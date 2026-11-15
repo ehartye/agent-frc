@@ -6,10 +6,10 @@
   "description": "Season-aware high-school FRC engineering guidance with explicit evidence and optional local vault grounding.",
   "license": "MIT",
   "engines": {
-    "node": ">=20.8"
+    "node": ">=20.11"
   },
   "scripts": {
-    "test": "node --test test/*.test.mjs",
+    "test": "node --test test/context.test.mjs test/lookup.test.mjs",
     "validate": "node scripts/validate.mjs",
     "context": "node scripts/context.mjs",
     "lookup": "node scripts/lookup.mjs"

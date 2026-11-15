@@ -10,7 +10,7 @@ Version **0.2.0**: six season-aware FRC learning skills, an original runnable Ja
 
 ## Metadata lookup
 
-Node 20.8+; no Node dependencies. Run `npm test`, `npm run validate`, or `npm run lookup -- --season 2026 --as-of 2026-11-15 --topic Java`. Nine Node tests cover privacy boundaries, schema/size rejection, explicit season selection, preview/freshness labels and historical filtering.
+Node 20.11+ (tested with Node 25.0.0); no Node dependencies. Run `npm test`, `npm run validate`, or `npm run lookup -- --season 2026 --as-of 2026-11-15 --topic Java`. Nine Node tests cover privacy boundaries, schema/size rejection, explicit season selection, preview/freshness labels and historical filtering.
 
 By default lookup uses only bundled public links. Set FRC_VAULT_PATH explicitly to inspect a compatible local catalog; no guessed path, automatic clone, upload or sync exists. Lookup returns allowlisted metadata, never source bodies or arbitrary catalog paths. --historical admits earlier seasons only. Re-open official sources before making a rules decision.
 
