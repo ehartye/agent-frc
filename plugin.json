@@ -1,0 +1,29 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "agent-frc",
+  "version": "0.1.0",
+  "description": "Season-aware high-school FRC engineering guidance with explicit evidence and optional local vault grounding.",
+  "author": {
+    "name": "ehartye"
+  },
+  "repository": "https://github.com/ehartye/agent-frc",
+  "license": "MIT",
+  "keywords": [
+    "frc",
+    "wpilib",
+    "java",
+    "robotics",
+    "education"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Agent FRC",
+        "shortDescription": "Grounded FRC learning and engineering workflows.",
+        "developerName": "ehartye",
+        "category": "Education",
+        "capabilities": []
+      }
+    }
+  }
+}

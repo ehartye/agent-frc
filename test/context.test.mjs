@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {context} from '../scripts/context.mjs';
+test('No configuration never reads a default vault',()=>assert.deepEqual(context({}),{mode:'public-reference-only',vaultConfigured:false}));
+test('Explicit catalog returns metadata only; invalid schema is refused',()=>{const root=fs.mkdtempSync(path.join(os.tmpdir(),'frc-context-'));try{fs.mkdirSync(path.join(root,'catalog'));const file=path.join(root,'catalog','sources.json');fs.writeFileSync(file,JSON.stringify({schema:'frc-source-catalog/v1',as_of:'2026-11-15',sources:[{privateBody:'not returned'}]}));const result=context({FRC_VAULT_PATH:root});assert.equal(result.sourceCount,1);assert.ok(!JSON.stringify(result).includes(root));assert.ok(!JSON.stringify(result).includes('privateBody'));fs.writeFileSync(file,'{}');assert.throws(()=>context({FRC_VAULT_PATH:root}));}finally{const safe=path.resolve(root);if(path.dirname(safe)!==path.resolve(os.tmpdir())||!path.basename(safe).startsWith('frc-context-'))throw Error('Unsafe cleanup');fs.rmSync(safe,{recursive:true,force:true});}});
+
+test('Linked catalog directories cannot redirect optional grounding',()=>{const root=fs.mkdtempSync(path.join(os.tmpdir(),'frc-context-'));try{const other=path.join(root,'outside');fs.mkdirSync(other);fs.writeFileSync(path.join(other,'sources.json'),'{}');fs.symlinkSync(other,path.join(root,'catalog'),'junction');assert.throws(()=>context({FRC_VAULT_PATH:root}),/links/);}finally{const safe=path.resolve(root);if(path.dirname(safe)!==path.resolve(os.tmpdir())||!path.basename(safe).startsWith('frc-context-'))throw Error('Unsafe cleanup');fs.rmSync(safe,{recursive:true,force:true});}});
+test('Oversized catalog is refused before parsing',()=>{const root=fs.mkdtempSync(path.join(os.tmpdir(),'frc-context-'));try{fs.mkdirSync(path.join(root,'catalog'));fs.writeFileSync(path.join(root,'catalog','sources.json'),' '.repeat(2*1024*1024+1));assert.throws(()=>context({FRC_VAULT_PATH:root}),/size/);}finally{const safe=path.resolve(root);if(path.dirname(safe)!==path.resolve(os.tmpdir())||!path.basename(safe).startsWith('frc-context-'))throw Error('Unsafe cleanup');fs.rmSync(safe,{recursive:true,force:true});}});
