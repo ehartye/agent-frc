@@ -1,0 +1,2 @@
+joint,dof,minimum,rest,maximum,units,neighbor_components,cable_clearance,service_clearance,expected_contact,evidence_status
+TEMPLATE,,,,,,,,,,not-evaluated

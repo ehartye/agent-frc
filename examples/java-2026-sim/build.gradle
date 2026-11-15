@@ -1,0 +1,42 @@
+plugins {
+    id 'java'
+    id 'edu.wpi.first.GradleRIO' version '2026.2.1'
+}
+java { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
+repositories { mavenCentral() }
+wpi.java.debugJni = false
+dependencies {
+    implementation wpi.java.deps.wpilib()
+    implementation 'edu.wpi.first.wpilibNewCommands:wpilibNewCommands-java:2026.2.1'
+    nativeDebug wpi.java.deps.wpilibJniDebug(wpi.platforms.desktop)
+    nativeRelease wpi.java.deps.wpilibJniRelease(wpi.platforms.desktop)
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.1'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+test { exclude '**/DemoTest.class'; useJUnitPlatform(); maxParallelForks = 1; testLogging { events 'passed', 'skipped', 'failed' } }
+wpi.java.configureTestTasks(test)
+tasks.register('headlessDemo', Test) {
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    include '**/DemoTest.class'
+}
+wpi.java.configureTestTasks(tasks.named('headlessDemo').get())
+// This original teaching adaptation has no deploy targets or robot addresses.
+tasks.matching { it.name.toLowerCase().startsWith('deploy') }.configureEach { enabled = false }
+
+dependencyLocking { lockAllConfigurations() }
+tasks.register('dependencyManifest') {
+    doLast {
+        def rows = []
+        ['runtimeClasspath', 'testRuntimeClasspath', 'nativeRelease'].each { scope ->
+            configurations.getByName(scope).resolvedConfiguration.resolvedArtifacts.each { artifact ->
+                def sha = java.security.MessageDigest.getInstance('SHA-256').digest(artifact.file.bytes).encodeHex().toString()
+                rows.add([scope: scope, coordinate: artifact.moduleVersion.id.toString(), classifier: artifact.classifier, extension: artifact.extension, sha256: sha])
+            }
+        }
+        def out = layout.buildDirectory.file('dependency-manifest.json').get().asFile
+        out.parentFile.mkdirs()
+        out.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson([scope: 'resolved lesson runtime/test/native artifacts only; not a full license audit', artifacts: rows.sort { a,b -> (a.scope+a.coordinate+(a.classifier?:'')) <=> (b.scope+b.coordinate+(b.classifier?:'')) }])) + '\n'
+    }
+}

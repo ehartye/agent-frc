@@ -1,7 +1,9 @@
 # Implemented architecture
 
-The package contains six Markdown skills, original reference policy, portable/compatibility manifests and a dependency-free Node context reader. It has no MCP server or installed host integration.
+Version 0.2.0 contains six guidance skills, original worksheets, a pinned desktop-only WPILib Java lesson, dependency-free context inspection and a read-only metadata selector. No MCP server, cloud service or installed host integration exists.
 
-Public source links are a small allowlisted reference set. The context reader defaults to public-only mode; explicit vault configuration reads a bounded catalog after checking the exact path is a regular non-symlink file within the resolved root. It returns only record count and as-of metadata. It does not perform semantic retrieval or execute catalog content.
+Public mode reads the small public reference list. Explicit FRC_VAULT_PATH mode uses the bounded catalog loader; it rejects catalog symlinks, unsupported schema and oversized files. Lookup requires a season and as-of date, preserves preview/stale labels, and returns allowlisted metadata only. It never reads capture bodies or arbitrary paths stored in a record, and performs no network request or upload.
 
-Proposed richer retrieval would add read-only topic lookup with path confinement, source freshness filters, version selection and an auditable answer-evidence ledger. That work is not implemented. Keep private indexes outside the public repository and make any ingestion a separate explicit action.
+The Java lesson has a simulated flywheel plant, command scheduler, pure readiness gate and bounded virtual-time demo. It instantiates no real actuator/network control devices and has no deployment targets. Dependency artifacts are downloaded for local builds, not repackaged for distribution.
+
+Future full-text retrieval, richer semantic matching, production-controller support and live hardware integration are not implemented.

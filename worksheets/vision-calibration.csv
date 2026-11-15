@@ -1,0 +1,2 @@
+record_id,camera_identity,resolution,lens_model,board_dimensions_units,image_coverage,residual_metric,robot_to_camera_transform,clock_basis,reviewer,evidence_status
+TEMPLATE,,,,,,,,,,not-performed

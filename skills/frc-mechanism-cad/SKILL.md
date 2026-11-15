@@ -11,3 +11,7 @@ Establish game constraints, interfaces, motion envelope, load and manufacturing 
 Output a concise scope/version statement, evidence links, original guidance, validation performed and remaining gaps. Include only relevant safety constraints. Do not claim runtime verification from documentation.
 
 Optional vault coverage keys: fusion-cad, intakes-launchers, drivetrain, safety. Resolve through the configured catalog, never a hard-coded path.
+
+## Developed learning tools
+
+Use the original [drawing release](../../worksheets/drawing-release.csv), [motion envelope](../../worksheets/motion-envelope.csv), [interference log](../../worksheets/interference-log.csv) and [mechanism experiment](../../worksheets/mechanism-experiment.csv) templates. Do not mark rows complete without measurements or inspection. Compare continuous readiness against one-time transition checks.

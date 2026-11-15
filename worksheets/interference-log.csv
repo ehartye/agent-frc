@@ -1,0 +1,2 @@
+case_id,assembly_revision,component_pair,pose,overlap_or_coincident,intentional_or_defect,action,reviewer,status
+TEMPLATE,,,,,,,,not-evaluated

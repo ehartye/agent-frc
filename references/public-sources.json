@@ -5,121 +5,282 @@
       "title": "Season Materials",
       "url": "https://www.firstinspires.org/resources/library/frc/season-materials",
       "scope": "2026 REBUILT gateway",
-      "handling": "link-only; recheck before use"
+      "handling": "link-only; recheck before use",
+      "id": "P01",
+      "seasons": [
+        2026
+      ],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": []
     },
     {
       "title": "Game and Season",
       "url": "https://www.firstinspires.org/programs/frc/game-and-season",
       "scope": "2027 BIOCORE announcement",
-      "handling": "link-only; recheck before use"
+      "handling": "link-only; recheck before use",
+      "id": "P02",
+      "seasons": [
+        2027
+      ],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": []
     },
     {
       "title": "Kit of Parts",
       "url": "https://www.firstinspires.org/resources/library/frc/kit-of-parts",
       "scope": "2027 planning page",
-      "handling": "link-only; recheck before use"
+      "handling": "link-only; recheck before use",
+      "id": "P03",
+      "seasons": [
+        2027
+      ],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": []
     },
     {
       "title": "Safety resource portal",
       "url": "https://www.firstinspires.org/resources/library/safety",
       "scope": "rolling safety gateway",
-      "handling": "link-only; recheck before use"
+      "handling": "link-only; recheck before use",
+      "id": "P04",
+      "seasons": [],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": []
     },
     {
       "title": "WPILib 2026.2.1 release",
       "url": "https://github.com/wpilibsuite/allwpilib/releases/tag/v2026.2.1",
       "scope": "v2026.2.1 stable",
-      "handling": "link-only; recheck before use"
+      "handling": "link-only; recheck before use",
+      "id": "P05",
+      "seasons": [
+        2026
+      ],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "java"
+      ]
     },
     {
       "title": "Command-based project structure",
       "url": "https://docs.wpilib.org/en/stable/docs/software/commandbased/structuring-command-based-project.html",
       "scope": "stable alias observed 2026-11-15",
-      "handling": "link-only; recheck before use"
+      "handling": "link-only; recheck before use",
+      "id": "P06",
+      "seasons": [
+        2026
+      ],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "java"
+      ]
     },
     {
       "title": "Unit Testing",
       "url": "https://docs.wpilib.org/en/stable/docs/software/wpilib-tools/robot-simulation/unit-testing.html",
       "scope": "stable; Java JUnit 5",
-      "handling": "link-only; recheck before use"
+      "handling": "link-only; recheck before use",
+      "id": "P07",
+      "seasons": [],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": []
     },
     {
       "title": "Robot Simulation introduction",
       "url": "https://docs.wpilib.org/en/stable/docs/software/wpilib-tools/robot-simulation/introduction.html",
       "scope": "stable alias",
-      "handling": "link-only; recheck before use"
+      "handling": "link-only; recheck before use",
+      "id": "P08",
+      "seasons": [],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": []
     },
     {
       "title": "WPILib Example Projects",
       "url": "https://docs.wpilib.org/en/stable/docs/software/examples-tutorials/wpilib-examples.html",
       "scope": "stable; examples tied to release",
-      "handling": "link-only; recheck before use"
+      "handling": "link-only; recheck before use",
+      "id": "P09",
+      "seasons": [],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "java"
+      ]
     },
     {
       "title": "Pose Estimators",
       "url": "https://docs.wpilib.org/en/stable/docs/software/advanced-controls/state-space/state-space-pose-estimators.html",
       "scope": "stable alias",
-      "handling": "link-only; recheck before use"
+      "handling": "link-only; recheck before use",
+      "id": "P10",
+      "seasons": [],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": []
     },
     {
       "title": "Coordinate System",
       "url": "https://docs.wpilib.org/en/stable/docs/software/basic-programming/coordinate-system.html",
       "scope": "stable alias",
-      "handling": "link-only; recheck before use"
+      "handling": "link-only; recheck before use",
+      "id": "P11",
+      "seasons": [],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": []
     },
     {
       "title": "Autodesk FIRST Robotics resources",
       "url": "https://www.autodesk.com/education/competitions/first",
       "scope": "rolling; 2026 resources linked",
-      "handling": "link-only; recheck before use"
+      "handling": "link-only; recheck before use",
+      "id": "P12",
+      "seasons": [
+        2026
+      ],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": []
     },
     {
       "title": "Fusion components",
       "url": "https://help.autodesk.com/view/fusion360/ENU/?contextId=ASM-COMPONENTS",
       "scope": "rolling Fusion help",
-      "handling": "link-only; recheck before use"
+      "handling": "link-only; recheck before use",
+      "id": "P13",
+      "seasons": [],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": []
     },
     {
       "title": "Fusion assembly relationships",
       "url": "https://help.autodesk.com/view/fusion360/ENU/?contextId=ASM-JOINTS",
       "scope": "rolling Fusion help",
-      "handling": "link-only; recheck before use"
+      "handling": "link-only; recheck before use",
+      "id": "P14",
+      "seasons": [],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": []
     },
     {
       "title": "Fusion export designs",
       "url": "https://help.autodesk.com/view/fusion360/ENU/?contextId=ASM-EXPORT-DESIGN",
       "scope": "rolling Fusion help",
-      "handling": "link-only; recheck before use"
+      "handling": "link-only; recheck before use",
+      "id": "P15",
+      "seasons": [],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": []
     },
     {
       "title": "Team 254 FRC 2024 public code",
       "url": "https://github.com/Team254/FRC-2024-Public",
       "scope": "2024; commit 040f653744c9b18182be5f6bc51a7e505e346e59",
-      "handling": "link-only; recheck before use"
+      "handling": "link-only; recheck before use",
+      "id": "P16",
+      "seasons": [
+        2024
+      ],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": []
     },
     {
       "title": "Team 6328 RobotCode2024Public",
       "url": "https://github.com/Mechanical-Advantage/RobotCode2024Public",
       "scope": "2024; commit 45144b3daefaca93a54de1d5c5e163c29d9ad378",
-      "handling": "link-only; recheck before use"
+      "handling": "link-only; recheck before use",
+      "id": "P17",
+      "seasons": [
+        2024
+      ],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": []
     },
     {
       "title": "PhotonVision pose estimator",
       "url": "https://docs.photonvision.org/en/latest/docs/programming/photonlib/robot-pose-estimator.html",
       "scope": "rolling latest; API differs from some 2026 docs",
-      "handling": "link-only; recheck before use"
+      "handling": "link-only; recheck before use",
+      "id": "P18",
+      "seasons": [
+        2026
+      ],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": []
     },
     {
       "title": "Limelight MegaTag2 localization",
       "url": "https://docs.limelightvision.io/docs/docs-limelight/pipeline-apriltag/apriltag-robot-localization-megatag2",
       "scope": "rolling documentation",
-      "handling": "link-only; recheck before use"
+      "handling": "link-only; recheck before use",
+      "id": "P19",
+      "seasons": [],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": []
     },
     {
       "title": "Phoenix 6 current limits",
       "url": "https://v6.docs.ctr-electronics.com/en/stable/docs/hardware-reference/talonfx/improving-performance-with-current-limits.html",
       "scope": "Phoenix 6 stable; Talon-specific",
-      "handling": "link-only; recheck before use"
+      "handling": "link-only; recheck before use",
+      "id": "P20",
+      "seasons": [],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": []
+    },
+    {
+      "id": "P21",
+      "title": "2026 Java build template",
+      "url": "https://raw.githubusercontent.com/wpilibsuite/vscode-wpilib/v2026.2.1/vscode-wpilib/resources/gradle/java/build.gradle",
+      "scope": "v2026.2.1",
+      "seasons": [
+        2026
+      ],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "java",
+        "testing"
+      ],
+      "handling": "link-only; upstream BSD notice retained for adapted build"
     }
   ]
 }

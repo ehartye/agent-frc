@@ -11,3 +11,7 @@ Establish the requested season and event. Open the official manual/update gatewa
 Output a concise scope/version statement, evidence links, original guidance, validation performed and remaining gaps. Include only relevant safety constraints. Do not claim runtime verification from documentation.
 
 Optional vault coverage keys: season-selection, kit-of-parts, rules-2026. Resolve through the configured catalog, never a hard-coded path.
+
+## Developed learning tools
+
+The read-only metadata selector is `node scripts/lookup.mjs --season YEAR --as-of YYYY-MM-DD --topic TEXT`. Use a path relative to the plugin root. It returns preview/stale labels and excludes unrelated seasons unless --historical is explicit. It does not verify rules; open official sources before answering.

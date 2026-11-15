@@ -11,3 +11,7 @@ Read the selected release, project Gradle/vendordeps and local project instructi
 Output a concise scope/version statement, evidence links, original guidance, validation performed and remaining gaps. Include only relevant safety constraints. Do not claim runtime verification from documentation.
 
 Optional vault coverage keys: java-architecture, testing-simulation, example-projects. Resolve through the configured catalog, never a hard-coded path.
+
+## Developed learning tools
+
+Use the [desktop lesson](../../examples/java-2026-sim/README.md) when a bounded runnable teaching example fits. Read its validation record and license boundaries. Its constants are synthetic fixtures; preserve that label. Run tests after behavior changes and keep robot deployment absent. Record failed attempts as well as final evidence.

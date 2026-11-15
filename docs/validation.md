@@ -1,7 +1,9 @@
-# Validation scope
+# Validation scope — 0.2.0
 
-Source-only version 0.1.0, reviewed 2026-11-15. Six skill frontmatter blocks and three manifests are parsed/checked by the package validator. The dependency-free context utility has automated tests for unconfigured mode, metadata-only output, schema rejection, catalog-directory link rejection and oversized input.
+Nine Node tests pass for explicit configuration, bounded catalog reading, allowlisted metadata output, season selection, preview/stale labels and historical filtering. Six skill frontmatter blocks and all three manifests validate.
 
-A bounded public-file inventory and pattern scan checks machine paths, common credential forms and forbidden private-vault references; local Markdown links are checked. This is not a guarantee against all secrets. Public content was authored separately from the optional private vault.
+The [Java lesson](../examples/java-2026-sim/VALIDATION.md) compiled and passed ten JUnit tests plus one bounded virtual-time demo on Windows x86-64. Gradle wrapper/distribution checksums and dependency locks are retained.
 
-No plugin installation/host loading, full skill behavior evaluation, robot project build, simulation or hardware verification. Proposed evaluation cases remain unexecuted.
+A bounded public-file inventory/pattern scan and local-link check precede publication. Only explicitly packaged source, worksheets, notices and generated Gradle wrapper infrastructure are included. Build outputs, caches, private catalogs, machine paths and credentials are excluded. Pattern scanning is not a universal secret detector.
+
+No plugin installation/host loading or human/agent skill-effectiveness evaluation; no real robot, camera, CAD application or full-field simulation.

@@ -11,3 +11,7 @@ Get selected manual edition and mode requirements. Define operator bindings, ove
 Output a concise scope/version statement, evidence links, original guidance, validation performed and remaining gaps. Include only relevant safety constraints. Do not claim runtime verification from documentation.
 
 Optional vault coverage keys: teleop-autonomous, java-architecture, example-projects. Resolve through the configured catalog, never a hard-coded path.
+
+## Developed learning tools
+
+Use the [mode acceptance worksheet](../../worksheets/mode-acceptance.csv). For trajectories, verify time-sampled reference state and separate chassis, module and mechanism layers. The desktop lesson tests cancellation/timeouts only; never present it as a full-field routine.

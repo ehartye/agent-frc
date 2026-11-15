@@ -1,10 +1,5 @@
-# Next work
+# Roadmap
 
-- Evaluate each skill with teachers/mentors and the declared regression prompts.
-- Add a version-pinned Java learning project with meaningful interlock tests and desktop simulation.
-- Verify final 2027 rules, Systemcore stack and vendor compatibility when published.
-- Add current official Fusion drawing workflow and an original reviewed sample.
-- Implement optional read-only topic retrieval only after schema/path/privacy tests.
-- Test host package loading when installation is separately requested.
+Shipped: original Java desktop lesson with tests and bounded simulation; version/freshness metadata lookup; deeper six-skill workflows and seven blank worksheets.
 
-No installation, marketplace submission, cloud service or robot deployment is part of this release.
+Remaining: teacher/mentor evaluation; full drivetrain/pose-estimator synthetic lab; camera-specific version-pinned integration; measured mechanism studies; Fusion sample drawing/export reopen exercise; final 2027 rules and production compatibility; compiled-binary dependency license review if binary redistribution is proposed. Host package loading awaits separately authorized installation.

@@ -11,3 +11,7 @@ Identify hardware/firmware and collect symptoms, times and logs. Separate power,
 Output a concise scope/version statement, evidence links, original guidance, validation performed and remaining gaps. Include only relevant safety constraints. Do not claim runtime verification from documentation.
 
 Optional vault coverage keys: troubleshooting, electrical-controls, safety. Resolve through the configured catalog, never a hard-coded path.
+
+## Developed learning tools
+
+Use expected-versus-observed evidence: model mismatch, timing mismatch, stale observations, saturation and command conflicts can resemble bad tuning. Request targeted logs only. The synthetic Java lesson supports safe software hypothesis tests, not physical fault certification.

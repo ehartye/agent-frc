@@ -1,0 +1,41 @@
+{
+  "date": "2026-11-15",
+  "platform": "Windows x86-64",
+  "jdk": "Eclipse Temurin 17.0.21+9",
+  "gradle": "8.11",
+  "gradleRio": "2026.2.1",
+  "wpilib": "2026.2.1",
+  "junit": "5.10.1",
+  "command": "gradlew.bat --no-daemon --console plain --write-locks test headlessDemo dependencyManifest",
+  "unit": {
+    "tests": 10,
+    "skipped": 0,
+    "failures": 0,
+    "errors": 0
+  },
+  "headlessDemo": {
+    "tests": 1,
+    "skipped": 0,
+    "failures": 0,
+    "errors": 0
+  },
+  "simulation": {
+    "virtualSeconds": 6,
+    "peakRpm": 2999.98,
+    "feedTicks": 64,
+    "staleFeedTicks": 0,
+    "saturatedTicks": 35,
+    "finalTargetRpm": 0,
+    "finalVolts": 0
+  },
+  "wrapperSha256": "2db75c40782f5e8ba1fc278a5574bab070adccb2d21ca5a6e5ed840888448046",
+  "wrapperPublishedChecksumMatched": true,
+  "hardwareOperated": false,
+  "limits": [
+    "Synthetic fixture parameters only",
+    "No full drivetrain, camera or piece-transport model",
+    "No hardware safety or rule compliance verification",
+    "Only Windows x86-64 tested",
+    "Resolved dependency manifest is not a compiled-binary redistribution license audit"
+  ]
+}

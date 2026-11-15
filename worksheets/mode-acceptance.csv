@@ -1,0 +1,2 @@
+test_id,season_manual_rule,mode,trigger,preconditions,expected_behavior,timeout_seconds,cancellation_behavior,evidence,reviewer,status
+TEMPLATE,,,,,,,,,,not-run
