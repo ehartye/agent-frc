@@ -9,11 +9,11 @@
     },
     {
       "file": "references/public-sources.json",
-      "sha256": "66151784b5dddab90db8f3dd30e00276cbb1cecd981494cd7b08293742c90259"
+      "sha256": "911dcc18078676bd9e12f2f7531b23f6ed8d754d2e02662911ceebdb248f82f5"
     },
     {
       "file": "eval/grounding-cases.json",
-      "sha256": "c1f7942fdf9316e987ea777efe806246fa70f7be326c858f66b1fe2faf100f78"
+      "sha256": "588c794a83de6514ef435caefb5ba637820b263d602295ef5bf15f5a065e535d"
     },
     {
       "file": "scripts/brief.mjs",
@@ -21,11 +21,11 @@
     },
     {
       "file": "references/workflows.json",
-      "sha256": "c0311d58fa504005846154041cfc3ed0b79478b6858f70f323251dba415d5599"
+      "sha256": "f76dd98ffb61e530b4688867ba6b80c3ac16708d7b8f49feb84db0bb80721c1c"
     }
   ],
-  "passed": 20,
-  "total": 20,
+  "passed": 24,
+  "total": 24,
   "results": [
     {
       "id": "2026-trajectory",
@@ -327,16 +327,16 @@
       "selectedIds": [
         "PUBLIC-PWR01",
         "PUBLIC-PN01",
+        "PUBLIC-W13",
+        "PUBLIC-PWR12",
         "PUBLIC-PWR02",
         "PUBLIC-PN02",
+        "PUBLIC-PWR13",
         "PUBLIC-PWR03",
         "PUBLIC-PN03",
+        "PUBLIC-PWR14",
         "PUBLIC-PWR04",
-        "PUBLIC-PN04",
-        "PUBLIC-PWR05",
-        "PUBLIC-PWR06",
-        "PUBLIC-PWR08",
-        "PUBLIC-PWR10"
+        "PUBLIC-PN04"
       ],
       "error": false,
       "passed": true,
@@ -351,6 +351,77 @@
       },
       "selectedIds": [
         "P09"
+      ],
+      "error": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "electrical-brownout-source",
+      "options": {
+        "asOf": "2026-11-15",
+        "season": 2026,
+        "topic": "brownout"
+      },
+      "selectedIds": [
+        "PUBLIC-W13"
+      ],
+      "error": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "electrical-sb50-source",
+      "options": {
+        "asOf": "2026-11-15",
+        "season": 2026,
+        "topic": "SB50"
+      },
+      "selectedIds": [
+        "PUBLIC-PWR12",
+        "PUBLIC-PWR13",
+        "PUBLIC-PWR14"
+      ],
+      "error": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "electrical-reference-not-season-rules",
+      "options": {
+        "asOf": "2026-11-15",
+        "season": 2027,
+        "topic": "SB50"
+      },
+      "selectedIds": [
+        "PUBLIC-PWR12",
+        "PUBLIC-PWR13",
+        "PUBLIC-PWR14"
+      ],
+      "error": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "electrical-brief-source-balance",
+      "options": {
+        "asOf": "2026-11-15",
+        "season": 2026,
+        "workflow": "troubleshoot"
+      },
+      "selectedIds": [
+        "PUBLIC-PWR01",
+        "PUBLIC-PN01",
+        "PUBLIC-W13",
+        "PUBLIC-PWR12",
+        "PUBLIC-PWR02",
+        "PUBLIC-PN02",
+        "PUBLIC-PWR13",
+        "PUBLIC-PWR03",
+        "PUBLIC-PN03",
+        "PUBLIC-PWR14",
+        "PUBLIC-PWR04",
+        "PUBLIC-PN04"
       ],
       "error": false,
       "passed": true,

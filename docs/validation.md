@@ -1,6 +1,6 @@
-# Validation scope — 0.5.0
+# Validation scope — 0.5.1
 
-Seventeen Node tests and 20 deterministic grounding/brief evaluations pass. Three manifests and six skill frontmatter blocks validate. Input hashes make the recorded evaluation reproducible from this source package.
+Seventeen Node tests and 24 deterministic grounding/brief evaluations pass. Three manifests and six skill frontmatter blocks validate. Input hashes make the recorded evaluation reproducible from this source package.
 
 The [Java laboratory](../examples/java-2026-sim/VALIDATION.md) passes29 JUnit tests plus one bounded demo on Windows x86-64:10 mechanism,9 navigation,4 cleanup and6event cases. Historical team build/lifecycle sources were read but never built or executed.
 

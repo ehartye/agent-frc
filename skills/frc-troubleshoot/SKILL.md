@@ -20,6 +20,8 @@ Read [grounding policy](../../docs/grounding.md). Start with the [learning brief
 
 Inspect unmatchedQueries, omitted counts, source versions and review dates. Open relevant official/pinned sources before factual decisions. Keep source findings, recommendations and unknowns separate. Never infer compatibility from an empty season list or a matching keyword.
 
+Read the [electrical evidence exercise](../../docs/electrical-review.md). Identify connector revision and conductor preparation separately; record telemetry validity before diagnosing a zero. Missing terminal values remain unresolved. Use existing logs and paper calculations; this skill authorizes no physical procedure.
+
 ## Reviewable output
 
 Deliver an expected/observed evidence table with source and next verification step. For each material claim identify source URL/version, applicability and verification level. Record actual commands/results separately from proposed tests.

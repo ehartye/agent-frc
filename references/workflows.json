@@ -125,22 +125,28 @@
       "title": "Device and evidence troubleshooting plan",
       "queries": [
         "power",
-        "pneumatics"
+        "pneumatics",
+        "brownout",
+        "SB50"
       ],
       "context": [
         "Exact device/connector/firmware/client versions",
         "Symptom timeline and targeted logs",
-        "Electrical, pneumatic, spring and gravity energy states"
+        "Electrical, pneumatic, spring and gravity energy states",
+        "Conductor preparation and terminal revision; telemetry producer and validity"
       ],
       "steps": [
         "Match the device-specific manual and changelog before interpreting indicators",
         "Separate command, requested output, sensor reading and physical state",
-        "Preserve fault history; formulate one software/log hypothesis before a qualified physical procedure"
+        "Preserve fault history; formulate one software/log hypothesis before a qualified physical procedure",
+        "Use the electrical evidence review to separate terminal acceptance, circuit protection, model-specific brownout behavior and missing current telemetry"
       ],
       "acceptance": [
         "A warning indicator is not assumed to inhibit output",
         "Component ratings do not establish season legality or every terminal specification",
-        "Battery variants/revisions and conflicting charge data stay explicit"
+        "Battery variants/revisions and conflicting charge data stay explicit",
+        "No current sample or a displayed zero is treated as proof of a de-energized circuit",
+        "Bare-wire acceptance is not reused for ferrules; undocumented terminal values remain unknown"
       ],
       "deliverable": "An expected/observed evidence table with source and next verification step"
     }

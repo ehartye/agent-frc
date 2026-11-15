@@ -1,6 +1,6 @@
 # Implemented architecture
 
-Version 0.5.0 contains six guidance skills, original worksheets, a pinned desktop-only WPILib Java lesson, dependency-free context inspection and a read-only metadata selector and deterministic workflow-brief generator. No MCP server, cloud service or installed host integration exists.
+Version 0.5.1 contains six guidance skills, original worksheets, a pinned desktop-only WPILib Java lesson, dependency-free context inspection and a read-only metadata selector and deterministic workflow-brief generator. No MCP server, cloud service or installed host integration exists.
 
 Public mode reads the small public reference list. Explicit FRC_VAULT_PATH mode uses the bounded catalog loader; it rejects catalog symlinks, unsupported schema and oversized files. Lookup requires a season and as-of date, preserves preview/stale labels, and returns allowlisted metadata only. It never reads capture bodies or arbitrary paths stored in a record, and performs no network request or upload.
 

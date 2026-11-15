@@ -207,6 +207,53 @@
       "exclude": [
         "PUBLIC-Q03"
       ]
+    },
+    {
+      "id": "electrical-brownout-source",
+      "options": {
+        "season": 2026,
+        "topic": "brownout"
+      },
+      "include": [
+        "PUBLIC-W13"
+      ]
+    },
+    {
+      "id": "electrical-sb50-source",
+      "options": {
+        "season": 2026,
+        "topic": "SB50"
+      },
+      "include": [
+        "PUBLIC-PWR13",
+        "PUBLIC-PWR14"
+      ]
+    },
+    {
+      "id": "electrical-reference-not-season-rules",
+      "options": {
+        "season": 2027,
+        "topic": "SB50"
+      },
+      "include": [
+        "PUBLIC-PWR13"
+      ],
+      "exclude": [
+        "P01"
+      ]
+    },
+    {
+      "id": "electrical-brief-source-balance",
+      "operation": "brief",
+      "options": {
+        "season": 2026,
+        "workflow": "troubleshoot"
+      },
+      "include": [
+        "PUBLIC-W13",
+        "PUBLIC-PWR13"
+      ],
+      "expectEvidenceLevel": "metadata-and-original-checklist-only"
     }
   ]
 }

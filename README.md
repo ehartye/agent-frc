@@ -1,6 +1,6 @@
 # agent-frc
 
-Version **0.5.0** provides six season-aware FRC learning skills, an original runnable Java desktop laboratory, twelve engineering worksheets and optional local-vault metadata lookup. Independent educational work; no FIRST or vendor endorsement.
+Version **0.5.1** provides six season-aware FRC learning skills, an original runnable Java desktop laboratory, thirteen engineering worksheets and optional local-vault metadata lookup. Independent educational work; no FIRST or vendor endorsement.
 
 - [Java laboratory](examples/java-2026-sim/README.md): Java 17, Gradle 8.11, WPILib 2026.2.1. Twenty-nine behavior tests plus a bounded demo passed on Windows x86-64. New [navigation exercises](examples/java-2026-sim/NAVIGATION.md) cover trajectories and delayed pose estimation.
 - [Worksheets](worksheets/README.md): original blank templates for mechanisms, CAD/field, calibration, navigation, device evidence and source-file tracing.
@@ -8,7 +8,7 @@ Version **0.5.0** provides six season-aware FRC learning skills, an original run
 
 ## Learning briefs and metadata lookup
 
-Node 20.11+; no Node dependencies. Generate a [learning brief](docs/briefs.md) with `npm run brief -- --workflow modes --season 2026 --as-of 2026-11-15`. Briefs expose missing context and partial source coverage; they do not read linked bodies or decide legality. Run npm test, npm run validate and npm run evaluate. Twenty deterministic grounding/brief evaluations pass; [scope and results](docs/evaluation.md) distinguish them from unexecuted language-model skill evaluations.
+Node 20.11+; no Node dependencies. Generate a [learning brief](docs/briefs.md) with `npm run brief -- --workflow modes --season 2026 --as-of 2026-11-15`. Briefs expose missing context and partial source coverage; they do not read linked bodies or decide legality. Run npm test, npm run validate and npm run evaluate. Twenty-four deterministic grounding/brief evaluations pass; [scope and results](docs/evaluation.md) distinguish them from unexecuted language-model skill evaluations.
 
 `npm run lookup -- --season 2026 --as-of 2026-11-15 --topic trajectory`
 
@@ -21,3 +21,5 @@ The laboratory has no robot deployment targets or physical I/O. Its ideal models
 2026 published/stable references remain separate from 2027 previews. Final 2027 game rules and production Systemcore compatibility remain unverified. See [validation](docs/validation.md), [grounding](docs/grounding.md) and [roadmap](docs/roadmap.md).
 
 Original code/prose is MIT. FIRST materials remain link-only. Selected [third-party notices](examples/java-2026-sim/THIRD_PARTY.md) cover build/wrapper sources. Runtime dependencies download locally and are not bundled. No private catalog, team data or credentials are shipped.
+
+The [electrical evidence review](docs/electrical-review.md) adds model-specific power guidance and a paper worksheet. No hardware procedure was executed.

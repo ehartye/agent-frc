@@ -1,0 +1,5 @@
+scenario,exact_model_revision,source_section,observed_or_assumed,permitted_conclusion,unresolved,next_qualified_verification
+PDH ferrule acceptance,,,,,,
+AMPD absent current telemetry,,,,,,
+roboRIO model threshold,,,,,,
+Hypothetical series resistance,,,,,,

@@ -1129,6 +1129,97 @@
         "lifecycle",
         "build"
       ]
+    },
+    {
+      "id": "PUBLIC-PWR12",
+      "title": "Anderson SB connector assembly sheet",
+      "url": "https://p1.aprimocdn.net/idealindustries/844e8917-e9ae-4321-a8d3-b3f00073abcc/ap-web_product-assets_default_instructions_1S1030A_Original%20file.pdf",
+      "scope": "1S1030A REV 19; two pages",
+      "handling": "link-only; original concise annotation; no PDF, table or asset copied",
+      "license": "Redistribution permission not established",
+      "seasons": [],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "power",
+        "electrical",
+        "connector",
+        "SB50"
+      ],
+      "limits": "No physical inspection, crimp qualification, full numerical-table transcription or season legality determination"
+    },
+    {
+      "id": "PUBLIC-PWR13",
+      "title": "Anderson SB50 crimp specification",
+      "url": "https://p1.aprimocdn.net/idealindustries/355cb8ff-28fc-4230-92cd-b3f00073ac76/ap-web_product-assets_default_instructions_1S6603-delete_Original%20file.pdf",
+      "scope": "1S6603 REV 2; ECN 2023-0043; two pages",
+      "handling": "link-only; original concise annotation; no PDF, table or asset copied",
+      "license": "Redistribution permission not established",
+      "seasons": [],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "power",
+        "electrical",
+        "connector",
+        "SB50"
+      ],
+      "limits": "No physical inspection, crimp qualification, full numerical-table transcription or season legality determination"
+    },
+    {
+      "id": "PUBLIC-PWR14",
+      "title": "Anderson SB50 datasheet",
+      "url": "https://p1.aprimocdn.net/idealindustries/d7c0a682-e691-4b60-8e76-b3f000737d74/ap-web_product-assets_default_data-sheets_ds-sb50_Original%20file.pdf",
+      "scope": "Seven-page official linked datasheet; revision date not established",
+      "handling": "link-only; original concise annotation; no PDF, table or asset copied",
+      "license": "Redistribution permission not established",
+      "seasons": [],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "power",
+        "electrical",
+        "connector",
+        "SB50"
+      ],
+      "limits": "No physical inspection, crimp qualification, full numerical-table transcription or season legality determination"
+    },
+    {
+      "id": "PUBLIC-W11",
+      "title": "Robot Battery Basics",
+      "url": "https://docs.wpilib.org/en/stable/docs/hardware/hardware-basics/robot-battery.html",
+      "scope": "stable alias",
+      "handling": "link-only; original concise commentary only",
+      "license": "Redistribution permission not established",
+      "seasons": [],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "safety",
+        "electrical"
+      ],
+      "limits": "Living page; no installed-device, hardware or season-rule verification"
+    },
+    {
+      "id": "PUBLIC-W13",
+      "title": "roboRIO brownouts and current draw",
+      "url": "https://docs.wpilib.org/en/stable/docs/software/roborio-info/roborio-brownouts.html",
+      "scope": "roboRIO 1/2, not a Systemcore specification",
+      "handling": "link-only; original concise commentary only",
+      "license": "Redistribution permission not established",
+      "seasons": [],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "electrical",
+        "troubleshooting"
+      ],
+      "limits": "Living page; no installed-device, hardware or season-rule verification"
     }
   ]
 }
