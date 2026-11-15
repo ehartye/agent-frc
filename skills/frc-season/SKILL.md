@@ -15,3 +15,7 @@ Optional vault coverage keys: season-selection, kit-of-parts, rules-2026. Resolv
 ## Developed learning tools
 
 The read-only metadata selector is `node scripts/lookup.mjs --season YEAR --as-of YYYY-MM-DD --topic TEXT`. Use a path relative to the plugin root. It returns preview/stale labels and excludes unrelated seasons unless --historical is explicit. It does not verify rules; open official sources before answering.
+
+## Version 0.3 evidence workflow
+
+For 2027 veteran opt-outs, official detailed KoP sections and Nov 12reminder specify selection plus purchased/secured registration before Nov 17, 2026 at 17:00 Eastern; generic table says noon. Cite both and flag the conflict. Drive-base alternative is$450 AndyMark; tote alternative$125 each REV/AndyMark. Do not infer eligibility, register, pay or expose voucher codes.

@@ -15,3 +15,7 @@ Optional vault coverage keys: java-architecture, testing-simulation, example-pro
 ## Developed learning tools
 
 Use the [desktop lesson](../../examples/java-2026-sim/README.md) when a bounded runnable teaching example fits. Read its validation record and license boundaries. Its constants are synthetic fixtures; preserve that label. Run tests after behavior changes and keep robot deployment absent. Record failed attempts as well as final evidence.
+
+## Version 0.3 evidence workflow
+
+Use the [navigation lesson](../../examples/java-2026-sim/NAVIGATION.md) alongside mechanism tests. Pin2026.2.1 APIs; validate generated paths before tracking. Report reference and corrected wheel-speed limits separately. Run the stated tasks and retain aggregate results, not machine-specific build reports.

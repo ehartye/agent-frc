@@ -6,9 +6,9 @@
   "gradleRio": "2026.2.1",
   "wpilib": "2026.2.1",
   "junit": "5.10.1",
-  "command": "gradlew.bat --no-daemon --console plain --write-locks test headlessDemo dependencyManifest",
+  "command": "gradlew.bat --offline --no-daemon --console plain test headlessDemo",
   "unit": {
-    "tests": 10,
+    "tests": 19,
     "skipped": 0,
     "failures": 0,
     "errors": 0
@@ -32,10 +32,43 @@
   "wrapperPublishedChecksumMatched": true,
   "hardwareOperated": false,
   "limits": [
-    "Synthetic fixture parameters only",
-    "No full drivetrain, camera or piece-transport model",
-    "No hardware safety or rule compliance verification",
-    "Only Windows x86-64 tested",
-    "Resolved dependency manifest is not a compiled-binary redistribution license audit"
-  ]
+    "Synthetic fixture parameters and thresholds only",
+    "Ideal drivetrain kinematics without motor response, traction, voltage sag or collision model",
+    "No camera calibration, physical mechanism, CAD application or robot operation",
+    "Only Windows x86-64 executed",
+    "Dependency manifest is not a compiled-binary redistribution audit"
+  ],
+  "suites": [
+    {
+      "name": "org.agentfrc.lesson.LessonTest",
+      "tests": 10,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "name": "org.agentfrc.lesson.NavigationTest",
+      "tests": 9,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0
+    }
+  ],
+  "navigation": {
+    "translationErrorMeters": 0.0005895631822027084,
+    "headingErrorRadians": 0.002813098296370385,
+    "peakRequestedWheelSpeed": 1.7810346120108496,
+    "peakAppliedWheelSpeed": 1.7810346120108496,
+    "steps": 182,
+    "model": "ideal kinematics; original synthetic path; no motor/traction/field model"
+  },
+  "poseFixtures": {
+    "captureStampedX": 2,
+    "arrivalStampedX": 1.5,
+    "chronologicalX": 2.25,
+    "outOfOrderX": 2.1,
+    "encoderBiasBeforeMeters": 0.2,
+    "encoderBiasAfterMeters": 0.11,
+    "evidence": "Values asserted by passing original regression tests; no physical measurement"
+  }
 }

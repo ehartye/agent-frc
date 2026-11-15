@@ -15,3 +15,7 @@ Optional vault coverage keys: fusion-cad, intakes-launchers, drivetrain, safety.
 ## Developed learning tools
 
 Use the original [drawing release](../../worksheets/drawing-release.csv), [motion envelope](../../worksheets/motion-envelope.csv), [interference log](../../worksheets/interference-log.csv) and [mechanism experiment](../../worksheets/mechanism-experiment.csv) templates. Do not mark rows complete without measurements or inspection. Compare continuous readiness against one-time transition checks.
+
+## Version 0.3 evidence workflow
+
+Trace source files with [case worksheet](../../worksheets/mechanism-case-trace.csv): requested goal, sensor state, readiness entry gate, continuous readiness, interruption cleanup and caller dependencies. Use pinned2024 Team254/6328 links as historical patterns. Do not infer CAD geometry, physical stop or jam-clearing safety from Java goals.

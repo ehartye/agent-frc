@@ -14,4 +14,8 @@ Optional vault coverage keys: vision-targeting, field-robot-fundamentals. Resolv
 
 ## Developed learning tools
 
-Use the [calibration worksheet](../../worksheets/vision-calibration.csv). Distinguish camera/resolution identity, transform direction and timestamp clock. The desktop lesson demonstrates a synthetic freshness gate only, not camera calibration or delayed estimator fusion.
+Use the [calibration worksheet](../../worksheets/vision-calibration.csv). Distinguish camera/resolution identity, transform direction and timestamp clock. The desktop lesson includes original delayed-estimator regression exercises; camera calibration remains unverified.
+
+## Version 0.3 evidence workflow
+
+Use [NavigationTest](../../examples/java-2026-sim/src/test/java/org/agentfrc/lesson/NavigationTest.java) for capture/arrival time, reset baselines and delayed correction. The pinned estimator accepts future/outlier inputs and replaces later corrections on old insertion; require an explicit application policy. Fixture thresholds are not camera recommendations. State clock/frame, ordering/reset epoch and missing calibration evidence.

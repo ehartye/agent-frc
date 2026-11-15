@@ -15,3 +15,7 @@ Optional vault coverage keys: teleop-autonomous, java-architecture, example-proj
 ## Developed learning tools
 
 Use the [mode acceptance worksheet](../../worksheets/mode-acceptance.csv). For trajectories, verify time-sampled reference state and separate chassis, module and mechanism layers. The desktop lesson tests cancellation/timeouts only; never present it as a full-field routine.
+
+## Version 0.3 evidence workflow
+
+Use [trajectory/pose exercise](../../examples/java-2026-sim/NAVIGATION.md) for software evidence. Require bounded completion, cancellation cleanup and a separate actuator-output policy. An ideal trajectory pass does not establish obstacle clearance or drivetrain dynamics.

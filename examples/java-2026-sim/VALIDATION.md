@@ -1,11 +1,13 @@
 # Executed validation — 2026-11-15
 
-Windows x86-64, Temurin Java 17.0.21+9, Gradle 8.11, GradleRIO/WPILib 2026.2.1.
+Windows x86-64; Temurin Java 17.0.21+9; Gradle 8.11; GradleRIO/WPILib 2026.2.1; JUnit 5.10.1.
 
-- Compilation succeeded. Ten JUnit behavior tests passed.
-- The separate headless demo test passed: six virtual seconds; peak 2999.98 RPM; 64 feeding ticks; zero stale-target feeding ticks; 35 saturated-output ticks; final target and applied voltage both zero. These are synthetic model results, not physical robot measurements.
-- Deprecated command scheduling calls were replaced with CommandScheduler scheduling before the final passing run.
-- Gradle wrapper JAR matched its published SHA-256. Distribution checksum is pinned; resolved dependency locks and [artifact manifest](validation/dependencies.json) are retained.
-- An initial JavaExec/native configuration attempt failed and was replaced with the supported Test-task native setup. An official Maven DNS failure cleared after DNS verification and a single retry; no hosts/proxy/network configuration was changed.
+Nineteen JUnit behavior tests and one bounded headless demo passed. Ten tests cover mechanism/mode/readiness behavior; nine cover trajectory generation/tracking, kinematic signs, capture timestamps, late vision insertion, reset baselines, temporal/outlier guards and delayed bias correction. Dependencies were cached; the run used --offline.
 
-[Machine-readable result](validation/result.json). Other OS/architectures, real mechanisms, cameras, field trajectories and robot deployment remain untested. No compiled runtime bundles are redistributed.
+The original ideal trajectory completed 182 steps with 0.000589563 m translation and 0.00281310 rad heading error. Peak feedback-requested wheel speed 1.78103 m/s exceeded the 1.5 m/s reference constraint, remaining below the separate 3 m/s fixture output cap. These synthetic values are not real-robot accuracy.
+
+The six-second flywheel demo retained 64 feeding ticks, zero stale-target feed ticks, 35 saturated ticks and zero final target/voltage. Wrapper checksum, distribution pin and resolved dependency lock remain unchanged. [Structured sanitized results](validation/result.json); [artifact manifest](validation/dependencies.json).
+
+Earlier build setup failures were resolved before 0.2.0: JavaExec/native task configuration replaced with supported Test setup; a transient official Maven DNS failure cleared after verification/retry. No network configuration changed.
+
+No upstream team project build, physical robot/camera/CAD test, complete field simulation, other OS verification or binary redistribution audit.

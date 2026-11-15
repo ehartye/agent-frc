@@ -18,3 +18,5 @@ All inertia, gearing, gains, setpoints, tolerance and latency limits are **synth
 Architecture: Launcher owns synthetic mechanism state; VisionGate makes a pure timestamp/target decision; Modes supplies bounded commands and cancellation; Demo drives local virtual time. Real robot adaptation would require reviewed I/O, season constraints, physical measurements and qualified supervised validation.
 
 See [dependency and source notices](THIRD_PARTY.md). The original lesson code is MIT under the repository license. The build configuration is a desktop-only adaptation informed by the official BSD-licensed 2026 template; upstream notices are retained.
+
+The [navigation laboratory](NAVIGATION.md) adds original trajectory and delayed-pose exercises with nine regression tests. These augment the mechanism suite; all physical/CAD limits above remain.

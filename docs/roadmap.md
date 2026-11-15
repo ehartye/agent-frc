@@ -1,5 +1,7 @@
 # Roadmap
 
-Shipped: original Java desktop lesson with tests and bounded simulation; version/freshness metadata lookup; deeper six-skill workflows and seven blank worksheets.
+Implemented: original desktop mechanism and trajectory/pose laboratories; nineteen JUnit tests plus bounded demo; metadata freshness/season lookup; six grounded skill workflows; ten blank worksheets.
 
-Remaining: teacher/mentor evaluation; full drivetrain/pose-estimator synthetic lab; camera-specific version-pinned integration; measured mechanism studies; Fusion sample drawing/export reopen exercise; final 2027 rules and production compatibility; compiled-binary dependency license review if binary redistribution is proposed. Host package loading awaits separately authorized installation.
+Next: caller/child-command audits for pinned historical team mechanisms; more realistic drivetrain dynamics and multi-camera ordering exercise; exact-model battery/charger documentation and AMPD installation reference; camera-version integration; Fusion drawing/export reopen exercise; mentor/student usability review.
+
+Season gates: final 2027 manual after official publication and verified production Systemcore compatibility. Physical studies need measured hardware and qualified supervision. Binary packages require a complete dependency license review. Plugin host loading awaits separately authorized installation.
