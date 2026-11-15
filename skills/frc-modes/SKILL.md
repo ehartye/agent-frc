@@ -19,3 +19,7 @@ Use the [mode acceptance worksheet](../../worksheets/mode-acceptance.csv). For t
 ## Version 0.3 evidence workflow
 
 Use [trajectory/pose exercise](../../examples/java-2026-sim/NAVIGATION.md) for software evidence. Require bounded completion, cancellation cleanup and a separate actuator-output policy. An ideal trajectory pass does not establish obstacle clearance or drivetrain dynamics.
+
+## Caller and evidence review
+
+Require an explicit completion/interrupt path. A feed helper may rely on a caller readiness gate; timed preparation does not prove readiness. The [lifecycle worksheet](../../worksheets/command-lifecycle.csv) separates immediate and next-periodic output observations.

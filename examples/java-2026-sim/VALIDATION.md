@@ -2,7 +2,7 @@
 
 Windows x86-64; Temurin Java 17.0.21+9; Gradle 8.11; GradleRIO/WPILib 2026.2.1; JUnit 5.10.1.
 
-Nineteen JUnit behavior tests and one bounded headless demo passed. Ten tests cover mechanism/mode/readiness behavior; nine cover trajectory generation/tracking, kinematic signs, capture timestamps, late vision insertion, reset baselines, temporal/outlier guards and delayed bias correction. Dependencies were cached; the run used --offline.
+Twenty-three JUnit behavior tests and one bounded headless demo passed. Ten tests cover mechanism/mode/readiness behavior; four cover command cleanup/disable; nine cover trajectory generation/tracking, kinematic signs, capture timestamps, late vision insertion, reset baselines, temporal/outlier guards and delayed bias correction. Dependencies were cached; the run used --offline.
 
 The original ideal trajectory completed 182 steps with 0.000589563 m translation and 0.00281310 rad heading error. Peak feedback-requested wheel speed 1.78103 m/s exceeded the 1.5 m/s reference constraint, remaining below the separate 3 m/s fixture output cap. These synthetic values are not real-robot accuracy.
 

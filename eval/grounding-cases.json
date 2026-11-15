@@ -1,0 +1,140 @@
+{
+  "schema": "frc-grounding-evaluation/v1",
+  "scope": "Deterministic public metadata selection only; not language-model skill effectiveness",
+  "defaultAsOf": "2026-11-15",
+  "cases": [
+    {
+      "id": "2026-trajectory",
+      "options": {
+        "season": 2026,
+        "topic": "trajectory"
+      },
+      "include": [
+        "PUBLIC-N03"
+      ]
+    },
+    {
+      "id": "2027-excludes-2026-trajectory",
+      "options": {
+        "season": 2027,
+        "topic": "trajectory"
+      },
+      "exclude": [
+        "PUBLIC-N03"
+      ]
+    },
+    {
+      "id": "2026-pose",
+      "options": {
+        "season": 2026,
+        "topic": "pose"
+      },
+      "include": [
+        "PUBLIC-N08"
+      ]
+    },
+    {
+      "id": "historical-default-exclusion",
+      "options": {
+        "season": 2026,
+        "topic": "Team6328"
+      },
+      "exclude": [
+        "PUBLIC-H04"
+      ]
+    },
+    {
+      "id": "historical-explicit-inclusion",
+      "options": {
+        "season": 2026,
+        "topic": "Team6328",
+        "includeHistorical": true
+      },
+      "include": [
+        "PUBLIC-H04"
+      ]
+    },
+    {
+      "id": "historical-never-future",
+      "options": {
+        "season": 2023,
+        "topic": "Team6328",
+        "includeHistorical": true
+      },
+      "exclude": [
+        "PUBLIC-H04"
+      ]
+    },
+    {
+      "id": "2027-no-2026-rulebook",
+      "options": {
+        "season": 2027,
+        "topic": "Season Materials"
+      },
+      "exclude": [
+        "P01"
+      ]
+    },
+    {
+      "id": "ampd-evidence",
+      "options": {
+        "season": 2026,
+        "topic": "AMPD"
+      },
+      "include": [
+        "PUBLIC-PWR10",
+        "PUBLIC-PWR11"
+      ]
+    },
+    {
+      "id": "exact-mk-model-evidence",
+      "options": {
+        "season": 2026,
+        "topic": "ES17-12"
+      },
+      "include": [
+        "PUBLIC-B01"
+      ]
+    },
+    {
+      "id": "historical-caller-evidence",
+      "options": {
+        "season": 2024,
+        "topic": "caller"
+      },
+      "include": [
+        "PUBLIC-H06",
+        "PUBLIC-H11"
+      ]
+    },
+    {
+      "id": "overdue-kop-visible",
+      "options": {
+        "season": 2027,
+        "topic": "Kit of Parts",
+        "asOf": "2026-11-18"
+      },
+      "atLeastOneStale": true
+    },
+    {
+      "id": "impossible-calendar-date",
+      "options": {
+        "season": 2026,
+        "topic": "trajectory",
+        "asOf": "2026-02-30"
+      },
+      "expectError": true
+    },
+    {
+      "id": "valid-leap-day",
+      "options": {
+        "season": 2026,
+        "topic": "trajectory",
+        "asOf": "2028-02-29"
+      },
+      "include": [
+        "PUBLIC-N03"
+      ]
+    }
+  ]
+}

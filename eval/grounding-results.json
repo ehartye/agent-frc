@@ -1,0 +1,228 @@
+{
+  "schema": "frc-grounding-results/v1",
+  "asOf": "2026-11-15",
+  "scope": "Deterministic public metadata selection only; not language-model skill effectiveness",
+  "inputs": [
+    {
+      "file": "scripts/lookup.mjs",
+      "sha256": "04d9275cbbcc3ee24e1bc48987ce57a5db6c9db89d8a5bd5ccaa71d9aa7165d6"
+    },
+    {
+      "file": "references/public-sources.json",
+      "sha256": "691dbf584d8e9642ef87a60336253369a8fb796da3825161f2758b6147b893f0"
+    },
+    {
+      "file": "eval/grounding-cases.json",
+      "sha256": "75fc64342aa7c7e806c71134b4e08848366f2942461be9ef0578be1a468e9af4"
+    }
+  ],
+  "passed": 13,
+  "total": 13,
+  "results": [
+    {
+      "id": "2026-trajectory",
+      "options": {
+        "asOf": "2026-11-15",
+        "season": 2026,
+        "topic": "trajectory"
+      },
+      "selectedIds": [
+        "PUBLIC-N01",
+        "PUBLIC-N02",
+        "PUBLIC-N03",
+        "PUBLIC-N04",
+        "PUBLIC-N05",
+        "PUBLIC-N06"
+      ],
+      "error": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "2027-excludes-2026-trajectory",
+      "options": {
+        "asOf": "2026-11-15",
+        "season": 2027,
+        "topic": "trajectory"
+      },
+      "selectedIds": [],
+      "error": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "2026-pose",
+      "options": {
+        "asOf": "2026-11-15",
+        "season": 2026,
+        "topic": "pose"
+      },
+      "selectedIds": [
+        "P10",
+        "P18",
+        "PUBLIC-N07",
+        "PUBLIC-N08",
+        "PUBLIC-N09",
+        "PUBLIC-N10",
+        "PUBLIC-N11"
+      ],
+      "error": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "historical-default-exclusion",
+      "options": {
+        "asOf": "2026-11-15",
+        "season": 2026,
+        "topic": "Team6328"
+      },
+      "selectedIds": [],
+      "error": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "historical-explicit-inclusion",
+      "options": {
+        "asOf": "2026-11-15",
+        "season": 2026,
+        "topic": "Team6328",
+        "includeHistorical": true
+      },
+      "selectedIds": [
+        "PUBLIC-H04",
+        "PUBLIC-H05",
+        "PUBLIC-H11",
+        "PUBLIC-H12",
+        "PUBLIC-H13",
+        "PUBLIC-H14",
+        "PUBLIC-H15"
+      ],
+      "error": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "historical-never-future",
+      "options": {
+        "asOf": "2026-11-15",
+        "season": 2023,
+        "topic": "Team6328",
+        "includeHistorical": true
+      },
+      "selectedIds": [],
+      "error": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "2027-no-2026-rulebook",
+      "options": {
+        "asOf": "2026-11-15",
+        "season": 2027,
+        "topic": "Season Materials"
+      },
+      "selectedIds": [],
+      "error": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "ampd-evidence",
+      "options": {
+        "asOf": "2026-11-15",
+        "season": 2026,
+        "topic": "AMPD"
+      },
+      "selectedIds": [
+        "PUBLIC-PWR10",
+        "PUBLIC-PWR11"
+      ],
+      "error": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "exact-mk-model-evidence",
+      "options": {
+        "asOf": "2026-11-15",
+        "season": 2026,
+        "topic": "ES17-12"
+      },
+      "selectedIds": [
+        "PUBLIC-B01"
+      ],
+      "error": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "historical-caller-evidence",
+      "options": {
+        "asOf": "2026-11-15",
+        "season": 2024,
+        "topic": "caller"
+      },
+      "selectedIds": [
+        "PUBLIC-H06",
+        "PUBLIC-H11",
+        "PUBLIC-H12",
+        "PUBLIC-H13"
+      ],
+      "error": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "overdue-kop-visible",
+      "options": {
+        "asOf": "2026-11-18",
+        "season": 2027,
+        "topic": "Kit of Parts"
+      },
+      "selectedIds": [
+        "P03"
+      ],
+      "error": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "impossible-calendar-date",
+      "options": {
+        "asOf": "2026-02-30",
+        "season": 2026,
+        "topic": "trajectory"
+      },
+      "selectedIds": [],
+      "error": true,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "valid-leap-day",
+      "options": {
+        "asOf": "2028-02-29",
+        "season": 2026,
+        "topic": "trajectory"
+      },
+      "selectedIds": [
+        "PUBLIC-N01",
+        "PUBLIC-N02",
+        "PUBLIC-N03",
+        "PUBLIC-N04",
+        "PUBLIC-N05",
+        "PUBLIC-N06"
+      ],
+      "error": false,
+      "passed": true,
+      "failures": []
+    }
+  ],
+  "limits": [
+    "No language-model response was generated or graded",
+    "No installed-host or user study",
+    "asOf compares review dates; it does not reconstruct a historical web snapshot"
+  ]
+}

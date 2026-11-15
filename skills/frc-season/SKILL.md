@@ -19,3 +19,7 @@ The read-only metadata selector is `node scripts/lookup.mjs --season YEAR --as-o
 ## Version 0.3 evidence workflow
 
 For 2027 veteran opt-outs, official detailed KoP sections and Nov 12reminder specify selection plus purchased/secured registration before Nov 17, 2026 at 17:00 Eastern; generic table says noon. Cite both and flag the conflict. Drive-base alternative is$450 AndyMark; tote alternative$125 each REV/AndyMark. Do not infer eligibility, register, pay or expose voucher codes.
+
+## Caller and evidence review
+
+Use npm run evaluate for deterministic source-selection regressions. A passing tool evaluation is not evidence of language-model skill effectiveness, rule compliance or a historical web snapshot.

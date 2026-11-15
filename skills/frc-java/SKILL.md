@@ -19,3 +19,7 @@ Use the [desktop lesson](../../examples/java-2026-sim/README.md) when a bounded 
 ## Version 0.3 evidence workflow
 
 Use the [navigation lesson](../../examples/java-2026-sim/NAVIGATION.md) alongside mechanism tests. Pin2026.2.1 APIs; validate generated paths before tracking. Report reference and corrected wheel-speed limits separately. Run the stated tasks and retain aggregate results, not machine-specific build reports.
+
+## Caller and evidence review
+
+Use the [cleanup laboratory](../../examples/java-2026-sim/CLEANUP.md) to distinguish trailing sequence actions from active-command end callbacks. State cancellation timing and Driver Station disable versus scheduler.disable. Do not infer physical stopping from numeric demand tests.

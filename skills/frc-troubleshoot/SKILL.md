@@ -19,3 +19,7 @@ Use expected-versus-observed evidence: model mismatch, timing mismatch, stale ob
 ## Version 0.3 evidence workflow
 
 Use [device worksheet](../../worksheets/device-evidence.csv). Identify exact PDH/PDP2/PH/PCM and connector/firmware/client version. PDH Hardware Client 2 guidance does not establish PH26.x USB compatibility; consult each device changelog. Preserve sticky-fault evidence. Distinguish electrical command, measured pressure and stored-energy state; disabled software does not vent air. Device ratings and 2026 rules do not establish2027 legality.
+
+## Caller and evidence review
+
+AMPD now has an official installation overview, but global maximum wire gauge is not per-terminal permission. Battery evidence must name exact suffix, document revision, temperature and rating basis. Preserve conflicting MK/Power-Sonic presentations; do not manufacture a charging recipe from an SDS or season current ceiling.

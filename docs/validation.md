@@ -1,7 +1,9 @@
-# Validation scope —0.3.0
+# Validation scope — 0.4.0
 
-Nine Node tests cover configuration and metadata-selection boundaries. All three plugin manifests and six skill frontmatter blocks validate. The [Java laboratory](../examples/java-2026-sim/VALIDATION.md) passed19 JUnit tests plus one bounded virtual-time demo on Windows x86-64.
+Ten Node tests cover configuration, metadata boundaries and calendar validity. All three manifests and six skill frontmatter blocks validate. Thirteen [deterministic grounding evaluations](evaluation.md) run actual public metadata selection with recorded input hashes. They are not LLM-response or skill-effectiveness tests.
 
-A bounded public-file allowlist/pattern scan and Markdown link check run before publication. Only reviewed source, blank worksheets, notices and the checksum-verified Gradle wrapper are packaged. Ignored build outputs and caches are excluded. Pattern scanning is not a universal secret detector.
+The [Java laboratory](../examples/java-2026-sim/VALIDATION.md) passes 23 JUnit tests plus one bounded demo on Windows x86-64:10 mechanism, 9 navigation and4cleanup regressions. Source reviews of historical teams were not executed as team projects.
 
-No installed-host loading, human/agent skill-effectiveness evaluation, physical robot/camera, CAD application or full-field physics simulation. Original navigation policy is educational, not calibrated operational logic.
+Public inventory/pattern and Markdown-link checks precede publication. Only source, blank worksheets, notices and the checksum-verified Gradle wrapper are packaged. No build outputs, private catalogs or credentials are included. Pattern scanning is not a universal secret detector.
+
+No installed-host loading, human/agent effectiveness evaluation, physical robot/camera or Fusion execution.

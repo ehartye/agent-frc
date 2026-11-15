@@ -1,7 +1,7 @@
 # Roadmap
 
-Implemented: original desktop mechanism and trajectory/pose laboratories; nineteen JUnit tests plus bounded demo; metadata freshness/season lookup; six grounded skill workflows; ten blank worksheets.
+Implemented: desktop mechanism/navigation/cleanup exercises; 23 JUnit tests plus bounded demo; 10 Node regressions; 13 deterministic public-grounding evaluations; 6 skills; 12 blank worksheets.
 
-Next: caller/child-command audits for pinned historical team mechanisms; more realistic drivetrain dynamics and multi-camera ordering exercise; exact-model battery/charger documentation and AMPD installation reference; camera-version integration; Fusion drawing/export reopen exercise; mentor/student usability review.
+Source gaps narrowed: official AMPD installation overview; exact historical MK datasheet and Power-Sonic variant/revision evidence; ten additional pinned team caller/low-level files.
 
-Season gates: final 2027 manual after official publication and verified production Systemcore compatibility. Physical studies need measured hardware and qualified supervision. Binary packages require a complete dependency license review. Plugin host loading awaits separately authorized installation.
+Remaining: AMPD terminal-specific ratings/torque; current MK document and exact legacy NB applicability; remaining team IO/lifecycle dependencies; realistic drivetrain and multi-camera exercises; actual Fusion export/reopen; mentor/student review; independent LLM skill evaluations and host loading. Final 2027 rules and production Systemcore compatibility await evidence. No hardware operation is implemented.

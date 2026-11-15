@@ -19,3 +19,7 @@ Use the original [drawing release](../../worksheets/drawing-release.csv), [motio
 ## Version 0.3 evidence workflow
 
 Trace source files with [case worksheet](../../worksheets/mechanism-case-trace.csv): requested goal, sensor state, readiness entry gate, continuous readiness, interruption cleanup and caller dependencies. Use pinned2024 Team254/6328 links as historical patterns. Do not infer CAD geometry, physical stop or jam-clearing safety from Java goals.
+
+## Caller and evidence review
+
+For historical caller studies, trace readiness entry, continued authorization, end callbacks, defaults and subsequent periodic output separately. Team254 file-level BSD notices can differ from root MIT; check each artifact before copying. The original cleanup tests do not execute team code.

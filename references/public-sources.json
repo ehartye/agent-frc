@@ -721,6 +721,338 @@
       "topics": [
         "mechanisms"
       ]
+    },
+    {
+      "id": "PUBLIC-PWR10",
+      "title": "AndyMark AMPD product",
+      "url": "https://andymark.com/products/ampd-andymark-power-distribution",
+      "scope": "am-5754; living page, date unspecified",
+      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
+      "license": "Redistribution permission not established",
+      "seasons": [],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "AMPD",
+        "power"
+      ]
+    },
+    {
+      "id": "PUBLIC-PWR11",
+      "title": "AndyMark AMPD installation overview",
+      "url": "https://docs.andymark.com/frc-electronics/power-distribution/ampd-andymark-power-distribution-am-5754",
+      "scope": "am-5754; living page, date unspecified",
+      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
+      "license": "Redistribution permission not established",
+      "seasons": [],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "AMPD",
+        "power"
+      ]
+    },
+    {
+      "id": "PUBLIC-B01",
+      "title": "MK ES17-12 manufacturer datasheet",
+      "url": "https://documents.andymark.com/cacc1eb873bfa1d6bda7b8a738560a16992dd936cd4f6e119a512326d85e2759/am-0844%20ES17-12%20User%20Guide.pdf",
+      "scope": "copyright2018; exact ES17-12; current revision not verified",
+      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
+      "license": "MK expressly restricts reproduction without written permission",
+      "seasons": [],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "battery",
+        "charging"
+      ]
+    },
+    {
+      "id": "PUBLIC-B02",
+      "title": "Power-Sonic PS-12180 official datasheet",
+      "url": "https://www.power-sonic.com/wp-content/uploads/datasheets/ps-12180-12181.pdf",
+      "scope": "v1.2; updated2026-08-18; F2/FR M5/M5/NB2 variants",
+      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
+      "license": "Power-Sonic all rights reserved",
+      "seasons": [],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "battery",
+        "charging"
+      ]
+    },
+    {
+      "id": "PUBLIC-B03",
+      "title": "Power-Sonic NB-labeled historical datasheet",
+      "url": "https://files.batteryjunction.com/frontend/files/powersonic/datasheet/POWERSONIC-PS-12180-NB-DataSheet.pdf",
+      "scope": "Rev1:08/20; copyright2018; NB illustration/NB2 drawing",
+      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
+      "license": "Power-Sonic all rights reserved",
+      "seasons": [],
+      "authority_state": "historical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "battery",
+        "charging"
+      ]
+    },
+    {
+      "id": "PUBLIC-H06",
+      "title": "Team254 RobotContainer caller audit",
+      "url": "https://raw.githubusercontent.com/Team254/FRC-2024-Public/040f653744c9b18182be5f6bc51a7e505e346e59/src/main/java/com/team254/frc2024/RobotContainer.java",
+      "scope": "2024 commit040f653744c9b18182be5f6bc51a7e505e346e59; selected bindings/defaults",
+      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
+      "license": "File-level WPILib BSD header; root MIT is insufficient alone",
+      "seasons": [
+        2024
+      ],
+      "authority_state": "historical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "mechanisms",
+        "caller"
+      ]
+    },
+    {
+      "id": "PUBLIC-H07",
+      "title": "Team254 ShooterFactory",
+      "url": "https://raw.githubusercontent.com/Team254/FRC-2024-Public/040f653744c9b18182be5f6bc51a7e505e346e59/src/main/java/com/team254/frc2024/command_factories/ShooterFactory.java",
+      "scope": "2024 commit040f653744c9b18182be5f6bc51a7e505e346e59",
+      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
+      "license": "Root MIT previously verified; file/dependency terms must be checked before copying",
+      "seasons": [
+        2024
+      ],
+      "authority_state": "historical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "mechanisms",
+        "cleanup"
+      ]
+    },
+    {
+      "id": "PUBLIC-H08",
+      "title": "Team254 ShooterStage1Subsystem",
+      "url": "https://raw.githubusercontent.com/Team254/FRC-2024-Public/040f653744c9b18182be5f6bc51a7e505e346e59/src/main/java/com/team254/frc2024/subsystems/shooterStage1/ShooterStage1Subsystem.java",
+      "scope": "2024 commit040f653744c9b18182be5f6bc51a7e505e346e59",
+      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
+      "license": "Root MIT previously verified; file/dependency terms must be checked before copying",
+      "seasons": [
+        2024
+      ],
+      "authority_state": "historical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "mechanisms",
+        "cleanup"
+      ]
+    },
+    {
+      "id": "PUBLIC-H09",
+      "title": "Team254 ServoMotorSubsystem",
+      "url": "https://raw.githubusercontent.com/Team254/FRC-2024-Public/040f653744c9b18182be5f6bc51a7e505e346e59/src/main/java/com/team254/lib/subsystems/ServoMotorSubsystem.java",
+      "scope": "2024 commit040f653744c9b18182be5f6bc51a7e505e346e59",
+      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
+      "license": "Root MIT previously verified; file/dependency terms must be checked before copying",
+      "seasons": [
+        2024
+      ],
+      "authority_state": "historical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "mechanisms",
+        "cleanup"
+      ]
+    },
+    {
+      "id": "PUBLIC-H10",
+      "title": "Team254 FeederSubsystem",
+      "url": "https://raw.githubusercontent.com/Team254/FRC-2024-Public/040f653744c9b18182be5f6bc51a7e505e346e59/src/main/java/com/team254/frc2024/subsystems/feeder/FeederSubsystem.java",
+      "scope": "2024 commit040f653744c9b18182be5f6bc51a7e505e346e59",
+      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
+      "license": "Root MIT previously verified; file/dependency terms must be checked before copying",
+      "seasons": [
+        2024
+      ],
+      "authority_state": "historical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "mechanisms",
+        "cleanup"
+      ]
+    },
+    {
+      "id": "PUBLIC-H11",
+      "title": "Team6328 RobotContainer caller audit",
+      "url": "https://raw.githubusercontent.com/Mechanical-Advantage/RobotCode2024Public/45144b3daefaca93a54de1d5c5e163c29d9ad378/src/main/java/org/littletonrobotics/frc2024/RobotContainer.java",
+      "scope": "2024 commit45144b3daefaca93a54de1d5c5e163c29d9ad378; selected shooting bindings",
+      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
+      "license": "Root MIT previously verified; file/dependency terms must be checked before copying",
+      "seasons": [
+        2024
+      ],
+      "authority_state": "historical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "mechanisms",
+        "caller"
+      ]
+    },
+    {
+      "id": "PUBLIC-H12",
+      "title": "Team6328 autonomous feed helper",
+      "url": "https://raw.githubusercontent.com/Mechanical-Advantage/RobotCode2024Public/45144b3daefaca93a54de1d5c5e163c29d9ad378/src/main/java/org/littletonrobotics/frc2024/commands/auto/AutoCommands.java",
+      "scope": "2024 commit45144b3daefaca93a54de1d5c5e163c29d9ad378",
+      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
+      "license": "Root MIT previously verified; file/dependency terms must be checked before copying",
+      "seasons": [
+        2024
+      ],
+      "authority_state": "historical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "autonomous",
+        "caller"
+      ]
+    },
+    {
+      "id": "PUBLIC-H13",
+      "title": "Team6328 autonomous caller policies",
+      "url": "https://raw.githubusercontent.com/Mechanical-Advantage/RobotCode2024Public/45144b3daefaca93a54de1d5c5e163c29d9ad378/src/main/java/org/littletonrobotics/frc2024/commands/auto/AutoBuilder.java",
+      "scope": "2024 commit45144b3daefaca93a54de1d5c5e163c29d9ad378; selected routes",
+      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
+      "license": "Root MIT previously verified; file/dependency terms must be checked before copying",
+      "seasons": [
+        2024
+      ],
+      "authority_state": "historical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "autonomous",
+        "caller"
+      ]
+    },
+    {
+      "id": "PUBLIC-H14",
+      "title": "Team6328 feeder goals",
+      "url": "https://raw.githubusercontent.com/Mechanical-Advantage/RobotCode2024Public/45144b3daefaca93a54de1d5c5e163c29d9ad378/src/main/java/org/littletonrobotics/frc2024/subsystems/rollers/feeder/Feeder.java",
+      "scope": "2024 commit45144b3daefaca93a54de1d5c5e163c29d9ad378",
+      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
+      "license": "Root MIT previously verified; file/dependency terms must be checked before copying",
+      "seasons": [
+        2024
+      ],
+      "authority_state": "historical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "mechanisms",
+        "cleanup"
+      ]
+    },
+    {
+      "id": "PUBLIC-H15",
+      "title": "Team6328 generic roller output",
+      "url": "https://raw.githubusercontent.com/Mechanical-Advantage/RobotCode2024Public/45144b3daefaca93a54de1d5c5e163c29d9ad378/src/main/java/org/littletonrobotics/frc2024/subsystems/rollers/GenericRollerSystem.java",
+      "scope": "2024 commit45144b3daefaca93a54de1d5c5e163c29d9ad378",
+      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
+      "license": "Root MIT previously verified; file/dependency terms must be checked before copying",
+      "seasons": [
+        2024
+      ],
+      "authority_state": "historical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "mechanisms",
+        "cleanup"
+      ]
+    },
+    {
+      "id": "PUBLIC-Q01",
+      "title": "WPILib sequential command lifecycle",
+      "url": "https://raw.githubusercontent.com/wpilibsuite/allwpilib/v2026.2.1/wpilibNewCommands/src/main/java/edu/wpi/first/wpilibj2/command/SequentialCommandGroup.java",
+      "scope": "v2026.2.1; edu.wpi.first command API",
+      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
+      "license": "WPILib BSD-3-Clause; existing notice retained",
+      "seasons": [
+        2026
+      ],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "commands",
+        "cleanup"
+      ]
+    },
+    {
+      "id": "PUBLIC-Q02",
+      "title": "WPILib command factories",
+      "url": "https://raw.githubusercontent.com/wpilibsuite/allwpilib/v2026.2.1/wpilibNewCommands/src/main/java/edu/wpi/first/wpilibj2/command/Commands.java",
+      "scope": "v2026.2.1; edu.wpi.first command API",
+      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
+      "license": "WPILib BSD-3-Clause; existing notice retained",
+      "seasons": [
+        2026
+      ],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "commands",
+        "cleanup"
+      ]
+    },
+    {
+      "id": "PUBLIC-Q03",
+      "title": "WPILib command scheduler",
+      "url": "https://raw.githubusercontent.com/wpilibsuite/allwpilib/v2026.2.1/wpilibNewCommands/src/main/java/edu/wpi/first/wpilibj2/command/CommandScheduler.java",
+      "scope": "v2026.2.1; edu.wpi.first command API",
+      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
+      "license": "WPILib BSD-3-Clause; existing notice retained",
+      "seasons": [
+        2026
+      ],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "commands",
+        "cleanup"
+      ]
+    },
+    {
+      "id": "PUBLIC-Q04",
+      "title": "WPILib trigger edge behavior",
+      "url": "https://raw.githubusercontent.com/wpilibsuite/allwpilib/v2026.2.1/wpilibNewCommands/src/main/java/edu/wpi/first/wpilibj2/command/button/Trigger.java",
+      "scope": "v2026.2.1; edu.wpi.first command API",
+      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
+      "license": "WPILib BSD-3-Clause; existing notice retained",
+      "seasons": [
+        2026
+      ],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "commands",
+        "cleanup"
+      ]
     }
   ]
 }

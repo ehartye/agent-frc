@@ -8,7 +8,7 @@
   "junit": "5.10.1",
   "command": "gradlew.bat --offline --no-daemon --console plain test headlessDemo",
   "unit": {
-    "tests": 19,
+    "tests": 23,
     "skipped": 0,
     "failures": 0,
     "errors": 0
@@ -40,6 +40,13 @@
   ],
   "suites": [
     {
+      "name": "org.agentfrc.lesson.CleanupTest",
+      "tests": 4,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0
+    },
+    {
       "name": "org.agentfrc.lesson.LessonTest",
       "tests": 10,
       "skipped": 0,
@@ -70,5 +77,16 @@
     "encoderBiasBeforeMeters": 0.2,
     "encoderBiasAfterMeters": 0.11,
     "evidence": "Values asserted by passing original regression tests; no physical measurement"
+  },
+  "cleanup": {
+    "tests": 4,
+    "pureStateOnly": true,
+    "observations": [
+      "Trailing cleanup runs after normal completion",
+      "Cancellation skips trailing step in deliberately incomplete sequence",
+      "runEnd clears numeric demand on cancellation and requirement conflict",
+      "Driver Station disable cancels active non-disabled command and invokes end"
+    ],
+    "limits": "Original fixture only; historical team code and physical motor response not executed"
   }
 }
