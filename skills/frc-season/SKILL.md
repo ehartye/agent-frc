@@ -1,25 +1,31 @@
 ---
 name: frc-season
-description: "Use when choosing an FRC season, reading rules, planning Kit of Parts or resolving source freshness."
+description: "Use when selecting or interpreting an FRC season, manual, update, Kit of Parts or software baseline."
 ---
-# frc-season
+# Season and authority review
 
-Read [grounding policy](../../docs/grounding.md) and [public source links](../../references/public-sources.json). Optional vault use must be explicit; absence is normal.
+Read [grounding policy](../../docs/grounding.md). Start with the [learning brief](../../docs/briefs.md): npm run brief -- --workflow season --season YEAR --as-of YYYY-MM-DD. The brief is optional scaffolding, not a source-reading substitute. No vault is required; local catalog use must be explicitly configured.
 
-Establish the requested season and event. Open the official manual/update gateway and record edition and access date. Distinguish rule text, Q&A, draft previews, vendor requirements and historical examples. Inventory rookie/veteran/opt-out/region-specific kit provisions; never assume identical hardware. Record disagreements and unresolved requirements. Produce a requirement worksheet with exact rule IDs; do not invent final 2027 rules from previews.
+## Establish context
 
-Output a concise scope/version statement, evidence links, original guidance, validation performed and remaining gaps. Include only relevant safety constraints. Do not claim runtime verification from documentation.
+- Requested season and event.
+- Manual edition and update trail.
+- Decision date and deadline timezone.
 
-Optional vault coverage keys: season-selection, kit-of-parts, rules-2026. Resolve through the configured catalog, never a hard-coded path.
+## Work through the evidence
 
-## Developed learning tools
+1. Open official manual and updates; identify the rule or explicitly unresolved question.
+2. Separate final rules, previews, announcements and planning pages.
+3. Record conflicting deadline wording and transaction-specific evidence.
 
-The read-only metadata selector is `node scripts/lookup.mjs --season YEAR --as-of YYYY-MM-DD --topic TEXT`. Use a path relative to the plugin root. It returns preview/stale labels and excludes unrelated seasons unless --historical is explicit. It does not verify rules; open official sources before answering.
+Inspect unmatchedQueries, omitted counts, source versions and review dates. Open relevant official/pinned sources before factual decisions. Keep source findings, recommendations and unknowns separate. Never infer compatibility from an empty season list or a matching keyword.
 
-## Version 0.3 evidence workflow
+## Reviewable output
 
-For 2027 veteran opt-outs, official detailed KoP sections and Nov 12reminder specify selection plus purchased/secured registration before Nov 17, 2026 at 17:00 Eastern; generic table says noon. Cite both and flag the conflict. Drive-base alternative is$450 AndyMark; tote alternative$125 each REV/AndyMark. Do not infer eligibility, register, pay or expose voucher codes.
+Deliver a dated decision table with claim, authority, applicability and unresolved items. For each material claim identify source URL/version, applicability and verification level. Record actual commands/results separately from proposed tests.
 
-## Caller and evidence review
+- Every legality claim has an official edition/rule citation.
+- Unknown future timings or dimensions stay unknown.
+- Team registration/payment status is not assumed.
 
-Use npm run evaluate for deterministic source-selection regressions. A passing tool evaluation is not evidence of language-model skill effectiveness, rule compliance or a historical web snapshot.
+No hardware operation or deployment is authorized by this skill. Do not infer physical safety, CAD validity or model effectiveness from static review or passing software fixtures. Source/file/dependency licenses must be checked before copying.

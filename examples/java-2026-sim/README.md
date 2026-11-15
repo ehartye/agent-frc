@@ -22,3 +22,5 @@ See [dependency and source notices](THIRD_PARTY.md). The original lesson code is
 The [navigation laboratory](NAVIGATION.md) adds original trajectory and delayed-pose exercises with nine regression tests. These augment the mechanism suite; all physical/CAD limits above remain.
 
 The [cleanup laboratory](CLEANUP.md) adds four pure-state lifecycle regressions, including a deliberately incomplete trailing-cleanup counterexample.
+
+The [event laboratory](EVENTS.md) adds six trigger/scheduler-boundary regressions.

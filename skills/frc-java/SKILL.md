@@ -1,25 +1,31 @@
 ---
 name: frc-java
-description: "Use when planning, reviewing or debugging Java WPILib architecture, tests or desktop simulation."
+description: "Use when designing, implementing or testing WPILib Java code."
 ---
-# frc-java
+# Java implementation and test plan
 
-Read [grounding policy](../../docs/grounding.md) and [public source links](../../references/public-sources.json). Optional vault use must be explicit; absence is normal.
+Read [grounding policy](../../docs/grounding.md). Start with the [learning brief](../../docs/briefs.md): npm run brief -- --workflow java --season YEAR --as-of YYYY-MM-DD. The brief is optional scaffolding, not a source-reading substitute. No vault is required; local catalog use must be explicitly configured.
 
-Read the selected release, project Gradle/vendordeps and local project instructions. Separate lifecycle, subsystem ownership, command composition and I/O. Check scheduler and mode cancellation. Prefer meaningful interlock, timeout, interruption and frame tests. Use the project wrapper only within authorized local work; report actual build/test/simulation output. Never mix 2026 stable imports with development APIs or claim simulation validates physical safety.
+## Establish context
 
-Output a concise scope/version statement, evidence links, original guidance, validation performed and remaining gaps. Include only relevant safety constraints. Do not claim runtime verification from documentation.
+- WPILib/GradleRIO/JDK versions.
+- Subsystem ownership and command requirements.
+- Desktop test versus robot deployment scope.
 
-Optional vault coverage keys: java-architecture, testing-simulation, example-projects. Resolve through the configured catalog, never a hard-coded path.
+## Work through the evidence
 
-## Developed learning tools
+1. Trace inputs, units, subsystem state, command ownership and cleanup.
+2. Build the isolated learning project at its pinned baseline.
+3. Exercise timeout, interruption, disable and invalid-input paths before tuning.
 
-Use the [desktop lesson](../../examples/java-2026-sim/README.md) when a bounded runnable teaching example fits. Read its validation record and license boundaries. Its constants are synthetic fixtures; preserve that label. Run tests after behavior changes and keep robot deployment absent. Record failed attempts as well as final evidence.
+Inspect unmatchedQueries, omitted counts, source versions and review dates. Open relevant official/pinned sources before factual decisions. Keep source findings, recommendations and unknowns separate. Never infer compatibility from an empty season list or a matching keyword.
 
-## Version 0.3 evidence workflow
+## Reviewable output
 
-Use the [navigation lesson](../../examples/java-2026-sim/NAVIGATION.md) alongside mechanism tests. Pin2026.2.1 APIs; validate generated paths before tracking. Report reference and corrected wheel-speed limits separately. Run the stated tasks and retain aggregate results, not machine-specific build reports.
+Deliver a code/test change plan with source versions and failure-path assertions. For each material claim identify source URL/version, applicability and verification level. Record actual commands/results separately from proposed tests.
 
-## Caller and evidence review
+- Compile/test commands and actual results are recorded.
+- Requested output and measured output are distinguished.
+- Historical projects are not treated as reproduced by another release.
 
-Use the [cleanup laboratory](../../examples/java-2026-sim/CLEANUP.md) to distinguish trailing sequence actions from active-command end callbacks. State cancellation timing and Driver Station disable versus scheduler.disable. Do not infer physical stopping from numeric demand tests.
+Use the [pinned desktop exercise](../../examples/java-2026-sim/README.md) only with its stated baseline. No hardware operation or deployment is authorized by this skill. Do not infer physical safety, CAD validity or model effectiveness from static review or passing software fixtures. Source/file/dependency licenses must be checked before copying.

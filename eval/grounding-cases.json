@@ -135,6 +135,78 @@
       "include": [
         "PUBLIC-N03"
       ]
+    },
+    {
+      "id": "brief-season",
+      "operation": "brief",
+      "options": {
+        "workflow": "season",
+        "season": 2026
+      },
+      "expectMode": "public-reference-only",
+      "expectEvidenceLevel": "metadata-and-original-checklist-only"
+    },
+    {
+      "id": "brief-java",
+      "operation": "brief",
+      "options": {
+        "workflow": "java",
+        "season": 2026
+      },
+      "expectMode": "public-reference-only",
+      "expectEvidenceLevel": "metadata-and-original-checklist-only"
+    },
+    {
+      "id": "brief-mechanism-cad",
+      "operation": "brief",
+      "options": {
+        "workflow": "mechanism-cad",
+        "season": 2026
+      },
+      "expectMode": "public-reference-only",
+      "expectEvidenceLevel": "metadata-and-original-checklist-only"
+    },
+    {
+      "id": "brief-vision",
+      "operation": "brief",
+      "options": {
+        "workflow": "vision",
+        "season": 2026
+      },
+      "expectMode": "public-reference-only",
+      "expectEvidenceLevel": "metadata-and-original-checklist-only"
+    },
+    {
+      "id": "brief-modes",
+      "operation": "brief",
+      "options": {
+        "workflow": "modes",
+        "season": 2026
+      },
+      "expectMode": "public-reference-only",
+      "expectEvidenceLevel": "metadata-and-original-checklist-only"
+    },
+    {
+      "id": "brief-troubleshoot",
+      "operation": "brief",
+      "options": {
+        "workflow": "troubleshoot",
+        "season": 2026
+      },
+      "expectMode": "public-reference-only",
+      "expectEvidenceLevel": "metadata-and-original-checklist-only"
+    },
+    {
+      "id": "brief-future-lab-boundary",
+      "operation": "brief",
+      "options": {
+        "workflow": "java",
+        "season": 2027
+      },
+      "expectLabStatus": "not-verified-for-selected-season",
+      "exclude": [
+        "PUBLIC-Q03"
+      ]
     }
   ]
 }

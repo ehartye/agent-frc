@@ -1053,6 +1053,82 @@
         "commands",
         "cleanup"
       ]
+    },
+    {
+      "id": "PUBLIC-H16",
+      "title": "Team254 declared build baseline",
+      "url": "https://raw.githubusercontent.com/Team254/FRC-2024-Public/040f653744c9b18182be5f6bc51a7e505e346e59/build.gradle",
+      "scope": "2024; commit040f653744c9b18182be5f6bc51a7e505e346e59",
+      "handling": "link-only; original concise metadata/synthesis; no source body or configuration values copied",
+      "license": "Root MIT previously reviewed; file/dependency terms require separate check before copying",
+      "seasons": [
+        2024
+      ],
+      "authority_state": "historical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "historical",
+        "lifecycle",
+        "build"
+      ]
+    },
+    {
+      "id": "PUBLIC-H17",
+      "title": "Team6328 declared build baseline",
+      "url": "https://raw.githubusercontent.com/Mechanical-Advantage/RobotCode2024Public/45144b3daefaca93a54de1d5c5e163c29d9ad378/build.gradle",
+      "scope": "2024; commit45144b3daefaca93a54de1d5c5e163c29d9ad378",
+      "handling": "link-only; original concise metadata/synthesis; no source body or configuration values copied",
+      "license": "Root MIT previously reviewed; file/dependency terms require separate check before copying",
+      "seasons": [
+        2024
+      ],
+      "authority_state": "historical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "historical",
+        "lifecycle",
+        "build"
+      ]
+    },
+    {
+      "id": "PUBLIC-H18",
+      "title": "Team254 Robot lifecycle",
+      "url": "https://raw.githubusercontent.com/Team254/FRC-2024-Public/040f653744c9b18182be5f6bc51a7e505e346e59/src/main/java/com/team254/frc2024/Robot.java",
+      "scope": "2024; commit040f653744c9b18182be5f6bc51a7e505e346e59",
+      "handling": "link-only; original concise metadata/synthesis; no source body or configuration values copied",
+      "license": "File-level WPILib BSD header",
+      "seasons": [
+        2024
+      ],
+      "authority_state": "historical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "historical",
+        "lifecycle",
+        "build"
+      ]
+    },
+    {
+      "id": "PUBLIC-H19",
+      "title": "Team6328 Robot lifecycle",
+      "url": "https://raw.githubusercontent.com/Mechanical-Advantage/RobotCode2024Public/45144b3daefaca93a54de1d5c5e163c29d9ad378/src/main/java/org/littletonrobotics/frc2024/Robot.java",
+      "scope": "2024; commit45144b3daefaca93a54de1d5c5e163c29d9ad378",
+      "handling": "link-only; original concise metadata/synthesis; no source body or configuration values copied",
+      "license": "Root MIT previously reviewed; file/dependency terms require separate check before copying",
+      "seasons": [
+        2024
+      ],
+      "authority_state": "historical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "historical",
+        "lifecycle",
+        "build"
+      ]
     }
   ]
 }

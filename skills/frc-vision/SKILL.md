@@ -1,21 +1,31 @@
 ---
 name: frc-vision
-description: "Use when planning or debugging FRC localization, AprilTags or targeting."
+description: "Use when planning or debugging FRC vision, localization or targeting."
 ---
-# frc-vision
+# Vision and localization contract
 
-Read [grounding policy](../../docs/grounding.md) and [public source links](../../references/public-sources.json). Optional vault use must be explicit; absence is normal.
+Read [grounding policy](../../docs/grounding.md). Start with the [learning brief](../../docs/briefs.md): npm run brief -- --workflow vision --season YEAR --as-of YYYY-MM-DD. The brief is optional scaffolding, not a source-reading substitute. No vault is required; local catalog use must be explicitly configured.
 
-Pin camera firmware, vision library, field layout and robot software. Define all frames, transform direction, units and timestamp clock. Review calibration, latency, uncertainty, invalid observations and logging. Distinguish pose estimation from mechanism aiming. Define readiness and loss-of-target behavior; do not transfer vendor sample rejection thresholds across versions. Use synthetic/replay evidence before proposing supervised physical validation.
+## Establish context
 
-Output a concise scope/version statement, evidence links, original guidance, validation performed and remaining gaps. Include only relevant safety constraints. Do not claim runtime verification from documentation.
+- Camera/firmware/library/field-layout versions.
+- Transform direction, units and field/alliance convention.
+- Capture clock, latency, frame ordering and reset epoch.
 
-Optional vault coverage keys: vision-targeting, field-robot-fundamentals. Resolve through the configured catalog, never a hard-coded path.
+## Work through the evidence
 
-## Developed learning tools
+1. Document frame transforms and timestamp origin before fusion.
+2. Exercise stale/future/outlier/duplicate/pre-reset behavior.
+3. Record calibration evidence separately from synthetic estimator tests.
 
-Use the [calibration worksheet](../../worksheets/vision-calibration.csv). Distinguish camera/resolution identity, transform direction and timestamp clock. The desktop lesson includes original delayed-estimator regression exercises; camera calibration remains unverified.
+Inspect unmatchedQueries, omitted counts, source versions and review dates. Open relevant official/pinned sources before factual decisions. Keep source findings, recommendations and unknowns separate. Never infer compatibility from an empty season list or a matching keyword.
 
-## Version 0.3 evidence workflow
+## Reviewable output
 
-Use [NavigationTest](../../examples/java-2026-sim/src/test/java/org/agentfrc/lesson/NavigationTest.java) for capture/arrival time, reset baselines and delayed correction. The pinned estimator accepts future/outlier inputs and replaces later corrections on old insertion; require an explicit application policy. Fixture thresholds are not camera recommendations. State clock/frame, ordering/reset epoch and missing calibration evidence.
+Deliver a frame/time contract and rejection-policy test table. For each material claim identify source URL/version, applicability and verification level. Record actual commands/results separately from proposed tests.
+
+- Capture time is not silently replaced by arrival time.
+- Fixture thresholds are not recommendations for every camera.
+- No vision accuracy claim follows solely from source review.
+
+Use the [pinned desktop exercise](../../examples/java-2026-sim/NAVIGATION.md) only with its stated baseline. No hardware operation or deployment is authorized by this skill. Do not infer physical safety, CAD validity or model effectiveness from static review or passing software fixtures. Source/file/dependency licenses must be checked before copying.

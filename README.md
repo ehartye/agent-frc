@@ -1,18 +1,18 @@
 # agent-frc
 
-Version **0.4.0** provides six season-aware FRC learning skills, an original runnable Java desktop laboratory, twelve engineering worksheets and optional local-vault metadata lookup. Independent educational work; no FIRST or vendor endorsement.
+Version **0.5.0** provides six season-aware FRC learning skills, an original runnable Java desktop laboratory, twelve engineering worksheets and optional local-vault metadata lookup. Independent educational work; no FIRST or vendor endorsement.
 
-- [Java laboratory](examples/java-2026-sim/README.md): Java 17, Gradle 8.11, WPILib 2026.2.1. Twenty-three behavior tests plus a bounded demo passed on Windows x86-64. New [navigation exercises](examples/java-2026-sim/NAVIGATION.md) cover trajectories and delayed pose estimation.
+- [Java laboratory](examples/java-2026-sim/README.md): Java 17, Gradle 8.11, WPILib 2026.2.1. Twenty-nine behavior tests plus a bounded demo passed on Windows x86-64. New [navigation exercises](examples/java-2026-sim/NAVIGATION.md) cover trajectories and delayed pose estimation.
 - [Worksheets](worksheets/README.md): original blank templates for mechanisms, CAD/field, calibration, navigation, device evidence and source-file tracing.
 - [Architecture and six skills](docs/architecture.md): season selection, Java, mechanism/CAD, vision, modes and troubleshooting, with public primary-source links.
 
-## Metadata lookup
+## Learning briefs and metadata lookup
 
-Node 20.11+; no Node dependencies. Run npm test, npm run validate and npm run evaluate. Thirteen deterministic grounding evaluations pass; [scope and results](docs/evaluation.md) distinguish them from unexecuted language-model skill evaluations.
+Node 20.11+; no Node dependencies. Generate a [learning brief](docs/briefs.md) with `npm run brief -- --workflow modes --season 2026 --as-of 2026-11-15`. Briefs expose missing context and partial source coverage; they do not read linked bodies or decide legality. Run npm test, npm run validate and npm run evaluate. Twenty deterministic grounding/brief evaluations pass; [scope and results](docs/evaluation.md) distinguish them from unexecuted language-model skill evaluations.
 
 `npm run lookup -- --season 2026 --as-of 2026-11-15 --topic trajectory`
 
-Ten Node tests cover explicit configuration, bounded schema/size checks, allowlisted metadata, season selection and freshness labels. Lookup defaults to public links. FRC_VAULT_PATH must be explicitly configured to read a compatible local catalog; no guessed path, clone, upload or sync exists. It never returns source bodies or arbitrary catalog paths. --historical admits past seasons only. Reopen official sources before rules decisions.
+Seventeen Node tests cover explicit configuration, bounded schema/size checks, allowlisted metadata, season selection and freshness labels. Lookup defaults to public links. FRC_VAULT_PATH must be explicitly configured to read a compatible local catalog; no guessed path, clone, upload or sync exists. It never returns source bodies or arbitrary catalog paths. --historical admits past seasons only. Reopen official sources before rules decisions.
 
 ## Boundaries
 

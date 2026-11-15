@@ -1,0 +1,148 @@
+{
+  "schema": "frc-workflows/v1",
+  "as_of": "2026-11-15",
+  "workflows": {
+    "season": {
+      "title": "Season and authority review",
+      "queries": [
+        "Season Materials",
+        "Game and Season",
+        "Kit of Parts"
+      ],
+      "context": [
+        "Requested season and event",
+        "Manual edition and update trail",
+        "Decision date and deadline timezone"
+      ],
+      "steps": [
+        "Open official manual and updates; identify the rule or explicitly unresolved question",
+        "Separate final rules, previews, announcements and planning pages",
+        "Record conflicting deadline wording and transaction-specific evidence"
+      ],
+      "acceptance": [
+        "Every legality claim has an official edition/rule citation",
+        "Unknown future timings or dimensions stay unknown",
+        "Team registration/payment status is not assumed"
+      ],
+      "deliverable": "A dated decision table with claim, authority, applicability and unresolved items"
+    },
+    "java": {
+      "title": "Java implementation and test plan",
+      "queries": [
+        "Java",
+        "commands"
+      ],
+      "context": [
+        "WPILib/GradleRIO/JDK versions",
+        "Subsystem ownership and command requirements",
+        "Desktop test versus robot deployment scope"
+      ],
+      "steps": [
+        "Trace inputs, units, subsystem state, command ownership and cleanup",
+        "Build the isolated learning project at its pinned baseline",
+        "Exercise timeout, interruption, disable and invalid-input paths before tuning"
+      ],
+      "acceptance": [
+        "Compile/test commands and actual results are recorded",
+        "Requested output and measured output are distinguished",
+        "Historical projects are not treated as reproduced by another release"
+      ],
+      "deliverable": "A code/test change plan with source versions and failure-path assertions",
+      "lab": "examples/java-2026-sim/README.md"
+    },
+    "mechanism-cad": {
+      "title": "Mechanism and CAD evidence plan",
+      "queries": [
+        "mechanisms",
+        "Fusion"
+      ],
+      "context": [
+        "Game-piece geometry and season envelope",
+        "Load cases, motion range and manufacturing process",
+        "CAD document/version and measurement provenance"
+      ],
+      "steps": [
+        "Sketch acquisition, transfer, staging and release states",
+        "Trace source-code caller/end/default/periodic paths independently of geometry",
+        "Define CAD joints, clearances, drawing dimensions and an export/reopen check"
+      ],
+      "acceptance": [
+        "Unmeasured dimensions and loads are marked assumptions",
+        "A command goal does not certify mechanical stopping or guarding",
+        "Source file and asset licenses are checked before reuse"
+      ],
+      "deliverable": "A state table, CAD review checklist and proposed measurement sheet"
+    },
+    "vision": {
+      "title": "Vision and localization contract",
+      "queries": [
+        "pose",
+        "calibration"
+      ],
+      "context": [
+        "Camera/firmware/library/field-layout versions",
+        "Transform direction, units and field/alliance convention",
+        "Capture clock, latency, frame ordering and reset epoch"
+      ],
+      "steps": [
+        "Document frame transforms and timestamp origin before fusion",
+        "Exercise stale/future/outlier/duplicate/pre-reset behavior",
+        "Record calibration evidence separately from synthetic estimator tests"
+      ],
+      "acceptance": [
+        "Capture time is not silently replaced by arrival time",
+        "Fixture thresholds are not recommendations for every camera",
+        "No vision accuracy claim follows solely from source review"
+      ],
+      "deliverable": "A frame/time contract and rejection-policy test table",
+      "lab": "examples/java-2026-sim/NAVIGATION.md"
+    },
+    "modes": {
+      "title": "Teleop and autonomous acceptance plan",
+      "queries": [
+        "commands",
+        "autonomous"
+      ],
+      "context": [
+        "Selected season/manual and operating modes",
+        "Operator binding and interruption priority",
+        "Start pose, frame, completion and failure conditions"
+      ],
+      "steps": [
+        "Trace initial binding state, rising/falling edges, early finish and a new press",
+        "Separate readiness entry gates from continued feed authorization",
+        "Specify timeout, mode-transition cancellation and immediate versus next-periodic cleanup"
+      ],
+      "acceptance": [
+        "Every routine has bounded completion or explicit interruption behavior",
+        "Driver Station disable is distinguished from scheduler.disable",
+        "Trajectory reference limits are separate from corrected actuator commands"
+      ],
+      "deliverable": "A mode/trigger transition matrix with expected software observations",
+      "lab": "examples/java-2026-sim/CLEANUP.md"
+    },
+    "troubleshoot": {
+      "title": "Device and evidence troubleshooting plan",
+      "queries": [
+        "power",
+        "pneumatics"
+      ],
+      "context": [
+        "Exact device/connector/firmware/client versions",
+        "Symptom timeline and targeted logs",
+        "Electrical, pneumatic, spring and gravity energy states"
+      ],
+      "steps": [
+        "Match the device-specific manual and changelog before interpreting indicators",
+        "Separate command, requested output, sensor reading and physical state",
+        "Preserve fault history; formulate one software/log hypothesis before a qualified physical procedure"
+      ],
+      "acceptance": [
+        "A warning indicator is not assumed to inhibit output",
+        "Component ratings do not establish season legality or every terminal specification",
+        "Battery variants/revisions and conflicting charge data stay explicit"
+      ],
+      "deliverable": "An expected/observed evidence table with source and next verification step"
+    }
+  }
+}

@@ -1,25 +1,31 @@
 ---
 name: frc-modes
-description: "Use when specifying or reviewing FRC teleop and autonomous behavior."
+description: "Use when specifying or reviewing FRC teleop, autonomous, trigger or interruption behavior."
 ---
-# frc-modes
+# Teleop and autonomous acceptance plan
 
-Read [grounding policy](../../docs/grounding.md) and [public source links](../../references/public-sources.json). Optional vault use must be explicit; absence is normal.
+Read [grounding policy](../../docs/grounding.md). Start with the [learning brief](../../docs/briefs.md): npm run brief -- --workflow modes --season YEAR --as-of YYYY-MM-DD. The brief is optional scaffolding, not a source-reading substitute. No vault is required; local catalog use must be explicitly configured.
 
-Get selected manual edition and mode requirements. Define operator bindings, override/interruption priority, state transitions and diagnostics. For autonomous define selected routine, start pose, alliance/frame, bounded time, sensor completion, failure branches and cleanup. Review mode transition cancellation. Treat historic paths and examples as educational evidence, not current legal routines. Never execute robot motion or deployment.
+## Establish context
 
-Output a concise scope/version statement, evidence links, original guidance, validation performed and remaining gaps. Include only relevant safety constraints. Do not claim runtime verification from documentation.
+- Selected season/manual and operating modes.
+- Operator binding and interruption priority.
+- Start pose, frame, completion and failure conditions.
 
-Optional vault coverage keys: teleop-autonomous, java-architecture, example-projects. Resolve through the configured catalog, never a hard-coded path.
+## Work through the evidence
 
-## Developed learning tools
+1. Trace initial binding state, rising/falling edges, early finish and a new press.
+2. Separate readiness entry gates from continued feed authorization.
+3. Specify timeout, mode-transition cancellation and immediate versus next-periodic cleanup.
 
-Use the [mode acceptance worksheet](../../worksheets/mode-acceptance.csv). For trajectories, verify time-sampled reference state and separate chassis, module and mechanism layers. The desktop lesson tests cancellation/timeouts only; never present it as a full-field routine.
+Inspect unmatchedQueries, omitted counts, source versions and review dates. Open relevant official/pinned sources before factual decisions. Keep source findings, recommendations and unknowns separate. Never infer compatibility from an empty season list or a matching keyword.
 
-## Version 0.3 evidence workflow
+## Reviewable output
 
-Use [trajectory/pose exercise](../../examples/java-2026-sim/NAVIGATION.md) for software evidence. Require bounded completion, cancellation cleanup and a separate actuator-output policy. An ideal trajectory pass does not establish obstacle clearance or drivetrain dynamics.
+Deliver a mode/trigger transition matrix with expected software observations. For each material claim identify source URL/version, applicability and verification level. Record actual commands/results separately from proposed tests.
 
-## Caller and evidence review
+- Every routine has bounded completion or explicit interruption behavior.
+- Driver Station disable is distinguished from scheduler.disable.
+- Trajectory reference limits are separate from corrected actuator commands.
 
-Require an explicit completion/interrupt path. A feed helper may rely on a caller readiness gate; timed preparation does not prove readiness. The [lifecycle worksheet](../../worksheets/command-lifecycle.csv) separates immediate and next-periodic output observations.
+Use the [pinned desktop exercise](../../examples/java-2026-sim/CLEANUP.md) only with its stated baseline. No hardware operation or deployment is authorized by this skill. Do not infer physical safety, CAD validity or model effectiveness from static review or passing software fixtures. Source/file/dependency licenses must be checked before copying.

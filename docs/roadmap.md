@@ -1,7 +1,5 @@
 # Roadmap
 
-Implemented: desktop mechanism/navigation/cleanup exercises; 23 JUnit tests plus bounded demo; 10 Node regressions; 13 deterministic public-grounding evaluations; 6 skills; 12 blank worksheets.
+Implemented: six cohesive skills and learning-brief workflows;17 Node regressions;20 deterministic grounding/brief evaluations;29 Java tests plus bounded demo;12 worksheets. Historical build declarations and selected Robot lifecycle paths are documented separately from the 2026 laboratory.
 
-Source gaps narrowed: official AMPD installation overview; exact historical MK datasheet and Power-Sonic variant/revision evidence; ten additional pinned team caller/low-level files.
-
-Remaining: AMPD terminal-specific ratings/torque; current MK document and exact legacy NB applicability; remaining team IO/lifecycle dependencies; realistic drivetrain and multi-camera exercises; actual Fusion export/reopen; mentor/student review; independent LLM skill evaluations and host loading. Final 2027 rules and production Systemcore compatibility await evidence. No hardware operation is implemented.
+Remaining: complete upstream dependency/IO graph; realistic drivetrain and multi-camera tests; battery variant/current-revision conflicts; AMPD terminal-specific details; actual CAD/Fusion export/reopen; mentor/student review; independently graded model responses and host loading. Final 2027rules and production controller compatibility await evidence. No hardware-control capability is implemented.

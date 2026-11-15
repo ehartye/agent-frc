@@ -8,7 +8,7 @@
   "junit": "5.10.1",
   "command": "gradlew.bat --offline --no-daemon --console plain test headlessDemo",
   "unit": {
-    "tests": 23,
+    "tests": 29,
     "skipped": 0,
     "failures": 0,
     "errors": 0
@@ -42,6 +42,13 @@
     {
       "name": "org.agentfrc.lesson.CleanupTest",
       "tests": 4,
+      "skipped": 0,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "name": "org.agentfrc.lesson.EventTest",
+      "tests": 6,
       "skipped": 0,
       "failures": 0,
       "errors": 0
@@ -88,5 +95,18 @@
       "Driver Station disable cancels active non-disabled command and invokes end"
     ],
     "limits": "Original fixture only; historical team code and physical motor response not executed"
+  },
+  "events": {
+    "tests": 6,
+    "pureStateOnly": true,
+    "observations": [
+      "Held early-finished command waits for new edge",
+      "Initially true binding does not generate a rising edge",
+      "Release cancels and ends",
+      "Scheduler disable does not cancel",
+      "In-loop cancellation is deferred to loop boundary",
+      "CancelIncoming does not block explicit cancellation"
+    ],
+    "limits": "Pinned2026software fixture; not historical robot execution or hardware response"
   }
 }

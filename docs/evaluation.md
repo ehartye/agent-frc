@@ -1,7 +1,9 @@
 # Evaluation scope
 
-Run npm run evaluate to execute 13 deterministic public metadata-grounding cases. They check season exclusion, explicit historical inclusion, model/caller source discovery, stale-review labels and valid calendar dates. The runner uses the real lookup module with an empty configuration environment, emits selected IDs and hashes its inputs. It does not open a private catalog, generate an LLM answer or grade skill effectiveness.
+Run npm run evaluate for 20 deterministic cases:13 metadata-selection scenarios and 7 learning-brief scenarios. The suite uses the actual lookup and brief modules, records selected IDs and hashes implementation/data inputs. It checks season exclusion, historical inclusion, model/caller discovery, stale dates, invalid calendar dates, workflow contracts and future-season laboratory limits.
 
-A real defect was reproduced: 2026-02-30 passed Date.parse because JavaScript normalized it. Lookup now requires an exact ISO calendar round-trip; regression coverage accepts the real 2028 leap day and refuses impossible dates. asOf controls review-date comparison, not historical website reconstruction.
+Seventeen Node regressions additionally check explicit configuration, metadata privacy, partial source coverage and balanced display budgets. The brief module reads no source bodies; its checklist is original static guidance.
 
-[Grounding cases](../eval/grounding-cases.json) and [recorded results](../eval/grounding-results.json). The six [human/agent cases](../eval/cases.json) remain unexecuted. Evaluate those later with held-out prompts, recorded model/tool versions, independent scoring and evidence citations; no installed-host or learner study is claimed.
+[Cases](../eval/grounding-cases.json), [results](../eval/grounding-results.json), [brief contract](briefs.md). Six [human/agent prompts](../eval/cases.json) remain unexecuted. No model response was generated or graded; no installed-host or learner effectiveness study is claimed.
+
+Previously reproduced/fixed: Date.parse accepted an impossible February 30 date. Exact ISO calendar round-trip now rejects it. asOf compares review dates; it does not reconstruct historical website content.

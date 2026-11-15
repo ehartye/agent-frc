@@ -9,15 +9,23 @@
     },
     {
       "file": "references/public-sources.json",
-      "sha256": "691dbf584d8e9642ef87a60336253369a8fb796da3825161f2758b6147b893f0"
+      "sha256": "66151784b5dddab90db8f3dd30e00276cbb1cecd981494cd7b08293742c90259"
     },
     {
       "file": "eval/grounding-cases.json",
-      "sha256": "75fc64342aa7c7e806c71134b4e08848366f2942461be9ef0578be1a468e9af4"
+      "sha256": "c1f7942fdf9316e987ea777efe806246fa70f7be326c858f66b1fe2faf100f78"
+    },
+    {
+      "file": "scripts/brief.mjs",
+      "sha256": "3d60f687736ae54bc7ca17e2385732119ca5f40aca7f1af9d7c8c2494e3236e5"
+    },
+    {
+      "file": "references/workflows.json",
+      "sha256": "c0311d58fa504005846154041cfc3ed0b79478b6858f70f323251dba415d5599"
     }
   ],
-  "passed": 13,
-  "total": 13,
+  "passed": 20,
+  "total": 20,
   "results": [
     {
       "id": "2026-trajectory",
@@ -97,7 +105,9 @@
         "PUBLIC-H12",
         "PUBLIC-H13",
         "PUBLIC-H14",
-        "PUBLIC-H15"
+        "PUBLIC-H15",
+        "PUBLIC-H17",
+        "PUBLIC-H19"
       ],
       "error": false,
       "passed": true,
@@ -214,6 +224,133 @@
         "PUBLIC-N04",
         "PUBLIC-N05",
         "PUBLIC-N06"
+      ],
+      "error": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "brief-season",
+      "options": {
+        "asOf": "2026-11-15",
+        "workflow": "season",
+        "season": 2026
+      },
+      "selectedIds": [
+        "P01"
+      ],
+      "error": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "brief-java",
+      "options": {
+        "asOf": "2026-11-15",
+        "workflow": "java",
+        "season": 2026
+      },
+      "selectedIds": [
+        "P05",
+        "PUBLIC-Q01",
+        "P06",
+        "PUBLIC-Q02",
+        "P09",
+        "PUBLIC-Q03",
+        "P21",
+        "PUBLIC-Q04"
+      ],
+      "error": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "brief-mechanism-cad",
+      "options": {
+        "asOf": "2026-11-15",
+        "workflow": "mechanism-cad",
+        "season": 2026
+      },
+      "selectedIds": [
+        "P13",
+        "P14",
+        "P15"
+      ],
+      "error": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "brief-vision",
+      "options": {
+        "asOf": "2026-11-15",
+        "workflow": "vision",
+        "season": 2026
+      },
+      "selectedIds": [
+        "P10",
+        "P18",
+        "PUBLIC-N07",
+        "PUBLIC-N08",
+        "PUBLIC-N09",
+        "PUBLIC-N10",
+        "PUBLIC-N11"
+      ],
+      "error": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "brief-modes",
+      "options": {
+        "asOf": "2026-11-15",
+        "workflow": "modes",
+        "season": 2026
+      },
+      "selectedIds": [
+        "PUBLIC-Q01",
+        "PUBLIC-Q02",
+        "PUBLIC-Q03",
+        "PUBLIC-Q04"
+      ],
+      "error": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "brief-troubleshoot",
+      "options": {
+        "asOf": "2026-11-15",
+        "workflow": "troubleshoot",
+        "season": 2026
+      },
+      "selectedIds": [
+        "PUBLIC-PWR01",
+        "PUBLIC-PN01",
+        "PUBLIC-PWR02",
+        "PUBLIC-PN02",
+        "PUBLIC-PWR03",
+        "PUBLIC-PN03",
+        "PUBLIC-PWR04",
+        "PUBLIC-PN04",
+        "PUBLIC-PWR05",
+        "PUBLIC-PWR06",
+        "PUBLIC-PWR08",
+        "PUBLIC-PWR10"
+      ],
+      "error": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "brief-future-lab-boundary",
+      "options": {
+        "asOf": "2026-11-15",
+        "workflow": "java",
+        "season": 2027
+      },
+      "selectedIds": [
+        "P09"
       ],
       "error": false,
       "passed": true,

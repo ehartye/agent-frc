@@ -1,25 +1,31 @@
 ---
 name: frc-mechanism-cad
-description: "Use when designing FRC intakes, indexers, launchers, drivetrains or Fusion assemblies."
+description: "Use when planning an FRC intake, launcher, mechanism, Fusion CAD model or drawing."
 ---
-# frc-mechanism-cad
+# Mechanism and CAD evidence plan
 
-Read [grounding policy](../../docs/grounding.md) and [public source links](../../references/public-sources.json). Optional vault use must be explicit; absence is normal.
+Read [grounding policy](../../docs/grounding.md). Start with the [learning brief](../../docs/briefs.md): npm run brief -- --workflow mechanism-cad --season YEAR --as-of YYYY-MM-DD. The brief is optional scaffolding, not a source-reading substitute. No vault is required; local catalog use must be explicitly configured.
 
-Establish game constraints, interfaces, motion envelope, load and manufacturing capability. Propose alternatives and measurable selection criteria. Organize Fusion components and joints; verify units, references and export reopen behavior. Track acquisition/index/feed states and jam recovery. Require qualified review of stored energy, pinch points and projectile paths. Do not prescribe unsupported universal gearing, compression, launch speed or material dimensions.
+## Establish context
 
-Output a concise scope/version statement, evidence links, original guidance, validation performed and remaining gaps. Include only relevant safety constraints. Do not claim runtime verification from documentation.
+- Game-piece geometry and season envelope.
+- Load cases, motion range and manufacturing process.
+- CAD document/version and measurement provenance.
 
-Optional vault coverage keys: fusion-cad, intakes-launchers, drivetrain, safety. Resolve through the configured catalog, never a hard-coded path.
+## Work through the evidence
 
-## Developed learning tools
+1. Sketch acquisition, transfer, staging and release states.
+2. Trace source-code caller/end/default/periodic paths independently of geometry.
+3. Define CAD joints, clearances, drawing dimensions and an export/reopen check.
 
-Use the original [drawing release](../../worksheets/drawing-release.csv), [motion envelope](../../worksheets/motion-envelope.csv), [interference log](../../worksheets/interference-log.csv) and [mechanism experiment](../../worksheets/mechanism-experiment.csv) templates. Do not mark rows complete without measurements or inspection. Compare continuous readiness against one-time transition checks.
+Inspect unmatchedQueries, omitted counts, source versions and review dates. Open relevant official/pinned sources before factual decisions. Keep source findings, recommendations and unknowns separate. Never infer compatibility from an empty season list or a matching keyword.
 
-## Version 0.3 evidence workflow
+## Reviewable output
 
-Trace source files with [case worksheet](../../worksheets/mechanism-case-trace.csv): requested goal, sensor state, readiness entry gate, continuous readiness, interruption cleanup and caller dependencies. Use pinned2024 Team254/6328 links as historical patterns. Do not infer CAD geometry, physical stop or jam-clearing safety from Java goals.
+Deliver a state table, cad review checklist and proposed measurement sheet. For each material claim identify source URL/version, applicability and verification level. Record actual commands/results separately from proposed tests.
 
-## Caller and evidence review
+- Unmeasured dimensions and loads are marked assumptions.
+- A command goal does not certify mechanical stopping or guarding.
+- Source file and asset licenses are checked before reuse.
 
-For historical caller studies, trace readiness entry, continued authorization, end callbacks, defaults and subsequent periodic output separately. Team254 file-level BSD notices can differ from root MIT; check each artifact before copying. The original cleanup tests do not execute team code.
+No hardware operation or deployment is authorized by this skill. Do not infer physical safety, CAD validity or model effectiveness from static review or passing software fixtures. Source/file/dependency licenses must be checked before copying.
