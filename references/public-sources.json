@@ -1385,6 +1385,62 @@
         "runtime",
         "simulation"
       ]
+    },
+    {
+      "id": "PUBLIC-SIM01",
+      "title": "WPILib simulated encoder and vendor-device boundary",
+      "url": "https://docs.wpilib.org/en/stable/docs/software/wpilib-tools/robot-simulation/drivesim-tutorial/simulation-instance.html",
+      "scope": "Living stable alias, accessed 2026-11-15",
+      "handling": "link-only; original concise synthesis; no source body copied",
+      "license": "Link-only reference; upstream source license retained by upstream",
+      "seasons": [],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "java",
+        "simulation",
+        "encoder",
+        "CAN"
+      ]
+    },
+    {
+      "id": "PUBLIC-SIM02",
+      "title": "WPILib physics simulation and sensor feedback",
+      "url": "https://docs.wpilib.org/en/stable/docs/software/wpilib-tools/robot-simulation/physics-sim.html",
+      "scope": "Living stable alias, accessed 2026-11-15",
+      "handling": "link-only; original concise synthesis; no source body copied",
+      "license": "Link-only reference; upstream source license retained by upstream",
+      "seasons": [],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "java",
+        "simulation",
+        "encoder",
+        "CAN"
+      ]
+    },
+    {
+      "id": "PUBLIC-SIM03",
+      "title": "Pinned WPILib EncoderSim implementation",
+      "url": "https://raw.githubusercontent.com/wpilibsuite/allwpilib/v2026.2.1/wpilibj/src/main/java/edu/wpi/first/wpilibj/simulation/EncoderSim.java",
+      "scope": "allwpilib v2026.2.1",
+      "handling": "link-only; original concise synthesis; no source body copied",
+      "license": "Link-only reference; upstream source license retained by upstream",
+      "seasons": [
+        2026
+      ],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "java",
+        "simulation",
+        "encoder",
+        "CAN"
+      ]
     }
   ]
 }

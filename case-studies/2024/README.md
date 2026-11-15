@@ -46,3 +46,5 @@ CAD inputs feed the simplified plant through generated properties: flywheel iner
 ## Hardware reading map
 
 Use the [selected rule locators and evidence tasks](rule-reading-map.json) with the [cross-season review workflow](../../docs/rulebook-hardware-review.md). Team Update 21 changed weight from 125 to 125.5 lb and OpenMesh to VH-109. Resolve the event and update date before selecting hardware.
+
+[Sensor/model boundary](../../examples/java-2026-sim/SIMULATION-BOUNDARIES.md): controller feedback comes directly from the mathematical plant. CAN encoder integration and physical parameter identification are unverified.

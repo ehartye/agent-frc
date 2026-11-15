@@ -132,5 +132,13 @@
     "snapshot": "Archived final/Championship update snapshot, not the original regional-season configuration",
     "requiredBeforeHardwareDecision": "event name/stage/date and applicable update revision",
     "caution": "Team Update 21 changed weight from 125 to 125.5 lb and OpenMesh to VH-109. Resolve the event and update date before selecting hardware."
+  },
+  "simulationInterface": {
+    "feedback": "direct plant state; no encoder object",
+    "vendorAdapter": null,
+    "vendorLibraryVersion": null,
+    "firmwareVerified": false,
+    "physicalParameters": "synthetic assumptions; unmeasured",
+    "readbackTested": false
   }
 }

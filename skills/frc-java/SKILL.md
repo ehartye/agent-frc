@@ -29,3 +29,5 @@ Deliver a code/test change plan with source versions and failure-path assertions
 - Historical projects are not treated as reproduced by another release.
 
 Use the [pinned desktop exercise](../../examples/java-2026-sim/README.md) only with its stated baseline. No hardware operation or deployment is authorized by this skill. Do not infer physical safety, CAD validity or model effectiveness from static review or passing software fixtures. Source/file/dependency licenses must be checked before copying.
+
+Read [simulation interface boundaries](../../examples/java-2026-sim/SIMULATION-BOUNDARIES.md). Identify whether feedback comes from plant truth, a WPILib Encoder/EncoderSim pair, or a versioned vendor device adapter. EncoderSim is not a CAN-controller encoder substitute. Record adapter/library/firmware versions only when chosen and verified; test production-API readback and unit/sign/reset conversions separately from plant dynamics. Keep unknown physical parameters and unsupported faults explicit.

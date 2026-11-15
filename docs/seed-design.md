@@ -8,7 +8,7 @@ Outputs: scope/version, evidence URLs/IDs, original recommendation, uncertaintie
 
 Failure states: missing season for rules, stale source, draft-only evidence, incompatible APIs, inaccessible link, license unknown, no hardware context. Progress on independent generic learning tasks, but do not invent missing facts.
 
-Proposed skills map to the actual guides: frc-season, frc-java, frc-mechanism-cad, frc-vision, frc-modes, frc-troubleshoot. Safety is cross-cutting. Version 0.6.1 supplies these workflows, tested desktop mechanism, navigation and command-cleanup Java lessons, original worksheets and explicit season/freshness metadata lookup and deterministic learning briefs. Full-text retrieval, automatic ingestion and robot execution are not implemented.
+Proposed skills map to the actual guides: frc-season, frc-java, frc-mechanism-cad, frc-vision, frc-modes, frc-troubleshoot. Safety is cross-cutting. Version 0.6.2 supplies these workflows, tested desktop mechanism, navigation and command-cleanup Java lessons, original worksheets and explicit season/freshness metadata lookup and deterministic learning briefs. Full-text retrieval, automatic ingestion and robot execution are not implemented.
 
 Acceptance scenarios: no vault configured produces no filesystem read; old 2024 examples stay historical; 2027 scoring question reports final-rule gap; 2026 Java task excludes development APIs; optional vault never uploads; source-license unknown prevents copying; robot movement request is not performed by plugin tools.
 

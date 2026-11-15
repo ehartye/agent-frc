@@ -132,5 +132,13 @@
     "snapshot": "Published archive snapshot; event-specific applicability must be resolved",
     "requiredBeforeHardwareDecision": "event name/stage/date and applicable update revision",
     "caution": "Do not transfer 2024 limits or radio exceptions. Full height/zone, bumper, motor/controller and power rules remain a manual review."
+  },
+  "simulationInterface": {
+    "feedback": "direct plant state; no encoder object",
+    "vendorAdapter": null,
+    "vendorLibraryVersion": null,
+    "firmwareVerified": false,
+    "physicalParameters": "synthetic assumptions; unmeasured",
+    "readbackTested": false
   }
 }

@@ -132,5 +132,13 @@
     "snapshot": "Published TU22 snapshot; current event applicability requires review",
     "requiredBeforeHardwareDecision": "event name/stage/date and applicable update revision",
     "caution": "R106/R107 add direction and total-height constraints; a sideplate sketch is not a whole-robot envelope check. Radio exceptions and wiring depend on location and revision."
+  },
+  "simulationInterface": {
+    "feedback": "direct plant state; no encoder object",
+    "vendorAdapter": null,
+    "vendorLibraryVersion": null,
+    "firmwareVerified": false,
+    "physicalParameters": "synthetic assumptions; unmeasured",
+    "readbackTested": false
   }
 }

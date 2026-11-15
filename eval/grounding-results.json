@@ -9,7 +9,7 @@
     },
     {
       "file": "references/public-sources.json",
-      "sha256": "f21c19173e34e005f136ea4d23c23d5ec26e77d729392d143bdaefa83ee9945f"
+      "sha256": "0d064142961cb6f6214f07161eab94c75dc9f813801e85582c9b641d95ca65f5"
     },
     {
       "file": "eval/grounding-cases.json",
@@ -260,7 +260,9 @@
         "P21",
         "PUBLIC-Q04",
         "PUBLIC-CS03",
-        "PUBLIC-CS08"
+        "PUBLIC-CS08",
+        "PUBLIC-SIM01",
+        "PUBLIC-SIM02"
       ],
       "error": false,
       "passed": true,
@@ -356,7 +358,9 @@
       },
       "selectedIds": [
         "P09",
-        "PUBLIC-CS08"
+        "PUBLIC-CS08",
+        "PUBLIC-SIM01",
+        "PUBLIC-SIM02"
       ],
       "error": false,
       "passed": true,
@@ -474,7 +478,9 @@
         "PUBLIC-CS04",
         "PUBLIC-CS08",
         "PUBLIC-CS05",
-        "PUBLIC-CS06"
+        "PUBLIC-SIM01",
+        "PUBLIC-CS06",
+        "PUBLIC-SIM02"
       ],
       "error": false,
       "passed": true,
@@ -493,7 +499,9 @@
         "PUBLIC-CS04",
         "PUBLIC-CS08",
         "PUBLIC-CS05",
-        "PUBLIC-CS06"
+        "PUBLIC-SIM01",
+        "PUBLIC-CS06",
+        "PUBLIC-SIM02"
       ],
       "error": false,
       "passed": true,
@@ -513,7 +521,10 @@
         "PUBLIC-CS03",
         "PUBLIC-CS05",
         "PUBLIC-CS08",
-        "PUBLIC-CS06"
+        "PUBLIC-CS06",
+        "PUBLIC-SIM01",
+        "PUBLIC-SIM02",
+        "PUBLIC-SIM03"
       ],
       "error": false,
       "passed": true,

@@ -13,3 +13,5 @@ The ideal plants omit game-piece contact, trajectories, impacts, thermal/current
 Sources: [pinned ElevatorSim](https://raw.githubusercontent.com/wpilibsuite/allwpilib/v2026.2.1/wpilibj/src/main/java/edu/wpi/first/wpilibj/simulation/ElevatorSim.java), [WPILib simulation overview](https://docs.wpilib.org/en/stable/docs/software/wpilib-tools/robot-simulation/physics-sim.html), reviewed 2026-11-15. No upstream source copied.
 
 The autonomous deadline helper accepts caller-supplied elapsed AUTO time and stops mechanism demands at the selected case boundary. It is not a full autonomous route or FMS/Driver Station clock adapter.
+
+Read the [simulation interface audit](SIMULATION-BOUNDARIES.md): direct plant/kinematic feedback is not a physical sensor or vendor CAN encoder adapter. No vendor simulation API is implemented or tested.
