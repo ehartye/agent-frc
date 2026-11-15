@@ -26,3 +26,5 @@ The [cleanup laboratory](CLEANUP.md) adds four pure-state lifecycle regressions,
 The [event laboratory](EVENTS.md) adds six trigger/scheduler-boundary regressions.
 
 The [three-season laboratory](CASES.md) adds original flywheel/elevator control slices and thirteen tests.
+
+For Windows setup, follow [WPILib bundled-JDK guidance](https://docs.wpilib.org/en/stable/docs/software/advanced-gradlerio/jvm-runtime.html): mismatched MSVC runtimes can break native-library loading. Prefer the JDK shipped with the matching WPILib installation and keep machine-specific Gradle paths out of version control. The recorded test here used Temurin 17.0.21+9 on one Windows host; success there does not verify every JDK/runtime combination. No installer or machine setting was changed.

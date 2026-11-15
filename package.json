@@ -1,6 +1,6 @@
 {
   "name": "agent-frc",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "private": true,
   "type": "module",
   "description": "Season-aware high-school FRC engineering guidance with explicit evidence and optional local vault grounding.",
@@ -9,13 +9,14 @@
     "node": ">=20.11"
   },
   "scripts": {
-    "test": "node --test test/context.test.mjs test/lookup.test.mjs test/brief.test.mjs test/case-study.test.mjs",
+    "test": "node --test test/context.test.mjs test/lookup.test.mjs test/brief.test.mjs test/case-study.test.mjs test/rules-audit.test.mjs",
     "validate": "node scripts/validate.mjs",
     "context": "node scripts/context.mjs",
     "lookup": "node scripts/lookup.mjs",
     "evaluate": "node scripts/evaluate.mjs",
     "brief": "node scripts/brief.mjs",
     "case": "node scripts/case-study.mjs",
-    "cases:validate": "node scripts/case-artifacts.mjs --check"
+    "cases:validate": "node scripts/case-artifacts.mjs --check",
+    "rules": "node scripts/rules-audit.mjs"
   }
 }

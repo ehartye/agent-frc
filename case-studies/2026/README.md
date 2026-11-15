@@ -42,3 +42,7 @@ CAD inputs feed the simplified plant through generated properties: flywheel iner
 - No FMS parser, phase-clock synchronization or scoring-window arrival-time verification.
 
 [End-to-end workflow](../README.md).
+
+## Hardware reading map
+
+Use the [selected rule locators and evidence tasks](rule-reading-map.json) with the [cross-season review workflow](../../docs/rulebook-hardware-review.md). R106/R107 add direction and total-height constraints; a sideplate sketch is not a whole-robot envelope check. Radio exceptions and wiring depend on location and revision.

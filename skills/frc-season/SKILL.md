@@ -29,3 +29,5 @@ Deliver a dated decision table with claim, authority, applicability and unresolv
 - Team registration/payment status is not assumed.
 
 No hardware operation or deployment is authorized by this skill. Do not infer physical safety, CAD validity or model effectiveness from static review or passing software fixtures. Source/file/dependency licenses must be checked before copying.
+
+Use the [hardware rule reading map](../../docs/rulebook-hardware-review.md) before selecting components. Require event stage and manual/update revision as well as year; the 2024 archive includes Championship radio and weight changes. A named event remains unresolved until its edition is matched.

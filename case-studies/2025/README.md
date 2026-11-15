@@ -42,3 +42,7 @@ CAD inputs feed the simplified plant through generated properties: flywheel iner
 - Zero voltage does not hold a gravity-loaded carriage; mechanical retention is unverified.
 
 [End-to-end workflow](../README.md).
+
+## Hardware reading map
+
+Use the [selected rule locators and evidence tasks](rule-reading-map.json) with the [cross-season review workflow](../../docs/rulebook-hardware-review.md). Do not transfer 2024 limits or radio exceptions. Full height/zone, bumper, motor/controller and power rules remain a manual review.

@@ -1347,6 +1347,44 @@
         "strategy",
         "case study"
       ]
+    },
+    {
+      "id": "PUBLIC-CS07",
+      "title": "2024 Team Update 21: final update and radio transition",
+      "url": "https://firstfrc.blob.core.windows.net/frc2024/Manual/TeamUpdates/TeamUpdate21.pdf",
+      "scope": "April 9, 2024; 2 pages; final season update",
+      "handling": "link-only; original concise commentary only",
+      "license": "FIRST link-only policy",
+      "seasons": [
+        2024
+      ],
+      "authority_state": "historical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "rules",
+        "manual",
+        "hardware",
+        "radio",
+        "case study"
+      ]
+    },
+    {
+      "id": "PUBLIC-CS08",
+      "title": "WPILib Windows JVM runtime and bundled JDK guidance",
+      "url": "https://docs.wpilib.org/en/stable/docs/software/advanced-gradlerio/jvm-runtime.html",
+      "scope": "Living stable documentation; reviewed 2026-11-15",
+      "handling": "link-only; original concise commentary",
+      "license": "Link-only reference; consult upstream documentation license before copying",
+      "seasons": [],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "java",
+        "runtime",
+        "simulation"
+      ]
     }
   ]
 }

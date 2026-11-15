@@ -1,4 +1,4 @@
-# Architecture — 0.6.0
+# Architecture — 0.6.1
 
 Seven source-only skills use explicit season/source context. Read-only lookup and brief modules return allowlisted metadata. Optional local-vault access is explicitly configured and never publishes source bodies.
 

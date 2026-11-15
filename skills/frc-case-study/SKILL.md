@@ -14,3 +14,5 @@ Read the [case workflow](../../case-studies/README.md) and [grounding policy](..
 6. Verify cross-file assumptions and trace links, then simulate nominal and fault cases. Report numerical results with model limitations; simulator success does not establish structural strength, launch accuracy or safe hardware.
 
 Deliver the case manifest, strategy decision, subsystem interface table, working code/test evidence, CAD artifact status and a short unresolved-gates list. Never claim the whole robot is implemented when only a vertical slice runs. No deployment, hardware action, software installation or external publication is authorized by this skill.
+
+Use the [hardware rule reading map](../../docs/rulebook-hardware-review.md) before selecting components. Require event stage and manual/update revision as well as year; the 2024 archive includes Championship radio and weight changes. A named event remains unresolved until its edition is matched.

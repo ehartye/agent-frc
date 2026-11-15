@@ -127,5 +127,10 @@
     "etag": "0x8DC59947AA1DCE1",
     "last_modified": "Wed, 10 Apr 2024 19:29:02 GMT",
     "handling": "Transient hash only; PDF body not retained or redistributed"
+  },
+  "eventContext": {
+    "snapshot": "Archived final/Championship update snapshot, not the original regional-season configuration",
+    "requiredBeforeHardwareDecision": "event name/stage/date and applicable update revision",
+    "caution": "Team Update 21 changed weight from 125 to 125.5 lb and OpenMesh to VH-109. Resolve the event and update date before selecting hardware."
   }
 }

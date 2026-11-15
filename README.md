@@ -1,6 +1,6 @@
 # agent-frc
 
-Version **0.6.0**, local source milestone. Seven FRC engineering skills connect rules, strategy, subsystems, working Java code, Fusion inputs and simulator evidence. Independent educational work; no FIRST/vendor endorsement. Publication is pending; no push or installation is performed.
+Version **0.6.1**, local source milestone. Seven FRC engineering skills connect rules, strategy, subsystems, working Java code, Fusion inputs and simulator evidence. Independent educational work; no FIRST/vendor endorsement. Publication is pending; no push or installation is performed.
 
 Start with the [end-to-end case workflow](case-studies/README.md): [2024 CRESCENDO](case-studies/2024/README.md), [2025 REEFSCAPE](case-studies/2025/README.md), or [2026 REBUILT](case-studies/2026/README.md). Each compares three strategies and implements a deliberately bounded mechanism slice. Complete robot design remains future work.
 
@@ -10,7 +10,7 @@ Start with the [end-to-end case workflow](case-studies/README.md): [2024 CRESCEN
 
 ## Use and validate
 
-Node 20.11+; no Node dependencies. Run `npm test`, `npm run validate`, `npm run evaluate` and `npm run cases:validate`. Twenty-one Node regressions and 29 deterministic grounding cases pass. They do not establish model/learner effectiveness.
+Node 20.11+; no Node dependencies. Run `npm test`, `npm run validate`, `npm run evaluate` and `npm run cases:validate`. Twenty-five Node regressions and 29 deterministic grounding cases pass. They do not establish model/learner effectiveness.
 
 `npm run case -- --season 2025`
 
@@ -23,3 +23,5 @@ Node 20.11+; no Node dependencies. Run `npm test`, `npm run validate`, `npm run 
 Historical game analysis uses a common pinned 2026 teaching runtime, not historical robot binaries. Selected requirements are not complete rule compliance. Final 2027 game rules and production Systemcore compatibility remain unverified. No physical IO, deploy target, robot operation, plugin installation or model-effectiveness test is provided.
 
 Original code, prose and concept vectors are MIT. FIRST manuals and manufacturer documentation stay link-only. [Manual fingerprints](case-studies/manual-fingerprints.json) identify retrieved bytes without bundling them. [Third-party notices](examples/java-2026-sim/THIRD_PARTY.md) cover selected build/wrapper sources; dependencies are not bundled. No private catalog, team data or credentials are shipped.
+
+[Hardware rules and Java evidence](docs/rulebook-hardware-review.md) adds a dated, event-aware reading map; use `npm run rules -- --season 2026 --as-of 2026-11-15 --event-stage archive-study`.

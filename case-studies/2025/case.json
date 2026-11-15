@@ -127,5 +127,10 @@
     "etag": "0x8DD76E1BB093DA6",
     "last_modified": "Tue, 08 Apr 2025 21:10:03 GMT",
     "handling": "Transient hash only; PDF body not retained or redistributed"
+  },
+  "eventContext": {
+    "snapshot": "Published archive snapshot; event-specific applicability must be resolved",
+    "requiredBeforeHardwareDecision": "event name/stage/date and applicable update revision",
+    "caution": "Do not transfer 2024 limits or radio exceptions. Full height/zone, bumper, motor/controller and power rules remain a manual review."
   }
 }

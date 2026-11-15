@@ -9,7 +9,7 @@
     },
     {
       "file": "references/public-sources.json",
-      "sha256": "b38a70ee0316b364a41df5d7913127a90aef2f28293ec32a3bcea24f2b206e45"
+      "sha256": "f21c19173e34e005f136ea4d23c23d5ec26e77d729392d143bdaefa83ee9945f"
     },
     {
       "file": "eval/grounding-cases.json",
@@ -259,7 +259,8 @@
         "PUBLIC-Q03",
         "P21",
         "PUBLIC-Q04",
-        "PUBLIC-CS03"
+        "PUBLIC-CS03",
+        "PUBLIC-CS08"
       ],
       "error": false,
       "passed": true,
@@ -354,7 +355,8 @@
         "season": 2027
       },
       "selectedIds": [
-        "P09"
+        "P09",
+        "PUBLIC-CS08"
       ],
       "error": false,
       "passed": true,
@@ -470,6 +472,7 @@
         "PUBLIC-CS01",
         "P08",
         "PUBLIC-CS04",
+        "PUBLIC-CS08",
         "PUBLIC-CS05",
         "PUBLIC-CS06"
       ],
@@ -488,6 +491,7 @@
         "PUBLIC-CS02",
         "P08",
         "PUBLIC-CS04",
+        "PUBLIC-CS08",
         "PUBLIC-CS05",
         "PUBLIC-CS06"
       ],
@@ -508,6 +512,7 @@
         "PUBLIC-CS04",
         "PUBLIC-CS03",
         "PUBLIC-CS05",
+        "PUBLIC-CS08",
         "PUBLIC-CS06"
       ],
       "error": false,
