@@ -1,9 +1,5 @@
 # Evaluation scope
 
-Run npm run evaluate for 24 deterministic cases:16 metadata-selection scenarios and 8 learning-brief scenarios. The suite uses the actual lookup and brief modules, records selected IDs and hashes implementation/data inputs. It checks season exclusion, historical inclusion, model/caller discovery, stale dates, invalid calendar dates, workflow contracts and future-season laboratory limits.
+Run npm run evaluate for 29 deterministic cases using the actual metadata lookup and brief modules. Results record input hashes, selected IDs and season/freshness boundaries. Five added cases cover the two historical manuals and three end-to-end workflow briefs. [Cases](../eval/grounding-cases.json) · [Results](../eval/grounding-results.json).
 
-Seventeen Node regressions additionally check explicit configuration, metadata privacy, partial source coverage and balanced display budgets. The brief module reads no source bodies; its checklist is original static guidance.
-
-[Cases](../eval/grounding-cases.json), [results](../eval/grounding-results.json), [brief contract](briefs.md). Eight [human/agent prompts](../eval/cases.json) remain unexecuted. No model response was generated or graded; no installed-host or learner effectiveness study is claimed.
-
-Previously reproduced/fixed: Date.parse accepted an impossible February 30 date. Exact ISO calendar round-trip now rejects it. asOf compares review dates; it does not reconstruct historical website content.
+Twenty-one Node tests cover lookup/configuration privacy, brief behavior and case trace/geometry drift. They do not grade answers, CAD quality, legal interpretation or design effectiveness. Eight [human/agent prompts](../eval/cases.json) remain unexecuted.

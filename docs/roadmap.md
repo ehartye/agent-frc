@@ -1,5 +1,7 @@
 # Roadmap
 
-Implemented: six cohesive skills and learning-brief workflows;17 Node regressions;24 deterministic grounding/brief evaluations;29 Java tests plus bounded demo;13 worksheets. Historical build declarations and selected Robot lifecycle paths are documented separately from the 2026 laboratory.
+Implemented locally: seven skills, three season-specific strategy/subsystem studies, 42 Java tests plus bounded demo, 21 Node tests, 29 deterministic grounding cases, 13 worksheets and three concept DXF/SVG pairs. Selected rules and original design assumptions are separately traced.
 
-Remaining: complete upstream dependency/IO graph; realistic drivetrain and multi-camera tests; battery variant/current-revision conflicts; AMPD terminal-specific details; actual CAD/Fusion export/reopen; mentor/student review; independently graded model responses and host loading. Final 2027 rules and production controller compatibility await evidence. No hardware-control capability is implemented.
+Next: restore Fusion access, execute script, inspect and reopen native exports; replace concept plates with modeled mechanisms and joints; add whole-robot geometry and power budgets; implement real IO adapters only under separate authorization; integrate full-field routes and game-piece physics; mentor review and separately evaluated agent responses.
+
+Native CAD, hardware safety, complete rule compliance and model effectiveness remain unverified. Publication remains blocked pending explicit approval; no retry is part of this milestone.

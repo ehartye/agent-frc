@@ -8,10 +8,10 @@
   "junit": "5.10.1",
   "command": "gradlew.bat --offline --no-daemon --console plain test headlessDemo",
   "unit": {
-    "tests": 29,
-    "skipped": 0,
+    "tests": 42,
     "failures": 0,
-    "errors": 0
+    "errors": 0,
+    "skipped": 0
   },
   "headlessDemo": {
     "tests": 1,
@@ -42,30 +42,37 @@
     {
       "name": "org.agentfrc.lesson.CleanupTest",
       "tests": 4,
-      "skipped": 0,
       "failures": 0,
-      "errors": 0
+      "errors": 0,
+      "skipped": 0
     },
     {
       "name": "org.agentfrc.lesson.EventTest",
       "tests": 6,
-      "skipped": 0,
       "failures": 0,
-      "errors": 0
+      "errors": 0,
+      "skipped": 0
     },
     {
       "name": "org.agentfrc.lesson.LessonTest",
       "tests": 10,
-      "skipped": 0,
       "failures": 0,
-      "errors": 0
+      "errors": 0,
+      "skipped": 0
     },
     {
       "name": "org.agentfrc.lesson.NavigationTest",
       "tests": 9,
-      "skipped": 0,
       "failures": 0,
-      "errors": 0
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "org.agentfrc.lesson.SeasonCaseTest",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
     }
   ],
   "navigation": {
@@ -108,5 +115,29 @@
       "CancelIncoming does not block explicit cancellation"
     ],
     "limits": "Pinned2026software fixture; not historical robot execution or hardware response"
+  },
+  "seasonCases": {
+    "tests": 13,
+    "nominal": [
+      {
+        "season": 2024,
+        "firstFeedSeconds": 0.14,
+        "peakVolts": 12,
+        "syntheticReleases": 1
+      },
+      {
+        "season": 2025,
+        "firstFeedSeconds": 1.06,
+        "peakVolts": 12,
+        "syntheticReleases": 1
+      },
+      {
+        "season": 2026,
+        "firstFeedSeconds": 0.14,
+        "peakVolts": 12,
+        "syntheticReleases": 1
+      }
+    ],
+    "scope": "Three original vertical slices; shared WPILib 2026.2.1 runtime; not full robot or historical runtime"
   }
 }

@@ -9,23 +9,23 @@
     },
     {
       "file": "references/public-sources.json",
-      "sha256": "911dcc18078676bd9e12f2f7531b23f6ed8d754d2e02662911ceebdb248f82f5"
+      "sha256": "b38a70ee0316b364a41df5d7913127a90aef2f28293ec32a3bcea24f2b206e45"
     },
     {
       "file": "eval/grounding-cases.json",
-      "sha256": "588c794a83de6514ef435caefb5ba637820b263d602295ef5bf15f5a065e535d"
+      "sha256": "71bddec1104f7c86975dc1d077c37e0c908a6ce74674bd4104ad1725797562ed"
     },
     {
       "file": "scripts/brief.mjs",
-      "sha256": "3d60f687736ae54bc7ca17e2385732119ca5f40aca7f1af9d7c8c2494e3236e5"
+      "sha256": "a99ac4e282cc323da93e39c62997b055707ef3fa405688a775300a49787afc25"
     },
     {
       "file": "references/workflows.json",
-      "sha256": "f76dd98ffb61e530b4688867ba6b80c3ac16708d7b8f49feb84db0bb80721c1c"
+      "sha256": "9fce8eee9c1ac4079600df0f75552d3cf61988dd22d18946d47f87485a894569"
     }
   ],
-  "passed": 24,
-  "total": 24,
+  "passed": 29,
+  "total": 29,
   "results": [
     {
       "id": "2026-trajectory",
@@ -258,7 +258,8 @@
         "P09",
         "PUBLIC-Q03",
         "P21",
-        "PUBLIC-Q04"
+        "PUBLIC-Q04",
+        "PUBLIC-CS03"
       ],
       "error": false,
       "passed": true,
@@ -274,7 +275,10 @@
       "selectedIds": [
         "P13",
         "P14",
-        "P15"
+        "P15",
+        "PUBLIC-CS04",
+        "PUBLIC-CS05",
+        "PUBLIC-CS06"
       ],
       "error": false,
       "passed": true,
@@ -422,6 +426,89 @@
         "PUBLIC-PWR14",
         "PUBLIC-PWR04",
         "PUBLIC-PN04"
+      ],
+      "error": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "case-2024-manual",
+      "options": {
+        "asOf": "2026-11-15",
+        "season": 2024,
+        "topic": "CRESCENDO"
+      },
+      "selectedIds": [
+        "PUBLIC-CS01"
+      ],
+      "error": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "case-2025-manual",
+      "options": {
+        "asOf": "2026-11-15",
+        "season": 2025,
+        "topic": "REEFSCAPE"
+      },
+      "selectedIds": [
+        "PUBLIC-CS02"
+      ],
+      "error": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "case-workflow-2024",
+      "options": {
+        "asOf": "2026-11-15",
+        "season": 2024,
+        "workflow": "case-study"
+      },
+      "selectedIds": [
+        "PUBLIC-CS01",
+        "P08",
+        "PUBLIC-CS04",
+        "PUBLIC-CS05",
+        "PUBLIC-CS06"
+      ],
+      "error": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "case-workflow-2025",
+      "options": {
+        "asOf": "2026-11-15",
+        "season": 2025,
+        "workflow": "case-study"
+      },
+      "selectedIds": [
+        "PUBLIC-CS02",
+        "P08",
+        "PUBLIC-CS04",
+        "PUBLIC-CS05",
+        "PUBLIC-CS06"
+      ],
+      "error": false,
+      "passed": true,
+      "failures": []
+    },
+    {
+      "id": "case-workflow-2026",
+      "options": {
+        "asOf": "2026-11-15",
+        "season": 2026,
+        "workflow": "case-study"
+      },
+      "selectedIds": [
+        "PUBLIC-F03",
+        "P08",
+        "PUBLIC-CS04",
+        "PUBLIC-CS03",
+        "PUBLIC-CS05",
+        "PUBLIC-CS06"
       ],
       "error": false,
       "passed": true,

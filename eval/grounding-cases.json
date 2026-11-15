@@ -254,6 +254,77 @@
         "PUBLIC-PWR13"
       ],
       "expectEvidenceLevel": "metadata-and-original-checklist-only"
+    },
+    {
+      "id": "case-2024-manual",
+      "options": {
+        "season": 2024,
+        "topic": "CRESCENDO"
+      },
+      "include": [
+        "PUBLIC-CS01"
+      ]
+    },
+    {
+      "id": "case-2025-manual",
+      "options": {
+        "season": 2025,
+        "topic": "REEFSCAPE"
+      },
+      "include": [
+        "PUBLIC-CS02"
+      ]
+    },
+    {
+      "id": "case-workflow-2024",
+      "operation": "brief",
+      "options": {
+        "season": 2024,
+        "workflow": "case-study"
+      },
+      "expectEvidenceLevel": "metadata-and-original-checklist-only",
+      "expectLabStatus": "not-verified-for-selected-season",
+      "include": [
+        "PUBLIC-CS01"
+      ],
+      "exclude": [
+        "PUBLIC-CS02",
+        "PUBLIC-F03"
+      ]
+    },
+    {
+      "id": "case-workflow-2025",
+      "operation": "brief",
+      "options": {
+        "season": 2025,
+        "workflow": "case-study"
+      },
+      "expectEvidenceLevel": "metadata-and-original-checklist-only",
+      "expectLabStatus": "not-verified-for-selected-season",
+      "include": [
+        "PUBLIC-CS02"
+      ],
+      "exclude": [
+        "PUBLIC-CS01",
+        "PUBLIC-F03"
+      ]
+    },
+    {
+      "id": "case-workflow-2026",
+      "operation": "brief",
+      "options": {
+        "season": 2026,
+        "workflow": "case-study"
+      },
+      "expectEvidenceLevel": "metadata-and-original-checklist-only",
+      "expectLabStatus": "available-as-separate-pinned-exercise",
+      "include": [
+        "PUBLIC-F03"
+      ],
+      "exclude": [
+        "PUBLIC-CS01",
+        "PUBLIC-CS02"
+      ]
     }
   ]
 }

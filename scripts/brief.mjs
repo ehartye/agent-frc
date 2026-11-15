@@ -25,5 +25,5 @@ export function buildBrief(options,env=process.env){
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href){
  try{const args=process.argv.slice(2),options={};for(let i=0;i<args.length;i++){const key=args[i];if(key==='--historical')options.includeHistorical=true;else if(['--workflow','--season','--as-of'].includes(key)){if(!args[i+1])throw Error('Missing value');const value=args[++i];options[key==='--as-of'?'asOf':key.slice(2)]=key==='--season'?Number(value):value;}else throw Error('Unknown argument');}console.log(JSON.stringify(buildBrief(options),null,2));}
- catch{console.error('Brief failed: provide --workflow season|java|mechanism-cad|vision|modes|troubleshoot --season YEAR --as-of YYYY-MM-DD; check any explicitly configured catalog.');process.exitCode=1;}
+ catch{console.error('Brief failed: provide --workflow season|java|mechanism-cad|vision|modes|troubleshoot|case-study --season YEAR --as-of YYYY-MM-DD; check any explicitly configured catalog.');process.exitCode=1;}
 }

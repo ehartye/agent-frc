@@ -4,7 +4,7 @@ Generate a reviewable plan with explicit context and evidence gaps:
 
 `npm run brief -- --workflow modes --season 2026 --as-of 2026-11-15`
 
-Workflows: season, java, mechanism-cad, vision, modes, troubleshoot. --historical explicitly admits older-season source links. FRC_VAULT_PATH is optional and never guessed.
+Workflows: season, java, mechanism-cad, vision, modes, troubleshoot, case-study. --historical explicitly admits older-season source links. FRC_VAULT_PATH is optional and never guessed.
 
 The result includes required context, ordered checks, acceptance conditions, an expected deliverable, source metadata and a lab baseline when relevant. It reads no source bodies and performs no network or hardware action. Open linked sources before making factual decisions.
 
@@ -12,4 +12,4 @@ Source groups are interleaved; at most 12 links are shown. unmatchedQueries and 
 
 A 2026 lab is a separate pinned exercise, not verification of a user's project. Other selected seasons receive an unverified-baseline label. Rules authority always requires official-source review. asOf compares review dates, not past web snapshots.
 
-The brief contract has seven Node regressions and eight cases within the 24-case deterministic evaluation suite. No LLM answer generation, installed-host test or learning-effectiveness study has occurred. [Evaluation scope](evaluation.md).
+The brief contract has seven Node regressions and eleven cases within the 29-case deterministic evaluation suite. No LLM answer generation, installed-host test or learning-effectiveness study has occurred. [Evaluation scope](evaluation.md).

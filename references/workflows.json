@@ -149,6 +149,34 @@
         "Bare-wire acceptance is not reused for ferrules; undocumented terminal values remain unknown"
       ],
       "deliverable": "An expected/observed evidence table with source and next verification step"
+    },
+    "case-study": {
+      "title": "Rulebook-to-robot case study",
+      "queries": [
+        "Game Manual",
+        "simulation",
+        "CAD"
+      ],
+      "context": [
+        "One selected game season and exact official source snapshot",
+        "Team goals, tools, budget and available fabrication time",
+        "Scope of implemented robot slice and unexecuted CAD/hardware work"
+      ],
+      "steps": [
+        "Read selected official requirements and build a trace register before strategy choices",
+        "Compare at least three original strategy options using explicit assumptions and reliability/cost tradeoffs",
+        "Allocate subsystem interfaces and implement a tested Java vertical slice",
+        "Generate CAD inputs and record native Fusion execution/export/reopen separately",
+        "Run simulator nominal and fault scenarios; distinguish modeled behavior from physical validation"
+      ],
+      "acceptance": [
+        "Every requirement links to a source section and design/test evidence or an explicit gap",
+        "Historical game rules never imply historical software compatibility",
+        "Native CAD and simulator claims name executed artifacts and actual results",
+        "No hardware operation, automatic deployment or publication"
+      ],
+      "deliverable": "A season-specific evidence package with strategy comparison, subsystem contracts, runnable code, CAD inputs, simulator results and unresolved gates",
+      "lab": "examples/java-2026-sim/CASES.md"
     }
   }
 }

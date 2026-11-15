@@ -1,25 +1,25 @@
 # agent-frc
 
-Version **0.5.1** provides six season-aware FRC learning skills, an original runnable Java desktop laboratory, thirteen engineering worksheets and optional local-vault metadata lookup. Independent educational work; no FIRST or vendor endorsement.
+Version **0.6.0**, local source milestone. Seven FRC engineering skills connect rules, strategy, subsystems, working Java code, Fusion inputs and simulator evidence. Independent educational work; no FIRST/vendor endorsement. Publication is pending; no push or installation is performed.
 
-- [Java laboratory](examples/java-2026-sim/README.md): Java 17, Gradle 8.11, WPILib 2026.2.1. Twenty-nine behavior tests plus a bounded demo passed on Windows x86-64. New [navigation exercises](examples/java-2026-sim/NAVIGATION.md) cover trajectories and delayed pose estimation.
-- [Worksheets](worksheets/README.md): original blank templates for mechanisms, CAD/field, calibration, navigation, device evidence and source-file tracing.
-- [Architecture and six skills](docs/architecture.md): season selection, Java, mechanism/CAD, vision, modes and troubleshooting, with public primary-source links.
+Start with the [end-to-end case workflow](case-studies/README.md): [2024 CRESCENDO](case-studies/2024/README.md), [2025 REEFSCAPE](case-studies/2025/README.md), or [2026 REBUILT](case-studies/2026/README.md). Each compares three strategies and implements a deliberately bounded mechanism slice. Complete robot design remains future work.
 
-## Learning briefs and metadata lookup
+- [Java laboratory](examples/java-2026-sim/README.md): Java 17 / WPILib 2026.2.1, **42 JUnit tests plus one bounded demo passed**. [Case evidence](case-studies/validation.json) includes actual ideal-plant outputs.
+- [Fusion concept package](examples/fusion-case-concepts/README.md): three generated DXF/SVG sideplates and an original Python script. Native CAD execution is blocked by sign-in failure; no F3D/STEP or full CAD validation claimed.
+- [Electrical review](docs/electrical-review.md) and [13 worksheets](worksheets/README.md) separate evidence, assumptions and physical checks.
 
-Node 20.11+; no Node dependencies. Generate a [learning brief](docs/briefs.md) with `npm run brief -- --workflow modes --season 2026 --as-of 2026-11-15`. Briefs expose missing context and partial source coverage; they do not read linked bodies or decide legality. Run npm test, npm run validate and npm run evaluate. Twenty-four deterministic grounding/brief evaluations pass; [scope and results](docs/evaluation.md) distinguish them from unexecuted language-model skill evaluations.
+## Use and validate
 
-`npm run lookup -- --season 2026 --as-of 2026-11-15 --topic trajectory`
+Node 20.11+; no Node dependencies. Run `npm test`, `npm run validate`, `npm run evaluate` and `npm run cases:validate`. Twenty-one Node regressions and 29 deterministic grounding cases pass. They do not establish model/learner effectiveness.
 
-Seventeen Node tests cover explicit configuration, bounded schema/size checks, allowlisted metadata, season selection and freshness labels. Lookup defaults to public links. FRC_VAULT_PATH must be explicitly configured to read a compatible local catalog; no guessed path, clone, upload or sync exists. It never returns source bodies or arbitrary catalog paths. --historical admits past seasons only. Reopen official sources before rules decisions.
+`npm run case -- --season 2025`
+
+`npm run brief -- --workflow case-study --season 2025 --as-of 2026-11-15`
+
+[Learning briefs](docs/briefs.md) expose incomplete metadata grounding; open official sources before decisions. The optional FRC_VAULT_PATH is explicit-only. No default vault scan, automatic download/sync, source-body retrieval or upload exists.
 
 ## Boundaries
 
-The laboratory has no robot deployment targets or physical I/O. Its ideal models and thresholds do not establish hardware readiness. The plugin is source-only: installation/host loading and human/agent effectiveness remain untested. No MCP server or cloud service exists.
+Historical game analysis uses a common pinned 2026 teaching runtime, not historical robot binaries. Selected requirements are not complete rule compliance. Final 2027 game rules and production Systemcore compatibility remain unverified. No physical IO, deploy target, robot operation, plugin installation or model-effectiveness test is provided.
 
-2026 published/stable references remain separate from 2027 previews. Final 2027 game rules and production Systemcore compatibility remain unverified. See [validation](docs/validation.md), [grounding](docs/grounding.md) and [roadmap](docs/roadmap.md).
-
-Original code/prose is MIT. FIRST materials remain link-only. Selected [third-party notices](examples/java-2026-sim/THIRD_PARTY.md) cover build/wrapper sources. Runtime dependencies download locally and are not bundled. No private catalog, team data or credentials are shipped.
-
-The [electrical evidence review](docs/electrical-review.md) adds model-specific power guidance and a paper worksheet. No hardware procedure was executed.
+Original code, prose and concept vectors are MIT. FIRST manuals and manufacturer documentation stay link-only. [Manual fingerprints](case-studies/manual-fingerprints.json) identify retrieved bytes without bundling them. [Third-party notices](examples/java-2026-sim/THIRD_PARTY.md) cover selected build/wrapper sources; dependencies are not bundled. No private catalog, team data or credentials are shipped.

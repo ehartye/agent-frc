@@ -1220,6 +1220,133 @@
         "troubleshooting"
       ],
       "limits": "Living page; no installed-device, hardware or season-rule verification"
+    },
+    {
+      "id": "PUBLIC-CS01",
+      "title": "2024 CRESCENDO Game Manual",
+      "url": "https://firstfrc.blob.core.windows.net/frc2024/Manual/2024GameManual.pdf",
+      "scope": "153 pages; section 6 V10 and section 7 V13; retrieved 2026-11-15",
+      "handling": "link-only; original concise annotations; no manual, sample body or vendor asset copied",
+      "license": "Redistribution permission not established",
+      "seasons": [
+        2024
+      ],
+      "authority_state": "historical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "manual",
+        "strategy",
+        "case study"
+      ]
+    },
+    {
+      "id": "PUBLIC-CS02",
+      "title": "2025 REEFSCAPE Game Manual",
+      "url": "https://firstfrc.blob.core.windows.net/frc2025/Manual/2025GameManual.pdf",
+      "scope": "164 pages; section 6 V13 and section 7 V11; retrieved 2026-11-15",
+      "handling": "link-only; original concise annotations; no manual, sample body or vendor asset copied",
+      "license": "Redistribution permission not established",
+      "seasons": [
+        2025
+      ],
+      "authority_state": "historical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "manual",
+        "strategy",
+        "case study"
+      ]
+    },
+    {
+      "id": "PUBLIC-CS03",
+      "title": "Pinned WPILib ElevatorSim source",
+      "url": "https://raw.githubusercontent.com/wpilibsuite/allwpilib/v2026.2.1/wpilibj/src/main/java/edu/wpi/first/wpilibj/simulation/ElevatorSim.java",
+      "scope": "v2026.2.1",
+      "handling": "link-only; original concise annotations; no manual, sample body or vendor asset copied",
+      "license": "WPILib BSD; linked only",
+      "seasons": [
+        2026
+      ],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "simulation",
+        "Java",
+        "case study"
+      ]
+    },
+    {
+      "id": "PUBLIC-CS04",
+      "title": "Fusion extrusion API",
+      "url": "https://autodeskfusion360.github.io/FusionAPIReference/Fusion_API_Documentation/files/ExtrudeFeatures_addSimple.htm",
+      "scope": "Living API reference; accessed 2026-11-15",
+      "handling": "link-only; original concise annotations; no manual, sample body or vendor asset copied",
+      "license": "Redistribution permission not established",
+      "seasons": [],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "CAD",
+        "Fusion",
+        "case study"
+      ]
+    },
+    {
+      "id": "PUBLIC-CS05",
+      "title": "Fusion export API sample documentation",
+      "url": "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/ExportToOtherFormats_Sample.htm",
+      "scope": "Living API reference; accessed 2026-11-15",
+      "handling": "link-only; original concise annotations; no manual, sample body or vendor asset copied",
+      "license": "Redistribution permission not established",
+      "seasons": [],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "CAD",
+        "Fusion",
+        "case study"
+      ]
+    },
+    {
+      "id": "PUBLIC-CS06",
+      "title": "Fusion script workflow",
+      "url": "https://help.autodesk.com/view/fusion360/ENU/?guid=GUID-9701BBA7-EC0E-4016-A9C8-964AA4838954",
+      "scope": "Living script/add-in workflow; accessed 2026-11-15",
+      "handling": "link-only; original concise annotations; no manual, sample body or vendor asset copied",
+      "license": "Redistribution permission not established",
+      "seasons": [],
+      "authority_state": "technical",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "CAD",
+        "Fusion",
+        "case study"
+      ]
+    },
+    {
+      "id": "PUBLIC-F03",
+      "title": "2026 REBUILT Game Manual",
+      "url": "https://firstfrc.blob.core.windows.net/frc2026/Manual/2026GameManual.pdf",
+      "scope": "2026 TU22; 166 pages; selected section 6.4 and 6.4.1 reviewed 2026-11-15",
+      "handling": "link-only; original concise commentary; no manual body copied",
+      "license": "Redistribution permission not established",
+      "seasons": [
+        2026
+      ],
+      "authority_state": "official",
+      "reviewed": "2026-11-15",
+      "review_due": "2026-12-15",
+      "topics": [
+        "manual",
+        "strategy",
+        "case study"
+      ]
     }
   ]
 }

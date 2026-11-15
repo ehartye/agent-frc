@@ -1,0 +1,11 @@
+{
+  "autodeskProduct": "Fusion360",
+  "type": "script",
+  "author": "agent-frc contributors",
+  "description": {
+    "": "Create three original educational concept sideplates and local exports."
+  },
+  "version": "0.6.0",
+  "runOnStartup": false,
+  "supportedOS": "windows|mac"
+}

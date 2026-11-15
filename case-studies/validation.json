@@ -1,0 +1,95 @@
+{
+  "schema": "frc-case-validation/v1",
+  "date": "2026-11-15",
+  "software": "Java 17.0.21+9; Gradle 8.11; WPILib 2026.2.1; Windows x86-64",
+  "java": {
+    "unit": {
+      "tests": 42,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "caseTests": 13,
+    "nominal": [
+      {
+        "season": 2024,
+        "firstFeedSeconds": 0.14,
+        "peakVolts": 12,
+        "syntheticReleases": 1
+      },
+      {
+        "season": 2025,
+        "firstFeedSeconds": 1.06,
+        "peakVolts": 12,
+        "syntheticReleases": 1
+      },
+      {
+        "season": 2026,
+        "firstFeedSeconds": 0.14,
+        "peakVolts": 12,
+        "syntheticReleases": 1
+      }
+    ]
+  },
+  "node": {
+    "tests": 21
+  },
+  "grounding": {
+    "cases": 29
+  },
+  "cad": {
+    "portableArtifacts": "three original DXF and three SVG sideplates generated",
+    "nativeExecution": false,
+    "reason": "Fusion Sign in Failure; user repairing; no further interaction until ready",
+    "pythonSyntax": "passed",
+    "limits": "No native export/reopen, interference, joints, load analysis or manufacturing verification; source syntax/structure checks are not native execution",
+    "structuralChecks": [
+      {
+        "season": 2024,
+        "svgXml": "parsed",
+        "dxfStructure": "4 outline lines and 2 placeholder holes",
+        "traceSymbolsFound": 2
+      },
+      {
+        "season": 2025,
+        "svgXml": "parsed",
+        "dxfStructure": "4 outline lines and 2 placeholder holes",
+        "traceSymbolsFound": 2
+      },
+      {
+        "season": 2026,
+        "svgXml": "parsed",
+        "dxfStructure": "4 outline lines and 2 placeholder holes",
+        "traceSymbolsFound": 2
+      }
+    ]
+  },
+  "limits": [
+    "No complete robot, game-piece/contact/ballistic or full-field simulator",
+    "No actual robot hardware, sensors, controller outputs or deployment",
+    "2024/2025 cases use 2026.2.1 software; historical runtime compatibility unverified",
+    "Selected rule traces only; no inspection certification or final2027 rules"
+  ],
+  "inputs": [
+    {
+      "file": "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/SeasonMechanism.java",
+      "sha256": "f3ef0c2515716f330d1c5e07eb0e6a662300f9a2e25767e4308e6ddaf91d38ce"
+    },
+    {
+      "file": "examples/java-2026-sim/src/test/java/org/agentfrc/lesson/SeasonCaseTest.java",
+      "sha256": "6f5b29ced5136c65be4e461b0909652cc27c84ca0c342a8c7e93b67ef924ab25"
+    },
+    {
+      "file": "examples/java-2026-sim/src/main/resources/case-2024.properties",
+      "sha256": "417129ef244919480f0d5a5affb551575c1198d092f3ff19bd8bcff31573bec4"
+    },
+    {
+      "file": "examples/java-2026-sim/src/main/resources/case-2025.properties",
+      "sha256": "57faab17f3874bdecd35b8d7801bb0f6ac7310427c954264ec0bccbeb5142db1"
+    },
+    {
+      "file": "examples/java-2026-sim/src/main/resources/case-2026.properties",
+      "sha256": "15aad0984ed990d63147c00426640bfcc454814ecad6bdb3c8281bedfebbe08c"
+    }
+  ]
+}

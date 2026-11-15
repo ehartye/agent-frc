@@ -24,3 +24,5 @@ The [navigation laboratory](NAVIGATION.md) adds original trajectory and delayed-
 The [cleanup laboratory](CLEANUP.md) adds four pure-state lifecycle regressions, including a deliberately incomplete trailing-cleanup counterexample.
 
 The [event laboratory](EVENTS.md) adds six trigger/scheduler-boundary regressions.
+
+The [three-season laboratory](CASES.md) adds original flywheel/elevator control slices and thirteen tests.
