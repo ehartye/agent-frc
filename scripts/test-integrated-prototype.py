@@ -19,7 +19,7 @@ class IntegratedTests(unittest.TestCase):
   for bad in [line.replace('releaseTime=0.5200000000000002','releaseTime=2'),line.replace('feedEnergy=0.0','feedEnergy=1.0'),line.replace('year=2024','year=2023')]:
    with self.assertRaises(ValueError):m.parse(bad)
  def test_receipt_bound_to_report(self):
-  r=m.report();self.assertEqual(r['sourceExecutionReceiptSha256'],hashlib.sha256((ROOT/'case-studies/integrated-prototype-run.json').read_bytes()).hexdigest());self.assertEqual(set(r['sourceCodeSha256']),set(m.PINS))
+  r=m.report();self.assertEqual(r['sourceExecutionReceiptSha256'],hashlib.sha256((ROOT/'case-studies/integrated-prototype-run.json').read_text(encoding='utf-8-sig').encode()).hexdigest());self.assertEqual(set(r['sourceCodeSha256']),set(m.PINS))
  def test_source_inertia_arithmetic_and_reserved_allowance(self):
   e=json.loads((ROOT/'case-studies/direct-drive-inertia-inputs.json').read_text())
   for w in e['wheels'].values():self.assertAlmostEqual(w['ringEnvelopeKgM2'],w['massKg']*w['radiusM']**2);self.assertAlmostEqual(w['diskHypothesisKgM2'],w['ringEnvelopeKgM2']/2)
@@ -29,4 +29,9 @@ class IntegratedTests(unittest.TestCase):
   self.assertEqual(len(rows),32)
   for y,mass,v,i in rows:
    if i==.004:self.assertGreater(rows[y,mass,v,.0003],rows[y,mass,v,i])
+ def test_receipt_line_endings_do_not_relabel_evidence(self):
+  import tempfile
+  text=(ROOT/'case-studies/integrated-prototype-run.json').read_text()
+  with tempfile.TemporaryDirectory() as d:
+   p=pathlib.Path(d)/'receipt.json';p.write_bytes(text.replace('\n','\r\n').encode());self.assertEqual(m.report(p),m.report())
 if __name__=='__main__':unittest.main()
