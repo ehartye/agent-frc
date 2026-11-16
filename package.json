@@ -9,7 +9,7 @@
     "node": ">=20.11"
   },
   "scripts": {
-    "test": "node --test test/context.test.mjs test/lookup.test.mjs test/brief.test.mjs test/case-study.test.mjs test/rules-audit.test.mjs",
+    "test": "node --test test/context.test.mjs test/lookup.test.mjs test/brief.test.mjs test/case-study.test.mjs test/rules-audit.test.mjs test/design-artifact.test.mjs",
     "validate": "node scripts/validate.mjs",
     "context": "node scripts/context.mjs",
     "lookup": "node scripts/lookup.mjs",
@@ -17,6 +17,7 @@
     "brief": "node scripts/brief.mjs",
     "case": "node scripts/case-study.mjs",
     "cases:validate": "node scripts/case-artifacts.mjs --check",
-    "rules": "node scripts/rules-audit.mjs"
+    "rules": "node scripts/rules-audit.mjs",
+    "design": "node scripts/design.mjs"
   }
 }
