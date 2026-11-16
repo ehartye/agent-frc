@@ -63,3 +63,12 @@ closure delay and local release. A retractable damping-pad hypothesis improves
 the provisional screen; its normal load/friction and actuators remain unverified.
 Original native guide/gate/pad envelope layouts establish nominal downstream
 clearances, not a constrained assembly or complete controller-to-catcher run.
+
+## Continuous world-coordinate handoff
+
+[World catcher handoff](world-catcher-handoff.md) now keeps piece/rotor state through
+intake, downstream transport, guarded catcher closure, provisional hold and local
+release using actual simulated controller IO. Nine positive and21 negative
+trajectories execute with fresh runtime-bound evidence. This removes the previous
+position/velocity reset boundary but does not validate real gate motion, actuator
+loads, sensors, friction, structure or calibrated hardware acceptance.
