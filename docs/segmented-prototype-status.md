@@ -37,3 +37,11 @@ A declared initial feeder velocity resolves the clear-beam startup handoff witho
 changing fault guards. The fixed-pose CORAL partial-end overlap predicate is now
 covered. This does not resolve actual feeder design, normal/contact mechanics,
 physical drive topology, calibration or acceptance.
+
+## Post-completion and sensitivity screen
+
+[Stopping sensitivity](segmented-stop-sensitivity.md) now covers42 native
+controller/plant scenarios across timestep, feeder speed, approach resistance and
+hypothetical post-completion stopping resistance. Logical beam completion is
+explicitly separate from capture. The nominal-case stopping screen fails at other
+feeder speeds; no physical brake/retention mechanism or acceptance is established.
