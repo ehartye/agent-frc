@@ -1,9 +1,12 @@
 """Scalar wheel-bank exploration, not native assembly or fit acceptance."""
 import json
+import math
 import unittest
 
 def screen(spacer_mm, count=6):
-    if spacer_mm < 0 or count < 2 or not isinstance(count, int):
+    if (isinstance(spacer_mm, bool) or not isinstance(spacer_mm, (int, float))
+            or not math.isfinite(spacer_mm) or spacer_mm < 0
+            or isinstance(count, bool) or not isinstance(count, int) or count < 2):
         raise ValueError('nonnegative spacer and integer count >=2 required')
     boss_span = 28.575
     head_envelope = 2 * (13.49375 + 2.6)
@@ -26,7 +29,8 @@ class ScreenTests(unittest.TestCase):
         self.assertAlmostEqual(q['bankHeadSpanMm'],206.8125)
         self.assertEqual(q['engineeringAcceptance'],'blocked')
     def test_invalid(self):
-        for spacer,n in [(-1,6),(1,1),(1,2.5)]:
+        for spacer,n in [(-1,6),(1,1),(1,2.5),(float('nan'),6),
+                         (float('inf'),6),(True,6),('1',6),(None,6),(1,True)]:
             with self.assertRaises(ValueError):screen(spacer,n)
 
 if __name__=='__main__':
