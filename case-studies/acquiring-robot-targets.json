@@ -1,0 +1,626 @@
+{
+  "schema": "frc-acquiring-robot-targets/v1",
+  "sourceRunId": "f3fe9a9b-7cda-40ee-89f2-7cde008a7c1e",
+  "sourceExecutionReceiptSha256": "83ba3d979c3e1614c2f52f5fce8e3e2779edd4c2d0ee623adc98a708fd4499fc",
+  "sourceCodeSha256": {
+    "case-studies/2024/note-fixture-nominal.json": "d0aad462e9bdf99b6fc83cd1db15ca7abe1f7768a3d9afd75ba33663e176e008",
+    "case-studies/2025/coral-fixture-nominal.json": "a82751de2ebcd7be4ca03ba99a469957c33194a81bd3aef6ef82d0b4e87a0567",
+    "case-studies/2026/intake-fixture-nominal.json": "c99db72594738e48424db574244cfa70aa1140f424a2772ac1f85702c0e81c56",
+    "case-studies/coral-mass-evidence.json": "874d97b8bd125adaa4b876bb2b9b230a7e979f87757684f779caab79b810f94c",
+    "case-studies/direct-drive-inertia-inputs.json": "8938a4da695dbfea43c5edb608e2bc7f94939823e9c9911ff80765253f4af72f",
+    "case-studies/integrated-prototype-targets.json": "292b3b764c63ed9db4cbe2c5d59d50cdc18845e387da65bcf3e4fd41a676ab2d",
+    "case-studies/powered-guide-run.json": "f22ce9ab3a4e9097a044ad6b0662de907a9fe9744fc0ec090a00dabf64b7ce0d",
+    "case-studies/target-frame-evidence.json": "51392cd4fe6b23dd7af1d63c32d27bbee3438f0ea2dc904d3875226bd0c086b6",
+    "examples/java-2026-sim/build.gradle": "f81ca1974aa36c65aff084d8f432178066787c622c94856d6b22492121c638f5",
+    "examples/java-2026-sim/gradle.lockfile": "807c82a5d0d482bf78ddc79938d17703b020cdf8123d7ce632c7ba745b40dcbf",
+    "examples/java-2026-sim/gradle.properties": "8d6ec165e661246d50c0a8e093cee3def9b37efd9d6cc3a55c618b76ab4b85cb",
+    "examples/java-2026-sim/gradle/wrapper/gradle-wrapper.properties": "8b986ccb9cbd1b9d965ced38b0bbd42e608836a9935ae4f3bcdf8ebee52f3b8f",
+    "examples/java-2026-sim/settings.gradle": "93dc2ef5eb59f63062000624ba6e686c9346c53b752cc4c6dae836ae93402c7e",
+    "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/AcquiringSeasonRobot.java": "c518103dcf39de2df696f473dad730401ab9809757d49bf19cbe74d216244860",
+    "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/IntegratedPregripPrototype.java": "ddf59535e4991ba7e7ad3699ff22705dd039bb0c7495d9ca6dd4f91338cee2c6",
+    "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/PoweredGuidePlant.java": "e975380a4da17783f9cbb30947dbbda8a21bf907d014c67011abf176e90393e3",
+    "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/PregripSupervisor.java": "026dffdc091b452292eda55b26b2c58d2db1eecef82926abe39fa5e362fa1a9a",
+    "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/SeasonRobotPrototype.java": "cf7e61090ec37fe6ae53be2660d39e1b009477828037ebf36fd791704990eeae",
+    "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/SharedSupply.java": "b9f3abb46a04d26a630c721266649eef79ee152ded5bec49c5c0c83595055857",
+    "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/SourceAcquisition.java": "ad2b596e7a7420a43bb82ceaa93c4bb3b2452f2ce2bc4f2b5ee6c49086e1f752",
+    "examples/java-2026-sim/src/test/java/org/agentfrc/lesson/AcquiringSeasonRobotTest.java": "20e9bf5391c1ad6aed1214f23f5e3a60d6ecd4d6b99a3cf9997e37017905e09e",
+    "scripts/acquiring-robot-targets.py": "b3fa504da414db76b5bb0259ed5fae69dfd0e31a7d25adabbf03e88b72e0bcbe",
+    "scripts/acquisition-contract.py": "9e2d09f0c0470b343fc6c6bc6c43cbc6fd5a54c12715db762f5dd0302bd41b5a",
+    "scripts/coral-placement.py": "e50e3ce68eff37ffee958c6123df9e5f8805a7f28d7ac4b2214fafdea3ebc1e9",
+    "scripts/integrated-prototype-targets.py": "84c9d175aed64f85823427265bba50682fb67bb551a8ac630c26e87f2458e741",
+    "scripts/mechanism-exit-registration.py": "7d47f2dbf110df6130a508730d0f4abf5a886748a07dfbdc505b64e1646e6db7",
+    "scripts/note-prototype-body.py": "1150993a91fe83c8a77da2aaa65823cb9e9fcb23408c2d68d0c618217d234fb9",
+    "scripts/pose-clearance-contract.py": "11318473993ca41212410a6d223d51b9c61369f63d13982037efbc374780ae36",
+    "scripts/powered-target-link.py": "115bf26ee2548b376b673abb6710d827663df738d2be5d749f0f338e7c795124",
+    "scripts/run-acquiring-robot.py": "3a5134c76b5e9d842bcae85eab366ead323558aa1d59e8eac316907038a3c92b",
+    "scripts/run-integrated-prototype.py": "b15076a95f2e77ebba817c2589d8325e408a2e1d39fa364b28fabfe56a2a61c4",
+    "scripts/run-powered-guide.py": "eb2bc2da4c51e45efd54f7aa6dd2a03304c2daba4af04fa5a64a0414ce142678",
+    "scripts/run-season-robot.py": "0aedf776e229b0219903d710ea26d74adb09c721b0ce6cbc5c665e049a8a6ed4",
+    "scripts/season-robot-targets.py": "ca0b8be07c798bd1350c46d2d2d112075399145f8d96176fae4a8db36596997f",
+    "scripts/target-local-ballistics.py": "4666b4d7824627c812a5aa10df4cbf85655189893d6d0680a8ae9746f68eb87e"
+  },
+  "cases": [
+    {
+      "runtime": {
+        "angle": 0.8726646259971648,
+        "chassisX": 2.397823281771212,
+        "chassisY": 0.0002436266861426252,
+        "dockTime": 5.3999999999999995,
+        "duty": 0.6,
+        "exitX": 1.9549922585667976,
+        "exitY": -0.0019146934246241382,
+        "exitZ": 0.7,
+        "heading": -3.1367187786632567,
+        "inertia": 0.0003,
+        "length": 0.3,
+        "mass": 0.235,
+        "plan": 1,
+        "radius": 0.0508,
+        "speed": 7.070714916032526,
+        "volts": 12.0,
+        "vx": -4.544913957681582,
+        "vy": -0.022151517582454098,
+        "vz": 5.416481870305188,
+        "year": 2024,
+        "time": 6.248613133822124,
+        "residual": 5.8304134853415235e-09
+      },
+      "officialScore": null,
+      "note": {
+        "sourceExit": {
+          "angle": 0.8726646259971648,
+          "chassisX": 2.397823281771212,
+          "chassisY": 0.0002436266861426252,
+          "dockTime": 5.3999999999999995,
+          "duty": 0.6,
+          "exitX": 1.9549922585667976,
+          "exitY": -0.0019146934246241382,
+          "exitZ": 0.7,
+          "heading": -3.1367187786632567,
+          "inertia": 0.0003,
+          "length": 0.3,
+          "mass": 0.235,
+          "plan": 1,
+          "radius": 0.0508,
+          "speed": 7.070714916032526,
+          "volts": 12.0,
+          "vx": -4.544913957681582,
+          "vy": -0.022151517582454098,
+          "vz": 5.416481870305188,
+          "year": 2024,
+          "time": 6.248613133822124,
+          "residual": 5.8304134853415235e-09,
+          "chassisPose": [
+            2.397823281771212,
+            0.0002436266861426252,
+            -3.1367187786632567
+          ]
+        },
+        "aimDistanceM": 1.9549922585667976,
+        "lateralOffsetM": 0,
+        "fixedNotePitchDeg": 14.756020471652636,
+        "fixedNoteAxisM": [
+          -0.2547005359451778,
+          -0.0012413883855192155,
+          0.9670191807529546
+        ],
+        "exitPositionM": [
+          1.9549922585667976,
+          -0.0019146934246241382,
+          0.7
+        ],
+        "exitVelocityMps": [
+          -4.544913957681582,
+          -0.022151517582454098,
+          5.416481870305188
+        ],
+        "registrationHypothesis": {
+          "basis": "virtual-chassis-with-declared-mount",
+          "units": "m",
+          "chassisPose": [
+            2.397823281771212,
+            0.0002436266861426252,
+            -3.1367187786632567
+          ]
+        },
+        "planeLengthM": 0.47568239509151483,
+        "planeWidthM": 1.051052,
+        "planeOriginM": [
+          0,
+          0,
+          1.9845019999999998
+        ],
+        "planeAxes": [
+          [
+            0.9670191807529546,
+            0,
+            0.25470356113702947
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            -0.25470356113702947,
+            0.0,
+            0.9670191807529546
+          ]
+        ],
+        "torusSupportsM": [
+          0.1777999999993479,
+          0.17779988257231635,
+          0.025589188115271607
+        ],
+        "normalSupportCrossings": [
+          {
+            "timeS": 0.3690671537552909,
+            "positionM": [
+              0.2776138001425612,
+              -0.010090090970140755,
+              2.031160883608379
+            ],
+            "normalVelocityMps": 2.895503115668598,
+            "absolutePlantTimeS": 6.617680287577414
+          },
+          {
+            "timeS": 0.3780364561146302,
+            "positionM": [
+              0.23684909265893372,
+              -0.010288774629056006,
+              2.0468857753717904
+            ],
+            "normalVelocityMps": 2.810445260266611,
+            "absolutePlantTimeS": 6.626649589936754
+          },
+          {
+            "timeS": 0.3872858219734098,
+            "positionM": [
+              0.19481152066766283,
+              -0.010493662119503314,
+              2.062275406853508
+            ],
+            "normalVelocityMps": 2.722731501463847,
+            "absolutePlantTimeS": 6.6358989557955335
+          }
+        ],
+        "extremumTimesS": [
+          0.3690671537552909,
+          0.3872858219734098
+        ],
+        "conservativeWholeTorusProjectionMarginM": 0.017540341698860512,
+        "conditionalWholeTorusThinPlaneClearance": true,
+        "installedRoofWallClearance": null,
+        "sensorPassage": null,
+        "matchScore": null
+      },
+      "acquisitionRuntime": {
+        "year": 2024.0,
+        "mass": 0.235,
+        "volts": 12.0,
+        "plan": 1.0,
+        "terminalQ": 0.0,
+        "terminalV": 0.0,
+        "acquisitionTime": 0.24779773264134303,
+        "sourceEnergy": 0.0423,
+        "potential": 0.03530794976912981,
+        "dragLoss": 0.0004,
+        "impactLoss": 0.0065920502308701905,
+        "impulse": -0.05566204818823135,
+        "residual": 0.0,
+        "dockTime": 5.3999999999999995,
+        "chassisX": 2.397823281771212,
+        "chassisY": 0.0002436266861426252,
+        "heading": -3.1367187786632567,
+        "angle": 0.8726646259971648,
+        "length": 0.3,
+        "radius": 0.0508,
+        "inertia": 0.0003,
+        "duty": 0.6,
+        "speed": 7.070714916032526,
+        "motorResidual": 5.8304134853415235e-09,
+        "feedEnergy": 0.0,
+        "motorWork": 12.782005298911201,
+        "robotTime": 6.00081540118078,
+        "globalTime": 6.248613133822124,
+        "exitX": 1.9549922585667976,
+        "exitY": -0.0019146934246241382,
+        "exitZ": 0.7,
+        "vx": -4.544913957681582,
+        "vy": -0.022151517582454098,
+        "vz": 5.416481870305188
+      },
+      "clockScope": "global acquisition + ideal drive + mechanism + target flight"
+    },
+    {
+      "runtime": {
+        "angle": 0.0,
+        "chassisX": -0.2548377100920345,
+        "chassisY": 0.08075110334016362,
+        "dockTime": 5.859999999999999,
+        "duty": 0.04,
+        "exitX": 0.14515743988005358,
+        "exitY": 0.0787813320826842,
+        "exitZ": 0.06715,
+        "heading": -0.0049244480468067075,
+        "inertia": 0.0005,
+        "length": 0.15,
+        "mass": 0.498951607,
+        "plan": 1,
+        "radius": 0.0254,
+        "speed": 0.5641263021511467,
+        "volts": 12.0,
+        "vx": 0.5641194620803685,
+        "vy": -0.0027779994389137007,
+        "vz": 0.0,
+        "year": 2025,
+        "time": 6.999746064813714,
+        "residual": 1.1687317780229023e-12
+      },
+      "officialScore": null,
+      "coral": [
+        {
+          "muHypothesis": 0,
+          "landingTimeS": 0.04516007557517876,
+          "landingCenterM": [
+            0.1706331174210322,
+            0.07865587741807506
+          ],
+          "landingMarginM": 0.01954101496470592,
+          "axialModelApplicable": true,
+          "stopDistanceM": null,
+          "stopCenterM": null,
+          "sweptMarginM": null,
+          "conditionalContainedStop": false,
+          "absoluteLandingTimeS": 7.0449061403888935,
+          "absoluteConditionalStopTimeS": null
+        },
+        {
+          "muHypothesis": 0.1,
+          "landingTimeS": 0.04516007557517876,
+          "landingCenterM": [
+            0.1706331174210322,
+            0.07865587741807506
+          ],
+          "landingMarginM": 0.01954101496470592,
+          "axialModelApplicable": true,
+          "stopDistanceM": 0.1622564712611987,
+          "stopCenterM": [
+            0.33288762131119465,
+            0.0778568570844992
+          ],
+          "sweptMarginM": -0.08034401069264344,
+          "conditionalContainedStop": false,
+          "absoluteLandingTimeS": 7.0449061403888935,
+          "absoluteConditionalStopTimeS": null
+        },
+        {
+          "muHypothesis": 0.3,
+          "landingTimeS": 0.04516007557517876,
+          "landingCenterM": [
+            0.1706331174210322,
+            0.07865587741807506
+          ],
+          "landingMarginM": 0.01954101496470592,
+          "axialModelApplicable": true,
+          "stopDistanceM": 0.05408549042039957,
+          "stopCenterM": [
+            0.22471795205108636,
+            0.07838953730688311
+          ],
+          "sweptMarginM": 0.013873006035122204,
+          "conditionalContainedStop": true,
+          "absoluteLandingTimeS": 7.0449061403888935,
+          "absoluteConditionalStopTimeS": 7.2366557192124965
+        },
+        {
+          "muHypothesis": 0.5,
+          "landingTimeS": 0.04516007557517876,
+          "landingCenterM": [
+            0.1706331174210322,
+            0.07865587741807506
+          ],
+          "landingMarginM": 0.01954101496470592,
+          "axialModelApplicable": true,
+          "stopDistanceM": 0.03245129425223974,
+          "stopCenterM": [
+            0.2030840181990647,
+            0.07849607335135989
+          ],
+          "sweptMarginM": 0.01954101496470592,
+          "conditionalContainedStop": true,
+          "absoluteLandingTimeS": 7.0449061403888935,
+          "absoluteConditionalStopTimeS": 7.159955887683055
+        }
+      ],
+      "acquisitionRuntime": {
+        "year": 2025.0,
+        "mass": 0.498951607,
+        "volts": 12.0,
+        "plan": 1.0,
+        "terminalQ": 0.0,
+        "terminalV": 0.0,
+        "acquisitionTime": 0.23337053107384081,
+        "sourceEnergy": 0.08981128926,
+        "potential": 0.0,
+        "dragLoss": 0.0004,
+        "impactLoss": 0.08941128925999998,
+        "impulse": -0.2987035535785232,
+        "residual": 1.3877787807814457e-17,
+        "dockTime": 5.859999999999999,
+        "chassisX": -0.2548377100920345,
+        "chassisY": 0.08075110334016362,
+        "heading": -0.0049244480468067075,
+        "angle": 0.0,
+        "length": 0.15,
+        "radius": 0.0254,
+        "inertia": 0.0005,
+        "duty": 0.04,
+        "speed": 0.5641263021511467,
+        "motorResidual": 1.1687317780229023e-12,
+        "feedEnergy": 0.0,
+        "motorWork": 0.32695362047740595,
+        "robotTime": 6.766375533739874,
+        "globalTime": 6.999746064813714,
+        "exitX": 0.14515743988005358,
+        "exitY": 0.0787813320826842,
+        "exitZ": 0.06715,
+        "vx": 0.5641194620803685,
+        "vy": -0.0027779994389137007,
+        "vz": 0.0
+      },
+      "clockScope": "global acquisition + ideal drive + mechanism + target flight"
+    },
+    {
+      "runtime": {
+        "angle": 0.0,
+        "chassisX": -0.2548377100920345,
+        "chassisY": 0.08075110334016362,
+        "dockTime": 5.859999999999999,
+        "duty": 0.04,
+        "exitX": 0.14515743988005358,
+        "exitY": 0.0787813320826842,
+        "exitZ": 0.06715,
+        "heading": -0.0049244480468067075,
+        "inertia": 0.0005,
+        "length": 0.15,
+        "mass": 0.816466266,
+        "plan": 1,
+        "radius": 0.0254,
+        "speed": 0.5506884809870021,
+        "volts": 12.0,
+        "vx": 0.5506818038507432,
+        "vy": -0.002711825854182999,
+        "vz": 0.0,
+        "year": 2025,
+        "time": 7.018354310884339,
+        "residual": 8.165690346118026e-13
+      },
+      "officialScore": null,
+      "coral": [
+        {
+          "muHypothesis": 0,
+          "landingTimeS": 0.04516007557517876,
+          "landingCenterM": [
+            0.1700262717598289,
+            0.07865886582216257
+          ],
+          "landingMarginM": 0.018934169303502613,
+          "axialModelApplicable": true,
+          "stopDistanceM": null,
+          "stopCenterM": null,
+          "sweptMarginM": null,
+          "conditionalContainedStop": false,
+          "absoluteLandingTimeS": 7.063514386459518,
+          "absoluteConditionalStopTimeS": null
+        },
+        {
+          "muHypothesis": 0.1,
+          "landingTimeS": 0.04516007557517876,
+          "landingCenterM": [
+            0.1700262717598289,
+            0.07865886582216257
+          ],
+          "landingMarginM": 0.018934169303502613,
+          "axialModelApplicable": true,
+          "stopDistanceM": 0.15461844926237386,
+          "stopCenterM": [
+            0.3246428462627162,
+            0.07789745837907991
+          ],
+          "sweptMarginM": -0.07316271750784831,
+          "conditionalContainedStop": false,
+          "absoluteLandingTimeS": 7.063514386459518,
+          "absoluteConditionalStopTimeS": null
+        },
+        {
+          "muHypothesis": 0.3,
+          "landingTimeS": 0.04516007557517876,
+          "landingCenterM": [
+            0.1700262717598289,
+            0.07865886582216257
+          ],
+          "landingMarginM": 0.018934169303502613,
+          "axialModelApplicable": true,
+          "stopDistanceM": 0.05153948308745796,
+          "stopCenterM": [
+            0.22156512992745803,
+            0.07840506334113502
+          ],
+          "sweptMarginM": 0.016619150095591395,
+          "conditionalContainedStop": true,
+          "absoluteLandingTimeS": 7.063514386459518,
+          "absoluteConditionalStopTimeS": 7.2506963772470625
+        },
+        {
+          "muHypothesis": 0.5,
+          "landingTimeS": 0.04516007557517876,
+          "landingCenterM": [
+            0.1700262717598289,
+            0.07865886582216257
+          ],
+          "landingMarginM": 0.018934169303502613,
+          "axialModelApplicable": true,
+          "stopDistanceM": 0.030923689852474776,
+          "stopCenterM": [
+            0.20094958666040635,
+            0.07850658433354604
+          ],
+          "sweptMarginM": 0.018934169303502613,
+          "conditionalContainedStop": true,
+          "absoluteLandingTimeS": 7.063514386459518,
+          "absoluteConditionalStopTimeS": 7.175823580932045
+        }
+      ],
+      "acquisitionRuntime": {
+        "year": 2025.0,
+        "mass": 0.816466266,
+        "volts": 12.0,
+        "plan": 1.0,
+        "terminalQ": 0.0,
+        "terminalV": 0.0,
+        "acquisitionTime": 0.2333560455551226,
+        "sourceEnergy": 0.14696392788,
+        "potential": 0.0,
+        "dragLoss": 0.0004,
+        "impactLoss": 0.14656392788,
+        "impulse": -0.4892126386888976,
+        "residual": 0.0,
+        "dockTime": 5.859999999999999,
+        "chassisX": -0.2548377100920345,
+        "chassisY": 0.08075110334016362,
+        "heading": -0.0049244480468067075,
+        "angle": 0.0,
+        "length": 0.15,
+        "radius": 0.0254,
+        "inertia": 0.0005,
+        "duty": 0.04,
+        "speed": 0.5506884809870021,
+        "motorResidual": 8.165690346118026e-13,
+        "feedEnergy": 0.0,
+        "motorWork": 0.36079370953325446,
+        "robotTime": 6.784998265329216,
+        "globalTime": 7.018354310884339,
+        "exitX": 0.14515743988005358,
+        "exitY": 0.0787813320826842,
+        "exitZ": 0.06715,
+        "vx": 0.5506818038507432,
+        "vy": -0.002711825854182999,
+        "vz": 0.0
+      },
+      "clockScope": "global acquisition + ideal drive + mechanism + target flight"
+    },
+    {
+      "runtime": {
+        "angle": 1.0471975511965976,
+        "chassisX": -2.4048377100920346,
+        "chassisY": 0.0007511033401635612,
+        "dockTime": 5.859999999999999,
+        "duty": 0.6,
+        "exitX": -2.0048425601199464,
+        "exitY": -0.0012186679173157178,
+        "exitZ": 0.7,
+        "heading": -0.004924448046806351,
+        "inertia": 0.0005,
+        "length": 0.3,
+        "mass": 0.215,
+        "plan": 1,
+        "radius": 0.0381,
+        "speed": 5.748001034320977,
+        "volts": 12.0,
+        "vx": 2.873965669703671,
+        "vy": -0.014152809031708284,
+        "vz": 4.977914916701194,
+        "year": 2026,
+        "time": 6.7309419218096735,
+        "residual": 1.0869758426679255e-09
+      },
+      "officialScore": null,
+      "fuel": {
+        "crossings": [
+          {
+            "timeS": 0.6178649834953329,
+            "positionM": [
+              -0.22911980904233453,
+              -0.009963193036104755,
+              1.9037999999999997
+            ],
+            "normalVelocityMps": -1.0812707236933123,
+            "absoluteRobotTimeS": 7.348806905305007
+          },
+          {
+            "timeS": 0.6732948430292952,
+            "positionM": [
+              -0.06981629566523018,
+              -0.010747681252743339,
+              1.8287999999999998
+            ],
+            "normalVelocityMps": -1.6248519556920433,
+            "absoluteRobotTimeS": 7.404236764838969
+          },
+          {
+            "timeS": 0.7143632015555808,
+            "positionM": [
+              0.0482127568503965,
+              -0.011328913888211587,
+              1.7537999999999996
+            ],
+            "normalVelocityMps": -2.0275949738338417,
+            "absoluteRobotTimeS": 7.445305123365254
+          }
+        ],
+        "wholeSphereThinPlaneMarginM": 0.2515658283410463,
+        "conditionalClearance": true,
+        "sensorPassage": null
+      },
+      "acquisitionRuntime": {
+        "year": 2026.0,
+        "mass": 0.215,
+        "volts": 12.0,
+        "plan": 1.0,
+        "terminalQ": 0.0,
+        "terminalV": 0.0,
+        "acquisitionTime": 0.25489137882095236,
+        "sourceEnergy": 0.0387,
+        "potential": 0.03651907451189746,
+        "dragLoss": 0.0004,
+        "impactLoss": 0.0017809254881025387,
+        "impulse": -0.02767305476242353,
+        "residual": -8.673617379884035e-19,
+        "dockTime": 5.859999999999999,
+        "chassisX": -2.4048377100920346,
+        "chassisY": 0.0007511033401635612,
+        "heading": -0.004924448046806351,
+        "angle": 1.0471975511965976,
+        "length": 0.3,
+        "radius": 0.0381,
+        "inertia": 0.0005,
+        "duty": 0.6,
+        "speed": 5.748001034320977,
+        "motorResidual": 1.0869758426679255e-09,
+        "feedEnergy": 0.0,
+        "motorWork": 15.635886933040155,
+        "robotTime": 6.476050542988721,
+        "globalTime": 6.7309419218096735,
+        "exitX": -2.0048425601199464,
+        "exitY": -0.0012186679173157178,
+        "exitZ": 0.7,
+        "vx": 2.873965669703671,
+        "vy": -0.014152809031708284,
+        "vz": 4.977914916701194
+      },
+      "clockScope": "global acquisition + ideal drive + mechanism + target flight"
+    }
+  ],
+  "assumptions": [
+    "Only final20mm guided source approach; source delivery speed0.6m/s externally prescribed, not station pickup",
+    "Same inclined guide frame with event-exact perfectly inelastic impulse and explicit acquisition energy ledger",
+    "Ideal source latch maps to closed pregrip gate; physical latch/release geometry unknown",
+    "Exact rest state consumed once; rigid carry during ideal kinematic drive, no drive energy/whole-robot conservation",
+    "Generated mass, dock pose, exit velocity and time preserved; target models retain fixed orientation/friction/registration hypotheses",
+    "Recorded receipt reproduction is not fresh Java execution; use run-acquiring-robot.py for new execution"
+  ],
+  "officialScore": null,
+  "calibration": null,
+  "engineeringAcceptance": "blocked"
+}
