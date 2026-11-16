@@ -47,3 +47,6 @@ For existing frozen simulation trace receipts, use [read-only trace diagnostics]
 ## Choose the simulation for the question
 
 Use [iterative simulator selection](../../docs/simulator-selection.md) to compare block-bot rehearsal, kinematic checks, bounded mechanism/contact fixtures, controls/drive and integrated field/adversary scenarios. Select by decision and evidence needed, not visual complexity or a mandatory fidelity ladder. Preserve model limits and explicit transition gates.
+## Integrated assumption-bounded season prototypes
+
+For a runnable 2024/2025/2026 simulation, use `scripts/run-prototype.ps1` with an existing JDK17 and populated WPILib Gradle cache selected by `JAVA_HOME` and `GRADLE_USER_HOME`. It runs offline, creates a fresh bound execution receipt and derives `targets.json` from actual powered exit states. See `docs/integrated-prototypes.md` for design assumptions and scope. Do not install tools, deploy code, imply measured calibration or replace hypothetical target registration with an installed transform. Treat explicit mounting, ideal attachment and virtual feedback as simulation inputs, not reasons to block exploratory runs. Preserve faults and target misses as useful results.

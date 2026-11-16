@@ -1,0 +1,1962 @@
+{
+  "schema": "frc-integrated-prototype-targets/v1",
+  "runId": "331be511-34b5-439c-8865-1af4af23841a",
+  "sourceExecutionReceiptSha256": "8b2e860480f6ce6e98c7a4de82888d2ac660a5caced148f6a777287a2f76bb1c",
+  "cases": [
+    {
+      "season": 2024,
+      "supplyVolts": 9.0,
+      "sourceExit": {
+        "year": 2024,
+        "volts": 9.0,
+        "dt": 5e-05,
+        "angleRad": 0.8726646259971648,
+        "massKg": 0.235,
+        "guideLengthM": 0.3,
+        "radiusM": 0.0508,
+        "inertiaEach": 0.004,
+        "time": 0.7547086760756642,
+        "x": 0.3,
+        "speed": 2.4789094814426478,
+        "omega": 48.96326628626433,
+        "motorWork": 10.850196124818561,
+        "frictionLoss": 0.008934511115025391,
+        "feedEnergy": 0.0,
+        "energyResidual": 3.1313618364947615e-11,
+        "plantElapsedTimeS": 0.23470867607566392,
+        "releaseTimeS": 0.5200000000000002
+      },
+      "registrationHypothesis": {
+        "season": 2024,
+        "basis": "hypothetical-rigid-registration",
+        "units": "m",
+        "from": "MECHANISM_1D",
+        "to": "TARGET_LOCAL_2024",
+        "originM": [
+          1.6928362829059618,
+          0.0,
+          0.47018666706430656
+        ],
+        "axes": [
+          [
+            -0.6427876096865394,
+            0,
+            0.766044443118978
+          ],
+          [
+            0,
+            -1,
+            0
+          ],
+          [
+            0.766044443118978,
+            0.0,
+            0.6427876096865394
+          ]
+        ]
+      },
+      "embeddedExit": {
+        "positionM": [
+          1.5,
+          0.0,
+          0.7
+        ],
+        "velocityMps": [
+          -1.5934123002058185,
+          0.0,
+          1.8989548332540878
+        ],
+        "basis": "hypothetical-rigid-registration",
+        "installedRegistration": null,
+        "orientation": null,
+        "scoring": null
+      },
+      "targetCenterCrossing": null,
+      "projectionMarginM": null,
+      "conditionalWholeSphereThinPlaneClearance": null,
+      "wholeNoteClearance": null,
+      "coralInstalledContact": null,
+      "targetSensorPassage": null,
+      "nominalComponentPoints": null
+    },
+    {
+      "season": 2024,
+      "supplyVolts": 9.0,
+      "sourceExit": {
+        "year": 2024,
+        "volts": 9.0,
+        "dt": 5e-05,
+        "angleRad": 0.8726646259971648,
+        "massKg": 0.235,
+        "guideLengthM": 0.3,
+        "radiusM": 0.0508,
+        "inertiaEach": 0.004,
+        "time": 0.7547086760756642,
+        "x": 0.3,
+        "speed": 2.4789094814426478,
+        "omega": 48.96326628626433,
+        "motorWork": 10.850196124818561,
+        "frictionLoss": 0.008934511115025391,
+        "feedEnergy": 0.0,
+        "energyResidual": 3.1313618364947615e-11,
+        "plantElapsedTimeS": 0.23470867607566392,
+        "releaseTimeS": 0.5200000000000002
+      },
+      "registrationHypothesis": {
+        "season": 2024,
+        "basis": "hypothetical-rigid-registration",
+        "units": "m",
+        "from": "MECHANISM_1D",
+        "to": "TARGET_LOCAL_2024",
+        "originM": [
+          2.192836282905962,
+          0.0,
+          0.47018666706430656
+        ],
+        "axes": [
+          [
+            -0.6427876096865394,
+            0,
+            0.766044443118978
+          ],
+          [
+            0,
+            -1,
+            0
+          ],
+          [
+            0.766044443118978,
+            0.0,
+            0.6427876096865394
+          ]
+        ]
+      },
+      "embeddedExit": {
+        "positionM": [
+          2.0,
+          0.0,
+          0.7
+        ],
+        "velocityMps": [
+          -1.5934123002058185,
+          0.0,
+          1.8989548332540878
+        ],
+        "basis": "hypothetical-rigid-registration",
+        "installedRegistration": null,
+        "orientation": null,
+        "scoring": null
+      },
+      "targetCenterCrossing": null,
+      "projectionMarginM": null,
+      "conditionalWholeSphereThinPlaneClearance": null,
+      "wholeNoteClearance": null,
+      "coralInstalledContact": null,
+      "targetSensorPassage": null,
+      "nominalComponentPoints": null
+    },
+    {
+      "season": 2024,
+      "supplyVolts": 9.0,
+      "sourceExit": {
+        "year": 2024,
+        "volts": 9.0,
+        "dt": 5e-05,
+        "angleRad": 0.8726646259971648,
+        "massKg": 0.235,
+        "guideLengthM": 0.3,
+        "radiusM": 0.0508,
+        "inertiaEach": 0.004,
+        "time": 0.7547086760756642,
+        "x": 0.3,
+        "speed": 2.4789094814426478,
+        "omega": 48.96326628626433,
+        "motorWork": 10.850196124818561,
+        "frictionLoss": 0.008934511115025391,
+        "feedEnergy": 0.0,
+        "energyResidual": 3.1313618364947615e-11,
+        "plantElapsedTimeS": 0.23470867607566392,
+        "releaseTimeS": 0.5200000000000002
+      },
+      "registrationHypothesis": {
+        "season": 2024,
+        "basis": "hypothetical-rigid-registration",
+        "units": "m",
+        "from": "MECHANISM_1D",
+        "to": "TARGET_LOCAL_2024",
+        "originM": [
+          2.692836282905962,
+          0.0,
+          0.47018666706430656
+        ],
+        "axes": [
+          [
+            -0.6427876096865394,
+            0,
+            0.766044443118978
+          ],
+          [
+            0,
+            -1,
+            0
+          ],
+          [
+            0.766044443118978,
+            0.0,
+            0.6427876096865394
+          ]
+        ]
+      },
+      "embeddedExit": {
+        "positionM": [
+          2.5,
+          0.0,
+          0.7
+        ],
+        "velocityMps": [
+          -1.5934123002058185,
+          0.0,
+          1.8989548332540878
+        ],
+        "basis": "hypothetical-rigid-registration",
+        "installedRegistration": null,
+        "orientation": null,
+        "scoring": null
+      },
+      "targetCenterCrossing": null,
+      "projectionMarginM": null,
+      "conditionalWholeSphereThinPlaneClearance": null,
+      "wholeNoteClearance": null,
+      "coralInstalledContact": null,
+      "targetSensorPassage": null,
+      "nominalComponentPoints": null
+    },
+    {
+      "season": 2024,
+      "supplyVolts": 12.0,
+      "sourceExit": {
+        "year": 2024,
+        "volts": 12.0,
+        "dt": 5e-05,
+        "angleRad": 0.8726646259971648,
+        "massKg": 0.235,
+        "guideLengthM": 0.3,
+        "radiusM": 0.0508,
+        "inertiaEach": 0.004,
+        "time": 0.7211895817204729,
+        "x": 0.3,
+        "speed": 2.9062828567024965,
+        "omega": 57.413151453091196,
+        "motorWork": 14.718523658461834,
+        "frictionLoss": 0.011363167796715465,
+        "feedEnergy": 0.0,
+        "energyResidual": 4.581401924497186e-11,
+        "plantElapsedTimeS": 0.20118958172047263,
+        "releaseTimeS": 0.5200000000000002
+      },
+      "registrationHypothesis": {
+        "season": 2024,
+        "basis": "hypothetical-rigid-registration",
+        "units": "m",
+        "from": "MECHANISM_1D",
+        "to": "TARGET_LOCAL_2024",
+        "originM": [
+          1.6928362829059618,
+          0.0,
+          0.47018666706430656
+        ],
+        "axes": [
+          [
+            -0.6427876096865394,
+            0,
+            0.766044443118978
+          ],
+          [
+            0,
+            -1,
+            0
+          ],
+          [
+            0.766044443118978,
+            0.0,
+            0.6427876096865394
+          ]
+        ]
+      },
+      "embeddedExit": {
+        "positionM": [
+          1.5,
+          0.0,
+          0.7
+        ],
+        "velocityMps": [
+          -1.8681226105327648,
+          0.0,
+          2.2263418325088966
+        ],
+        "basis": "hypothetical-rigid-registration",
+        "installedRegistration": null,
+        "orientation": null,
+        "scoring": null
+      },
+      "targetCenterCrossing": null,
+      "projectionMarginM": null,
+      "conditionalWholeSphereThinPlaneClearance": null,
+      "wholeNoteClearance": null,
+      "coralInstalledContact": null,
+      "targetSensorPassage": null,
+      "nominalComponentPoints": null
+    },
+    {
+      "season": 2024,
+      "supplyVolts": 12.0,
+      "sourceExit": {
+        "year": 2024,
+        "volts": 12.0,
+        "dt": 5e-05,
+        "angleRad": 0.8726646259971648,
+        "massKg": 0.235,
+        "guideLengthM": 0.3,
+        "radiusM": 0.0508,
+        "inertiaEach": 0.004,
+        "time": 0.7211895817204729,
+        "x": 0.3,
+        "speed": 2.9062828567024965,
+        "omega": 57.413151453091196,
+        "motorWork": 14.718523658461834,
+        "frictionLoss": 0.011363167796715465,
+        "feedEnergy": 0.0,
+        "energyResidual": 4.581401924497186e-11,
+        "plantElapsedTimeS": 0.20118958172047263,
+        "releaseTimeS": 0.5200000000000002
+      },
+      "registrationHypothesis": {
+        "season": 2024,
+        "basis": "hypothetical-rigid-registration",
+        "units": "m",
+        "from": "MECHANISM_1D",
+        "to": "TARGET_LOCAL_2024",
+        "originM": [
+          2.192836282905962,
+          0.0,
+          0.47018666706430656
+        ],
+        "axes": [
+          [
+            -0.6427876096865394,
+            0,
+            0.766044443118978
+          ],
+          [
+            0,
+            -1,
+            0
+          ],
+          [
+            0.766044443118978,
+            0.0,
+            0.6427876096865394
+          ]
+        ]
+      },
+      "embeddedExit": {
+        "positionM": [
+          2.0,
+          0.0,
+          0.7
+        ],
+        "velocityMps": [
+          -1.8681226105327648,
+          0.0,
+          2.2263418325088966
+        ],
+        "basis": "hypothetical-rigid-registration",
+        "installedRegistration": null,
+        "orientation": null,
+        "scoring": null
+      },
+      "targetCenterCrossing": null,
+      "projectionMarginM": null,
+      "conditionalWholeSphereThinPlaneClearance": null,
+      "wholeNoteClearance": null,
+      "coralInstalledContact": null,
+      "targetSensorPassage": null,
+      "nominalComponentPoints": null
+    },
+    {
+      "season": 2024,
+      "supplyVolts": 12.0,
+      "sourceExit": {
+        "year": 2024,
+        "volts": 12.0,
+        "dt": 5e-05,
+        "angleRad": 0.8726646259971648,
+        "massKg": 0.235,
+        "guideLengthM": 0.3,
+        "radiusM": 0.0508,
+        "inertiaEach": 0.004,
+        "time": 0.7211895817204729,
+        "x": 0.3,
+        "speed": 2.9062828567024965,
+        "omega": 57.413151453091196,
+        "motorWork": 14.718523658461834,
+        "frictionLoss": 0.011363167796715465,
+        "feedEnergy": 0.0,
+        "energyResidual": 4.581401924497186e-11,
+        "plantElapsedTimeS": 0.20118958172047263,
+        "releaseTimeS": 0.5200000000000002
+      },
+      "registrationHypothesis": {
+        "season": 2024,
+        "basis": "hypothetical-rigid-registration",
+        "units": "m",
+        "from": "MECHANISM_1D",
+        "to": "TARGET_LOCAL_2024",
+        "originM": [
+          2.692836282905962,
+          0.0,
+          0.47018666706430656
+        ],
+        "axes": [
+          [
+            -0.6427876096865394,
+            0,
+            0.766044443118978
+          ],
+          [
+            0,
+            -1,
+            0
+          ],
+          [
+            0.766044443118978,
+            0.0,
+            0.6427876096865394
+          ]
+        ]
+      },
+      "embeddedExit": {
+        "positionM": [
+          2.5,
+          0.0,
+          0.7
+        ],
+        "velocityMps": [
+          -1.8681226105327648,
+          0.0,
+          2.2263418325088966
+        ],
+        "basis": "hypothetical-rigid-registration",
+        "installedRegistration": null,
+        "orientation": null,
+        "scoring": null
+      },
+      "targetCenterCrossing": null,
+      "projectionMarginM": null,
+      "conditionalWholeSphereThinPlaneClearance": null,
+      "wholeNoteClearance": null,
+      "coralInstalledContact": null,
+      "targetSensorPassage": null,
+      "nominalComponentPoints": null
+    },
+    {
+      "season": 2025,
+      "supplyVolts": 9.0,
+      "sourceExit": {
+        "year": 2025,
+        "volts": 9.0,
+        "dt": 5e-05,
+        "angleRad": 0.0,
+        "massKg": 0.498951607,
+        "guideLengthM": 0.15,
+        "radiusM": 0.0254,
+        "inertiaEach": 0.004,
+        "time": 1.142821064877221,
+        "x": 0.15,
+        "speed": 0.4361690110811581,
+        "omega": 17.19249071038409,
+        "motorWork": 1.2299519296559622,
+        "frictionLoss": 0.00016385572023375948,
+        "feedEnergy": 0.0,
+        "energyResidual": 3.042011087472929e-14,
+        "plantElapsedTimeS": 0.6228210648772209,
+        "releaseTimeS": 0.5200000000000002
+      },
+      "registrationHypothesis": {
+        "season": 2025,
+        "basis": "hypothetical-rigid-registration",
+        "units": "m",
+        "from": "MECHANISM_1D",
+        "to": "TARGET_LOCAL_2025",
+        "originM": [
+          0.0,
+          0.08,
+          0.06715
+        ],
+        "axes": [
+          [
+            1.0,
+            0,
+            0.0
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "embeddedExit": {
+        "positionM": [
+          0.15,
+          0.08,
+          0.06715
+        ],
+        "velocityMps": [
+          0.4361690110811581,
+          0.0,
+          0.0
+        ],
+        "basis": "hypothetical-rigid-registration",
+        "installedRegistration": null,
+        "orientation": null,
+        "scoring": null
+      },
+      "targetCenterCrossing": {
+        "timeS": 0.04516007557517876,
+        "positionM": [
+          0.16969742550397607,
+          0.08,
+          0.05715
+        ],
+        "normalVelocityMps": -0.4428690551393268,
+        "absolutePlantTimeS": 1.1879811404523997
+      },
+      "projectionMarginM": null,
+      "conditionalWholeSphereThinPlaneClearance": null,
+      "wholeNoteClearance": null,
+      "coralInstalledContact": null,
+      "targetSensorPassage": null,
+      "nominalComponentPoints": null
+    },
+    {
+      "season": 2025,
+      "supplyVolts": 9.0,
+      "sourceExit": {
+        "year": 2025,
+        "volts": 9.0,
+        "dt": 5e-05,
+        "angleRad": 0.0,
+        "massKg": 0.498951607,
+        "guideLengthM": 0.15,
+        "radiusM": 0.0254,
+        "inertiaEach": 0.004,
+        "time": 1.142821064877221,
+        "x": 0.15,
+        "speed": 0.4361690110811581,
+        "omega": 17.19249071038409,
+        "motorWork": 1.2299519296559622,
+        "frictionLoss": 0.00016385572023375948,
+        "feedEnergy": 0.0,
+        "energyResidual": 3.042011087472929e-14,
+        "plantElapsedTimeS": 0.6228210648772209,
+        "releaseTimeS": 0.5200000000000002
+      },
+      "registrationHypothesis": {
+        "season": 2025,
+        "basis": "hypothetical-rigid-registration",
+        "units": "m",
+        "from": "MECHANISM_1D",
+        "to": "TARGET_LOCAL_2025",
+        "originM": [
+          0.05000000000000002,
+          0.08,
+          0.06715
+        ],
+        "axes": [
+          [
+            1.0,
+            0,
+            0.0
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "embeddedExit": {
+        "positionM": [
+          0.2,
+          0.08,
+          0.06715
+        ],
+        "velocityMps": [
+          0.4361690110811581,
+          0.0,
+          0.0
+        ],
+        "basis": "hypothetical-rigid-registration",
+        "installedRegistration": null,
+        "orientation": null,
+        "scoring": null
+      },
+      "targetCenterCrossing": {
+        "timeS": 0.04516007557517876,
+        "positionM": [
+          0.21969742550397608,
+          0.08,
+          0.05715
+        ],
+        "normalVelocityMps": -0.4428690551393268,
+        "absolutePlantTimeS": 1.1879811404523997
+      },
+      "projectionMarginM": null,
+      "conditionalWholeSphereThinPlaneClearance": null,
+      "wholeNoteClearance": null,
+      "coralInstalledContact": null,
+      "targetSensorPassage": null,
+      "nominalComponentPoints": null
+    },
+    {
+      "season": 2025,
+      "supplyVolts": 9.0,
+      "sourceExit": {
+        "year": 2025,
+        "volts": 9.0,
+        "dt": 5e-05,
+        "angleRad": 0.0,
+        "massKg": 0.498951607,
+        "guideLengthM": 0.15,
+        "radiusM": 0.0254,
+        "inertiaEach": 0.004,
+        "time": 1.142821064877221,
+        "x": 0.15,
+        "speed": 0.4361690110811581,
+        "omega": 17.19249071038409,
+        "motorWork": 1.2299519296559622,
+        "frictionLoss": 0.00016385572023375948,
+        "feedEnergy": 0.0,
+        "energyResidual": 3.042011087472929e-14,
+        "plantElapsedTimeS": 0.6228210648772209,
+        "releaseTimeS": 0.5200000000000002
+      },
+      "registrationHypothesis": {
+        "season": 2025,
+        "basis": "hypothetical-rigid-registration",
+        "units": "m",
+        "from": "MECHANISM_1D",
+        "to": "TARGET_LOCAL_2025",
+        "originM": [
+          0.30000000000000004,
+          0.08,
+          0.06715
+        ],
+        "axes": [
+          [
+            1.0,
+            0,
+            0.0
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "embeddedExit": {
+        "positionM": [
+          0.45000000000000007,
+          0.08,
+          0.06715
+        ],
+        "velocityMps": [
+          0.4361690110811581,
+          0.0,
+          0.0
+        ],
+        "basis": "hypothetical-rigid-registration",
+        "installedRegistration": null,
+        "orientation": null,
+        "scoring": null
+      },
+      "targetCenterCrossing": {
+        "timeS": 0.04516007557517876,
+        "positionM": [
+          0.46969742550397614,
+          0.08,
+          0.05715
+        ],
+        "normalVelocityMps": -0.4428690551393268,
+        "absolutePlantTimeS": 1.1879811404523997
+      },
+      "projectionMarginM": null,
+      "conditionalWholeSphereThinPlaneClearance": null,
+      "wholeNoteClearance": null,
+      "coralInstalledContact": null,
+      "targetSensorPassage": null,
+      "nominalComponentPoints": null
+    },
+    {
+      "season": 2025,
+      "supplyVolts": 12.0,
+      "sourceExit": {
+        "year": 2025,
+        "volts": 12.0,
+        "dt": 5e-05,
+        "angleRad": 0.0,
+        "massKg": 0.498951607,
+        "guideLengthM": 0.15,
+        "radiusM": 0.0254,
+        "inertiaEach": 0.004,
+        "time": 1.0519571015383524,
+        "x": 0.15,
+        "speed": 0.5179946685302821,
+        "omega": 20.423483760151164,
+        "motorWork": 1.735681959956687,
+        "frictionLoss": 0.00026823680197695775,
+        "feedEnergy": 0.0,
+        "energyResidual": 3.9745984281580604e-14,
+        "plantElapsedTimeS": 0.5319571015383522,
+        "releaseTimeS": 0.5200000000000002
+      },
+      "registrationHypothesis": {
+        "season": 2025,
+        "basis": "hypothetical-rigid-registration",
+        "units": "m",
+        "from": "MECHANISM_1D",
+        "to": "TARGET_LOCAL_2025",
+        "originM": [
+          0.0,
+          0.08,
+          0.06715
+        ],
+        "axes": [
+          [
+            1.0,
+            0,
+            0.0
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "embeddedExit": {
+        "positionM": [
+          0.15,
+          0.08,
+          0.06715
+        ],
+        "velocityMps": [
+          0.5179946685302821,
+          0.0,
+          0.0
+        ],
+        "basis": "hypothetical-rigid-registration",
+        "installedRegistration": null,
+        "orientation": null,
+        "scoring": null
+      },
+      "targetCenterCrossing": {
+        "timeS": 0.04516007557517876,
+        "positionM": [
+          0.1733926783783672,
+          0.08,
+          0.05715
+        ],
+        "normalVelocityMps": -0.4428690551393268,
+        "absolutePlantTimeS": 1.0971171771135313
+      },
+      "projectionMarginM": null,
+      "conditionalWholeSphereThinPlaneClearance": null,
+      "wholeNoteClearance": null,
+      "coralInstalledContact": null,
+      "targetSensorPassage": null,
+      "nominalComponentPoints": null
+    },
+    {
+      "season": 2025,
+      "supplyVolts": 12.0,
+      "sourceExit": {
+        "year": 2025,
+        "volts": 12.0,
+        "dt": 5e-05,
+        "angleRad": 0.0,
+        "massKg": 0.498951607,
+        "guideLengthM": 0.15,
+        "radiusM": 0.0254,
+        "inertiaEach": 0.004,
+        "time": 1.0519571015383524,
+        "x": 0.15,
+        "speed": 0.5179946685302821,
+        "omega": 20.423483760151164,
+        "motorWork": 1.735681959956687,
+        "frictionLoss": 0.00026823680197695775,
+        "feedEnergy": 0.0,
+        "energyResidual": 3.9745984281580604e-14,
+        "plantElapsedTimeS": 0.5319571015383522,
+        "releaseTimeS": 0.5200000000000002
+      },
+      "registrationHypothesis": {
+        "season": 2025,
+        "basis": "hypothetical-rigid-registration",
+        "units": "m",
+        "from": "MECHANISM_1D",
+        "to": "TARGET_LOCAL_2025",
+        "originM": [
+          0.05000000000000002,
+          0.08,
+          0.06715
+        ],
+        "axes": [
+          [
+            1.0,
+            0,
+            0.0
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "embeddedExit": {
+        "positionM": [
+          0.2,
+          0.08,
+          0.06715
+        ],
+        "velocityMps": [
+          0.5179946685302821,
+          0.0,
+          0.0
+        ],
+        "basis": "hypothetical-rigid-registration",
+        "installedRegistration": null,
+        "orientation": null,
+        "scoring": null
+      },
+      "targetCenterCrossing": {
+        "timeS": 0.04516007557517876,
+        "positionM": [
+          0.2233926783783672,
+          0.08,
+          0.05715
+        ],
+        "normalVelocityMps": -0.4428690551393268,
+        "absolutePlantTimeS": 1.0971171771135313
+      },
+      "projectionMarginM": null,
+      "conditionalWholeSphereThinPlaneClearance": null,
+      "wholeNoteClearance": null,
+      "coralInstalledContact": null,
+      "targetSensorPassage": null,
+      "nominalComponentPoints": null
+    },
+    {
+      "season": 2025,
+      "supplyVolts": 12.0,
+      "sourceExit": {
+        "year": 2025,
+        "volts": 12.0,
+        "dt": 5e-05,
+        "angleRad": 0.0,
+        "massKg": 0.498951607,
+        "guideLengthM": 0.15,
+        "radiusM": 0.0254,
+        "inertiaEach": 0.004,
+        "time": 1.0519571015383524,
+        "x": 0.15,
+        "speed": 0.5179946685302821,
+        "omega": 20.423483760151164,
+        "motorWork": 1.735681959956687,
+        "frictionLoss": 0.00026823680197695775,
+        "feedEnergy": 0.0,
+        "energyResidual": 3.9745984281580604e-14,
+        "plantElapsedTimeS": 0.5319571015383522,
+        "releaseTimeS": 0.5200000000000002
+      },
+      "registrationHypothesis": {
+        "season": 2025,
+        "basis": "hypothetical-rigid-registration",
+        "units": "m",
+        "from": "MECHANISM_1D",
+        "to": "TARGET_LOCAL_2025",
+        "originM": [
+          0.30000000000000004,
+          0.08,
+          0.06715
+        ],
+        "axes": [
+          [
+            1.0,
+            0,
+            0.0
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "embeddedExit": {
+        "positionM": [
+          0.45000000000000007,
+          0.08,
+          0.06715
+        ],
+        "velocityMps": [
+          0.5179946685302821,
+          0.0,
+          0.0
+        ],
+        "basis": "hypothetical-rigid-registration",
+        "installedRegistration": null,
+        "orientation": null,
+        "scoring": null
+      },
+      "targetCenterCrossing": {
+        "timeS": 0.04516007557517876,
+        "positionM": [
+          0.4733926783783673,
+          0.08,
+          0.05715
+        ],
+        "normalVelocityMps": -0.4428690551393268,
+        "absolutePlantTimeS": 1.0971171771135313
+      },
+      "projectionMarginM": null,
+      "conditionalWholeSphereThinPlaneClearance": null,
+      "wholeNoteClearance": null,
+      "coralInstalledContact": null,
+      "targetSensorPassage": null,
+      "nominalComponentPoints": null
+    },
+    {
+      "season": 2025,
+      "supplyVolts": 9.0,
+      "sourceExit": {
+        "year": 2025,
+        "volts": 9.0,
+        "dt": 5e-05,
+        "angleRad": 0.0,
+        "massKg": 0.816466266,
+        "guideLengthM": 0.15,
+        "radiusM": 0.0254,
+        "inertiaEach": 0.004,
+        "time": 1.1502355368784096,
+        "x": 0.15,
+        "speed": 0.43198468085062164,
+        "omega": 17.040264065582686,
+        "motorWork": 1.2380881439760667,
+        "frictionLoss": 0.00042504923779697226,
+        "feedEnergy": 0.0,
+        "energyResidual": 4.884981308350689e-15,
+        "plantElapsedTimeS": 0.6302355368784095,
+        "releaseTimeS": 0.5200000000000002
+      },
+      "registrationHypothesis": {
+        "season": 2025,
+        "basis": "hypothetical-rigid-registration",
+        "units": "m",
+        "from": "MECHANISM_1D",
+        "to": "TARGET_LOCAL_2025",
+        "originM": [
+          0.0,
+          0.08,
+          0.06715
+        ],
+        "axes": [
+          [
+            1.0,
+            0,
+            0.0
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "embeddedExit": {
+        "positionM": [
+          0.15,
+          0.08,
+          0.06715
+        ],
+        "velocityMps": [
+          0.43198468085062164,
+          0.0,
+          0.0
+        ],
+        "basis": "hypothetical-rigid-registration",
+        "installedRegistration": null,
+        "orientation": null,
+        "scoring": null
+      },
+      "targetCenterCrossing": {
+        "timeS": 0.04516007557517876,
+        "positionM": [
+          0.16950846083453355,
+          0.08,
+          0.05715
+        ],
+        "normalVelocityMps": -0.4428690551393268,
+        "absolutePlantTimeS": 1.1953956124535883
+      },
+      "projectionMarginM": null,
+      "conditionalWholeSphereThinPlaneClearance": null,
+      "wholeNoteClearance": null,
+      "coralInstalledContact": null,
+      "targetSensorPassage": null,
+      "nominalComponentPoints": null
+    },
+    {
+      "season": 2025,
+      "supplyVolts": 9.0,
+      "sourceExit": {
+        "year": 2025,
+        "volts": 9.0,
+        "dt": 5e-05,
+        "angleRad": 0.0,
+        "massKg": 0.816466266,
+        "guideLengthM": 0.15,
+        "radiusM": 0.0254,
+        "inertiaEach": 0.004,
+        "time": 1.1502355368784096,
+        "x": 0.15,
+        "speed": 0.43198468085062164,
+        "omega": 17.040264065582686,
+        "motorWork": 1.2380881439760667,
+        "frictionLoss": 0.00042504923779697226,
+        "feedEnergy": 0.0,
+        "energyResidual": 4.884981308350689e-15,
+        "plantElapsedTimeS": 0.6302355368784095,
+        "releaseTimeS": 0.5200000000000002
+      },
+      "registrationHypothesis": {
+        "season": 2025,
+        "basis": "hypothetical-rigid-registration",
+        "units": "m",
+        "from": "MECHANISM_1D",
+        "to": "TARGET_LOCAL_2025",
+        "originM": [
+          0.05000000000000002,
+          0.08,
+          0.06715
+        ],
+        "axes": [
+          [
+            1.0,
+            0,
+            0.0
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "embeddedExit": {
+        "positionM": [
+          0.2,
+          0.08,
+          0.06715
+        ],
+        "velocityMps": [
+          0.43198468085062164,
+          0.0,
+          0.0
+        ],
+        "basis": "hypothetical-rigid-registration",
+        "installedRegistration": null,
+        "orientation": null,
+        "scoring": null
+      },
+      "targetCenterCrossing": {
+        "timeS": 0.04516007557517876,
+        "positionM": [
+          0.21950846083453357,
+          0.08,
+          0.05715
+        ],
+        "normalVelocityMps": -0.4428690551393268,
+        "absolutePlantTimeS": 1.1953956124535883
+      },
+      "projectionMarginM": null,
+      "conditionalWholeSphereThinPlaneClearance": null,
+      "wholeNoteClearance": null,
+      "coralInstalledContact": null,
+      "targetSensorPassage": null,
+      "nominalComponentPoints": null
+    },
+    {
+      "season": 2025,
+      "supplyVolts": 9.0,
+      "sourceExit": {
+        "year": 2025,
+        "volts": 9.0,
+        "dt": 5e-05,
+        "angleRad": 0.0,
+        "massKg": 0.816466266,
+        "guideLengthM": 0.15,
+        "radiusM": 0.0254,
+        "inertiaEach": 0.004,
+        "time": 1.1502355368784096,
+        "x": 0.15,
+        "speed": 0.43198468085062164,
+        "omega": 17.040264065582686,
+        "motorWork": 1.2380881439760667,
+        "frictionLoss": 0.00042504923779697226,
+        "feedEnergy": 0.0,
+        "energyResidual": 4.884981308350689e-15,
+        "plantElapsedTimeS": 0.6302355368784095,
+        "releaseTimeS": 0.5200000000000002
+      },
+      "registrationHypothesis": {
+        "season": 2025,
+        "basis": "hypothetical-rigid-registration",
+        "units": "m",
+        "from": "MECHANISM_1D",
+        "to": "TARGET_LOCAL_2025",
+        "originM": [
+          0.30000000000000004,
+          0.08,
+          0.06715
+        ],
+        "axes": [
+          [
+            1.0,
+            0,
+            0.0
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "embeddedExit": {
+        "positionM": [
+          0.45000000000000007,
+          0.08,
+          0.06715
+        ],
+        "velocityMps": [
+          0.43198468085062164,
+          0.0,
+          0.0
+        ],
+        "basis": "hypothetical-rigid-registration",
+        "installedRegistration": null,
+        "orientation": null,
+        "scoring": null
+      },
+      "targetCenterCrossing": {
+        "timeS": 0.04516007557517876,
+        "positionM": [
+          0.4695084608345336,
+          0.08,
+          0.05715
+        ],
+        "normalVelocityMps": -0.4428690551393268,
+        "absolutePlantTimeS": 1.1953956124535883
+      },
+      "projectionMarginM": null,
+      "conditionalWholeSphereThinPlaneClearance": null,
+      "wholeNoteClearance": null,
+      "coralInstalledContact": null,
+      "targetSensorPassage": null,
+      "nominalComponentPoints": null
+    },
+    {
+      "season": 2025,
+      "supplyVolts": 12.0,
+      "sourceExit": {
+        "year": 2025,
+        "volts": 12.0,
+        "dt": 5e-05,
+        "angleRad": 0.0,
+        "massKg": 0.816466266,
+        "guideLengthM": 0.15,
+        "radiusM": 0.0254,
+        "inertiaEach": 0.004,
+        "time": 1.0584748981598056,
+        "x": 0.15,
+        "speed": 0.5128378600917899,
+        "omega": 20.238717415059348,
+        "motorWork": 1.7464845072419377,
+        "frictionLoss": 0.000695372550474213,
+        "feedEnergy": 0.0,
+        "energyResidual": 3.9745984281580604e-14,
+        "plantElapsedTimeS": 0.5384748981598054,
+        "releaseTimeS": 0.5200000000000002
+      },
+      "registrationHypothesis": {
+        "season": 2025,
+        "basis": "hypothetical-rigid-registration",
+        "units": "m",
+        "from": "MECHANISM_1D",
+        "to": "TARGET_LOCAL_2025",
+        "originM": [
+          0.0,
+          0.08,
+          0.06715
+        ],
+        "axes": [
+          [
+            1.0,
+            0,
+            0.0
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "embeddedExit": {
+        "positionM": [
+          0.15,
+          0.08,
+          0.06715
+        ],
+        "velocityMps": [
+          0.5128378600917899,
+          0.0,
+          0.0
+        ],
+        "basis": "hypothetical-rigid-registration",
+        "installedRegistration": null,
+        "orientation": null,
+        "scoring": null
+      },
+      "targetCenterCrossing": {
+        "timeS": 0.04516007557517876,
+        "positionM": [
+          0.17315979651955818,
+          0.08,
+          0.05715
+        ],
+        "normalVelocityMps": -0.4428690551393268,
+        "absolutePlantTimeS": 1.1036349737349842
+      },
+      "projectionMarginM": null,
+      "conditionalWholeSphereThinPlaneClearance": null,
+      "wholeNoteClearance": null,
+      "coralInstalledContact": null,
+      "targetSensorPassage": null,
+      "nominalComponentPoints": null
+    },
+    {
+      "season": 2025,
+      "supplyVolts": 12.0,
+      "sourceExit": {
+        "year": 2025,
+        "volts": 12.0,
+        "dt": 5e-05,
+        "angleRad": 0.0,
+        "massKg": 0.816466266,
+        "guideLengthM": 0.15,
+        "radiusM": 0.0254,
+        "inertiaEach": 0.004,
+        "time": 1.0584748981598056,
+        "x": 0.15,
+        "speed": 0.5128378600917899,
+        "omega": 20.238717415059348,
+        "motorWork": 1.7464845072419377,
+        "frictionLoss": 0.000695372550474213,
+        "feedEnergy": 0.0,
+        "energyResidual": 3.9745984281580604e-14,
+        "plantElapsedTimeS": 0.5384748981598054,
+        "releaseTimeS": 0.5200000000000002
+      },
+      "registrationHypothesis": {
+        "season": 2025,
+        "basis": "hypothetical-rigid-registration",
+        "units": "m",
+        "from": "MECHANISM_1D",
+        "to": "TARGET_LOCAL_2025",
+        "originM": [
+          0.05000000000000002,
+          0.08,
+          0.06715
+        ],
+        "axes": [
+          [
+            1.0,
+            0,
+            0.0
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "embeddedExit": {
+        "positionM": [
+          0.2,
+          0.08,
+          0.06715
+        ],
+        "velocityMps": [
+          0.5128378600917899,
+          0.0,
+          0.0
+        ],
+        "basis": "hypothetical-rigid-registration",
+        "installedRegistration": null,
+        "orientation": null,
+        "scoring": null
+      },
+      "targetCenterCrossing": {
+        "timeS": 0.04516007557517876,
+        "positionM": [
+          0.2231597965195582,
+          0.08,
+          0.05715
+        ],
+        "normalVelocityMps": -0.4428690551393268,
+        "absolutePlantTimeS": 1.1036349737349842
+      },
+      "projectionMarginM": null,
+      "conditionalWholeSphereThinPlaneClearance": null,
+      "wholeNoteClearance": null,
+      "coralInstalledContact": null,
+      "targetSensorPassage": null,
+      "nominalComponentPoints": null
+    },
+    {
+      "season": 2025,
+      "supplyVolts": 12.0,
+      "sourceExit": {
+        "year": 2025,
+        "volts": 12.0,
+        "dt": 5e-05,
+        "angleRad": 0.0,
+        "massKg": 0.816466266,
+        "guideLengthM": 0.15,
+        "radiusM": 0.0254,
+        "inertiaEach": 0.004,
+        "time": 1.0584748981598056,
+        "x": 0.15,
+        "speed": 0.5128378600917899,
+        "omega": 20.238717415059348,
+        "motorWork": 1.7464845072419377,
+        "frictionLoss": 0.000695372550474213,
+        "feedEnergy": 0.0,
+        "energyResidual": 3.9745984281580604e-14,
+        "plantElapsedTimeS": 0.5384748981598054,
+        "releaseTimeS": 0.5200000000000002
+      },
+      "registrationHypothesis": {
+        "season": 2025,
+        "basis": "hypothetical-rigid-registration",
+        "units": "m",
+        "from": "MECHANISM_1D",
+        "to": "TARGET_LOCAL_2025",
+        "originM": [
+          0.30000000000000004,
+          0.08,
+          0.06715
+        ],
+        "axes": [
+          [
+            1.0,
+            0,
+            0.0
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0
+          ]
+        ]
+      },
+      "embeddedExit": {
+        "positionM": [
+          0.45000000000000007,
+          0.08,
+          0.06715
+        ],
+        "velocityMps": [
+          0.5128378600917899,
+          0.0,
+          0.0
+        ],
+        "basis": "hypothetical-rigid-registration",
+        "installedRegistration": null,
+        "orientation": null,
+        "scoring": null
+      },
+      "targetCenterCrossing": {
+        "timeS": 0.04516007557517876,
+        "positionM": [
+          0.47315979651955825,
+          0.08,
+          0.05715
+        ],
+        "normalVelocityMps": -0.4428690551393268,
+        "absolutePlantTimeS": 1.1036349737349842
+      },
+      "projectionMarginM": null,
+      "conditionalWholeSphereThinPlaneClearance": null,
+      "wholeNoteClearance": null,
+      "coralInstalledContact": null,
+      "targetSensorPassage": null,
+      "nominalComponentPoints": null
+    },
+    {
+      "season": 2026,
+      "supplyVolts": 9.0,
+      "sourceExit": {
+        "year": 2026,
+        "volts": 9.0,
+        "dt": 5e-05,
+        "angleRad": 1.0471975511965976,
+        "massKg": 0.215,
+        "guideLengthM": 0.3,
+        "radiusM": 0.0381,
+        "inertiaEach": 0.004,
+        "time": 0.7865548933909271,
+        "x": 0.3,
+        "speed": 2.169830470392884,
+        "omega": 57.13676725677558,
+        "motorWork": 14.11952358954525,
+        "frictionLoss": 0.00716912262187796,
+        "feedEnergy": 0.0,
+        "energyResidual": 2.62367905179417e-11,
+        "plantElapsedTimeS": 0.26655489339092686,
+        "releaseTimeS": 0.5200000000000002
+      },
+      "registrationHypothesis": {
+        "season": 2026,
+        "basis": "hypothetical-rigid-registration",
+        "units": "m",
+        "from": "MECHANISM_1D",
+        "to": "TARGET_LOCAL_2026",
+        "originM": [
+          -2.15,
+          0.0,
+          0.4401923788646684
+        ],
+        "axes": [
+          [
+            0.5000000000000001,
+            0,
+            0.8660254037844386
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            -0.8660254037844386,
+            0.0,
+            0.5000000000000001
+          ]
+        ]
+      },
+      "embeddedExit": {
+        "positionM": [
+          -2.0,
+          0.0,
+          0.7
+        ],
+        "velocityMps": [
+          1.0849152351964422,
+          0.0,
+          1.8791283092657756
+        ],
+        "basis": "hypothetical-rigid-registration",
+        "installedRegistration": null,
+        "orientation": null,
+        "scoring": null
+      },
+      "targetCenterCrossing": null,
+      "projectionMarginM": null,
+      "conditionalWholeSphereThinPlaneClearance": null,
+      "wholeNoteClearance": null,
+      "coralInstalledContact": null,
+      "targetSensorPassage": null,
+      "nominalComponentPoints": null
+    },
+    {
+      "season": 2026,
+      "supplyVolts": 9.0,
+      "sourceExit": {
+        "year": 2026,
+        "volts": 9.0,
+        "dt": 5e-05,
+        "angleRad": 1.0471975511965976,
+        "massKg": 0.215,
+        "guideLengthM": 0.3,
+        "radiusM": 0.0381,
+        "inertiaEach": 0.004,
+        "time": 0.7865548933909271,
+        "x": 0.3,
+        "speed": 2.169830470392884,
+        "omega": 57.13676725677558,
+        "motorWork": 14.11952358954525,
+        "frictionLoss": 0.00716912262187796,
+        "feedEnergy": 0.0,
+        "energyResidual": 2.62367905179417e-11,
+        "plantElapsedTimeS": 0.26655489339092686,
+        "releaseTimeS": 0.5200000000000002
+      },
+      "registrationHypothesis": {
+        "season": 2026,
+        "basis": "hypothetical-rigid-registration",
+        "units": "m",
+        "from": "MECHANISM_1D",
+        "to": "TARGET_LOCAL_2026",
+        "originM": [
+          -4.65,
+          0.0,
+          0.4401923788646684
+        ],
+        "axes": [
+          [
+            0.5000000000000001,
+            0,
+            0.8660254037844386
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            -0.8660254037844386,
+            0.0,
+            0.5000000000000001
+          ]
+        ]
+      },
+      "embeddedExit": {
+        "positionM": [
+          -4.5,
+          0.0,
+          0.7
+        ],
+        "velocityMps": [
+          1.0849152351964422,
+          0.0,
+          1.8791283092657756
+        ],
+        "basis": "hypothetical-rigid-registration",
+        "installedRegistration": null,
+        "orientation": null,
+        "scoring": null
+      },
+      "targetCenterCrossing": null,
+      "projectionMarginM": null,
+      "conditionalWholeSphereThinPlaneClearance": null,
+      "wholeNoteClearance": null,
+      "coralInstalledContact": null,
+      "targetSensorPassage": null,
+      "nominalComponentPoints": null
+    },
+    {
+      "season": 2026,
+      "supplyVolts": 9.0,
+      "sourceExit": {
+        "year": 2026,
+        "volts": 9.0,
+        "dt": 5e-05,
+        "angleRad": 1.0471975511965976,
+        "massKg": 0.215,
+        "guideLengthM": 0.3,
+        "radiusM": 0.0381,
+        "inertiaEach": 0.004,
+        "time": 0.7865548933909271,
+        "x": 0.3,
+        "speed": 2.169830470392884,
+        "omega": 57.13676725677558,
+        "motorWork": 14.11952358954525,
+        "frictionLoss": 0.00716912262187796,
+        "feedEnergy": 0.0,
+        "energyResidual": 2.62367905179417e-11,
+        "plantElapsedTimeS": 0.26655489339092686,
+        "releaseTimeS": 0.5200000000000002
+      },
+      "registrationHypothesis": {
+        "season": 2026,
+        "basis": "hypothetical-rigid-registration",
+        "units": "m",
+        "from": "MECHANISM_1D",
+        "to": "TARGET_LOCAL_2026",
+        "originM": [
+          -5.15,
+          0.0,
+          0.4401923788646684
+        ],
+        "axes": [
+          [
+            0.5000000000000001,
+            0,
+            0.8660254037844386
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            -0.8660254037844386,
+            0.0,
+            0.5000000000000001
+          ]
+        ]
+      },
+      "embeddedExit": {
+        "positionM": [
+          -5.0,
+          0.0,
+          0.7
+        ],
+        "velocityMps": [
+          1.0849152351964422,
+          0.0,
+          1.8791283092657756
+        ],
+        "basis": "hypothetical-rigid-registration",
+        "installedRegistration": null,
+        "orientation": null,
+        "scoring": null
+      },
+      "targetCenterCrossing": null,
+      "projectionMarginM": null,
+      "conditionalWholeSphereThinPlaneClearance": null,
+      "wholeNoteClearance": null,
+      "coralInstalledContact": null,
+      "targetSensorPassage": null,
+      "nominalComponentPoints": null
+    },
+    {
+      "season": 2026,
+      "supplyVolts": 12.0,
+      "sourceExit": {
+        "year": 2026,
+        "volts": 12.0,
+        "dt": 5e-05,
+        "angleRad": 1.0471975511965976,
+        "massKg": 0.215,
+        "guideLengthM": 0.3,
+        "radiusM": 0.0381,
+        "inertiaEach": 0.004,
+        "time": 0.7485776487644036,
+        "x": 0.3,
+        "speed": 2.544686953265444,
+        "omega": 67.0096034257441,
+        "motorWork": 19.213628160649346,
+        "frictionLoss": 0.008585331217431056,
+        "feedEnergy": 0.0,
+        "energyResidual": 3.636557721620193e-11,
+        "plantElapsedTimeS": 0.2285776487644033,
+        "releaseTimeS": 0.5200000000000002
+      },
+      "registrationHypothesis": {
+        "season": 2026,
+        "basis": "hypothetical-rigid-registration",
+        "units": "m",
+        "from": "MECHANISM_1D",
+        "to": "TARGET_LOCAL_2026",
+        "originM": [
+          -2.15,
+          0.0,
+          0.4401923788646684
+        ],
+        "axes": [
+          [
+            0.5000000000000001,
+            0,
+            0.8660254037844386
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            -0.8660254037844386,
+            0.0,
+            0.5000000000000001
+          ]
+        ]
+      },
+      "embeddedExit": {
+        "positionM": [
+          -2.0,
+          0.0,
+          0.7
+        ],
+        "velocityMps": [
+          1.2723434766327222,
+          0.0,
+          2.203763546206699
+        ],
+        "basis": "hypothetical-rigid-registration",
+        "installedRegistration": null,
+        "orientation": null,
+        "scoring": null
+      },
+      "targetCenterCrossing": null,
+      "projectionMarginM": null,
+      "conditionalWholeSphereThinPlaneClearance": null,
+      "wholeNoteClearance": null,
+      "coralInstalledContact": null,
+      "targetSensorPassage": null,
+      "nominalComponentPoints": null
+    },
+    {
+      "season": 2026,
+      "supplyVolts": 12.0,
+      "sourceExit": {
+        "year": 2026,
+        "volts": 12.0,
+        "dt": 5e-05,
+        "angleRad": 1.0471975511965976,
+        "massKg": 0.215,
+        "guideLengthM": 0.3,
+        "radiusM": 0.0381,
+        "inertiaEach": 0.004,
+        "time": 0.7485776487644036,
+        "x": 0.3,
+        "speed": 2.544686953265444,
+        "omega": 67.0096034257441,
+        "motorWork": 19.213628160649346,
+        "frictionLoss": 0.008585331217431056,
+        "feedEnergy": 0.0,
+        "energyResidual": 3.636557721620193e-11,
+        "plantElapsedTimeS": 0.2285776487644033,
+        "releaseTimeS": 0.5200000000000002
+      },
+      "registrationHypothesis": {
+        "season": 2026,
+        "basis": "hypothetical-rigid-registration",
+        "units": "m",
+        "from": "MECHANISM_1D",
+        "to": "TARGET_LOCAL_2026",
+        "originM": [
+          -4.65,
+          0.0,
+          0.4401923788646684
+        ],
+        "axes": [
+          [
+            0.5000000000000001,
+            0,
+            0.8660254037844386
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            -0.8660254037844386,
+            0.0,
+            0.5000000000000001
+          ]
+        ]
+      },
+      "embeddedExit": {
+        "positionM": [
+          -4.5,
+          0.0,
+          0.7
+        ],
+        "velocityMps": [
+          1.2723434766327222,
+          0.0,
+          2.203763546206699
+        ],
+        "basis": "hypothetical-rigid-registration",
+        "installedRegistration": null,
+        "orientation": null,
+        "scoring": null
+      },
+      "targetCenterCrossing": null,
+      "projectionMarginM": null,
+      "conditionalWholeSphereThinPlaneClearance": null,
+      "wholeNoteClearance": null,
+      "coralInstalledContact": null,
+      "targetSensorPassage": null,
+      "nominalComponentPoints": null
+    },
+    {
+      "season": 2026,
+      "supplyVolts": 12.0,
+      "sourceExit": {
+        "year": 2026,
+        "volts": 12.0,
+        "dt": 5e-05,
+        "angleRad": 1.0471975511965976,
+        "massKg": 0.215,
+        "guideLengthM": 0.3,
+        "radiusM": 0.0381,
+        "inertiaEach": 0.004,
+        "time": 0.7485776487644036,
+        "x": 0.3,
+        "speed": 2.544686953265444,
+        "omega": 67.0096034257441,
+        "motorWork": 19.213628160649346,
+        "frictionLoss": 0.008585331217431056,
+        "feedEnergy": 0.0,
+        "energyResidual": 3.636557721620193e-11,
+        "plantElapsedTimeS": 0.2285776487644033,
+        "releaseTimeS": 0.5200000000000002
+      },
+      "registrationHypothesis": {
+        "season": 2026,
+        "basis": "hypothetical-rigid-registration",
+        "units": "m",
+        "from": "MECHANISM_1D",
+        "to": "TARGET_LOCAL_2026",
+        "originM": [
+          -5.15,
+          0.0,
+          0.4401923788646684
+        ],
+        "axes": [
+          [
+            0.5000000000000001,
+            0,
+            0.8660254037844386
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            -0.8660254037844386,
+            0.0,
+            0.5000000000000001
+          ]
+        ]
+      },
+      "embeddedExit": {
+        "positionM": [
+          -5.0,
+          0.0,
+          0.7
+        ],
+        "velocityMps": [
+          1.2723434766327222,
+          0.0,
+          2.203763546206699
+        ],
+        "basis": "hypothetical-rigid-registration",
+        "installedRegistration": null,
+        "orientation": null,
+        "scoring": null
+      },
+      "targetCenterCrossing": null,
+      "projectionMarginM": null,
+      "conditionalWholeSphereThinPlaneClearance": null,
+      "wholeNoteClearance": null,
+      "coralInstalledContact": null,
+      "targetSensorPassage": null,
+      "nominalComponentPoints": null
+    }
+  ],
+  "sourceCodeSha256": {
+    "case-studies/2025/coral-fixture-nominal.json": "a82751de2ebcd7be4ca03ba99a469957c33194a81bd3aef6ef82d0b4e87a0567",
+    "case-studies/2026/intake-fixture-nominal.json": "c99db72594738e48424db574244cfa70aa1140f424a2772ac1f85702c0e81c56",
+    "case-studies/powered-guide-run.json": "f22ce9ab3a4e9097a044ad6b0662de907a9fe9744fc0ec090a00dabf64b7ce0d",
+    "case-studies/target-frame-evidence.json": "51392cd4fe6b23dd7af1d63c32d27bbee3438f0ea2dc904d3875226bd0c086b6",
+    "scripts/integrated-prototype-targets.py": "8536543ec1aaa231c5774414ffeeb7bc4c84d42cccd99d735d2763daf9b2e202",
+    "scripts/mechanism-exit-registration.py": "7d47f2dbf110df6130a508730d0f4abf5a886748a07dfbdc505b64e1646e6db7",
+    "scripts/powered-target-link.py": "115bf26ee2548b376b673abb6710d827663df738d2be5d749f0f338e7c795124",
+    "scripts/run-integrated-prototype.py": "ef07b50eec8e5226bab77d24c1021782643502a47860a3c02e316f67a3370a0b",
+    "scripts/run-powered-guide.py": "eb2bc2da4c51e45efd54f7aa6dd2a03304c2daba4af04fa5a64a0414ce142678",
+    "scripts/target-local-ballistics.py": "4666b4d7824627c812a5aa10df4cbf85655189893d6d0680a8ae9746f68eb87e"
+  },
+  "simulationReadyScope": "Runnable virtual retained pregrip through control, motor-driven guide and local target flight; not complete field robot",
+  "assumptions": [
+    "Initial body is retained at rest in a separately mounted straight guide; prior floor/side-pad dynamics are not reused",
+    "Prescribed0.35s nip closure,15N per side,ideal rigid rail attachments and true virtual feedback; no force-calibrated actuators",
+    "Fixed guide pitch50deg NOTE,0 CORAL,60 FUEL; gravity-constrained guide supports and mounting are explicit design assumptions",
+    "Rollers start stopped; feed energy0, no spinup reset, source exit speed/time unchanged through target registration",
+    "Target transforms are hypothetical design inputs, not installed registration; no official score inference",
+    "Fault cases terminate simulation and preserve nonzero motor state, not physically safe stopping"
+  ],
+  "calibration": null,
+  "matchScore": null
+}
