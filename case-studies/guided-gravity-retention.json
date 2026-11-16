@@ -829,10 +829,13 @@
     }
   ],
   "sourceCodeSha256": {
-    "scripts/guided-gravity-retention.py": "d18fab9c521430343ffd96a87b50feddde3999a974066ac17bb302223c1e852a",
+    "scripts/guided-gravity-retention.py": "e3347784b9dace129ca93f10a3d5705a5815254401d563b1e64d9e5931845ffc",
     "scripts/time-resolved-catcher-closure.py": "9ba446d130f3cce913e13229f4b016c66ab76a7857a977e286de88dfbfd77309",
     "scripts/native-catcher-sweep.py": "27fa93f89ee366156b35b12cfd74f81d421113468f3225be8dc8d0027c5508d4",
     "scripts/native-catcher-envelopes.py": "773cb6de6a0b325c3bfa54bdad2da6bfb847f31c202910de7fb3cc3c8361e3be",
+    "scripts/pose-clearance-contract.py": "11318473993ca41212410a6d223d51b9c61369f63d13982037efbc374780ae36",
+    "scripts/prepare-segmented-replay.py": "eab5479d6228ff3f975baa42838bb36a5cb4d1d22da33e0e8bb58e1837c0d1d8",
+    "scripts/segmented-fuel-contact.py": "52d0172956bd0c4f2973b73b939c6dbe458a9f0878006134bdc02add8305f1d3",
     "case-studies/guided-retention-evidence.json": "96b72399ac3683a02acdc2a0e28c77f475ca54c02589ed6bff79f72e68427d74"
   },
   "runtime": {

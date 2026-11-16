@@ -1,4 +1,4 @@
-import pathlib,importlib.util,json,math,hashlib,unittest
+import pathlib,importlib.util,json,math,hashlib,unittest,tempfile,shutil,copy
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 s=importlib.util.spec_from_file_location('g',ROOT/'scripts/guided-gravity-retention.py');m=importlib.util.module_from_spec(s);s.loader.exec_module(m)
 class GuidedRetentionTests(unittest.TestCase):
@@ -13,6 +13,8 @@ class GuidedRetentionTests(unittest.TestCase):
   with self.assertRaises(ValueError):m.drop(170,0,0,0)
  def test_native_certificate_pins_and_interval_reconstruction(self):
   r=json.loads((ROOT/'case-studies/guided-gravity-retention.json').read_text());self.assertEqual(len(r['nativeCases']),9);self.assertEqual(len(r['timingCases']),36)
+  m.verify_source_pins(r)
+  self.assertEqual(set(r['sourceCodeSha256']), {'scripts/guided-gravity-retention.py','scripts/time-resolved-catcher-closure.py','scripts/native-catcher-sweep.py','scripts/native-catcher-envelopes.py','scripts/pose-clearance-contract.py','scripts/prepare-segmented-replay.py','scripts/segmented-fuel-contact.py','case-studies/guided-retention-evidence.json'})
   for name,h in r['sourceCodeSha256'].items():self.assertEqual(hashlib.sha256((ROOT/name).read_text(encoding='utf-8-sig').encode()).hexdigest(),h)
   for c in r['nativeCases']:
    if c['status']=='certified-2mm-clearance':
@@ -28,4 +30,18 @@ class GuidedRetentionTests(unittest.TestCase):
   r=json.loads((ROOT/'case-studies/guided-gravity-retention.json').read_text())
   for c in r['timingCases']:
    actual=m.drop(c['heightMm'],c['massKg'],c['assumedFrictionCoefficient'],c['assumedGuideSideLoadN']);self.assertEqual(actual,{k:v for k,v in c.items() if k!='season'})
+ def test_missing_dependency_rejected(self):
+  r=json.loads((ROOT/'case-studies/guided-gravity-retention.json').read_text())
+  for name in m.SOURCE_DEPENDENCIES:
+   bad=copy.deepcopy(r);del bad['sourceCodeSha256'][name]
+   with self.assertRaises(ValueError):m.verify_source_pins(bad)
+ def test_geometry_mutation_rejected_without_touching_workspace(self):
+  r=json.loads((ROOT/'case-studies/guided-gravity-retention.json').read_text())
+  with tempfile.TemporaryDirectory() as tmp:
+   root=pathlib.Path(tmp)
+   for name in m.SOURCE_DEPENDENCIES:
+    target=root/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(ROOT/name,target)
+   m.verify_source_pins(r,root)
+   p=root/'scripts/pose-clearance-contract.py';old=p.read_text();changed=old.replace('2024:(177.8,177.8)','2024:(187.8,177.8)');self.assertNotEqual(old,changed);p.write_text(changed)
+   with self.assertRaises(ValueError):m.verify_source_pins(r,root)
 if __name__=='__main__':unittest.main()
