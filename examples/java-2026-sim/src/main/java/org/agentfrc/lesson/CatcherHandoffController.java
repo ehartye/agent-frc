@@ -16,7 +16,7 @@ public final class CatcherHandoffController implements AutoCloseable {
   switch(state){
    case WAIT_ARRIVAL -> {if(a){if(clear){state=State.CLOSING;stateTime=0;everCommanded=true;}else state=State.FAULT;}else if(time>=5)state=State.FAULT;}
    case CLOSING -> {if(!clear)state=State.FAULT;else if(gateClosed.get()){state=State.HOLD;stateTime=0;}else if(stateTime>=.25)state=State.FAULT;}
-   case HOLD -> {if(releaseRequested){if(unloaded.get()){state=State.OPENING;stateTime=0;}else if((releaseWait+=.02)>=.5)state=State.FAULT;}}
+   case HOLD -> {if(!gateClosed.get())state=State.FAULT;else if(releaseRequested){if(unloaded.get()){state=State.OPENING;stateTime=0;}else if((releaseWait+=.02)>=.5)state=State.FAULT;}}
    case OPENING -> {if(!gateClosed.get()){state=State.RELEASED;stateTime=0;}else if(stateTime>=.25)state=State.FAULT;}
    default -> {}
   }

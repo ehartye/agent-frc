@@ -1,7 +1,7 @@
 {
   "schema": "frc-world-catcher-handoff/v1",
   "status": "fresh-executed-world-coordinate-handoff",
-  "runId": "797d0f75-28c3-4714-8d54-ad335bb6e1a1",
+  "runId": "8752f0e0-c537-49f7-83e8-dbe42ff42164",
   "tests": [
     "absentApproachMomentumCannotInventTransport()",
     "loadedReleaseIndicationKeepsGateCommanded()",
@@ -19,7 +19,7 @@
     "examples/java-2026-sim/src/test/java/org/agentfrc/lesson/SegmentedEntryCouplingTest.java": "5c50c62290a0432e8158fa7b9b0bd6ba5bcf447ebe8edab84a5f8bb54ceaf037",
     "scripts/prepare-catcher-golden.py": "271684e4d864ad13fa3df43cc1400d34451c014035f936db2ba11846197b2e5e",
     "scripts/unilateral-catcher-study.py": "b0acaa35915cb5dd734cd91c5f0f252fb8eb5cc1e9a8e8d2f8e9963052f6b68b",
-    "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/CatcherHandoffController.java": "7a9aae6fc2835d5a0c830bce09a93ac3d9491047b366079782d5bd4ccfcae079",
+    "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/CatcherHandoffController.java": "defce944c9943cb035bb9e2762c7de942c2189dbc4d9096e4d9303f7fb7fdabd",
     "examples/java-2026-sim/src/test/java/org/agentfrc/lesson/CatcherContactModel.java": "835981dfd19ebd0fa8388a440d9bbf67289d4ffff6f56178dcd63e34121c4397",
     "examples/java-2026-sim/src/test/resources/catcher-contact-golden.csv": "946c9ff15832f6c0d08367aae9540e29d196fd9cedba6a21381e1dee52977435",
     "examples/java-2026-sim/build.gradle": "f81ca1974aa36c65aff084d8f432178066787c622c94856d6b22492121c638f5",
@@ -39,16 +39,16 @@
   },
   "runtimeClassSha256": {
     "SeasonRollerController": "186a1d36adc578bf1e3ecee37ebd17f109e9731cdd2f94982e7cea2ba93d834f",
-    "CatcherHandoffController": "3b1e8bda42f0e8051b08030c478e2208bf39d9148e077726fc912a4b6f458a56",
+    "CatcherHandoffController": "bb8026ca7dbf8d854a5553447d6d0258eb15b529ed33d9582d6abdbd088fe292",
     "SegmentedEntryCouplingTest": "5586b86d989194d60f61f4769b15a921537f22ed48b3b7ebce2287e1872a463f",
     "CatcherContactModel": "1455d08eb38c90a88e59a239593293d8b83faa4200cb38ddf9f24773a0173296",
     "WorldCatcherHandoffTest": "0bd14ec3ab0058fbb76a7a8c8e125687cf330bcf3492ebb7f5658f39a95a1a18"
   },
   "javaExecutableSha256": "1db37e7021f8fecc0e0cd6de5ee6f0c4fe403f28a55c0691a3812139724d0330",
   "artifactsSha256": {
-    "runtime.properties": "ed673c27e1485cd0fc4d5542e4514a1358726e1a2dc7a1ca26fb49ee5163d872",
-    "tests.xml": "4412a5735afe2c08cd44c047f99423779070d3865e5e26324e1e824dc6f16f5d",
-    "gradle.log": "6c32466deb59115878ec7eac49d78b47b613dfc3898f92d798759a0924286e3e"
+    "runtime.properties": "877b048bccae13e2a0e13e1ca7751c9de19f27992c0e189ad379de47bdaf3d9f",
+    "tests.xml": "c161d89cccef3765e22f5e57750bcc8e88eb6c343be200fde29086eac356a9de",
+    "gradle.log": "1d3802f72fbd11a03033d887143c96857337bb51731c9288e703131849c80e0f"
   },
   "observations": [
     "WORLD_CATCHER year=2024 initialSpeed=0.0 fault=0 Result[intakeDone=false, catcherState=FAULT, captured=false, locallyReleased=false, tailPulses=0, arrivalS=-1.0, finalX=-0.25, finalSpeed=1.1102230246251566E-17, maxCaptureDisplacement=0.0, preDwellSpeed=0.0, postDwellSpeed=0.0, minIsolationGap=-1.0, maxEnergyResidual=3.081487911019578E-35]",

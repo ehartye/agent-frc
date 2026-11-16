@@ -72,3 +72,12 @@ release using actual simulated controller IO. Nine positive and21 negative
 trajectories execute with fresh runtime-bound evidence. This removes the previous
 position/velocity reset boundary but does not validate real gate motion, actuator
 loads, sensors, friction, structure or calibrated hardware acceptance.
+
+## Swept-envelope and uncertainty limits
+
+[Catcher uncertainty](catcher-sweep-uncertainty.md) adds30 native pose/swept-envelope
+screens and90 native sensor observations. Rotated CORAL and pitched/offset pieces
+provide concrete counterexamples to transferring nominal gate/pad assumptions.
+Post-HOLD gate-feedback loss now faults explicitly, with a failing-then-passing
+regression and freshly regenerated original world evidence. These are bounded
+screens, not coupled6DOF contact or real actuator validation.
