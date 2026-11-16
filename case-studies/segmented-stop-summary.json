@@ -1,6 +1,7 @@
 {
   "schema": "frc-segmented-stop-summary/v1",
-  "receiptSha256": "e6dadfde00f1d179b920c075846e46395664661d19d3ee7f9add1c12204515fb",
+  "receiptSha256": "228d9600158ad4e0cca6a52ef331fe9c8c109860d2454f6b4a8e5a362a7dc209",
+  "receiptPinBasis": "UTF-8 without BOM and normalized LF",
   "scenarioCount": 42,
   "sweeps": [
     {

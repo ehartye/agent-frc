@@ -69,3 +69,10 @@ selected physical feeder/drive/catcher topology and its engagement delay, and
 obtain real inertia, load, friction and resistance evidence. Further offline
 experiments can compare options, but these force values do not authorize hardware
 selection, procurement, deployment or physical acceptance.
+
+Derived summary receipt pins now use UTF-8 without BOM and normalized LF, matching
+source-pin portability. A fresh worktree exposed that Git newline conversion could
+change the earlier raw JSON receipt hash without changing any values. The native
+execution receipt and its artifact hashes were not re-recorded or relabeled; only
+the derived text pin changed. A regression test proves BOM/newline equivalence
+while still rejecting a changed JSON value.

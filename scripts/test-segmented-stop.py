@@ -15,4 +15,11 @@ class StopReceiptTests(unittest.TestCase):
   r=next(x for x in self.rows if x['year']==2026 and x['approachResistance']==.1)
   self.assertTrue(r['timeout']);self.assertFalse(r['done']);self.assertIsNone(r['completionS'])
  def test_summary_regenerates(self):self.assertEqual(smod.summary(),json.loads((ROOT/'case-studies/segmented-stop-summary.json').read_text(encoding='utf-8-sig')))
+ def test_receipt_pin_normalizes_only_bom_and_newlines(self):
+  import tempfile
+  with tempfile.TemporaryDirectory() as temp:
+   a=pathlib.Path(temp)/'a.json';b=pathlib.Path(temp)/'b.json'
+   a.write_bytes(b'{"value": 1}\n');b.write_bytes(b'\xef\xbb\xbf{"value": 1}\r\n')
+   self.assertEqual(smod.text_pin(a),smod.text_pin(b))
+   b.write_bytes(b'{"value": 2}\n');self.assertNotEqual(smod.text_pin(a),smod.text_pin(b))
 if __name__=='__main__':unittest.main()
