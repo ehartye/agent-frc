@@ -5,12 +5,15 @@ public final class PregripSupervisor {
  public enum State {WAIT_HELD,CLOSING,GRIPPED,OPENING_GATE,FEED,DONE,FAULT}
  public record Observation(long sequence,double time,boolean nominalPoseValid,boolean bodySupported,boolean gateClosed,double leftRetractionMm,double rightRetractionMm,double leftLoadN,double rightLoadN,double leftRpm,double rightRpm,boolean downstreamExitClear){}
  public record Output(State state,boolean motionEnabled,boolean closeNip,boolean openGate,double feedDuty){}
+ private final double requestedFeedDuty;
+ public PregripSupervisor(){this(.08);}
+ public PregripSupervisor(double duty){if(!Double.isFinite(duty)||duty<0||duty>.8)throw new IllegalArgumentException("feed duty");requestedFeedDuty=duty;}
  private State state=State.WAIT_HELD;private long sequence=-1;private double previous=-1,started,contactSince=-1;private boolean gateCommand;
  private static boolean finite(double v){return Double.isFinite(v);}
  private static boolean valid(Observation o){return o!=null&&o.sequence>=0&&finite(o.time)&&o.time>=0&&finite(o.leftRetractionMm)&&finite(o.rightRetractionMm)&&o.leftRetractionMm>=0&&o.rightRetractionMm>=0&&o.leftRetractionMm<=61&&o.rightRetractionMm<=61&&finite(o.leftLoadN)&&finite(o.rightLoadN)&&o.leftLoadN>=0&&o.rightLoadN>=0&&o.leftLoadN<=100&&o.rightLoadN<=100&&finite(o.leftRpm)&&finite(o.rightRpm)&&Math.abs(o.leftRpm)<=6000&&Math.abs(o.rightRpm)<=6000;}
  private static boolean stopped(Observation o){return Math.abs(o.leftRpm)<=5&&Math.abs(o.rightRpm)<=5;}
  private static boolean grip(Observation o){return o.leftRetractionMm<=.2&&o.rightRetractionMm<=.2&&o.leftLoadN>=1&&o.leftLoadN<=30&&o.rightLoadN>=1&&o.rightLoadN<=30;}
- private Output output(){return new Output(state,state!=State.FAULT,state==State.CLOSING||state==State.GRIPPED||state==State.OPENING_GATE||state==State.FEED,gateCommand,state==State.FEED?.08:0);}
+ private Output output(){return new Output(state,state!=State.FAULT,state==State.CLOSING||state==State.GRIPPED||state==State.OPENING_GATE||state==State.FEED,gateCommand,state==State.FEED?requestedFeedDuty:0);}
  private Output fault(){state=State.FAULT;return output();}
  public Output update(double now,Observation o){
   if(state==State.FAULT)return output();

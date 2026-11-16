@@ -19,7 +19,7 @@ class SupportTests(unittest.TestCase):
  def test_shaft_candidate_difference_and_below_datum_scope(self):
   e=json.loads((ROOT/'case-studies/note-overhung-support-evidence.json').read_text())['shaftCandidate'];self.assertEqual(e['drawingMaxDiameterMm'],13.74);self.assertEqual(e['analysisEnvelopeCornerDiameterMm'],13.75);r=json.loads((ROOT/'case-studies/note-overhung-support.json').read_text());self.assertLess(r['shaftEnvelopeMm'][0],0);self.assertAlmostEqual(r['shaftEnvelopeMm'][1]-r['shaftEnvelopeMm'][0],152.4)
  def test_virtual_protocol_receipt_bound(self):
-  r=json.loads((ROOT/'case-studies/virtual-pregrip-supervisor.json').read_text());self.assertEqual(set(r['tests']),runner.TESTS);self.assertEqual(len(r['tests']),8);self.assertEqual(set(r['sourceCodeSha256']),set(runner.CODE));self.assertFalse(r['physicalRobotIoExecuted']);self.assertFalse(r['simulatedWpilibIoExecuted']);self.assertTrue(r['virtualLogicOnly'])
+  r=json.loads((ROOT/'case-studies/virtual-pregrip-supervisor.json').read_text());self.assertEqual(set(r['tests']),runner.TESTS);self.assertEqual(len(r['tests']),9);self.assertEqual(set(r['sourceCodeSha256']),set(runner.CODE));self.assertFalse(r['physicalRobotIoExecuted']);self.assertFalse(r['simulatedWpilibIoExecuted']);self.assertTrue(r['virtualLogicOnly'])
   for p,h in r['sourceCodeSha256'].items():self.assertEqual(hashlib.sha256((ROOT/p).read_text(encoding='utf-8-sig').encode()).hexdigest(),h)
  def test_no_standalone_rail_claim(self):
   r=json.loads((ROOT/'case-studies/pregrip-rail-interface.json').read_text());self.assertFalse(r['nativeMatingExecuted']);self.assertFalse(r['continuous60mmEngagementProven']);self.assertIsNone(r['attachmentToNewWeb'])

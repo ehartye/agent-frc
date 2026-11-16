@@ -3,7 +3,7 @@ import pathlib,hashlib,json,subprocess,os,uuid,tempfile,xml.etree.ElementTree as
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 CODE=['scripts/run-pregrip-supervisor.py','examples/java-2026-sim/build.gradle','examples/java-2026-sim/src/main/java/org/agentfrc/lesson/PregripSupervisor.java','examples/java-2026-sim/src/test/java/org/agentfrc/lesson/PregripSupervisorTest.java']
 CLASSES=['PregripSupervisor','PregripSupervisor$State','PregripSupervisor$Observation','PregripSupervisor$Output','PregripSupervisorTest']
-TESTS={'freshBaselineDwellGateFeedbackThenFeed()','preloadedBaselineAndStuckHighCannotArm()','noContactOrUnilateralContactCannotRelease()','staleMissingNonfiniteOrReplayFaults()','lostGripAfterOpenDoesNotCommandGateSlam()','coordinatedForgedReadbacksStillAuthorizeLogicalFeed()','missingGateOpeningFeedbackNeverFeeds()','missedUpdatesOnlyFaultOnReturn()'}
+TESTS={'configuredDutyIsAuthorizedOnlyAfterFeedback()','freshBaselineDwellGateFeedbackThenFeed()','preloadedBaselineAndStuckHighCannotArm()','noContactOrUnilateralContactCannotRelease()','staleMissingNonfiniteOrReplayFaults()','lostGripAfterOpenDoesNotCommandGateSlam()','coordinatedForgedReadbacksStillAuthorizeLogicalFeed()','missingGateOpeningFeedbackNeverFeeds()','missedUpdatesOnlyFaultOnReturn()'}
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def pins():return {n:hashlib.sha256((ROOT/n).read_text(encoding='utf-8-sig').encode()).hexdigest() for n in CODE}
 def run(out,jdk,cache):

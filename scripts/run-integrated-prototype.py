@@ -3,7 +3,7 @@ import pathlib,hashlib,json,subprocess,os,uuid,tempfile,xml.etree.ElementTree as
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 CODE=['examples/java-2026-sim/src/main/java/org/agentfrc/lesson/IntegratedPregripPrototype.java','examples/java-2026-sim/src/main/java/org/agentfrc/lesson/PregripSupervisor.java','scripts/run-integrated-prototype.py','examples/java-2026-sim/build.gradle','examples/java-2026-sim/src/main/java/org/agentfrc/lesson/PoweredGuidePlant.java','examples/java-2026-sim/src/main/java/org/agentfrc/lesson/SharedSupply.java','examples/java-2026-sim/src/test/java/org/agentfrc/lesson/IntegratedPregripPrototypeTest.java']
 CLASSES=['IntegratedPregripPrototype','IntegratedPregripPrototype$Result','PregripSupervisor','PregripSupervisor$State','PregripSupervisor$Observation','PregripSupervisor$Output','PoweredGuidePlant','PoweredGuidePlant$Config','PoweredGuidePlant$Sample','SharedSupply','SharedSupply$Result','IntegratedPregripPrototypeTest']
-TESTS={'allSeasonRuntimeExitsAndTimestepSensitivity()','missingContactAndGateFeedbackNeverFeed()','lostGripTerminatesWithoutClaimingPhysicalStop()','invalidScenariosRejected()'}
+TESTS={'zeroAndChangedDemandReachThePlant()','allSeasonRuntimeExitsAndTimestepSensitivity()','missingContactAndGateFeedbackNeverFeed()','lostGripTerminatesWithoutClaimingPhysicalStop()','invalidScenariosRejected()'}
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def pins():return {n:hashlib.sha256((ROOT/n).read_text(encoding='utf-8-sig').encode()).hexdigest() for n in CODE}
 def run(out,jdk,cache):
@@ -27,7 +27,7 @@ def run(out,jdk,cache):
  if {n.get('name') for n in tree.findall('testcase')}!=TESTS or tree.get('tests')!=str(len(TESTS)) or any(tree.get(k)!='0' for k in ['failures','errors','skipped']):raise ValueError('incomplete tests')
  if sum((node.text or '').splitlines().count('PROTOTYPE_RUN_ID='+token) for node in tree.findall('system-out'))!=1:raise ValueError('XML run binding mismatch')
  (pending/'tests.xml').write_bytes(xml);observations=[l.strip() for node in tree.findall('system-out') for l in (node.text or '').splitlines() if l.strip().startswith('PROTOTYPE_EXIT ')]
- if len(observations)!=8:raise ValueError('exit inventory')
+ if len(observations)!=32:raise ValueError('exit inventory')
  report=dict(schema='frc-integrated-prototype-run/v1',runId=token,tests=sorted(TESTS),sourceCodeSha256=before,runtimeClassSha256=classes,wpimathJarSha256=sha(jars[0]),javaExecutableSha256=sha(java),artifactsSha256={n:sha(pending/n) for n in ['runtime.properties','tests.xml','gradle.log']},observations=observations,physicalRobotIoExecuted=False,calibration=None,engineeringAcceptance='blocked')
  (pending/'receipt.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n');pending.rename(out);return report
 if __name__=='__main__':

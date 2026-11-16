@@ -12,7 +12,7 @@ The command runs offline and writes a fresh execution receipt plus `targets.json
 
 An initially retained body → prescribed nip closure → fresh two-sided virtual contact dwell → virtual gate opening feedback → two actual WPILib NEO motor models sharing battery sag → constrained guide translation → actual exit speed/time → season-specific local target flight. There is no injected feed velocity or release impulse; the rollers and body start stopped. Energy accounting includes motor work, rotor/body kinetic energy, gravity and slip loss. 100/50 microsecond steps are compared.
 
-The prototype has eight baseline scenarios: NOTE and FUEL at 9/12 V, and both sourced CORAL mass boundaries at 9/12 V. No old side-pad capture dynamics are reused. This is a usable retained-body-to-target subassembly simulation, not a complete driving/intake/field robot or a claim of physical calibration.
+The prototype has eight heavy-inertia baseline scenarios, plus 24 lower-inertia sensitivity cases (32 total): NOTE and FUEL at 9/12 V, and both sourced CORAL mass boundaries at 9/12 V. The supervisor�s validated configured duty is delivered to the plant only after motion-enable and gate feedback authorization. Zero-demand and changed-demand regressions verify that this is not merely a state check. No old side-pad capture dynamics are reused. This is a usable retained-body-to-target subassembly simulation, not a complete driving/intake/field robot or a claim of physical calibration.
 
 ## Explicit simulation design inputs
 
@@ -24,10 +24,18 @@ The prototype has eight baseline scenarios: NOTE and FUEL at 9/12 V, and both so
 
 ## Current result and next design iteration
 
-All eight baseline cases reach the modeled guide exit. NOTE exits at 2.48–2.91 m/s, FUEL at 2.17–2.54 m/s, CORAL at 0.432–0.518 m/s. NOTE/FUEL do **not** reach their elevated target planes at the current mounting assumption. This is a useful design failure, not a reason to stop simulation: stopped rollers spend the short stroke accelerating their own inertia. The next architecture should test independently spun launch wheels with a controlled feed handoff, or explicitly compare longer guides/lower rotor inertia, without resetting body velocity or hiding energy.
+All 32 cases reach the modeled guide exit. NOTE exits at 2.48–2.91 m/s, FUEL at 2.17–2.54 m/s, CORAL at 0.432–0.518 m/s. NOTE/FUEL do **not** reach their elevated target planes at the current mounting assumption. This is a useful design failure, not a reason to stop simulation: stopped rollers spend the short stroke accelerating their own inertia. The first informed improvement compares lower single-roller inertia without changing body velocity or hiding energy. At 12 V, FUEL with 0.0005 kg m� reaches 5.748 m/s and passes one conditional whole-sphere thin-plane projection; NOTE with 0.0003 reaches 7.071 m/s and passes one center-plane projection. These are different fidelity claims: NOTE whole-body passage and all official scoring remain unknown. Higher exit speed can overshoot a fixed aim point, so target placement is a design input, not an automatic success.
 
 Missing contact, missing gate-open feedback, closure too slow for the dwell deadline and post-release grip loss remain negative controls. A fault terminates this run with potentially nonzero rotor speed; it does not establish physical safe stopping. The earlier single-block rail escape, collar collision and moving-FUEL no-contact counterexamples remain retained in their reports.
 
 Native rail mating supports the geometric design choice, but ideal joints are used for this simulation. Preload, actual attachment stiffness, actuator response and contact calibration can improve fidelity later without blocking this exploratory prototype.
 
 The mirrored block and correct fastener layout is recorded in [the fastened-pair study](maxlift-fastened-pair.md). Its ideal rigid-joint simulation contract supports this model's attachment assumption; native clearance and thread proxies are not translated into calibrated stiffness or force limits.
+
+## Physically informed inertia inputs
+
+[REV wheel masses](https://www.revrobotics.com/ION-Compliant-Wheels/) are 128/18/84 g for the selected NOTE/CORAL/FUEL families. Nominal outer-ring inertias are 0.000330322/0.000011613/0.000121935 kg m�. A disk distribution is a hypothesis, not a lower bound. The [NEO V1.1](https://www.revrobotics.com/rev-21-1650/) complete 425 g mass and 60 mm casing bound its contained rotor at 0.0003825 kg m� if all motor mass is placed at the casing radius. Direct drive G=1 is explicit; other gearing would reflect rotor inertia by G�.
+
+NOTE wheel, hub/collar ring estimates, shaft envelope and this complete-motor bound total about 0.0007234 kg m�, leaving about 0.0002766 under the 0.001 model ceiling for unspecified rotating hardware. This is conditional on that allowance, not an unconditional assembly upper bound. The 0.0003/0.0005 points are working hypotheses; actual mass distribution and rotor/accessory inertia remain unmeasured. Exact snapshot pins and arithmetic are in `case-studies/direct-drive-inertia-inputs.json`.
+
+The zero-demand regression ends at the authorization boundary without energizing the motor model. It checks command routing, not gravity-driven drift, retention or safe behavior after an open gate. Demand is configured per run; continuous mid-run duty changes are not modeled by this constant-demand plant.
