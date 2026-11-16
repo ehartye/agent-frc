@@ -64,3 +64,17 @@ and friction measurements, load distribution, constrained-pose reaction model,
 entry/exit geometry (especially CORAL ends), and a compatible feeding/beam startup
 state. No procurement, physical deployment or hardware testing is authorized by
 this artifact.
+
+### Verified controller integration boundary
+
+Three additional actual HAL/JUnit startup tests in
+`SegmentedStartupContractTest` verify that an initially blocked CORAL/FUEL center
+faults immediately with zero PWM. The NOTE hole starts clear; without subsequent
+beam events it times out rather than completing. No controller code was changed
+or safety check bypassed. `segmented-startup-boundary.json` records the executed
+class/source hashes and test XML hash, plus the independently computed center and
+outside geometry/beam states. It does not claim a controller-coupled trajectory.
+At the outside resting pose the reduced model has no contact, hence zero piece
+impulse and no motion by induction. Defining an upstream feeder or approach
+condition, resolving CORAL end contact, and choosing a reviewed startup policy
+are genuine prerequisites for a complete intake-cycle simulation.

@@ -1,0 +1,77 @@
+{
+  "schema": "frc-segmented-startup-boundary/v1",
+  "status": "executed-controller-startup-tests",
+  "tests": [
+    "preloadedCoralCenterIsRejected()",
+    "noteHoleOrEmptyEntranceStartsButCannotCompleteWithoutBeamEvents()",
+    "preloadedFuelCenterIsRejected()"
+  ],
+  "xmlSha256": "aad7dc34f6be62ff3db44645ceaf55bddb930a2e74b35330d365898007fa717c",
+  "sourceCodeSha256": {
+    "scripts/prepare-segmented-replay.py": "eab5479d6228ff3f975baa42838bb36a5cb4d1d22da33e0e8bb58e1837c0d1d8",
+    "scripts/segmented-force-model.py": "d0474f06257daeeb680529464c466e394c44cff881e3a902483ea73af91b25e3",
+    "scripts/record-segmented-startup.py": "16b9e37b7ecba62d1ee3ea29f7cfa27dc8bdb6aa6e62730f680a6058d554738b",
+    "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/SeasonRollerController.java": "df1d7a09d06477d52ff319c86ab86c51d0b532c1c990bf7a003a85e9d02c4702",
+    "examples/java-2026-sim/src/test/java/org/agentfrc/lesson/SegmentedStartupContractTest.java": "a4c18b58b69bb120e640393188d606f5336699e5de0a1d977bf8a66295b6a86c"
+  },
+  "classSha256": {
+    "SeasonRollerController": "186a1d36adc578bf1e3ecee37ebd17f109e9731cdd2f94982e7cea2ba93d834f",
+    "SegmentedStartupContractTest": "bfe703033d90dd4545c7c6c73655c4edf1447eb87ecc2d3c87ab2a56d34e8cbc"
+  },
+  "geometryEvidenceSha256": {
+    "case-studies/2024/note-fixture-nominal.json": "d0aad462e9bdf99b6fc83cd1db15ca7abe1f7768a3d9afd75ba33663e176e008",
+    "case-studies/2025/coral-fixture-nominal.json": "a82751de2ebcd7be4ca03ba99a469957c33194a81bd3aef6ef82d0b4e87a0567",
+    "case-studies/2026/intake-fixture-nominal.json": "c99db72594738e48424db574244cfa70aa1140f424a2772ac1f85702c0e81c56",
+    "case-studies/native-season-wheel-units.json": "13d5c9b44a1e1b533146f290292e19d67375dfb4b9533a09da3bfa119b2ed602",
+    "case-studies/2026/native-wheel-stack-exploration.json": "64eb367be67960e5124cdc3ca8717c83d53fd761bad8eebb9f48ffb930df8ff6"
+  },
+  "poses": {
+    "2024": {
+      "centerBeamOccupied": false,
+      "centerGapBracketMm": [
+        -3.078288669196706,
+        -2.4133182241868667
+      ],
+      "outsideBeamOccupied": false,
+      "outsideGapBracketMm": [
+        44.27224105928948,
+        44.93721150429932
+      ]
+    },
+    "2025": {
+      "centerBeamOccupied": true,
+      "centerGapBracketMm": [
+        -4.9034391083968245,
+        -4.9034391083968245
+      ],
+      "outsideBeamOccupied": false,
+      "outsideGapBracketMm": [
+        73.7875,
+        null
+      ]
+    },
+    "2026": {
+      "centerBeamOccupied": true,
+      "centerGapBracketMm": [
+        -4.787674414939801,
+        -4.787674414939801
+      ],
+      "outsideBeamOccupied": false,
+      "outsideGapBracketMm": [
+        159.3338849859855,
+        159.3338849859855
+      ]
+    }
+  },
+  "conclusion": "Preloaded CORAL/FUEL center triggers startup fault; NOTE hole begins clear but requires future beam events. Outside rest cannot self-start with zero geometric contact in the reduced tangential model.",
+  "derivation": "Outside rest conclusion is an induction from zero contact impulse and zero initial velocity, not a controller-coupled trajectory test.",
+  "nextRequirements": [
+    "Define upstream feeder or approach initial conditions",
+    "Resolve CORAL partial-end contact before full crossing",
+    "Choose and review startup/beam policy without bypassing fault checks",
+    "Supply normal reactions and drive topology for physical force coupling"
+  ],
+  "controllerForceCoupled": false,
+  "engineeringAcceptance": "blocked",
+  "calibration": null
+}
