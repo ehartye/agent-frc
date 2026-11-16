@@ -8,7 +8,7 @@ const stamp=x=>x&&['AUTO','TELEOP'].includes(x.period)&&Number.isSafeInteger(x.e
 const tri=x=>x===true||x===false||x===null;
 export const sourcePins=()=>Object.fromEntries(['scripts/season-goal-boundary.mjs','scripts/2026-fuel-assessment.mjs','case-studies/season-goal-evidence.json'].map(p=>[p,createHash('sha256').update(fs.readFileSync(new URL('../'+p,import.meta.url),'utf8').replace(/\r\n/g,'\n')).digest('hex')]));
 export function assessSeasonAttempt(a){
- check(a&&Object.hasOwn(goals,a.season)&&a.goal===goals[a.season],'Season goal mismatch');
+ check(a&&Number.isInteger(a.season)&&[2024,2025,2026].includes(a.season)&&a.goal===goals[a.season],'Season goal mismatch');
  check(a.basis==='hypothetical-interface-test'&&id(a.attemptId)&&id(a.pieceId),'Explicit hypothetical attempt identity required');
  check(stamp(a.release),'Period-local release timestamp required');
  check(a.gates&&['possession','aligned','mechanismReady','reefZone'].every(k=>tri(a.gates[k])),'Tri-state gate observations required');

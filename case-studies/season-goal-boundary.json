@@ -1,7 +1,7 @@
 {
   "schema": "frc-season-goal-boundary-report/v1",
   "sourceCodeSha256": {
-    "scripts/season-goal-boundary.mjs": "230c2e14afed309c459acc559cc3bdf61f93b4759dbe57f456c4b9c1d7152934",
+    "scripts/season-goal-boundary.mjs": "a2ca43e8af7251abbb288b3ad87a34648b110a9587f8921c5361163c77365116",
     "scripts/2026-fuel-assessment.mjs": "42ba643b868ffbc40572a01bacce88dd1c2d5b1d2075a1f93ac21ef7a835dc38",
     "case-studies/season-goal-evidence.json": "cf8bf6dcfee8dd3954d77cffc9f1bb7a282e3df3eb8c901a781771b785ed1239",
     "scripts/record-season-goals.mjs": "e049422c5a463e7882b8c03de7486f463e277a6eb8b6f382480896ebb45f0452",
@@ -757,7 +757,7 @@
       "hardwareAcceptance": "blocked",
       "physicalLinkage": "not-demonstrated",
       "sourceCodeSha256": {
-        "scripts/season-goal-boundary.mjs": "230c2e14afed309c459acc559cc3bdf61f93b4759dbe57f456c4b9c1d7152934",
+        "scripts/season-goal-boundary.mjs": "a2ca43e8af7251abbb288b3ad87a34648b110a9587f8921c5361163c77365116",
         "scripts/2026-fuel-assessment.mjs": "42ba643b868ffbc40572a01bacce88dd1c2d5b1d2075a1f93ac21ef7a835dc38",
         "case-studies/season-goal-evidence.json": "cf8bf6dcfee8dd3954d77cffc9f1bb7a282e3df3eb8c901a781771b785ed1239"
       }
@@ -780,7 +780,7 @@
       "hardwareAcceptance": "blocked",
       "physicalLinkage": "not-demonstrated",
       "sourceCodeSha256": {
-        "scripts/season-goal-boundary.mjs": "230c2e14afed309c459acc559cc3bdf61f93b4759dbe57f456c4b9c1d7152934",
+        "scripts/season-goal-boundary.mjs": "a2ca43e8af7251abbb288b3ad87a34648b110a9587f8921c5361163c77365116",
         "scripts/2026-fuel-assessment.mjs": "42ba643b868ffbc40572a01bacce88dd1c2d5b1d2075a1f93ac21ef7a835dc38",
         "case-studies/season-goal-evidence.json": "cf8bf6dcfee8dd3954d77cffc9f1bb7a282e3df3eb8c901a781771b785ed1239"
       }
@@ -803,7 +803,7 @@
       "hardwareAcceptance": "blocked",
       "physicalLinkage": "not-demonstrated",
       "sourceCodeSha256": {
-        "scripts/season-goal-boundary.mjs": "230c2e14afed309c459acc559cc3bdf61f93b4759dbe57f456c4b9c1d7152934",
+        "scripts/season-goal-boundary.mjs": "a2ca43e8af7251abbb288b3ad87a34648b110a9587f8921c5361163c77365116",
         "scripts/2026-fuel-assessment.mjs": "42ba643b868ffbc40572a01bacce88dd1c2d5b1d2075a1f93ac21ef7a835dc38",
         "case-studies/season-goal-evidence.json": "cf8bf6dcfee8dd3954d77cffc9f1bb7a282e3df3eb8c901a781771b785ed1239"
       }
@@ -826,7 +826,7 @@
       "hardwareAcceptance": "blocked",
       "physicalLinkage": "not-demonstrated",
       "sourceCodeSha256": {
-        "scripts/season-goal-boundary.mjs": "230c2e14afed309c459acc559cc3bdf61f93b4759dbe57f456c4b9c1d7152934",
+        "scripts/season-goal-boundary.mjs": "a2ca43e8af7251abbb288b3ad87a34648b110a9587f8921c5361163c77365116",
         "scripts/2026-fuel-assessment.mjs": "42ba643b868ffbc40572a01bacce88dd1c2d5b1d2075a1f93ac21ef7a835dc38",
         "case-studies/season-goal-evidence.json": "cf8bf6dcfee8dd3954d77cffc9f1bb7a282e3df3eb8c901a781771b785ed1239"
       }
@@ -849,7 +849,7 @@
       "hardwareAcceptance": "blocked",
       "physicalLinkage": "not-demonstrated",
       "sourceCodeSha256": {
-        "scripts/season-goal-boundary.mjs": "230c2e14afed309c459acc559cc3bdf61f93b4759dbe57f456c4b9c1d7152934",
+        "scripts/season-goal-boundary.mjs": "a2ca43e8af7251abbb288b3ad87a34648b110a9587f8921c5361163c77365116",
         "scripts/2026-fuel-assessment.mjs": "42ba643b868ffbc40572a01bacce88dd1c2d5b1d2075a1f93ac21ef7a835dc38",
         "case-studies/season-goal-evidence.json": "cf8bf6dcfee8dd3954d77cffc9f1bb7a282e3df3eb8c901a781771b785ed1239"
       }
@@ -872,7 +872,7 @@
       "hardwareAcceptance": "blocked",
       "physicalLinkage": "not-demonstrated",
       "sourceCodeSha256": {
-        "scripts/season-goal-boundary.mjs": "230c2e14afed309c459acc559cc3bdf61f93b4759dbe57f456c4b9c1d7152934",
+        "scripts/season-goal-boundary.mjs": "a2ca43e8af7251abbb288b3ad87a34648b110a9587f8921c5361163c77365116",
         "scripts/2026-fuel-assessment.mjs": "42ba643b868ffbc40572a01bacce88dd1c2d5b1d2075a1f93ac21ef7a835dc38",
         "case-studies/season-goal-evidence.json": "cf8bf6dcfee8dd3954d77cffc9f1bb7a282e3df3eb8c901a781771b785ed1239"
       }
@@ -895,7 +895,7 @@
       "hardwareAcceptance": "blocked",
       "physicalLinkage": "not-demonstrated",
       "sourceCodeSha256": {
-        "scripts/season-goal-boundary.mjs": "230c2e14afed309c459acc559cc3bdf61f93b4759dbe57f456c4b9c1d7152934",
+        "scripts/season-goal-boundary.mjs": "a2ca43e8af7251abbb288b3ad87a34648b110a9587f8921c5361163c77365116",
         "scripts/2026-fuel-assessment.mjs": "42ba643b868ffbc40572a01bacce88dd1c2d5b1d2075a1f93ac21ef7a835dc38",
         "case-studies/season-goal-evidence.json": "cf8bf6dcfee8dd3954d77cffc9f1bb7a282e3df3eb8c901a781771b785ed1239"
       }
@@ -918,7 +918,7 @@
       "hardwareAcceptance": "blocked",
       "physicalLinkage": "not-demonstrated",
       "sourceCodeSha256": {
-        "scripts/season-goal-boundary.mjs": "230c2e14afed309c459acc559cc3bdf61f93b4759dbe57f456c4b9c1d7152934",
+        "scripts/season-goal-boundary.mjs": "a2ca43e8af7251abbb288b3ad87a34648b110a9587f8921c5361163c77365116",
         "scripts/2026-fuel-assessment.mjs": "42ba643b868ffbc40572a01bacce88dd1c2d5b1d2075a1f93ac21ef7a835dc38",
         "case-studies/season-goal-evidence.json": "cf8bf6dcfee8dd3954d77cffc9f1bb7a282e3df3eb8c901a781771b785ed1239"
       },
@@ -994,7 +994,7 @@
       "hardwareAcceptance": "blocked",
       "physicalLinkage": "not-demonstrated",
       "sourceCodeSha256": {
-        "scripts/season-goal-boundary.mjs": "230c2e14afed309c459acc559cc3bdf61f93b4759dbe57f456c4b9c1d7152934",
+        "scripts/season-goal-boundary.mjs": "a2ca43e8af7251abbb288b3ad87a34648b110a9587f8921c5361163c77365116",
         "scripts/2026-fuel-assessment.mjs": "42ba643b868ffbc40572a01bacce88dd1c2d5b1d2075a1f93ac21ef7a835dc38",
         "case-studies/season-goal-evidence.json": "cf8bf6dcfee8dd3954d77cffc9f1bb7a282e3df3eb8c901a781771b785ed1239"
       },
