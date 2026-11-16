@@ -28,3 +28,12 @@ external aggregate normal load. Motion is caused by its ideal drive and contact
 impulses, not prescribed positions. This does not close normal mechanics,
 calibration, actual motor topology, controller integration or mechanical
 acceptance. The separately validated prescribed WPILib IO replay remains distinct.
+
+## Controller-coupled hypothetical entry experiment
+
+[Segmented entry coupling](segmented-entry-coupling.md) now uses actual simulated
+controller IO in feedback with a reduced tangential plant for all three seasons.
+A declared initial feeder velocity resolves the clear-beam startup handoff without
+changing fault guards. The fixed-pose CORAL partial-end overlap predicate is now
+covered. This does not resolve actual feeder design, normal/contact mechanics,
+physical drive topology, calibration or acceptance.

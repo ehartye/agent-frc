@@ -1,7 +1,7 @@
 {
   "schema": "frc-segmented-startup-boundary/v2",
   "status": "fresh-executed-controller-startup-tests",
-  "runId": "4e74beba-3dda-49a2-aa2b-62e2bd5c2c7c",
+  "runId": "65b913e0-18e3-4666-842e-0ba7a0671577",
   "tests": [
     "preloadedCoralCenterIsRejected()",
     "noteHoleOrEmptyEntranceStartsButCannotCompleteWithoutBeamEvents()",
@@ -13,7 +13,7 @@
     "scripts/record-segmented-startup.py": "78c485cd62b74e8867ca56fd0adca7ab164389c31d34201154babb7e0627846c",
     "examples/java-2026-sim/build.gradle": "f81ca1974aa36c65aff084d8f432178066787c622c94856d6b22492121c638f5",
     "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/SeasonRollerController.java": "df1d7a09d06477d52ff319c86ab86c51d0b532c1c990bf7a003a85e9d02c4702",
-    "examples/java-2026-sim/src/test/java/org/agentfrc/lesson/SegmentedStartupContractTest.java": "e3976e717945626b2dee03a2f2965d0bf1d00a8394c4ef88585408a3fb83784d"
+    "examples/java-2026-sim/src/test/java/org/agentfrc/lesson/SegmentedStartupContractTest.java": "1b5fc695082d74ad44361d21c1f7b4d396ced24cb5bdea6c2559602d70f228e8"
   },
   "runtimeClassSha256": {
     "SeasonRollerController": "186a1d36adc578bf1e3ecee37ebd17f109e9731cdd2f94982e7cea2ba93d834f",
@@ -21,8 +21,8 @@
   },
   "javaExecutableSha256": "1db37e7021f8fecc0e0cd6de5ee6f0c4fe403f28a55c0691a3812139724d0330",
   "artifactsSha256": {
-    "runtime.properties": "84066655288e0c0c82fb671fe90cf150383aa80e42965f41289ceb92b4c98b95",
-    "tests.xml": "708ab478824bc22609894cb48f222deec0fd80f89e97ca7d912b43e5f9252825",
+    "runtime.properties": "e5c4ba6ef9499e0f2a4743455ccbcc16691631a388b8bf11a902e252edab22b6",
+    "tests.xml": "56dc523d2a8b59e4a39264f76898b29e1c7f4d978a716bb0df5aeccc927477f2",
     "gradle.log": "96e668e3d1c95fb31d5ca49dbbdc55ef881bebfa9e20197f696815e4f0111a24"
   },
   "geometryEvidenceSha256": {
