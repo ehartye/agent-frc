@@ -98,3 +98,7 @@ See [protocol integration](bounded-virtual-supervisor.md) for the opt-in HAL ada
 ## Staged continuous-world supervision
 
 See [staged world integration](staged-world-supervision.md): conditional virtual pose and separate pad-travel/load observations now gate the continuous three-season approach/hold/release model. Stuck-high pad evidence still causes false HOLD, and missed updates leave closure commanded until a later fault. These are preserved counterexamples, not hardware safety or calibration claims.
+
+## Virtual diagnostics and command lease
+
+See [diagnostics and fault-output study](virtual-diagnostics-watchdog.md): separate virtual analog readbacks reject single-channel pad contradictions, but coordinated false readings still authorize false HOLD. An independently ticked command lease changes applied outputs during controller silence; alternative zero-output mechanical mappings produce different outcomes, including window escape. No real hardware safety guarantee.
