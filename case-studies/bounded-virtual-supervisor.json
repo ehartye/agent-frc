@@ -1,0 +1,53 @@
+{
+  "schema": "frc-bounded-virtual-supervisor/v1",
+  "runId": "e2fb49c9-4754-4893-8e75-6e3105cba916",
+  "status": "fresh-HAL-protocol-replay-only",
+  "tests": [
+    "invalidBoundsAndWrongSeasonNeverCommandClosure()",
+    "geometricCounterexampleAndAgeHorizonAreNotBypassed()",
+    "pythonClearanceGoldenVectorsMatch()",
+    "lossAfterHoldCannotAuthorizeRelease()",
+    "invalidPadsDenyHoldEvenWithClosedFeedback()",
+    "staleFutureAndClockRegressionFailClosed()",
+    "allSeasonsRequireIndependentPadsBeforeHoldAndPermitGuardedRelease()"
+  ],
+  "sourceCodeSha256": {
+    "scripts/run-supervised-catcher.py": "4c3e68a0ce7b2303b777fc484856ec1758eaf13ca1ad9dc22e32283e44322c48",
+    "scripts/prepare-supervisor-golden.py": "1b69146248f337103a10c4e75ea6e5f5e56ab3198a326cadf430d109ef98d39a",
+    "scripts/pose-clearance-contract.py": "11318473993ca41212410a6d223d51b9c61369f63d13982037efbc374780ae36",
+    "examples/java-2026-sim/build.gradle": "f81ca1974aa36c65aff084d8f432178066787c622c94856d6b22492121c638f5",
+    "examples/java-2026-sim/src/test/resources/supervisor-clearance-golden.csv": "c6de9d60825d0458e17f8ccd705d2fe6052d4c7c408acdbc538ff5c4aed0a530",
+    "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/CatcherHandoffController.java": "defce944c9943cb035bb9e2762c7de942c2189dbc4d9096e4d9303f7fb7fdabd",
+    "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/BoundedCatcherSupervisor.java": "8d56dcf41d2da31145b3b2daa0341e824ccd08502ba2a867eafffbf61c4a6038",
+    "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/SupervisedCatcherAdapter.java": "b5b4fdb8ec92489e3de88a651e50dbe50e64b96081add719b6e339eecb7339b2",
+    "examples/java-2026-sim/src/test/java/org/agentfrc/lesson/SupervisedCatcherTest.java": "a99bce8b1b4d795a4f8a0224659181939c2e6aa5f7976e0e19d5216540cd40bb"
+  },
+  "runtimeClassSha256": {
+    "CatcherHandoffController": "bb8026ca7dbf8d854a5553447d6d0258eb15b529ed33d9582d6abdbd088fe292",
+    "BoundedCatcherSupervisor": "fb8f054fa06832e3a1465794836018ed33606eb89896444c0d95dceab264ae56",
+    "BoundedCatcherSupervisor$Pose": "7102d552856cdc96bb71851f4d8d9839eb5da59b642f36c3cf7b0623be431f1c",
+    "BoundedCatcherSupervisor$Pads": "674e6cfb82c9d258c96bafe870b9a3145f3894a08a439c61726ffeac153ab7c4",
+    "BoundedCatcherSupervisor$Verdict": "e84e61b9ec6ab2e39fadd7728e2d8fd8d74e37b90d612548a21f36349b8dffc4",
+    "SupervisedCatcherAdapter": "10734ba0f23cec95461edc3a703541d9054862f5a424841c632894ae2221c120",
+    "SupervisedCatcherTest": "d5f29d89e162d4554dacab0f6c0c752d0d72a12f797055fdef467a9f2ef1e651"
+  },
+  "javaExecutableSha256": "1db37e7021f8fecc0e0cd6de5ee6f0c4fe403f28a55c0691a3812139724d0330",
+  "artifactsSha256": {
+    "runtime.properties": "93e37887e5656a7f593252b9b5a88155ded972644b0b2c370d4d2a11ffee1f15",
+    "tests.xml": "6938f45c6c5777088d2e093c60d32fc60897ee8e4a5c819039dc079ef983dec6",
+    "gradle.log": "42f73dc1947daa17a689d4877cdec676ad0a95b929d478be0ec28aed4749cf18"
+  },
+  "physicalRobotIoExecuted": false,
+  "simulatedWpilibIoExecuted": true,
+  "calibration": null,
+  "engineeringAcceptance": "blocked",
+  "limitations": [
+    "Virtual observations and error bounds supplied directly; no real pose sensor, contact switch or load sensor selected or implemented",
+    "HAL protocol tests replay beam/feedback events, not continuous world transport or force-coupled gate motion",
+    "Bounds include observation age plus20ms decision horizon; no guarantee after missed updates, unbounded acceleration or false validity bits",
+    "Requires fresh independent bilateral contact AND load-valid bits before HOLD and throughout HOLD; geometry and closure command never establish load",
+    "Denial latches protocol FAULT; existing fault behavior retains prior closure, not safe stopping or power-loss qualification",
+    "Adapter currently requires near-catcher pose domain from initialization, so it is not yet a replacement for the full upstream world rig",
+    "No capture or engineering qualification; native geometry, actual hardware, actuator forces and uncertainty calibration remain separate"
+  ]
+}

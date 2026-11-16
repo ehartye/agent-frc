@@ -90,3 +90,7 @@ preserve the earlier limitations;14 paths have inter-sample2mm distance proofs
 under prescribed rigid motion. Nine pad strokes still show contact gaps or
 required compression. The contract is not yet controller input from actual
 sensing and does not qualify capture, preload or hardware.
+
+## Bounded virtual supervisor
+
+See [protocol integration](bounded-virtual-supervisor.md) for the opt-in HAL adapter: bounded pose/age clearance permission plus independent bilateral pad-contact/load validity before and throughout HOLD. Thirty-three protocol paths and 30 formula vectors are not continuous-world capture validation. No real sensors, calibrated loads or hardware safety claims. Existing world controller and receipts are unchanged.
