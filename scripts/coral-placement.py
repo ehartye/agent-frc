@@ -1,7 +1,8 @@
 """Conditional finite CORAL placement on an isolated, unperforated local floor patch."""
 import hashlib, importlib.util, json, math, pathlib
 ROOT=pathlib.Path(__file__).resolve().parents[1]
-PINS=('scripts/coral-placement.py','scripts/pose-clearance-contract.py','case-studies/target-frame-evidence.json','case-studies/integrated-prototype-targets.json')
+spec=importlib.util.spec_from_file_location('integrated',ROOT/'scripts/integrated-prototype-targets.py');integrated=importlib.util.module_from_spec(spec);spec.loader.exec_module(integrated)
+PINS=list(dict.fromkeys(['scripts/coral-placement.py','scripts/pose-clearance-contract.py','case-studies/target-frame-evidence.json']+integrated.PINS))
 def load_geometry():
  s=importlib.util.spec_from_file_location('pose',ROOT/PINS[1]);m=importlib.util.module_from_spec(s);s.loader.exec_module(m)
  return tuple(v/1000 for v in m.GEOMETRY[2025])
@@ -37,8 +38,10 @@ def evaluate(position,velocity,yaw,mu,polygon):
  result.update(stopDistanceM=distance,stopCenterM=stop,sweptMarginM=swept,conditionalContainedStop=swept>=0)
  return result
 
-def report():
- evidence=json.loads((ROOT/PINS[2]).read_text());runtime=json.loads((ROOT/PINS[3]).read_text())
+def report(target_file=None,receipt_file=None):
+ target=pathlib.Path(target_file) if target_file else ROOT/'case-studies/integrated-prototype-targets.json'
+ evidence=json.loads((ROOT/PINS[2]).read_text());runtime=json.loads(target.read_text())
+ if runtime!=integrated.report(receipt_file):raise ValueError('stale runtime targets')
  polygon=[[v*.0254 for v in p] for p in evidence['coralFloor']['verticesInch']]
  rows=[]
  for index,c in enumerate(runtime['cases']):
@@ -55,6 +58,10 @@ def report():
      r=item[0];return r['sweptMarginM'] if r['sweptMarginM'] is not None else r['landingMarginM']
     best,bp,bv=max(scored,key=score)
     rows.append(dict(sourceCaseIndex=index,sourceExit=c['sourceExit'],yawDeg=yaw,muHypothesis=mu,baseline=baseline,improvedRegistration=dict(exitPositionM=bp,exitVelocityMps=bv,translationFromBaselineM=[bp[i]-p[i] for i in range(3)],yawRotationDeg=yaw),improved=best))
- return dict(schema='frc-coral-placement/v1',sourceRunId=runtime['runId'],pins={p:hashlib.sha256((ROOT/p).read_text(encoding='utf-8-sig').encode()).hexdigest() for p in PINS},floorSource=evidence['coralFloor'],halfLengthM=HALF,radiusM=RADIUS,cases=rows,assumptions=['Fixed horizontal finite cylinder at yaw0 or +/-15deg; no orientation inferred from runtime','Floor is isolated convex part-local unrounded patch, no holes, corner radii, walls or installed transform','Perfectly inelastic vertical landing; horizontal velocity preserved; no impact impulse coupling','Axial sliding only when velocity aligns tube axis; hypothetical constant Coulomb mu, no rolling, spin or settling','Bounded grid registration is a design hypothesis, not an installed mechanism; best landing used for mu0, not a stop','Whole swept fixed projection containment proven by convex endpoint support; no hole or pressure/contact-area proof'],calibration=None,installedRegistration=None,officialScore=None,engineeringAcceptance='blocked')
+ return dict(schema='frc-coral-placement/v1',sourceTargetReportSha256=hashlib.sha256(target.read_text(encoding='utf-8-sig').encode()).hexdigest(),sourceRunId=runtime['runId'],pins={p:hashlib.sha256((ROOT/p).read_text(encoding='utf-8-sig').encode()).hexdigest() for p in PINS},floorSource=evidence['coralFloor'],halfLengthM=HALF,radiusM=RADIUS,cases=rows,assumptions=['Fixed horizontal finite cylinder at yaw0 or +/-15deg; no orientation inferred from runtime','Floor is isolated convex part-local unrounded patch, no holes, corner radii, walls or installed transform','Perfectly inelastic vertical landing; horizontal velocity preserved; no impact impulse coupling','Axial sliding only when velocity aligns tube axis; hypothetical constant Coulomb mu, no rolling, spin or settling','Bounded grid registration is a design hypothesis, not an installed mechanism; best landing used for mu0, not a stop','Whole swept fixed projection containment proven by convex endpoint support; no hole or pressure/contact-area proof'],calibration=None,installedRegistration=None,officialScore=None,engineeringAcceptance='blocked')
 if __name__=='__main__':
- print(json.dumps(report(),indent=2,allow_nan=False))
+ import argparse
+ a=argparse.ArgumentParser();a.add_argument('--targets');a.add_argument('--receipt');a.add_argument('--output');v=a.parse_args();text=json.dumps(report(v.targets,v.receipt),indent=2,allow_nan=False)+'\n'
+ if v.output:
+  with pathlib.Path(v.output).open('x') as f:f.write(text)
+ else:print(text,end='')

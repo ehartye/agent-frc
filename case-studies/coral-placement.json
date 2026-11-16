@@ -1,11 +1,21 @@
 {
   "schema": "frc-coral-placement/v1",
+  "sourceTargetReportSha256": "292b3b764c63ed9db4cbe2c5d59d50cdc18845e387da65bcf3e4fd41a676ab2d",
   "sourceRunId": "e5637c2c-1c17-4b46-904c-d236f03a3031",
   "pins": {
-    "scripts/coral-placement.py": "72afcefbf33841b9938206c0f83dcb21626881a94b4fc1d73e90f6ca67814161",
+    "scripts/coral-placement.py": "e50e3ce68eff37ffee958c6123df9e5f8805a7f28d7ac4b2214fafdea3ebc1e9",
     "scripts/pose-clearance-contract.py": "11318473993ca41212410a6d223d51b9c61369f63d13982037efbc374780ae36",
     "case-studies/target-frame-evidence.json": "51392cd4fe6b23dd7af1d63c32d27bbee3438f0ea2dc904d3875226bd0c086b6",
-    "case-studies/integrated-prototype-targets.json": "292b3b764c63ed9db4cbe2c5d59d50cdc18845e387da65bcf3e4fd41a676ab2d"
+    "case-studies/2025/coral-fixture-nominal.json": "a82751de2ebcd7be4ca03ba99a469957c33194a81bd3aef6ef82d0b4e87a0567",
+    "case-studies/2026/intake-fixture-nominal.json": "c99db72594738e48424db574244cfa70aa1140f424a2772ac1f85702c0e81c56",
+    "case-studies/direct-drive-inertia-inputs.json": "8938a4da695dbfea43c5edb608e2bc7f94939823e9c9911ff80765253f4af72f",
+    "case-studies/powered-guide-run.json": "f22ce9ab3a4e9097a044ad6b0662de907a9fe9744fc0ec090a00dabf64b7ce0d",
+    "scripts/integrated-prototype-targets.py": "84c9d175aed64f85823427265bba50682fb67bb551a8ac630c26e87f2458e741",
+    "scripts/mechanism-exit-registration.py": "7d47f2dbf110df6130a508730d0f4abf5a886748a07dfbdc505b64e1646e6db7",
+    "scripts/powered-target-link.py": "115bf26ee2548b376b673abb6710d827663df738d2be5d749f0f338e7c795124",
+    "scripts/run-integrated-prototype.py": "b15076a95f2e77ebba817c2589d8325e408a2e1d39fa364b28fabfe56a2a61c4",
+    "scripts/run-powered-guide.py": "eb2bc2da4c51e45efd54f7aa6dd2a03304c2daba4af04fa5a64a0414ce142678",
+    "scripts/target-local-ballistics.py": "4666b4d7824627c812a5aa10df4cbf85655189893d6d0680a8ae9746f68eb87e"
   },
   "floorSource": {
     "url": "https://firstfrc.blob.core.windows.net/frc2025/FieldAssets/2025FieldDrawings.pdf",

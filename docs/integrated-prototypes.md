@@ -39,3 +39,9 @@ The mirrored block and correct fastener layout is recorded in [the fastened-pair
 NOTE wheel, hub/collar ring estimates, shaft envelope and this complete-motor bound total about 0.0007234 kg m², leaving about 0.0002766 under the 0.001 model ceiling for unspecified rotating hardware. This is conditional on that allowance, not an unconditional assembly upper bound. The 0.0003/0.0005 points are working hypotheses; actual mass distribution and rotor/accessory inertia remain unmeasured. Exact snapshot pins and arithmetic are in `case-studies/direct-drive-inertia-inputs.json`.
 
 The zero-demand regression ends at the authorization boundary without energizing the motor model. It checks command routing, not gravity-driven drift, retention or safe behavior after an open gate. Demand is configured per run; continuous mid-run duty changes are not modeled by this constant-demand plant.
+
+## Finite-body target iteration
+
+The same command now also writes `note-body.json` and `coral-placement.json`, both bound to that run's fresh receipt and target report. [NOTE full-extent analysis](note-prototype-body.md) rejects all original center-only candidates and finds one bounded aim/attitude hypothesis with 20.9 mm nominal whole-torus thin-plane margin. [CORAL placement](coral-placement.md) checks the finite tube on the isolated floor patch and compares explicit axial sliding/friction hypotheses, preserving low-friction and nonaxial failures. Neither output is an official score or a calibrated contact/settling model.
+
+For platform, toolchain/cache prerequisites and the distinction from a clean-machine bootstrap or historical team-code build, see [prototype setup](prototype-setup.md).

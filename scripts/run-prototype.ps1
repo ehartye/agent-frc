@@ -8,4 +8,8 @@ python (Join-Path $PSScriptRoot 'run-integrated-prototype.py') --output $OutputD
 if($LASTEXITCODE -ne 0){throw 'Prototype execution failed; diagnostic directory retained.'}
 python (Join-Path $PSScriptRoot 'integrated-prototype-targets.py') --receipt (Join-Path $OutputDirectory 'receipt.json') --output (Join-Path $OutputDirectory 'targets.json')
 if($LASTEXITCODE -ne 0){throw 'Target report failed; runtime receipt retained.'}
+foreach($study in @(@('note-prototype-body.py','note-body.json'),@('coral-placement.py','coral-placement.json'))){
+ python (Join-Path $PSScriptRoot $study[0]) --receipt (Join-Path $OutputDirectory 'receipt.json') --targets (Join-Path $OutputDirectory 'targets.json') --output (Join-Path $OutputDirectory $study[1])
+ if($LASTEXITCODE -ne 0){throw 'Finite-body report failed; runtime and target reports retained.'}
+}
 Write-Output "Prototype results: $OutputDirectory"
