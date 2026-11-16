@@ -1,0 +1,13 @@
+# Source-fed acquisition boundary experiment
+
+This is a separate analytic study, not connected to the Java prototype. Run `python -B scripts/acquisition-contract.py` and `npm run test:acquisition-contract`. Existing runtime report supplies the exact NOTE/FUEL nominal masses and both sourced CORAL mass bounds and guide pitches; it does not supply an acquisition velocity. The 0.6 m/s incoming velocity is an explicit source-feed hypothesis with its kinetic energy entered in the ledger.
+
+A new straight constrained approach starts the body center 20 mm before the powered guide origin. Gravity and hypothetical 0.02 N sliding drag determine exact travel time and pre-impact speed. A hypothetical passive stop at the registered center position applies an instantaneous, perfectly inelastic impulse. Its entire kinetic-energy reduction and momentum change are reported. This is not a hidden velocity reset, but it is an ideal impact law, not a modeled bumper or a peak-load prediction. A proposed real stop must be offset to contact the body's leading surface. Original floor/pad capture validity is not carried over.
+
+A separate hypothetical latch retains the body against gravity during a 0.2 s dwell. The prescribed verified-virtual observation and 0.2 J energy limit are assumptions, not component ratings or sensor assurance. Four nominal mass/season cases reach exact q=0,v=0 conditionally. No-stop, elastic/no-damping, excessive-speed, missing-retention and uncertain-retention controls cannot qualify. Underfed cases preserve stalls where gravity/drag prevents arrival. Failed cases terminate with their actual state and unresolved subsequent dynamics, not a claim of safe stopping.
+
+The ledger balances incoming kinetic energy against uphill potential gain, guide friction, impact dissipation and remaining kinetic energy. Piece position is continuous; the only velocity discontinuity is the reported ideal impulse. Retained dwell has no displacement or work, although a static reaction is necessary. Rollers remain outside this acquisition model; body spin, lateral pose, compliance and real feeding sources are unmodeled.
+
+## Java handoff gate
+
+`IntegratedPregripPrototype` currently constructs a fresh `PoweredGuidePlant` and calls `feed(0)`. It has no acquisition-state import. Therefore this study must not call it and describe the result as continuous acquisition. Next implementation needs an explicit state/time interface, registered center and pose, preserved acquisition energy ledger, verified retention through nip closure, and a modeled release path. A nominal eligible state matches the current zero-rest assumption mathematically; it is not a validated transfer or physical acquisition. No official score or engineering acceptance is inferred.
