@@ -54,3 +54,12 @@ position/dwell/disturbance criterion. The cradle model passes its linear-subsyst
 screen, with an independent analytic bound, but physical attachment, unilateral
 contact, upstream isolation and release remain unresolved. This independent
 subsystem result is not an integrated robot or hardware acceptance claim.
+
+## Unilateral catcher and native interface envelopes
+
+[Unilateral catcher interfaces](unilateral-catcher-interfaces.md) replace ideal
+bilateral attachment with force-limited bumper/gate contacts and explicitly test
+closure delay and local release. A retractable damping-pad hypothesis improves
+the provisional screen; its normal load/friction and actuators remain unverified.
+Original native guide/gate/pad envelope layouts establish nominal downstream
+clearances, not a constrained assembly or complete controller-to-catcher run.
