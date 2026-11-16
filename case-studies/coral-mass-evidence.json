@@ -1,0 +1,27 @@
+{
+  "schema": "frc-coral-mass-evidence/v1",
+  "source": {
+    "url": "https://firstfrc.blob.core.windows.net/frc2025/Manual/HTML/2025GameManual.htm",
+    "sha256": "8b7fee3f1c74913f91a8f16ca0f7c7710ac93a28b271529391721cdafb21f7da",
+    "bytes": 1131553,
+    "section": "5.7.1 CORAL",
+    "retrievedDate": "2026-11-16"
+  },
+  "massBoundsLb": [
+    1.1,
+    1.8
+  ],
+  "kgPerLb": 0.45359237,
+  "massBoundsKg": [
+    0.4989516070000001,
+    0.816466266
+  ],
+  "sourceMeaning": "KOP/event CORAL weight range; source-dependent variation is expressly noted",
+  "notProvided": [
+    "friction coefficient",
+    "nip normal force",
+    "guide pitch or tube orientation",
+    "normal-force actuator",
+    "validated dynamic contact properties"
+  ]
+}
