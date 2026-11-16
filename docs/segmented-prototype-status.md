@@ -102,3 +102,7 @@ See [staged world integration](staged-world-supervision.md): conditional virtual
 ## Virtual diagnostics and command lease
 
 See [diagnostics and fault-output study](virtual-diagnostics-watchdog.md): separate virtual analog readbacks reject single-channel pad contradictions, but coordinated false readings still authorize false HOLD. An independently ticked command lease changes applied outputs during controller silence; alternative zero-output mechanical mappings produce different outcomes, including window escape. No real hardware safety guarantee.
+
+## Exact actuator and retention evidence
+
+[Component integration screen](component-retention-evidence.md) rejects direct P16 gate/pad drive on timing, preserves a spring-pin/self-locking-actuator power-loss counterexample, and identifies force-sensor/interface and independence gaps. Vendor revisions are pinned; no component acceptance, procurement or competition-legality claim.
