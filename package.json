@@ -32,6 +32,7 @@
     "trace:inspect": "node scripts/inspect-trace.mjs",
     "setup:check": "node scripts/check-environment.mjs",
     "audit:interfaces": "node scripts/shaft-sleeve-audit.mjs",
-    "candidate:profiled": "node scripts/profiled-wheel-candidates.mjs"
+    "candidate:profiled": "node scripts/profiled-wheel-candidates.mjs",
+    "test:maxlift-pair": "python -B scripts/test-maxlift-fastened-pair.py"
   }
 }
