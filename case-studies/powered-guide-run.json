@@ -1,6 +1,6 @@
 {
   "schema": "frc-powered-guide-run/v1",
-  "runId": "cb15bcb3-e9e3-4ad5-9583-d986b42fb9c0",
+  "runId": "3d39cded-6670-4f35-9bad-1c023f19c016",
   "tests": [
     "horizontalUnpoweredRollersCannotCreateEnergy()",
     "invalidAndRepeatedFeedRejected()",
@@ -11,12 +11,12 @@
   "sourceCodeSha256": {
     "scripts/run-powered-guide.py": "eb2bc2da4c51e45efd54f7aa6dd2a03304c2daba4af04fa5a64a0414ce142678",
     "examples/java-2026-sim/build.gradle": "f81ca1974aa36c65aff084d8f432178066787c622c94856d6b22492121c638f5",
-    "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/PoweredGuidePlant.java": "98c71b78ebe289cd7c98d481666c94e726d932aded7fed39beb80df1387bea3f",
+    "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/PoweredGuidePlant.java": "e975380a4da17783f9cbb30947dbbda8a21bf907d014c67011abf176e90393e3",
     "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/SharedSupply.java": "b9f3abb46a04d26a630c721266649eef79ee152ded5bec49c5c0c83595055857",
     "examples/java-2026-sim/src/test/java/org/agentfrc/lesson/PoweredGuideTest.java": "8f8297434b367654b5ed71af2ab4adf2145f381e0e40441274c00a96ae327272"
   },
   "runtimeClassSha256": {
-    "PoweredGuidePlant": "44d25061e8a2cd2e44ddcda9a9e1793e50a40a9ba67b01c60b634a5d186e7ee9",
+    "PoweredGuidePlant": "effa839b24afcf9387837b3965219a67b562534667f0e4bb1e97aafd484fa00f",
     "PoweredGuidePlant$Config": "2020f54fa940e94a5b7630239ea183e5e1d78ce744030be13d949ab32c77183a",
     "PoweredGuidePlant$Sample": "2ab322f51e0a99c0ba7ff2009461fd661e650918bff8613be9b1e595f0673146",
     "SharedSupply": "6e9f6c2c5354542ace316a27d7f48ca6cc48531e062f8ff7257c614ca7b8eaae",
@@ -27,9 +27,9 @@
   "wpimathJarSha256": "71bf7d1c0da17f20b112311693b4a15c600f19ef4652c17d1e8210e6562a6a7d",
   "javaExecutableSha256": "1db37e7021f8fecc0e0cd6de5ee6f0c4fe403f28a55c0691a3812139724d0330",
   "artifactsSha256": {
-    "runtime.properties": "fb16278673e7e1dfeca435da14b430c8da90791d08ba77f1d3b8376a309068bf",
-    "tests.xml": "b1e5a2e17991d0dbb79ecbc410964d1f7cabcadb5502c0dbd6d73d21340d2283",
-    "gradle.log": "07c16b50c937be78277888324be876bd356e2e2177be4d01253e7552975d573c"
+    "runtime.properties": "58693349f4c05b630a6a6991d4955207931dd849b1099d722ba692ecee0f1513",
+    "tests.xml": "938ed9abbc50b77140be3bcaed85377ea228b0ee84ced1443756603ce5592613",
+    "gradle.log": "1895c87f228c6b754bd5dd80cf74fd241c1508f6800fb47db57d92a997bb40df"
   },
   "observations": [
     "POWERED_EXIT year=2024 volts=9.0 dt=5.0E-5 angleRad=0.8726646259971648 massKg=0.235 guideLengthM=0.3 radiusM=0.0508 inertiaEach=0.004 Sample[time=2.077547556808754, x=0.3, speed=7.537187665291001, omega=223.2912234532039, motorWork=220.9446647222912, frictionLoss=14.308782837378802, feedEnergy=0.0047, energyResidual=2.3729169670860806E-12, exited=true]",

@@ -1,6 +1,6 @@
 {
   "schema": "frc-powered-target-link/v1",
-  "runId": "cb15bcb3-e9e3-4ad5-9583-d986b42fb9c0",
+  "runId": "3d39cded-6670-4f35-9bad-1c023f19c016",
   "cases": [
     {
       "season": 2024,
@@ -1502,7 +1502,7 @@
     "scripts/target-local-ballistics.py": "4666b4d7824627c812a5aa10df4cbf85655189893d6d0680a8ae9746f68eb87e",
     "scripts/mechanism-exit-registration.py": "7d47f2dbf110df6130a508730d0f4abf5a886748a07dfbdc505b64e1646e6db7",
     "scripts/run-powered-guide.py": "eb2bc2da4c51e45efd54f7aa6dd2a03304c2daba4af04fa5a64a0414ce142678",
-    "case-studies/powered-guide-run.json": "df5e1bd3f36bb3a726842f0bc72a4545d12135aae5177cebf8c0db345a6c4ddf",
+    "case-studies/powered-guide-run.json": "f22ce9ab3a4e9097a044ad6b0662de907a9fe9744fc0ec090a00dabf64b7ce0d",
     "case-studies/target-frame-evidence.json": "51392cd4fe6b23dd7af1d63c32d27bbee3438f0ea2dc904d3875226bd0c086b6",
     "case-studies/2026/intake-fixture-nominal.json": "c99db72594738e48424db574244cfa70aa1140f424a2772ac1f85702c0e81c56",
     "case-studies/2025/coral-fixture-nominal.json": "a82751de2ebcd7be4ca03ba99a469957c33194a81bd3aef6ef82d0b4e87a0567"

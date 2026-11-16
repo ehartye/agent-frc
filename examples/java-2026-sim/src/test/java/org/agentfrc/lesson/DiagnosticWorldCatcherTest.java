@@ -17,7 +17,9 @@ class DiagnosticWorldCatcherTest {
  record Result(boolean intakeDone,boolean enteredHold,boolean retainedClosureAfterFault,double motionDuringMissedUpdates,boolean leaseExpired,boolean finalPhysicalGateClosed,String catcherState,boolean captured,boolean locallyReleased,int tailPulses,double arrivalS,double finalX,double finalSpeed,double maxCaptureDisplacement,double preDwellSpeed,double postDwellSpeed,double minIsolationGap,double maxEnergyResidual){}
  // fault1=missing arrival,2=missing tail,3=closed feedback stuck false,4=unloaded feedback false,
  // 5=500ms closing lag,6=disabled catcher. All feedback and actuator parameters are hypothetical.
- static Result run(int year,double initialSpeed,int fault) {
+ record ExitState(int year,double time,double x,double velocity,double mass,boolean gateClosed,boolean padContact,double releaseImpulse){}
+ static Result run(int year,double initialSpeed,int fault) {return run(year,initialSpeed,fault,null);}
+ static Result run(int year,double initialSpeed,int fault,java.util.function.Consumer<ExitState> observer) {
   final double dt=.002;double x=-.25,v=initialSpeed,u=0,angle=0,work=0,loss=0,initial=.25*v*v,maxResidual=0;
   double hx=year==2024?.1778:year==2025?.1508125:.075,wr=SegmentedEntryCouplingTest.radius(year);
   double arrivalPlane=.4+hx-.005,tailPlane=.4-hx-.018;
@@ -91,6 +93,7 @@ class DiagnosticWorldCatcherTest {
     if(pushApplied&&x<.35){
      assertEquals(StagedCatcherController.State.RELEASED,catcher.state());
      assertFalse(gateClosed);assertFalse(padValid);assertTrue(v<0);
+     if(observer!=null)observer.accept(new ExitState(year,(step+1)*dt,x,v,.5,gateClosed,padValid,.2));
      // End-of-step state, NOT interpolated plane intersection or a free-flight launch.
      System.out.println("MECHANISM_EXIT year="+year+" initialSpeed="+initialSpeed+" fault="+fault+" timeS="+((step+1)*dt)+" xM="+x+" vxMps="+v+" externalReleaseImpulseNs=0.2 planeXM=0.35 dtS="+dt);
      break;

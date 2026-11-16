@@ -1,6 +1,6 @@
 {
   "schema": "frc-mechanism-exit-continuity/v1",
-  "worldRunId": "f5bc7f43-0c82-4030-9223-b4f130722132",
+  "worldRunId": "4123389e-4271-4a62-8f23-f0aa05160a94",
   "cases": [
     {
       "year": 2024,
@@ -583,7 +583,7 @@
     "scripts/mechanism-exit-registration.py": "7d47f2dbf110df6130a508730d0f4abf5a886748a07dfbdc505b64e1646e6db7",
     "scripts/target-local-ballistics.py": "4666b4d7824627c812a5aa10df4cbf85655189893d6d0680a8ae9746f68eb87e",
     "case-studies/target-frame-evidence.json": "51392cd4fe6b23dd7af1d63c32d27bbee3438f0ea2dc904d3875226bd0c086b6",
-    "case-studies/mechanism-exit-world-replay.json": "f4e810c5dce45e8d41302762532c4e9eddea702486ae72bcb2a25a5b08ac3000"
+    "case-studies/mechanism-exit-world-replay.json": "4fe2016635e5bedacda869d85bebddb5113852b460f89489c8e2cb3aec5dbdbe"
   },
   "limitations": [
     "Fresh HAL toy-plant state extraction, not hardware or a new launcher",

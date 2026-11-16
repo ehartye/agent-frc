@@ -12,6 +12,12 @@ public final class PoweredGuidePlant {
  public PoweredGuidePlant(Config c){this.c=java.util.Objects.requireNonNull(c);}
  static boolean valid(double x,double lo,double hi){return Double.isFinite(x)&&x>=lo&&x<=hi;}
  public void feed(double speed){if(feeding||exited||!valid(speed,0,.4))throw new IllegalArgumentException("Single bounded feed");feeding=true;q[1]=speed;feedEnergy=.5*c.mass*speed*speed;}
+ /** Separate transfer API. Preserves wheel state and the already-running clock.
+  * Only horizontal guides and matching body mass are supported; no implicit velocity turn. */
+ public void acceptHorizontalHandoff(double mass,double speed,double inheritedTime){
+  if(feeding||exited||!valid(speed,0,.5)||!valid(inheritedTime,0,10)||Math.abs(time-inheritedTime)>1e-8||!Double.isFinite(mass)||mass!=c.mass||c.angle!=0)throw new IllegalArgumentException("Incompatible continuous handoff");
+  feeding=true;q[1]=speed;feedEnergy=.5*mass*speed*speed;
+ }
  private double[] derivative(double[] a){
   var s=SharedSupply.solve(c.supplyVolts,.02,new double[]{c.duty,c.duty},new double[]{a[2]/MOTOR.KvRadPerSecPerVolt,a[2]/MOTOR.KvRadPerSecPerVolt},new double[]{MOTOR.rOhms,MOTOR.rOhms});
   double torque=2*MOTOR.KtNMPerAmp*s.armatureAmps()[0],slip=c.radius*a[2]-a[1];

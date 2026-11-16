@@ -1,6 +1,6 @@
 {
   "schema": "frc-diagnostic-world-supervisor/v1",
-  "runId": "f5bc7f43-0c82-4030-9223-b4f130722132",
+  "runId": "4123389e-4271-4a62-8f23-f0aa05160a94",
   "status": "fresh-virtual-diagnostic-and-lease-world-replay",
   "tests": [
     "absentApproachMomentumCannotInventTransport()",
@@ -37,7 +37,7 @@
     "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/BoundedCatcherSupervisor.java": "f2151525ca15c7a756a074dcd700d84c05ea193f859ad89b5bb20cbc9d4fa2b7",
     "examples/java-2026-sim/src/test/java/org/agentfrc/lesson/SegmentedEntryCouplingTest.java": "5c50c62290a0432e8158fa7b9b0bd6ba5bcf447ebe8edab84a5f8bb54ceaf037",
     "examples/java-2026-sim/src/test/java/org/agentfrc/lesson/CatcherContactModel.java": "835981dfd19ebd0fa8388a440d9bbf67289d4ffff6f56178dcd63e34121c4397",
-    "examples/java-2026-sim/src/test/java/org/agentfrc/lesson/DiagnosticWorldCatcherTest.java": "c91a9fd97cdc25ae17e26aa746421d9de5fbdc867af20c965c6c86586b234b96"
+    "examples/java-2026-sim/src/test/java/org/agentfrc/lesson/DiagnosticWorldCatcherTest.java": "757608e788c6a4bcf3315461bc7763c99c9a5b210052e256030c7632ed0d84d4"
   },
   "runtimeClassSha256": {
     "PadConsistencyMonitor": "3ca6cd5d4ad2af112a5c28569dd97399142dffa9666613e737f88037cb70f5ee",
@@ -52,13 +52,13 @@
     "BoundedCatcherSupervisor$Verdict": "e84e61b9ec6ab2e39fadd7728e2d8fd8d74e37b90d612548a21f36349b8dffc4",
     "SegmentedEntryCouplingTest": "5586b86d989194d60f61f4769b15a921537f22ed48b3b7ebce2287e1872a463f",
     "CatcherContactModel": "1455d08eb38c90a88e59a239593293d8b83faa4200cb38ddf9f24773a0173296",
-    "DiagnosticWorldCatcherTest": "5ba054956f66f698d3b4d566eede7e24976e61bddcbbfd0446b7655d4cbcbc40"
+    "DiagnosticWorldCatcherTest": "cf903c6014e58e29361332c18a293a6b4921b4c9ccfd33a8f54e0d0f6478d31d"
   },
   "javaExecutableSha256": "1db37e7021f8fecc0e0cd6de5ee6f0c4fe403f28a55c0691a3812139724d0330",
   "artifactsSha256": {
-    "runtime.properties": "f3bcf7b309119d4ae1d45eef4e6043934db54c0c85135c2e6a0ad5ad7f68a39e",
-    "tests.xml": "0a2a83fd25cd23b3b405de5c593260419f945128865ced34352fbb92ebd990b3",
-    "gradle.log": "a2bd111bb19ea56e03c7e4e9e164f6f3f9da74514ef697b212b693815563129d"
+    "runtime.properties": "12fccf1318a48c0ca10a6df43aa1aeb85aedf3d24bfbe0ab7912a3452c8f9687",
+    "tests.xml": "0e63e94354e2055ff73c13f727ea7fb8d48f9b07155581e0ae4c315fb5c40d68",
+    "gradle.log": "d5b7cf361957b2dc10376384eb9d39ce86585956c2b51555b8a21971de312e02"
   },
   "observations": [
     "DIAGNOSTIC_CATCHER year=2024 initialSpeed=0.0 fault=0 Result[intakeDone=false, enteredHold=false, retainedClosureAfterFault=false, motionDuringMissedUpdates=0.0, leaseExpired=false, finalPhysicalGateClosed=false, catcherState=FAULT, captured=false, locallyReleased=false, tailPulses=0, arrivalS=-1.0, finalX=-0.25, finalSpeed=1.1102230246251566E-17, maxCaptureDisplacement=0.0, preDwellSpeed=0.0, postDwellSpeed=0.0, minIsolationGap=-1.0, maxEnergyResidual=3.081487911019578E-35]",
