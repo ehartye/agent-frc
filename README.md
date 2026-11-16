@@ -1,6 +1,6 @@
 # agent-frc
 
-Version **0.6.2**, local source milestone. Seven FRC engineering skills connect rules, strategy, subsystems, working Java code, Fusion inputs and simulator evidence. Independent educational work; no FIRST/vendor endorsement. Publication is pending; no push or installation is performed.
+Version **0.7.0**, strategy and previsualization release. Nine FRC engineering skills connect rules, strategy, subsystems, working Java code, Fusion inputs and simulator evidence. Independent educational work; no FIRST/vendor endorsement. Installation and native CAD execution require separate verification.
 
 Start with the [end-to-end case workflow](case-studies/README.md): [2024 CRESCENDO](case-studies/2024/README.md), [2025 REEFSCAPE](case-studies/2025/README.md), or [2026 REBUILT](case-studies/2026/README.md). Each compares three strategies and implements a deliberately bounded mechanism slice. Complete robot design remains future work.
 
@@ -25,3 +25,5 @@ Historical game analysis uses a common pinned 2026 teaching runtime, not histori
 Original code, prose and concept vectors are MIT. FIRST manuals and manufacturer documentation stay link-only. [Manual fingerprints](case-studies/manual-fingerprints.json) identify retrieved bytes without bundling them. [Third-party notices](examples/java-2026-sim/THIRD_PARTY.md) cover selected build/wrapper sources; dependencies are not bundled. No private catalog, team data or credentials are shipped.
 
 [Hardware rules and Java evidence](docs/rulebook-hardware-review.md) adds a dated, event-aware reading map; use `npm run rules -- --season 2026 --as-of 2026-11-15 --event-stage archive-study`.
+
+The [strategy-to-previsualization workflow](docs/design-artifact.md) adds conversational skills for strategic narratives and previsualization. Students preserve alternatives, scaffold pseudocode and fabrication questions, then iterate a versioned JSON blockout before CAD. `npm run design -- new design.json` starts a portable artifact; validation and millimetre OpenSCAD handoff are spatial planning tools, not fabrication or rule-compliance certification.
