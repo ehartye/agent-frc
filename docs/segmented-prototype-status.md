@@ -15,3 +15,7 @@ The contact redesign is documented in `segmented-season-contact.md`. The raw-sto
 Native scripts require existing OCP and network access to exact public manufacturer STEP URLs. They hash-check temporary assets and retain numeric evidence only. Python tests that read receipts explicitly do not count as fresh native replays. Ordinary `npm test` covers the integrated interface/candidate contracts; it does not execute native CAD, physical dynamics or season compliance validation.
 
 Next defensible work: complete constrained fastening/drive geometry and source reconciliation, then define an explicitly uncalibrated dynamic sensitivity experiment or supply calibration evidence before any physical performance claim. No fabrication, strength, capture, scoring or engineering acceptance is established by zero nominal common volumes.
+
+## Prescribed geometry/IO milestone
+
+`segmented-contact-replay.md` now records a runnable three-season, six-trace prescribed-motion experiment through the existing WPILib simulated IO controller. It preserves uncertain NOTE proximity and unsupported CORAL end crossings rather than inventing contact. This adds time-varying geometry/control integration evidence, not force-coupled dynamics or calibration. Beam completion in the nominal no-confirmed-contact control explicitly prevents interpreting replay completion as physical transport.

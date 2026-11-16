@@ -108,3 +108,8 @@ wpi.java.configureTestTasks(tasks.named('coralContactTest').get())
 test { exclude '**/NoteContactTest.class' }
 tasks.register('noteContactTest', Test) { testClassesDirs = sourceSets.test.output.classesDirs; classpath = sourceSets.test.runtimeClasspath; useJUnitPlatform(); include '**/NoteContactTest.class'; testLogging.showStandardStreams=true }
 wpi.java.configureTestTasks(tasks.named('noteContactTest').get())
+
+// Explicit prescribed trajectory replay: geometry contact flags do not drive the motion.
+test { exclude '**/SegmentedReplayTest.class' }
+tasks.register('segmentedReplayTest', Test) { testClassesDirs = sourceSets.test.output.classesDirs; classpath = sourceSets.test.runtimeClasspath; useJUnitPlatform(); include '**/SegmentedReplayTest.class'; testLogging.showStandardStreams=true }
+wpi.java.configureTestTasks(tasks.named('segmentedReplayTest').get())
