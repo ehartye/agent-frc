@@ -1,0 +1,45 @@
+{
+  "schema": "frc-guided-retention-evidence/v1",
+  "sources": {
+    "r4-em-ld.pdf": {
+      "url": "https://files.southco.com/static/Literature/r4-em-ld.en.pdf",
+      "sha256": "53b0e04b4ff870c7a35b594abac09f2a5b73f06210c5bca5039424d3b52775ca",
+      "bytes": 1593335
+    },
+    "r4-em-override.pdf": {
+      "url": "https://files.southco.com/static/Literature/r4-em-mech.en.pdf",
+      "sha256": "ffabca1418044061e47ae664ecf41b5ac471bb8472cbabf04eca06b56e64ab08",
+      "bytes": 646251
+    }
+  },
+  "candidate": {
+    "latch": "R4-EM-43-161",
+    "striker": "R4-90-511-20",
+    "overrideMount": "R4-EM-72",
+    "function": "push-to-close; electronic release; auto relock; cam status switch",
+    "mountStyle": "5.5mm thru holes",
+    "strikerThread": "M6",
+    "strikerDiameterMm": 7.5,
+    "recommendedSupplyV": [
+      12,
+      24
+    ],
+    "signalV": [
+      8,
+      26
+    ],
+    "signalMaxMa": 25,
+    "noLoadAverageOperatingCurrentMaLessThan": 600,
+    "overrideCompatibility": "4/6-series row visually checked against catalog compatibility matrix; R4-EM-52 is not the compatible kit"
+  },
+  "notEstablished": [
+    "rated load for exact latch and this mounting",
+    "power-loss behavior at each phase",
+    "release/auto-relock timing bound",
+    "gate dynamics and friction",
+    "striker/guide/fastener native fit",
+    "electrical interface, power, season legality"
+  ],
+  "engineeringAcceptance": "blocked",
+  "procurementSelected": false
+}

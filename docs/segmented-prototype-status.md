@@ -106,3 +106,7 @@ See [diagnostics and fault-output study](virtual-diagnostics-watchdog.md): separ
 ## Exact actuator and retention evidence
 
 [Component integration screen](component-retention-evidence.md) rejects direct P16 gate/pad drive on timing, preserves a spring-pin/self-locking-actuator power-loss counterexample, and identifies force-sensor/interface and independence gaps. Vendor revisions are pinned; no component acceptance, procurement or competition-legality claim.
+
+## Guided passive retention architecture
+
+[Gravity-guided architecture study](guided-retention-architecture.md) pins a Southco rotary latch/striker/override candidate, separates capture from lift/reset, and evaluates 36 hypothetical timing cases plus nine native gravity paths. Rebound collision, guide-friction stall and phase-dependent power-loss gaps remain explicit. Not a native component assembly or accepted safe state.
