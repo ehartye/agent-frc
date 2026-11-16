@@ -17,4 +17,3 @@ public final class SupervisedCatcherAdapter implements AutoCloseable {
  public BoundedCatcherSupervisor.Verdict verdict(){return verdict;}
  @Override public void close(){controller.close();}
 }
-

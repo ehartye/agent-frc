@@ -41,4 +41,3 @@ public final class BoundedCatcherSupervisor {
   return new Verdict(true,"conditional virtual permission only",rear,side);
  }
 }
-

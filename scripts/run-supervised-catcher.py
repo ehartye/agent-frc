@@ -28,4 +28,3 @@ def run(out,jdk,cache):
 if __name__=='__main__':
  import argparse
  a=argparse.ArgumentParser();a.add_argument('--output',required=True);a.add_argument('--java-home',required=True);a.add_argument('--gradle-home',required=True);v=a.parse_args();print(json.dumps(run(v.output,v.java_home,v.gradle_home),indent=2))
-

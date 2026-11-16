@@ -1,6 +1,6 @@
 {
   "schema": "frc-bounded-virtual-supervisor/v1",
-  "runId": "e2fb49c9-4754-4893-8e75-6e3105cba916",
+  "runId": "63f754df-0632-445b-8990-d3d55be08bc3",
   "status": "fresh-HAL-protocol-replay-only",
   "tests": [
     "invalidBoundsAndWrongSeasonNeverCommandClosure()",
@@ -12,15 +12,15 @@
     "allSeasonsRequireIndependentPadsBeforeHoldAndPermitGuardedRelease()"
   ],
   "sourceCodeSha256": {
-    "scripts/run-supervised-catcher.py": "4c3e68a0ce7b2303b777fc484856ec1758eaf13ca1ad9dc22e32283e44322c48",
+    "scripts/run-supervised-catcher.py": "7ed7d3ce67adc0cc9f665389b78fdb1aeb84500948ddeb802d1b65f6779d8d75",
     "scripts/prepare-supervisor-golden.py": "1b69146248f337103a10c4e75ea6e5f5e56ab3198a326cadf430d109ef98d39a",
     "scripts/pose-clearance-contract.py": "11318473993ca41212410a6d223d51b9c61369f63d13982037efbc374780ae36",
     "examples/java-2026-sim/build.gradle": "f81ca1974aa36c65aff084d8f432178066787c622c94856d6b22492121c638f5",
     "examples/java-2026-sim/src/test/resources/supervisor-clearance-golden.csv": "c6de9d60825d0458e17f8ccd705d2fe6052d4c7c408acdbc538ff5c4aed0a530",
     "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/CatcherHandoffController.java": "defce944c9943cb035bb9e2762c7de942c2189dbc4d9096e4d9303f7fb7fdabd",
-    "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/BoundedCatcherSupervisor.java": "8d56dcf41d2da31145b3b2daa0341e824ccd08502ba2a867eafffbf61c4a6038",
-    "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/SupervisedCatcherAdapter.java": "b5b4fdb8ec92489e3de88a651e50dbe50e64b96081add719b6e339eecb7339b2",
-    "examples/java-2026-sim/src/test/java/org/agentfrc/lesson/SupervisedCatcherTest.java": "a99bce8b1b4d795a4f8a0224659181939c2e6aa5f7976e0e19d5216540cd40bb"
+    "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/BoundedCatcherSupervisor.java": "f2151525ca15c7a756a074dcd700d84c05ea193f859ad89b5bb20cbc9d4fa2b7",
+    "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/SupervisedCatcherAdapter.java": "22ca70bedb9e5c7159539d019b3b8bf0fd660e626eafbb121df0c86b38bc4b3f",
+    "examples/java-2026-sim/src/test/java/org/agentfrc/lesson/SupervisedCatcherTest.java": "fb2c85024b6aeccd18e1bc7096413fc5a57cb8f9f2a3200de98b971d7b16bc39"
   },
   "runtimeClassSha256": {
     "CatcherHandoffController": "bb8026ca7dbf8d854a5553447d6d0258eb15b529ed33d9582d6abdbd088fe292",
@@ -33,8 +33,8 @@
   },
   "javaExecutableSha256": "1db37e7021f8fecc0e0cd6de5ee6f0c4fe403f28a55c0691a3812139724d0330",
   "artifactsSha256": {
-    "runtime.properties": "93e37887e5656a7f593252b9b5a88155ded972644b0b2c370d4d2a11ffee1f15",
-    "tests.xml": "6938f45c6c5777088d2e093c60d32fc60897ee8e4a5c819039dc079ef983dec6",
+    "runtime.properties": "871ed24fb61143775cb565beff65464037e09d3c931d4a8c24a661a8cefddbac",
+    "tests.xml": "0a86511e8c41a57a303578ad4260a5182fc4769f84b2d94c5ca4af9fe77f16e1",
     "gradle.log": "42f73dc1947daa17a689d4877cdec676ad0a95b929d478be0ec28aed4749cf18"
   },
   "physicalRobotIoExecuted": false,

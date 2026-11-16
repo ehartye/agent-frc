@@ -60,4 +60,3 @@ class SupervisedCatcherTest {
   try(var out=java.nio.file.Files.newOutputStream(java.nio.file.Path.of(output),java.nio.file.StandardOpenOption.CREATE_NEW)){p.store(out,"Fresh supervisor execution");}
  }
 }
-
