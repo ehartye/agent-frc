@@ -88,7 +88,13 @@ class DiagnosticWorldCatcherTest {
     double energy=CatcherContactModel.energy(x-.4,v,gateClosed)+.125*u*u;
     maxResidual=Math.max(maxResidual,Math.abs(energy-initial-work+loss));assertTrue(maxResidual<1e-8);
     if(arrivalStep>=0&&step+1<=arrivalStep+1000){maxX=Math.max(maxX,Math.abs(x-.4));if(step+1>=arrivalStep+375&&step+1<=arrivalStep+500)pre=Math.max(pre,Math.abs(v));if(step+1>=arrivalStep+875)post=Math.max(post,Math.abs(v));}
-    if(pushApplied&&x<.35)break;
+    if(pushApplied&&x<.35){
+     assertEquals(StagedCatcherController.State.RELEASED,catcher.state());
+     assertFalse(gateClosed);assertFalse(padValid);assertTrue(v<0);
+     // End-of-step state, NOT interpolated plane intersection or a free-flight launch.
+     System.out.println("MECHANISM_EXIT year="+year+" initialSpeed="+initialSpeed+" fault="+fault+" timeS="+((step+1)*dt)+" xM="+x+" vxMps="+v+" externalReleaseImpulseNs=0.2 planeXM=0.35 dtS="+dt);
+     break;
+    }
    }
    boolean captured=hadHold&&maxX<=.05&&pre<=.01&&post<=.01&&catcher.state()!=StagedCatcherController.State.FAULT;
    var r=new Result(intake.done(),hadHold,catcher.state()==StagedCatcherController.State.FAULT&&gate.getSpeed()>.5,missedMotion,leaseExpired,gateClosed,catcher.state().name(),captured,pushApplied&&x<.35,catcher.tailPulses(),arrivalStep<0?-1:arrivalStep*dt,x,v,maxX,pre,post,Double.isFinite(minIsolation)?minIsolation:-1,maxResidual);
