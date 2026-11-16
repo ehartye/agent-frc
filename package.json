@@ -35,6 +35,7 @@
     "candidate:profiled": "node scripts/profiled-wheel-candidates.mjs",
     "test:maxlift-pair": "python -B scripts/test-maxlift-fastened-pair.py",
     "test:coral-placement": "python -B scripts/test-coral-placement.py",
-    "test:acquisition-contract": "python -B scripts/test-acquisition-contract.py"
+    "test:acquisition-contract": "python -B scripts/test-acquisition-contract.py",
+    "test:acquiring-robot": "python -B scripts/test-acquiring-robot.py"
   }
 }
