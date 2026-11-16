@@ -81,3 +81,12 @@ provide concrete counterexamples to transferring nominal gate/pad assumptions.
 Post-HOLD gate-feedback loss now faults explicitly, with a failing-then-passing
 regression and freshly regenerated original world evidence. These are bounded
 screens, not coupled6DOF contact or real actuator validation.
+
+## Conditional pose contract and interval-certified closure
+
+[Pose/time closure](pose-time-closure.md) adds conservative gate/guide permission
+bounds and18 native moving-piece/gate trajectories. Four collision witnesses
+preserve the earlier limitations;14 paths have inter-sample2mm distance proofs
+under prescribed rigid motion. Nine pad strokes still show contact gaps or
+required compression. The contract is not yet controller input from actual
+sensing and does not qualify capture, preload or hardware.
