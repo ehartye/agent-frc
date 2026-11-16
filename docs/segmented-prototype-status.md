@@ -19,3 +19,12 @@ Next defensible work: complete constrained fastening/drive geometry and source r
 ## Prescribed geometry/IO milestone
 
 `segmented-contact-replay.md` now records a runnable three-season, six-trace prescribed-motion experiment through the existing WPILib simulated IO controller. It preserves uncertain NOTE proximity and unsupported CORAL end crossings rather than inventing contact. This adds time-varying geometry/control integration evidence, not force-coupled dynamics or calibration. Beam completion in the nominal no-confirmed-contact control explicitly prevents interpreting replay completion as physical transport.
+
+## Assumption-bounded tangential force experiment
+
+See [segmented-force-sensitivity.md](segmented-force-sensitivity.md). All three
+season envelopes now gate a two-coordinate force-coupled sensitivity model with
+external aggregate normal load. Motion is caused by its ideal drive and contact
+impulses, not prescribed positions. This does not close normal mechanics,
+calibration, actual motor topology, controller integration or mechanical
+acceptance. The separately validated prescribed WPILib IO replay remains distinct.
