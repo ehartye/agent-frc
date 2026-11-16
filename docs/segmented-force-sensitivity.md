@@ -78,3 +78,14 @@ At the outside resting pose the reduced model has no contact, hence zero piece
 impulse and no motion by induction. Defining an upstream feeder or approach
 condition, resolving CORAL end contact, and choosing a reviewed startup policy
 are genuine prerequisites for a complete intake-cycle simulation.
+
+The startup recorder now requires a fresh offline Gradle run into a unique pending
+evidence directory. A new run token and class hashes are emitted by the executing
+JUnit class, checked against the current compiled outputs, and source/evidence
+hashes must remain unchanged across execution. The complete evidence directory
+is published by rename only after all checks pass. Existing XML alone can no
+longer produce a receipt. Six binding tests reject stale/missing run identity,
+changed source/class content and failed/incomplete XML. The v2 receipt supersedes
+the original v1 startup receipt, whose recording path could relabel stale XML.
+Run with `--output <new-directory> --java-home <existing-jdk> --gradle-home
+<existing-cache>`; no installation or download is performed by the recorder.

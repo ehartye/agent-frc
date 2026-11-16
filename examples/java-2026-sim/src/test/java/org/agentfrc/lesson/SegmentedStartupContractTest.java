@@ -5,6 +5,17 @@ import edu.wpi.first.hal.HAL;
 import edu.wpi.first.wpilibj.simulation.*;
 /** Actual controller startup contract, not a coupled mechanical intake test. */
 class SegmentedStartupContractTest {
+ @AfterAll static void runtimeBinding() throws Exception {
+  String token=System.getenv("FRC_STARTUP_RUN_ID"),output=System.getenv("FRC_STARTUP_RUNTIME");
+  if(token==null&&output==null)return;
+  assertNotNull(token);assertNotNull(output);
+  var properties=new java.util.Properties();properties.setProperty("runId",token);
+  for(Class<?> c:new Class<?>[]{SeasonRollerController.class,SegmentedStartupContractTest.class}){
+   byte[] bytes=c.getResourceAsStream(c.getSimpleName()+".class").readAllBytes();
+   properties.setProperty(c.getSimpleName()+"Sha256",java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(bytes)));
+  }
+  try(var stream=java.nio.file.Files.newOutputStream(java.nio.file.Path.of(output),java.nio.file.StandardOpenOption.CREATE_NEW)){properties.store(stream,"Fresh native startup run");}
+ }
  @BeforeAll static void init(){assertTrue(HAL.initialize(500,0));}
  @BeforeEach void enable(){DriverStationSim.resetData();DriverStationSim.setDsAttached(true);DriverStationSim.setEnabled(true);DriverStationSim.notifyNewData();RoboRioSim.setVInVoltage(12);}
  @AfterEach void disable(){DriverStationSim.setEnabled(false);DriverStationSim.notifyNewData();}
@@ -30,3 +41,4 @@ class SegmentedStartupContractTest {
   }
  }
 }
+
