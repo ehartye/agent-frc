@@ -94,3 +94,7 @@ sensing and does not qualify capture, preload or hardware.
 ## Bounded virtual supervisor
 
 See [protocol integration](bounded-virtual-supervisor.md) for the opt-in HAL adapter: bounded pose/age clearance permission plus independent bilateral pad-contact/load validity before and throughout HOLD. Thirty-three protocol paths and 30 formula vectors are not continuous-world capture validation. No real sensors, calibrated loads or hardware safety claims. Existing world controller and receipts are unchanged.
+
+## Staged continuous-world supervision
+
+See [staged world integration](staged-world-supervision.md): conditional virtual pose and separate pad-travel/load observations now gate the continuous three-season approach/hold/release model. Stuck-high pad evidence still causes false HOLD, and missed updates leave closure commanded until a later fault. These are preserved counterexamples, not hardware safety or calibration claims.
