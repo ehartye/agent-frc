@@ -1,6 +1,6 @@
 {
   "name": "agent-frc",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "description": "Season-aware high-school FRC engineering guidance with explicit evidence and optional local vault grounding.",
   "author": {
     "name": "ehartye"
