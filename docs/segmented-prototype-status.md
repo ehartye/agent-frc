@@ -45,3 +45,12 @@ controller/plant scenarios across timestep, feeder speed, approach resistance an
 hypothetical post-completion stopping resistance. Logical beam completion is
 explicitly separate from capture. The nominal-case stopping screen fails at other
 feeder speeds; no physical brake/retention mechanism or acceptance is established.
+
+## Provisional downstream capture topology screen
+
+[Capture topology study](capture-topology-study.md) compares open exit, a viscous
+pinch surrogate and a guided compliant cradle under an explicit provisional
+position/dwell/disturbance criterion. The cradle model passes its linear-subsystem
+screen, with an independent analytic bound, but physical attachment, unilateral
+contact, upstream isolation and release remain unresolved. This independent
+subsystem result is not an integrated robot or hardware acceptance claim.
