@@ -3,11 +3,19 @@ import pathlib,json,math,hashlib,importlib.util
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 s=importlib.util.spec_from_file_location('integrated',ROOT/'scripts/integrated-prototype-targets.py');m=importlib.util.module_from_spec(s);s.loader.exec_module(m);b=m.link.b
 PINS=sorted(set(m.PINS+['scripts/note-prototype-body.py','case-studies/2024/note-fixture-nominal.json']))
-def evaluate(row,distance,pitch,lateral=0):
+def evaluate(row,distance,pitch,lateral=0,world_state=None,note_axis=None):
  if type(row.get('year')) is not int or row['year']!=2024:raise ValueError('NOTE season required')
  for value in (distance,pitch,lateral):b.finite(value)
  e=json.loads((ROOT/'case-studies/target-frame-evidence.json').read_text())['speaker'];low=e['lowEdgeAboveAssemblyBottomInch']*.0254;rise=(e['highEdgeAboveAssemblyBottomInch']-e['lowEdgeAboveAssemblyBottomInch'])*.0254;reach=e['horizontalReachInch']*.0254;length=math.hypot(reach,rise);width=e['widthInch']*.0254;a=math.atan2(rise,reach);u=(math.cos(a),0,math.sin(a));vaxis=(0,1,0);normal=b.cross(u,vaxis);origin=(0,0,low)
- state,transform=m.link.embed_exit(row,distance);p=list(state['positionM']);p[1]+=lateral;transform['originM'][1]+=lateral;velocity=state['velocityMps'];axis=(-math.sin(pitch),0,math.cos(pitch));geom=json.loads((ROOT/'case-studies/2024/note-fixture-nominal.json').read_text())['pieceSource']['geometryMm'];minor=geom['thickness']/2000;major=geom['outerDiameter']/2000-minor;supports=[b.torus_support(d,axis,major,minor) for d in [u,vaxis,normal]]
+ if world_state is None:state,transform=m.link.embed_exit(row,distance)
+ else:
+  state=dict(positionM=list(b.vec(world_state['positionM'])),velocityMps=list(b.vec(world_state['velocityMps'])));transform=dict(basis='virtual-chassis-with-declared-mount',units='m',chassisPose=row.get('chassisPose'))
+  if abs(b.dot(state['velocityMps'],state['velocityMps'])-row['speed']**2)>1e-8:raise ValueError('velocity reset forbidden')
+ p=list(state['positionM']);p[1]+=lateral
+ if 'originM' in transform:transform['originM'][1]+=lateral
+ velocity=state['velocityMps'];axis=b.vec(note_axis) if note_axis is not None else (-math.sin(pitch),0,math.cos(pitch))
+ if abs(b.dot(axis,axis)-1)>1e-9:raise ValueError('unit note axis required')
+ geom=json.loads((ROOT/'case-studies/2024/note-fixture-nominal.json').read_text())['pieceSource']['geometryMm'];minor=geom['thickness']/2000;major=geom['outerDiameter']/2000-minor;supports=[b.torus_support(d,axis,major,minor) for d in [u,vaxis,normal]]
  def crossing(offset):
   c=next((c for c in b.crossing(p,velocity,tuple(origin[i]+normal[i]*offset for i in range(3)),normal) if c['normalVelocityMps']>0),None)
   if c:c['absolutePlantTimeS']=row['time']+c['timeS']
@@ -20,7 +28,7 @@ def evaluate(row,distance,pitch,lateral=0):
     t=-b.dot(velocity,direction)/b.dot(b.G,direction)
     if times[0]<t<times[1]:times.append(t)
   coords=[b.to_local(b.position(p,velocity,t),origin,[u,vaxis,normal]) for t in times];margin=min(min(c[0]-supports[0],length-c[0]-supports[0],width/2-abs(c[1])-supports[1]) for c in coords)
- return dict(sourceExit=row,aimDistanceM=distance,lateralOffsetM=lateral,fixedNotePitchDeg=math.degrees(pitch),exitPositionM=p,exitVelocityMps=velocity,registrationHypothesis=transform,planeLengthM=length,planeWidthM=width,planeOriginM=origin,planeAxes=[u,vaxis,normal],torusSupportsM=supports,normalSupportCrossings=[first,center,last],extremumTimesS=times,conservativeWholeTorusProjectionMarginM=margin,conditionalWholeTorusThinPlaneClearance=margin is not None and margin>0,installedRoofWallClearance=None,sensorPassage=None,matchScore=None)
+ return dict(sourceExit=row,aimDistanceM=distance,lateralOffsetM=lateral,fixedNotePitchDeg=math.degrees(pitch),fixedNoteAxisM=axis,exitPositionM=p,exitVelocityMps=velocity,registrationHypothesis=transform,planeLengthM=length,planeWidthM=width,planeOriginM=origin,planeAxes=[u,vaxis,normal],torusSupportsM=supports,normalSupportCrossings=[first,center,last],extremumTimesS=times,conservativeWholeTorusProjectionMarginM=margin,conditionalWholeTorusThinPlaneClearance=margin is not None and margin>0,installedRoofWallClearance=None,sensorPassage=None,matchScore=None)
 def report(target_file=None,receipt_file=None):
  target=pathlib.Path(target_file) if target_file else ROOT/'case-studies/integrated-prototype-targets.json'
  expected=m.report(receipt_file);stored=json.loads(target.read_text())

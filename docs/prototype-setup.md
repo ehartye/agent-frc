@@ -26,6 +26,8 @@ python --version
 
 The final line prints a fresh ignored output directory containing:
 
+- `HANDOFF.md`: readable run summary and remaining scope.
+- `robot-targets.json` and `robot-run/`: generated chassis approach/pose coupled to the mechanism and target report, with a separate fresh execution receipt.
 - `receipt.json`, `runtime.properties`, `tests.xml`, `gradle.log`: bound execution and diagnostics.
 - `targets.json`: actual powered exits in explicit hypothetical season target frames.
 - `note-body.json`: whole-torus thin-plane and bounded aim/attitude analysis.
@@ -45,3 +47,5 @@ Deployment tasks are disabled. Nothing contacts a robot. Sensor channels, produc
 ## Evidence boundaries
 
 The original lesson's older test counts describe earlier dated experiments. Current branch receipts describe newer runs; neither should overwrite the meaning of the other. The advanced body studies are original experiments, not proof that historical team examples build. Reproducing the current command on a fresh authorized school machine, with explicit dependency/setup provenance, remains a useful next validation task.
+
+See the [season robot handoff](season-robot-handoff.md) for the three preloaded robot slices, working design inputs and exact remaining gaps.

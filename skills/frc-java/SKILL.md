@@ -50,3 +50,5 @@ Use [iterative simulator selection](../../docs/simulator-selection.md) to compar
 ## Integrated assumption-bounded season prototypes
 
 For a runnable 2024/2025/2026 simulation, use `scripts/run-prototype.ps1` with an existing JDK17 and populated WPILib Gradle cache selected by `JAVA_HOME` and `GRADLE_USER_HOME`. It runs offline, creates a fresh bound execution receipt and derives `targets.json` from actual powered exit states. See `docs/integrated-prototypes.md` for design assumptions and scope. Do not install tools, deploy code, imply measured calibration or replace hypothetical target registration with an installed transform. Treat explicit mounting, ideal attachment and virtual feedback as simulation inputs, not reasons to block exploratory runs. Preserve faults and target misses as useful results.
+
+The same runner now includes preloaded season robot slices: ideal approach/docking, pose-stop authorization, mechanism and actual pose-derived target registration. Start with generated `HANDOFF.md`; see `docs/season-robot-handoff.md`. Keep acquisition, drive energy/sensor fidelity, complete field geometry and official scoring distinct from these runnable slices.

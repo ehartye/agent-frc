@@ -12,4 +12,12 @@ foreach($study in @(@('note-prototype-body.py','note-body.json'),@('coral-placem
  python (Join-Path $PSScriptRoot $study[0]) --receipt (Join-Path $OutputDirectory 'receipt.json') --targets (Join-Path $OutputDirectory 'targets.json') --output (Join-Path $OutputDirectory $study[1])
  if($LASTEXITCODE -ne 0){throw 'Finite-body report failed; runtime and target reports retained.'}
 }
+$robotOutput=Join-Path $OutputDirectory 'robot-run'
+python (Join-Path $PSScriptRoot 'run-season-robot.py') --output $robotOutput --java-home $env:JAVA_HOME --gradle-home $env:GRADLE_USER_HOME
+if($LASTEXITCODE -ne 0){throw 'Season robot execution failed; prior reports retained.'}
+python (Join-Path $PSScriptRoot 'season-robot-targets.py') --receipt (Join-Path $robotOutput 'receipt.json') --output (Join-Path $OutputDirectory 'robot-targets.json')
+if($LASTEXITCODE -ne 0){throw 'Season robot target report failed; native receipt retained.'}
+python (Join-Path $PSScriptRoot 'prototype-handoff.py') --report (Join-Path $OutputDirectory 'robot-targets.json') --output (Join-Path $OutputDirectory 'HANDOFF.md')
+if($LASTEXITCODE -ne 0){throw 'Readable handoff generation failed; raw results retained.'}
 Write-Output "Prototype results: $OutputDirectory"
+Write-Output "Start with: $(Join-Path $OutputDirectory 'HANDOFF.md')"
