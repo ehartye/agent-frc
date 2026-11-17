@@ -51,3 +51,5 @@ Use the [CAD color convention](../../docs/cad-color-convention.md) for new/revis
 ## Project tidying
 
 Use [safe project tidying](../../docs/project-tidying.md) when CAD tabs or audit copies obscure the active assembly. Inventory exact document identities, preserve unknown/unsaved work, reuse verified saved states, reopen before closing duplicates, and reconcile long-running operations before retrying. Keep one named active assembly without mandating redundant archives.
+
+Before using generated primitives for clearance, verify actual world bounds/registration and analytic volume with translated/axis/near-axis controls. Use the bounded placement-witness helper described in native-fusion-handoff.md; correct volume alone cannot establish correct placement, and matching witnesses do not establish clearance.
