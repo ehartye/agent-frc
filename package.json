@@ -9,7 +9,7 @@
     "node": ">=20.11"
   },
   "scripts": {
-    "test": "node --test test/context.test.mjs test/lookup.test.mjs test/brief.test.mjs test/case-study.test.mjs test/rules-audit.test.mjs test/design-artifact.test.mjs test/native-witness.test.mjs test/planar-observation.test.mjs",
+    "test": "node --test test/context.test.mjs test/lookup.test.mjs test/brief.test.mjs test/case-study.test.mjs test/rules-audit.test.mjs test/design-artifact.test.mjs test/native-witness.test.mjs test/planar-observation.test.mjs test/trace-diagnostics.test.mjs",
     "validate": "node scripts/validate.mjs",
     "context": "node scripts/context.mjs",
     "lookup": "node scripts/lookup.mjs",
@@ -19,6 +19,7 @@
     "cases:validate": "node scripts/case-artifacts.mjs --check",
     "rules": "node scripts/rules-audit.mjs",
     "design": "node scripts/design.mjs",
-    "native:witness": "node scripts/check-native-witness.mjs"
+    "native:witness": "node scripts/check-native-witness.mjs",
+    "trace:inspect": "node scripts/inspect-trace.mjs"
   }
 }
