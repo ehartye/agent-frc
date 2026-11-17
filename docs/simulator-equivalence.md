@@ -40,3 +40,17 @@ Preserve counterexamples and unknowns. At source commit 6b4eb84, a valid local c
 ## Portable source bytes before a run
 
 Hash the bytes actually executed, not a normalized reconstruction. Before a reproducible run, verify intended source/configuration inventory against the committed/indexed bytes under the project's explicit encoding and line-ending policy. Git text normalization and editor BOM changes can make a clean-looking receipt nonportable. Recheck pins after the run. If normalization changes inputs, preserve the old receipt and generate a fresh run; never rewrite its historical pins to fit a new commit. Byte identity establishes provenance only, not physical correctness.
+
+## Moving mass and phase allocation
+
+When unlocking lift/pitch degrees of freedom, partition mechanism mass and inertia out of the chassis representation before adding them to a coupled model. Document which body owns each physical mass, where its center and inertia are expressed, and how constraints change. Preserve world momentum and cumulative energy/work across the mapping; distinguish energy-reference offsets from physical work. Do not add the same moving assembly twice or reset the ledger to hide a jump. If previously constrained modes gain new state, define their incoming velocities and account for any actual impulses or work rather than inventing them.
+
+A fixed-base actuator fixture is not a moving-chassis continuation. Reject moving-base checkpoints at a fixed-base API, or use explicitly coupled generalized dynamics with chassis reactions and a consistent mass matrix. A stationary fixture's reaction load or zero constraint work cannot be silently reused on a translating base. Required negative controls include duplicate mechanism mass, zeroed incoming velocity, cleared cumulative work, an inconsistent reference energy and a moving state passed to a fixed-base step. Compare a mapped continuation against the physical identities before testing a complete maneuver.
+
+Published source snapshot 5094c48 retains the fixed-base restriction in sim/actuation/mechanics.py and explicit contact/patch boundaries in the integration modules. These are subsystem contracts, not evidence that the later combined pilot has been reviewed or that a full lift succeeds.
+
+## Preload travel is part of the acquisition path
+
+Screen the entire moving cassette, its bearings/pulleys/supports and the piece through advancing feed, not only an already-indexed held pose. Explore preload travel together with piece translation, tolerances and rotor phase. Retain the zero-travel baseline and rejected travel/offset pairs; staged opening/closing needs an explicit controller/contact model, not an assumed collision-free transition. Valid finite patches do not imply holding force, usable preload range or feasible drive work.
+
+The finite native screen at 2f80f5b preserves advancing-feed counterexamples that a held-pose-only check misses. It samples one side, centered motion and nominal source clocking, not continuous clearance or full phase/tolerance coverage. Required test controls include a held pose that clears while an intermediate feed position overlaps, a support added to the inventory, and a changed preload state that invalidates historical patch evidence. This remains guidance, not a new sweep implementation.

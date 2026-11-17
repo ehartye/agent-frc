@@ -63,3 +63,11 @@ This is still a bounded evidence-consistency gate, not verification that the pro
 ## Cross-discipline phase handoffs
 
 Use the [simulator continuation and handoff contract](simulator-equivalence.md) when a modeled contact state becomes a proposed carried pose. Preserve actual state and require geometry corridor, achievable wrench and continuity separately. A local patch or position dwell is not capture. This is source-reviewed guidance; no new contact solver or checkpoint loader is implemented here.
+
+## Boolean and interior-witness disagreement
+
+A valid solid and a completed Boolean operation do not by themselves establish a trustworthy clearance result. If an intersection reports empty material while points classify strictly inside both operands, retain UNKNOWN and archive the exact discrepant case. Distinguish strict IN from ON/boundary/tangent classification. Record point coordinates, frame, inward displacement, classifier tolerance, shape tolerances, kernel/version, operand identity/order, source hashes and transform/phase state. A point displaced from a face is not automatically a valid interior witness; classify it against both actual operands.
+
+Repeat with reversed operands and each source solid where appropriate, preserving all outcomes rather than choosing the preferred one. Reopen the exported geometry and verify its bytes/topology as separate checks. These are cross-checks using the same kernel, not independent physical ground truth. Neither empty intersection nor a contradictory point witness should silently authorize geometry adoption, nor does rigid foam overlap automatically establish an unsafe force.
+
+Source eb9fbdb archives this mismatch in rounded-retention-guide.json and its generator/tests. The numerical point offset there is case-specific, not a plugin tolerance default. Proposed regression controls: strict shared-interior IN plus empty Boolean remains unknown; ON-only tangent evidence does not masquerade as shared interior; changed source/phase/tolerances invalidate the archived comparison. The existing receipt schema does not carry point-classifier witnesses, so this cross-validation is guidance, not an implemented automatic gate. A future executable extension needs a versioned independent-witness contract and negative fixtures before advertising it as supported.
