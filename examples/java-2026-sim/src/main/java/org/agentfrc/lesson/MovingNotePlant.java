@@ -1,0 +1,38 @@
+package org.agentfrc.lesson;
+import edu.wpi.first.math.system.plant.DCMotor;
+/** Separately hypothesized straight moving fixture; no chassis CAD, pitch or calibrated traction. */
+public final class MovingNotePlant {
+ public static final double BODY_MASS=45, DRIVE_RADIUS=.0762, DRIVE_INERTIA=.02, DRIVE_GEAR=8.45, GRAVITY=9.80665;
+ public record Config(NoteContactPlant.Config note,double groundMu){public Config{if(note==null||!finite(groundMu,0,1.5))throw new IllegalArgumentException("Moving NOTE configuration");}}
+ public record Initial(double bodyX,double bodyV,double leftOmega,double rightOmega,double noteX,double noteZ,double noteVx,double noteVz,double sleeveOmega){}
+ public record Sample(double noteX,double noteZ,double noteVx,double noteVz,double bodyX,double bodyV,double leftAngle,double leftOmega,double rightAngle,double rightOmega,double sleeveAngle,double sleeveOmega,double relativeX,double bus,double batteryAmps,double normalTotal,double groundLeft,double groundRight,double slipLeft,double slipRight,double rollerNormal,double maxEvaluatedRollerNormal,double mechanicalResidual,double motorWork,double normalLoss,double pieceFrictionLoss,double groundSlipLoss,double noteConstraintMoment,double[] armatureAmps,double[] duties){}
+ private record Forces(NoteContactPlant.Contact upper,NoteContactPlant.Contact floor,double normalTotal,double left,double right,double slipLeft,double slipRight){}
+ private final Config c;
+ private final DCMotor drive=DCMotor.getNEO(2),sleeve=DCMotor.getNEO(1);
+ // body X,V; left theta,omega; right theta,omega; NOTE X,Z,Vx,Vz; sleeve theta,omega; work and three losses.
+ private double[] q=new double[16];private final double initialEnergy;private double maximumRollerNormal;
+ private static Initial defaultInitial(Config c){if(c==null)throw new IllegalArgumentException("Configuration required");return new Initial(0,0,0,0,-.220,c.note().minorRadius(),0,0,0);}
+ public MovingNotePlant(Config c){this(c,defaultInitial(c));}
+ public MovingNotePlant(Config c,Initial initial){if(c==null||initial==null)throw new IllegalArgumentException("Configuration and initial state required");this.c=c;q[0]=initial.bodyX;q[1]=initial.bodyV;q[3]=initial.leftOmega;q[5]=initial.rightOmega;q[6]=initial.noteX;q[7]=initial.noteZ;q[8]=initial.noteVx;q[9]=initial.noteVz;q[11]=initial.sleeveOmega;var f=validate(q);initialEnergy=energy(q,f);}
+ private static boolean finite(double x,double lo,double hi){return Double.isFinite(x)&&x>=lo&&x<=hi;}
+ private NoteContactPlant.Contact floor(double[] a){double delta=c.note.minorRadius()-a[7];if(delta<=0)return new NoteContactPlant.Contact(0,0,0,0,0,0,0,0,0,0);double dd=-a[9],elastic=50000*delta,factor=1+5*dd,fn=elastic*Math.max(0,factor),ft=-c.note.floorMu()*fn*Math.tanh(a[8]/.01);return new NoteContactPlant.Contact(ft,fn,0,c.note.minorRadius()*ft,.5*50000*delta*delta,factor>=0?50000*5*delta*dd*dd:-elastic*dd,-ft*a[8],delta,fn,ft);}
+ private Forces validate(double[] a){
+  for(double v:a)if(!Double.isFinite(v))throw new IllegalArgumentException("Nonfinite moving state");
+  if(Math.abs(a[3]-a[5])>1e-9)throw new IllegalArgumentException("Unsupported unequal wheel speeds: no yaw model");
+  double extent=c.note.majorRadius()+c.note.minorRadius();
+  if(Math.abs(a[6])+extent>.7||Math.abs(a[0])+DRIVE_RADIUS>.7||Math.abs(a[0])+c.note.rollerRadius()>.7||!finite(a[7],.015,.06)||Math.abs(a[1])>5||Math.abs(a[8])>5||Math.abs(a[9])>5||Math.abs(a[3])>200||Math.abs(a[5])>200||Math.abs(a[11])>200)throw new IllegalArgumentException("Finite world floor or moving state domain");
+  var upper=NoteContactPlant.upper(c.note,a[6]-a[0],a[7],a[8]-a[1],a[9],a[11]);maximumRollerNormal=Math.max(maximumRollerNormal,upper.normal());var floor=floor(a);
+  if(upper.overlap()>.008||floor.overlap()>.008)throw new IllegalArgumentException("Excessive assumed compression");
+  double normal=BODY_MASS*GRAVITY+upper.fz();if(!Double.isFinite(normal)||normal<=0)throw new IllegalArgumentException("Unsupported nonpositive drive normal support");
+  double sl=DRIVE_RADIUS*a[3]-a[1],sr=DRIVE_RADIUS*a[5]-a[1];return new Forces(upper,floor,normal,c.groundMu*normal/2*Math.tanh(sl/.01),c.groundMu*normal/2*Math.tanh(sr/.01),sl,sr);
+ }
+ private SharedSupply.Result supply(double[] a,double[] duty){double[] emf={a[3]*DRIVE_GEAR/drive.KvRadPerSecPerVolt,a[5]*DRIVE_GEAR/drive.KvRadPerSecPerVolt,a[11]*c.note.gear()/sleeve.KvRadPerSecPerVolt};double[] resistance={drive.rOhms,drive.rOhms,sleeve.rOhms};try{return SharedSupply.solve(12,.02,duty,emf,resistance);}catch(IllegalArgumentException error){throw new IllegalArgumentException(error.getMessage()+" bodyX="+a[0]+" bodyV="+a[1]+" noteX="+a[6]+" relativeX="+(a[6]-a[0])+" sleeveOmega="+a[11]+" duties="+java.util.Arrays.toString(duty)+" driveOmegas="+java.util.Arrays.toString(new double[]{a[3],a[5]})+" shaftBackEmfVolts="+java.util.Arrays.toString(emf)+" effectiveResistancesOhm="+java.util.Arrays.toString(resistance),error);}}
+
+ private static double[] duties(double left,double right,double roller){if(!finite(left,-.2,.2)||!finite(right,-.2,.2)||!finite(roller,-.2,.2))throw new IllegalArgumentException("Duty domain");if(Math.abs(left-right)>1e-12)throw new IllegalArgumentException("Unsupported unequal drive duties: no yaw model");return new double[]{left,right,roller};}
+ private double[] derivative(double[] a,double[] duty){var f=validate(a);var bus=supply(a,duty);double tl=DRIVE_GEAR*drive.KtNMPerAmp*bus.armatureAmps()[0],tr=DRIVE_GEAR*drive.KtNMPerAmp*bus.armatureAmps()[1],ts=c.note.gear()*sleeve.KtNMPerAmp*bus.armatureAmps()[2];return new double[]{a[1],(f.left+f.right-f.upper.fx())/BODY_MASS,a[3],(tl-DRIVE_RADIUS*f.left)/DRIVE_INERTIA,a[5],(tr-DRIVE_RADIUS*f.right)/DRIVE_INERTIA,a[8],a[9],(f.upper.fx()+f.floor.fx())/c.note.mass(),-GRAVITY+(f.upper.fz()+f.floor.fz())/c.note.mass(),a[11],(ts+f.upper.rollerTorque())/c.note.rollerInertia(),tl*a[3]+tr*a[5]+ts*a[11],f.upper.normalLoss()+f.floor.normalLoss(),f.upper.frictionLoss()+f.floor.frictionLoss(),f.left*f.slipLeft+f.right*f.slipRight};}
+ private double energy(double[] a,Forces f){return .5*BODY_MASS*a[1]*a[1]+.5*DRIVE_INERTIA*(a[3]*a[3]+a[5]*a[5])+.5*c.note.mass()*(a[8]*a[8]+a[9]*a[9])+.5*c.note.rollerInertia()*a[11]*a[11]+c.note.mass()*GRAVITY*a[7]+f.upper.potential()+f.floor.potential();}
+ private static double[] stage(double[] a,double[] derivative,double dt){double[] b=a.clone();for(int i=0;i<b.length;i++)b[i]+=dt*derivative[i];return b;}
+ public Sample step(double leftDuty,double rightDuty,double rollerDuty,double dt){double[] duty=duties(leftDuty,rightDuty,rollerDuty);if(!finite(dt,.00001,.0001))throw new IllegalArgumentException("Integrator domain");var k1=derivative(q,duty);var k2=derivative(stage(q,k1,dt/2),duty);var k3=derivative(stage(q,k2,dt/2),duty);var k4=derivative(stage(q,k3,dt),duty);double[] next=q.clone();for(int i=0;i<q.length;i++)next[i]+=dt*(k1[i]+2*k2[i]+2*k3[i]+k4[i])/6;validate(next);supply(next,duty);q=next;return sample(leftDuty,rightDuty,rollerDuty);}
+ public double maxEvaluatedRollerNormal(){return maximumRollerNormal;}
+ public Sample sample(double leftDuty,double rightDuty,double rollerDuty){double[] duty=duties(leftDuty,rightDuty,rollerDuty);var f=validate(q);var bus=supply(q,duty);return new Sample(q[6],q[7],q[8],q[9],q[0],q[1],q[2],q[3],q[4],q[5],q[10],q[11],q[6]-q[0],bus.volts(),bus.batteryAmps(),f.normalTotal,f.left,f.right,f.slipLeft,f.slipRight,f.upper.normal(),maximumRollerNormal,energy(q,f)+q[13]+q[14]+q[15]-q[12]-initialEnergy,q[12],q[13],q[14],q[15],f.upper.constraintMoment()+f.floor.constraintMoment(),bus.armatureAmps().clone(),duty.clone());}
+}

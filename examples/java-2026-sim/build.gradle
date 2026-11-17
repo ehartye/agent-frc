@@ -113,3 +113,6 @@ wpi.java.configureTestTasks(tasks.named('noteContactTest').get())
 test { exclude '**/SegmentedReplayTest.class' }
 tasks.register('segmentedReplayTest', Test) { testClassesDirs = sourceSets.test.output.classesDirs; classpath = sourceSets.test.runtimeClasspath; useJUnitPlatform(); include '**/SegmentedReplayTest.class'; testLogging.showStandardStreams=true }
 wpi.java.configureTestTasks(tasks.named('segmentedReplayTest').get())
+test { exclude '**/MovingNoteTest.class' }
+tasks.register('movingNoteTest', Test) { testClassesDirs = sourceSets.test.output.classesDirs; classpath = sourceSets.test.runtimeClasspath; useJUnitPlatform(); include '**/MovingNoteTest.class'; testLogging.showStandardStreams=true }
+wpi.java.configureTestTasks(tasks.named('movingNoteTest').get())
