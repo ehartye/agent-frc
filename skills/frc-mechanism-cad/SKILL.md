@@ -47,3 +47,7 @@ Read [native Fusion handoff checks](../../docs/native-fusion-handoff.md) when Fu
 ## Standing viewing convention
 
 Use the [CAD color convention](../../docs/cad-color-convention.md) for new/revised robot views: consistent functional roles, visible legend and non-color labels, with documented project overrides. Preserve supplier appearances and physical material properties; appearance never means safety or verified performance. Recheck native persistence and body inventory after application.
+
+## Project tidying
+
+Use [safe project tidying](../../docs/project-tidying.md) when CAD tabs or audit copies obscure the active assembly. Inventory exact document identities, preserve unknown/unsaved work, reuse verified saved states, reopen before closing duplicates, and reconcile long-running operations before retrying. Keep one named active assembly without mandating redundant archives.

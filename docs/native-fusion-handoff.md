@@ -33,3 +33,5 @@ For each operation retain: source/version; intended document; requested edit; ac
 This reference was harvested from a representative native supplier-interface and full one-side cassette audition. It does not claim the complete robot migration is finished or all imported parts have native feature histories. The native adapter and source files are maintained in the robot project; no automatic Fusion executor is installed by this reference. Repository use, installed plugin version and availability of Fusion itself are separate checks.
 
 Use the [standing CAD viewing-color convention](cad-color-convention.md) through reversible appearance/view mappings. Preserve material assignments and supplier semantics; save/reopen the legend mapping and confirm geometry, joints and full body inventory are unchanged.
+
+For tab/resource cleanup and timeout reconciliation, follow [safe project tidying](project-tidying.md). A timed-out request may still be running; verify staged progress and recoverability before retrying or closing documents.
