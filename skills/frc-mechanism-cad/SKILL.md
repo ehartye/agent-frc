@@ -33,3 +33,5 @@ No hardware operation or deployment is authorized by this skill. Do not infer ph
 ## Native CAD evidence and long-running checks
 
 Read [native CAD verification lessons](../../docs/native-cad-feedback.md) before claiming clearance or validating a mounting interface. Audit static support/cartridge interfaces separately from moving/game-piece sweeps; preserve baseline contacts and failing intermediate poses. Require method-qualified bounds, negative controls and source-bound incremental progress for expensive checks. Do not describe the proposed native backend optimizations as implemented by the portable blockout CLI.
+
+Use `npm run native:witness -- receipt.json expected-pins.json` for the bounded native-evidence contract. Independently establish expected pins; phase-unregistered rotating geometry, failed Booleans and incomplete receipts remain unknown. This is receipt checking, not native CAD execution. At every meaningful tool failure or result, send source-bound friction and a counterexample to the plugin feedback loop instead of postponing harvest until cleanup.

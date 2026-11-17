@@ -29,3 +29,19 @@ A hollow torus represented only by its outer box can generate many unnecessary n
 5. Wire these into an optional native backend only after dependency, licensing and host validation. The current JavaScript artifact remains parameterized spatial planning, not a native Boolean engine.
 
 Completion means tested reusable plugin functionality, not a one-off exploratory script or a note in the robot repository. Preserve the distinction between a captured lesson, implemented tool, verified test and released capability.
+
+## Implemented: bounded native-witness receipt checker
+
+Run `npm run native:witness -- receipt.json expected-pins.json`. This reads only two local JSON files and emits a classification; it never calls a CAD kernel, changes geometry or uploads evidence. Exit 0 means no material overlap above the declared tolerance at the supplied finite witnesses only; exit 1 means declared material overlap; exit 2 means unknown/invalid/stale/incomplete. None means a robot is safe, legal or fabrication ready.
+
+The new `agent-frc/native-witness@1` contract is separate from the unchanged design artifact schema. It requires source pins for trajectory, geometry, transforms and backend; declared expected witness IDs; completion state; kernel/version, bound method, triangulation and shape-tolerance metadata; volume units and tolerance; and per-witness immutable state hash, pair IDs, conservative contact, rotor phase registration, solid validity, Boolean completion and measured overlap volume. `expected-pins.json` is an independently obtained object with the four SHA-256 pins, not a copy blindly trusted from the receipt.
+
+A rotating component without phase registration remains unknown even when reported native material volume is zero. The output retains that observed volume without promoting it to a continuous clearance result. A synthetic-test receipt always remains unknown for native qualification. Producer-declared hashes and metadata are not cryptographic proof of a real CAD run: verify original captures, source availability and phase registration separately. A malicious producer could invent a receipt; this checker validates consistency and prevents accidental promotion, not fraud.
+
+The current checker covers one finite receipt. Before/after comparisons, reusable all-interface audits, checkpoints/resume, continuous sweeps and conservative annular broadphase remain backlog. Numerical/native tests are still owned by the producer. Tests here use synthetic receipts and malformed, stale, phase-unknown, incomplete and error counterexamples.
+
+## Continuous feedback loop
+
+At each meaningful native milestone or tool failure, the producing worker sends a compact evidence packet: source commit and receipt, observed friction, generalized contract, counterexample, proposed test and remaining uncertainty. Do not wait for end-of-project cleanup. The plugin worker classifies it as guidance, reusable implementation or unresolved research; implements the smallest portable tested improvement; links it from the relevant skill; and pushes only that scoped change. Keep an explicit status: reported, source-verified, implemented, tested, pushed for review, merged, released. A pushed PR is not an installed capability.
+
+The rotor-phase lesson is implemented as this receipt gate. Its originating design report distinguished conservative filled-envelope stops from native material at sampled source clocking; untracked phase prevents automatic clearance. The precise numerical robot result is intentionally not asserted here without its source receipt. Partial receipt finalization failures must never be treated as accepted evidence; rerun or resume only against pinned complete inputs.
