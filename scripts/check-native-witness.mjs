@@ -1,0 +1,3 @@
+import fs from 'node:fs';
+import {assessWitnessManifest} from './native-witness.mjs';
+try { const args=process.argv.slice(2);if(args.length!==2)throw Error('Usage: check-native-witness receipt.json expected-manifest.json');const load=p=>{if(fs.statSync(p).size>5000000)throw Error('Input exceeds 5 MB');return JSON.parse(fs.readFileSync(p,'utf8'))};const result=assessWitnessManifest(load(args[0]),load(args[1]));console.log(JSON.stringify(result,null,2));if(result.status==='unknown')process.exitCode=2;else if(result.status==='material-overlap')process.exitCode=1;}catch(e){console.error(e.message);process.exitCode=2}

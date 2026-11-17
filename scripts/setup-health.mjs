@@ -1,0 +1,22 @@
+import {spawnSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
+const profiles={core:[],physics:[{distribution:'mujoco',module:'mujoco',required:true},{distribution:'numpy',module:'numpy',required:true},{distribution:'matplotlib',module:'matplotlib',required:false}], 'native-cad':[{distribution:'cadquery-ocp',module:'OCP',required:true},{distribution:'numpy',module:'numpy',required:false}]};
+export function selectLibraries(task){if(!Object.hasOwn(profiles,task))throw Error('Unknown task; choose core, physics or native-cad');return structuredClone(profiles[task]);}
+export function assessLibraries(libraries,expected={}){
+ return libraries.map(r=>({...r,status:r.importStatus!=='ok'?'import-failed':!r.version?'metadata-missing':expected[r.distribution]&&r.version!==expected[r.distribution]?'version-mismatch':'available',expectedVersion:expected[r.distribution]??null}));
+}
+export function inspectEnvironment({task='core',python='python',expected={},run=spawnSync}={}){
+ const selected=selectLibraries(task);
+ for(const [name,version] of Object.entries(expected))if(!selected.some(x=>x.distribution===name)||typeof version!=='string'||!version.trim())throw Error('Expected versions must name selected distributions with nonempty exact versions');
+ const [major,minor]=process.versions.node.split('.').map(Number);const nodeOkay=major>20||(major===20&&minor>=11);
+ const report={schema:'agent-frc/environment-health@1',task,node:{version:process.versions.node,supported:nodeOkay},python:null,libraries:[],ready:nodeOkay,limitations:['Installed/importable is not physics calibration or runtime compatibility proof.','No native renderer, GPU, Fusion session, robot hardware or plugin installation is tested.','No software is installed or updated. Reports may contain private interpreter/module paths; review before sharing.']};
+ if(!selected.length){report.pythonStatus='not-needed-for-core';return report;}
+ if(typeof python!=='string'||!python.trim()||python.startsWith('-'))throw Error('Choose an explicit Python executable or command name, not shell arguments');
+ const child=run(python,['-B',fileURLToPath(new URL('./python-health.py',import.meta.url)),JSON.stringify(selected)],{encoding:'utf8',timeout:20000,maxBuffer:1024*1024,windowsHide:true,shell:false});
+ if(child.error||child.status!==0){report.pythonStatus='probe-failed';report.ready=false;report.diagnostic=child.error?.code??'nonzero-exit';report.detail=String(child.stderr??'').slice(0,1000);return report;}
+ let data;try{data=JSON.parse(child.stdout);}catch{report.pythonStatus='invalid-probe-output';report.ready=false;return report;}
+ if(!data?.interpreter||!Array.isArray(data.libraries)||data.libraries.length!==selected.length||data.libraries.some((r,i)=>r.distribution!==selected[i].distribution||r.module!==selected[i].module||r.required!==selected[i].required||!['ok','failed'].includes(r.importStatus))){report.pythonStatus='invalid-probe-shape';report.ready=false;return report;}
+ report.python=data.interpreter;report.pythonStatus='probed';report.libraries=assessLibraries(data.libraries,expected);report.ready=nodeOkay&&report.libraries.every(r=>!r.required||r.status==='available');
+ report.nextSteps=report.libraries.filter(r=>r.status!=='available').map(r=>({distribution:r.distribution,required:r.required,action:r.status==='version-mismatch'?'Compare with project lockfile; do not silently upgrade':r.status==='metadata-missing'?'Import succeeded but distribution version is unresolved; inspect this interpreter':r.errorType==='ModuleNotFoundError'?'Confirm selected interpreter and project dependency manifest before proposing installation':'Inspect import exception and native dependency compatibility in the selected interpreter'}));return report;
+}
+export function parseArgs(args){const opts={expected:{}};for(let i=0;i<args.length;i++){const k=args[i],v=args[++i];if(!v)throw Error('Missing option value');if(k==='--task')opts.task=v;else if(k==='--python')opts.python=v;else if(k==='--expect'){const at=v.indexOf('=');if(at<1)throw Error('Use distribution=exact-version');opts.expected[v.slice(0,at)]=v.slice(at+1);}else throw Error('Unknown option '+k);}return opts;}

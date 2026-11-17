@@ -29,3 +29,27 @@ Deliver a state table, cad review checklist and proposed measurement sheet. For 
 - Source file and asset licenses are checked before reuse.
 
 No hardware operation or deployment is authorized by this skill. Do not infer physical safety, CAD validity or model effectiveness from static review or passing software fixtures. Source/file/dependency licenses must be checked before copying.
+
+## Native CAD evidence and long-running checks
+
+Read [native CAD verification lessons](../../docs/native-cad-feedback.md) before claiming clearance or validating a mounting interface. Audit static support/cartridge interfaces separately from moving/game-piece sweeps; preserve baseline contacts and failing intermediate poses. Require method-qualified bounds, negative controls and source-bound incremental progress for expensive checks. Do not describe the proposed native backend optimizations as implemented by the portable blockout CLI.
+
+Use `npm run native:witness -- receipt.json expected-manifest.json` for the bounded native-evidence contract. Independently prepare the expected manifest before the native run, including source pins, exact witness states/pairs/phase and method/tolerance policy; phase-unregistered rotating geometry, failed Booleans and incomplete receipts remain unknown. This is receipt checking, not native CAD execution. At every meaningful tool failure or result, send source-bound friction and a counterexample to the plugin feedback loop instead of postponing harvest until cleanup.
+
+## Operating-space iteration
+
+Use [define, check and iterate the operating space](../../docs/operating-space.md) when the student needs to set functional ranges, assess tolerances or recheck a changed design. Reuse the existing narrative/artifact; maintain the linked worksheet as a sidecar, classify physical versus study/model limits, and invalidate affected evidence after changes. Keep consequential choices with the student.
+
+## Native deliverable contract
+
+Read [native Fusion handoff checks](../../docs/native-fusion-handoff.md) when Fusion is selected or required. Confirm the project-specific output requirement; scripts and MCP may author it, but a required Fusion file must actually be saved and reopened. Verify grounding, transforms, symmetric edits, stored joint limits and complete native/export inventories, preserving supplier-content privacy and imported-versus-parametric distinctions.
+
+## Standing viewing convention
+
+Use the [CAD color convention](../../docs/cad-color-convention.md) for new/revised robot views: consistent functional roles, visible legend and non-color labels, with documented project overrides. Preserve supplier appearances and physical material properties; appearance never means safety or verified performance. Recheck native persistence and body inventory after application.
+
+## Project tidying
+
+Use [safe project tidying](../../docs/project-tidying.md) when CAD tabs or audit copies obscure the active assembly. Inventory exact document identities, preserve unknown/unsaved work, reuse verified saved states, reopen before closing duplicates, and reconcile long-running operations before retrying. Keep one named active assembly without mandating redundant archives.
+
+Before using generated primitives for clearance, verify actual world bounds/registration and analytic volume with translated/axis/near-axis controls. Use the bounded placement-witness helper described in native-fusion-handoff.md; correct volume alone cannot establish correct placement, and matching witnesses do not establish clearance.
