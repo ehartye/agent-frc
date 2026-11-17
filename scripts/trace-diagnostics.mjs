@@ -21,9 +21,11 @@ export function diagnoseTrace(receipt, sourceSha256){
   else {if(!Array.isArray(r.contacts))throw Error('contacts must be an array');
    const values=r.contacts.map(c=>{if(!object(c))throw Error('contact object required');return numeric(c.normalMagnitudeN,'contacts.normalMagnitudeN');});
    normal=values.every(v=>v!==null)?values.reduce((a,b)=>a+b,0):null;
+   if(normal!==null&&!finite(normal))throw Error('Nonfinite contact aggregate');
    const counts=r.contacts.map(c=>numeric(c.activeSamples,'contacts.activeSamples'));
-   if(counts.some(v=>v!==null&&(!Number.isInteger(v)||v<0)))throw Error('Nonnegative integer activeSamples required');
+   if(counts.some(v=>v!==null&&(!Number.isSafeInteger(v)||v<0)))throw Error('Nonnegative integer activeSamples required');
    active=counts.every(v=>v!==null)?counts.reduce((a,b)=>a+b,0):null;
+   if(active!==null&&!Number.isSafeInteger(active))throw Error('Unsafe activeSamples aggregate');
    if(values.some(v=>v!==null&&v<0))throw Error('Nonnegative normal magnitude required');
   }
   return {index:i,timeS:t,contactSampleTimeS:ct,relativeXM:numeric(r.relativeRobotXY?.[0],'relativeRobotXY[0]'),chassisVxMps:numeric(r.chassis?.vx,'chassis.vx'),pieceVxMps:numeric(r.note?.v?.[0],'note.v[0]'),normalSumN:normal,activeSamples:active,busV:numeric(r.busV,'busV'),energyResidualJ:numeric(r.energyJ?.residual,'energyJ.residual'),newPhaseResidualJ:numeric(r.newPhaseResidualJ,'newPhaseResidualJ'),command:object(r.command)?r.command:null};
@@ -40,7 +42,9 @@ export const hashBytes=bytes=>createHash('sha256').update(bytes).digest('hex');
 function plot(rows,key,timeKey,label){
  const points=rows.filter(r=>r[key]!==null&&r[timeKey]!==null);if(!points.length)return '<p>'+esc(label)+': MISSING</p>';
  const xs=points.map(r=>r[timeKey]),ys=points.map(r=>r[key]);const xmin=Math.min(...xs),xmax=Math.max(...xs),ymin=Math.min(...ys),ymax=Math.max(...ys);
- const path=rows.map(r=>r[key]===null||r[timeKey]===null?null:[25+700*(r[timeKey]-xmin)/(xmax-xmin||1),15+100*(1-(r[key]-ymin)/(ymax-ymin||1))]);
+ if(!finite(xmax-xmin)||!finite(ymax-ymin))throw Error('Unsupported plotting numeric range');
+ const path=rows.map(r=>r[key]===null||r[timeKey]===null?null:[25+700*((r[timeKey]-xmin)/(xmax-xmin||1)),15+100*(1-(r[key]-ymin)/(ymax-ymin||1))]);
+ if(path.some(p=>p&&p.some(v=>!finite(v))))throw Error('Nonfinite plot coordinate');
  let d='',pen=false;for(const p of path){if(!p){pen=false;continue;}d+=(pen?' L':' M')+p.join(',');pen=true;}
  return '<section><h3>'+esc(label)+'</h3><svg role="img" aria-label="'+esc(label)+'" viewBox="0 0 750 140"><path d="'+d+'" fill="none" stroke="#1777aa" stroke-width="2"/></svg><p>Range '+esc(ymin)+' to '+esc(ymax)+'; time '+esc(xmin)+' to '+esc(xmax)+' s. Missing samples break lines.</p></section>';
 }

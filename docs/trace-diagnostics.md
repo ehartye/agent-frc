@@ -12,7 +12,7 @@ Source file SHA256 is computed from actual bytes and rechecked before output. Up
 
 ## Executed validation
 
-Seven synthetic tests cover time separation, missing fields, malformed/nonfinite values, ordering/count errors, timing anomalies, HTML injection escaping, explicit partial state, input preservation and fresh-output refusal. The plugin suite totals 66 tests at introduction.
+Eight synthetic tests cover time separation, missing fields, malformed/nonfinite values, ordering/count errors, timing anomalies, HTML injection escaping, explicit partial state, input preservation and fresh-output refusal. The plugin suite totals 67 tests at introduction.
 
 Read-only real-data checks at introduction:
 - 200-row inward tail: SHA256 c76ccc2062f452194c2acf541be1d6918ef4a4e355c910a1ee6511dd85f70021.
@@ -20,3 +20,5 @@ Read-only real-data checks at introduction:
 - 1503-row immutable partial first-contact milestone: SHA256 aa6b0b5db8a361e0c6446ce5e338ab05e58e2a2e42ba40a660e92b57e2cdc912. Its stepS/controllerPeriodS are absent and correctly displayed missing, not invented.
 
 These runs generated reports, not new physics replays. Large raw traces are not copied into the plugin. Remaining opportunities include independent source-pin verification, schema-specific checkpoint comparison, same-time run comparison, and validated endpoint reconstruction adapters. None is advertised as implemented.
+
+Derived contact sums must be finite and sample counts safe integers. The renderer rejects numeric ranges whose subtraction overflows; it scales ratios before pixel multiplication. These explicit numeric limits fail before CLI output rather than serializing Infinity as null or drawing NaN coordinates.
