@@ -39,3 +39,5 @@ Read [rotating observation and fault-transition checks](../../docs/planar-observ
 ## Optimization and continuation
 
 Read [simulator equivalence and handoff contracts](../../docs/simulator-equivalence.md) before optimizing repeated queries or restoring a physical checkpoint. Preserve full-state/energy traces and failure behavior, validate exact checkpoint shapes and source identity, and distinguish a dwell from geometry-and-force-supported capture. These are evidence-guided test requirements, not a generic motor model or physical acceptance tool.
+
+When a simulation stops at a boundary, ask whether it is a study assumption, model-validity limit or physical interference. Follow the study-boundary and controller-clock contracts in simulator-equivalence.md: rebuild dependent obstacle filters, preserve held commands and absolute tick phase, and compare like-time timestep evidence before claiming progress.

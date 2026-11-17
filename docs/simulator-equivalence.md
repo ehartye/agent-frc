@@ -98,3 +98,29 @@ Independent review of 287571f found a rejection-domain mismatch: finite note_cen
 Add an adversarial control for every shortcut, including globally separated early returns: exercise extreme finite coordinates, overflow-prone unit conversions and invalid model-domain inputs before success can bypass checks. Require the reference and optimized implementations to reject the same unsupported inputs without state mutation. A broadphase geometric separation cannot authorize an input the narrowphase contract rejects. Fix and independently review the input-domain preflight, then produce fresh source-bound evidence; retain old receipts and do not relabel an acquisition run made with the previous source.
 
 Verified follow-up: source 14b55ca delegates extreme finite coordinates/radii to the unchanged scalar reference before an early cull. Its new negatives cover signed extreme coordinates on all axes, same-origin cancellation and opposite-origin overflow, preserving reference exception behavior rather than inventing successful separation. Independent source review closed this specific defect with seven scoped tests and a fresh exact single-fixture benchmark. This does not retroactively qualify 287571f receipts, establish all-input equivalence, or validate the separate acquisition trajectory. The plugin remains guidance-only for this optimization.
+
+## Challenge study boundaries without deleting physical checks
+
+When a run stops, ask students which kind of boundary was reached: a chosen study extent, a model-validity limit (unsupported contact/attitude/material regime), a conservative possible-obstacle gate, or independently established physical interference. Record the exact reason, coordinate frame, source and evidence. A study endpoint is not automatically a physical wall; equally, challenging an assumption does not authorize ignoring model validity or attaching a game piece ideally.
+
+Before extending a study extent, trace every dependent assumption: obstacle inventory/prefilters, contact-law support, cached bounds, units and lateral/height/attitude limits. Rebuild candidate inventory from the full source inventory for the new extent. Merely changing the final coordinate rejection can omit obstacles filtered out under the old range. Keep the physical narrowphase, unknown outcomes and original negative controls unchanged unless a separately justified model change is explicit.
+
+Source c311268 adds an inward domain with the prefilter rebuilt, a synthetic obstacle rejected by the new inventory but omitted by the old prefilter, and comparison against an unfiltered inventory across sampled positions. This establishes a bounded gate contract, not continuous native clearance. Finite belt contact can shrink or disappear farther inward; reaching a larger admitted region is not capture.
+
+Use this reviewable experiment record before rerunning:
+
+- Original stop reason and classification; proposed study extent and why it is worth testing.
+- Original/new domain identity, source pins, full obstacle inventory and candidate-filter derivation.
+- Unchanged law/state/energy fields and remaining unsupported domains; explicit changes listed separately.
+- Synthetic old-prefilter-missed obstacle negative, old-domain parity, unfiltered-inventory parity and new-boundary rejection.
+- Same-time coarse/half-step comparisons, controller event timing, contact support, cumulative energy and outcomes, including lost contact and further unknown stops.
+
+Do not compare a midpoint force from one step size with an endpoint or different-time midpoint from another. Reconstruct like-for-like quantities at a common physical time with the same law, and label midpoint versus endpoint evidence. Passing static inventory probes does not establish the actual trajectory; retain separate receipts and verification levels. This is a conversational experiment/test contract, not an implemented domain-extension tool.
+
+## Controller clock phase is checkpoint state
+
+Restoring plant fields, controller memory and fault latch is insufficient when a split occurs between controller ticks. Preserve the held actuator command, absolute next update time, last observation/event time and scheduler policy. Do not reset a local loop counter and issue an early command on resume. Preserve actuator/plant momentum while the held command remains active.
+
+The correction at 121381b retains a command issued at 0.902 s through a 0.910 s checkpoint until the original 0.912 s tick. Test split versus uninterrupted operation both on and between ticks, at coarse/half integration steps, comparing event times, observations, commands and resulting physical/energy state. Include a naive step-zero update as a negative control. Define overdue-event/catch-up semantics explicitly for the intended scheduler; the source's small fixed-step example is not a general scheduler implementation.
+
+A domain-only continuation must retain physical state, accumulated work and controller clock phase while recording a distinct model-domain identity. No reset, ideal retention latch or successful intake is implied by crossing the old experimental guard. These lessons came from challenging an overly narrow study, not from relaxing a proven physical constraint.
