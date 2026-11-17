@@ -43,3 +43,7 @@ Use [define, check and iterate the operating space](../../docs/operating-space.m
 ## Native deliverable contract
 
 Read [native Fusion handoff checks](../../docs/native-fusion-handoff.md) when Fusion is selected or required. Confirm the project-specific output requirement; scripts and MCP may author it, but a required Fusion file must actually be saved and reopened. Verify grounding, transforms, symmetric edits, stored joint limits and complete native/export inventories, preserving supplier-content privacy and imported-versus-parametric distinctions.
+
+## Standing viewing convention
+
+Use the [CAD color convention](../../docs/cad-color-convention.md) for new/revised robot views: consistent functional roles, visible legend and non-color labels, with documented project overrides. Preserve supplier appearances and physical material properties; appearance never means safety or verified performance. Recheck native persistence and body inventory after application.

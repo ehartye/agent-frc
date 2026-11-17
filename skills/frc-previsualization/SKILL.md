@@ -108,3 +108,7 @@ Read [native CAD verification lessons](../../docs/native-cad-feedback.md) before
 ## Operating-space iteration
 
 Use [define, check and iterate the operating space](../../docs/operating-space.md) when the student needs to set functional ranges, assess tolerances or recheck a changed design. Reuse the existing narrative/artifact; maintain the linked worksheet as a sidecar, classify physical versus study/model limits, and invalidate affected evidence after changes. Keep consequential choices with the student.
+
+## Standing viewing convention
+
+Use the [CAD color convention](../../docs/cad-color-convention.md) for new/revised robot views: consistent functional roles, visible legend and non-color labels, with documented project overrides. Preserve supplier appearances and physical material properties; appearance never means safety or verified performance. Recheck native persistence and body inventory after application.
