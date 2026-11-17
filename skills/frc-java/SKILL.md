@@ -43,3 +43,7 @@ Read [simulator equivalence and handoff contracts](../../docs/simulator-equivale
 When a simulation stops at a boundary, ask whether it is a study assumption, model-validity limit or physical interference. Follow the study-boundary and controller-clock contracts in simulator-equivalence.md: rebuild dependent obstacle filters, preserve held commands and absolute tick phase, and compare like-time timestep evidence before claiming progress.
 
 For existing frozen simulation trace receipts, use [read-only trace diagnostics](../../docs/trace-diagnostics.md) and npm run trace:inspect to create an offline HTML timeline and JSON report. Inspect missing fields, PARTIAL state, actual sample times, rejected trials and inherited residuals before interpreting progress. Do not read actively rewritten files or infer capture from horizon/contact.
+
+## Choose the simulation for the question
+
+Use [iterative simulator selection](../../docs/simulator-selection.md) to compare block-bot rehearsal, kinematic checks, bounded mechanism/contact fixtures, controls/drive and integrated field/adversary scenarios. Select by decision and evidence needed, not visual complexity or a mandatory fidelity ladder. Preserve model limits and explicit transition gates.
