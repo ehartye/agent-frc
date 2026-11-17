@@ -29,3 +29,7 @@ Deliver a state table, cad review checklist and proposed measurement sheet. For 
 - Source file and asset licenses are checked before reuse.
 
 No hardware operation or deployment is authorized by this skill. Do not infer physical safety, CAD validity or model effectiveness from static review or passing software fixtures. Source/file/dependency licenses must be checked before copying.
+
+## Native CAD evidence and long-running checks
+
+Read [native CAD verification lessons](../../docs/native-cad-feedback.md) before claiming clearance or validating a mounting interface. Audit static support/cartridge interfaces separately from moving/game-piece sweeps; preserve baseline contacts and failing intermediate poses. Require method-qualified bounds, negative controls and source-bound incremental progress for expensive checks. Do not describe the proposed native backend optimizations as implemented by the portable blockout CLI.
