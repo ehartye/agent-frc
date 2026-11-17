@@ -1,6 +1,6 @@
 # agent-frc
 
-Version **0.7.0**, strategy and previsualization release. Nine FRC engineering skills connect rules, strategy, subsystems, working Java code, Fusion inputs and simulator evidence. Independent educational work; no FIRST/vendor endorsement. Installation and native CAD execution require separate verification.
+Version **0.7.0**, strategy and previsualization release. Ten FRC engineering skills connect rules, strategy, subsystems, working Java code, Fusion inputs and simulator evidence. Independent educational work; no FIRST/vendor endorsement. Installation and native CAD execution require separate verification.
 
 Start with the [end-to-end case workflow](case-studies/README.md): [2024 CRESCENDO](case-studies/2024/README.md), [2025 REEFSCAPE](case-studies/2025/README.md), or [2026 REBUILT](case-studies/2026/README.md). Each compares three strategies and implements a deliberately bounded mechanism slice. Complete robot design remains future work.
 
@@ -10,7 +10,7 @@ Start with the [end-to-end case workflow](case-studies/README.md): [2024 CRESCEN
 
 ## Use and validate
 
-Node 20.11+; no Node dependencies. Run `npm test`, `npm run validate`, `npm run evaluate` and `npm run cases:validate`. Twenty-five Node regressions and 29 deterministic grounding cases pass. They do not establish model/learner effectiveness.
+Node 20.11+; no Node dependencies. Run `npm test`, `npm run validate`, `npm run evaluate` and `npm run cases:validate`. The current Node regression suite is run with npm test; 29 deterministic grounding cases are available separately. They do not establish model/learner effectiveness.
 
 `npm run case -- --season 2025`
 
@@ -27,3 +27,7 @@ Original code, prose and concept vectors are MIT. FIRST manuals and manufacturer
 [Hardware rules and Java evidence](docs/rulebook-hardware-review.md) adds a dated, event-aware reading map; use `npm run rules -- --season 2026 --as-of 2026-11-15 --event-stage archive-study`.
 
 The [strategy-to-previsualization workflow](docs/design-artifact.md) adds conversational skills for strategic narratives and previsualization. Students preserve alternatives, scaffold pseudocode and fabrication questions, then iterate a versioned JSON blockout before CAD. `npm run design -- new design.json` starts a portable artifact; validation and millimetre OpenSCAD handoff are spatial planning tools, not fabrication or rule-compliance certification.
+
+## Setup and installed libraries
+
+Use the [setup skill](skills/frc-setup/SKILL.md) and [task-specific health check](docs/setup-health.md) before choosing an interpreter or proposing dependency changes. npm run setup:check -- --task core needs no Python physics packages; select --task physics with the project Python executable to inspect MuJoCo and NumPy versions/import health. Optional libraries stay optional. Nothing is silently installed.
