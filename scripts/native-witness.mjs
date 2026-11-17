@@ -64,3 +64,36 @@ export function assessWitnessReceipt(r, expectedPins) {
   const status=r.basis==='synthetic-test'?'unknown':!r.coverage.complete?'unknown':witnesses.some(w=>w.status==='unknown')?'unknown':witnesses.some(w=>w.status==='material-overlap')?'material-overlap':'no-material-overlap-at-witnesses';
   return {status,reason:r.basis==='synthetic-test'?'synthetic-not-native':!r.coverage.complete?'incomplete-coverage':'bounded-witness-evidence',witnesses,limitations:['Finite witnesses only; no continuous sweep or structural/physical clearance proof.','Hashes bind declared inputs; caller must independently verify captures and phase registration.','No geometry or trajectory adoption is authorized.']};
 }
+
+// Independently authored expectations; never derive these from an untrusted receipt.
+export function validateWitnessManifest(m) {
+  const errors=[];
+  if(!exact(m,['schema','pins','methodPolicy','witnesses'],'manifest',errors))return {valid:false,errors};
+  if(m.schema!=='agent-frc/native-witness-manifest@1')errors.push('unsupported manifest schema');
+  pins(m.pins,'manifest.pins',errors);
+  if(!Array.isArray(m.witnesses)||!m.witnesses.length||m.witnesses.length>10000)errors.push('manifest witnesses must be nonempty bounded array');
+  const rows=[];
+  if(Array.isArray(m.witnesses))for(const w of m.witnesses){
+    if(!exact(w,['id','stateHash','pair','rotating','phase'],'manifest.witness',errors))continue;
+    rows.push({...w,conservativeContact:false,solidValid:false,booleanStatus:'not-run',overlapVolume:null});
+  }
+  const derived={schema:'agent-frc/native-witness@1',id:'manifest-validation',basis:'synthetic-test',pins:m.pins,coverage:{expectedWitnessIds:rows.map(w=>w.id),complete:true},method:m.methodPolicy,witnesses:rows};
+  errors.push(...validateWitnessReceipt(derived).errors);
+  return {valid:errors.length===0,errors};
+}
+export function assessWitnessManifest(r,m) {
+  const rv=validateWitnessReceipt(r),mv=validateWitnessManifest(m);
+  if(!rv.valid||!mv.valid)return {status:'unknown',reason:'invalid-contract',errors:[...rv.errors,...mv.errors],witnesses:[]};
+  if(pinKeys.some(k=>r.pins[k]!==m.pins[k]))return {status:'unknown',reason:'stale-inputs',witnesses:[]};
+  const methodKeys=['kernel','version','volumeUnits','volumeTolerance','boundMethod','triangulation','shapeToleranceIncluded'];
+  if(methodKeys.some(k=>r.method[k]!==m.methodPolicy[k]))return {status:'unknown',reason:'method-policy-mismatch',witnesses:[]};
+  const expected=new Map(m.witnesses.map(w=>[w.id,w]));
+  if(r.coverage.expectedWitnessIds.length!==expected.size||r.coverage.expectedWitnessIds.some(id=>!expected.has(id)))return {status:'unknown',reason:'inventory-mismatch',witnesses:[]};
+  for(const w of r.witnesses){const e=expected.get(w.id);
+    if(!e||w.stateHash!==e.stateHash||w.rotating!==e.rotating||w.pair[0]!==e.pair[0]||w.pair[1]!==e.pair[1]||
+      (w.phase===null)!==(e.phase===null)||(w.phase!==null&&(w.phase.angleDeg!==e.phase.angleDeg||w.phase.registrationHash!==e.phase.registrationHash)))
+      return {status:'unknown',reason:'witness-state-mismatch',witnessId:w.id,witnesses:[]};
+  }
+  const result=assessWitnessReceipt(r,m.pins);
+  return {...result,expectationScope:'independent-inventory-state-phase-method',limitations:[...(result.limitations??[]),'The manifest must be independently prepared and verified, not generated from the receipt being checked.','Finite registered witnesses and declared native results remain producer evidence, not continuous clearance or authenticity proof.']};
+}
