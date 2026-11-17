@@ -39,3 +39,7 @@ Use `npm run native:witness -- receipt.json expected-manifest.json` for the boun
 ## Operating-space iteration
 
 Use [define, check and iterate the operating space](../../docs/operating-space.md) when the student needs to set functional ranges, assess tolerances or recheck a changed design. Reuse the existing narrative/artifact; maintain the linked worksheet as a sidecar, classify physical versus study/model limits, and invalidate affected evidence after changes. Keep consequential choices with the student.
+
+## Native deliverable contract
+
+Read [native Fusion handoff checks](../../docs/native-fusion-handoff.md) when Fusion is selected or required. Confirm the project-specific output requirement; scripts and MCP may author it, but a required Fusion file must actually be saved and reopened. Verify grounding, transforms, symmetric edits, stored joint limits and complete native/export inventories, preserving supplier-content privacy and imported-versus-parametric distinctions.
