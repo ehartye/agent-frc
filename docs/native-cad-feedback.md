@@ -59,3 +59,7 @@ Each expected witness has exactly `id`, `stateHash`, `pair` (ordered two-part id
 Prepare and version this manifest from the intended trajectory states, source geometry, transforms and approved numerical policy before running the producer. Independently verify phase registration and digest computation. Do not generate it from the completed receipt: doing so defeats the comparison. The checker catches stale row hashes, swapped parts, changed phase, jointly truncated receipt/inventory, and method/tolerance drift. Incomplete receipts can preserve expected inventory for progress but remain unknown.
 
 This is still a bounded evidence-consistency gate, not verification that the producer ran the stated kernel or that all relevant intermediate states were sampled. Source receipt availability, authentic captures, physically appropriate tolerance, continuous clearance, loads and real game-piece behavior need separate evidence.
+
+## Cross-discipline phase handoffs
+
+Use the [simulator continuation and handoff contract](simulator-equivalence.md) when a modeled contact state becomes a proposed carried pose. Preserve actual state and require geometry corridor, achievable wrench and continuity separately. A local patch or position dwell is not capture. This is source-reviewed guidance; no new contact solver or checkpoint loader is implemented here.
