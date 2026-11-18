@@ -8,8 +8,8 @@ function record(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-function label(value) {
-  return typeof value === 'string' && value.trim().length > 0 && value.length <= 256;
+function label(value, maxLength = 256) {
+  return typeof value === 'string' && value.trim().length > 0 && value.length <= maxLength;
 }
 
 function array(value, limit, name, min = 1) {
@@ -18,10 +18,10 @@ function array(value, limit, name, min = 1) {
   return value;
 }
 
-function indexBy(rows, key, limit, name) {
+function indexBy(rows, key, limit, name, maxIdLength = 256) {
   const index = new Map();
   for (const row of array(rows, limit, name, 0)) {
-    requireValue(record(row) && label(row[key]) && !index.has(row[key]), name + ' contains an invalid or duplicate ' + key);
+    requireValue(record(row) && label(row[key], maxIdLength) && !index.has(row[key]), name + ' contains an invalid or duplicate ' + key);
     index.set(row[key], row);
   }
   return index;
@@ -39,7 +39,11 @@ function readSchedule(schedule, horizon) {
     Number.isFinite(clock.tickZeroSeconds) && label(clock.origin), 'invalid controller clock');
   requirePair(window, Number.isSafeInteger, 'tick window');
   const times = window.map(tick => clock.tickZeroSeconds + tick * clock.periodSeconds);
-  requireValue(times.every(Number.isFinite) && times[0] >= 0 && times[1] <= horizon && times[0] < times[1],
+  // Allow rounding in the product and sum only. Cap the allowance well below one controller tick.
+  const tolerance = (tick, bound) => Math.min(clock.periodSeconds * 1e-6,
+    2 * Number.EPSILON * Math.max(Math.abs(clock.tickZeroSeconds), Math.abs(tick * clock.periodSeconds), Math.abs(bound)));
+  requireValue(times.every(Number.isFinite) && times[0] >= -tolerance(window[0], 0) &&
+    times[1] - horizon <= tolerance(window[1], horizon) && times[0] < times[1],
     'controller window outside declared numerical horizon');
   const units = new Map();
   for (const { id, units: unit } of array(channels, 64, 'channels')) {
@@ -111,7 +115,7 @@ function validateScope(scope, observation, horizon) {
   const keys = ['kind', 'origin', 'units'];
   if (scope.kind === 'poses') {
     const ids = array(scope.poseIds, 256, 'pose inventory');
-    requireValue(ids.every(label) && new Set(ids).size === ids.length, 'invalid or duplicate pose IDs');
+    requireValue(ids.every(id => label(id)) && new Set(ids).size === ids.length, 'invalid or duplicate pose IDs');
     keys.push('poseIds');
   } else {
     requireValue(scope.kind === 'startup' || scope.kind === 'continuation', 'unknown coverage kind');
@@ -128,9 +132,16 @@ function validateScope(scope, observation, horizon) {
       keys.push('checkpoint');
     }
   }
-  if (observation) {
-    keys.push('findings');
-    for (const finding of array(scope.findings, 256, 'findings', 0)) {
+  if (observation) keys.push('findings');
+  requireValue(Object.keys(scope).every(key => keys.includes(key)), 'unsupported coverage field');
+}
+
+function retainObservation(scope, horizon, row) {
+  validateScope(scope, true, horizon);
+  const accepted = { ...scope, findings: [] };
+  row.observations.push(accepted);
+  for (const [index, finding] of array(scope.findings, 256, 'findings', 0).entries()) {
+    try {
       requireValue(record(finding) && label(finding.outcome) && label(finding.detail), 'invalid local finding');
       if (scope.kind === 'poses') {
         requireValue(scope.poseIds.includes(finding.poseId), 'finding outside observed pose inventory');
@@ -138,9 +149,11 @@ function validateScope(scope, observation, horizon) {
         requirePair(finding.interval, Number.isFinite, 'finding interval');
         requireValue(encloses(scope.interval, finding.interval), 'finding outside observed interval');
       }
+      accepted.findings.push(finding);
+    } catch (error) {
+      row.issues.push('findings[' + index + ']: ' + error.message);
     }
   }
-  requireValue(Object.keys(scope).every(key => keys.includes(key)), 'unsupported coverage field');
 }
 
 function encloses(outer, inner) {
@@ -179,8 +192,7 @@ function coverageFor(study, requirement, runs, horizon) {
     try {
       for (const scope of array(runs.get(id)?.coverage, 64, 'observed coverage', 0)) {
         try {
-          validateScope(scope, true, horizon);
-          row.observations.push(scope);
+          retainObservation(scope, horizon, row);
         } catch (error) {
           row.issues.push(error.message);
         }
@@ -198,20 +210,41 @@ function coverageFor(study, requirement, runs, horizon) {
   return { status: results.every(row => row.status === 'covered') ? 'covered' : 'unknown', issues, runs: results };
 }
 
-export function assessRefinementEvidence({ manifest, receipt, request, evidence }, digests, independentDigest) {
-  const numerical = assessContactConvergence(manifest, receipt);
-  const result = { schema: 'agent-frc/refinement-result@1', exitCode: 2,
-    engineeringAcceptance: 'blocked', numerical, studies: [], issues: [] };
-  if (numerical.status === 'invalid') return result;
+export function assessRefinementEvidence({ manifest, receipt, request, evidence }, digests, independentDigest, inputIssues = []) {
+  const result = { schema: 'agent-frc/refinement-result@1', exitCode: 2, binding: 'unbound',
+    engineeringAcceptance: 'blocked', studies: [], issues: [...inputIssues] };
+  // Retain the unmodified legacy verdict even when reading or binding a companion input fails.
   try {
-    requireValue(evidence?.schema === 'agent-frc/refinement-evidence@1', 'invalid evidence schema');
-    requireValue(request?.schema === 'agent-frc/refinement-request@1', 'invalid request schema');
-    requireValue(digests.request === independentDigest, 'request differs from independently retained digest');
-    for (const name of ['manifest', 'receipt', 'request']) {
-      requireValue(evidence[name + 'Sha256'] === digests[name], 'evidence is not bound to supplied ' + name + ' bytes');
+    result.numerical = assessContactConvergence(manifest, receipt);
+  } catch (error) {
+    result.numerical = { status: 'invalid', issues: [error.message] };
+  }
+  const { numerical } = result;
+  if (evidence?.schema !== 'agent-frc/refinement-evidence@1') result.issues.push('invalid evidence schema');
+  if (request?.schema !== 'agent-frc/refinement-request@1') result.issues.push('invalid request schema');
+  if (!independentDigest || digests.request !== independentDigest) result.issues.push('request differs from independently retained digest');
+  for (const name of ['manifest', 'receipt', 'request']) {
+    if (!digests[name] || evidence?.[name + 'Sha256'] !== digests[name]) {
+      result.issues.push('evidence is not bound to supplied ' + name + ' bytes');
     }
-    const requests = indexBy(request.studies, 'id', 32, 'requested studies');
-    const observations = indexBy(evidence.runs, 'id', 1024, 'observed runs');
+  }
+  if (!result.issues.length) result.binding = 'bound';
+  try {
+    // The legacy receipt can be malformed while the manifest still identifies the expected studies.
+    if (numerical.status === 'invalid') {
+      const manifestCheck = assessContactConvergence(manifest,
+        { schema: 'agent-frc/contact-convergence-receipt@1', basis: 'synthetic', runs: [] });
+      if (manifestCheck.status === 'invalid') return result;
+    } else {
+      for (const run of receipt.runs) {
+        for (const metric of run.metrics) {
+          if (metric.value === null) result.issues.push('missing required numerical value: ' + run.id + '/' + metric.id);
+        }
+      }
+    }
+    const requests = result.binding === 'bound' ? indexBy(request.studies, 'id', 32, 'requested studies', 2000) : new Map();
+    const observations = evidence?.schema === 'agent-frc/refinement-evidence@1'
+      ? indexBy(evidence.runs, 'id', 1024, 'observed runs', 2000) : new Map();
     const studyIds = new Set(manifest.studies.map(study => study.id));
     const runIds = new Set(manifest.studies.flatMap(study => study.levels.map(level => level.runId)));
     for (const id of requests.keys()) if (!studyIds.has(id)) result.issues.push('unexpected requested study: ' + id);
@@ -221,7 +254,7 @@ export function assessRefinementEvidence({ manifest, receipt, request, evidence 
       const coverage = coverageFor(study, requests.get(study.id), observations, manifest.windowEndSeconds);
       result.studies.push({ id: study.id, schedule, coverage });
     }
-    const incomplete = result.issues.length > 0 || numerical.status === 'unknown' ||
+    const incomplete = result.issues.length > 0 || numerical.status === 'invalid' || numerical.status === 'unknown' ||
       result.studies.some(study => study.schedule.status === 'unknown' || study.coverage.status === 'unknown');
     if (!incomplete) {
       const differs = numerical.status === 'not-converged' || result.studies.some(study => study.schedule.status === 'different-inputs');

@@ -28,6 +28,8 @@ The request supplies a `schedule` per study and the producer supplies one per ru
 
 An incompatible or incomplete declaration leaves the run unknown. For comparable schedules, the first changed entry or event identifies the run and both supplied values. A difference in a feedback-controlled experiment can be legitimate. The result reports that the actual inputs differed.
 
+When testing the model time derived from an integer tick against the numerical horizon, the checker allows floating-point rounding in the multiplication and addition. It caps the allowance at one millionth of a controller period. Ticks, recorded target values, phases and event ordering compare exactly.
+
 ## Coverage
 
 Each study in the request names a nonempty `coverage` list. Each run in the evidence contains its observations. Every record has a named time `origin` and `units` of `s`. The same origin and units must cover the request.
@@ -47,3 +49,5 @@ For each observation include `findings`, an array that may be empty. A finding s
 - **2** — an invalid or missing input, stale digest, unknown numerical result, incompatible schedule or incomplete coverage prevents a complete comparison. This takes precedence when other studies also report a difference. The report keeps available numerical and local observations.
 
 The checker compares declarations against a caller-supplied expectation. Source authentication, solver execution, calibration and physical qualification require separate evidence. A [producer recipe](simulation-input-roles.md) illustrates binding repeated filenames and ordered configuration overrides.
+
+The report retains readable numerical evidence if a companion file or request pin is missing. With `binding: unbound`, schedule and coverage remain unknown. Valid local findings can still be inspected as producer declarations. A malformed finding within a valid scope produces an issue while its valid siblings remain attached. If a discrete outcome changes while a required metric is absent, the original numerical verdict remains `not-converged` and the companion returns 2 with the missing run and metric.

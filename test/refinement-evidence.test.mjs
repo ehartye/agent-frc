@@ -234,3 +234,79 @@ test('a later incompatible unit takes priority over an earlier held-state differ
   assert.equal(report.studies[0].schedule.runs[0].status, 'unknown');
   assert.match(report.studies[0].schedule.runs[0].issue, /units/);
 });
+
+test('malformed sibling leaves a valid observed interval and local failed finding visible', t => {
+  const f = copyFixture(t);
+  const valid = { interval: [0, 0.1], outcome: 'failed', detail: 'Support below weight' };
+  f.evidence.runs[0].coverage[0].findings = [valid, { ...valid, interval: [-0.1, 0.1] }];
+  const { code, report } = evaluate(f.dir, f.save());
+  const row = report.studies[0].coverage.runs[0];
+  assert.equal(code, 2);
+  assert.equal(row.status, 'unknown');
+  assert.deepEqual(row.observations, [{ ...f.evidence.runs[0].coverage[0], findings: [valid] }]);
+  assert.match(row.issues.join(' '), /finding/);
+  assert.doesNotMatch(row.issues.join(' '), /missing startup/);
+});
+
+test('readable numerical result survives missing, malformed and unbound companions', t => {
+  for (const fault of ['missing file', 'malformed request', 'missing flag', 'wrong digest']) {
+    const f = copyFixture(t);
+    if (fault === 'missing file') fs.unlinkSync(f.files[3]);
+    if (fault === 'malformed request') fs.writeFileSync(f.files[2], '{');
+    const pin = fault === 'missing flag' ? null : fault === 'wrong digest' ? 'f'.repeat(64) : frozen;
+    const { report, code } = evaluate(f.dir, pin);
+    assert.equal(code, 2);
+    assert.deepEqual(report.numerical, assessContactConvergence(f.manifest, f.receipt));
+    assert.equal(report.binding, 'unbound');
+    assert.equal(report.studies.every(s => s.schedule.status === 'unknown' && s.coverage.status === 'unknown'), true);
+  }
+});
+
+test('non-assessable numerical receipt leaves independently bound companion dimensions visible', t => {
+  const f = copyFixture(t);
+  f.receipt.runs[0].metrics[0].value = 'broken';
+  const { report, code } = evaluate(f.dir, f.save());
+  assert.equal(code, 2);
+  assert.deepEqual(report.numerical, assessContactConvergence(f.manifest, f.receipt));
+  assert.equal(report.binding, 'bound');
+  assert.equal(report.studies[0].schedule.status, 'matched');
+  assert.equal(report.studies[1].coverage.status, 'covered');
+});
+
+test('missing required numerical value outranks a discrete change while preserving both results', t => {
+  const f = copyFixture(t);
+  f.receipt.runs[2].metrics[0].value = null;
+  f.receipt.runs[2].outcome = 'contact-at-horizon';
+  const { report, code } = evaluate(f.dir, f.save());
+  assert.equal(code, 2);
+  assert.deepEqual(report.numerical, assessContactConvergence(f.manifest, f.receipt));
+  assert.equal(report.numerical.status, 'not-converged');
+  assert.match(report.issues.join(' '), /shared.*travel/);
+  assert.equal(report.studies[0].schedule.status, 'matched');
+});
+
+test('binary rounding at a derived horizon is allowed, while an actual overrun is unknown', t => {
+  const f = copyFixture(t);
+  f.manifest.windowEndSeconds = 0.3;
+  for (const run of f.receipt.runs) run.windowEndSeconds = 0.3;
+  for (const row of [...f.request.studies, ...f.evidence.runs]) {
+    row.schedule.clock.periodSeconds = 0.1;
+    row.schedule.window[1] = 3;
+    row.coverage[0].interval[1] = 0.3;
+  }
+  assert.equal(evaluate(f.dir, f.save()).code, 0);
+  for (const row of [...f.request.studies, ...f.evidence.runs]) row.schedule.clock.periodSeconds = 0.10000000001;
+  assert.equal(evaluate(f.dir, f.save()).code, 2);
+});
+
+test('a valid long v1 study and shared run identity remain addressable', t => {
+  const f = copyFixture(t);
+  const id = 'r'.repeat(1000), studyId = 's'.repeat(2000);
+  f.manifest.studies[0].id = f.request.studies[0].id = studyId;
+  for (const study of f.manifest.studies) study.levels.find(l => l.runId === 'shared').runId = id;
+  f.receipt.runs.find(r => r.id === 'shared').id = id;
+  f.evidence.runs.find(r => r.id === 'shared').id = id;
+  const { code, report } = evaluate(f.dir, f.save());
+  assert.equal(report.numerical.status, 'within-declared-bounds');
+  assert.equal(code, 0);
+});
