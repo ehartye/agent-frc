@@ -10,6 +10,12 @@ Keep unknown or unsaved user work open and ask only about the specific unresolve
 
 ## Decide what actually needs keeping
 
+When an imported or untitled design becomes the working draft, give it a name the next operator can recognize. Include the assembly or subsystem, the change under study, and its role. For example, `Intake – pivot clearance – active draft` distinguishes the editable design from a comparison copy. Record the source design and revision or native archive digest alongside the draft.
+
+For a requested Fusion save, use the intended document and the authorized project and folder. Check who can access the destination when the design includes restricted geometry. After saving, read back the active tab title, document saved state and resulting design location and version. A local F3D export preserves a native archive and can leave the working tab untitled and unsaved. If only local storage is authorized, record the archive and the tab state separately.
+
+If the immediate readback fails, check the destination folder for the saved design's file ID and version and inspect the tab again. Retry only after resolving whether the first save completed.
+
 Prefer one clearly named active assembly, a small set of useful comparison documents and source-linked evidence. Reuse a verified existing saved copy when it already preserves the exact state. Do not create a new archive for every cleanup or accumulate redundant exports by default. A distinct failed experiment may deserve preservation because its counterexample explains a decision; duplicate views of the same verified file may not need another artifact.
 
 For each proposed closure, record the exact document identity, disposition and recoverable source. Save only within authorization. If a new archive is necessary, use a descriptive project-relative name and provenance note, keeping original/imported/proxy and supplier restrictions explicit. Do not overwrite the canonical assembly or relabel a rejected trial as current.
@@ -18,7 +24,7 @@ For each proposed closure, record the exact document identity, disposition and r
 
 Reopen the selected saved artifact in isolation and compare the properties relevant to recovery: document identity, body/source inventory, joints, native parameters/history and outstanding unsaved changes. File existence or a successful export call alone is insufficient. Native and exchange formats preserve different information; a STEP file does not substitute for the required editable Fusion file. Record reopen evidence before closing the exact verified duplicate. If equivalence is uncertain, leave it open.
 
-After each small closure batch, verify the intended active assembly remains open and correctly named. Check document count and system memory/responsiveness, recording observations rather than promising performance. A busy Fusion main-thread script may make an OS responsiveness indicator false while still progressing. Inspect staged progress receipts and active task state before calling it a hang or closing it.
+Close each agent-created inspection copy when its check is complete and its recovery source is verified. Recheck the open-document inventory and active document identity. The operator should see one clearly named active draft, with any other retained tab identified by purpose. Keep unrelated or unverified unsaved work open. If cleanup also aims to improve responsiveness, record the observed document count and resource use. A busy Fusion main-thread script may make an OS responsiveness indicator false while still progressing. Inspect staged progress receipts and active task state before calling it a hang or closing it.
 
 ## Long operations and timeout reconciliation
 
