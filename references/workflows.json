@@ -62,6 +62,7 @@
         "CAD document/version and measurement provenance"
       ],
       "steps": [
+        "For an existing design, open docs/strategy-first-continuation.md from the plugin root. Locate the selected strategy decision and the latest test result before choosing the next experiment.",
         "Sketch acquisition, transfer, staging and release states",
         "Trace source-code caller/end/default/periodic paths independently of geometry",
         "Define CAD joints, clearances, drawing dimensions and an export/reopen check"
