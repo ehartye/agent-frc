@@ -3,7 +3,7 @@ import { createReadStream } from 'node:fs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { loadInventory, inventoryIssues } from './route-inventory.mjs';
+import { loadInventory, inventoryIssues, contactRegistrationIssue } from './route-inventory.mjs';
 
 const finite = Number.isFinite;
 const named = v => typeof v === 'string' && v.trim().length > 0;
@@ -120,9 +120,12 @@ export async function reviewFieldRoute(file) {
     evidence.push({...r,source:ref.sha256});
   }
   const seen=new Set();
-  const verifiedContacts=evidence.filter(materialContact).map(r=>({
-    timeS:r.timeS,moving:r.moving,obstacle:r.obstacle,volumeMm3:r.volumeMm3,source:r.source
-  })).sort((a,b)=>a.timeS-b.timeS);
+  const materialContacts=evidence.filter(materialContact).map(r=>{
+    const matches=route.intervals.filter(i=>i.fromS===r.fromS && i.toS===r.toS);
+    const issue=contactRegistrationIssue(inventory,s,matches.length===1?matches[0]:null,r);
+    return {timeS:r.timeS,moving:r.moving,obstacle:r.obstacle,volumeMm3:r.volumeMm3,source:r.source,
+      ...(issue ? {registrationIssue:issue} : {})};
+  }).sort((a,b)=>a.timeS-b.timeS);
   const events=detector.events.map(event=>{
     requireInput(named(event.id) && !seen.has(event.id) && s.pieces.includes(event.piece)
       && finite(event.timeS) && event.timeS>s.startS,'Duplicate or invalid detector observation.');
@@ -146,11 +149,14 @@ export async function reviewFieldRoute(file) {
     if(covered<event.timeS) gaps.push({fromS:covered,toS:event.timeS,reason:'Unexamined time.'});
     // An exact penetration is still a witness when an adjacent sweep is incomplete.
     // Include the event instant, which may also be the start of the next interval.
-    const contacts=verifiedContacts.filter(c=>c.timeS<=event.timeS);
+    const contacts=materialContacts.filter(c=>c.timeS<=event.timeS);
+    const qualifiedContacts=contacts.filter(c=>!c.registrationIssue);
     const declaredRouteStatus=missing.length?'pending':contacts.length?'infeasible':gaps.length?'pending':'supported';
-    const routeStatus=declaredRouteStatus==='supported' && (!inventory || inventoryGaps.length)?'pending':declaredRouteStatus;
+    let routeStatus=declaredRouteStatus;
+    if (declaredRouteStatus==='infeasible' && !qualifiedContacts.length) routeStatus='pending';
+    if (declaredRouteStatus==='supported' && (!inventory || inventoryGaps.length)) routeStatus='pending';
     const wholeFieldStatus=routeStatus==='supported' && inventory?.scope.kind!=='whole-field'?'pending':routeStatus;
-    return {detectorEvent:event, routeStatus, wholeFieldStatus, declaredRouteStatus, gaps, inventoryGaps, contacts};
+    return {detectorEvent:event, routeStatus, wholeFieldStatus, declaredRouteStatus, gaps, inventoryGaps, contacts,qualifiedContacts};
   });
   return {schema:'field-route/result@2',scenarioSha256:req.scenario.sha256,routeSha256:req.route.sha256,
     inventorySha256:req.inventory?.sha256??null,inventoryScope:inventory?.scope??null,
