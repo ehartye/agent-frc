@@ -54,16 +54,19 @@ export function verifyHistorical({root=ROOT,caseId,python,run=false,registryByte
  catch(e){return issue(result,'invalid','registry-invalid',e.message);}
  if(caseId!==CASE)return issue(result,'invalid','case-unknown',`Supported cases: ${CASE}`);
  result.locator=c.locator;
+ result.files=c.files.map(f=>({path:f.path,expectedBlob:f.blob,expectedMode:'100644',expectedType:'blob',expectedSha256:f.sha256,resolvedBlob:null,resolvedMode:null,resolvedType:null,beforeSha256:null,afterSha256:null}));
  const content=new Map();
  for(const f of c.files){
+  const record=result.files.find(r=>r.path===f.path);
   let entry,b;
   try{entry=(deps.readTreeEntry??readTreeEntry)(root,c.locator,f.path);}
   catch(e){return issue(result,'prerequisite','history-unavailable',e.message);}
+  record.resolvedBlob=entry.oid;record.resolvedMode=entry.mode;record.resolvedType=entry.type;
   if(entry.mode!=='100644'||entry.type!=='blob')return issue(result,'invalid','nonregular-entry',f.path);
   if(entry.oid!==f.blob)return issue(result,'mismatch','blob-mismatch',f.path);
   try{b=(deps.readBlob??((r,oid)=>git(r,['cat-file','blob',oid])))(root,f.blob);}
   catch(e){return issue(result,'prerequisite','blob-unavailable',e.message);}
-  const actual=sha(b);result.files.push({path:f.path,expectedBlob:f.blob,resolvedBlob:entry.oid,expectedSha256:f.sha256,beforeSha256:actual,afterSha256:null});
+  const actual=sha(b);record.beforeSha256=actual;
   if(actual!==f.sha256)return issue(result,'mismatch','content-mismatch',f.path);
   content.set(f.path,b);
  }
@@ -95,6 +98,9 @@ export function verifyHistorical({root=ROOT,caseId,python,run=false,registryByte
   const parent=fs.realpathSync(os.tmpdir());
   temp=(deps.makeTemp??(p=>fs.mkdtempSync(p)))(path.join(parent,'agent-frc-history-'));
   if(path.dirname(path.resolve(temp))!==parent||fs.lstatSync(temp).isSymbolicLink())throw Error('Invalid owned extraction directory');
+  // Synchronous stderr preserves recovery identity even if this parent is killed
+  // while spawnSync waits; stdout remains exclusively the final JSON result.
+  (deps.onTempCreated??(p=>fs.writeSync(2,JSON.stringify({event:'historical-temporary-directory',path:p})+'\n')))(temp);
   for(const [p,b] of content){
    const target=path.resolve(temp,...p.split('/'));
    if(!target.startsWith(temp+path.sep))throw Error('Extraction escaped temporary directory');
