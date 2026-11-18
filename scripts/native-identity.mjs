@@ -4,6 +4,14 @@ const id=x=>typeof x==='string'&&x.trim().length>0&&x.length<=2000;
 const hash=x=>typeof x==='string'&&/^[a-f0-9]{64}$/.test(x);
 const bases=['synthetic','native-observed','human-reported'];
 
+// Source IDs and local body IDs can repeat in distinct occurrence instances.
+export function nativeBodyKey(occurrenceId,localBodyId) {
+  if(!id(occurrenceId)||!id(localBodyId))throw Error('Occurrence and local body IDs must be nonempty bounded strings');
+  const key=JSON.stringify([occurrenceId,localBodyId]);
+  if(!id(key))throw Error('Combined occurrence/body key exceeds the identity length limit');
+  return key;
+}
+
 export function compareNativeIdentity(expected,observed) {
   const result={schema:'agent-frc/native-identity-result@1',status:'matched',issues:[],bodies:[],scope:{
     evidenceBasis:observed?.evidenceBasis??null,

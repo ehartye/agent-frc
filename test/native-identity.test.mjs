@@ -4,8 +4,16 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
-import {compareNativeIdentity} from '../scripts/native-identity.mjs';
+import {compareNativeIdentity,nativeBodyKey} from '../scripts/native-identity.mjs';
 const h='a'.repeat(64);
+test('body keys distinguish occurrence instances without delimiter collisions',()=>{
+  assert.notEqual(nativeBodyKey('instance-a','body'),nativeBodyKey('instance-b','body'));
+  assert.notEqual(nativeBodyKey('a/b','c'),nativeBodyKey('a','b/c'));
+  assert.notEqual(nativeBodyKey('a+','b'),nativeBodyKey('a','+b'));
+  assert.deepEqual(JSON.parse(nativeBodyKey('a"b','c\\d')),['a"b','c\\d']);
+  for(const value of [null,'',[],3])assert.throws(()=>nativeBodyKey(value,'body'));
+  assert.throws(()=>nativeBodyKey('a'.repeat(1500),'b'.repeat(1500)));
+});
 function fixture(){return [
   {schema:'agent-frc/native-identity-manifest@1',archiveSha256:h,allowedEvidenceBases:['synthetic'],bodies:[
     {id:'solid-a',occurrenceId:'nested',sourceId:'source-a',sourceOwnerId:'root'},
@@ -32,6 +40,16 @@ test('missing parents, orphan bodies and cycles fail closed including unused gra
 test('missing source metadata is not replaced by body or occurrence names',()=>{
   const [e,o]=fixture();o.occurrences[0].sourceId=null;
   const r=compareNativeIdentity(e,o);assert.equal(r.status,'invalid');assert.ok(r.issues.some(x=>x.code==='source-unresolved'));
+});
+test('empty assembly containers are allowed and retain ancestry without inventing bodies',()=>{
+  const [e,o]=fixture();o.occurrences.push({id:'empty-container',parentId:'root',sourceId:null});
+  const result=compareNativeIdentity(e,o);assert.equal(result.status,'matched');assert.equal(result.bodies.length,2);
+});
+test('separate instances may inherit the same source without overwriting their bodies',()=>{
+  const [e,o]=fixture();o.occurrences.push({id:'second-instance',parentId:'root',sourceId:null});
+  const key=nativeBodyKey('second-instance','solid-a');o.bodies.push({id:key,occurrenceId:'second-instance'});
+  e.bodies.push({id:key,occurrenceId:'second-instance',sourceId:'source-a',sourceOwnerId:'root'});
+  const result=compareNativeIdentity(e,o);assert.equal(result.status,'matched');assert.equal(result.bodies.length,3);
 });
 test('duplicate and malformed inventories are rejected',()=>{
   for(const edit of [(e,o)=>o.bodies.push(o.bodies[0]),(e,o)=>o.occurrences.push(o.occurrences[0]),(e)=>e.bodies.push(e.bodies[0]),(e,o)=>o.occurrences[1].sourceId=[],(e,o)=>delete o.occurrences[1].parentId,(e,o)=>o.bodies[0].name='fallback',(e)=>e.bodies=[],(e,o)=>o.bodies=[null]]){
