@@ -1,0 +1,18 @@
+{
+  "schema": "agent-frc/viewer-controls-manifest@1",
+  "sourcePins": {"archiveSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "producerSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
+  "allowedEvidenceBases": ["synthetic"],
+  "applicationBindings": [{"code":"KeyD","modifiers":[],"action":"drive-right"},{"code":"KeyW","modifiers":["Shift"],"action":"drive-fast"}],
+  "engineBindings": [{"code":"KeyD","modifiers":[],"optionIds":["floor"]},{"code":"KeyC","modifiers":[],"optionIds":["camera"]}],
+  "restoreValues": {"floor":true},
+  "releaseOnFocusLoss": ["drive-right","drive-fast"],
+  "cases": [{"id":"drive-and-focus","initialHeld":[],"events":[
+    {"id":"press","type":"keydown","code":"KeyD","modifiers":[]},
+    {"id":"repeat","type":"keydown","code":"KeyD","modifiers":[]},
+    {"id":"release-with-shift","type":"keyup","code":"KeyD","modifiers":["Shift"]},
+    {"id":"camera","type":"keydown","code":"KeyC","modifiers":[]},
+    {"id":"fast","type":"keydown","code":"KeyW","modifiers":["Shift"]},
+    {"id":"blur","type":"focus-loss"},
+    {"id":"late-release","type":"keyup","code":"KeyW","modifiers":[]}
+  ]}]
+}

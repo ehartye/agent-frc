@@ -1,6 +1,6 @@
 # agent-frc
 
-Version **0.7.0**, strategy and previsualization release. Ten FRC engineering skills connect rules, strategy, subsystems, working Java code, Fusion inputs and simulator evidence. Independent educational work; no FIRST/vendor endorsement. Installation and native CAD execution require separate verification.
+Version **0.8.0**, portable verification and native-viewer evidence contracts. Ten FRC engineering skills connect rules, strategy, subsystems, working Java code, Fusion inputs and simulator evidence. Independent educational work; no FIRST/vendor endorsement. Installation and native CAD execution require separate verification.
 
 Start with the [end-to-end case workflow](case-studies/README.md): [2024 CRESCENDO](case-studies/2024/README.md), [2025 REEFSCAPE](case-studies/2025/README.md), or [2026 REBUILT](case-studies/2026/README.md). Each compares three strategies and implements a deliberately bounded mechanism slice. Complete robot design remains future work.
 
@@ -41,3 +41,5 @@ Use the [setup skill](skills/frc-setup/SKILL.md) and [task-specific health check
 The plugin now drives a [Game-to-Robot Strategy Brief](docs/game-to-robot-strategy.md) for all three historical cases. Run `npm run strategy -- --season 2026`; recommendations remain unselected proposals. The [guarded local Fusion recipe](examples/fusion-guarded/README.md) has bounded 2026 sideplate execution evidence. These retained experimental studies do not establish a new published release or complete robot validation.
 
 The local [parallel decision-chain workflow](docs/decision-chain.md) now includes an explicit resource baseline and source-pinned 2026 preliminary envelopes. `npm run --silent envelope -- templates/resource-baseline.json` emits three unselected branches with unknown inventory/geometry kept explicit; `npm run chain -- case-studies/2026/envelope-study.json` reports dependency freshness. This is planning and provenance tooling, not a match simulator or a completed robot design.
+
+Use the [native viewer contracts](docs/native-viewer-contracts.md) to compare independent export inventories, archive-bound articulation witnesses and observed control transitions. The three bounded JSON commands preserve evidence basis; they do not execute CAD or demonstrate GUI integration.
