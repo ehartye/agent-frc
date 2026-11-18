@@ -1,0 +1,127 @@
+{
+  "schema": "agent-frc/refinement-request@1",
+  "studies": [
+    {
+      "id": "temporal",
+      "schedule": {
+        "clock": {
+          "periodSeconds": 0.01,
+          "tickZeroSeconds": 0,
+          "origin": "model-start"
+        },
+        "window": [
+          0,
+          10
+        ],
+        "channels": [
+          {
+            "id": "roller",
+            "units": "V"
+          },
+          {
+            "id": "gate",
+            "units": "1"
+          }
+        ],
+        "entry": [
+          {
+            "channel": "roller",
+            "target": 0,
+            "phase": "idle"
+          },
+          {
+            "channel": "gate",
+            "target": 1,
+            "phase": "hold"
+          }
+        ],
+        "events": [
+          {
+            "tick": 2,
+            "channel": "roller",
+            "target": 4,
+            "phase": "feed"
+          },
+          {
+            "tick": 2,
+            "channel": "roller",
+            "target": 5,
+            "phase": "feed"
+          }
+        ]
+      },
+      "coverage": [
+        {
+          "kind": "startup",
+          "origin": "model-start",
+          "units": "s",
+          "interval": [
+            0,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "spatial",
+      "schedule": {
+        "clock": {
+          "periodSeconds": 0.01,
+          "tickZeroSeconds": 0,
+          "origin": "model-start"
+        },
+        "window": [
+          0,
+          10
+        ],
+        "channels": [
+          {
+            "id": "roller",
+            "units": "V"
+          },
+          {
+            "id": "gate",
+            "units": "1"
+          }
+        ],
+        "entry": [
+          {
+            "channel": "roller",
+            "target": 0,
+            "phase": "idle"
+          },
+          {
+            "channel": "gate",
+            "target": 1,
+            "phase": "hold"
+          }
+        ],
+        "events": [
+          {
+            "tick": 2,
+            "channel": "roller",
+            "target": 4,
+            "phase": "feed"
+          },
+          {
+            "tick": 2,
+            "channel": "roller",
+            "target": 5,
+            "phase": "feed"
+          }
+        ]
+      },
+      "coverage": [
+        {
+          "kind": "startup",
+          "origin": "model-start",
+          "units": "s",
+          "interval": [
+            0,
+            1
+          ]
+        }
+      ]
+    }
+  ]
+}

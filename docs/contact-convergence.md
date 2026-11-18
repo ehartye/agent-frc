@@ -1,5 +1,7 @@
 # Contact refinement evidence before prediction
 
+For delivered controller events, held commands and the exact trajectory portions covered in each run, use the optional [refinement evidence companion](refinement-evidence.md) with the same two v1 documents.
+
 `npm run contact:convergence -- expected-manifest.json observed-receipt.json` checks supplied summary results against independently declared refinement studies. Exit 0 means only `within-declared-bounds`; exit 1 means `not-converged`; exit 2 means `unknown` or invalid input. Every result keeps `engineeringAcceptance: blocked`, `calibration: not-assessed` and `integrity: not-independently-verified`. The tool neither executes physics nor authenticates traces. Synthetic evidence stays synthetic.
 
 ## Declare the numerical question before running

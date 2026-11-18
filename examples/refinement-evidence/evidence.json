@@ -1,0 +1,318 @@
+{
+  "schema": "agent-frc/refinement-evidence@1",
+  "manifestSha256": "7faeeb678603a23c807bc1ebded8f893d010d0ae95538f25dda243086e88e815",
+  "receiptSha256": "9bb4ad0a16fffe6869e00c85704f3aa27f37440683bceb2451ad1bda1b56a3bb",
+  "requestSha256": "ba88018f68330e4f7e78a63dca749135a7b64579d60f0fa9e5f9962efcc2cf92",
+  "runs": [
+    {
+      "id": "coarse-time",
+      "schedule": {
+        "clock": {
+          "periodSeconds": 0.01,
+          "tickZeroSeconds": 0,
+          "origin": "model-start"
+        },
+        "window": [
+          0,
+          10
+        ],
+        "channels": [
+          {
+            "id": "roller",
+            "units": "V"
+          },
+          {
+            "id": "gate",
+            "units": "1"
+          }
+        ],
+        "entry": [
+          {
+            "channel": "roller",
+            "target": 0,
+            "phase": "idle"
+          },
+          {
+            "channel": "gate",
+            "target": 1,
+            "phase": "hold"
+          }
+        ],
+        "events": [
+          {
+            "tick": 2,
+            "channel": "roller",
+            "target": 4,
+            "phase": "feed"
+          },
+          {
+            "tick": 2,
+            "channel": "roller",
+            "target": 5,
+            "phase": "feed"
+          }
+        ]
+      },
+      "coverage": [
+        {
+          "kind": "startup",
+          "origin": "model-start",
+          "units": "s",
+          "interval": [
+            0,
+            1
+          ],
+          "findings": []
+        }
+      ]
+    },
+    {
+      "id": "mid-time",
+      "schedule": {
+        "clock": {
+          "periodSeconds": 0.01,
+          "tickZeroSeconds": 0,
+          "origin": "model-start"
+        },
+        "window": [
+          0,
+          10
+        ],
+        "channels": [
+          {
+            "id": "roller",
+            "units": "V"
+          },
+          {
+            "id": "gate",
+            "units": "1"
+          }
+        ],
+        "entry": [
+          {
+            "channel": "roller",
+            "target": 0,
+            "phase": "idle"
+          },
+          {
+            "channel": "gate",
+            "target": 1,
+            "phase": "hold"
+          }
+        ],
+        "events": [
+          {
+            "tick": 2,
+            "channel": "roller",
+            "target": 4,
+            "phase": "feed"
+          },
+          {
+            "tick": 2,
+            "channel": "roller",
+            "target": 5,
+            "phase": "feed"
+          }
+        ]
+      },
+      "coverage": [
+        {
+          "kind": "startup",
+          "origin": "model-start",
+          "units": "s",
+          "interval": [
+            0,
+            1
+          ],
+          "findings": []
+        }
+      ]
+    },
+    {
+      "id": "shared",
+      "schedule": {
+        "clock": {
+          "periodSeconds": 0.01,
+          "tickZeroSeconds": 0,
+          "origin": "model-start"
+        },
+        "window": [
+          0,
+          10
+        ],
+        "channels": [
+          {
+            "id": "roller",
+            "units": "V"
+          },
+          {
+            "id": "gate",
+            "units": "1"
+          }
+        ],
+        "entry": [
+          {
+            "channel": "roller",
+            "target": 0,
+            "phase": "idle"
+          },
+          {
+            "channel": "gate",
+            "target": 1,
+            "phase": "hold"
+          }
+        ],
+        "events": [
+          {
+            "tick": 2,
+            "channel": "roller",
+            "target": 4,
+            "phase": "feed"
+          },
+          {
+            "tick": 2,
+            "channel": "roller",
+            "target": 5,
+            "phase": "feed"
+          }
+        ]
+      },
+      "coverage": [
+        {
+          "kind": "startup",
+          "origin": "model-start",
+          "units": "s",
+          "interval": [
+            0,
+            1
+          ],
+          "findings": []
+        }
+      ]
+    },
+    {
+      "id": "coarse-space",
+      "schedule": {
+        "clock": {
+          "periodSeconds": 0.01,
+          "tickZeroSeconds": 0,
+          "origin": "model-start"
+        },
+        "window": [
+          0,
+          10
+        ],
+        "channels": [
+          {
+            "id": "roller",
+            "units": "V"
+          },
+          {
+            "id": "gate",
+            "units": "1"
+          }
+        ],
+        "entry": [
+          {
+            "channel": "roller",
+            "target": 0,
+            "phase": "idle"
+          },
+          {
+            "channel": "gate",
+            "target": 1,
+            "phase": "hold"
+          }
+        ],
+        "events": [
+          {
+            "tick": 2,
+            "channel": "roller",
+            "target": 4,
+            "phase": "feed"
+          },
+          {
+            "tick": 2,
+            "channel": "roller",
+            "target": 5,
+            "phase": "feed"
+          }
+        ]
+      },
+      "coverage": [
+        {
+          "kind": "startup",
+          "origin": "model-start",
+          "units": "s",
+          "interval": [
+            0,
+            1
+          ],
+          "findings": []
+        }
+      ]
+    },
+    {
+      "id": "mid-space",
+      "schedule": {
+        "clock": {
+          "periodSeconds": 0.01,
+          "tickZeroSeconds": 0,
+          "origin": "model-start"
+        },
+        "window": [
+          0,
+          10
+        ],
+        "channels": [
+          {
+            "id": "roller",
+            "units": "V"
+          },
+          {
+            "id": "gate",
+            "units": "1"
+          }
+        ],
+        "entry": [
+          {
+            "channel": "roller",
+            "target": 0,
+            "phase": "idle"
+          },
+          {
+            "channel": "gate",
+            "target": 1,
+            "phase": "hold"
+          }
+        ],
+        "events": [
+          {
+            "tick": 2,
+            "channel": "roller",
+            "target": 4,
+            "phase": "feed"
+          },
+          {
+            "tick": 2,
+            "channel": "roller",
+            "target": 5,
+            "phase": "feed"
+          }
+        ]
+      },
+      "coverage": [
+        {
+          "kind": "startup",
+          "origin": "model-start",
+          "units": "s",
+          "interval": [
+            0,
+            1
+          ],
+          "findings": []
+        }
+      ]
+    }
+  ]
+}
