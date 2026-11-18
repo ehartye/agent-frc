@@ -22,6 +22,8 @@ Scope interference queries explicitly: whole-occurrence queries can include inte
 
 ## Save, reopen and compare
 
+Use [native revision persistence](native-revision.md) for independently expected inventories before edit, immediately after edit, after recompute and after exact-archive reopen. A successful direct delete can be transient in a history-based design. Inspect the supported persistent Remove-feature route where appropriate, then verify target, feature health and body-state persistence. Never delete by a colliding source index alone. Keep game-piece route checks and baseline/revised assembly-interface checks separate; one can pass while the other fails.
+
 Deliver the native file with meaningful component names, required editable parameters/features and joints, plus explicit remaining imported/proxy content. Reopen it and verify document identity, full body/source inventory, parameter values, joints/limits, transforms and representation metadata. Hidden reference bodies can survive native save while disappearing from a default exchange export. Verify each exported file's actual inventory independently; file existence is insufficient. Do not treat a successful STEP round trip as native history/joint preservation.
 
 Supplier CAD and supplier-derived native files need item-level sharing permission. Keep them private unless authorized; publish original scripts, authorized authored geometry and sanitized evidence summaries instead. A native-file requirement does not authorize redistributing third-party solids.

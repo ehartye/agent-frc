@@ -119,4 +119,6 @@ Use [iterative simulator selection](../../docs/simulator-selection.md) to compar
 
 ## Carry rehearsal decisions into trustworthy simulation
 
+Before promoting contact-driven retention or release predictions, use [contact refinement evidence](../../docs/contact-convergence.md). Require timestep and relevant contact geometry/search studies with predeclared outcome definitions and metric tolerances. Preserve outcome changes, incomplete runs, law/initial-energy differences and calibration gaps. Passing source integrity, power identities or a one-pose preload fit cannot establish dynamic prediction accuracy.
+
 When a student changes a command policy, ask which controller state changes and which physical state must continue unchanged. Use the [continuation and verification guidance](../../docs/simulator-equivalence.md) to distinguish a newly initialized controller from a preserved plant, current-source tests from historical evidence, and same-time comparisons from mismatched midpoint samples. Retain failed or still-moving outcomes. A matching plot or a green historical test is not capture, stopping, mechanical acceptance or a complete mission.

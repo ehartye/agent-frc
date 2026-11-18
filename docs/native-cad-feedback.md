@@ -32,6 +32,8 @@ Completion means tested reusable plugin functionality, not a one-off exploratory
 
 ## Implemented: bounded native-witness receipt checker
 
+For new evidence involving proxy geometry or installed source registration, use version 2 below. Version 1 remains a compatibility route for historical receipts and cannot express operand representation or independently checked installation transforms.
+
 Run `npm run native:witness -- receipt.json expected-manifest.json`. This reads only two local JSON files and emits a classification; it never calls a CAD kernel, changes geometry or uploads evidence. Exit 0 means no material overlap above the declared tolerance at the supplied finite witnesses only; exit 1 means declared material overlap; exit 2 means unknown/invalid/stale/incomplete. None means a robot is safe, legal or fabrication ready.
 
 The new `agent-frc/native-witness@1` contract is separate from the unchanged design artifact schema. It requires source pins for trajectory, geometry, transforms and backend; declared expected witness IDs; completion state; kernel/version, bound method, triangulation and shape-tolerance metadata; volume units and tolerance; and per-witness immutable state hash, pair IDs, conservative contact, rotor phase registration, solid validity, Boolean completion and measured overlap volume. The CLI requires an independently prepared `agent-frc/native-witness-manifest@1` document, not expected values copied from the receipt.
@@ -59,6 +61,24 @@ Each expected witness has exactly `id`, `stateHash`, `pair` (ordered two-part id
 Prepare and version this manifest from the intended trajectory states, source geometry, transforms and approved numerical policy before running the producer. Independently verify phase registration and digest computation. Do not generate it from the completed receipt: doing so defeats the comparison. The checker catches stale row hashes, swapped parts, changed phase, jointly truncated receipt/inventory, and method/tolerance drift. Incomplete receipts can preserve expected inventory for progress but remain unknown.
 
 This is still a bounded evidence-consistency gate, not verification that the producer ran the stated kernel or that all relevant intermediate states were sampled. Source receipt availability, authentic captures, physically appropriate tolerance, continuous clearance, loads and real game-piece behavior need separate evidence.
+
+## Implemented: representation and installed registration in version 2
+
+Use receipt schema `agent-frc/native-witness@2` and manifest schema `agent-frc/native-witness-manifest@2` with the same `native:witness` command. All version 1 fields remain required. Each observed and expected witness additionally requires `representations`, an ordered two-element array corresponding to `pair`, and `transformRegistrationHash`, a lowercase SHA-256 digest or null. Mixed versions fail closed.
+
+Each representation is `native-material`, `outer-envelope` or `unknown`. `native-material` means an operand models its declared source solid, not that physical material or forces are calibrated. An enclosing proxy remains `outer-envelope` even when it is a valid native solid. The existing `conservativeContact` observation does not identify operand representation and cannot replace this array.
+
+`transformRegistrationHash` binds an independently checked installation-registration record for both operands: exact archive/source identity, body/occurrence mapping, units, frames and installed transforms. A hypothetical source placement remains null. Rotating operands additionally need the existing installed phase record; source STEP orientation is not automatically installed phase. Prepare expected hashes and metadata independently; an expected/observed difference returns unknown.
+
+Envelope or unknown operands keep the material verdict **unknown**, even with zero overlap. This contract does not certify containment, so it cannot infer clearance from an allegedly enclosing proxy. The observed volume and representations are retained. Positive envelope volume neither condemns the physical part nor establishes a false positive. Native source-solid overlap at unregistered transforms/phase also remains unknown for the installed assembly. Preserve the exact failing pose and obtain the missing registration or supported contact treatment.
+
+Only completed, valid, registered material witnesses receive the existing finite material-overlap/non-overlap classifications. `physicalContact` is always `unknown`: geometric evidence does not establish compliant forces, capture, passage or a supported physics kernel. Unknown reasons remain visible per witness. Synthetic receipts and incomplete coverage remain unknown in the aggregate.
+
+Version 1 semantics and historical files are preserved. Do not downgrade version 2 to discard unresolved metadata. The checker validates declarations and agreement, not that a producer actually measured transforms or executed CAD.
+
+## Implemented: inherited native source identity
+
+Use [the occurrence identity checker](native-identity.md) when imported solids inherit source metadata. It resolves supplied parent links, honors child overrides, reports the identity owner, and rejects incomplete inventory or ancestry. Include hidden physical bodies in independent expectations. This is a portable JSON contract, not an installed Fusion adapter.
 
 ## Cross-discipline phase handoffs
 
