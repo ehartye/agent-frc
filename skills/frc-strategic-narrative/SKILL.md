@@ -5,6 +5,8 @@ description: "Guide a student from match goals to explicit strategic narratives 
 
 # Strategic Narrative
 
+When a project already has a match story, follow the [design continuation procedure](../../docs/strategy-first-continuation.md) to recover the selected investigation and later owner decisions before asking for a new strategy.
+
 
 ## Advice and process guidance
 
