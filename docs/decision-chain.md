@@ -74,3 +74,5 @@ The envelope content contract separates:
 - **Status:** distinguish hypothetical target, analytically checked condition, simulation evidence and measured hardware result. No overall feasible/final/manufacture-ready designation follows merely from a valid graph or smaller rectangle.
 
 Early dimensions may be calculated only from verified applicable rule bounds, verified actual hardware dimensions and verified field geometry, with assumptions and uncertainty exposed. No real envelope dimensions were invented in this implementation. Tests prove resource revisions invalidate multiple envelope candidates. A future geometry adapter must establish collision/approach and mechanism reach against the shared FieldPackage before claiming any target is workable.
+
+During delivery review, reconcile the installed build list, unresolved purchases and combined inspection margin with the [assembly accounting check](assembly-accounting.md).
