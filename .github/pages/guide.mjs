@@ -3,7 +3,7 @@ export const stages = [
   {
     id: 'rules', name: 'Model the game', question: 'What can a robot score, and when?',
     objective: 'Turn the release-day manual into a model of the game before drawing a robot. Count the pieces, locate them, identify scoring targets and split the match into useful time windows.',
-    activity: 'Trace a possible path from a starting location to a piece source and then to a scoring zone. Compare it with paths available to partners and opponents. A crossing suggests a traffic exposure to investigate.',
+    activity: 'Identify the governing manual and its edition before tracing a route from a starting location through a piece source to a scoring zone. Compare that route with the paths available to partners and opponents.',
     handoff: 'A dated game model with citations, piece inventory, field coordinates, phase lengths and a list of unknowns.',
     skills: ['frc-season','frc-case-study'], docs: [['Prepare a project rules model','docs/project-rules-model.md'],['Invented training profile','examples/kickoff/training-field.json']]
   },
@@ -38,9 +38,9 @@ export const stages = [
   {
     id: 'verify', name: 'Test and revise', question: 'Which decision does the evidence support?',
     objective: 'Test the assumption with the greatest consequence for the design. Record the exact candidate, inputs, observed result and limitations.',
-    activity: 'Choose the smallest experiment that distinguishes the candidates. If it fails, trace the result back to the capability and match story. A returning team can reopen that record and choose its next test.',
+    activity: 'Repeat a clearance study on the saved CAD assembly. Verify its version, placements and joints, then check which bodies overlap at the sampled poses. Use the result to revise the mechanism or its match role.',
     handoff: 'A result tied to the tested revision, the team’s next decision and any remaining physical verification.',
-    skills: ['frc-setup','frc-troubleshoot','frc-java','frc-mechanism-cad'], docs: [['Recorded release height','docs/recorded-release-height.md'],['Simulation selection','docs/simulator-selection.md'],['Resume a design investigation','docs/strategy-first-continuation.md']]
+    skills: ['frc-setup','frc-troubleshoot','frc-java','frc-mechanism-cad'], docs: [['Replay a saved native study','docs/native-study-replay.md'],['Recorded release height','docs/recorded-release-height.md'],['Simulation selection','docs/simulator-selection.md'],['Resume a design investigation','docs/strategy-first-continuation.md']]
   }
 ];
 export const purpose = {

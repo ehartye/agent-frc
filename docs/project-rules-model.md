@@ -21,6 +21,10 @@ Record which inputs an observation depends on. When an update changes field geom
 
 ## Record a rule once
 
+For a register containing several documents, set `manualSourceId` to the governing manual's source ID. A single source is selected automatically. Set the profile's `manual` to that source's location (a URL or project-relative path). You can also state its exact `manualEdition` and `manualSha256`. Keep the project edition label and the manual publisher's edition in their respective fields.
+
+When two locations serve identical bytes, hash each copy independently. Put the lowercase `sha256` on the canonical source and list the copy in its `mirrors` array as `{"location":"packet/copy.pdf","sha256":"…"}` with the same digest. Without verified matching bytes, keep using the reviewed location. Compilation records the selected source and verifies the declared identity offline. An unpinned rolling URL still requires checking the document at the time of use.
+
 Give each source an ID, title, edition and location. In the register name the edition and evidence cutoff. Each fact records an ID, topic, source ID, locator and statement. Use the topics field, inventory, timing, scoring and restrictions for coverage. Add a new topic when an unfamiliar game action requires it.
 
 A modeled fact also carries a JSON Pointer to the field profile and the value read from the source. For example, a diagram with an invented field width of 200 inches could produce the following entry:

@@ -2,15 +2,15 @@ import { readFile, realpath, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
-import { newRegister, reviewRegister, verifyRuleValues } from './rule-register.mjs';
+import { newRegister, reviewRegister, governingManual } from './rule-register.mjs';
 import { rulesModel } from './kickoff.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 export { newRegister, reviewRegister } from './rule-register.mjs';
 
 export function compileRules(register, profile) {
-  verifyRuleValues(register,profile);
-  return rulesModel({ ...profile, ruleRegister: register });
+  const model=rulesModel({ ...profile, ruleRegister:register });
+  return { ...model, manualBinding:governingManual(register,profile) };
 }
 
 async function readJson(file) {
