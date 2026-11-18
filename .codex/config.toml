@@ -1,0 +1,2 @@
+[plugins."agent-frc@agent-frc-local"]
+enabled = true
