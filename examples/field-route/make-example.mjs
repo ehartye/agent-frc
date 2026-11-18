@@ -13,8 +13,10 @@ export async function example(dir) {
   await mkdir(dir,{recursive:true});
   const save=(file,value)=>writePinned(dir,file,value);
   const sources={};
+  const collections=[{path:['obstacles'],format:'ids',initial:'placed'},{path:['preloaded'],format:'ids',initial:'carried'}];
   for(const [key,data] of Object.entries({
-    field:{id:'teaching-course',revision:'A',obstacles:['post']},
+    field:{id:'teaching-course',revision:'A',obstacles:['post'],preloaded:['parcel'],
+      fieldRouteInventory:{complete:true,unresolved:[],collections}},
     robot:{id:'teaching-carriage',revision:'A',bodies:['frame']},
     transform:{from:'robot',to:'course',length:'m',alignment:'fixture origin'},
     trajectory:{id:'transfer',intervals:[[0,1],[1,2]],basis:'invented teaching evidence'},
@@ -30,8 +32,11 @@ export async function example(dir) {
     fromS,toS,method:'continuous-swept-enclosures',moving:{frame:[0,0,0,1,1,1],parcel:[0,0,1,1,1,2]},
     obstacles:{post:[2,0,0,3,1,2]}}))};
   const route=await save('sweep.json',sweep);
-  await save('request.json',{scenario,route,detector});
-  return {scenario,route,detector,sweep,bound};
+  const inventory=await save('inventory.json',{schema:'field-route/inventory@1',fieldSha256:sources.field.sha256,
+    clock:'trial',startS:0,scope:{kind:'whole-field',name:'Complete teaching course',unresolved:[]},
+    collections});
+  await save('request.json',{scenario,route,detector,inventory});
+  return {scenario,route,detector,sweep,bound,inventory};
 }
 
 if(process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href===import.meta.url) {
