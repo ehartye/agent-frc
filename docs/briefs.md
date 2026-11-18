@@ -1,15 +1,5 @@
-# Learning briefs
+# Prepare a design review
 
-Generate a reviewable plan with explicit context and evidence gaps:
+Run `npm run brief -- --workflow modes --season YEAR --as-of YYYY-MM-DD` using the project's year and review date. Supported workflows include season, swerve, java, mechanism-cad, vision, modes, troubleshoot and case-study.
 
-`npm run brief -- --workflow modes --season 2026 --as-of 2026-11-15`
-
-Workflows: season, java, mechanism-cad, vision, modes, troubleshoot, case-study. --historical explicitly admits older-season source links. FRC_VAULT_PATH is optional and never guessed.
-
-The result includes required context, ordered checks, acceptance conditions, an expected deliverable, source metadata and a lab baseline when relevant. It reads no source bodies and performs no network or hardware action. Open linked sources before making factual decisions.
-
-Source groups are interleaved; at most 12 links are shown. unmatchedQueries and omitted counts expose incomplete retrieval. The per-query selector itself returns at most 20 records, so retrievedCandidateCount is not a corpus-wide total. Partial coverage is expected: public mechanism/CAD planning may find CAD sources without a current-season mechanism match. Add explicit historical scope or supply known authoritative sources; never infer missing facts.
-
-A 2026 lab is a separate pinned exercise, not verification of a user's project. Other selected seasons receive an unverified-baseline label. Rules authority always requires official-source review. asOf compares review dates, not past web snapshots.
-
-The brief contract has seven Node regressions and eleven cases within the 29-case deterministic evaluation suite. No LLM answer generation, installed-host test or learning-effectiveness study has occurred. [Evaluation scope](evaluation.md).
+Use the returned checklist to identify the decision, required inputs, acceptance conditions and deliverable. Open the selected sources and verify their edition before applying them. The brief reads metadata offline. It returns up to twelve links, identifies unmatched queries and reports the number omitted. An optional explicitly configured local catalog can supply project-specific references.

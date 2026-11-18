@@ -10,7 +10,8 @@ on:
       - 'docs/**'
       - 'templates/**'
       - 'scripts/kickoff*.mjs'
-      - 'case-studies/2025/kickoff-field.json'
+      - 'scripts/field-rehearsal*.mjs'
+      - 'examples/kickoff/training-field.json'
   workflow_dispatch:
 permissions:
   contents: read

@@ -28,4 +28,4 @@ Deliver a mode/trigger transition matrix with expected software observations. Fo
 - Driver Station disable is distinguished from scheduler.disable.
 - Trajectory reference limits are separate from corrected actuator commands.
 
-Use the [pinned desktop exercise](../../examples/java-2026-sim/CLEANUP.md) only with its stated baseline. No hardware operation or deployment is authorized by this skill. Do not infer physical safety, CAD validity or model effectiveness from static review or passing software fixtures. Source/file/dependency licenses must be checked before copying.
+Exercise each transition offline using the project’s commands. Check scheduler ownership, cancellation, stale data, disable and re-enable against expected outputs.

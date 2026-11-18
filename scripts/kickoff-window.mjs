@@ -9,6 +9,31 @@ export function analyzeWindow(s) {
   }
   if (s.opening+s.incoming>s.stock) throw Error('Allocated pieces exceed the distinct match inventory.');
   if (s.cap !== null && !whole(s.cap)) throw Error('Target capacity must be a whole count.');
+  if (s.delivery==='shuttle') {
+    const returning=s.returnTravel ?? s.travel;
+    if(!finite(returning)) throw Error('Return transit must be finite and nonnegative.');
+    const available=Math.min(s.opening+s.incoming,s.cap ?? s.stock);
+    // First pickup is at A. Every scored piece travels A→B. Only intervening trips return B→A.
+    const transit=n=>n*s.travel+Math.max(0,n-1)*returning;
+    const serviceBudget=(n,start)=>s.window-start-transit(n);
+    const maxCycle=n=>{
+      if(n===0) return Infinity;
+      const late=Math.max(0,n-s.opening);
+      const full=serviceBudget(n,s.setup)/n;
+      return late?Math.min(full,serviceBudget(late,Math.max(s.setup,s.arrival))/late):full;
+    };
+    let lo=0,hi=available;
+    while(lo<hi){
+      const count=lo+Math.ceil((hi-lo)/2);
+      if(maxCycle(count)>=s.cycle-Number.EPSILON*s.cycle*4) lo=count; else hi=count-1;
+    }
+    const allowance=maxCycle(s.goal);
+    return {ready:s.setup,usable:Math.max(0,serviceBudget(s.goal,s.setup)),
+      afterArrival:Math.max(0,s.window-Math.max(s.setup,s.arrival)),rate:allowance>0?1/allowance:Infinity,
+      available,delivered:lo,attainable:lo>=s.goal,points:lo*s.points,goalTransit:transit(s.goal),
+      outboundLegs:s.goal,returnLegs:s.goal-1};
+  }
+  if(s.delivery && s.delivery!=='staged') throw Error('Unknown delivery mode.');
   const ready=s.setup+s.travel;
   const usable=Math.max(0,s.window-ready);
   const afterArrival=Math.max(0,s.window-Math.max(ready,s.arrival));

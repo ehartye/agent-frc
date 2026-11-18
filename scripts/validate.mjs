@@ -1,3 +1,4 @@
+import {checkDesignReferences} from './check-design-references.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { validateSkills } from './skill-validation.mjs';
@@ -16,4 +17,4 @@ if (checked.issues.length) {
   process.exit(1);
 }
 for(const p of ['.claude-plugin/plugin.json','.codex-plugin/plugin.json']){const m=JSON.parse(fs.readFileSync(path.join(root,p),'utf8'));if(m.name!==manifest.name||m.version!==manifest.version)throw Error('Compatibility mismatch');}
-console.log(JSON.stringify({manifest:'valid',skills:checked.skills.length,compatibilityManifests:2,hostInstallationTested:false}));
+console.log(JSON.stringify({manifest:'valid',designReferences:checkDesignReferences(root),skills:checked.skills.length,compatibilityManifests:2,hostInstallationTested:false}));

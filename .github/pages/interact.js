@@ -3,7 +3,8 @@
 const field=JSON.parse(document.getElementById('fieldModel').textContent);
 const pitch=document.getElementById('pitch');
 const ctx=pitch.getContext('2d');
-const poses=[[67,67],[115,96],[143,135]];
+const start=field.route[0],end=field.route.at(-1);
+const poses=[start,field.route.length>2?field.route[Math.floor(field.route.length/2)]:start.map((v,i)=>(v+end[i])/2),end];
 const notes=['Pickup · Start with a trial pose near a piece source.',
   'Transit · Check where the cycle shares space with other routes.',
   'Approach · Compare the robot envelope with the target approach.'];
@@ -26,7 +27,7 @@ function draw(){
     if(fill){ctx.fillStyle=fill;ctx.fill();}
     if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lineWidth;ctx.stroke();}
   }
-  const corners=[[0,0],[L,0],[L,W],[0,W]];
+  const corners=field.boundary;
   path(corners.map(([x,y])=>[x+9,y-6,-12]),'#95b3c2');
   path([[0,0],[L,0],[L,0,-12],[0,0,-12]],'#5b7d94','#3a5b72');
   path([[L,0],[L,W],[L,W,-12],[L,0,-12]],'#6e91a4','#3a5b72');
@@ -41,21 +42,16 @@ function draw(){
     for(const [a,b] of visible)path([[...a,z],[...b,z],[...b,h],[...a,h]],face,'#395567',1.3);
     path(p.map(a=>[...a,h]),top,'#395567',1.5);
   }
-  for(const m of field.landmarks){
-    const r=m.acrossFlats/(2*Math.cos(Math.PI/m.sides));
-    const ring=scale=>Array.from({length:m.sides},(_,i)=>{
-      const angle=(i*2+1)*Math.PI/m.sides;return[m.x+Math.cos(angle)*r*scale,m.y+Math.sin(angle)*r*scale];
-    });
-    prism(ring(1.1),0,7,'#cbdadd','#5e7b8c');
-    prism(ring(1),7,m.height,'#546e81','#3d5b6d');
-    ring(.76).forEach(([x,y])=>path([[x,y,m.height],[x,y,59]],null,'#dbe6e9',2.3,false));
-    path(ring(.76).map(([x,y])=>[x,y,59]),null,'#eaf5f5',2);
+  for(const o of field.obstacles){
+    if(o.kind==='overlay')continue;
+    const h=o.kind==='landmark'?field.body.height*.8:Math.max(4,o.low+5);
+    prism(o.poly,0,h,o.kind==='landmark'?'#bdd2dc':'#f3d4a8','#506f82');
   }
   ctx.setLineDash([5,5]);path(poses.map(p=>[...p,2]),null,'#fff3c1',2.4,false);ctx.setLineDash([]);
   const [rx,ry]=poses[selected];
   const box=(l,w)=>[[rx-l,ry-w],[rx+l,ry-w],[rx+l,ry+w],[rx-l,ry+w]];
-  prism(box(17,17),0,8,'#244265','#173451');
-  prism(box(14,14),8,28,'#ffd4aa','#f4a16b');
+  prism(box(field.body.length/2+field.body.bumper,field.body.width/2+field.body.bumper),0,6,'#244265','#173451');
+  prism(box(field.body.length/2,field.body.width/2),6,field.body.height,'#ffd4aa','#f4a16b');
   const [px,py]=view([rx,ry,28]);
   ctx.strokeStyle='#172f55';ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(px,py-5);ctx.lineTo(px-13,py-32);ctx.lineTo(px-62,py-32);ctx.stroke();
   ctx.font='bold 14px Consolas, monospace';ctx.fillStyle='#173552';ctx.textAlign='right';ctx.fillText(['PICKUP','TRANSIT','APPROACH'][selected],px-17,py-39);

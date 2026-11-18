@@ -33,9 +33,7 @@ A comparison manifest must pin independent revisions for the ruleset, robot conc
 
 Model uncertainty must be reported separately from random trial variation. Current one-pocket teaching plants do not justify match-score forecasts, scoring accuracy, contact physics or physical safety. The chain stores this evidence and propagates revision changes; it does not supply that experiment harness or automatically select a winner.
 
-## Case-study bridge and migration
-
-`case-studies/*/strategy-brief.json` remains a legacy generated review artifact. Its `decision.selectedByUser` stays null. The legacy `case.json.selected` field identifies an educational mechanism, not a team-selected strategy; never import it into an approval record. A future bridge should pin the exact legacy JSON digest and source body separately, and create one explicit strategy branch per hypothesis. Do not pretend a committed Markdown brief or a template is an executed contract or CAD validation.
+## Inspect a saved graph
 
 Run `npm test` and `npm run validate`. To inspect a saved graph: `npm run chain -- study.json`. JSON parsing/graph failures exit nonzero. The CLI is read-only. Tests exercise independent strategy and design branches, shared and branch-local invalidation, explicit rebasing, changed hashes, revision conflicts, invalid handoffs, season contamination and forged decisions.
 
@@ -45,7 +43,7 @@ Run `npm test` and `npm run validate`. To inspect a saved graph: `npm run chain 
 
 The model contains season, version-pinned sources, frames, locations, zones and obstacles. Each entity has a stable ID, rule/update semantic source references, explicit phases/conditions/possession/replenishment (null means unknown), geometry and `reachability: not-assessed`. Locations declare scoring or retrieval purpose. Geometry is either unknown with a reason and no coordinates, or sourced with metric frame, dimensionality, shape, coordinates, uncertainty (null means unknown), and official CAD/drawing source references. Frames explicitly identify origin and axes. Every source includes kind, season, URL, revision, retrieval date, locator and body SHA-256. Source labels are asserted provenance, not independently authenticated by the validator.
 
-Executable case-study location geometry remains unknown. The 2026 package separately carries drawing-derived nominal feature references under the restricted reference catalog described below; these are not robot poses, paths or complete field geometry. Synthetic fixture geometry remains test-only. Unknown is not a centered default, zero-sized region or traversable area. Consumers must block geometry-dependent scoring, retrieval or collision claims until required geometry and semantics are resolved. Empty locations/zones/obstacles do not establish complete field coverage. Reachability, robot clearance and legal action feasibility require the selected robot/strategy plus game conditions; they are not properties inferred from a CAD point. A field revision participates in the same exact-pin invalidation as any Game Analysis revision.
+Unknown is not a centered default, zero-sized region or traversable area. Consumers must block geometry-dependent scoring, retrieval or collision claims until required geometry and semantics are resolved. Empty locations/zones/obstacles do not establish complete field coverage. Reachability, robot clearance and legal action feasibility require the selected robot/strategy plus game conditions; they are not properties inferred from a CAD point. A field revision participates in the same exact-pin invalidation as any Game Analysis revision.
 
 ### FieldPackage, Scenario and RobotAffordanceMap boundaries
 
@@ -76,23 +74,3 @@ The envelope content contract separates:
 - **Status:** distinguish hypothetical target, analytically checked condition, simulation evidence and measured hardware result. No overall feasible/final/manufacture-ready designation follows merely from a valid graph or smaller rectangle.
 
 Early dimensions may be calculated only from verified applicable rule bounds, verified actual hardware dimensions and verified field geometry, with assumptions and uncertainty exposed. No real envelope dimensions were invented in this implementation. Tests prove resource revisions invalidate multiple envelope candidates. A future geometry adapter must establish collision/approach and mechanism reach against the shared FieldPackage before claiming any target is workable.
-
-## Executable 2026 resource-to-envelope slice
-
-`npm run envelope -- templates/resource-baseline.json` emits a deterministic study to stdout. The input must contain an explicit `resources` baseline; the shipped example intentionally records unknown team/inventory/budget/schedule. The committed [2026 study](../case-studies/2026/envelope-study.json) contains three unselected strategy/envelope branches: kit-baseline, compact and payload. It consumes [field-package.json](../case-studies/2026/field-package.json), containing source-pinned original factual summaries, not source documents.
-
-To use real resources, copy the input outside the public repository and fill exact part/revision, quantity, ownership, condition, availability, dimensional scope and evidence. Expected kits, opt-outs and credits are separate collections. They never create physical inventory or erase previously owned hardware. An available component envelope is not a complete robot envelope. Private team inputs should not be committed or published without item-level permission.
-
-Optional `assumptions` accepts `kitInventoryId`, `fieldVariant`, `clearanceMarginMm`, `heightUncertaintyMm`, and `candidateDimensions` for compact/payload targets. Candidate dimensions are explicitly hypothetical, not measurements; kit dimensions can only come from actual input inventory evidence. Defaults remain null. Unknown margin, robot uncertainty or field variant blocks a positive static-clearance result. Even a bounded result is named `within-assumed-static-clearance-only`, with overall status unresolved and reachability not assessed.
-
-The sourced 2026 example separates the 110-inch rule perimeter, 30-inch height and 12-inch extension bounds from chosen dimensions. The measured welded-trench height is 22.25 +/- 0.25 inches, yielding a 558.8 mm lower bound before robot uncertainty/margin. The builder derives a provisional static height ceiling only when both reserves are supplied. It does not transform this into a legal build approval, collision-free path, bump traversal or shot forecast. Event applicability, bumper accounting, source revision/field-variant mismatches and physical dynamics remain open.
-
-Capability contracts now require both the strategy and robot-envelope pins, so envelope changes invalidate downstream architecture/specification/evidence instead of relying on optional links. The stored 2026 vertical slice stops at preliminary envelopes; no completed contract, design, CAD, simulator evidence or actual kit ownership is invented.
-
-Perimeter checks require `dimensions.perimeterReference` for inventory or `candidateDimensions.<name>.footprintReference` for hypothetical targets to be explicitly `robot-perimeter-excluding-bumpers`. A `complete-robot-including-bumpers` or unknown reference remains unresolved against the rule perimeter, even when its numeric rectangle is larger than the limit. The numeric rectangular perimeter alone is descriptive geometry, not a legality conclusion. Trench source units, conversion consistency and source revision/hash pins are validated before arithmetic, and every strategy location ID must exist with the matching scoring/retrieval purpose.
-
-## Hypothetical experiment evidence linkage
-
-Use [comparison-chain linkage](comparison-chain.md) to execute a bounded abstract comparison and attach separate comparison-input, comparison-experiment and comparison-run-evidence revisions. The exact game/resource/config/model pins participate in stale propagation; ordinary sibling design branches remain isolated. This does not fabricate a subsystem specification or upgrade unverified release counts into scoring or hardware evidence.
-
-[Restricted nominal field references](field-references.md) are now available separately from executable location/obstacle geometry. Explicit source, variant, frame and use gates preserve provisional meanings and prevent the current consumers from silently promoting them to robot poses or paths.

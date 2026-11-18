@@ -1,6 +1,6 @@
 # Guarded local Fusion workflow
 
-This original disposable-design recipe is version 1.0.0. It uses Autodesk's built-in local MCP and Python API. No cloud or community service is involved. Enable the official server only with the owner's permission and verify the installed build against Autodesk's current security advisory. The tested build was 2706.1.17; the listener was 127.0.0.1:27182. A loopback endpoint is not an authentication boundary.
+Use the bundled Python client and Fusion recipe to compare two parametric sideplates across a native archive and a STEP export. Start the official local MCP only in a session authorized by its owner. Keep the request journal beside the project's engineering evidence.
 
 ## Transaction contract
 
@@ -13,31 +13,21 @@ This original disposable-design recipe is version 1.0.0. It uses Autodesk's buil
 
 ## Running the bounded example
 
-Use Python 3 and the two bundled files; no pip dependencies. Run `python guarded_client.py request.json journal-directory` against an already authorized official local server. Keep journals and native files outside public repositories. Use a fresh request ID for each read-only inspection as well. The bundled client executed a read-only recovery inspection successfully at actual revision 4 while the caller held stale revision 0, returning the earlier completed update receipt. Mutating live recipe calls used the earlier stdlib local MCP harness. Synthetic journal tests cover pending-intent refusal, changed-payload refusal and cached completion without network dispatch. Crash, network-timeout and concurrent-writer failure injection have not been executed.
+Run from this directory with Python 3:
 
-Every request needs `recipeVersion: "1.0.0"`, a job ID, request ID and stage. `baseline` reports current documents; only use it in a session whose scope is authorized. `create` also requires `expectedActiveDocumentId`, `dimensionsMm` copied from the reviewed 2026 case CAD inputs and `thicknessMm: 6.35`. `update`, `export` and `reopen` require `expectedDocumentId` and `expectedRevision`; read-only `inspect` requires identity/job but deliberately ignores stale revision and can return an earlier operation via `inspectRequestId`; mutating operations require `expectedGeometrySha256` computed by the recipe's `fingerprint` function on the last readback. Include the same dimensions and current thickness. `update` sets a thickness from 1 to 10 mm. `export` requires a new `outputDirectory`; `reopen` requires that directory plus `expectedHashes` keyed by `f3d` and `step` from the export receipt. The original active document is restored after the operation.
+~~~sh
+python guarded_client.py request.json journal-directory
+python -B -m unittest discover
+~~~
 
-This is an intentionally narrow two-plate fixture, not a general CAD command runner. Inspect the code and request before execution. Geometry uses fixed sketch outlines and holes plus a thickness parameter; it is not a fully constrained assembly. The second plane is fixed at the original gap plus original thickness, so changing thickness changes the clear gap. This is reported, not silently treated as a constant-gap assembly.
+Every request carries a unique job ID, request ID, stage and the recipe version in guarded_case.py. Begin with baseline, record the active document creation ID, and send it as expectedActiveDocumentId on create. Supply the project's dimensionsMm object with lengthMm, heightMm, gapMm, original thicknessMm and axles (two [x,y] hole-center pairs in millimetres). This recipe reserves a 6 mm radius for both holes. Choose centers that clear the edges and each other. The top-level thicknessMm must equal the original thickness on creation. The second plate plane stays fixed at original gap plus original thickness as you change thickness.
 
-## Executed 2026 concept evidence
+For update, export and reopen include the expected document ID, revision and geometry SHA-256 from the latest inspection plus the original dimensions and current thickness. The update accepts a new thickness between 1 and 10 mm. Use a new output directory on export and pass its two expected file hashes on reopen. The client checks each reopened solid, hole position and volume. Native history also supplies a plate thickness parameter and six timeline entries. Reopened inspection documents close afterward and the original active document regains focus.
 
-On 2026-11-16 the two 480 x 260 mm concept plates were created at 6.35 mm thickness with diameter-12 mm placeholder holes centered at (90,65) and (350,65) mm. Their second plane is at z=306.35 mm. Thickness was changed to 7 mm; the resulting clear gap is 299.35 mm, not 300 mm. Both bodies remained solid with six healthy timeline entries. F3D reopened with the 7 mm parameter and history; STEP reopened with the same geometry and no parametric history. The three earlier disposable mounting-plate documents retained identical measured geometry and modification flags, and the original active document was restored.
+For recovery, send a fresh inspect request for the same document and job. Include inspectRequestId to retrieve an earlier operation. Archive files freeze document attributes at export time. Use the external request journal and a fresh geometry inspection to reconcile an interrupted operation.
 
-Live negative checks rejected wrong document, wrong job, stale revision, changed expected geometry and changed payload under an existing request ID. An identical completed update returned the prior receipt; independent inspection confirmed revision 2 and two bodies. These checks do not prove crash atomicity, cross-process exactly-once execution, whole-design preservation under arbitrary edits, or security against hostile clients.
+Measure the workholding and bearing fits before manufacturing. Record material and moving-body mass separately when using the assembly dimensions for simulation.
 
-## CAD-to-Java boundary
-
-The sideplate envelope and axle holes were measured in native CAD. The 2026 case's roller radius of 30 mm and mass of 0.6 kg remain assumptions: no roller body, material density or mass-property measurement was created. The simple solid-cylinder approximation gives inertia 0.00027 kg m2. `FlywheelSizingLab` changes assumed radius to 60 mm at fixed mass, predicts four times the inertia, and tests slower initial acceleration with unchanged unloaded steady speed at 6 V. This connects a design assumption to a plant prediction; it does not infer inertia from the plate geometry.
-
-WPILib 2026.2.1 uses direct plant truth with NEO constants. No REV device adapter, encoder, firmware, wheel contact, game-piece deformation/flight, bearing loss, battery sag or physical motor has been tested. The recipe does not establish bearing fits, structural strength, assembly interference, guarding, manufacturing readiness or season legality.
-
-## Official references
-
-- [Document creation ID and copied-document caveat](https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/core_Document_creationId.htm), accessed 2026-11-16.
-- [Fusion API units](https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/Units_UM.htm), reviewed 2026-11-15.
-- [Official local MCP](https://github.com/Autodesk/ai-integrations/blob/main/fusion/local-mcp-server/README.md), reviewed 2026-11-15.
-- [Autodesk security advisory](https://www.autodesk.com/trust/security-advisories/adsk-sa-2026-0008), reviewed 2026-11-15.
-
-Only original code and summaries are included; Autodesk/FIRST assets and documentation bodies are not bundled.
-
-Native archives are snapshots taken during export: their embedded operation attributes may show the export as in-flight and an earlier workflow counter. Do not treat a reopened archive as a completed-operation journal or replay its pending request. External receipts plus fresh inspection govern recovery.
+- [Document creation ID and copied-document identity](https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/core_Document_creationId.htm)
+- [Fusion API units](https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/Units_UM.htm)
+- [Official Fusion local MCP installation and operation](https://github.com/Autodesk/ai-integrations/blob/main/fusion/local-mcp-server/README.md)

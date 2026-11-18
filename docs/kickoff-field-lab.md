@@ -1,41 +1,38 @@
 # Start a season at the field
 
-When students start with the game reveal, their first design activity is to move a plain robot box around a scale field. Give them the controls before asking for a match story. A student who already has a saved investigation can instead use the [continuation procedure](strategy-first-continuation.md).
+Start with the team’s release packet. Create an external, project-owned model before students enter the field lab. An existing project can resume from its saved investigation. [Project rules model](project-rules-model.md) · [Continuation procedure](strategy-first-continuation.md)
 
-## Read the rules into a model first
+## Read the rules into a model
 
-Build a portable release-day rules model before the student pre-sim. Review the inventory and its starting distribution, phases, scoring values, control restrictions, field frame, starts, sources and target locations. The 2025 model derives mirrored route hypotheses from illustrative start slots, piece locations and compatible goals. Open questions stay visible. Use the model as the next command's input.
+Record the source edition, game-piece inventory and distribution, scoring values, control restrictions, active periods, field frame, starting positions, supply locations and scoring targets. Use a manual URL or a project-relative source file such as `sources/release.pdf`. Local source locators appear as text. Label source dimensions, derived coordinates, trial assumptions and unknowns. Keep later competition evidence outside a release-day exercise. Save the profile and generated model in the team project.
+
+From the team project, use the installed plugin’s script with the paths to the project’s files. Replace `<plugin>` with its actual location. Use a new output filename for each revision.
 
 ```sh
-npm run kickoff -- --season 2025 --model-output rules.json
-npm run kickoff -- --profile rules.json --output field.html
+node "<plugin>/scripts/kickoff.mjs" --profile release-day.json --model-output rules.json
+node "<plugin>/scripts/kickoff.mjs" --profile rules.json --output field.html
 ```
+
+Open `field.html` in a browser. It runs offline. The model can omit unsupported geometry, optional scoring data and timed rehearsal. Leave unknown dimensions as open questions. The rectangle-and-prism preview supports early spatial comparisons. Apply a rectangular starting perimeter only when the source rules and the proposed shape support that screen. The team can also inspect the public lab with a fictional model. [Training lab](https://ehartye.github.io/agent-frc/field-lab.html)
 
 ## Explore a scoring opportunity
 
-Allocate a share of the distinct pieces at the pickup location and a second group arriving at a specified time. Select the scoring target and phase. Estimate travel and other unavailable time. Compare the goal with the available supply, open slots and the candidate's complete cycle time. Each window treats a piece as scoring once at its selected target. Recycled pieces, competing allocations and overlapping windows need separate accounting before aggregating match points.
+Allocate the pieces available to one robot at the selected supply location, including any later delivery. Deduct setup, travel and service time. Check open scoring slots. Compare two delivery plans.
 
-For example, if 25 pieces can arrive and score during 5 usable seconds, the average requirement is 5 pieces/s. A serial 0.25-second cycle tops out at 20 pieces. A 0.20-second cycle reaches 25 in the idealized window. A late supply wave can demand a faster burst. These illustrative values are independent of the bundled 2025 game. Use complete acquire/feed/score cycle timing or identify the bottleneck being screened. The ideal bound assumes every completed cycle scores.
+- **One-piece shuttle.** Each score requires a loaded trip to the scoring location. Every additional piece requires an empty return. Three scores require five transit legs. The model uses the same path and speed for the return.
+- **Supply staged at the goal.** Make one initial transit, then service pieces at the scoring location. Identify who supplies those pieces and when the robot can use them.
 
-The page marks candidate pickup and scoring approaches automatically. It routes centerlines around the modeled landmarks and samples nearby peer paths within one trial box span. Color marks and named start slots expose conflict locations. Two or more other slots near the same sample flag high potential overlap. Peer routes are alternatives and traffic timing is unknown. The other alliance is mirrored for this profile. Omitted obstacles, robot swept clearance and supply queues require separate study.
+For example, 25 pieces over five usable seconds require five pieces per second. A serial loader completing a piece every 0.25 seconds can deliver at most 20 in that window. A 0.20-second candidate reaches 25 under ideal conditions. Late arrivals, repeated transit and occupied scoring positions can change the requirement.
 
-Save the route, exposure, load direction and its evidence, retained function and first test with the opportunity. A crossing can motivate a protected or retractable intake. A numerical force or structural rating needs a supported load case. Use the resulting opportunity IDs alongside field observations when drafting the role and technical requirements.
+One opportunity represents distinct pieces, one robot and one window. Before combining opportunities, reconcile shared supply, recycled pieces, occupied positions and overlapping times.
 
-## Open the lab
+## Infer traffic and test physical space
 
-From the plugin root, generate a standalone page and open it in a browser. Give the output a new filename for each edition. The page runs offline and can be shared with students.
+The model draws candidate routes from project-defined starts and supplies to compatible scoring targets. Each route can specify sources by period with `sourceByPhase` and optional `preloadPhases`. Opponent routes use the explicit alliance reflection in the field map or rehearsal profile. A sampled overlap identifies a possible conflict. Exposure depends on which routes robots take and when they arrive.
 
-```sh
-npm run kickoff -- --season 2025 --output field.html
-```
+Students can resize the trial box, move its pose and change its heading. An optional `trial` object supplies frame `length`, `width`, `height`, and optional `x`, `y`, `heading`. Otherwise the lab uses the external rehearsal dimensions. A model with neither opens with a visual scale cube sized to one twelfth of the shorter field side. The static route check screens the occupied frame and bumpers against the profile’s collision geometry. A blocked or unresolved route leaves the arithmetic conditional. Where the profile supplies behavior programs, use the timed field rehearsal to compare queues and delays under different assignments. [Match rehearsal](field-rehearsal.md)
 
-The bundled [2025 profile](../case-studies/2025/kickoff-field.json) models the rectangular field extents and two reefs using the release-day V0 manual. The field, target elevations and rectangular starting-size checks have section references in the page. A 30-inch cube is a trial shape. Students can try an oversized box and see the signed consequence. The target rings show elevation. They do not model branch alignment, game-piece contact or scoring.
-
-For a new game, pin the release-day manual first. Prepare a project-owned JSON profile following the example, then run the command below. Use the season's own sourced field extents, identified landmarks, field frame and relevant starting limits. The page uses inches, a rectangular field boundary and regular-prism landmarks. Set an unknown limit to `null`, use empty arrays for unmodeled landmarks or elevations, and name omitted geometry. Use the rectangular perimeter check only when the selected rules support that interpretation. Preserve other rule types or dimensions as open questions. Keep later updates, competition evidence and prior designs out of a release-day exercise.
-
-```sh
-npm run kickoff -- --profile release-day.json --output field.html
-```
+Save the route, affected mechanism, contact direction, supporting evidence and the function that must survive. A shared travel corridor can justify a protected intake. Estimating an impact force needs a separate load case with relative motion, effective mass, compliance and contact geometry. Compare waiting for a partner with choosing another route before assigning a faster loader requirement.
 
 ## From the field to a design decision
 

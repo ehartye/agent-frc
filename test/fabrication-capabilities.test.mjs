@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {validateFabricationPlan,validateSchoolCapabilities,compareFabrication,fabricationDigest} from '../scripts/fabrication-capabilities.mjs';
-const asOf='2026-11-16';
+const asOf='2096-11-16';
 function fixture(){
- const e=(id,kind)=>({id,kind,description:'Synthetic test evidence only',locator:'test fixture, no actual school or machine',revision:'fixture-v1',sha256:'1'.repeat(64),recordedOn:asOf,reviewDue:'2026-12-16'});
+ const e=(id,kind)=>({id,kind,description:'Synthetic test evidence only',locator:'test fixture, no actual school or machine',revision:'fixture-v1',sha256:'1'.repeat(64),recordedOn:asOf,reviewDue:'2096-12-16'});
  const op={id:'cut',processId:'milling',machineClass:'mill',materialId:'example-material-grade',setupEnvelopeMm:[200,100,20],envelopeBasis:'stock-and-fixture-XYZ-no-rotation',allowedDeviationMm:0.1,fixtureIds:['fixture-a'],operatorCapabilityId:'milling-role',basis:'assumed',evidenceRefs:['design'],unresolvedInputs:[]};
  const plan={schema:'frc-fabrication-plan/v1',id:'fixture-plan',revision:1,assumption:'all-required-tools-assumed-for-design-only',evidence:[e('design','design-assumption')],parts:[{id:'bracket',description:'Synthetic bracket',designRef:{id:'design',revision:1,sha256:'0'.repeat(64)},routeCoverage:'partial',routes:[{id:'route-a',description:'Hypothetical reviewed route',operations:[op]}],unresolvedInputs:[]}]};
  const profile={schema:'frc-school-capabilities/v1',id:'fixture-school',revision:1,registryCoverage:'partial',evidence:[e('school','school-record')],tools:[{id:'mill-a',label:'Synthetic mill A',machineClass:'mill',availability:'available',condition:'serviceable',access:{setup:'declared-current',training:'declared-current',supervision:'declared-current',safetyReview:'declared-current'},evidenceRefs:['school'],capabilities:[{id:'milling-a',processId:'milling',materialId:'example-material-grade',usableSetupMm:[250,150,30],envelopeBasis:'stock-and-fixture-XYZ-no-rotation',achievableDeviationMm:0.05,fixtureIds:['fixture-a'],operatorCapabilityId:'milling-role',evidenceRefs:['school']}]}]};
@@ -30,7 +30,7 @@ test('Missing registry entries are unknown, never inferred absence or ready',()=
  const {plan,profile}=fixture();profile.tools=[];const op=operation(result(plan,profile));assert.equal(op.status,'school-capabilities-unresolved');assert.ok(op.unknown.some(x=>x.includes('do not prove absence')));
 });
 test('Freshness, source pins and school-specific evidence are required for current declarations',()=>{
- for(const edit of [e=>{e.recordedOn='2026-11-01';e.reviewDue='2026-11-15';},e=>e.recordedOn='2026-11-17',e=>e.sha256=null,e=>e.revision=null,e=>e.kind='manufacturer-spec']){const {plan,profile}=fixture();edit(profile.evidence[0]);assert.equal(operation(result(plan,profile)).status,'school-capabilities-unresolved');}
+ for(const edit of [e=>{e.recordedOn='2096-11-01';e.reviewDue='2096-11-15';},e=>e.recordedOn='2096-11-17',e=>e.sha256=null,e=>e.revision=null,e=>e.kind='manufacturer-spec']){const {plan,profile}=fixture();edit(profile.evidence[0]);assert.equal(operation(result(plan,profile)).status,'school-capabilities-unresolved');}
  const {plan,profile}=fixture();profile.evidence[0].kind='design-assumption';assert.throws(()=>result(plan,profile),/design-only assumption/);
 });
 test('Independent alternative routes and tool candidates retain mismatches, not automatic substitutions',()=>{
@@ -39,7 +39,7 @@ test('Independent alternative routes and tool candidates retain mismatches, not 
 });
 test('Reject forged approval fields, invalid dimensions, missing unknowns, unknown evidence and impossible dates',()=>{
  for(const edit of [p=>p.assumption='school-has-all-tools',p=>p.operationAuthorized=true,p=>p.parts[0].routes[0].operations[0].setupEnvelopeMm=[200,0,20],p=>p.parts[0].routes[0].operations[0].allowedDeviationMm=NaN,p=>delete p.parts[0].routes[0].operations[0].fixtureIds,p=>p.parts[0].routes[0].operations[0].evidenceRefs=['missing']]){const {plan,profile}=fixture();edit(plan);assert.throws(()=>result(plan,profile));}
- const {plan,profile}=fixture();assert.throws(()=>compareFabrication(plan,profile,{asOf:'2026-02-30'}));const old=result(plan,profile);profile.revision++;profile.tools[0].availability='unavailable';const newer=result(plan,profile);assert.notEqual(old.profileSha256,newer.profileSha256);assert.notEqual(operation(old).status,operation(newer).status);
+ const {plan,profile}=fixture();assert.throws(()=>compareFabrication(plan,profile,{asOf:'2096-02-30'}));const old=result(plan,profile);profile.revision++;profile.tools[0].availability='unavailable';const newer=result(plan,profile);assert.notEqual(old.profileSha256,newer.profileSha256);assert.notEqual(operation(old).status,operation(newer).status);
 });
 test('Drawing labels cannot promote assumption-only evidence and comparison work is bounded',()=>{
  const {plan,profile}=fixture();plan.parts[0].routes[0].operations[0].basis='drawing-requirement';assert.throws(()=>result(plan,profile),/Drawing requirement/);plan.evidence[0].kind='design-record';assert.equal(operation(result(plan,profile)).status,'declared-match-needs-qualified-review');

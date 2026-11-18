@@ -28,4 +28,4 @@ Deliver a frame/time contract and rejection-policy test table. For each material
 - Fixture thresholds are not recommendations for every camera.
 - No vision accuracy claim follows solely from source review.
 
-Use the [pinned desktop exercise](../../examples/java-2026-sim/NAVIGATION.md) only with its stated baseline. No hardware operation or deployment is authorized by this skill. Do not infer physical safety, CAD validity or model effectiveness from static review or passing software fixtures. Source/file/dependency licenses must be checked before copying.
+Replay the team’s observations with the project’s sensor calibration. Record timestamp, frame transform, uncertainty and the reason for each rejected measurement.

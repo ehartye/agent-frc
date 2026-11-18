@@ -50,7 +50,10 @@ export function routeStudy(profile, piece, goal, phase, custom, bodyWidth) {
     return result;
   }
   const routeType=map?.routes.find(r=>r.piece===piece && r.goal===goal);
-  const sourceFor=r=>phase==='AUTO' && r.autoSource?r.autoSource:r.piece;
+  const first=profile.scoring?.phases[0]?.name;
+  // Older external profiles identify the opening period's alternate source with autoSource.
+  const sourceFor=r=>r.sourceByPhase?.[phase] || (phase===first && r.autoSource) || r.piece;
+  const preload=r=>r.preloadPhases?.includes(phase) ?? Boolean(phase===first && r.autoSource);
   const start=map?.starts[0];
   const a=custom?.a || (routeType && nearest(start,map.sources[sourceFor(routeType)]));
   const b=custom?.b || (a && routeType && nearest(a,map.targets[goal]));
@@ -61,19 +64,21 @@ export function routeStudy(profile, piece, goal, phase, custom, bodyWidth) {
   const peers=[];
   if(map) for(const side of [0,1]) for(const [slot,p] of map.starts.entries()) {
     if(!side && slot===0) continue;
-    const transform=q=>side?[profile.field.length-q[0],profile.field.width-q[1]]:q;
+    const mirror=map.mirror || profile.rehearsal?.mirror;
+    if(side && !mirror)continue;
+    const transform=q=>side?[mirror.redX?profile.field.length-q[0]:q[0],mirror.redY?profile.field.width-q[1]:q[1]]:q;
     const paths=[];
     for(const r of map.routes){
       const supply=nearest(p,map.sources[sourceFor(r)]);
       const dest=nearest(supply,map.targets[r.goal]);
       const legs=[[p,supply],[supply,dest]];
-      if(phase==='AUTO' && r.autoSource) legs.push([p,nearest(p,map.targets[r.goal])]);
+      if(preload(r)) legs.push([p,nearest(p,map.targets[r.goal])]);
       for(const [from,to] of legs){
         const part=path(transform(from),transform(to));
         if(part.length) paths.push(part);
       }
     }
-    peers.push({name:(side?'Opposing':'Partner')+' slot '+(slot+1),paths});
+    peers.push({name:(side?'Red opponent':'Blue partner')+' slot '+(slot+1),alliance:side?'red':'blue',paths});
   }
   const hot=[];
   const names=new Set();

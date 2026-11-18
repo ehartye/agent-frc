@@ -23,8 +23,8 @@ function fieldScene(canvas, profile, state, place) {
       const focus = camera.view === 'robot' ? state : profile.landmarks[0];
       x0 = focus.x;
       y0 = focus.y;
-      spanX = 230;
-      spanY = 200;
+      const extent=camera.view==='target'?Math.max(focus.acrossFlats,focus.height):Math.max(state.length,state.width,state.height);
+      spanX=4*extent;spanY=3.5*extent;
     }
     const scale = Math.min(width * .90 / spanX, height * .75 / spanY) * camera.zoom;
     const cx = width / 2, cy = height * .57;
@@ -45,12 +45,13 @@ function fieldScene(canvas, profile, state, place) {
       ctx.stroke();
     }
     const L=field.length, W=field.width;
-    path([[0,0],[L,0],[L,W],[0,W]], '#a9d4c9','#245158');
+    path(rehearsal.supported?rehearsal.geom.boundary:[[0,0],[L,0],[L,W],[0,W]], '#a9d4c9','#245158');
+    ctx.save();ctx.clip();
     for(let x=36;x<L;x+=36) path([[x,0],[x,W]],'#40696c');
     for(let y=36;y<W;y+=36) path([[0,y],[L,y]],'#40696c');
     path([[L/2,0],[L/2,W]],'#afc8bd');
     if(study) {
-      for(const peer of study.peers) for(const leg of peer.paths) path(leg,'#669295');
+      for(const peer of study.peers) for(const leg of peer.paths) path(leg,peer.alliance==='red'?'#b96d74':peer.alliance==='blue'?'#669be0':'#669295');
       for(const h of study.hot) {
         const [px,py]=project(...h.point);
         ctx.fillStyle=h.count>=2?'#d89569':'#ae9d70';ctx.beginPath();ctx.arc(px,py,3,0,Math.PI*2);ctx.fill();
@@ -67,6 +68,7 @@ function fieldScene(canvas, profile, state, place) {
       ctx.fillStyle='#ffcb77';ctx.beginPath();ctx.arc(px,py,6,0,Math.PI*2);ctx.fill();
       ctx.font='bold 15px system-ui';ctx.fillText(p.name,px+9,py+12);
     }
+    ctx.restore();
     const objects = profile.landmarks.map(m => {
       const r = m.acrossFlats / (2*Math.cos(Math.PI/m.sides));
       const points = Array.from({length:m.sides},(_,i) => {

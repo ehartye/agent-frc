@@ -1,27 +1,30 @@
 const byId = id => document.getElementById(id);
 const fmt = n => String(Number(n.toFixed(3)));
-const state = {length:30, width:30, height:30, x:Math.round(profile.field.length/4),
-  y:Math.round(profile.field.width/3), heading:0};
+const state=initialTrial(profile);
+const gameTitle=(profile.season?profile.season+' ':'')+profile.game;
+const exportName=profile.season || profile.game.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'game';
 const observations = [];
 const opportunities = [];
 const sliders = new Map();
-byId('season').textContent = profile.season + ' ' + profile.game + ' · ' + profile.edition;
+byId('season').textContent=gameTitle+' · '+profile.edition;
 function paragraph(parent, content) {
   const p = document.createElement('p');
   p.textContent = content;
   parent.append(p);
 }
 const sources = byId('sources');
-const sourceLink = document.createElement('a');
-sourceLink.href = profile.manual;
-sourceLink.textContent = 'Game manual · ' + profile.edition;
-sources.append(sourceLink);
+if(/^https?:\/\//i.test(profile.manual)) {
+  const a=document.createElement('a');
+  a.href=profile.manual;a.textContent='Game manual · '+profile.edition;sources.append(a);
+} else {
+  paragraph(sources,'Project source file: '+profile.manual+' · '+profile.edition);
+}
 paragraph(sources, 'Field: ' + profile.field.length + ' × ' + profile.field.width + ' in. ' + profile.field.source);
 paragraph(sources, profile.limits.source);
 paragraph(sources, profile.geometrySource);
 if (profile.levels.length) paragraph(sources, profile.levels.map(v=>v.name+' '+v.height+' in').join(' · '));
 paragraph(sources, profile.omissions);
-paragraph(sources, 'The 30-inch starting box and its pose are editable trial values. X runs downfield from the first end wall. Y runs across the field from the near side.');
+paragraph(sources,'Editable starting box: '+[state.length,state.width,state.height].map(fmt).join(' × ')+' in. '+(profile.trial?'The project supplies this trial.':profile.rehearsal?'Dimensions come from the project rehearsal defaults.':'The initial cube uses one twelfth of the shorter field side as a visual scale reference.')+' X runs downfield from the first end wall. Y runs across the field from the near side.');
 
 function slider(group, key, title, min, max, unit) {
   const item = document.createElement('div');
@@ -33,17 +36,17 @@ function slider(group, key, title, min, max, unit) {
   out.htmlFor = key;
   label.append(out);
   const input = document.createElement('input');
-  Object.assign(input, {id:key, type:'range', min, max, step:1, value:state[key]});
+  Object.assign(input, {id:key, type:'range', min, max, step:key==='heading'?1:'any', value:state[key]});
   state[key] = Number(input.value);
   item.append(label,input);
   byId(group).append(item);
   sliders.set(key,{input,out,unit});
   input.oninput = () => {state[key]=Number(input.value);refresh();};
 }
-for (const key of ['length','width','height']) slider('sizes',key,key[0].toUpperCase()+key.slice(1),1,
-  Math.max(60,Math.ceil(profile.limits.height || 0),Math.ceil((profile.limits.perimeter || 0)/2)), ' in');
-slider('pose','x','Downfield X',0,Math.floor(profile.field.length),' in');
-slider('pose','y','Across field Y',0,Math.floor(profile.field.width),' in');
+for(const key of ['length','width','height']) slider('sizes',key,key[0].toUpperCase()+key.slice(1),Math.min(1,state[key]),
+  Math.max(2*state[key],profile.limits.height || 0,(profile.limits.perimeter || 0)/2), ' in');
+slider('pose','x','Downfield X',0,profile.field.length,' in');
+slider('pose','y','Across field Y',0,profile.field.width,' in');
 slider('pose','heading','Heading',-180,180,'°');
 function margin(value, limit) {
   if (limit === null) return 'limit unknown';
@@ -111,26 +114,27 @@ byId('capture').onclick=()=>{
 };
 byId('download').onclick=()=>{
   const feedback=byId('feedback');
-  if(!observations.length && !opportunities.length) {
-    feedback.textContent='Save a field observation or scoring opportunity to ground your draft.';
+  if(!observations.length && !opportunities.length && !rehearsalNotes.length) {
+    feedback.textContent='Save a field observation, scoring opportunity or match snapshot to ground your draft.';
     byId('finding').focus();
     return;
   }
   const sections=[['story','Role and repeatable cycle'],['alternative','Alternative or fallback'],
     ['capability','REQ-1 · Provisional capability'],['experiment','TEST-1 · First experiment for REQ-1']];
-  const draft=['# '+profile.season+' '+profile.game+' kickoff narrative','Status: student draft for review.',
+  const draft=['# '+gameTitle+' kickoff narrative','Status: student draft for review.',
     '## Release-day evidence',profile.edition+' — '+profile.manual,
     'Field: '+profile.field.length+' × '+profile.field.width+' in. '+profile.field.source,
     profile.limits.source,profile.geometrySource,
     profile.levels.map(v=>v.name+' '+v.height+' in').join(' · '),profile.omissions,
     '## Student observations',...observations.map(reportObservation),
-    '## Scoring opportunities and route requirements',...opportunities.map(o=>o.report)];
+    '## Scoring opportunities and route requirements',...opportunities.map(o=>o.report),
+    '## Match rehearsal snapshots',...rehearsalNotes.map(note=>note.report)];
   for (const [id,title] of sections) draft.push('## '+title,byId(id).value.trim() || 'Open for student discussion.');
-  draft.push('Evidence for capability review: '+[...observations,...opportunities].map(o=>o.id).join(', ')+'.',
+  draft.push('Evidence for capability review: '+[...observations,...opportunities,...rehearsalNotes].map(o=>o.id).join(', ')+'.',
     'Before technical design, record the team decision, then give the selected capability a measurable acceptance check.');
   const url=URL.createObjectURL(new Blob([draft.join('\n\n')+'\n'],{type:'text/markdown;charset=utf-8'}));
   const link=document.createElement('a');
-  link.href=url;link.download=profile.season+'-kickoff-narrative.md';link.click();
+  link.href=url;link.download=exportName+'-kickoff-narrative.md';link.click();
   setTimeout(()=>URL.revokeObjectURL(url),30000);
   feedback.textContent='Downloaded the draft with its observations and source edition.';
 };

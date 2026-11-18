@@ -1,7 +1,7 @@
-# Architecture — 0.6.2
+# Design workflow and data ownership
 
-Seven source-only skills use explicit season/source context. Read-only lookup and brief modules return allowlisted metadata. Optional local-vault access is explicitly configured and never publishes source bodies.
+The project owns the rules register, field model, trials, strategy decisions, CAD and verification receipts. The plugin supplies skills, portable interpreters, active-design references and original teaching fixtures.
 
-The case-study layer contains three season manifests, original strategy/subsystem analyses and partial requirement traces. A generator creates concept vectors and Java properties from declared assumptions. SeasonMechanism uses WPILib flywheel/elevator plants and external gate inputs; no physical IO or FMS parser exists.
+The rules reader captures source clauses and their interpretation. The field lab consumes the resulting profile, derives route hypotheses, then rehearses finite footprints under the declared match clock. Students record observations and use them to choose a strategy. Subsystem contracts identify what must fit, move, survive and be measured. Simulation and CAD checkers consume the resulting evidence with exact revisions.
 
-The Fusion script is separate from simulator execution. Native outputs stay ignored and require actual application execution and review. Dataset consistency, code execution, native CAD and hardware evidence are separate levels. [Workflow](../case-studies/README.md).
+Start with [rules decomposition](project-rules-model.md). Resume through [the decision record](strategy-first-continuation.md).

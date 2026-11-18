@@ -1,6 +1,6 @@
 # Electrical evidence review: ratings, terminals and fault logs
 
-Reviewed 2026-11-15. This is an original paper-review exercise, not an installation, charging or energization procedure. Use the selected season's official manual and updates separately. No final 2027 electrical rules or Systemcore behavior are established here.
+Reviewed 2026-11-15. This is an original paper-review exercise, not an installation, charging or energization procedure. Use the selected season's official manual and updates separately.
 
 ## Four evidence gates
 

@@ -1,0 +1,40 @@
+{
+  "schema": "swerve-encoder-replay/v1",
+  "basis": "Synthetic four-corner chassis. The archive supplies the nominal wheel and final stage. Upstream ratio, chassis dimensions, sensor offsets, polarities and all measurements below are exercise assumptions.",
+  "wheelDiameterM": 0.1,
+  "motorTurnsPerPulleyTurn": 3,
+  "pulleyTurnsPerWheelTurn": 2,
+  "velocityToleranceMps": 0.00001,
+  "modules": [
+    {"id": "front-left",  "xM": 0.25,  "yM": 0.25,  "encoderAtForwardDeg": 0,   "driveSign": 1},
+    {"id": "front-right", "xM": 0.25,  "yM": -0.25, "encoderAtForwardDeg": 90,  "driveSign": -1},
+    {"id": "back-left",   "xM": -0.25, "yM": 0.25,  "encoderAtForwardDeg": 180, "driveSign": 1},
+    {"id": "back-right",  "xM": -0.25, "yM": -0.25, "encoderAtForwardDeg": 270, "driveSign": -1}
+  ],
+  "cases": [
+    {
+      "name": "Field-forward with robot facing field-left",
+      "fieldVelocityMps": [1, 0], "yawRateRadPerSec": 0, "gyroDeg": 90, "pivotM": [0, 0],
+      "samples": [
+        ["front-left", 270, 1145.91559], ["front-right", 0, -1145.91559],
+        ["back-left", 90, 1145.91559], ["back-right", 180, -1145.91559]
+      ]
+    },
+    {
+      "name": "Positive yaw with one equivalent reversed wheel",
+      "fieldVelocityMps": [0, 0], "yawRateRadPerSec": 2, "gyroDeg": 0, "pivotM": [0, 0],
+      "samples": [
+        ["front-left", 135, 810.28468], ["front-right", 135, -810.28468],
+        ["back-left", 45, 810.28468], ["back-right", 45, 810.28468]
+      ]
+    },
+    {
+      "name": "Front-left pivot preserves an arbitrary direction at zero speed",
+      "fieldVelocityMps": [0, 0], "yawRateRadPerSec": 2, "gyroDeg": 0, "pivotM": [0.25, 0.25],
+      "samples": [
+        ["front-left", 87, 0], ["front-right", 90, -1145.91559],
+        ["back-left", 90, 1145.91559], ["back-right", 225, -1620.56937]
+      ]
+    }
+  ]
+}

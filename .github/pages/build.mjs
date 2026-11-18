@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile, copyFile, access, readdir } from 'node:fs/p
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildLab, rulesModel } from '../../scripts/kickoff.mjs';
+import { fieldGeometry } from '../../scripts/field-rehearsal-geometry.mjs';
 import { stages, purpose } from './guide.mjs';
 
 const source=path.dirname(fileURLToPath(import.meta.url));
@@ -22,21 +23,25 @@ const chapters=stages.map((s,i)=>`<details id="${s.id}" class="chapter"${i===0?'
 <div class="chapter-body"><h3>${escape(s.question)}</h3><p>${escape(s.objective)}</p><p>${escape(s.activity)}</p>
 <div class="handoff"><h4>Carry forward</h4><p>${escape(s.handoff)}</p></div>
 <h4>Supporting skills</h4><div class="chips">${s.skills.map(k=>link(k,'skills/'+k+'/SKILL.md')).join('')}</div>
-<div class="reading">${s.id==='rules'?'<a href="rules.json" download>Download the 2025 rules model ↓</a> · ':''}${s.docs.map(([label,p])=>link(label+' ↗',p)).join(' · ')}</div></div></details>`).join('\n');
+<div class="reading">${s.id==='rules'?'<a href="rules.json" download>Download the training rules model ↓</a> · ':''}${s.docs.map(([label,p])=>link(label+' ↗',p)).join(' · ')}</div></div></details>`).join('\n');
 const directory=Object.keys(purpose).map(k=>{
   const uses=stages.filter(s=>s.skills.includes(k));
   if(!uses.length) throw Error('Skill lacks a workflow stage: '+k);
   return `<div class="skill" data-stages="${uses.map(s=>s.id).join(' ')}"><h3>${link(k,'skills/'+k+'/SKILL.md')}</h3><p>${escape(purpose[k])}</p><div class="used">${uses.map(s=>'<a href="#'+s.id+'">'+escape(s.name)+'</a>').join(' · ')}</div></div>`;
 }).join('\n');
 const style=await readFile(path.join(source,'site.html'),'utf8');
-const profile=JSON.parse(await readFile(path.join(root,'case-studies/2025/kickoff-field.json'),'utf8'));
+const profile=JSON.parse(await readFile(path.join(root,'examples/kickoff/training-field.json'),'utf8'));
+const model=rulesModel(profile);
+const geo=fieldGeometry(profile);
+const diagram={field:model.field,boundary:geo.boundary,obstacles:geo.obstacles(),body:model.rehearsal.defaults,
+  route:model.routeHypotheses[0].routeIn};
 const page=style.replace('<!-- chapters -->',()=>chapters).replace('<!-- skills -->',()=>directory)
   .replace('<!-- stage options -->',()=>stages.map(s=>'<option value="'+s.id+'">'+escape(s.name)+'</option>').join(''))
-  .replace('/* field model */',()=>JSON.stringify({field:profile.field,landmarks:profile.landmarks}).replaceAll('<','\\u003c'));
+  .replace('/* field model */',()=>JSON.stringify(diagram).replaceAll('<','\\u003c'));
 await mkdir(output,{recursive:true});
 if((await readdir(output)).length) throw Error('Choose an empty output folder for the workflow guide.');
 await writeFile(path.join(output,'index.html'),page);
 for(const file of ['guide.css','interact.js']) await copyFile(path.join(source,file),path.join(output,file));
-await writeFile(path.join(output,'rules.json'),JSON.stringify(rulesModel(profile),null,2)+'\n');
+await writeFile(path.join(output,'rules.json'),JSON.stringify(model,null,2)+'\n');
 await buildLab(profile,path.join(output,'field-lab.html'));
 console.log('Built '+stages.length+' workflow stages, '+ownedSkills.length+' skills and the current kickoff lab.');
