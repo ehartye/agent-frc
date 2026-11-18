@@ -1,0 +1,18 @@
+{
+  "schema": "agent-frc/native-export-receipt@1",
+  "sourcePins": {"archiveSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "producerSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
+  "units": {"length": "m", "angle": "rad"},
+  "frames": ["assembly"],
+  "evidenceBasis": "synthetic",
+  "nativeBodies": ["arm", "hidden", "base"],
+  "motionGroups": ["frame"],
+  "meshes": [
+    {"id": "arm-render", "bodyIds": ["arm"], "groupId": "frame", "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"},
+    {"id": "base-render", "bodyIds": ["base"], "groupId": "frame", "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}
+  ],
+  "exclusions": [{"bodyId": "hidden", "reason": "Internal synthetic fixture part deliberately omitted from appearance export"}],
+  "witnesses": [
+    {"meshId": "arm-render", "poseId": "rest", "frameId": "assembly", "translation": [0, 0, 0.1], "rotation": [0, 0, 0, -1], "bounds": {"min": [-0.1, -0.1, 0.1], "max": [0.1, 0.1, 0.6]}},
+    {"meshId": "base-render", "poseId": "rest", "frameId": "assembly", "translation": [0, 0, 0], "rotation": [0, 0, 0, 1], "bounds": {"min": [-0.5, -0.5, 0], "max": [0.5, 0.5, 0.1]}}
+  ]
+}
