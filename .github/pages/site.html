@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#142f63"><meta name="description" content="A student field guide to turning FRC game rules into a match strategy, measurable robot requirements and tested designs.">
+<title>Agent FRC · Robot design field guide</title><link rel="stylesheet" href="guide.css"><script defer src="interact.js"></script></head>
+<body><a class="skip" href="#workflow">Skip to the workflow</a>
+<header><div class="wrap bar"><a class="brand" href="#top"><span class="mark" aria-hidden="true"><i></i><i></i><i></i></span>Agent FRC</a><nav aria-label="Main"><a href="#workflow">Workflow</a><a href="#exercise">Rate check</a><a href="#skills">Skills</a><a class="repository" href="https://github.com/ehartye/agent-frc">GitHub ↗</a></nav></div></header>
+<main id="top">
+<section class="hero"><div class="wrap hero-grid"><div class="hero-copy"><p class="overline">Robot design field guide</p><h1>From game rules<br>to <em>robot design.</em></h1><p class="lead">Read the field. Choose a match role. Turn the student team’s choice into a robot design with requirements it can test.</p>
+<div class="hero-actions"><a class="button" href="#workflow">Explore the workflow <span aria-hidden="true">↓</span></a><a class="secondary" href="field-lab.html">Open the field lab ↗</a></div></div>
+<figure class="board"><div class="board-title"><b>Field notebook</b><span>2025 / REEFSCAPE</span></div>
+<canvas id="pitch" width="730" height="375" role="img" aria-label="An illustrative robot route between a pickup pose, a transit pose and a reef approach on the 2025 field."></canvas>
+<div class="pose-controls" aria-label="Example robot pose"><button type="button" data-pose="0" aria-pressed="true">Pickup</button><button type="button" data-pose="1" aria-pressed="false">Transit</button><button type="button" data-pose="2" aria-pressed="false">Approach</button></div>
+<figcaption id="poseText" aria-live="polite">Pickup · Start with a trial pose near a piece source.</figcaption></figure></div></section>
+<section id="workflow" class="wrap section workflow"><div class="section-intro"><p class="overline">The design sequence</p><h2>One decision <br>at a time.</h2><p>Open a stage to see the question students answer, the record they carry forward and the skills that support them.</p></div><div class="chapters"><!-- chapters --></div></section>
+<section id="exercise" class="rate-section"><div class="wrap rate"><div><p class="overline">Scoring opportunity</p><h2>Can the loader <br>keep up?</h2><p>Try a hypothetical burst with the pieces already available. Adjust the scoring window and the loader’s measured or assumed time per piece.</p></div>
+<form id="rateForm"><div class="rate-inputs"><label>Pieces to score<input id="pieces" type="number" min="1" max="1000" step="1" value="20" required></label>
+<label>Usable seconds<input id="seconds" type="number" min="0.01" max="999" step="any" value="4" required></label>
+<label>Loader seconds / piece<input id="cadence" type="number" min="0.001" max="999" step="any" value="0.4" required></label></div>
+<div class="readout" aria-live="polite"><div><output id="required">5</output><span>required pieces/s</span></div><div><output id="capacity">2.5</output><span>loader pieces/s</span></div></div>
+<p id="rateNote">At this cadence, the loader can deliver 10 of 20 pieces in the window.</p><p class="assumption">The usable window starts after travel and alignment. Check the supply available to one robot, possession rules and scoring positions in the actual game.</p></form></div></section>
+<section id="skills" class="wrap section"><div class="skill-heading"><div><p class="overline">Plugin reference</p><h2>Skills by stage.</h2></div><label class="filter">Show skills for<select id="skillFilter"><option value="all">All stages</option><!-- stage options --></select></label></div>
+<p id="skillCount" aria-live="polite"></p><div class="directory"><!-- skills --></div></section>
+</main><footer><div class="wrap"><span>Agent FRC · Robot design field guide</span><a href="https://github.com/ehartye/agent-frc">Project repository ↗</a></div></footer>
+<script type="application/json" id="fieldModel">/* field model */</script></body></html>

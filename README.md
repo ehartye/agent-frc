@@ -1,5 +1,7 @@
 # agent-frc
 
+[Explore the robot design field guide](https://ehartye.github.io/agent-frc/) to follow the student workflow, try a scoring-rate exercise and open the skills that support each stage.
+
 At kickoff, build the rules model before pre-sim with `npm run kickoff -- --season 2025 --model-output rules.json`. Open the reviewed model with `npm run kickoff -- --profile rules.json --output field.html` to compare scoring rates, inferred routes and contact requirements.
 
 Start a fresh season with the [interactive kickoff field lab](docs/kickoff-field-lab.md). Students move and resize a robot box on the field, save what they observe, and turn those findings into a match story and a testable design requirement. Run `npm run kickoff -- --season 2025 --output field.html` and open the result in a browser.
