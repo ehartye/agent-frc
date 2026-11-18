@@ -68,6 +68,8 @@ function compareSchedule(expected, observed) {
   requireValue(expected.units.size === observed.units.size, 'incompatible channel inventory');
   for (const [channel, units] of expected.units) {
     requireValue(observed.units.get(channel) === units, 'incompatible channel or units: ' + channel);
+  }
+  for (const channel of expected.units.keys()) {
     const first = expected.held.get(channel), second = observed.held.get(channel);
     if (first.target !== second.target || first.phase !== second.phase) {
       return { status: 'different-inputs', issue: 'entry state changed for ' + channel, expected: first, observed: second };
@@ -104,6 +106,98 @@ function schedulesFor(study, requirement, runs, horizon) {
   return { status, runs: results };
 }
 
+function validateScope(scope, observation, horizon) {
+  requireValue(record(scope) && label(scope.origin) && scope.units === 's', 'invalid coverage time origin or units');
+  const keys = ['kind', 'origin', 'units'];
+  if (scope.kind === 'poses') {
+    const ids = array(scope.poseIds, 256, 'pose inventory');
+    requireValue(ids.every(label) && new Set(ids).size === ids.length, 'invalid or duplicate pose IDs');
+    keys.push('poseIds');
+  } else {
+    requireValue(scope.kind === 'startup' || scope.kind === 'continuation', 'unknown coverage kind');
+    requirePair(scope.interval, Number.isFinite, 'trajectory interval');
+    requireValue(scope.interval[0] >= 0 && scope.interval[1] <= horizon, 'trajectory interval outside numerical horizon');
+    keys.push('interval');
+    if (scope.kind === 'startup' && observation) {
+      requireValue(scope.interval[0] === 0, 'independent startup observation must include its origin');
+    }
+    if (scope.kind === 'continuation') {
+      requireValue(record(scope.checkpoint) && label(scope.checkpoint.id) &&
+        typeof scope.checkpoint.sha256 === 'string' && /^[a-f0-9]{64}$/.test(scope.checkpoint.sha256),
+        'continuation requires named checkpoint and SHA-256');
+      keys.push('checkpoint');
+    }
+  }
+  if (observation) {
+    keys.push('findings');
+    for (const finding of array(scope.findings, 256, 'findings', 0)) {
+      requireValue(record(finding) && label(finding.outcome) && label(finding.detail), 'invalid local finding');
+      if (scope.kind === 'poses') {
+        requireValue(scope.poseIds.includes(finding.poseId), 'finding outside observed pose inventory');
+      } else {
+        requirePair(finding.interval, Number.isFinite, 'finding interval');
+        requireValue(encloses(scope.interval, finding.interval), 'finding outside observed interval');
+      }
+    }
+  }
+  requireValue(Object.keys(scope).every(key => keys.includes(key)), 'unsupported coverage field');
+}
+
+function encloses(outer, inner) {
+  return outer[0] <= inner[0] && outer[1] >= inner[1];
+}
+
+function scopeGap(required, observations) {
+  const scoped = observations.filter(row => row.kind === required.kind &&
+    row.origin === required.origin && row.units === required.units);
+  if (required.kind === 'poses') {
+    const poses = new Set(scoped.flatMap(row => row.poseIds));
+    const missing = required.poseIds.filter(id => !poses.has(id));
+    return missing.length ? 'missing pose coverage: ' + missing.join(', ') : null;
+  }
+  const covered = scoped.some(row => encloses(row.interval, required.interval) &&
+    (row.kind === 'startup' ||
+      (row.checkpoint.id === required.checkpoint.id && row.checkpoint.sha256 === required.checkpoint.sha256)));
+  return covered ? null : 'missing ' + required.kind + ' coverage at ' + required.origin +
+    ' [' + required.interval.join(', ') + ']' +
+    (required.checkpoint ? ' from checkpoint ' + required.checkpoint.id : '');
+}
+
+function coverageFor(study, requirement, runs, horizon) {
+  const issues = [];
+  const required = [];
+  try {
+    for (const scope of array(requirement?.coverage, 32, 'required coverage')) {
+      validateScope(scope, false, horizon);
+      required.push(scope);
+    }
+  } catch (error) {
+    issues.push('request: ' + error.message);
+  }
+  const results = study.levels.map(({ runId: id }) => {
+    const row = { id, status: 'covered', observations: [], issues: [] };
+    try {
+      for (const scope of array(runs.get(id)?.coverage, 64, 'observed coverage', 0)) {
+        try {
+          validateScope(scope, true, horizon);
+          row.observations.push(scope);
+        } catch (error) {
+          row.issues.push(error.message);
+        }
+      }
+      for (const scope of required) {
+        const gap = scopeGap(scope, row.observations);
+        if (gap) row.issues.push(gap);
+      }
+    } catch (error) {
+      row.issues.push(error.message);
+    }
+    if (row.issues.length || issues.length) row.status = 'unknown';
+    return row;
+  });
+  return { status: results.every(row => row.status === 'covered') ? 'covered' : 'unknown', issues, runs: results };
+}
+
 export function assessRefinementEvidence({ manifest, receipt, request, evidence }, digests, independentDigest) {
   const numerical = assessContactConvergence(manifest, receipt);
   const result = { schema: 'agent-frc/refinement-result@1', exitCode: 2,
@@ -124,7 +218,14 @@ export function assessRefinementEvidence({ manifest, receipt, request, evidence 
     for (const id of observations.keys()) if (!runIds.has(id)) result.issues.push('unexpected run: ' + id);
     for (const study of manifest.studies) {
       const schedule = schedulesFor(study, requests.get(study.id), observations, manifest.windowEndSeconds);
-      result.studies.push({ id: study.id, schedule, coverage: { status: 'unassessed' } });
+      const coverage = coverageFor(study, requests.get(study.id), observations, manifest.windowEndSeconds);
+      result.studies.push({ id: study.id, schedule, coverage });
+    }
+    const incomplete = result.issues.length > 0 || numerical.status === 'unknown' ||
+      result.studies.some(study => study.schedule.status === 'unknown' || study.coverage.status === 'unknown');
+    if (!incomplete) {
+      const differs = numerical.status === 'not-converged' || result.studies.some(study => study.schedule.status === 'different-inputs');
+      result.exitCode = differs ? 1 : 0;
     }
   } catch (error) {
     result.issues.push(error.message);

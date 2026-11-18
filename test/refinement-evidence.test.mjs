@@ -124,3 +124,113 @@ test('numerical and discrete disagreement survive matching schedules', t => {
     assert.equal(report.studies[0].schedule.status, 'matched');
   }
 });
+
+const poseIds = ['low', 'rising', 'middle', 'high', 'tipping', 'airborne'];
+const localScope = () => [
+  { kind: 'continuation', origin: 'model-start', units: 's', interval: [0.3, 1],
+    checkpoint: { id: 'stopped', sha256: 'b'.repeat(64) } },
+  { kind: 'poses', origin: 'model-start', units: 's', poseIds: [...poseIds] }
+];
+function recordLocal(f) {
+  for (const run of f.evidence.runs) {
+    run.coverage = localScope().map(item => ({ ...item, findings: [] }));
+    run.coverage[1].findings.push({ poseId: 'airborne', outcome: 'failed', detail: 'Support bound below weight' });
+  }
+}
+
+test('the four unchanged published files and independently frozen digest pass', () => {
+  const { code, report } = evaluate(fixture);
+  assert.equal(code, 0);
+  assert.equal(report.studies.every(study => study.coverage.status === 'covered'), true);
+  assert.equal(report.engineeringAcceptance, 'blocked');
+});
+
+test('a shared temporal checkpoint and six poses cannot demonstrate an independently replayed whole cycle', t => {
+  const f = copyFixture(t);
+  recordLocal(f);
+  for (const study of f.request.studies) {
+    study.coverage.push({ kind: 'poses', origin: 'model-start', units: 's', poseIds: [...poseIds, 'landing'] });
+  }
+  f.evidence.runs[0].schedule.events[1].tick++;
+  const { code, report } = evaluate(f.dir, f.save());
+  assert.equal(code, 2);
+  assert.equal(report.studies[0].schedule.status, 'different-inputs');
+  const row = report.studies[0].coverage.runs[0];
+  assert.match(row.issues.join(' '), /startup/);
+  assert.match(row.issues.join(' '), /landing/);
+  assert.deepEqual(row.observations, f.evidence.runs[0].coverage);
+});
+
+test('matching local scope remains covered even when a sampled finding or numerical comparison fails', t => {
+  const f = copyFixture(t);
+  recordLocal(f);
+  for (const study of f.request.studies) study.coverage = localScope();
+  const positive = evaluate(f.dir, f.save());
+  assert.equal(positive.code, 0);
+  assert.equal(positive.report.studies[1].coverage.runs[0].observations[1].findings[0].outcome, 'failed');
+  f.receipt.runs[2].metrics[0].value = 30;
+  const numerical = evaluate(f.dir, f.save());
+  assert.equal(numerical.code, 1);
+  assert.equal(numerical.report.studies[0].coverage.status, 'covered');
+});
+
+for (const [label, mutate] of [
+  ['different checkpoint bytes', rows => { rows[0].checkpoint.sha256 = 'c'.repeat(64); }],
+  ['different checkpoint identity', rows => { rows[0].checkpoint.id = 'previous'; }],
+  ['incompatible time origin', rows => { rows[0].origin = 'other'; }],
+  ['missing start of requested interval', rows => { rows[0].interval[0] = 0.4; }],
+  ['reversed observed interval', rows => rows[0].interval.reverse()],
+  ['duplicate pose', rows => { rows[1].poseIds[2] = rows[1].poseIds[3]; }],
+  ['failed finding at a pose outside the observed set', rows => { rows[1].findings[0].poseId = 'absent'; }],
+  ['temporal finding outside observation', rows => rows[0].findings.push({ interval: [0,1], outcome: 'failed', detail: 'Load' })],
+  ['missing pose', rows => rows[1].poseIds.shift()]
+]) {
+  test(label + ' leaves requested coverage unsatisfied', t => {
+    const f = copyFixture(t);
+    recordLocal(f);
+    for (const study of f.request.studies) study.coverage = localScope();
+    mutate(f.evidence.runs[0].coverage);
+    const { code, report } = evaluate(f.dir, f.save());
+    assert.equal(code, 2);
+    assert.equal(report.studies[0].coverage.status, 'unknown');
+    assert.equal(report.studies[0].schedule.status, 'matched');
+  });
+}
+
+test('complete coverage preserves schedule, metric and discrete disagreement exit 1', t => {
+  for (const mutate of [
+    f => f.evidence.runs[0].schedule.events[1].tick++,
+    f => { f.receipt.runs[2].metrics[0].value = 3; },
+    f => { f.receipt.runs[2].outcome = 'contact-at-horizon'; }
+  ]) {
+    const f = copyFixture(t);
+    mutate(f);
+    assert.equal(evaluate(f.dir, f.save()).code, 1);
+  }
+});
+
+test('invalid predeclared coverage, extra or duplicate run and oversized inputs fail closed', t => {
+  for (const mutate of [
+    f => { f.request.studies[0].coverage = []; },
+    f => { f.request.studies[0].coverage[0].interval = [-1, 1]; },
+    f => { f.evidence.runs.push(f.evidence.runs[0]); },
+    f => { f.evidence.runs.push({ ...f.evidence.runs[0], id: 'extra' }); }
+  ]) {
+    const f = copyFixture(t);
+    mutate(f);
+    assert.equal(evaluate(f.dir, f.save()).code, 2);
+  }
+  const f = copyFixture(t);
+  fs.appendFileSync(f.files[3], Buffer.alloc(5000001, 32));
+  assert.equal(evaluate(f.dir).code, 2);
+});
+
+test('a later incompatible unit takes priority over an earlier held-state difference', t => {
+  const f = copyFixture(t);
+  f.evidence.runs[0].schedule.entry[0].target = 9;
+  f.evidence.runs[0].schedule.channels[1].units = 'deg';
+  const { code, report } = evaluate(f.dir, f.save());
+  assert.equal(code, 2);
+  assert.equal(report.studies[0].schedule.runs[0].status, 'unknown');
+  assert.match(report.studies[0].schedule.runs[0].issue, /units/);
+});
