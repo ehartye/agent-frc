@@ -8,6 +8,10 @@ description: "Guide a student from match goals to explicit strategic narratives 
 When a project already has a match story, follow the [design continuation procedure](../../docs/strategy-first-continuation.md) to recover the selected investigation and later owner decisions before asking for a new strategy.
 
 
+## Begin with student observations
+
+For a fresh kickoff, first open the [kickoff field lab](../../docs/kickoff-field-lab.md). If students already explored the field, read their downloaded narrative and observations. Ask which size or approach they tried, what changed, and how that changes their preferred alliance role. Carry the observation IDs, alternative and open test into the narrative. After students choose, link their decision to a measurable capability in the [technical contract](../../templates/capability-contract.md).
+
 ## Advice and process guidance
 
 **Entry:** a student has a game, robot idea, or an existing CAD model but no clear reason for its architecture. Accept partial knowledge. Never force a lengthy questionnaire before showing a useful first hypothesis.

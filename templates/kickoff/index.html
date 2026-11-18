@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kickoff field lab</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f4ec;color:#172b2c;font:16px/1.5 "Segoe UI",system-ui,sans-serif}
+header, main{max-width:1440px;margin:auto;padding:18px clamp(14px,3vw,48px)}header{display:flex;align-items:baseline;gap:1em;border-bottom:1px solid #bfc8bd}
+h1,h2,p{margin:0}h1{font-size:clamp(22px,3vw,36px);letter-spacing:-.04em}h2{font-size:20px}header p,.muted,small{color:#475c59}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(265px,315px);gap:24px;align-items:start}figure{margin:0;background:#123338;border-radius:12px;overflow:hidden;color:#ecf4ec}
+canvas{display:block;width:100%;height:clamp(340px,49vh,590px);touch-action:none;cursor:grab}canvas:active{cursor:grabbing}
+nav,figcaption{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 16px}figcaption{font-size:13px;color:#d7e8de}
+button{font:inherit;font-weight:600;cursor:pointer;border:1px solid #829b91;border-radius:6px;background:#fff;color:#163b39;padding:6px 12px}
+nav button{font-size:14px;background:#1c4549;color:#eaf5ed}nav button[aria-pressed=true],button.primary{background:#d2eb8a;color:#17382f}
+aside,article,details{padding:16px 0;border-top:1px solid #aab8aa}aside{padding-top:8px}label{display:block;font-weight:600}
+.slider{margin:7px 0}.slider label{display:flex;justify-content:space-between;font-size:14px}.slider output{font-variant-numeric:tabular-nums;color:#325e59}
+input[type=range]{width:100%;accent-color:#316b61;margin:1px 0}fieldset{padding:8px 0;border:0;margin:0}legend{font-size:17px;font-weight:700}
+#screen{white-space:pre-line;background:#e2eadc;border-left:4px solid #567b67;padding:9px 12px;font-size:14px}#screen[data-exceeded=true]{background:#fae3ce;border-color:#b85a26}
+article{margin-top:20px}.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}textarea,input[type=text]{display:block;width:100%;font:inherit;border:1px solid #9aa99f;border-radius:5px;padding:8px;background:white}textarea{min-height:54px}
+#captures{padding-left:1.5em}summary{cursor:pointer;font-weight:600}a{color:#175d55}button:disabled{opacity:.5;cursor:default}.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+select{width:100%;font:inherit;color:inherit;padding:5px;border:1px solid #9aa99f;border-radius:5px}#difference{font-size:14px}
+@media(max-width:780px){.layout,.fields{grid-template-columns:1fr}.layout{gap:12px}header{flex-wrap:wrap;gap:2px 15px}canvas{height:350px}}
+</style>
+</head>
+<body>
+<header><h1>Kickoff field lab</h1><p id="season"></p></header>
+<main>
+<div class="layout"><div>
+<figure><nav aria-label="Camera"><button data-view="field">Field</button><button data-view="robot">Robot</button><button data-view="target">Target</button><button data-view="top">Overhead</button><button id="zoomIn" aria-label="Zoom in">+</button><button id="zoomOut" aria-label="Zoom out">−</button></nav>
+<canvas id="field" aria-label="Rotatable field with an adjustable robot box. Use the sliders to move and resize it."></canvas>
+<figcaption>Lime shows your box. Drag to orbit. Scroll to zoom. Click the floor to place the box. Grid squares are 36 inches.</figcaption></figure>
+<details><summary>Field dimensions, sources and omissions</summary><div id="sources"></div></details>
+</div><aside><fieldset><legend>Robot volume</legend><div id="sizes"></div></fieldset><p id="screen" role="status"></p>
+<fieldset><legend>Field pose</legend><div id="pose"></div></fieldset>
+<div id="elevations"><label for="level">Compare box top with</label><select id="level"></select><p id="difference"></p></div></aside></div>
+<article><h2>Record what changed</h2><p class="muted">Try two sizes or approaches. Save each observation with the exact box and field pose you used.</p>
+<label for="finding">What did you notice?</label><input id="finding" type="text" placeholder="What became easier, harder, or impossible?">
+<div class="actions"><button id="capture">Save observation</button></div><ol id="captures"></ol></article>
+<article><h2>Draft the match story</h2><p class="muted">Use the saved observations to explain a role and what the robot would need to do.</p>
+<div class="fields"><label>Our role and repeatable match cycle<textarea id="story"></textarea></label><label>Alternative role or fallback<textarea id="alternative"></textarea></label><label>Capability the design would need<textarea id="capability"></textarea></label><label>What should we test first?<textarea id="experiment"></textarea></label></div>
+<div class="actions"><button class="primary" id="download">Download narrative and observations</button><span id="feedback" role="status"></span></div></article>
+</main>
+<script id="profile" type="application/json">/* PROFILE */</script>
+<script>
+'use strict';
+const profile = JSON.parse(document.querySelector('#profile').textContent);
+/* SCENE */
+/* LAB */
+</script>
+</body></html>

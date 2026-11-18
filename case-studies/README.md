@@ -3,7 +3,7 @@
 Start with one season: [2024](2024/README.md), [2025](2025/README.md), [2026](2026/README.md). Never combine their requirements. These original case studies implement a narrow mechanism/control slice while documenting the remaining whole-robot work.
 
 1. **Freeze evidence.** Record official manual URL, retrieval date, section versions and applicable updates/Q&A. The selected paragraphs are not a complete rules review. No manual bodies are bundled.
-2. **Compare strategies.** List scoring/task opportunities, constraints, alliance roles, reliability and development cost. Label proposed choices and assumed numbers.
+2. **Explore the field and compare strategies.** At kickoff, open the [student field lab](../docs/kickoff-field-lab.md) and use saved observations to draft the match story before consulting retrospective strategies. List scoring/task opportunities, constraints, alliance roles, reliability and development cost. Label proposed choices and assumed numbers.
 3. **Allocate subsystems.** Define sensors, commands, outputs, mechanical interfaces, units, ownership, mode transitions and failure behavior. Include drive, power, control and safety even when outside the runnable slice.
 4. **Implement a vertical slice.** Run the pinned Java controller and plant tests before connecting any physical IO. Keep season policy separate from actuator control.
 5. **Design in CAD.** Use named parameters and a dimension/assumption register. Generate the concept sideplate, run the Fusion script, inspect/interference-check, export STEP/F3D and reopen. Fusion access is restored; a guarded 2026 sideplate adaptation has native/export/reopen evidence. The 2024/2025 native cases remain unexecuted.

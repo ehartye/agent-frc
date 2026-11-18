@@ -1,5 +1,7 @@
 # agent-frc
 
+Start a fresh season with the [interactive kickoff field lab](docs/kickoff-field-lab.md). Students move and resize a robot box on the field, save what they observe, and turn those findings into a match story and a testable design requirement. Run `npm run kickoff -- --season 2025 --output field.html` and open the result in a browser.
+
 Version **0.9.0** adds [strategy-first continuation](docs/strategy-first-continuation.md) for resuming a design investigation. The [practice project and review rubric](examples/continuation/README.md) exercise source discovery and the next experiment decision. Ten FRC engineering skills connect rules, strategy, subsystems, working Java code, Fusion inputs and simulator evidence. Independent educational work; no FIRST/vendor endorsement. Installation and native CAD execution require separate verification.
 
 Start with the [end-to-end case workflow](case-studies/README.md): [2024 CRESCENDO](case-studies/2024/README.md), [2025 REEFSCAPE](case-studies/2025/README.md), or [2026 REBUILT](case-studies/2026/README.md). Each compares three strategies and implements a deliberately bounded mechanism slice. Complete robot design remains future work.

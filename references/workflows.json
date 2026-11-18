@@ -63,6 +63,7 @@
       ],
       "steps": [
         "For an existing design, open docs/strategy-first-continuation.md from the plugin root. Locate the selected strategy decision and the latest test result before choosing the next experiment.",
+        "For a fresh kickoff design, trace the selected match story and its field-lab observations into a measurable capability before choosing a mechanism.",
         "Sketch acquisition, transfer, staging and release states",
         "Trace source-code caller/end/default/periodic paths independently of geometry",
         "Define CAD joints, clearances, drawing dimensions and an export/reopen check"
@@ -165,6 +166,7 @@
       ],
       "steps": [
         "Read selected official requirements and build a trace register before strategy choices",
+        "For a fresh kickoff, open docs/kickoff-field-lab.md. Have students move and resize a plain robot, capture observations and use them to draft their match story before showing historical strategies.",
         "Compare at least three original strategy options using explicit assumptions and reliability/cost tradeoffs",
         "Allocate subsystem interfaces and implement a tested Java vertical slice",
         "Generate CAD inputs and record native Fusion execution/export/reopen separately",
