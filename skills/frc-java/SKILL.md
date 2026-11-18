@@ -53,6 +53,5 @@ Use [iterative simulator selection](../../docs/simulator-selection.md) to compar
 
 Run the selected project experiment from its own entry point. Record code, inputs, toolchain and actual observations.
 
-The same runner now includes preloaded season robot slices: ideal approach/docking, pose-stop authorization, mechanism and actual pose-derived target registration. Start with generated `HANDOFF.md`; see `docs/season-robot-handoff.md`. Keep acquisition, drive energy/sensor fidelity, complete field geometry and official scoring distinct from these runnable slices.
 
 For a released game piece, use the [recorded height screen](../../docs/recorded-release-height.md) to determine whether to continue with a target-passage test.

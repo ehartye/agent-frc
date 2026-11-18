@@ -1,3 +1,4 @@
+import {validateProfile} from '../scripts/kickoff.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -35,4 +36,10 @@ test('register review preserves unknowns and rejects missing coverage or duplica
   const other = example();
   other.facts[1].id = other.facts[0].id;
   assert.throws(() => reviewRegister(other),/unique/);
+});
+
+test('the lab rejects a compiled model edited out of agreement with its reviewed facts',() => {
+  const model = compileRules(example(),structuredClone(profile));
+  model.field.width += 1;
+  assert.throws(() => validateProfile(model),/disagrees/);
 });

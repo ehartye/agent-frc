@@ -1,3 +1,4 @@
+import {verifyRuleValues} from './rule-register.mjs';
 import { readFile, realpath, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { analyzeWindow } from './kickoff-window.mjs';
@@ -28,6 +29,7 @@ export function initialTrial(p) {
 }
 
 export function validateProfile(p) {
+  if (p && Object.hasOwn(p,"ruleRegister")) verifyRuleValues(p.ruleRegister,p);
   if (!p || (p.season!==undefined && !Number.isInteger(p.season)) || !label(p.game) || !label(p.edition) ||
       !sourceLocator(p.manual) || p.units !== 'in') {
     throw Error('Specify a game, edition, manual URL or project-relative source file, and inch units.');
