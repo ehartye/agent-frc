@@ -8,7 +8,7 @@ function example() {
   const register = newRegister();
   register.edition = profile.edition;
   register.cutoff = 'release packet';
-  register.sources = [{id:'handout',title:'Invented classroom exercise',edition:profile.edition,location:'handout.pdf'}];
+  register.sources = [{id:'handout',title:'Invented classroom exercise',edition:profile.edition,location:profile.manual}];
   register.facts = [
     {id:'width',sourceId:'handout',locator:'Diagram A',topic:'field',statement:'Width shown on diagram',status:'modeled',pointer:'/field/width',value:profile.field.width},
     {id:'signal',sourceId:'handout',locator:'Task B',topic:'novel-task',statement:'Signal a partner at arrival',status:'unmodeled',reason:'Record this requirement in the strategy narrative.'}
@@ -42,4 +42,39 @@ test('the lab rejects a compiled model edited out of agreement with its reviewed
   const model = compileRules(example(),structuredClone(profile));
   model.field.width += 1;
   assert.throws(() => validateProfile(model),/disagrees/);
+});
+
+test('changing only the manual is detected at compilation and on reopening a reviewed model',() => {
+  const register=example();
+  const later={...profile,manual:'packet/later.pdf'};
+  assert.throws(()=>compileRules(register,later),/governing source/);
+  const model=compileRules(register,profile);
+  assert.throws(()=>validateProfile({...model,manual:later.manual}),/governing source/);
+  model.ruleRegister.sources[0].edition='Revised exercise';
+  assert.throws(()=>validateProfile(model),/Saved manual binding/);
+});
+
+test('secondary sources cannot substitute for the manual and differing edition labels may be explicit',() => {
+  const register=example();
+  register.sources.push({id:'drawing',title:'Drawing',edition:'A',location:'drawings/layout.pdf'});
+  assert.throws(()=>compileRules(register,profile),/manualSourceId/);
+  register.manualSourceId='handout';
+  register.sources[0].edition='First printing';
+  const local={...profile,manual:'manuals/handout.pdf',manualEdition:'First printing'};
+  register.sources[0].location=local.manual;
+  assert.equal(compileRules(register,local).manualBinding.sourceId,'handout');
+  assert.throws(()=>compileRules(register,{...local,manual:register.sources[1].location}),/governing source/);
+  assert.throws(()=>compileRules(register,{...local,manualEdition:'Second printing'}),/manual edition/);
+});
+
+test('a mirror requires a matching reviewed digest',() => {
+  const register=example();
+  const source=register.sources[0];
+  source.sha256='a'.repeat(64);
+  source.mirrors=[{location:'archive/copy.pdf',sha256:source.sha256}];
+  const local={...profile,manual:source.mirrors[0].location,manualSha256:source.sha256};
+  assert.equal(compileRules(register,local).manualBinding.location,source.location);
+  assert.throws(()=>compileRules(register,{...local,manualSha256:'b'.repeat(64)}),/digest/);
+  source.mirrors[0].sha256='b'.repeat(64);
+  assert.throws(()=>compileRules(register,local),/same reviewed SHA/);
 });

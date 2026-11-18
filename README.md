@@ -10,6 +10,8 @@ Agent FRC helps students turn a new game manual into robot design decisions. Ope
 
 ## Run from a checkout
 
+To repeat a geometric check on a saved Fusion assembly, use the [native study replay procedure](docs/native-study-replay.md). It verifies the document and geometry before testing the chosen poses.
+
 Use Node.js and npm. See the [local marketplace guide](docs/local-plugin.md) to stage and install this checkout. The plugin works with project files and has no required vault or robot connection.
 
 ```sh

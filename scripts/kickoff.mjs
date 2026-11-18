@@ -29,6 +29,7 @@ export function initialTrial(p) {
 }
 
 export function validateProfile(p) {
+  if (p && Object.hasOwn(p,'manualBinding') && !Object.hasOwn(p,'ruleRegister')) throw Error('A reviewed manual binding requires its source register.');
   if (p && Object.hasOwn(p,"ruleRegister")) verifyRuleValues(p.ruleRegister,p);
   if (!p || (p.season!==undefined && !Number.isInteger(p.season)) || !label(p.game) || !label(p.edition) ||
       !sourceLocator(p.manual) || p.units !== 'in') {
