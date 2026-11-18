@@ -1,5 +1,7 @@
 # agent-frc
 
+At kickoff, build the rules model before pre-sim with `npm run kickoff -- --season 2025 --model-output rules.json`. Open the reviewed model with `npm run kickoff -- --profile rules.json --output field.html` to compare scoring rates, inferred routes and contact requirements.
+
 Start a fresh season with the [interactive kickoff field lab](docs/kickoff-field-lab.md). Students move and resize a robot box on the field, save what they observe, and turn those findings into a match story and a testable design requirement. Run `npm run kickoff -- --season 2025 --output field.html` and open the result in a browser.
 
 Version **0.9.0** adds [strategy-first continuation](docs/strategy-first-continuation.md) for resuming a design investigation. The [practice project and review rubric](examples/continuation/README.md) exercise source discovery and the next experiment decision. Ten FRC engineering skills connect rules, strategy, subsystems, working Java code, Fusion inputs and simulator evidence. Independent educational work; no FIRST/vendor endorsement. Installation and native CAD execution require separate verification.

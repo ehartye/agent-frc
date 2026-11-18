@@ -21,19 +21,38 @@ article{margin-top:20px}.fields{display:grid;grid-template-columns:repeat(2,minm
 #captures{padding-left:1.5em}summary{cursor:pointer;font-weight:600}a{color:#175d55}button:disabled{opacity:.5;cursor:default}.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
 select{width:100%;font:inherit;color:inherit;padding:5px;border:1px solid #9aa99f;border-radius:5px}#difference{font-size:14px}
 @media(max-width:780px){.layout,.fields{grid-template-columns:1fr}.layout{gap:12px}header{flex-wrap:wrap;gap:2px 15px}canvas{height:350px}}
+#scoreResult{display:block;white-space:pre-line;border-left:4px solid #527d6d;background:#e1ebdf;padding:12px 16px;margin-top:12px}
+#opportunity .fields{margin:12px 0}.fields input[type=number]{display:block;width:100%;padding:6px;font:inherit}h3{margin-bottom:2px}
+#modelSummary table{border-collapse:collapse;margin:10px 0}#modelSummary td,#modelSummary th{border-bottom:1px solid #bdc6bc;padding:3px 16px 3px 0;text-align:left}
 </style>
 </head>
 <body>
 <header><h1>Kickoff field lab</h1><p id="season"></p></header>
 <main>
+<details open><summary>Kickoff rules model</summary><div id="modelSummary"></div><button id="modelFile">Download rules model</button></details>
 <div class="layout"><div>
 <figure><nav aria-label="Camera"><button data-view="field">Field</button><button data-view="robot">Robot</button><button data-view="target">Target</button><button data-view="top">Overhead</button><button id="zoomIn" aria-label="Zoom in">+</button><button id="zoomOut" aria-label="Zoom out">−</button></nav>
 <canvas id="field" aria-label="Rotatable field with an adjustable robot box. Use the sliders to move and resize it."></canvas>
 <figcaption>Lime shows your box. Drag to orbit. Scroll to zoom. Click the floor to place the box. Grid squares are 36 inches.</figcaption></figure>
+<div class="actions"><button id="markA">Mark A at robot</button><button id="markB">Mark B at robot</button><button id="clearRoute">Clear route</button><output id="routeLabel"></output></div>
 <details><summary>Field dimensions, sources and omissions</summary><div id="sources"></div></details>
 </div><aside><fieldset><legend>Robot volume</legend><div id="sizes"></div></fieldset><p id="screen" role="status"></p>
 <fieldset><legend>Field pose</legend><div id="pose"></div></fieldset>
 <div id="elevations"><label for="level">Compare box top with</label><select id="level"></select><p id="difference"></p></div></aside></div>
+<article id="opportunity"><h2>What can we score in this window?</h2>
+<p id="inventory"></p><p class="muted" id="scoreSource"></p>
+<div class="fields" id="choices"></div>
+<p class="muted">Allocate pieces to this robot at this location. Use one window per opportunity. Compare overlapping windows separately.</p>
+<div class="fields" id="numbers"></div>
+<label>Supply and timing assumptions<input id="allocation" type="text" placeholder="Where are the pieces, who else needs them, and when can they arrive?"></label>
+<h3>Route and mechanism exposure</h3><p>The model suggests a pickup-to-goal route. Amber marks show possible shared corridors. Move the robot and mark A or B to compare another route.</p>
+<div class="fields">
+<p id="traffic" role="status"></p>
+<label>Exposed mechanism and state<input id="exposure" type="text" placeholder="e.g. extended capture roller during crossing"></label>
+<label>Contact direction, load and evidence<input id="loadCase" type="text" placeholder="e.g. side contact at the intake tip, load still unknown"></label>
+<label>Function to retain and acceptance test<input id="survive" type="text" placeholder="e.g. retain the piece, then complete the next capture within the cycle budget"></label></div>
+<p class="muted">Potential conflicts come from modeled routes. Establish the load, contact direction and retained function in a separate test.</p>
+<output id="scoreResult" aria-live="polite"></output><div class="actions"><button id="saveWindow">Save opportunity for the narrative</button><span id="windowStatus" role="status"></span></div><ol id="savedWindows"></ol></article>
 <article><h2>Record what changed</h2><p class="muted">Try two sizes or approaches. Save each observation with the exact box and field pose you used.</p>
 <label for="finding">What did you notice?</label><input id="finding" type="text" placeholder="What became easier, harder, or impossible?">
 <div class="actions"><button id="capture">Save observation</button></div><ol id="captures"></ol></article>
@@ -46,6 +65,9 @@ select{width:100%;font:inherit;color:inherit;padding:5px;border:1px solid #9aa99
 'use strict';
 const profile = JSON.parse(document.querySelector('#profile').textContent);
 /* SCENE */
+/* ROUTE MODEL */
+/* WINDOW MODEL */
 /* LAB */
+/* OPPORTUNITIES */
 </script>
 </body></html>

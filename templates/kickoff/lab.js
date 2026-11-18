@@ -3,6 +3,7 @@ const fmt = n => String(Number(n.toFixed(3)));
 const state = {length:30, width:30, height:30, x:Math.round(profile.field.length/4),
   y:Math.round(profile.field.width/3), heading:0};
 const observations = [];
+const opportunities = [];
 const sliders = new Map();
 byId('season').textContent = profile.season + ' ' + profile.game + ' · ' + profile.edition;
 function paragraph(parent, content) {
@@ -110,8 +111,8 @@ byId('capture').onclick=()=>{
 };
 byId('download').onclick=()=>{
   const feedback=byId('feedback');
-  if(!observations.length) {
-    feedback.textContent='Save an observation to ground your draft.';
+  if(!observations.length && !opportunities.length) {
+    feedback.textContent='Save a field observation or scoring opportunity to ground your draft.';
     byId('finding').focus();
     return;
   }
@@ -122,9 +123,10 @@ byId('download').onclick=()=>{
     'Field: '+profile.field.length+' × '+profile.field.width+' in. '+profile.field.source,
     profile.limits.source,profile.geometrySource,
     profile.levels.map(v=>v.name+' '+v.height+' in').join(' · '),profile.omissions,
-    '## Student observations',...observations.map(reportObservation)];
+    '## Student observations',...observations.map(reportObservation),
+    '## Scoring opportunities and route requirements',...opportunities.map(o=>o.report)];
   for (const [id,title] of sections) draft.push('## '+title,byId(id).value.trim() || 'Open for student discussion.');
-  draft.push('Basis for REQ-1: '+observations.map(o=>o.id).join(', ')+'.',
+  draft.push('Evidence for capability review: '+[...observations,...opportunities].map(o=>o.id).join(', ')+'.',
     'Before technical design, record the team decision, then give the selected capability a measurable acceptance check.');
   const url=URL.createObjectURL(new Blob([draft.join('\n\n')+'\n'],{type:'text/markdown;charset=utf-8'}));
   const link=document.createElement('a');

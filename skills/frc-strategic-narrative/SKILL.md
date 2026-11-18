@@ -10,6 +10,8 @@ When a project already has a match story, follow the [design continuation proced
 
 ## Begin with student observations
 
+Review the release-day rules model before pre-sim. Use the saved scoring-window IDs to connect piece supply, required cadence, route exposure and retained capture function to the proposed role. State why a candidate misses the required rate or what must be measured before ruling it out.
+
 For a fresh kickoff, first open the [kickoff field lab](../../docs/kickoff-field-lab.md). If students already explored the field, read their downloaded narrative and observations. Ask which size or approach they tried, what changed, and how that changes their preferred alliance role. Carry the observation IDs, alternative and open test into the narrative. After students choose, link their decision to a measurable capability in the [technical contract](../../templates/capability-contract.md).
 
 ## Advice and process guidance
