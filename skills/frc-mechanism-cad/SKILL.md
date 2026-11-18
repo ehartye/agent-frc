@@ -36,6 +36,12 @@ Read [native CAD verification lessons](../../docs/native-cad-feedback.md) before
 
 Use `npm run native:witness -- receipt.json expected-manifest.json` for the bounded native-evidence contract. Independently prepare the expected manifest before the native run, including source pins, exact witness states/pairs/phase and method/tolerance policy; phase-unregistered rotating geometry, failed Booleans and incomplete receipts remain unknown. This is receipt checking, not native CAD execution. At every meaningful tool failure or result, send source-bound friction and a counterexample to the plugin feedback loop instead of postponing harvest until cleanup.
 
+## Source identity and proxy-contact boundaries
+
+For nested native assemblies, use [occurrence identity checking](../../docs/native-identity.md) before reusing body/source mappings. Capture actual ancestry, child overrides and the complete expected physical inventory, including hidden bodies. Never infer identity by display name alone.
+
+For new proxy-contact evidence, use [native witness version 2](../../docs/native-cad-feedback.md). Declare both operand representations and independently checked installed-transform registration. Outer-envelope overlap and unregistered supplier-source orientation remain unknown for installed material contact. Preserve observed volumes and failed poses; do not omit unsupported contact from a physics model or downgrade the receipt schema to obtain clearance.
+
 ## Operating-space iteration
 
 Use [define, check and iterate the operating space](../../docs/operating-space.md) when the student needs to set functional ranges, assess tolerances or recheck a changed design. Reuse the existing narrative/artifact; maintain the linked worksheet as a sidecar, classify physical versus study/model limits, and invalidate affected evidence after changes. Keep consequential choices with the student.
