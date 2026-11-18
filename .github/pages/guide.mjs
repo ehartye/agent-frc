@@ -38,7 +38,7 @@ export const stages = [
   {
     id: 'verify', name: 'Test and revise', question: 'Which decision does the evidence support?',
     objective: 'Test the assumption with the greatest consequence for the design. Record the exact candidate, inputs, observed result and limitations.',
-    activity: 'Check whether the robot and its carried piece can reach each scoring observation. Follow an overlapping swept bound into the native geometry, then decide whether the route or mechanism needs to change.',
+    activity: 'Read the starting field inventory and follow a piece from supply to release. Check each route against the objects present at that time. Inspect a collision in the native geometry before changing the route or mechanism.',
     handoff: 'A result tied to the tested revision, the team’s next decision and any remaining physical verification.',
     skills: ['frc-setup','frc-troubleshoot','frc-java','frc-mechanism-cad'], docs: [['Review the route to a scoring event','docs/field-route-evidence.md'],['Replay a saved native study','docs/native-study-replay.md'],['Recorded release height','docs/recorded-release-height.md'],['Simulation selection','docs/simulator-selection.md'],['Resume a design investigation','docs/strategy-first-continuation.md']]
   }

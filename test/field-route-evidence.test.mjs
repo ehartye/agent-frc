@@ -9,7 +9,7 @@ import { reviewFieldRoute } from '../scripts/field-route-evidence.mjs';
 async function run(t,change=()=>{}) {
   const dir=await mkdtemp(path.join(os.tmpdir(),'route-check-'));
   t.after(()=>rm(dir,{recursive:true,force:true}));
-  const {scenario,detector,sweep,bound}=await example(dir);
+  const {scenario,detector,sweep,bound,inventory}=await example(dir);
   let s=JSON.parse(await readFile(path.join(dir,scenario.file)));
   let d=JSON.parse(await readFile(path.join(dir,detector.file)));
   const save=(name,value)=>writePinned(dir,name,value);
@@ -19,7 +19,7 @@ async function run(t,change=()=>{}) {
   const routeRows=[];
   for (const [i,ref] of refs.entries()) routeRows.push(await save('pair-'+i+'.json',{...ref,scenarioSha256:expected.sha256,
     sourceEvidence:await save('numeric-'+i+'.json',{basis:'synthetic',ref})}));
-  const req={scenario:expected,detector:await save('detector.json',{...d,scenarioSha256:expected.sha256}),
+  const req={inventory,scenario:expected,detector:await save('detector.json',{...d,scenarioSha256:expected.sha256}),
     route:await save('sweep.json',{...sweep,scenarioSha256:expected.sha256,refinements:routeRows})};
   await save('request.json',req);
   return reviewFieldRoute(path.join(dir,'request.json'));

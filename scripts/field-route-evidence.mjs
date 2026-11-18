@@ -3,6 +3,7 @@ import { createReadStream } from 'node:fs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { loadInventory, inventoryIssues } from './route-inventory.mjs';
 
 const finite = Number.isFinite;
 const named = v => typeof v === 'string' && v.trim().length > 0;
@@ -46,11 +47,12 @@ function materialContact(r) {
 function evaluateSlice(scenario, slice, route, evidence, until) {
   const issues = [];
   const moving = [...scenario.robotBodies, ...slice.carried];
-  if (!covers(route?.moving, moving) || !covers(route?.obstacles, scenario.obstacles)
+  const obstacles=slice.obstacles??scenario.obstacles;
+  if (!covers(route?.moving, moving) || !covers(route?.obstacles, obstacles)
       || route.method !== 'continuous-swept-enclosures') {
     return ['Missing continuous bounds or mismatched body inventory.'];
   }
-  for (const a of moving) for (const b of scenario.obstacles) {
+  for (const a of moving) for (const b of obstacles) {
     const matches = evidence.filter(r => r.fromS === slice.fromS && r.toS === slice.toS
       && r.moving === a && r.obstacle === b);
     if (matches.length>1) {issues.push('Conflicting refinements: '+a+' / '+b);continue;}
@@ -73,10 +75,10 @@ export async function reviewFieldRoute(file) {
   const [s,route,detector]=await Promise.all([req.scenario,req.route,req.detector].map(ref=>pinned(base,ref,true)));
   requireInput(s.schema==='field-route/scenario@1' && route.schema==='field-route/sweep@1'
     && detector.schema==='field-route/events@1','Unrecognized evidence contract.');
-  requireInput(ids(s.robotBodies) && ids(s.obstacles) && ids(s.pieces) && named(s.clock)
+  requireInput(ids(s.robotBodies) && (ids(s.obstacles) || (Array.isArray(s.obstacles) && s.obstacles.length===0)) && ids(s.pieces) && named(s.clock)
     && finite(s.startS) && finite(s.marginM) && s.marginM>=0,'Invalid scenario inventory, clock or margin.');
-  requireInput(new Set([...s.robotBodies,...s.pieces,...s.obstacles]).size === s.robotBodies.length+s.pieces.length+s.obstacles.length,
-    'Body IDs must be unique across robot, pieces and obstacles.');
+  requireInput(s.robotBodies.every(id=>!s.pieces.includes(id) && !s.obstacles.includes(id)),
+    'Robot body IDs must be distinct from pieces and obstacles.');
   requireInput(Array.isArray(s.intervals) && Array.isArray(route.intervals) && Array.isArray(detector.events),'Missing evidence arrays.');
   const slices=[...s.intervals].sort((a,b)=>a.fromS-b.fromS);
   for (const p of s.contactResponses ?? []) {
@@ -90,11 +92,16 @@ export async function reviewFieldRoute(file) {
       && new Set(row.carried).size===row.carried.length && row.carried.every(id=>s.pieces.includes(id)),
       'Invalid or overlapping expected interval.');
     previous=row.toS;
+    const obstacles=row.obstacles??s.obstacles;
+    requireInput(Array.isArray(obstacles) && new Set(obstacles).size===obstacles.length
+      && obstacles.every(id=>s.obstacles.includes(id) && !row.carried.includes(id)),
+      'An interval needs distinct declared obstacles and carried pieces.');
   }
   const missing=[];
   for (const key of ['field','robot','transform','trajectory']) {
     if (s.sources?.[key]) await pinned(base,s.sources[key]); else missing.push(key);
   }
+  const inventory=s.sources?.field ? await loadInventory(req.inventory,s,(ref,json=true)=>pinned(base,ref,json)) : null;
   for (const journal of [route,detector]) {
     requireInput(journal.scenarioSha256===req.scenario.sha256 && journal.clock===s.clock,'Scenario or clock mismatch.');
     await pinned(base,journal.sourceEvidence);
@@ -106,8 +113,8 @@ export async function reviewFieldRoute(file) {
     const r=await pinned(base,ref,true);
     requireInput(r.scenarioSha256===req.scenario.sha256 && r.clock===s.clock && named(r.backend)
       && named(r.moving) && named(r.obstacle) && interval(r),'Unbound refinement.');
-    requireInput(slices.some(i=>i.fromS===r.fromS && i.toS===r.toS && [...s.robotBodies,...i.carried].includes(r.moving))
-      && s.obstacles.includes(r.obstacle),'Refinement is outside its expected interval or inventory.');
+    requireInput(slices.some(i=>i.fromS===r.fromS && i.toS===r.toS && [...s.robotBodies,...i.carried].includes(r.moving)
+      && (i.obstacles??s.obstacles).includes(r.obstacle)),'Refinement is outside its expected interval or inventory.');
     await pinned(base,r.sourceEvidence);
     if(r.method==='coupled-contact-response') await pinned(base,r.dynamicsEvidence);
     evidence.push({...r,source:ref.sha256});
@@ -122,12 +129,17 @@ export async function reviewFieldRoute(file) {
     seen.add(event.id);
     let covered=s.startS;
     const gaps=[];
+    const inventoryGaps=[];
+    if(inventory?.scope.kind==='whole-field' && !inventory.initial.has(event.piece))
+      inventoryGaps.push({fromS:s.startS,toS:event.timeS,reason:'Detector piece absent from source inventory: '+event.piece});
     for (const slice of slices) {
       if (slice.fromS>=event.timeS) break;
       if (slice.fromS>covered) gaps.push({fromS:covered,toS:slice.fromS,reason:'Unexamined time.'});
       const matches=route.intervals.filter(r=>r.fromS===slice.fromS && r.toS===slice.toS);
       const until=Math.min(event.timeS,slice.toS);
       const issues=evaluateSlice(s,slice,matches.length===1?matches[0]:null,evidence,until);
+      for(const reason of inventoryIssues(inventory,s,slice,matches.length===1?matches[0]:null,until))
+        inventoryGaps.push({fromS:slice.fromS,toS:until,reason});
       for(const reason of issues) gaps.push({fromS:slice.fromS,toS:until,reason});
       covered=until;
     }
@@ -135,10 +147,13 @@ export async function reviewFieldRoute(file) {
     // An exact penetration is still a witness when an adjacent sweep is incomplete.
     // Include the event instant, which may also be the start of the next interval.
     const contacts=verifiedContacts.filter(c=>c.timeS<=event.timeS);
-    const routeStatus=missing.length?'pending':contacts.length?'infeasible':gaps.length?'pending':'supported';
-    return {detectorEvent:event, routeStatus, gaps, contacts};
+    const declaredRouteStatus=missing.length?'pending':contacts.length?'infeasible':gaps.length?'pending':'supported';
+    const routeStatus=declaredRouteStatus==='supported' && (!inventory || inventoryGaps.length)?'pending':declaredRouteStatus;
+    const wholeFieldStatus=routeStatus==='supported' && inventory?.scope.kind!=='whole-field'?'pending':routeStatus;
+    return {detectorEvent:event, routeStatus, wholeFieldStatus, declaredRouteStatus, gaps, inventoryGaps, contacts};
   });
-  return {schema:'field-route/result@1',scenarioSha256:req.scenario.sha256,routeSha256:req.route.sha256,
+  return {schema:'field-route/result@2',scenarioSha256:req.scenario.sha256,routeSha256:req.route.sha256,
+    inventorySha256:req.inventory?.sha256??null,inventoryScope:inventory?.scope??null,
     detectorSha256:req.detector.sha256,missingRegistration:missing,events,
     scope:'Supplied route and recorded detector events. Rules, actual field scoring and physical qualification are independent.'};
 }

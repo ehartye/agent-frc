@@ -7,6 +7,8 @@ description: "Use when turning project-supplied game rules into a field rehearsa
 
 Before crediting a simulated scoring event, [review the route to that observation](../../docs/field-route-evidence.md). Bind the detector and continuous motion evidence to the same project geometry, transform, trajectory, piece and clock. Preserve the observed detector result when the route is unresolved or infeasible.
 
+Compare starting occupancy with independently registered field objects before accepting a route. Track the same identity from stock through placement, custody and release. Record missing source objects and distinguish a bounded clearance study from a whole-field claim.
+
 1. Read the supplied release documents. Identify their edition and the decision date. Follow the [rules decomposition procedure](../../docs/project-rules-model.md) to extract each governing provision with its locator, interpretation and omissions into the team's project.
 2. Build the [field lab](../../docs/kickoff-field-lab.md) from that model. Have students move a plain robot through a complete scoring cycle. Compare accessible pieces, dwell and transit time, throughput, competing routes and recovery.
 3. Draft two viable match stories and state what evidence would favor each. Record the owner's selection or leave it open. Use the [strategy brief](../../docs/game-to-robot-strategy.md) to translate the chosen story into measurable requirements.
