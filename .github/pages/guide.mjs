@@ -33,7 +33,7 @@ export const stages = [
     objective: 'Compare a small set of mechanism and control alternatives. Keep geometry, sensor frames, actuator behavior and mode transitions together as the design changes.',
     activity: 'Carry a selected blockout into CAD. Trace the optical path through the seated piece. Move it toward the exit and check whether the last port clears while the piece still rests on the mechanism.',
     handoff: 'A versioned CAD and control candidate, a named fallback, and testable subsystem interfaces.',
-    skills: ['frc-previsualization','frc-mechanism-cad','frc-java','frc-vision','frc-modes','frc-swerve'], docs: [['Check sensor placement and release','docs/sensor-observability.md'],['Editable design artifacts','docs/design-artifact.md'],['Subsystem contracts','docs/subsystem-contracts.md'],['Swerve Fusion sample','examples/swerve/README.md']]
+    skills: ['frc-previsualization','frc-mechanism-cad','frc-java','frc-vision','frc-modes','frc-swerve'], docs: [['Check sensor placement and release','docs/sensor-observability.md'],['Reconcile the build list and combined weight','docs/assembly-accounting.md'],['Editable design artifacts','docs/design-artifact.md'],['Subsystem contracts','docs/subsystem-contracts.md'],['Swerve Fusion sample','examples/swerve/README.md']]
   },
   {
     id: 'verify', name: 'Test and revise', question: 'Which decision does the evidence support?',

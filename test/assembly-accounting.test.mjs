@@ -1,0 +1,88 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtemp,readFile,writeFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {reviewAssembly} from '../scripts/assembly-accounting.mjs';
+
+const sample=fileURLToPath(new URL('../examples/assembly-accounting/mapping.json',import.meta.url));
+async function run(t,edit){
+  const dir=await mkdtemp(path.join(tmpdir(),'assembly-account-'));
+  t.after(()=>rm(dir,{recursive:true,force:true}));
+  const request=JSON.parse(await readFile(sample,'utf8'));
+  request.sources[0].file=path.join(path.dirname(sample),'bench.json');
+  edit(request);
+  const file=path.join(dir,'mapping.json');
+  await writeFile(file,JSON.stringify(request));
+  return reviewAssembly(file);
+}
+
+test('counts installed units, included subparts and service space separately across poses',async t=>{
+  const r=await run(t,x=>{
+    x.exports.push({...x.exports[0],id:'reopened'});
+    x.assignments.push(...x.assignments.map(row=>({...row,export:'reopened'})));
+  });
+  assert.equal(r.coverage.covered,12);
+  assert.equal(r.coverage.roles.service,2);
+  assert.equal(r.coverage.roles.included,2);
+  assert.equal(r.coverage.bindings.drive.length,4);
+  assert.equal(r.buy[0].requiredUnits,2);
+  assert.equal(r.buy[0].packsToCoverKnownShortfall,1);
+  assert.equal(r.buy[1].shortfall,null);
+  assert.equal(r.orderQuantitiesKnown,false);
+  assert.deepEqual(r.undecided,['retainer']);
+  assert.ok(Math.abs(r.mass.configurationMarginKg[0]+.05)<1e-12);
+});
+test('preserves missing, duplicate and orphan included assignments, partial mass and unmodeled requirements',async t=>{
+  const r=await run(t,x=>{
+    x.assignments=x.assignments.filter(row=>row.occurrence!=='motor');
+    x.assignments.push({...x.assignments[0]});
+    x.instances.push({id:'clip',presence:'unmodeled',disposition:'make'});
+    x.mass.baseline=null;
+  });
+  assert.equal(r.coverage.missing.length,1);
+  assert.equal(r.coverage.duplicates.length,1);
+  assert.equal(r.coverage.orphanIncluded.length,1);
+  assert.equal(r.inventoryComplete,false);
+  assert.ok(r.make.includes('clip'));
+  assert.deepEqual(r.mass.knownInstanceSubtotalKg,[0,0]);
+  assert.equal(r.mass.configurationMarginKg,null);
+});
+test('keeps a partial or unaudited mass margin open while reporting represented quantities',async t=>{
+  for(const edit of [x=>{x.scope='partial';},x=>x.mass.omissions.push('fasteners')]){
+    const r=await run(t,edit);
+    assert.ok(r.mass.representedMarginKg[0]<0);
+    assert.equal(r.mass.configurationMarginKg,null);
+    assert.deepEqual(r.mass.knownInstanceSubtotalKg,[.14,.14]);
+  }
+  const uncertain=await run(t,x=>{x.changes[1].delta=null;});
+  assert.equal(uncertain.mass.representedMarginKg,null);
+  assert.deepEqual(uncertain.mass.missingDeltas,['retainer']);
+});
+test('applies a replacement once and recalculates the make and buy list for the resulting configuration',async t=>{
+  const r=await run(t,x=>{
+    x.selected=['shield'];
+    x.changes[0].remove=['left'];
+    x.instances.find(p=>p.id==='shield').disposition='buy';
+    x.instances.find(p=>p.id==='shield').article='drive';
+    Object.assign(x.articles[1],{sku:'sample/drive',onHand:2,unitsPerPack:4});
+  });
+  assert.equal(r.orderQuantitiesKnown,true);
+  assert.deepEqual(r.buy[0].instances,['right']);
+  assert.deepEqual(r.buy[1].instances,['drive','shield']);
+  assert.equal(r.buy[1].packsToCoverKnownShortfall,0);
+  assert.ok(Math.abs(r.mass.configurationMarginKg[0]-.04)<1e-12);
+});
+test('rejects conflicting alternatives, double removal credit, missing identities and altered evidence',async t=>{
+  const cases=[
+    [x=>x.changes.forEach(c=>{c.exclusiveGroup='guard';}),/alternatives/],
+    [x=>x.changes.forEach(c=>{c.remove=['guard'];}),/twice-credited/],
+    [x=>{x.exports[0].variant={group:'skin',choice:'light'};x.exports.push({...x.exports[0],id:'other',variant:{group:'skin',choice:'dark'}});},/variants/],
+    [x=>{x.assignments[0].instance='absent';},/physical instance/],
+    [x=>{x.mass.baseline.rangeKg=[1,2];},/differs from pinned/],
+    [x=>{x.sources[0].sha256='0'.repeat(64);},/digest mismatch/],
+    [x=>{x.changes[0].configuration='other';},/baseline mismatch/]
+  ];
+  for(const [edit,expected] of cases) await assert.rejects(()=>run(t,edit),expected);
+});

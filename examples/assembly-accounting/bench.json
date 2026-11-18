@@ -1,0 +1,22 @@
+{
+  "fixture": "Invented tabletop carriage",
+  "poses": {
+    "parked": [
+      "guard",
+      "bearing-a",
+      "bearing-b",
+      "motor",
+      "shaft-tip",
+      "tool-space"
+    ]
+  },
+  "mass": {
+    "base": [
+      3.6,
+      3.8
+    ],
+    "shield": 0.16,
+    "retainer": 0.09,
+    "guard": 0.14
+  }
+}

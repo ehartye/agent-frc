@@ -4,6 +4,8 @@ description: "Use when planning an FRC intake, launcher, mechanism, Fusion CAD m
 ---
 # Mechanism and CAD evidence plan
 
+Before selecting parts or combining design changes, use the [assembly accounting check](../../docs/assembly-accounting.md) to reconcile installed instances, supplied articles and inspection mass.
+
 When a saved assembly replaces a temporary CAD document, use the [native study replay procedure](../../docs/native-study-replay.md) to verify the destination, assembly revision and moving geometry before repeating a clearance query. Save the binding and pose inputs in the design project.
 
 When resuming an existing design, follow the [design continuation procedure](../../docs/strategy-first-continuation.md) before proposing the next CAD edit or mechanism experiment.

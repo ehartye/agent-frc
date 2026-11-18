@@ -31,7 +31,7 @@ export function screenHeight(sample,target) {
     conditionalOnDatum:target.registration === 'assumed'};
 }
 
-async function readPinned(base,ref) {
+export async function readPinned(base,ref) {
   if (!text(ref?.file) || !/^[a-f0-9]{64}$/.test(ref.sha256)) throw Error('Expected a file and SHA-256 pin.');
   const bytes = await readFile(path.resolve(base,ref.file));
   if (createHash('sha256').update(bytes).digest('hex') !== ref.sha256) throw Error('Source digest mismatch for ' + ref.file);

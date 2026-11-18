@@ -1,0 +1,174 @@
+{
+  "schema": "agent-frc/assembly-accounting@1",
+  "revision": "eae45eaed010f5080c2a0533603c034609c006f67f484f2b62dcf1af6f62cbaa",
+  "configuration": "student bench",
+  "scope": "complete",
+  "sources": [
+    {
+      "id": "bench",
+      "file": "bench.json",
+      "sha256": "eae45eaed010f5080c2a0533603c034609c006f67f484f2b62dcf1af6f62cbaa"
+    }
+  ],
+  "exports": [
+    {
+      "id": "parked",
+      "source": "bench",
+      "pointer": "/poses/parked"
+    }
+  ],
+  "instances": [
+    {
+      "id": "guard",
+      "presence": "modeled",
+      "disposition": "make",
+      "mass": {
+        "source": "bench",
+        "pointer": "/mass/guard",
+        "basis": "estimated",
+        "rangeKg": [
+          0.14,
+          0.14
+        ]
+      }
+    },
+    {
+      "id": "left",
+      "presence": "modeled",
+      "disposition": "buy",
+      "article": "bearing"
+    },
+    {
+      "id": "right",
+      "presence": "modeled",
+      "disposition": "buy",
+      "article": "bearing"
+    },
+    {
+      "id": "drive",
+      "presence": "modeled",
+      "disposition": "buy",
+      "article": "drive"
+    },
+    {
+      "id": "shield",
+      "presence": "candidate",
+      "disposition": "make"
+    },
+    {
+      "id": "retainer",
+      "presence": "candidate",
+      "disposition": "undecided"
+    }
+  ],
+  "articles": [
+    {
+      "id": "bearing",
+      "sku": "sample/bearing",
+      "unitsPerPack": 2,
+      "onHand": 0
+    },
+    {
+      "id": "drive",
+      "sku": null,
+      "unitsPerPack": null,
+      "onHand": null
+    }
+  ],
+  "assignments": [
+    {
+      "export": "parked",
+      "occurrence": "guard",
+      "role": "installed",
+      "instance": "guard"
+    },
+    {
+      "export": "parked",
+      "occurrence": "bearing-a",
+      "role": "installed",
+      "instance": "left"
+    },
+    {
+      "export": "parked",
+      "occurrence": "bearing-b",
+      "role": "installed",
+      "instance": "right"
+    },
+    {
+      "export": "parked",
+      "occurrence": "motor",
+      "role": "installed",
+      "instance": "drive"
+    },
+    {
+      "export": "parked",
+      "occurrence": "shaft-tip",
+      "role": "included",
+      "instance": "drive"
+    },
+    {
+      "export": "parked",
+      "occurrence": "tool-space",
+      "role": "service"
+    }
+  ],
+  "changes": [
+    {
+      "id": "shield",
+      "configuration": "student bench",
+      "revision": "eae45eaed010f5080c2a0533603c034609c006f67f484f2b62dcf1af6f62cbaa",
+      "remove": [],
+      "add": [
+        "shield"
+      ],
+      "delta": {
+        "source": "bench",
+        "pointer": "/mass/shield",
+        "basis": "estimated",
+        "rangeKg": [
+          0.16,
+          0.16
+        ]
+      }
+    },
+    {
+      "id": "retainer",
+      "configuration": "student bench",
+      "revision": "eae45eaed010f5080c2a0533603c034609c006f67f484f2b62dcf1af6f62cbaa",
+      "remove": [],
+      "add": [
+        "retainer"
+      ],
+      "delta": {
+        "source": "bench",
+        "pointer": "/mass/retainer",
+        "basis": "estimated",
+        "rangeKg": [
+          0.09,
+          0.09
+        ]
+      }
+    }
+  ],
+  "selected": [
+    "shield",
+    "retainer"
+  ],
+  "omissions": [],
+  "mass": {
+    "unit": "kg",
+    "configuration": "student bench",
+    "revision": "eae45eaed010f5080c2a0533603c034609c006f67f484f2b62dcf1af6f62cbaa",
+    "baseline": {
+      "source": "bench",
+      "pointer": "/mass/base",
+      "basis": "estimated",
+      "rangeKg": [
+        3.6,
+        3.8
+      ]
+    },
+    "limitKg": 4,
+    "omissions": []
+  }
+}
