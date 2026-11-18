@@ -9,3 +9,35 @@ When someone asks what to try next on an existing robot design, recover the deci
 5. **Recommend one next experiment.** Tie it to the selected cycle step. State the starting configuration, what varies, what to observe, and which decision the result would inform. Give a source locator for the narrative, decision, current candidate, rule and prior result, using a path and heading, revision or rule number that another reader can open.
 
 For conflicting records, say which claim each record supports and how its date, revision or authority affects its use. If an essential source is missing, name the gap and keep the recommendation conditional. For a missing rule, leave legality unresolved until the applicable text is available. If a consequential choice is still open after reading the records, explain what work can proceed under either choice and ask the single question that changes the next experiment.
+
+## When the decision is missing from this checkout
+
+Start with the current project and the locators supplied by the team. If a selection is missing or two records materially disagree, look for a relevant local branch or registered worktree of this repository. A plain folder, or a project without Git available, still has its files and any records the owner supplied. Describe what is missing and use the shared-work and priority question above.
+
+In PowerShell, start in the project directory. First inspect the names and paths. Limit the search to plausible review branches, decision files and their directly related records.
+
+```powershell
+$project = (Get-Location).Path
+git -C "$project" rev-parse --show-toplevel
+git -C "$project" worktree list --porcelain
+git -C "$project" for-each-ref --count=20 --format="%(refname) %(objectname)" refs/heads/
+```
+
+In a large repository narrow the final argument to a relevant local ref prefix. Report the refs you actually checked if a decision remains missing. To read a committed choice on a branch with no mounted worktree, use its full commit ID from the listing. Substitute the selected commit, the relevant folders and the exact path discovered there.
+
+```powershell
+$revision = '<commit ID>'
+git -C "$project" ls-tree -r --name-only "$revision" -- notes strategy design | Select-Object -First 30
+$record = 'notes/owner review.md'
+git -C "$project" show "${revision}:$record"
+```
+
+For a plausible registered worktree, use the path from the worktree listing. Inspect the current file itself to recover an uncommitted correction. Paths below are relative to that worktree's root.
+
+```powershell
+$other = '<registered worktree path>'
+git --no-optional-locks -C "$other" status --short --untracked-files=all -- notes strategy design
+Get-Content -LiteralPath (Join-Path "$other" "$record")
+```
+
+Record a committed decision as revision, relative path and heading. For a changed file cite the worktree, relative path, heading and modified or untracked status. Follow an explicit owner correction when choosing the experiment. A newer edit or a named branch alone establishes no priority. When proposals compete without a decision, cite both, prepare the work they share and ask which direction comes first. All discovery is read-only. Keep the current checkout, index and refs intact, use local objects and limit reads to this repository and its registered worktrees.

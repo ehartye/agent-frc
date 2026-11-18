@@ -26,3 +26,5 @@ A reader may propose a different discriminating test if it honors the selected r
 Prepare a separate copy of the project that omits only `notes/05-review.md`. Keep the reader blind to the original run and expected answer. Session 03 now leaves one consequential choice unresolved. The reader can locate the cycle, candidate, exchange-plane limit and baseline, then prepare a shared plane datum and orientation observation for either route. The approach stops depend on which pass to try first. The answer should ask which alignment the owner wants first, cite the unresolved decision, and avoid inventing an order.
 
 For a rule-source check, instead omit only `rules/yard-manual.md` in another copy. The owner's straight-pass decision still stands. A good answer identifies the missing rule and bounds conclusions about legality pending retrieval of the applicable clause.
+
+The [cross-checkout exercise](checkout-grader.md) tests a missing decision on a local branch, an uncommitted owner correction, conflicting proposals and a plain folder. Its generator creates and checks disposable projects.
