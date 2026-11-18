@@ -86,3 +86,21 @@ test('rejects conflicting alternatives, double removal credit, missing identitie
   ];
   for(const [edit,expected] of cases) await assert.rejects(()=>run(t,edit),expected);
 });
+
+test('distinguishes a pinned limit from a planning allowance and an unknown limit', async t => {
+  const pinned = await run(t, () => {});
+  assert.equal(pinned.mass.limitBasis, 'source-pinned');
+  assert.deepEqual(pinned.mass.limitEvidence, {source: 'bench', pointer: '/mass/inspectionLimitKg'});
+  const legacy = await run(t, request => { delete request.mass.limitEvidence; });
+  assert.equal(legacy.mass.limitBasis, 'project-declared');
+  assert.deepEqual(legacy.mass.representedMarginKg, pinned.mass.representedMarginKg);
+  assert.equal(legacy.mass.configurationMarginKg, null);
+  const unknown = await run(t, request => {
+    delete request.mass.limitEvidence;
+    request.mass.limitKg = null;
+  });
+  assert.equal(unknown.mass.limitBasis, 'unknown');
+  assert.equal(unknown.mass.representedMarginKg, null);
+  await assert.rejects(run(t, request => { request.mass.limitKg += 0.3; }), /Inspection limit differs/);
+  await assert.rejects(run(t, request => { request.mass.limitEvidence.pointer = '/missing'; }), /Locator absent/);
+});

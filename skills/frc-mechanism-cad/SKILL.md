@@ -4,7 +4,7 @@ description: "Use when planning an FRC intake, launcher, mechanism, Fusion CAD m
 ---
 # Mechanism and CAD evidence plan
 
-Before selecting parts or combining design changes, use the [assembly accounting check](../../docs/assembly-accounting.md) to reconcile installed instances, supplied articles and inspection mass.
+Before selecting parts or combining design changes, use the [assembly accounting check](../../docs/assembly-accounting.md) to reconcile installed instances, supplied articles and inspection mass. Trace the comparison limit to the project’s selected rule or budget before relying on a final margin.
 
 When a saved assembly replaces a temporary CAD document, use the [native study replay procedure](../../docs/native-study-replay.md) to verify the destination, assembly revision and moving geometry before repeating a clearance query. Save the binding and pose inputs in the design project.
 

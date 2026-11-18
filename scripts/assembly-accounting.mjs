@@ -161,8 +161,9 @@ function massReport(request, instances, configured, selected, complete) {
   }
   requireValue(!range||range[0]>=0,'Credited removals exceed the baseline mass.');
   const scopeMargin=range&&m.limitKg!==null?[m.limitKg-range[1],m.limitKg-range[0]]:null;
-  const eligible=complete&&omissions.length===0;
-  return {unit:'kg',limitKg:m.limitKg,knownInstanceSubtotalKg:[knownLow,knownHigh],instanceMassBases:[...bases],
+  const limitBasis = m.limitKg === null ? 'unknown' : (m.limitEvidence ? 'source-pinned' : 'project-declared');
+  const eligible = complete && omissions.length === 0 && limitBasis === 'source-pinned';
+  return {unit:'kg',limitKg:m.limitKg,limitBasis,limitEvidence:m.limitEvidence ?? null,knownInstanceSubtotalKg:[knownLow,knownHigh],instanceMassBases:[...bases],
     unweighed,baseline:m.baseline,baselineBasis,changes:selected.map(c=>({id:c.id,delta:c.delta})),missingDeltas,
     omissions,representedRangeKg:range,representedMarginKg:scopeMargin,configurationMarginKg:eligible?scopeMargin:null};
 }
@@ -220,6 +221,11 @@ export async function reviewAssembly(file) {
       requireValue(snapshot.idField===undefined,'A keyed inventory already supplies its occurrence names.');
       snapshot.occurrences=Object.keys(inventory);
     }
+  }
+  if (request.mass?.limitEvidence != null) {
+    const limit = locate(request.mass.limitEvidence);
+    requireValue(Number.isFinite(limit) && limit === request.mass.limitKg,
+      'Inspection limit differs from the numeric kilogram value in the pinned source.');
   }
   const result=reconcileAssembly(request);
   for(const row of [...request.instances.map(part=>part.mass),request.mass.baseline,...result.mass.changes.map(change=>change.delta)]){
