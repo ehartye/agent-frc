@@ -29,3 +29,5 @@ Deliver a mode/trigger transition matrix with expected software observations. Fo
 - Trajectory reference limits are separate from corrected actuator commands.
 
 Exercise each transition offline using the project’s commands. Check scheduler ownership, cancellation, stale data, disable and re-enable against expected outputs.
+
+Before using a sensor to advance the mechanism, [check the mounted optical path and release evidence](../../docs/sensor-observability.md). Compare the seated and early-exit readings with the actual material and require an independent clearance observation for withdrawal.
