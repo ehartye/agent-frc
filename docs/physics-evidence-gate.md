@@ -30,6 +30,8 @@ A future acceptance path requires independently reviewed code and tests for the 
 
 ## Relationship to other checks
 
+The [contact convergence helper](contact-convergence.md) compares supplied refinement summaries and outcome definitions. It does not replay a registered model, authenticate simulation output or extend this gate's adapter coverage. Even `within-declared-bounds` leaves engineering acceptance blocked and calibration unassessed. Require contact geometry/search refinement as well as timestep checks before interpreting a contact-driven prediction; a release/contact outcome change is material evidence against that prediction.
+
 The subsystem contract linter checks structure, declared pin linkage and stale dependencies. The static aperture screen checks bounded geometry only. Neither is the physics gate. This gate's successful replay establishes only that a registered synthetic numerical calculation was performed reproducibly. The broader integration safety case still needs independent review of the exact merged candidate and separate qualified physical release.
 
 Domain coverage is effect-specific, not a simulator product name or a telemetry channel. Assigning a temperature field is not evidence of solving thermal behavior; executing 2D motion does not itself establish heat, center-of-mass load transfer or tipping coverage. Review the actual equations, input coupling, execution, calibration and acceptance evidence for each required effect.
