@@ -55,3 +55,7 @@ Use [safe project tidying](../../docs/project-tidying.md) when CAD tabs or audit
 Before using generated primitives for clearance, verify actual world bounds/registration and analytic volume with translated/axis/near-axis controls. Use the bounded placement-witness helper described in native-fusion-handoff.md; correct volume alone cannot establish correct placement, and matching witnesses do not establish clearance.
 
 For an authorized official local Fusion session, use the [guarded disposable recipe](../../examples/fusion-guarded/README.md): unique document match plus job marker, expected geometry/revision, durable intent, no uncertain replay, feature health and separate native/STEP reopen evidence. Do not generalize the executed sideplate test to a full robot or untested client crash recovery.
+
+## Portable export, articulation and viewer contracts
+
+Use the [native viewer contract guide](../../docs/native-viewer-contracts.md) for independent expected/observed JSON comparisons. The native:export and native:articulation commands require exact inventories, archive identity, explicit frames/units and finite witnesses. The viewer:controls command checks supplied post-engine observations and collision-only restoration policy; it never hooks real input. Expected input comes first for these three commands. Preserve synthetic, native-observed, interactive-observed and human-reported evidence boundaries as allowed by each contract; a match does not execute CAD, prove a reopen or qualify a viewer/robot.
