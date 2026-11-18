@@ -1,0 +1,23 @@
+{
+  "resources": {
+    "schema": "frc-resource-baseline/v1",
+    "season": 2026,
+    "teamNumber": null,
+    "teamStatus": "unknown",
+    "inventoryCoverage": "unknown",
+    "evidence": [],
+    "physicalInventory": [],
+    "kitExpectations": [],
+    "credits": [],
+    "budget": null,
+    "fabrication": [],
+    "schedule": null
+  },
+  "assumptions": {
+    "clearanceMarginMm": null,
+    "heightUncertaintyMm": null,
+    "fieldVariant": "unknown",
+    "kitInventoryId": null,
+    "candidateDimensions": {}
+  }
+}

@@ -91,5 +91,7 @@
       "file": "examples/java-2026-sim/src/main/resources/case-2026.properties",
       "sha256": "15aad0984ed990d63147c00426640bfcc454814ecad6bdb3c8281bedfebbe08c"
     }
-  ]
+  ],
+  "historicalSnapshot": true,
+  "supersededForCurrentStatusBy": "next-milestone-validation.json"
 }

@@ -1,0 +1,23 @@
+{
+ "schema":"frc-fuel-intake-experiment/v1",
+ "basis":"uncalibrated-original-fixed-planar-contact-experiment",
+ "massSelection":"manual-range-midpoint-not-measured",
+ "sphereInertia":"assumed-uniform-solid-sphere",
+ "normalLaw":"k*positive(overlap)*positive(1+d*overlapRate)",
+ "tangentLaw":"-mu*normalForce*tanh(slip/regularizationSpeed)",
+ "gravityMps2":9.80665,
+ "floor":{"stiffnessNpm":50000,"dissipationSpm":5,"mu":0.4},
+ "wall":{"stiffnessNpm":50000,"dissipationSpm":5,"mu":0.2},
+ "roller":{"stiffnessNpm":5000,"dissipationSpm":5,"mu":0.8},
+ "regularizationMps":0.01,
+ "initial":{"xM":-0.06,"zM":0.075,"vxMps":0.15,"vzMps":0,"sphereOmegaRadps":0,"rollerOmegaRadps":0},
+ "supply":{"openCircuitVolts":12,"resistanceOhm":0.02,"motor":"WPILib-2026.2.1-getNEO-1","neutral":"ideal-short-brake","regeneration":"unsupported-reject"},
+ "controller":{"periodSeconds":0.02,"acquireDuty":-0.12,"reverseDuty":0.12,"nipBeamXM":0.072,"exitBeamXM":-0.10},
+ "holdObservation":{"startSeconds":0.72,"endSeconds":1.30,"xAbsMaxM":0.005,"vxAbsMaxMps":0.002,"rollerNormalMinN":5},
+ "integration":{"stepSeconds":0.0001,"refinementStepSeconds":0.00005,"maxOverlapM":0.008},
+ "perturbationEnvelope":"none-tested; one declared incoming-state trajectory only",
+ "releaseStatus":"unsupported-regeneration; expected rejection is not successful release",
+ "capture":null,
+ "backstopRetentionEstablished":false,
+ "engineeringAcceptance":"blocked"
+}

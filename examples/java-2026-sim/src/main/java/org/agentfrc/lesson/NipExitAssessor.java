@@ -1,0 +1,9 @@
+package org.agentfrc.lesson;
+/** Plant-truth assessor only, never controller input. Requires prior nip contact and explicit unload arming. */
+public final class NipExitAssessor {
+ private final double z,r;private double lastTime=Double.NEGATIVE_INFINITY,candidate=Double.NaN,verified=Double.NaN;private boolean witnessed,armed,recontact;
+ public NipExitAssessor(double rollerZ,double combinedRadius){if(!Double.isFinite(rollerZ)||!Double.isFinite(combinedRadius)||combinedRadius<=0)throw new IllegalArgumentException("Assessor geometry");z=rollerZ;r=combinedRadius;}
+ public void arm(){if(!witnessed)throw new IllegalStateException("Prior roller contact required");if(armed)throw new IllegalStateException("One unload assessment only");armed=true;candidate=verified=Double.NaN;recontact=false;}
+ public void observe(double time,double x,double centerZ,double vx,double vz){if(!Double.isFinite(time)||time<0||time<=lastTime||!Double.isFinite(x)||!Double.isFinite(centerZ)||!Double.isFinite(vx)||!Double.isFinite(vz))throw new IllegalArgumentException("Finite strictly increasing assessor time/state required");double distance=Math.hypot(x,centerZ-z),gap=distance-r,separation=(x*vx+(centerZ-z)*vz)/distance;if(!Double.isFinite(gap)||!Double.isFinite(separation))throw new IllegalArgumentException("Assessor domain");lastTime=time;if(gap<=0)witnessed=true;if(!armed)return;if(Double.isFinite(candidate)&&gap<=0){recontact=true;candidate=Double.NaN;verified=Double.NaN;}if(!Double.isFinite(candidate)&&x<0&&gap>=.005&&separation>=.01)candidate=time;if(Double.isFinite(candidate)&&time-candidate>=.2&&!Double.isFinite(verified))verified=time;}
+ public boolean verified(){return armed&&Double.isFinite(verified)&&!recontact;}public boolean recontact(){return recontact;}public double candidateTime(){return candidate;}public double verificationTime(){return verified;}
+}

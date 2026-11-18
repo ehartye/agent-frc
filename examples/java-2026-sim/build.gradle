@@ -40,3 +40,71 @@ tasks.register('dependencyManifest') {
         out.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson([scope: 'resolved lesson runtime/test/native artifacts only; not a full license audit', artifacts: rows.sort { a,b -> (a.scope+a.coordinate+(a.classifier?:'')) <=> (b.scope+b.coordinate+(b.classifier?:'')) }])) + '\n'
     }
 }
+
+// Explicit opt-in task: missing CAD/extractor inputs fail; ordinary tests do not imply this ran.
+test { exclude '**/CadIoTest.class' }
+tasks.register('cadIoTest', Test) {
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    include '**/CadIoTest.class'
+}
+wpi.java.configureTestTasks(tasks.named('cadIoTest').get())
+
+// Source-backed bare component; still not complete mechanism or engineering acceptance.
+test { exclude '**/WheelIoTest.class' }
+tasks.register('wheelIoTest', Test) {
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    include '**/WheelIoTest.class'
+}
+wpi.java.configureTestTasks(tasks.named('wheelIoTest').get())
+
+// Opt-in coupled drive/native-load tests; missing inputs fail, never silently skip.
+test { exclude '**/CoupledDriveTest.class' }
+tasks.register('coupledDriveTest', Test) {
+ testClassesDirs = sourceSets.test.output.classesDirs
+ classpath = sourceSets.test.runtimeClasspath
+ useJUnitPlatform()
+ include '**/CoupledDriveTest.class'
+}
+wpi.java.configureTestTasks(tasks.named('coupledDriveTest').get())
+
+test { exclude '**/TractionTest.class' }
+tasks.register('tractionTest', Test) {
+ testClassesDirs = sourceSets.test.output.classesDirs
+ classpath = sourceSets.test.runtimeClasspath
+ useJUnitPlatform()
+ include '**/TractionTest.class'
+}
+wpi.java.configureTestTasks(tasks.named('tractionTest').get())
+
+// Native season inputs required; ordinary unit tests do not imply this task ran.
+test { exclude '**/SeasonRollerTest.class' }
+tasks.register('seasonRollerTest', Test) { testClassesDirs = sourceSets.test.output.classesDirs; classpath = sourceSets.test.runtimeClasspath; useJUnitPlatform(); include '**/SeasonRollerTest.class' }
+wpi.java.configureTestTasks(tasks.named('seasonRollerTest').get())
+
+test { exclude '**/MovingSeasonTest.class' }
+tasks.register('movingSeasonTest', Test) { testClassesDirs = sourceSets.test.output.classesDirs; classpath = sourceSets.test.runtimeClasspath; useJUnitPlatform(); include '**/MovingSeasonTest.class' }
+wpi.java.configureTestTasks(tasks.named('movingSeasonTest').get())
+
+test { exclude '**/FuelPlaneTest.class' }
+tasks.register('fuelPlaneTest', Test) { testClassesDirs = sourceSets.test.output.classesDirs; classpath = sourceSets.test.runtimeClasspath; useJUnitPlatform(); include '**/FuelPlaneTest.class' }
+wpi.java.configureTestTasks(tasks.named('fuelPlaneTest').get())
+
+test { exclude '**/FuelIntakeTest.class' }
+tasks.register('fuelIntakeTest', Test) { testClassesDirs = sourceSets.test.output.classesDirs; classpath = sourceSets.test.runtimeClasspath; useJUnitPlatform(); include '**/FuelIntakeTest.class'; testLogging.showStandardStreams=true }
+wpi.java.configureTestTasks(tasks.named('fuelIntakeTest').get())
+
+test { exclude '**/PassiveUnloadTest.class' }
+tasks.register('passiveUnloadTest', Test) { testClassesDirs = sourceSets.test.output.classesDirs; classpath = sourceSets.test.runtimeClasspath; useJUnitPlatform(); include '**/PassiveUnloadTest.class'; testLogging.showStandardStreams=true }
+wpi.java.configureTestTasks(tasks.named('passiveUnloadTest').get())
+
+test { exclude '**/CoralContactTest.class' }
+tasks.register('coralContactTest', Test) { testClassesDirs = sourceSets.test.output.classesDirs; classpath = sourceSets.test.runtimeClasspath; useJUnitPlatform(); include '**/CoralContactTest.class'; testLogging.showStandardStreams=true }
+wpi.java.configureTestTasks(tasks.named('coralContactTest').get())
+
+test { exclude '**/NoteContactTest.class' }
+tasks.register('noteContactTest', Test) { testClassesDirs = sourceSets.test.output.classesDirs; classpath = sourceSets.test.runtimeClasspath; useJUnitPlatform(); include '**/NoteContactTest.class'; testLogging.showStandardStreams=true }
+wpi.java.configureTestTasks(tasks.named('noteContactTest').get())

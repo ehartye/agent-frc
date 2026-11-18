@@ -15,3 +15,7 @@ Sources: [pinned ElevatorSim](https://raw.githubusercontent.com/wpilibsuite/allw
 The autonomous deadline helper accepts caller-supplied elapsed AUTO time and stops mechanism demands at the selected case boundary. It is not a full autonomous route or FMS/Driver Station clock adapter.
 
 Read the [simulation interface audit](SIMULATION-BOUNDARIES.md): direct plant/kinematic feedback is not a physical sensor or vendor CAN encoder adapter. No vendor simulation API is implemented or tested.
+
+## 2026 inertia sensitivity
+
+`FlywheelSizingLab` and `FlywheelSizingTest` connect the assumed 0.6 kg, 30 mm-radius roller to an ideal solid-cylinder inertia. A 60 mm assumed radius gives four times the inertia at fixed mass; the plant compares early acceleration and four-second unloaded speed at 6 V. Native sideplates do not measure roller mass, radius, contact or ballistics. No CAN/vendor simulation adapter is present. The initial two-second convergence assertion was too strict (about 1 rpm residual); the explicit four-second horizon is tested instead. This is a model exercise, not physical validation.

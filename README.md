@@ -5,7 +5,7 @@ Version **0.7.0**, strategy and previsualization release. Ten FRC engineering sk
 Start with the [end-to-end case workflow](case-studies/README.md): [2024 CRESCENDO](case-studies/2024/README.md), [2025 REEFSCAPE](case-studies/2025/README.md), or [2026 REBUILT](case-studies/2026/README.md). Each compares three strategies and implements a deliberately bounded mechanism slice. Complete robot design remains future work.
 
 - [Java laboratory](examples/java-2026-sim/README.md): Java 17 / WPILib 2026.2.1, **42 JUnit tests plus one bounded demo passed**. [Case evidence](case-studies/validation.json) includes actual ideal-plant outputs.
-- [Fusion concept package](examples/fusion-case-concepts/README.md): three generated DXF/SVG sideplates and an original Python script. Native CAD execution is blocked by sign-in failure; no F3D/STEP or full CAD validation claimed.
+- [Fusion concept package](examples/fusion-case-concepts/README.md): three generated DXF/SVG sideplates and an original Python script. See the dated concept evidence and the guarded native recipe below for their separate execution status; neither establishes a complete robot or full CAD validation.
 - [Electrical review](docs/electrical-review.md) and [13 worksheets](worksheets/README.md) separate evidence, assumptions and physical checks.
 
 ## Use and validate
@@ -31,3 +31,7 @@ The [strategy-to-previsualization workflow](docs/design-artifact.md) adds conver
 ## Setup and installed libraries
 
 Use the [setup skill](skills/frc-setup/SKILL.md) and [task-specific health check](docs/setup-health.md) before choosing an interpreter or proposing dependency changes. npm run setup:check -- --task core needs no Python physics packages; select --task physics with the project Python executable to inspect MuJoCo and NumPy versions/import health. Optional libraries stay optional. Nothing is silently installed.
+
+The plugin now drives a [Game-to-Robot Strategy Brief](docs/game-to-robot-strategy.md) for all three historical cases. Run `npm run strategy -- --season 2026`; recommendations remain unselected proposals. The [guarded local Fusion recipe](examples/fusion-guarded/README.md) has bounded 2026 sideplate execution evidence. These retained experimental studies do not establish a new published release or complete robot validation.
+
+The local [parallel decision-chain workflow](docs/decision-chain.md) now includes an explicit resource baseline and source-pinned 2026 preliminary envelopes. `npm run --silent envelope -- templates/resource-baseline.json` emits three unselected branches with unknown inventory/geometry kept explicit; `npm run chain -- case-studies/2026/envelope-study.json` reports dependency freshness. This is planning and provenance tooling, not a match simulator or a completed robot design.

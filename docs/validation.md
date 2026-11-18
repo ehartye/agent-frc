@@ -1,11 +1,9 @@
-# Validation scope — 0.6.2 local
+# Validation scope — local follow-up, 2026-11-16
 
-42 JUnit tests and one bounded demo pass, including 13 new season-case checks. Twenty-five Node tests and 29 deterministic grounding cases pass. Seven skills and three synchronized manifests validate. See [case results](../case-studies/validation.json), [Java evidence](../examples/java-2026-sim/validation/result.json) and [grounding results](../eval/grounding-results.json).
+44 JUnit tests and one bounded demo pass with Java 17/WPILib 2026.2.1. The new inertia exercise uses assumed mass/radius and direct plant feedback. The two initial failures and their corrections are preserved in [current evidence](../case-studies/next-milestone-validation.json).
 
-Three generated DXF/SVG concept pairs are checked against their JSON inputs; Java properties use the same assumptions. These are geometry/data consistency checks. Native Fusion execution is blocked by Sign in Failure and paused while the user repairs access. No export/reopen, CAD interference or physical validation is claimed.
+Three season-specific strategy briefs are generated and tested for traceability, assumption sensitivity and unset user decisions. Deterministic tests assess artifact behavior, not language-model effectiveness. Seven skills and synchronized compatibility manifests validate.
 
-The existing eight human/agent prompts remain unexecuted. No installed-host or language-model effectiveness claim. This milestone remains local; the prior publication denial is not retried.
+The [guarded local Fusion experiment](../examples/fusion-guarded/README.md) verified two 2026 concept plates, parameter change, five rejection paths, duplicate handling, native/STEP reopen and preservation of three earlier test documents. The original batch script, 2024/2025 native cases, full assembly, contact/load physics and hardware remain unverified. Local F3D export does not mean cloud save.
 
-The 0.6.1 follow-up added four event-aware rule-reader regressions (25 Node tests total) and [rule reading evidence](../case-studies/rule-reading-validation.json). Java source/parameters did not change and the 42-test v0.6.0 execution remains the Java evidence. Official PDFs were privately cached outside both repositories; source packages retain links/metadata only.
-
-The 0.6.2 [simulation interface audit](../case-studies/simulation-interface-audit.json) clarifies direct plant/numeric feedback and absent CAN/DIO sensor adapters. It changes documentation and metadata only; Java was not rerun. Node/grounding checks passed again. Existing v0.6.1 ZIPs remain unchanged and do not contain this clarification.
+[Earlier case evidence](../case-studies/validation.json) is a historical snapshot; its sign-in blocker was later resolved. [Simulation interface audit](../case-studies/simulation-interface-audit.json) remains applicable: no CAN/vendor sensor adapter or calibrated mechanism physics. The plugin has not been installed or evaluated with model/user studies. This follow-up is local and unpushed; previously approved v0.6.2 publication is unchanged.

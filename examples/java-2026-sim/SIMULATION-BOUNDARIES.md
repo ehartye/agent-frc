@@ -1,3 +1,5 @@
+> Historical scope note: this review describes the original lesson classes below. The separate desktop-only CandidateIo prototype now implements an actual DIO Encoder/PWM simulation path and an opt-in native STEP property adapter; see [CAD/code IO scope](../../docs/cad-code-io.md). Its deliberately nonphysical fixture does not replace these original classes or establish robot validation.
+
 # Simulation interfaces and unverified sensor paths
 
 Reviewed 2026-11-15 against the actual source and dependency declarations. The lesson is a generic desktop plant/policy exercise on Java 17, GradleRIO/WPILib 2026.2.1. It contains no EncoderSim, physical Encoder object, vendor motor-controller client or vendor simulation adapter. No vendor library version, controller firmware or adapter has been chosen or tested.
