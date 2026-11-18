@@ -1,0 +1,603 @@
+{
+  "schema": "frc-catcher-native-swept-pose-screen/v1",
+  "status": "executed-native-conservative-swept-envelope-screen",
+  "runtime": {
+    "python": "3.13.12 (tags/v3.13.12:1cbe481, Feb  3 2026, 18:22:25) [MSC v.1944 64 bit (AMD64)]",
+    "ocp": "8.0.1.0"
+  },
+  "sourceCodeSha256": {
+    "scripts/native-catcher-sweep.py": "27fa93f89ee366156b35b12cfd74f81d421113468f3225be8dc8d0027c5508d4",
+    "scripts/native-catcher-envelopes.py": "773cb6de6a0b325c3bfa54bdad2da6bfb847f31c202910de7fb3cc3c8361e3be",
+    "scripts/prepare-segmented-replay.py": "eab5479d6228ff3f975baa42838bb36a5cb4d1d22da33e0e8bb58e1837c0d1d8"
+  },
+  "geometryEvidenceSha256": {
+    "case-studies/2024/note-fixture-nominal.json": "d0aad462e9bdf99b6fc83cd1db15ca7abe1f7768a3d9afd75ba33663e176e008",
+    "case-studies/2025/coral-fixture-nominal.json": "a82751de2ebcd7be4ca03ba99a469957c33194a81bd3aef6ef82d0b4e87a0567",
+    "case-studies/2026/intake-fixture-nominal.json": "c99db72594738e48424db574244cfa70aa1140f424a2772ac1f85702c0e81c56",
+    "case-studies/native-season-wheel-units.json": "13d5c9b44a1e1b533146f290292e19d67375dfb4b9533a09da3bfa119b2ed602",
+    "case-studies/2026/native-wheel-stack-exploration.json": "64eb367be67960e5124cdc3ca8717c83d53fd761bad8eebb9f48ffb930df8ff6"
+  },
+  "layoutReceiptSha256": "f8e1d94fa1c1b1bd2e5e646778e130eb6d7204423f188d4a932a48d10cf9194f",
+  "cases": [
+    {
+      "season": 2024,
+      "pose": "nominal",
+      "feedOffsetMm": 0,
+      "lateralOffsetMm": 0,
+      "yawDeg": 0,
+      "pitchDeg": 0,
+      "floorRestingCenterHeightMm": 25.4,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 0.0,
+        "left-pad-sweep": 0.0,
+        "right-pad-sweep": 0.0,
+        "left-guide": 0.0,
+        "right-guide": 0.0
+      },
+      "leftClosedPadGapMm": 0.0,
+      "rightClosedPadGapMm": 0.0
+    },
+    {
+      "season": 2024,
+      "pose": "nominal-tail-margin",
+      "feedOffsetMm": -17,
+      "lateralOffsetMm": 0,
+      "yawDeg": 0,
+      "pitchDeg": 0,
+      "floorRestingCenterHeightMm": 25.4,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 0.0,
+        "left-pad-sweep": 0.0,
+        "right-pad-sweep": 0.0,
+        "left-guide": 0.0,
+        "right-guide": 0.0
+      },
+      "leftClosedPadGapMm": 0.0,
+      "rightClosedPadGapMm": 0.0
+    },
+    {
+      "season": 2024,
+      "pose": "yaw3-tight-margin",
+      "feedOffsetMm": -17.9,
+      "lateralOffsetMm": 0,
+      "yawDeg": 3,
+      "pitchDeg": 0,
+      "floorRestingCenterHeightMm": 25.4,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 0.0,
+        "left-pad-sweep": 0.0,
+        "right-pad-sweep": 0.0,
+        "left-guide": 0.0,
+        "right-guide": 0.0
+      },
+      "leftClosedPadGapMm": 0.0,
+      "rightClosedPadGapMm": 0.0
+    },
+    {
+      "season": 2024,
+      "pose": "yaw5-tail-margin",
+      "feedOffsetMm": -17,
+      "lateralOffsetMm": 0,
+      "yawDeg": 5,
+      "pitchDeg": 0,
+      "floorRestingCenterHeightMm": 25.4,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 0.0,
+        "left-pad-sweep": 0.0,
+        "right-pad-sweep": 0.0,
+        "left-guide": 0.0,
+        "right-guide": 0.0
+      },
+      "leftClosedPadGapMm": 2.842170943040401e-14,
+      "rightClosedPadGapMm": 0.0
+    },
+    {
+      "season": 2024,
+      "pose": "yaw10",
+      "feedOffsetMm": 0,
+      "lateralOffsetMm": 0,
+      "yawDeg": 10,
+      "pitchDeg": 0,
+      "floorRestingCenterHeightMm": 25.4,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 0.0,
+        "left-pad-sweep": 0.0,
+        "right-pad-sweep": 0.0,
+        "left-guide": 0.0,
+        "right-guide": 0.0
+      },
+      "leftClosedPadGapMm": 0.0,
+      "rightClosedPadGapMm": 0.0
+    },
+    {
+      "season": 2024,
+      "pose": "lateral5",
+      "feedOffsetMm": 0,
+      "lateralOffsetMm": 5,
+      "yawDeg": 0,
+      "pitchDeg": 0,
+      "floorRestingCenterHeightMm": 25.4,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 0.0,
+        "left-pad-sweep": 0.0,
+        "right-pad-sweep": 5116.039393624079,
+        "left-guide": 0.0,
+        "right-guide": 0.0
+      },
+      "leftClosedPadGapMm": 5.0,
+      "rightClosedPadGapMm": 0.0
+    },
+    {
+      "season": 2024,
+      "pose": "lateral10",
+      "feedOffsetMm": 0,
+      "lateralOffsetMm": 10,
+      "yawDeg": 0,
+      "pitchDeg": 0,
+      "floorRestingCenterHeightMm": 25.4,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 0.0,
+        "left-pad-sweep": 0.0,
+        "right-pad-sweep": 18480.362694719664,
+        "left-guide": 0.0,
+        "right-guide": 0.0
+      },
+      "leftClosedPadGapMm": 10.0,
+      "rightClosedPadGapMm": 0.0
+    },
+    {
+      "season": 2024,
+      "pose": "pitch5",
+      "feedOffsetMm": 0,
+      "lateralOffsetMm": 0,
+      "yawDeg": 0,
+      "pitchDeg": 5,
+      "floorRestingCenterHeightMm": 38.6825351947431,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 0.0,
+        "left-pad-sweep": 0.0,
+        "right-pad-sweep": 0.0,
+        "left-guide": 0.0,
+        "right-guide": 0.0
+      },
+      "leftClosedPadGapMm": 0.0,
+      "rightClosedPadGapMm": 0.0
+    },
+    {
+      "season": 2024,
+      "pose": "pitch10",
+      "feedOffsetMm": 0,
+      "lateralOffsetMm": 0,
+      "yawDeg": 0,
+      "pitchDeg": 10,
+      "floorRestingCenterHeightMm": 51.86398227644018,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 0.0,
+        "left-pad-sweep": 0.0,
+        "right-pad-sweep": 0.0,
+        "left-guide": 0.0,
+        "right-guide": 0.0
+      },
+      "leftClosedPadGapMm": 2.1059402124629645,
+      "rightClosedPadGapMm": 2.105940212462962
+    },
+    {
+      "season": 2024,
+      "pose": "combined",
+      "feedOffsetMm": -17,
+      "lateralOffsetMm": 5,
+      "yawDeg": 5,
+      "pitchDeg": 5,
+      "floorRestingCenterHeightMm": 38.6825351947431,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 0.0,
+        "left-pad-sweep": 0.0,
+        "right-pad-sweep": 3324.627132525227,
+        "left-guide": 0.0,
+        "right-guide": 0.0
+      },
+      "leftClosedPadGapMm": 5.004396886647839,
+      "rightClosedPadGapMm": 0.0
+    },
+    {
+      "season": 2025,
+      "pose": "nominal",
+      "feedOffsetMm": 0,
+      "lateralOffsetMm": 0,
+      "yawDeg": 0,
+      "pitchDeg": 0,
+      "floorRestingCenterHeightMm": 57.15,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 0.0,
+        "left-pad-sweep": 0.0,
+        "right-pad-sweep": 0.0,
+        "left-guide": 0.0,
+        "right-guide": 0.0
+      },
+      "leftClosedPadGapMm": 0.0,
+      "rightClosedPadGapMm": 7.105427357601002e-15
+    },
+    {
+      "season": 2025,
+      "pose": "nominal-tail-margin",
+      "feedOffsetMm": -17,
+      "lateralOffsetMm": 0,
+      "yawDeg": 0,
+      "pitchDeg": 0,
+      "floorRestingCenterHeightMm": 57.15,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 0.0,
+        "left-pad-sweep": 0.0,
+        "right-pad-sweep": 0.0,
+        "left-guide": 0.0,
+        "right-guide": 0.0
+      },
+      "leftClosedPadGapMm": 0.0,
+      "rightClosedPadGapMm": 7.105427357601002e-15
+    },
+    {
+      "season": 2025,
+      "pose": "yaw3-tight-margin",
+      "feedOffsetMm": -17.9,
+      "lateralOffsetMm": 0,
+      "yawDeg": 3,
+      "pitchDeg": 0,
+      "floorRestingCenterHeightMm": 57.15,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 147.5613640692206,
+        "left-pad-sweep": 1418.587436614637,
+        "right-pad-sweep": 4729.668283387468,
+        "left-guide": 0.0,
+        "right-guide": 0.0
+      },
+      "leftClosedPadGapMm": 0.0,
+      "rightClosedPadGapMm": 0.0
+    },
+    {
+      "season": 2025,
+      "pose": "yaw5-tail-margin",
+      "feedOffsetMm": -17,
+      "lateralOffsetMm": 0,
+      "yawDeg": 5,
+      "pitchDeg": 0,
+      "floorRestingCenterHeightMm": 57.15,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 368.0411376694748,
+        "left-pad-sweep": 3070.690617071468,
+        "right-pad-sweep": 8704.801690485452,
+        "left-guide": 958.8454885414765,
+        "right-guide": 958.8454885415276
+      },
+      "leftClosedPadGapMm": 0.0,
+      "rightClosedPadGapMm": 0.0
+    },
+    {
+      "season": 2025,
+      "pose": "yaw10",
+      "feedOffsetMm": 0,
+      "lateralOffsetMm": 0,
+      "yawDeg": 10,
+      "pitchDeg": 0,
+      "floorRestingCenterHeightMm": 57.15,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 0.0,
+        "left-pad-sweep": 10312.784220996165,
+        "right-pad-sweep": 10312.784220996211,
+        "left-guide": 13357.02110300351,
+        "right-guide": 13357.02110303911
+      },
+      "leftClosedPadGapMm": 0.0,
+      "rightClosedPadGapMm": 0.0
+    },
+    {
+      "season": 2025,
+      "pose": "lateral5",
+      "feedOffsetMm": 0,
+      "lateralOffsetMm": 5,
+      "yawDeg": 0,
+      "pitchDeg": 0,
+      "floorRestingCenterHeightMm": 57.15,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 0.0,
+        "left-pad-sweep": 0.0,
+        "right-pad-sweep": 18214.891665380328,
+        "left-guide": 0.0,
+        "right-guide": 0.0
+      },
+      "leftClosedPadGapMm": 5.0,
+      "rightClosedPadGapMm": 0.0
+    },
+    {
+      "season": 2025,
+      "pose": "lateral10",
+      "feedOffsetMm": 0,
+      "lateralOffsetMm": 10,
+      "yawDeg": 0,
+      "pitchDeg": 0,
+      "floorRestingCenterHeightMm": 57.15,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 0.0,
+        "left-pad-sweep": 0.0,
+        "right-pad-sweep": 27027.15170885686,
+        "left-guide": 0.0,
+        "right-guide": 0.0
+      },
+      "leftClosedPadGapMm": 10.0,
+      "rightClosedPadGapMm": 0.0
+    },
+    {
+      "season": 2025,
+      "pose": "pitch5",
+      "feedOffsetMm": 0,
+      "lateralOffsetMm": 0,
+      "yawDeg": 0,
+      "pitchDeg": 5,
+      "floorRestingCenterHeightMm": 70.07670244907445,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 0.0,
+        "left-pad-sweep": 0.0,
+        "right-pad-sweep": 0.0,
+        "left-guide": 0.0,
+        "right-guide": 0.0
+      },
+      "leftClosedPadGapMm": 0.0,
+      "rightClosedPadGapMm": 7.105427357601002e-15
+    },
+    {
+      "season": 2025,
+      "pose": "pitch10",
+      "feedOffsetMm": 0,
+      "lateralOffsetMm": 0,
+      "yawDeg": 0,
+      "pitchDeg": 10,
+      "floorRestingCenterHeightMm": 82.47007887904161,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 0.0,
+        "left-pad-sweep": 0.0,
+        "right-pad-sweep": 0.0,
+        "left-guide": 0.0,
+        "right-guide": 0.0
+      },
+      "leftClosedPadGapMm": 5.684341886080802e-14,
+      "rightClosedPadGapMm": 5.684341886080802e-14
+    },
+    {
+      "season": 2025,
+      "pose": "combined",
+      "feedOffsetMm": -17,
+      "lateralOffsetMm": 5,
+      "yawDeg": 5,
+      "pitchDeg": 5,
+      "floorRestingCenterHeightMm": 70.07670244907445,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 1021.1028388161401,
+        "left-pad-sweep": 0.0,
+        "right-pad-sweep": 17087.60806757354,
+        "left-guide": 0.0,
+        "right-guide": 9947.468082671907
+      },
+      "leftClosedPadGapMm": 0.223172433642915,
+      "rightClosedPadGapMm": 0.0
+    },
+    {
+      "season": 2026,
+      "pose": "nominal",
+      "feedOffsetMm": 0,
+      "lateralOffsetMm": 0,
+      "yawDeg": 0,
+      "pitchDeg": 0,
+      "floorRestingCenterHeightMm": 75,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 0.0,
+        "left-pad-sweep": 0.0,
+        "right-pad-sweep": 0.0,
+        "left-guide": 0.0,
+        "right-guide": 0.0
+      },
+      "leftClosedPadGapMm": 4.297915269824576e-08,
+      "rightClosedPadGapMm": 4.297915269392291e-08
+    },
+    {
+      "season": 2026,
+      "pose": "nominal-tail-margin",
+      "feedOffsetMm": -17,
+      "lateralOffsetMm": 0,
+      "yawDeg": 0,
+      "pitchDeg": 0,
+      "floorRestingCenterHeightMm": 75,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 0.0,
+        "left-pad-sweep": 0.0,
+        "right-pad-sweep": 0.0,
+        "left-guide": 0.0,
+        "right-guide": 0.0
+      },
+      "leftClosedPadGapMm": 1.378453047505335e-09,
+      "rightClosedPadGapMm": 1.3784388688831976e-09
+    },
+    {
+      "season": 2026,
+      "pose": "yaw3-tight-margin",
+      "feedOffsetMm": -17.9,
+      "lateralOffsetMm": 0,
+      "yawDeg": 3,
+      "pitchDeg": 0,
+      "floorRestingCenterHeightMm": 75,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 0.0,
+        "left-pad-sweep": 0.0,
+        "right-pad-sweep": 0.0,
+        "left-guide": 0.0,
+        "right-guide": 0.0
+      },
+      "leftClosedPadGapMm": 1.1393357239586143e-11,
+      "rightClosedPadGapMm": 4.467835881933481e-09
+    },
+    {
+      "season": 2026,
+      "pose": "yaw5-tail-margin",
+      "feedOffsetMm": -17,
+      "lateralOffsetMm": 0,
+      "yawDeg": 5,
+      "pitchDeg": 0,
+      "floorRestingCenterHeightMm": 75,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 0.0,
+        "left-pad-sweep": 0.0,
+        "right-pad-sweep": 0.0,
+        "left-guide": 0.0,
+        "right-guide": 0.0
+      },
+      "leftClosedPadGapMm": 2.148350842760183e-11,
+      "rightClosedPadGapMm": 8.361698311563618e-11
+    },
+    {
+      "season": 2026,
+      "pose": "yaw10",
+      "feedOffsetMm": 0,
+      "lateralOffsetMm": 0,
+      "yawDeg": 10,
+      "pitchDeg": 0,
+      "floorRestingCenterHeightMm": 75,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 0.0,
+        "left-pad-sweep": 0.0,
+        "right-pad-sweep": 0.0,
+        "left-guide": 0.0,
+        "right-guide": 0.0
+      },
+      "leftClosedPadGapMm": 1.2113048342143884e-09,
+      "rightClosedPadGapMm": 1.8616219676914625e-12
+    },
+    {
+      "season": 2026,
+      "pose": "lateral5",
+      "feedOffsetMm": 0,
+      "lateralOffsetMm": 5,
+      "yawDeg": 0,
+      "pitchDeg": 0,
+      "floorRestingCenterHeightMm": 75,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 0.0,
+        "left-pad-sweep": 0.0,
+        "right-pad-sweep": 4632.7959805549835,
+        "left-guide": 0.0,
+        "right-guide": 0.0
+      },
+      "leftClosedPadGapMm": 5.000000000000386,
+      "rightClosedPadGapMm": 0.0
+    },
+    {
+      "season": 2026,
+      "pose": "lateral10",
+      "feedOffsetMm": 0,
+      "lateralOffsetMm": 10,
+      "yawDeg": 0,
+      "pitchDeg": 0,
+      "floorRestingCenterHeightMm": 75,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 0.0,
+        "left-pad-sweep": 0.0,
+        "right-pad-sweep": 14027.2566771396,
+        "left-guide": 0.0,
+        "right-guide": 0.0
+      },
+      "leftClosedPadGapMm": 10.000000000000332,
+      "rightClosedPadGapMm": 0.0
+    },
+    {
+      "season": 2026,
+      "pose": "pitch5",
+      "feedOffsetMm": 0,
+      "lateralOffsetMm": 0,
+      "yawDeg": 0,
+      "pitchDeg": 5,
+      "floorRestingCenterHeightMm": 75,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 0.0,
+        "left-pad-sweep": 0.0,
+        "right-pad-sweep": 0.0,
+        "left-guide": 0.0,
+        "right-guide": 0.0
+      },
+      "leftClosedPadGapMm": 8.813594549414848e-12,
+      "rightClosedPadGapMm": 4.220647774345027e-12
+    },
+    {
+      "season": 2026,
+      "pose": "pitch10",
+      "feedOffsetMm": 0,
+      "lateralOffsetMm": 0,
+      "yawDeg": 0,
+      "pitchDeg": 10,
+      "floorRestingCenterHeightMm": 75,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 0.0,
+        "left-pad-sweep": 0.0,
+        "right-pad-sweep": 0.0,
+        "left-guide": 0.0,
+        "right-guide": 0.0
+      },
+      "leftClosedPadGapMm": 2.4199654438681278e-11,
+      "rightClosedPadGapMm": 2.3728314814903085e-11
+    },
+    {
+      "season": 2026,
+      "pose": "combined",
+      "feedOffsetMm": -17,
+      "lateralOffsetMm": 5,
+      "yawDeg": 5,
+      "pitchDeg": 5,
+      "floorRestingCenterHeightMm": 75,
+      "nominalOneDimensionalGateGuardWouldAllow": true,
+      "intersectionVolumesMm3": {
+        "gate-sweep": 0.0,
+        "left-pad-sweep": 0.0,
+        "right-pad-sweep": 4632.795980766184,
+        "left-guide": 0.0,
+        "right-guide": 0.0
+      },
+      "leftClosedPadGapMm": 5.000000000000032,
+      "rightClosedPadGapMm": 0.0
+    }
+  ],
+  "interpretation": [
+    "Gate and pad translational swept volumes are exact boxes for the prescribed straight strokes; tested against static posed rigid game-piece envelopes",
+    "Zero intersection certifies only static-pose swept-volume separation; positive intersection flags possible obstruction/compression, not a time-resolved collision",
+    "Yaw/pitch/lateral/feed offsets are hypothetical test inputs, not measured tolerances",
+    "Poses are raised to ideal floor tangency; gravity, deformation and moving-piece/gate timing not simulated",
+    "Pad gaps or overlaps challenge the assumed normal preload/friction; neither establishes actual force",
+    "This screen does not update the one-dimensional control/force model to full6DOF"
+  ],
+  "calibration": null,
+  "engineeringAcceptance": "blocked"
+}

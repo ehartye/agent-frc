@@ -1,0 +1,169 @@
+{
+  "schema": "frc-segmented-season-probes/v1",
+  "fixtureContextSha256": {
+    "case-studies/2024/note-fixture-nominal.json": "d0aad462e9bdf99b6fc83cd1db15ca7abe1f7768a3d9afd75ba33663e176e008",
+    "case-studies/2025/coral-fixture-nominal.json": "a82751de2ebcd7be4ca03ba99a469957c33194a81bd3aef6ef82d0b4e87a0567",
+    "case-studies/2026/intake-fixture-nominal.json": "c99db72594738e48424db574244cfa70aa1140f424a2772ac1f85702c0e81c56"
+  },
+  "basis": "original constrained-pose geometric probes; source-sized gamepiece idealizations, cylindrical wheel envelopes, no mechanics acceptance",
+  "NOTE": {
+    "wheelCentersYmm": [
+      -175,
+      -125,
+      -75,
+      -25,
+      25,
+      75,
+      125,
+      175
+    ],
+    "wheelHalfWidthMm": 12.00625,
+    "wheelRadiusMm": 50.8,
+    "wheelZmm": 101.6,
+    "torusMajorMm": 152.4,
+    "torusMinorMm": 25.4,
+    "torusCenterMm": [
+      0,
+      0,
+      25.4
+    ],
+    "gaps": [
+      {
+        "lowerMm": 2.107375347771369,
+        "upperMm": 2.1206747566715656,
+        "sampleCount": 36000,
+        "geometricErrorBoundMm": 0.013299408900196793
+      },
+      {
+        "lowerMm": 4.287332555125415,
+        "upperMm": 4.300631964025612,
+        "sampleCount": 36000,
+        "geometricErrorBoundMm": 0.013299408900196793
+      },
+      {
+        "lowerMm": 44.22426145151737,
+        "upperMm": 44.23756086041757,
+        "sampleCount": 36000,
+        "geometricErrorBoundMm": 0.013299408900196793
+      },
+      {
+        "lowerMm": 82.12523927862327,
+        "upperMm": 82.13853868752346,
+        "sampleCount": 36000,
+        "geometricErrorBoundMm": 0.013299408900196793
+      },
+      {
+        "lowerMm": 82.12523927862327,
+        "upperMm": 82.13853868752346,
+        "sampleCount": 36000,
+        "geometricErrorBoundMm": 0.013299408900196793
+      },
+      {
+        "lowerMm": 44.22426145151737,
+        "upperMm": 44.23756086041757,
+        "sampleCount": 36000,
+        "geometricErrorBoundMm": 0.013299408900196793
+      },
+      {
+        "lowerMm": 4.287332555125415,
+        "upperMm": 4.300631964025612,
+        "sampleCount": 36000,
+        "geometricErrorBoundMm": 0.013299408900196793
+      },
+      {
+        "lowerMm": 2.107375347771369,
+        "upperMm": 2.1206747566715656,
+        "sampleCount": 36000,
+        "geometricErrorBoundMm": 0.013299408900196793
+      }
+    ]
+  },
+  "CORAL": {
+    "wheelCentersYmm": [
+      -66.675,
+      -47.625,
+      -28.575000000000003,
+      -9.525,
+      9.525,
+      28.575000000000003,
+      47.625,
+      66.675
+    ],
+    "wheelHalfWidthMm": 6.35,
+    "wheelRadiusMm": 25.4,
+    "wheelZmm": 139.7,
+    "tubeOuterRadiusMm": 57.15,
+    "tubeInnerRadiusMm": 50.8,
+    "tubeLengthMm": 301.625,
+    "tubeCenterMm": [
+      0,
+      0,
+      57.15
+    ],
+    "gapsMm": [
+      25.94770228472023,
+      13.346440512979079,
+      4.169435132753776,
+      0.08812649799081385,
+      0.08812649799081385,
+      4.169435132753776,
+      13.346440512979079,
+      25.94770228472023
+    ],
+    "restriction": "tube axisX centered atX0, spans wheel X envelope; only upper exterior, no bore/end-face contact"
+  },
+  "FUEL": {
+    "schema": "frc-segmented-fuel-contact-geometry/v1",
+    "units": "mm",
+    "basis": "original ideal finite cylinders using pinned native full wheel bounds; not exact tread contact",
+    "wheelCentersY": [
+      -87.3125,
+      -52.3875,
+      -17.4625,
+      17.4625,
+      52.3875,
+      87.3125
+    ],
+    "wheelHalfWidth": 12.00625,
+    "pieceRadius": 75,
+    "nominalWheelZ": 188.1,
+    "compressedWheelZ": 183.1,
+    "nominalSignedGaps": [
+      31.28278924201463,
+      10.180076024634417,
+      0.19820918121986608,
+      0.19820918121986608,
+      10.180076024634417,
+      31.28278924201463
+    ],
+    "compressedSignedGaps": [
+      27.81552066231295,
+      5.812408400953501,
+      -4.787674414939801,
+      -4.787674414939801,
+      5.812408400953501,
+      27.81552066231295
+    ],
+    "priorInfiniteSleeveNominalGap": 0,
+    "forceLaw": null,
+    "material": null,
+    "friction": null,
+    "calibrated": false,
+    "engineeringAcceptance": "blocked",
+    "limitations": [
+      "Geometric gaps only; negative gap is an imposed compliant-overlap hypothesis",
+      "Full-bound cylinder envelope overfills actual tread grooves and may overpredict contact",
+      "No summing six copies of previous aggregate sleeve stiffness",
+      "Lateral dynamics, spinning sphere, floor, motor and thermal coupling absent"
+    ]
+  },
+  "forceLaw": null,
+  "calibration": null,
+  "engineeringAcceptance": "blocked",
+  "limitations": [
+    "No prior continuous-sleeve validity transferred",
+    "Native CAD envelope is not exact wheel tread geometry",
+    "No force stiffness/damping/friction, effective patch weighting or material identified",
+    "Fixed orientations and lateral positions are external constraints, not demonstrated guidance"
+  ]
+}

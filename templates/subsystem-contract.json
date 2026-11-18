@@ -1,0 +1,17 @@
+{
+  "schema": "frc-subsystem-contract/v1",
+  "subsystemId": "example-feed",
+  "owners": {"hardware": null, "software": null, "integration": null},
+  "capabilityIds": ["example-transfer-only"],
+  "dependencyPins": [{"id":"replace-with-architecture-pin","revision":1,"sha256":"0000000000000000000000000000000000000000000000000000000000000000"}],
+  "interfaces": [{
+    "id":"feed-to-launcher", "kind":"software", "producer":"example-feed", "consumer":"example-launcher",
+    "definition":"Draft only. Specify request/acknowledgement identity, exclusive command ownership, allowed states, units, freshness, cancellation and restart semantics before use.",
+    "quantities":[{"id":"request-age","unit":"ms","frame":"monotonic producer timestamp; clock agreement unresolved","bounds":null,"basis":"unknown","source":null,"unknownReason":"No measured latency budget or clock contract"}],
+    "failureResponse":"Unresolved. Mechanism-specific analysis must define inhibit/hold/stop behavior, stored-energy effects and re-enable rules; zero output is not presumed safe.",
+    "verificationIds":["stale-request"]
+  }],
+  "hazards":[{"id":"stale-transfer","condition":"Stale or repeated transfer request","consequence":"Unexpected mechanism action","mitigation":"Define independent output arbitration and stale-request rejection; not implemented here","recoveryAuthority":"Qualified human process not yet assigned","verificationIds":["stale-request"]}],
+  "checks":[{"id":"stale-request","level":"software","method":"Offline fault-injection test for stale, duplicate and missing acknowledgement cases","acceptance":"No unrequested transfer; specific timing bounds unresolved","status":"not-run","evidencePins":[]}],
+  "unresolvedInputs":["Template only; replace fake pin with a real graph input","Mechanical/electrical interface coverage not reviewed","No real robot or runtime safety implementation"]
+}

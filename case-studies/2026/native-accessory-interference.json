@@ -1,0 +1,148 @@
+{
+  "schema": "frc-accessory-interference/v1",
+  "sourceRecords": {
+    "socket": {
+      "url": "https://www.revrobotics.com/content/cad/REV-29-2922.STEP",
+      "sha256": "53bf4bac9c31d0d7c47bdaf50315612161f04bce4011e6704b5c93064733df40",
+      "bytes": 61467,
+      "boundsMm": [
+        -3.96875,
+        -3.96875,
+        -30.226000099999997,
+        3.96875,
+        3.96875,
+        0.0
+      ]
+    },
+    "screw": {
+      "url": "https://www.revrobotics.com/content/cad/REV-29-2951.STEP",
+      "sha256": "89e2b6ad909e8bdcb66fb86a7948298c159ffb0fd8c6b00bac022a7e54550ea2",
+      "bytes": 69904,
+      "boundsMm": [
+        -4.5847,
+        -4.584700000000005,
+        -13.9827,
+        4.5847,
+        4.5847000000000016,
+        13.9827001
+      ]
+    },
+    "spacer": {
+      "url": "https://www.revrobotics.com/content/cad/REV-21-2005.STEP",
+      "sha256": "6d9c91b22f6f0bb71bde31882890f4228690834c05d70adc6369b0fb0cc8c482",
+      "bytes": 62023,
+      "boundsMm": [
+        -9.143999999999998,
+        -9.143999999999998,
+        -3.175,
+        9.143999999999998,
+        9.143999999999998,
+        3.175
+      ]
+    },
+    "hub": {
+      "url": "https://www.revrobotics.com/content/cad/REV-21-2037.STEP",
+      "sha256": "994be447326c5e10fa86f4d9addd0abc218dd82b7bef9efbcac9e8259c268807",
+      "bytes": 406016,
+      "boundsMm": [
+        -17.454199807851335,
+        -17.462500100000003,
+        -1.0269562977782698e-15,
+        17.454199807851335,
+        17.462500100000003,
+        8.731250099999999
+      ]
+    }
+  },
+  "placement": "original hypothesis: right hub phase180; screw axis y=-12.7, native underside z11.4173 seated x13.49375; spacer center x17.4625",
+  "sourceDatums": "button tip z=-13.9827 and underside z11.4173; socket tip z0 and underside z-25.4, reversed to point head outward; hypothetical seating",
+  "screwBoundsMm": [
+    -11.906249999999998,
+    -17.284700000000004,
+    -4.584699999999999,
+    16.059150100000004,
+    -8.115299999999998,
+    4.5847000000000016
+  ],
+  "spacerBoundsMm": [
+    14.287499999999996,
+    -9.143999999999998,
+    -9.143999999999998,
+    20.6375,
+    9.143999999999998,
+    9.143999999999998
+  ],
+  "analyticSpacer": {
+    "odMm": 17,
+    "idMm": 14,
+    "widthMm": 6.35,
+    "provenance": "original analytic hypothesis; no supplier SKU",
+    "socketCommon": {
+      "volumeMm3": 0.0,
+      "boundsMm": null
+    },
+    "hubCommon": {
+      "volumeMm3": 0.0,
+      "boundsMm": null
+    },
+    "manufacturingAcceptance": "blocked"
+  },
+  "socketBoundsMm": [
+    -11.90625,
+    -16.66875,
+    -3.9687500000000036,
+    18.319750099999997,
+    -8.73125,
+    3.9687499999999973
+  ],
+  "socketSpacer": {
+    "volumeMm3": 2.8622359993759003,
+    "boundsMm": [
+      14.287499899999998,
+      -9.144000099999998,
+      -1.490387128398026,
+      18.319750099999997,
+      -8.7312499,
+      1.4903871283980235
+    ]
+  },
+  "socketEntryHub": {
+    "volumeMm3": 0.0,
+    "boundsMm": null
+  },
+  "spacerScrew": {
+    "volumeMm3": 0.6844539940326768,
+    "boundsMm": [
+      14.287499899999997,
+      -9.103215822653121,
+      -1.9887855393382023,
+      15.125970415659204,
+      -8.382932295662181,
+      1.9887855393382117
+    ]
+  },
+  "spacerHub": {
+    "volumeMm3": 0.0,
+    "boundsMm": null
+  },
+  "screwEntryHub": {
+    "volumeMm3": 2.003032213995003,
+    "boundsMm": [
+      13.4937499,
+      -9.594751008697164,
+      -3.193644323000496,
+      14.287500099999999,
+      -8.115299899999998,
+      3.1936443230004965
+    ]
+  },
+  "engineeringAcceptance": "blocked",
+  "nativeThreadEngagementChecked": false,
+  "vendorAssetsRetained": false,
+  "limitations": [
+    "Rejected candidate placement, not a complete assembly",
+    "Threads are simplified CAD solids; no thread engagement or torque proof",
+    "No shaft or wheel or supports included in this diagnostic",
+    "No prior contact validity transferred"
+  ]
+}

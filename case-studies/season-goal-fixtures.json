@@ -1,0 +1,382 @@
+{
+  "schema": "frc-season-goal-fixtures/v1",
+  "basis": "All target observations are explicitly supplied interface tests, not plant-generated trajectories",
+  "attempts": [
+    {
+      "season": 2024,
+      "goal": "SPEAKER",
+      "basis": "hypothetical-interface-test",
+      "attemptId": "2024-release-only",
+      "pieceId": "piece-2024-release-only",
+      "release": {
+        "period": "TELEOP",
+        "elapsedMs": 5000
+      },
+      "gates": {
+        "possession": true,
+        "aligned": true,
+        "mechanismReady": true,
+        "reefZone": true
+      },
+      "event": null,
+      "alliance": "RED",
+      "context": {
+        "clockBasis": "nominal-scenario",
+        "firstInactiveAlliance": "RED",
+        "ruleSnapshot": {
+          "season": 2026,
+          "url": "https://firstfrc.blob.core.windows.net/frc2026/Manual/2026GameManual.pdf",
+          "revision": "TU22; 166 pages",
+          "sha256": "5c67300fc412a1eed8ca9dc37fb6644aee05795a2befed1f69736643cbf95139"
+        },
+        "eventApplicability": "unverified-archive"
+      }
+    },
+    {
+      "season": 2024,
+      "goal": "SPEAKER",
+      "basis": "hypothetical-interface-test",
+      "attemptId": "2024-explicit-target-positive",
+      "pieceId": "piece-2024-explicit-target-positive",
+      "release": {
+        "period": "TELEOP",
+        "elapsedMs": 5000
+      },
+      "gates": {
+        "possession": true,
+        "aligned": true,
+        "mechanismReady": true,
+        "reefZone": true
+      },
+      "event": {
+        "basis": "hypothetical-external-event",
+        "attemptId": "2024-explicit-target-positive",
+        "pieceId": "piece-2024-explicit-target-positive",
+        "goal": "SPEAKER",
+        "eventId": "event-2024-explicit-target-positive",
+        "evidenceRefs": [
+          "explicit-fixture-not-generated-physics"
+        ],
+        "fieldOpening": {
+          "period": "TELEOP",
+          "elapsedMs": 5100
+        },
+        "sensorPassage": {
+          "period": "TELEOP",
+          "elapsedMs": 5200
+        },
+        "amplification": "UNAMPLIFIED"
+      },
+      "alliance": "RED",
+      "context": {
+        "clockBasis": "nominal-scenario",
+        "firstInactiveAlliance": "RED",
+        "ruleSnapshot": {
+          "season": 2026,
+          "url": "https://firstfrc.blob.core.windows.net/frc2026/Manual/2026GameManual.pdf",
+          "revision": "TU22; 166 pages",
+          "sha256": "5c67300fc412a1eed8ca9dc37fb6644aee05795a2befed1f69736643cbf95139"
+        },
+        "eventApplicability": "unverified-archive"
+      }
+    },
+    {
+      "season": 2024,
+      "goal": "SPEAKER",
+      "basis": "hypothetical-interface-test",
+      "attemptId": "2024-target-counterexample",
+      "pieceId": "piece-2024-target-counterexample",
+      "release": {
+        "period": "TELEOP",
+        "elapsedMs": 5000
+      },
+      "gates": {
+        "possession": true,
+        "aligned": true,
+        "mechanismReady": true,
+        "reefZone": true
+      },
+      "event": {
+        "basis": "hypothetical-external-event",
+        "attemptId": "2024-target-counterexample",
+        "pieceId": "piece-2024-target-counterexample",
+        "goal": "SPEAKER",
+        "eventId": "event-2024-target-counterexample",
+        "evidenceRefs": [
+          "explicit-fixture-not-generated-physics"
+        ],
+        "fieldOpening": {
+          "period": "TELEOP",
+          "elapsedMs": 5100
+        },
+        "sensorPassage": {
+          "period": "TELEOP",
+          "elapsedMs": 5200
+        },
+        "amplification": "UNKNOWN"
+      },
+      "alliance": "RED",
+      "context": {
+        "clockBasis": "nominal-scenario",
+        "firstInactiveAlliance": "RED",
+        "ruleSnapshot": {
+          "season": 2026,
+          "url": "https://firstfrc.blob.core.windows.net/frc2026/Manual/2026GameManual.pdf",
+          "revision": "TU22; 166 pages",
+          "sha256": "5c67300fc412a1eed8ca9dc37fb6644aee05795a2befed1f69736643cbf95139"
+        },
+        "eventApplicability": "unverified-archive"
+      }
+    },
+    {
+      "season": 2025,
+      "goal": "CORAL_L1",
+      "basis": "hypothetical-interface-test",
+      "attemptId": "2025-release-only",
+      "pieceId": "piece-2025-release-only",
+      "release": {
+        "period": "TELEOP",
+        "elapsedMs": 5000
+      },
+      "gates": {
+        "possession": true,
+        "aligned": true,
+        "mechanismReady": true,
+        "reefZone": true
+      },
+      "event": null,
+      "alliance": "RED",
+      "context": {
+        "clockBasis": "nominal-scenario",
+        "firstInactiveAlliance": "RED",
+        "ruleSnapshot": {
+          "season": 2026,
+          "url": "https://firstfrc.blob.core.windows.net/frc2026/Manual/2026GameManual.pdf",
+          "revision": "TU22; 166 pages",
+          "sha256": "5c67300fc412a1eed8ca9dc37fb6644aee05795a2befed1f69736643cbf95139"
+        },
+        "eventApplicability": "unverified-archive"
+      }
+    },
+    {
+      "season": 2025,
+      "goal": "CORAL_L1",
+      "basis": "hypothetical-interface-test",
+      "attemptId": "2025-explicit-target-positive",
+      "pieceId": "piece-2025-explicit-target-positive",
+      "release": {
+        "period": "TELEOP",
+        "elapsedMs": 5000
+      },
+      "gates": {
+        "possession": true,
+        "aligned": true,
+        "mechanismReady": true,
+        "reefZone": true
+      },
+      "event": {
+        "basis": "hypothetical-external-event",
+        "attemptId": "2025-explicit-target-positive",
+        "pieceId": "piece-2025-explicit-target-positive",
+        "goal": "CORAL_L1",
+        "eventId": "event-2025-explicit-target-positive",
+        "evidenceRefs": [
+          "explicit-fixture-not-generated-physics"
+        ],
+        "assessedAt": {
+          "period": "TELEOP",
+          "elapsedMs": 5200
+        },
+        "sameAllianceRobotContact": false,
+        "otherLevelScored": false,
+        "troughContact": true,
+        "directlySupportedByTroughCoral": false
+      },
+      "alliance": "RED",
+      "context": {
+        "clockBasis": "nominal-scenario",
+        "firstInactiveAlliance": "RED",
+        "ruleSnapshot": {
+          "season": 2026,
+          "url": "https://firstfrc.blob.core.windows.net/frc2026/Manual/2026GameManual.pdf",
+          "revision": "TU22; 166 pages",
+          "sha256": "5c67300fc412a1eed8ca9dc37fb6644aee05795a2befed1f69736643cbf95139"
+        },
+        "eventApplicability": "unverified-archive"
+      }
+    },
+    {
+      "season": 2025,
+      "goal": "CORAL_L1",
+      "basis": "hypothetical-interface-test",
+      "attemptId": "2025-target-counterexample",
+      "pieceId": "piece-2025-target-counterexample",
+      "release": {
+        "period": "TELEOP",
+        "elapsedMs": 5000
+      },
+      "gates": {
+        "possession": true,
+        "aligned": true,
+        "mechanismReady": true,
+        "reefZone": true
+      },
+      "event": {
+        "basis": "hypothetical-external-event",
+        "attemptId": "2025-target-counterexample",
+        "pieceId": "piece-2025-target-counterexample",
+        "goal": "CORAL_L1",
+        "eventId": "event-2025-target-counterexample",
+        "evidenceRefs": [
+          "explicit-fixture-not-generated-physics"
+        ],
+        "assessedAt": {
+          "period": "TELEOP",
+          "elapsedMs": 5200
+        },
+        "sameAllianceRobotContact": true,
+        "otherLevelScored": false,
+        "troughContact": true,
+        "directlySupportedByTroughCoral": false
+      },
+      "alliance": "RED",
+      "context": {
+        "clockBasis": "nominal-scenario",
+        "firstInactiveAlliance": "RED",
+        "ruleSnapshot": {
+          "season": 2026,
+          "url": "https://firstfrc.blob.core.windows.net/frc2026/Manual/2026GameManual.pdf",
+          "revision": "TU22; 166 pages",
+          "sha256": "5c67300fc412a1eed8ca9dc37fb6644aee05795a2befed1f69736643cbf95139"
+        },
+        "eventApplicability": "unverified-archive"
+      }
+    },
+    {
+      "season": 2026,
+      "goal": "HUB",
+      "basis": "hypothetical-interface-test",
+      "attemptId": "2026-release-only",
+      "pieceId": "piece-2026-release-only",
+      "release": {
+        "period": "TELEOP",
+        "elapsedMs": 5000
+      },
+      "gates": {
+        "possession": true,
+        "aligned": true,
+        "mechanismReady": true,
+        "reefZone": true
+      },
+      "event": null,
+      "alliance": "RED",
+      "context": {
+        "clockBasis": "nominal-scenario",
+        "firstInactiveAlliance": "RED",
+        "ruleSnapshot": {
+          "season": 2026,
+          "url": "https://firstfrc.blob.core.windows.net/frc2026/Manual/2026GameManual.pdf",
+          "revision": "TU22; 166 pages",
+          "sha256": "5c67300fc412a1eed8ca9dc37fb6644aee05795a2befed1f69736643cbf95139"
+        },
+        "eventApplicability": "unverified-archive"
+      }
+    },
+    {
+      "season": 2026,
+      "goal": "HUB",
+      "basis": "hypothetical-interface-test",
+      "attemptId": "2026-explicit-target-positive",
+      "pieceId": "piece-2026-explicit-target-positive",
+      "release": {
+        "period": "TELEOP",
+        "elapsedMs": 5000
+      },
+      "gates": {
+        "possession": true,
+        "aligned": true,
+        "mechanismReady": true,
+        "reefZone": true
+      },
+      "event": {
+        "basis": "hypothetical-external-event",
+        "attemptId": "2026-explicit-target-positive",
+        "pieceId": "piece-2026-explicit-target-positive",
+        "goal": "HUB",
+        "eventId": "event-2026-explicit-target-positive",
+        "evidenceRefs": [
+          "explicit-fixture-not-generated-physics"
+        ],
+        "topEntry": {
+          "period": "TELEOP",
+          "elapsedMs": 5100
+        },
+        "sensorPassage": {
+          "period": "TELEOP",
+          "elapsedMs": 5200
+        },
+        "hubAlliance": "RED"
+      },
+      "alliance": "RED",
+      "context": {
+        "clockBasis": "nominal-scenario",
+        "firstInactiveAlliance": "RED",
+        "ruleSnapshot": {
+          "season": 2026,
+          "url": "https://firstfrc.blob.core.windows.net/frc2026/Manual/2026GameManual.pdf",
+          "revision": "TU22; 166 pages",
+          "sha256": "5c67300fc412a1eed8ca9dc37fb6644aee05795a2befed1f69736643cbf95139"
+        },
+        "eventApplicability": "unverified-archive"
+      }
+    },
+    {
+      "season": 2026,
+      "goal": "HUB",
+      "basis": "hypothetical-interface-test",
+      "attemptId": "2026-target-counterexample",
+      "pieceId": "piece-2026-target-counterexample",
+      "release": {
+        "period": "TELEOP",
+        "elapsedMs": 9000
+      },
+      "gates": {
+        "possession": true,
+        "aligned": true,
+        "mechanismReady": true,
+        "reefZone": true
+      },
+      "event": {
+        "basis": "hypothetical-external-event",
+        "attemptId": "2026-target-counterexample",
+        "pieceId": "piece-2026-target-counterexample",
+        "goal": "HUB",
+        "eventId": "event-2026-target-counterexample",
+        "evidenceRefs": [
+          "explicit-fixture-not-generated-physics"
+        ],
+        "topEntry": {
+          "period": "TELEOP",
+          "elapsedMs": 10100
+        },
+        "sensorPassage": {
+          "period": "TELEOP",
+          "elapsedMs": 10200
+        },
+        "hubAlliance": "RED"
+      },
+      "alliance": "RED",
+      "context": {
+        "clockBasis": "nominal-scenario",
+        "firstInactiveAlliance": "RED",
+        "ruleSnapshot": {
+          "season": 2026,
+          "url": "https://firstfrc.blob.core.windows.net/frc2026/Manual/2026GameManual.pdf",
+          "revision": "TU22; 166 pages",
+          "sha256": "5c67300fc412a1eed8ca9dc37fb6644aee05795a2befed1f69736643cbf95139"
+        },
+        "eventApplicability": "unverified-archive"
+      }
+    }
+  ]
+}

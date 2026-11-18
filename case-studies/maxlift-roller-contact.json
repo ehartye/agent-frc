@@ -1,0 +1,328 @@
+{
+  "schema": "frc-maxlift-roller-contact/v1",
+  "sourceCodeSha256": {
+    "scripts/maxlift-corner-mating.py": "8579c6d76c63ff17455f1936cb55401776d27b6d01b5cdec97c05496bebedd88",
+    "scripts/retained-pregrip-fit.py": "114ab7de7dba25df05c9db46d8450a5cecabd9d2b8b4fa7b84f45216839f5ae3",
+    "case-studies/maxlift-corner-evidence.json": "424a4404481376b1e5d221720091ae7d4bb37c46ccf3db04185547ab27d05fa1",
+    "scripts/maxlift-roller-contact.py": "40e5acedf5a18498a0ac58515916cc9115c86251a34106142d5e71fd5632e2b6"
+  },
+  "runtimeOcp": "8.0.1.0",
+  "rollerFaces": [
+    [
+      {
+        "radiusMm": 7.999999999999999,
+        "axisPointMm": [
+          11.044999999999991,
+          -0.005000000000005434,
+          -20.29999999999998
+        ],
+        "axisDirection": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "boundsMm": [
+          3.044999999999992,
+          -0.005000000000006414,
+          -25.04999999999998,
+          19.04499999999999,
+          7.994999999999994,
+          -20.54999999999998
+        ]
+      },
+      {
+        "radiusMm": 7.999999999999999,
+        "axisPointMm": [
+          11.044999999999991,
+          -0.005000000000005434,
+          -20.29999999999998
+        ],
+        "axisDirection": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "boundsMm": [
+          3.044999999999992,
+          -8.005000000000004,
+          -25.04999999999998,
+          19.04499999999999,
+          -0.005000000000004454,
+          -20.54999999999998
+        ]
+      }
+    ],
+    [
+      {
+        "radiusMm": 7.999999999999999,
+        "axisPointMm": [
+          11.044999999999991,
+          -0.005000000000005434,
+          25.29999999999998
+        ],
+        "axisDirection": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "boundsMm": [
+          3.044999999999992,
+          -0.005000000000006414,
+          20.54999999999998,
+          19.04499999999999,
+          7.994999999999994,
+          25.04999999999998
+        ]
+      },
+      {
+        "radiusMm": 7.999999999999999,
+        "axisPointMm": [
+          11.044999999999991,
+          -0.005000000000005434,
+          25.29999999999998
+        ],
+        "axisDirection": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "boundsMm": [
+          3.044999999999992,
+          -8.005000000000004,
+          20.54999999999998,
+          19.04499999999999,
+          -0.005000000000004454,
+          25.04999999999998
+        ]
+      }
+    ],
+    [
+      {
+        "radiusMm": 9.499999999999998,
+        "axisPointMm": [
+          25.05,
+          0.0,
+          -34.9
+        ],
+        "axisDirection": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "boundsMm": [
+          19.349999999999998,
+          -1.1634144591899853e-15,
+          -44.4,
+          24.75,
+          9.499999999999998,
+          -25.4
+        ]
+      },
+      {
+        "radiusMm": 9.499999999999998,
+        "axisPointMm": [
+          25.05,
+          0.0,
+          -34.9
+        ],
+        "axisDirection": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "boundsMm": [
+          19.349999999999998,
+          -9.499999999999998,
+          -44.4,
+          24.75,
+          1.1634144591899853e-15,
+          -25.4
+        ]
+      }
+    ],
+    [
+      {
+        "radiusMm": 9.499999999999998,
+        "axisPointMm": [
+          25.05,
+          0.0,
+          34.9
+        ],
+        "axisDirection": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "boundsMm": [
+          19.349999999999998,
+          -1.1634144591899853e-15,
+          25.4,
+          24.75,
+          9.499999999999998,
+          44.4
+        ]
+      },
+      {
+        "radiusMm": 9.499999999999998,
+        "axisPointMm": [
+          25.05,
+          0.0,
+          34.9
+        ],
+        "axisDirection": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "boundsMm": [
+          19.349999999999998,
+          -9.499999999999998,
+          25.4,
+          24.75,
+          1.1634144591899853e-15,
+          44.4
+        ]
+      }
+    ]
+  ],
+  "witnesses": [
+    {
+      "pointMm": [
+        19.045,
+        -0.005,
+        -22.8
+      ],
+      "pointToActualCylinderMm": 1.1963467629231421e-14,
+      "pointToNativeTubeMm": 0.0,
+      "continuous60mmTrackLengthMm": 60.0
+    },
+    {
+      "pointMm": [
+        19.045,
+        -0.005,
+        22.8
+      ],
+      "pointToActualCylinderMm": 1.1963467629231421e-14,
+      "pointToNativeTubeMm": 0.0,
+      "continuous60mmTrackLengthMm": 60.0
+    },
+    {
+      "pointMm": [
+        22.05,
+        0,
+        -25.4
+      ],
+      "pointToActualCylinderMm": 1.1634144591899853e-15,
+      "pointToNativeTubeMm": 3.197442310920451e-14,
+      "continuous60mmTrackLengthMm": 60.0
+    },
+    {
+      "pointMm": [
+        22.05,
+        0,
+        25.4
+      ],
+      "pointToActualCylinderMm": 0.0,
+      "pointToNativeTubeMm": 3.197442310920451e-14,
+      "continuous60mmTrackLengthMm": 60.0
+    }
+  ],
+  "cases": [
+    {
+      "railTranslationMm": [
+        31.745,
+        300,
+        0
+      ],
+      "rollerDistancesMm": [
+        1.0658141036401503e-14,
+        1.0658141036401503e-14,
+        3.197442310920451e-14,
+        3.197442310920451e-14
+      ],
+      "wholePairDistanceMm": 1.0658141036401503e-14
+    },
+    {
+      "railTranslationMm": [
+        31.75,
+        300,
+        0
+      ],
+      "rollerDistancesMm": [
+        0.005000000000009663,
+        0.005000000000009663,
+        3.197442310920451e-14,
+        3.197442310920451e-14
+      ],
+      "wholePairDistanceMm": 3.197442310920451e-14
+    },
+    {
+      "railTranslationMm": [
+        36.745,
+        300,
+        0
+      ],
+      "rollerDistancesMm": [
+        5.000000000000007,
+        5.000000000000007,
+        3.197442310920451e-14,
+        3.197442310920451e-14
+      ],
+      "wholePairDistanceMm": 3.197442310920451e-14
+    },
+    {
+      "railTranslationMm": [
+        41.745,
+        300,
+        0
+      ],
+      "rollerDistancesMm": [
+        10.000000000000007,
+        10.000000000000007,
+        4.294999999999998,
+        4.294999999999998
+      ],
+      "wholePairDistanceMm": 4.006248244929408
+    }
+  ],
+  "nativeTrackControls": [
+    {
+      "pointMm": [
+        31.745,
+        0,
+        25.4
+      ],
+      "trackLengthMm": 0.0
+    },
+    {
+      "pointMm": [
+        32.745,
+        0,
+        25.4
+      ],
+      "trackLengthMm": 37.08712152522132
+    },
+    {
+      "pointMm": [
+        34.745,
+        0,
+        25.4
+      ],
+      "trackLengthMm": 60.0
+    }
+  ],
+  "strokeRailYmm": [
+    300,
+    360
+  ],
+  "opposedStageInstalled": false,
+  "physicalPreload": null,
+  "continuousStrokeWitness": "four nominal mid-width point tracks on actual trimmed cylindrical faces and native tube",
+  "engineeringAcceptance": "blocked",
+  "limitations": [
+    "Nominal fixed-orientation translation only, no tolerances or contact-patch width",
+    "One block is not captive; whole-pair distance masks loss of individual roller contacts",
+    "No fasteners, preload, loads, rolling friction, wheel support attachment or robot-world integration",
+    "No transfer of old pad dynamics or season scoring"
+  ]
+}

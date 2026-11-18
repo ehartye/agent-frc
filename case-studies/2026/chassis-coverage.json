@@ -1,0 +1,100 @@
+[
+  {
+    "summaryPin": {
+      "id": "square-chassis.summary",
+      "revision": 1,
+      "sha256": "60c6a09f92b8555ef4a8f49395b76bfa9b461b61a51cf69b7d72da0dd631a4fc"
+    },
+    "schema": "frc-chassis-linked-summary/v1",
+    "ledgerPin": {
+      "id": "square-chassis.ledger",
+      "revision": 1,
+      "sha256": "76462f4eef56f01964ec64b4adfde3bae2af3cd5ec733ce04bbb02d0281a8d2b"
+    },
+    "output": {
+      "schema": "frc-chassis-coverage-summary/v1",
+      "ledgerSha256": "4c7c6b258d86c7419ae2da84eea5b4672df7b086553e6ea47c3fd282a39c2499",
+      "variant": {
+        "manufacturer": "AndyMark",
+        "model": "AM14U6",
+        "configuration": "square",
+        "sourceRefs": [
+          "andymark-am14u6-guide-2026"
+        ]
+      },
+      "listedComponentRows": 8,
+      "knownQuantityRows": 8,
+      "nonUnknownMassRows": 0,
+      "nonUnknownPlacementRows": 0,
+      "explicitOmissionRows": 6,
+      "unknownAdditionalItems": true,
+      "coverageDenominator": "Declared component rows plus explicit omission rows; unknown additional items are not enumerable. No completeness percentage.",
+      "aggregateMassKg": null,
+      "centerOfMassMm": null,
+      "inertiaTensorKgM2": null,
+      "frictionModel": null,
+      "aggregation": "not-implemented",
+      "chassisCadBinding": "not-established",
+      "engineeringAcceptance": "blocked",
+      "inventoryReadiness": "not-assessed",
+      "limitations": [
+        "Source facts identify selected guide/BOM rows only; no actual school stock or assembled robot is established.",
+        "Component masses and placements are unknown; no origin, zero mass or homogeneous density substitutes are used.",
+        "Gearbox internals are not separately enumerated and must not be double-counted against the assembly.",
+        "The advertised nominal 31 lb product mass is not ingested as a numeric input: its weighed variant/scope is unresolved and it is not a complete robot mass.",
+        "Wheel material/durometer does not establish traction or friction. No aggregate mass, CoM or inertia is calculated.",
+        "Per-component masses/transforms are declarations with provenance, not authenticated assembly properties. V1 performs no aggregate physics, even if every declared row is filled."
+      ]
+    },
+    "outputSha256": "be1942e889d7c47276a29c2776e65ac8df507e30b5fa8eb9ec252d898709aa09"
+  },
+  {
+    "summaryPin": {
+      "id": "long-chassis.summary",
+      "revision": 1,
+      "sha256": "299990cd674fb23d147a43bbfc39a54bd016941c58fc61c086f50013c5d43603"
+    },
+    "schema": "frc-chassis-linked-summary/v1",
+    "ledgerPin": {
+      "id": "long-chassis.ledger",
+      "revision": 1,
+      "sha256": "23f064c86471512976426b191fb5f4ae199f49d4cebae4054ceab40a06529e1a"
+    },
+    "output": {
+      "schema": "frc-chassis-coverage-summary/v1",
+      "ledgerSha256": "6dfcd6b7abd01bd7dc4695ed50d8ebc5126511d8c53812052a3d94f256a58214",
+      "variant": {
+        "manufacturer": "AndyMark",
+        "model": "AM14U6",
+        "configuration": "long",
+        "sourceRefs": [
+          "andymark-am14u6-guide-2026"
+        ]
+      },
+      "listedComponentRows": 8,
+      "knownQuantityRows": 8,
+      "nonUnknownMassRows": 0,
+      "nonUnknownPlacementRows": 0,
+      "explicitOmissionRows": 6,
+      "unknownAdditionalItems": true,
+      "coverageDenominator": "Declared component rows plus explicit omission rows; unknown additional items are not enumerable. No completeness percentage.",
+      "aggregateMassKg": null,
+      "centerOfMassMm": null,
+      "inertiaTensorKgM2": null,
+      "frictionModel": null,
+      "aggregation": "not-implemented",
+      "chassisCadBinding": "not-established",
+      "engineeringAcceptance": "blocked",
+      "inventoryReadiness": "not-assessed",
+      "limitations": [
+        "Source facts identify selected guide/BOM rows only; no actual school stock or assembled robot is established.",
+        "Component masses and placements are unknown; no origin, zero mass or homogeneous density substitutes are used.",
+        "Gearbox internals are not separately enumerated and must not be double-counted against the assembly.",
+        "The advertised nominal 31 lb product mass is not ingested as a numeric input: its weighed variant/scope is unresolved and it is not a complete robot mass.",
+        "Wheel material/durometer does not establish traction or friction. No aggregate mass, CoM or inertia is calculated.",
+        "Per-component masses/transforms are declarations with provenance, not authenticated assembly properties. V1 performs no aggregate physics, even if every declared row is filled."
+      ]
+    },
+    "outputSha256": "03954a776e2bb643d1d6618fcd86a673cf8e4da91df7c9292ea1209c759ac4c0"
+  }
+]

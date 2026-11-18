@@ -1,0 +1,21 @@
+import {createHash} from 'node:crypto';
+const canonical=x=>x===null||typeof x!=='object'?JSON.stringify(x):Array.isArray(x)?'['+x.map(canonical).join(',')+']':'{'+Object.keys(x).sort().map(k=>JSON.stringify(k)+':'+canonical(x[k])).join(',')+'}';
+export const catalogDigest=x=>createHash('sha256').update(canonical(x)).digest('hex');
+const check=(ok,m)=>{if(!ok)throw Error(m);};
+const closed=(x,ks)=>check(x&&typeof x==='object'&&!Array.isArray(x)&&Object.keys(x).length===ks.length&&ks.every(k=>Object.hasOwn(x,k)),'Closed hardware catalog schema required');
+const text=x=>typeof x==='string'&&x.trim().length>0&&x.length<=4096;
+const id=x=>typeof x==='string'&&/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(x);
+export function validateHardwareCatalog(c){
+ closed(c,['schema','season','sources','coverage','eventApplicability','entries','unresolved']);
+ check(c.schema==='frc-hardware-rule-catalog/v1'&&[2024,2025,2026].includes(c.season),'Supported season-specific catalog required');
+ check(c.coverage==='partial'&&c.eventApplicability==='unresolved','Catalog cannot assert complete legality or event approval');
+ check(Array.isArray(c.sources)&&c.sources.length>0&&c.sources.length<=16&&Array.isArray(c.entries)&&c.entries.length>0&&c.entries.length<=128,'Catalog collection bounds');
+ const sources=new Set();for(const s of c.sources){closed(s,['id','season','url','revision','sha256','locator','verification']);check(s.season===c.season&&id(s.id)&&!sources.has(s.id)&&/^https:\/\//.test(s.url)&&text(s.revision)&&/^[a-f0-9]{64}$/.test(s.sha256)&&text(s.locator),'Unique pinned hardware source required');closed(s.verification,['method','checkedAt']);check(s.verification.method==='local-byte-hash-and-text-review'&&text(s.verification.checkedAt),'Exact-byte review provenance required');sources.add(s.id);}
+ const entries=new Set();for(const e of c.entries){closed(e,['id','category','statement','conditions','sourceRefs','specificationStatus','manufacturerPerformance']);check(id(e.id)&&!entries.has(e.id),'Unique hardware entry required');entries.add(e.id);check(['motor-class','motor-controller-compatibility','propulsion','power','control-system','vision','network'].includes(e.category)&&text(e.statement),'Rule category and statement required');check(e.specificationStatus==='rule-constraint-only'&&e.manufacturerPerformance===null,'Rules are not measured/manufacturer performance specs');check(Array.isArray(e.conditions)&&e.conditions.length>0&&e.conditions.length<=32&&e.conditions.every(text),'Explicit bounded applicability conditions required');check(Array.isArray(e.sourceRefs)&&e.sourceRefs.length>0&&e.sourceRefs.length<=16,'Rule source refs required');for(const ref of e.sourceRefs){closed(ref,['sourceId','ruleId','locator']);check(sources.has(ref.sourceId)&&/^[REG][0-9]{3}$/.test(ref.ruleId)&&text(ref.locator),'Exact rule locator and source required');}}
+ check(Array.isArray(c.unresolved)&&c.unresolved.length>0&&c.unresolved.length<=32&&c.unresolved.every(text),'Unresolved catalog coverage required');return true;
+}
+export function validateHardwareCatalogArtifact(a){if(a.kind!=='hardware-catalog')return;validateHardwareCatalog(a.content);check(a.content.season===a.season,'Hardware catalog/study season mismatch');}
+export function selectHardwareRules(c,request){
+ validateHardwareCatalog(c);closed(request,['season','entryIds','expectedCatalogSha256']);check(request.season===c.season,'Hardware rules cannot cross seasons');check(request.expectedCatalogSha256===catalogDigest(c),'Exact catalog pin required');check(Array.isArray(request.entryIds)&&request.entryIds.length>0&&request.entryIds.length<=128&&new Set(request.entryIds).size===request.entryIds.length,'Explicit unique rule entries required');check(request.entryIds.every(id),'Valid entry IDs required');const entries=request.entryIds.map(id=>c.entries.find(e=>e.id===id)).filter(Boolean),unknownEntryIds=request.entryIds.filter(id=>!c.entries.some(e=>e.id===id));
+ return structuredClone({catalogSha256:catalogDigest(c),season:c.season,entries,unknownEntryIds,lookupStatus:unknownEntryIds.length?'partially-unresolved':'selected-rules-only',sources:c.sources,coverage:c.coverage,eventApplicability:c.eventApplicability,unresolved:c.unresolved,physicalInventory:null,manufacturerPerformance:null,configurationLegality:null,controllerCompatibility:null});
+}

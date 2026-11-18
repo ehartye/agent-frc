@@ -1,0 +1,137 @@
+{
+  "schema": "frc-retention-component-evidence/v1",
+  "observedAtUtc": "2026-11-16T14:01:34.788962+00:00",
+  "sources": {
+    "p16": {
+      "url": "https://www.actuonix.com/assets/images/datasheets/ActuonixP16Datasheet.pdf",
+      "downloadSha256": "070deb5f22cead2e67abec1e02b870234e9e321fdacc38d4debb51c247c1768d",
+      "localEvidenceName": "p16-datasheet.pdf",
+      "revisionBoundary": "2016 Rev B; visual table checked"
+    },
+    "lsb200": {
+      "url": "https://media.futek.com/content/futek/files/pdf/productdrawings/fsh00103.pdf",
+      "downloadSha256": "f2b1215f9594b96e7acc4e10e716906c5cbe0c14404b4e7d37d8754935429410",
+      "localEvidenceName": "lsb200-fsh00103.pdf",
+      "revisionBoundary": "FI1041-G; FSH00103 capacity row visually checked"
+    },
+    "iaa100": {
+      "url": "https://media.futek.com/content/futek/files/pdf/productdrawings/iaa100.pdf",
+      "downloadSha256": "7b1e0d311a76c687c4d5a5ddc0ec1f189323805b8689e7c79f2a60cab19467f4",
+      "localEvidenceName": "iaa100.pdf",
+      "revisionBoundary": "FI1573, item FSH04461; not FSH03863 or FSH04939"
+    },
+    "revHall": {
+      "url": "https://docs.revrobotics.com/rev-crossover-products/sensors/magnetic-limit-switch/specs.md",
+      "downloadSha256": "d3bbb1a6ef7e04973d9c0d178b7fe4cca71a2d3c1e0432c5a7c383c116f6101c",
+      "localEvidenceName": "rev-magnetic-specs.md",
+      "revisionBoundary": "Live REV specifications; not positional accuracy calibration"
+    },
+    "gn817": {
+      "url": "https://live-catalog.jwwinco.com/pdf/winco/us/817.pdf?dispositiontype=attachment",
+      "downloadSha256": "00562f27b2c42a893b9cac3f0dfe2383d9563ff4959968d50c6d34046e403edf",
+      "localEvidenceName": "gn817.pdf",
+      "revisionBoundary": "GN817 standard sheet, metric 6mm pin / 6mm stroke / M12x1.5 row, type G"
+    }
+  },
+  "roboRioSource": {
+    "url": "https://docs.wpilib.org/en/stable/docs/hardware/sensors/analog-inputs-hardware.html",
+    "analogVolts": [
+      0,
+      5
+    ],
+    "bits": 12,
+    "platform": "roboRIO, not latest Systemcore"
+  },
+  "actuators": [
+    {
+      "part": "P16-200-22-12-P",
+      "strokeMm": 200,
+      "noLoadSpeedMmS": 46,
+      "maxLiftN": 50,
+      "backdriveN": 75,
+      "productUrl": "https://www.actuonix.com/p16-200-22-12-p"
+    },
+    {
+      "part": "P16-200-64-12-P",
+      "strokeMm": 200,
+      "noLoadSpeedMmS": 18,
+      "maxLiftN": 90,
+      "backdriveN": 200,
+      "productUrl": "https://www.actuonix.com/p16-200-64-12-p"
+    }
+  ],
+  "p16Common": {
+    "closedPinDistanceMm": 247,
+    "sideLoadLimitNAt200mm": 4,
+    "repeatabilityMmWithPAndLac": 0.8,
+    "feedbackLinearityPercentLessThan": 2,
+    "backlashMm": 0.3,
+    "dutyCyclePercent": 20,
+    "powerOffRetention": "conditional on applied axial load below backdrive force; no dynamic or safety qualification"
+  },
+  "loadCell": {
+    "part": "FSH00103",
+    "family": "LSB200",
+    "capacityN": 22.2,
+    "ratedOutputMvPerV": 2,
+    "calibrationExcitationV": 5,
+    "thread": "M3x0.5",
+    "nonlinearityPercentRO": 0.1,
+    "hysteresisPercentRO": 0.1,
+    "nonrepeatabilityPercentRO": 0.05,
+    "standardCalibration": "tension; compression calibration must be separately established"
+  },
+  "amplifier": {
+    "partInDrawing": "FSH04461",
+    "family": "IAA100",
+    "supplyRangeV": [
+      12,
+      30
+    ],
+    "outputOptionsV": [
+      [
+        -5,
+        5
+      ],
+      [
+        -10,
+        10
+      ]
+    ],
+    "bridgeExcitationV": [
+      5,
+      10
+    ],
+    "inputBridgeOhm": [
+      87.5,
+      5000
+    ],
+    "allGroundsConnected": true,
+    "notGalvanicIndependenceEvidence": true
+  },
+  "hall": {
+    "part": "REV-31-1462",
+    "operatingV": [
+      3.3,
+      5
+    ],
+    "activeLow": true,
+    "typicalHysteresisMm": 5,
+    "threeElementsAreParallelNotIndependent": true
+  },
+  "calibration": null,
+  "engineeringAcceptance": "blocked",
+  "procurementSelected": false,
+  "retentionPin": {
+    "part": "GN 817-6-6-M12X1.5-G",
+    "pinDiameterMm": 6,
+    "strokeMm": 6,
+    "bodyThread": "M12x1.5",
+    "pullStudThread": "M5",
+    "springInitialApproxN": 6.5,
+    "springEndApproxN": 19,
+    "springLoadIsNotShearCapacity": true,
+    "interface": "Type G threaded stem for operating mechanism",
+    "catalogUrl": "https://www.jwwinco.com/en-us/products/3.1-Indexing-locking-blocking-with-pins-and-ball-shaped-elements/Indexing-plungers/GN-817-Steel-Indexing-Plungers-with-Multiple-Pin-Lengths-Lock-Out-or-Non-Lock-Out"
+  }
+}

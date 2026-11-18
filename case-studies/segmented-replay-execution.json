@@ -1,0 +1,86 @@
+{
+  "schema": "frc-segmented-replay-execution/v1",
+  "status": "executed-prescribed-geometry-io-replay",
+  "sourceCodeSha256": {
+    "scripts/run-segmented-replay.py": "91e6dc02ee4dff5e9642dec00186f1b26df877680b0b47ff1a186ff163989a1c",
+    "scripts/prepare-segmented-replay.py": "eab5479d6228ff3f975baa42838bb36a5cb4d1d22da33e0e8bb58e1837c0d1d8",
+    "scripts/test-segmented-replay.py": "06cd387bf90eeef3413ce7fd0c3f2e294218aa1f682041b40d98d1b175958894",
+    "scripts/segmented-fuel-contact.py": "52d0172956bd0c4f2973b73b939c6dbe458a9f0878006134bdc02add8305f1d3",
+    "examples/java-2026-sim/build.gradle": "f81ca1974aa36c65aff084d8f432178066787c622c94856d6b22492121c638f5",
+    "examples/java-2026-sim/src/test/java/org/agentfrc/lesson/SegmentedReplayTest.java": "12cb4a86e934dc3be881d21a2a875504d4d456d72de992a2b08e98b036d6d5c5",
+    "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/SeasonRollerController.java": "df1d7a09d06477d52ff319c86ab86c51d0b532c1c990bf7a003a85e9d02c4702"
+  },
+  "sourceCodePinBasis": "UTF-8 without BOM and normalized LF",
+  "javaExecutableSha256": "1db37e7021f8fecc0e0cd6de5ee6f0c4fe403f28a55c0691a3812139724d0330",
+  "simulatedWpilibIoExecuted": true,
+  "physicalRobotIoExecuted": false,
+  "contactCausedTransport": false,
+  "calibration": null,
+  "engineeringAcceptance": "blocked",
+  "geometryCounts": {
+    "2024-nominal": {
+      "overlap": 0,
+      "separated": 106,
+      "unknown": 54
+    },
+    "2024-compressed": {
+      "overlap": 90,
+      "separated": 70,
+      "unknown": 0
+    },
+    "2025-nominal": {
+      "overlap": 0,
+      "separated": 134,
+      "unknown": 26
+    },
+    "2025-compressed": {
+      "overlap": 62,
+      "separated": 72,
+      "unknown": 26
+    },
+    "2026-nominal": {
+      "overlap": 0,
+      "separated": 160,
+      "unknown": 0
+    },
+    "2026-compressed": {
+      "overlap": 16,
+      "separated": 144,
+      "unknown": 0
+    }
+  },
+  "geometryEvidenceSha256": {
+    "case-studies/2024/note-fixture-nominal.json": "d0aad462e9bdf99b6fc83cd1db15ca7abe1f7768a3d9afd75ba33663e176e008",
+    "case-studies/2025/coral-fixture-nominal.json": "a82751de2ebcd7be4ca03ba99a469957c33194a81bd3aef6ef82d0b4e87a0567",
+    "case-studies/2026/intake-fixture-nominal.json": "c99db72594738e48424db574244cfa70aa1140f424a2772ac1f85702c0e81c56",
+    "case-studies/native-season-wheel-units.json": "13d5c9b44a1e1b533146f290292e19d67375dfb4b9533a09da3bfa119b2ed602",
+    "case-studies/2026/native-wheel-stack-exploration.json": "64eb367be67960e5124cdc3ca8717c83d53fd761bad8eebb9f48ffb930df8ff6"
+  },
+  "pythonTests": 6,
+  "javaTests": 5,
+  "compiledBindings": {
+    "controllerClassSha256": "186a1d36adc578bf1e3ecee37ebd17f109e9731cdd2f94982e7cea2ba93d834f",
+    "testClassSha256": "99bda9d0523b42161869d0294c10abc7cf9e51421705c07c51ae7f391c522373"
+  },
+  "outputs": {
+    "2024-compressed-io.csv": "23ded4e12174302ac24ae99282816b75b62061194a068643ebd4206f7ba2b3c8",
+    "2024-compressed.csv": "ea0b13af34f039f79dd48b4835dc0bb8c4bebb4012100b4f3439fcb532269fe5",
+    "2024-nominal-io.csv": "90cb25aa5344c3f90a1da1a027da3b89efcb4c08d80a3af1021becf7d673343e",
+    "2024-nominal.csv": "07b169cfaff550cb82a9fda04ffee7300e3d74269bb6a5fc2c3d7e1ec5a7600c",
+    "2025-compressed-io.csv": "146214ed3fa4a5f011e66deb603bc30749f24cae4cc7ce454a0a80c1294867ee",
+    "2025-compressed.csv": "950c527b893fc08446e7e1fac64bc911f63bd816043106c1d5a49aa785c47f94",
+    "2025-nominal-io.csv": "07fa3f25913611b2b2ee2ff92233306a1dd6f195b9d8573dab4e322461f90101",
+    "2025-nominal.csv": "f366a915adde884d7cea7644b450b010ce4623557d4d42fe099f52bd30ecb85d",
+    "2026-compressed-io.csv": "83bc96b2a342101c23e0c79fb3f3297903bd9230741ba903654310dc8603703f",
+    "2026-compressed.csv": "42065711683632dd17781cb189b1aca654aae4c3f53904061b38c72981b04818",
+    "2026-nominal-io.csv": "73fd350875d9cdada5be5d81f363b52673f93e965cd8aaab213d35fc2a977c71",
+    "2026-nominal.csv": "4b42841234847ca4cc1e508f8d58da71973711cabc4098ff3be74a03612e9dc1",
+    "dependency-manifest.json": "ecc530f65eff5c7355963cdaf6b54fcbe36d06f90a3d51fea8c10b443b94dfdc",
+    "input.properties": "1d039acb5c9c9effe3a2136c4316b3ca9ed363720f5361ebcfbb62cf80c17edf",
+    "java.log": "c7288bbab9ec9127a51ee6f3e9dc76654488e9199f1a55001436d3eb0c666855",
+    "prepared.json": "5a11c56b57401d7015a2c8ce8af597dc48265df28047b80a7a5818baafcb62f7",
+    "python-tests.log": "26271a32847b08f3fd50277b545fd6b2d61ca485528257fa7b1f3aa9a83b907d",
+    "result.properties": "cfee2a78224466a58633228d36f123f9a42645c42da8fe5de4d863b843be0b57",
+    "tests.xml": "9283e43f9b101bd16c7ba0ddc766daf546411b173b9104f7f4d9e18e628719ea"
+  }
+}

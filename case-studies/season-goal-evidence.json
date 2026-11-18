@@ -1,0 +1,53 @@
+{
+  "schema": "frc-season-goal-evidence/v1",
+  "manualSources": {
+    "2024": {
+      "url": "https://firstfrc.blob.core.windows.net/frc2024/Manual/HTML/2024GameManual.htm",
+      "sha256": "bf306079c54be191711b5aae112450eab904e144073ec46d4342b283f64fa1d5",
+      "bytes": 940778
+    },
+    "2025": {
+      "url": "https://firstfrc.blob.core.windows.net/frc2025/Manual/HTML/2025GameManual.htm",
+      "sha256": "8b7fee3f1c74913f91a8f16ca0f7c7710ac93a28b271529391721cdafb21f7da",
+      "bytes": 1131553
+    },
+    "2026": {
+      "url": "https://firstfrc.blob.core.windows.net/frc2026/Manual/HTML/2026GameManual.htm",
+      "sha256": "3e96b803b56fe88c6698ba1d2fc2ff2e253857071552a2f0446e753f0a46250a",
+      "bytes": 1211124
+    }
+  },
+  "goals": {
+    "2024": {
+      "goal": "SPEAKER",
+      "criterion": "Field-facing opening followed by sensor passage",
+      "locators": [
+        "6.5.1",
+        "6.5.6 Table 6-2"
+      ],
+      "scope": "Unamplified interior-period event only; amplification and post-period windows unsupported"
+    },
+    "2025": {
+      "goal": "CORAL_L1",
+      "criterion": "No same-alliance robot contact, not scored on another level, and contacting trough or directly supported by CORAL contacting trough",
+      "locators": [
+        "6.5.1",
+        "6.5.4 Table 6-2",
+        "G412"
+      ],
+      "scope": "Single observation, not persistence or match accounting; zone gate is conservative design policy"
+    },
+    "2026": {
+      "goal": "HUB",
+      "criterion": "Top opening followed by sensor passage; existing TU22 interior-phase assessor",
+      "locators": [
+        "6.4.1",
+        "6.5.1",
+        "6.5.3"
+      ],
+      "scope": "No release-count conversion; grace and cross-phase remain unsupported"
+    }
+  },
+  "eventApplicability": "unverified-archive",
+  "engineeringAcceptance": "blocked"
+}

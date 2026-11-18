@@ -1,0 +1,15 @@
+# Native accessory diagnostic and original spacer hypothesis
+
+This follow-on rejects the apparent button-head/spacer solution from the scalar screen. Run `python -B scripts/inspect-accessory-stack.py` for an opt-in fresh download/hash-verified OCP replay. Numeric receipt: `case-studies/2026/native-accessory-interference.json`. Vendor geometry is temporary and not exported.
+
+Pinned manufacturer STEP solids show the assumed REV-29-2951 button screw has 0.684454mm3 common volume with the quarter-inch REV-21-2005 spacer, and 2.003032mm3 with the entry hub. The latter intersection lies entirely at X13.49375..14.28750mm, identifying overlap in the raised hub-face region rather than opposite threaded engagement. Increasing inter-wheel pitch does not fix local screw-head-to-hub interference.
+
+A narrower-head candidate, REV-29-2922-PK50 (#10-32 x1in socket head), is identified by the [manufacturer table](https://www.revrobotics.com/10-32-Socket-Head-Screws/). Its [STEP](https://www.revrobotics.com/content/cad/REV-29-2922.STEP) is pinned in the script and receipt. The source model's tip is Z0 and head points toward negative Z; reverse its axis, seating its Z-25.4mm under-head plane at X13.49375mm. It has zero common volume with the entry hub but 2.862236mm3 overlap with the standard spacer. Native head extent is X18.31975mm. Supplier [MAXHub guidance](https://docs.revrobotics.com/ion-build/motion/maxhubs) illustrates socket screws on a different traction-wheel assembly; that example is not proof of length/engagement here.
+
+## Original geometric alternative, not a sourced component
+
+An analytic annular spacer (17mm OD,14mm ID,6.35mm width) avoids the tested socket head and hub in nominal native common-volume checks. It is a new design hypothesis, not a modified vendor model, purchasable SKU or fabrication release. Its14mm bore provides only0.25mm nominal diametral room around the previously sourced13.75mm rounded-hex corner circle. Its8.5mm outer radius has only0.23125mm nominal radial separation from the socket head's nearest envelope at8.73125mm. Neither figure is a tolerance clearance. Source stock, material, allowable compression/creep, complete mating-face contact, shaft alignment and fabrication tolerances remain unverified.
+
+At the retained34.925mm wheel pitch, opposing socket head envelopes span36.6395mm, so their axial projections overlap by1.7145mm. Their heads occupy opposite sides of the shaft in the proposed opposed-screw clocking, but native adjacent-wheel assembly verification is still required. Do not reuse the button-head scalar clearance as a socket-head result.
+
+The experiment includes one entry hub and one screw at a time, plus a spacer. It excludes the opposite threaded hub, wheel, shaft and support stack. Simplified screw threads cannot establish real engagement, preload or stripping strength. Geometry acceptance, procurement and mechanical acceptance remain blocked. The analytic part can support a provisional uncalibrated geometric simulation study only; no calibrated contact validity transfers.

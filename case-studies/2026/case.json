@@ -92,8 +92,8 @@
   "status": {
     "rules": "selected-sections-reviewed",
     "strategy": "original-proposal",
-    "java": "compiled and tested in 42-test suite",
-    "cad": "script-and-DXF-only; Fusion sign-in blocked",
+    "java": "compiled and tested in 44-test suite plus bounded demo, 2026-11-16",
+    "cad": "Native guarded sideplates created; 6.35 to 7 mm thickness edit, F3D/STEP reopen and numerical geometry/history checks passed 2026-11-16. Separate experiment; not a complete assembly.",
     "simulation": "nominal plant plus boundary/fault cases executed",
     "hardware": "not-operated"
   },

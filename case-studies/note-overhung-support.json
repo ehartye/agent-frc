@@ -1,0 +1,891 @@
+{
+  "schema": "frc-note-overhung-support/v1",
+  "lowerCollarOffsetMm": 6.03225,
+  "unexpectedIntersections": [],
+  "sourceCodeSha256": {
+    "case-studies/2024/note-fixture-nominal.json": "d0aad462e9bdf99b6fc83cd1db15ca7abe1f7768a3d9afd75ba33663e176e008",
+    "case-studies/2025/coral-fixture-nominal.json": "a82751de2ebcd7be4ca03ba99a469957c33194a81bd3aef6ef82d0b4e87a0567",
+    "case-studies/2026/intake-fixture-nominal.json": "c99db72594738e48424db574244cfa70aa1140f424a2772ac1f85702c0e81c56",
+    "case-studies/lateral-pregrip-evidence.json": "38479fed3aa765bb1efc453306dc64154858c5b8869a77774d1380f27056926f",
+    "case-studies/native-catcher-envelopes.json": "f8e1d94fa1c1b1bd2e5e646778e130eb6d7204423f188d4a932a48d10cf9194f",
+    "case-studies/note-overhung-support-evidence.json": "9936f346bff9556282b45205cee26cb07e92f9f93eff6456764aadfd8710cd3b",
+    "scripts/inspect-accessory-stack.py": "6a6f0d1fbc80c376d735538cdbcf90820d5a176b8edc2dc5583f0002d23a3916",
+    "scripts/inspect-housing-stack.py": "125fb5a37a1e99c82d3093e9379ff858a157ff7f901d9aa481fe7810220a58c7",
+    "scripts/inspect-support-stack.py": "23706a3eaf2e298ab1d83bfcc88787689246704da43d80deb2ac360b4347d13c",
+    "scripts/inspect-wheel-stack.py": "748848f06a7d0f2f85bf21e17a272004a4dda5ab8038ad6527dc4ad07a47c8f5",
+    "scripts/note-overhung-support.py": "cb0b91e2726962cb7be107519f146d76e76455bee13d12115c998869550add50",
+    "scripts/retained-pregrip-fit.py": "114ab7de7dba25df05c9db46d8450a5cecabd9d2b8b4fa7b84f45216839f5ae3"
+  },
+  "sourceRecords": {
+    "bearing": {
+      "part": "REV-21-1916",
+      "url": "https://www.revrobotics.com/content/cad/REV-21-1916.STEP",
+      "sha256": "3e16cb3f5f215288b8706eb8228d9580fea78c425eee536ef95195b5b98f02e6",
+      "bytes": 70890
+    },
+    "collar": {
+      "part": "REV-21-2900",
+      "url": "https://www.revrobotics.com/content/cad/REV-21-2900.STEP",
+      "sha256": "9167c2167b9470f9b33ef368b81d1cc52038c7914f220cc7dd83f142c2022ee9",
+      "bytes": 236513
+    },
+    "retainer": {
+      "part": "REV-21-2286",
+      "url": "https://www.revrobotics.com/content/cad/REV-21-2286.STEP",
+      "sha256": "6d22992a59ed8864450ad7d98f78c20118a948267ab876d871d4666d4bf8902f",
+      "bytes": 82861
+    },
+    "hub": {
+      "part": "REV-21-2037",
+      "url": "https://www.revrobotics.com/content/cad/REV-21-2037.STEP",
+      "sha256": "994be447326c5e10fa86f4d9addd0abc218dd82b7bef9efbcac9e8259c268807",
+      "bytes": 406016
+    },
+    "socket": {
+      "part": "REV-29-2922",
+      "url": "https://www.revrobotics.com/content/cad/REV-29-2922.STEP",
+      "sha256": "53bf4bac9c31d0d7c47bdaf50315612161f04bce4011e6704b5c93064733df40",
+      "bytes": 61467
+    },
+    "wheel": {
+      "part": "pinned4inMAXSplineCAD",
+      "url": "https://www.revrobotics.com/content/cad/Compliant-Wheel-4in-MAXSpline.STEP",
+      "sha256": "408544394be77d3815d32ab360d8cbb975ccf847366f0d02c77499dc33fe3bb2",
+      "bytes": 5814862
+    }
+  },
+  "runtimeOcp": "8.0.1.0",
+  "partBoundsMm": {
+    "wheel": [
+      349.2,
+      176.8,
+      13.393749899999998,
+      450.8,
+      278.4,
+      37.4062501
+    ],
+    "hubLower": [
+      382.54580019214865,
+      210.1374999,
+      11.112499899999996,
+      417.45419980785135,
+      245.0625001,
+      19.843750000000004
+    ],
+    "hubUpper": [
+      382.54580019214865,
+      210.1374999,
+      30.956249999999994,
+      417.45419980785135,
+      245.0625001,
+      39.6875001
+    ],
+    "socketLower": [
+      396.03125,
+      210.93125,
+      13.493749999999999,
+      403.96875000000006,
+      218.86875,
+      43.7197501
+    ],
+    "socketUpper": [
+      396.03125,
+      236.33124999999998,
+      7.080249900000003,
+      403.96875,
+      244.26874999999998,
+      37.30625
+    ],
+    "lowerCollar": [
+      386.02999989999995,
+      213.6299612334307,
+      -1.2697501000007125,
+      413.9474321553104,
+      241.57002393160587,
+      5.080250100000001
+    ],
+    "upperCollar": [
+      386.02999989999995,
+      213.6299612334307,
+      109.7687498999993,
+      413.9474321553104,
+      241.57002393160587,
+      116.11875010000003
+    ],
+    "hubSpacer": [
+      391.5,
+      219.1,
+      39.6875,
+      408.5,
+      236.1,
+      66.83125
+    ],
+    "bearingSpacer": [
+      391.5,
+      219.1,
+      74.76875,
+      408.5,
+      236.1,
+      101.83125000000001
+    ],
+    "lowerHubSpacer": [
+      391.5,
+      219.1,
+      5.0802499999999995,
+      408.5,
+      236.1,
+      11.1125
+    ],
+    "shaft": [
+      393.125,
+      221.24999999999991,
+      -1.2697499999999988,
+      406.875,
+      233.95000000000005,
+      151.13025000000005
+    ],
+    "lowerBearing": [
+      384.4425,
+      212.0425,
+      66.83125,
+      415.5575,
+      243.1575,
+      74.76875
+    ],
+    "lowerPlate": [
+      360.0,
+      202.6,
+      70.00625,
+      440.0,
+      252.6,
+      73.18125
+    ],
+    "lowerRetainer": [
+      366.8394366857527,
+      208.54999999999998,
+      73.18124999999998,
+      433.1605633142473,
+      246.65,
+      76.35625000000002
+    ],
+    "upperBearing": [
+      384.4425,
+      212.0425,
+      101.83125,
+      415.5575,
+      243.1575,
+      109.76875000000001
+    ],
+    "upperPlate": [
+      360.0,
+      202.6,
+      105.00625,
+      440.0,
+      252.6,
+      108.18125
+    ],
+    "upperRetainer": [
+      366.8394366857527,
+      208.54999999999998,
+      108.18125,
+      433.1605633142473,
+      246.65,
+      111.35625000000002
+    ],
+    "backWeb": [
+      440.0,
+      202.6,
+      70.00625,
+      443.175,
+      252.6,
+      108.18124999999999
+    ]
+  },
+  "pairChecks": [
+    {
+      "parts": [
+        "wheel",
+        "hubLower"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "wheel",
+        "hubUpper"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "wheel",
+        "socketLower"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "wheel",
+        "socketUpper"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "wheel",
+        "shaft"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "hubLower",
+        "socketLower"
+      ],
+      "classification": "thread-proxy-not-engagement-proof",
+      "intersectionMm3": 32.59478280122093
+    },
+    {
+      "parts": [
+        "hubLower",
+        "socketUpper"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "hubLower",
+        "lowerHubSpacer"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "hubLower",
+        "shaft"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "hubUpper",
+        "socketLower"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "hubUpper",
+        "socketUpper"
+      ],
+      "classification": "thread-proxy-not-engagement-proof",
+      "intersectionMm3": 32.594782801220866
+    },
+    {
+      "parts": [
+        "hubUpper",
+        "hubSpacer"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "hubUpper",
+        "shaft"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "lowerCollar",
+        "lowerHubSpacer"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "lowerCollar",
+        "shaft"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "upperCollar",
+        "shaft"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "upperCollar",
+        "upperBearing"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "upperCollar",
+        "upperRetainer"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "hubSpacer",
+        "shaft"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "hubSpacer",
+        "lowerBearing"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "bearingSpacer",
+        "shaft"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "bearingSpacer",
+        "lowerBearing"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "bearingSpacer",
+        "lowerRetainer"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "bearingSpacer",
+        "upperBearing"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "lowerHubSpacer",
+        "shaft"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "shaft",
+        "lowerBearing"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "shaft",
+        "lowerPlate"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "shaft",
+        "lowerRetainer"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "shaft",
+        "upperBearing"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "shaft",
+        "upperPlate"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "shaft",
+        "upperRetainer"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "lowerBearing",
+        "lowerPlate"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "lowerBearing",
+        "lowerRetainer"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "lowerPlate",
+        "lowerRetainer"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "lowerPlate",
+        "backWeb"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "upperBearing",
+        "upperPlate"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "upperBearing",
+        "upperRetainer"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "upperPlate",
+        "upperRetainer"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    },
+    {
+      "parts": [
+        "upperPlate",
+        "backWeb"
+      ],
+      "classification": "nonthread-interface",
+      "intersectionMm3": 0.0
+    }
+  ],
+  "aabbCulledPairCount": 114,
+  "partCount": 18,
+  "reversedRetainerControlMm3": 184.39863159829264,
+  "sweptChecks": [
+    {
+      "part": "wheel",
+      "inflatedSweptBoundsMm": [
+        345.2,
+        172.8,
+        9.393749899999998,
+        454.8,
+        342.4,
+        41.4062501
+      ],
+      "obstructionMm3": {
+        "floor": 0.0,
+        "gate": 0.0,
+        "bumper": 0.0,
+        "guide-1": 0.0,
+        "guide1": 0.0
+      },
+      "envelopePass": true
+    },
+    {
+      "part": "hubLower",
+      "inflatedSweptBoundsMm": [
+        378.54580019214865,
+        206.1374999,
+        7.112499899999996,
+        421.45419980785135,
+        309.06250009999997,
+        23.843750000000004
+      ],
+      "obstructionMm3": {
+        "floor": 0.0,
+        "gate": 0.0,
+        "bumper": 0.0,
+        "guide-1": 0.0,
+        "guide1": 0.0
+      },
+      "envelopePass": true
+    },
+    {
+      "part": "hubUpper",
+      "inflatedSweptBoundsMm": [
+        378.54580019214865,
+        206.1374999,
+        26.956249999999994,
+        421.45419980785135,
+        309.06250009999997,
+        43.6875001
+      ],
+      "obstructionMm3": {
+        "floor": 0.0,
+        "gate": 0.0,
+        "bumper": 0.0,
+        "guide-1": 0.0,
+        "guide1": 0.0
+      },
+      "envelopePass": true
+    },
+    {
+      "part": "socketLower",
+      "inflatedSweptBoundsMm": [
+        392.03125,
+        206.93125,
+        9.493749999999999,
+        407.96875000000006,
+        282.86875,
+        47.7197501
+      ],
+      "obstructionMm3": {
+        "floor": 0.0,
+        "gate": 0.0,
+        "bumper": 0.0,
+        "guide-1": 0.0,
+        "guide1": 0.0
+      },
+      "envelopePass": true
+    },
+    {
+      "part": "socketUpper",
+      "inflatedSweptBoundsMm": [
+        392.03125,
+        232.33124999999998,
+        3.0802499000000028,
+        407.96875,
+        308.26874999999995,
+        41.30625
+      ],
+      "obstructionMm3": {
+        "floor": 0.0,
+        "gate": 0.0,
+        "bumper": 0.0,
+        "guide-1": 0.0,
+        "guide1": 0.0
+      },
+      "envelopePass": true
+    },
+    {
+      "part": "lowerCollar",
+      "inflatedSweptBoundsMm": [
+        382.02999989999995,
+        209.6299612334307,
+        -5.269750100000713,
+        417.9474321553104,
+        305.5700239316059,
+        9.0802501
+      ],
+      "obstructionMm3": {
+        "floor": 0.0,
+        "gate": 0.0,
+        "bumper": 0.0,
+        "guide-1": 0.0,
+        "guide1": 0.0
+      },
+      "envelopePass": true
+    },
+    {
+      "part": "upperCollar",
+      "inflatedSweptBoundsMm": [
+        382.02999989999995,
+        209.6299612334307,
+        105.7687498999993,
+        417.9474321553104,
+        305.5700239316059,
+        120.11875010000003
+      ],
+      "obstructionMm3": {
+        "floor": 0.0,
+        "gate": 0.0,
+        "bumper": 0.0,
+        "guide-1": 0.0,
+        "guide1": 0.0
+      },
+      "envelopePass": true
+    },
+    {
+      "part": "hubSpacer",
+      "inflatedSweptBoundsMm": [
+        387.5,
+        215.1,
+        35.6875,
+        412.5,
+        300.1,
+        70.83125
+      ],
+      "obstructionMm3": {
+        "floor": 0.0,
+        "gate": 0.0,
+        "bumper": 0.0,
+        "guide-1": 0.0,
+        "guide1": 0.0
+      },
+      "envelopePass": true
+    },
+    {
+      "part": "bearingSpacer",
+      "inflatedSweptBoundsMm": [
+        387.5,
+        215.1,
+        70.76875,
+        412.5,
+        300.1,
+        105.83125000000001
+      ],
+      "obstructionMm3": {
+        "floor": 0.0,
+        "gate": 0.0,
+        "bumper": 0.0,
+        "guide-1": 0.0,
+        "guide1": 0.0
+      },
+      "envelopePass": true
+    },
+    {
+      "part": "lowerHubSpacer",
+      "inflatedSweptBoundsMm": [
+        387.5,
+        215.1,
+        1.0802499999999995,
+        412.5,
+        300.1,
+        15.1125
+      ],
+      "obstructionMm3": {
+        "floor": 0.0,
+        "gate": 0.0,
+        "bumper": 0.0,
+        "guide-1": 0.0,
+        "guide1": 0.0
+      },
+      "envelopePass": true
+    },
+    {
+      "part": "shaft",
+      "inflatedSweptBoundsMm": [
+        389.125,
+        217.24999999999991,
+        -5.269749999999998,
+        410.875,
+        297.95000000000005,
+        155.13025000000005
+      ],
+      "obstructionMm3": {
+        "floor": 0.0,
+        "gate": 0.0,
+        "bumper": 0.0,
+        "guide-1": 0.0,
+        "guide1": 0.0
+      },
+      "envelopePass": true
+    },
+    {
+      "part": "lowerBearing",
+      "inflatedSweptBoundsMm": [
+        380.4425,
+        208.0425,
+        62.83125,
+        419.5575,
+        307.1575,
+        78.76875
+      ],
+      "obstructionMm3": {
+        "floor": 0.0,
+        "gate": 0.0,
+        "bumper": 0.0,
+        "guide-1": 0.0,
+        "guide1": 0.0
+      },
+      "envelopePass": true
+    },
+    {
+      "part": "lowerPlate",
+      "inflatedSweptBoundsMm": [
+        356.0,
+        198.6,
+        66.00625,
+        444.0,
+        316.6,
+        77.18125
+      ],
+      "obstructionMm3": {
+        "floor": 0.0,
+        "gate": 0.0,
+        "bumper": 0.0,
+        "guide-1": 0.0,
+        "guide1": 0.0
+      },
+      "envelopePass": true
+    },
+    {
+      "part": "lowerRetainer",
+      "inflatedSweptBoundsMm": [
+        362.8394366857527,
+        204.54999999999998,
+        69.18124999999998,
+        437.1605633142473,
+        310.65,
+        80.35625000000002
+      ],
+      "obstructionMm3": {
+        "floor": 0.0,
+        "gate": 0.0,
+        "bumper": 0.0,
+        "guide-1": 0.0,
+        "guide1": 0.0
+      },
+      "envelopePass": true
+    },
+    {
+      "part": "upperBearing",
+      "inflatedSweptBoundsMm": [
+        380.4425,
+        208.0425,
+        97.83125,
+        419.5575,
+        307.1575,
+        113.76875000000001
+      ],
+      "obstructionMm3": {
+        "floor": 0.0,
+        "gate": 0.0,
+        "bumper": 0.0,
+        "guide-1": 0.0,
+        "guide1": 0.0
+      },
+      "envelopePass": true
+    },
+    {
+      "part": "upperPlate",
+      "inflatedSweptBoundsMm": [
+        356.0,
+        198.6,
+        101.00625,
+        444.0,
+        316.6,
+        112.18125
+      ],
+      "obstructionMm3": {
+        "floor": 0.0,
+        "gate": 0.0,
+        "bumper": 0.0,
+        "guide-1": 0.0,
+        "guide1": 0.0
+      },
+      "envelopePass": true
+    },
+    {
+      "part": "upperRetainer",
+      "inflatedSweptBoundsMm": [
+        362.8394366857527,
+        204.54999999999998,
+        104.18125,
+        437.1605633142473,
+        310.65,
+        115.35625000000002
+      ],
+      "obstructionMm3": {
+        "floor": 0.0,
+        "gate": 0.0,
+        "bumper": 0.0,
+        "guide-1": 0.0,
+        "guide1": 0.0
+      },
+      "envelopePass": true
+    },
+    {
+      "part": "backWeb",
+      "inflatedSweptBoundsMm": [
+        436.0,
+        198.6,
+        66.00625,
+        447.175,
+        316.6,
+        112.18124999999999
+      ],
+      "obstructionMm3": {
+        "floor": 0.0,
+        "gate": 0.0,
+        "bumper": 0.0,
+        "guide-1": 0.0,
+        "guide1": 0.0
+      },
+      "envelopePass": true
+    }
+  ],
+  "shaftEnvelopeMm": [
+    -1.2697500000000002,
+    151.13025
+  ],
+  "bearingCentersZmm": [
+    70.8,
+    105.8
+  ],
+  "customSpacerWidthsMm": [
+    27.14375,
+    27.0625
+  ],
+  "railAttachment": null,
+  "axialContactAndPreload": null,
+  "loadAcceptance": null,
+  "limitations": [
+    "NOTE right side only; other side/season supports not inferred",
+    "Actual pinned wheel/hub/socket/bearing/collar/retainer CAD; custom shortened analytic shaft,plates,spacers and backing web",
+    "13.75mm shaft-envelope corner diameter differs from13.74mm drawing maximum; no tolerance/fit reconciliation",
+    "Backing web tangent to plates only, no fasteners/welds or rail attachment; housing fasteners absent",
+    "Pairwise rigid-volume tests and4mm-inflated fixed-orientation60mm lateral sweeps, not a constrained loaded assembly",
+    "No transfer of previous horizontal bank stiffness, race contact, preload, retention or dynamics",
+    "Adjusted collar/shaft can extend below mechanism-floor top datum outside its plate outline; ground/chassis clearance remains unknown",
+    "No physical sensing, actuator control or scoring acceptance"
+  ],
+  "engineeringAcceptance": "blocked"
+}

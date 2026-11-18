@@ -1,0 +1,9 @@
+# Additional native season units and local bearing housing
+
+`inspect-season-wheel-units.py` hash-pins the2024 four-inch MAXSpline wheel and2025 direct-hex wheel. The recorded run in `case-studies/native-season-wheel-units.json` found no nominal common volume between the NOTE wheel and either proposed hub or original shaft envelope. The CORAL wheel clears the30-degree-clocked shaft and proposed end spacer. The deliberately misclocked CORAL shaft intersects the wheel by97.56737mm3. These are representative units, not complete2024/2025 banks or dynamic validation.
+
+`inspect-housing-stack.py` examines the pinned REV-21-2286 retainer with previously pinned REV-21-1916 bearing and REV-21-2900 collar. [Manufacturer product evidence](https://www.revrobotics.com/rev-21-2286/) identifies glass-filled nylon and #10 screw/3/16in rivet compatibility. The [native retainer STEP](https://www.revrobotics.com/content/cad/REV-21-2286.STEP) is downloaded temporarily with exact hash verification.
+
+An original80x50x3.175mm plate has a nominal28.575mm bearing bore and5mm mounting holes50.8mm apart. It is not a material or tolerance selection. The positive-end proposed plate occupies X124.20625..127.38125mm. The retainer occupies X127.38125..130.55625mm, with its larger counterbore facing the bearing flange. All five tested local interfaces have zero nominal common volume. A deliberately reversed retainer intersects the bearing by184.39863mm3, so its orientation must not be inferred from bounding-box clearance alone.
+
+This is not outer-race retention acceptance: mounting screws/nuts, plate anchorage, applied preload, race-face contact area, strength and tolerances are absent. The housing study is separate from the full bank; it has not been combined or mirrored there. No custom plate or spacer is released for manufacture. Original geometric hypotheses remain useful for subsequent simulation setup, while all engineering acceptance gates remain blocked.

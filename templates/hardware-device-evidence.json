@@ -1,0 +1,68 @@
+{
+  "schema": "frc-device-evidence-planning-template/v1",
+  "status": "unpopulated-planning-template-not-a-validated-device-record",
+  "identity": {
+    "manufacturer": null,
+    "model": null,
+    "partNumber": null,
+    "hardwareRevision": null
+  },
+  "legality": {
+    "season": null,
+    "catalogPin": null,
+    "ruleRefs": [],
+    "status": "unassessed"
+  },
+  "inventory": {
+    "resourceBaselinePin": null,
+    "inventoryItemId": null,
+    "status": "not-linked"
+  },
+  "geometry": {
+    "sourceRefs": [],
+    "bounds": null,
+    "mountingHoles": null,
+    "shaftInterface": null,
+    "connectorEnvelope": null,
+    "coordinateFrame": null,
+    "units": null,
+    "tolerances": null,
+    "status": "unknown"
+  },
+  "electrical": {
+    "sourceRefs": [],
+    "ratedVoltage": null,
+    "voltageRange": null,
+    "currentConditions": null,
+    "connectors": null,
+    "wiringLimits": null,
+    "status": "unknown"
+  },
+  "performance": {
+    "sourceRefs": [],
+    "curves": null,
+    "operatingConditions": null,
+    "uncertainty": null,
+    "status": "unknown"
+  },
+  "model": {
+    "sourceRefs": [],
+    "controllerFirmware": null,
+    "vendorLibrary": null,
+    "parameters": null,
+    "validityDomain": null,
+    "status": "not-built"
+  },
+  "calibration": {
+    "measurementEvidence": [],
+    "holdoutValidation": null,
+    "status": "none"
+  },
+  "sources": [],
+  "rights": {
+    "redistribution": null,
+    "license": null,
+    "status": "unknown"
+  },
+  "engineeringAcceptance": "blocked"
+}

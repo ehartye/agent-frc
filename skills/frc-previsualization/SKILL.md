@@ -116,3 +116,7 @@ Use the [CAD color convention](../../docs/cad-color-convention.md) for new/revis
 ## Choose the simulation for the question
 
 Use [iterative simulator selection](../../docs/simulator-selection.md) to compare block-bot rehearsal, kinematic checks, bounded mechanism/contact fixtures, controls/drive and integrated field/adversary scenarios. Select by decision and evidence needed, not visual complexity or a mandatory fidelity ladder. Preserve model limits and explicit transition gates.
+
+## Carry rehearsal decisions into trustworthy simulation
+
+When a student changes a command policy, ask which controller state changes and which physical state must continue unchanged. Use the [continuation and verification guidance](../../docs/simulator-equivalence.md) to distinguish a newly initialized controller from a preserved plant, current-source tests from historical evidence, and same-time comparisons from mismatched midpoint samples. Retain failed or still-moving outcomes. A matching plot or a green historical test is not capture, stopping, mechanical acceptance or a complete mission.

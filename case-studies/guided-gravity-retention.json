@@ -1,0 +1,862 @@
+{
+  "schema": "frc-guided-gravity-retention/v1",
+  "timingCases": [
+    {
+      "season": 2024,
+      "heightMm": 70.8,
+      "massKg": 0.2,
+      "assumedFrictionCoefficient": 0,
+      "assumedGuideSideLoadN": 0,
+      "accelerationMps2": 9.80665,
+      "closureSeconds": 0.120163145663583,
+      "stalled": false,
+      "impactSpeedMps": 1.178397912421776,
+      "releaseLatencyBudgetTo250ms": 0.129836854336417,
+      "availableGravitationalEnergyJ": 0.138862164
+    },
+    {
+      "season": 2024,
+      "heightMm": 70.8,
+      "massKg": 0.2,
+      "assumedFrictionCoefficient": 0,
+      "assumedGuideSideLoadN": 50,
+      "accelerationMps2": 9.80665,
+      "closureSeconds": 0.120163145663583,
+      "stalled": false,
+      "impactSpeedMps": 1.178397912421776,
+      "releaseLatencyBudgetTo250ms": 0.129836854336417,
+      "availableGravitationalEnergyJ": 0.138862164
+    },
+    {
+      "season": 2024,
+      "heightMm": 70.8,
+      "massKg": 0.2,
+      "assumedFrictionCoefficient": 0.05,
+      "assumedGuideSideLoadN": 0,
+      "accelerationMps2": 9.80665,
+      "closureSeconds": 0.120163145663583,
+      "stalled": false,
+      "impactSpeedMps": 1.178397912421776,
+      "releaseLatencyBudgetTo250ms": 0.129836854336417,
+      "availableGravitationalEnergyJ": 0.138862164
+    },
+    {
+      "season": 2024,
+      "heightMm": 70.8,
+      "massKg": 0.2,
+      "assumedFrictionCoefficient": 0.05,
+      "assumedGuideSideLoadN": 50,
+      "accelerationMps2": -2.6933500000000006,
+      "closureSeconds": null,
+      "stalled": true,
+      "impactSpeedMps": null,
+      "releaseLatencyBudgetTo250ms": null,
+      "availableGravitationalEnergyJ": 0.138862164
+    },
+    {
+      "season": 2024,
+      "heightMm": 70.8,
+      "massKg": 0.2,
+      "assumedFrictionCoefficient": 0.1,
+      "assumedGuideSideLoadN": 0,
+      "accelerationMps2": 9.80665,
+      "closureSeconds": 0.120163145663583,
+      "stalled": false,
+      "impactSpeedMps": 1.178397912421776,
+      "releaseLatencyBudgetTo250ms": 0.129836854336417,
+      "availableGravitationalEnergyJ": 0.138862164
+    },
+    {
+      "season": 2024,
+      "heightMm": 70.8,
+      "massKg": 0.2,
+      "assumedFrictionCoefficient": 0.1,
+      "assumedGuideSideLoadN": 50,
+      "accelerationMps2": -15.19335,
+      "closureSeconds": null,
+      "stalled": true,
+      "impactSpeedMps": null,
+      "releaseLatencyBudgetTo250ms": null,
+      "availableGravitationalEnergyJ": 0.138862164
+    },
+    {
+      "season": 2024,
+      "heightMm": 70.8,
+      "massKg": 0.5,
+      "assumedFrictionCoefficient": 0,
+      "assumedGuideSideLoadN": 0,
+      "accelerationMps2": 9.80665,
+      "closureSeconds": 0.120163145663583,
+      "stalled": false,
+      "impactSpeedMps": 1.178397912421776,
+      "releaseLatencyBudgetTo250ms": 0.129836854336417,
+      "availableGravitationalEnergyJ": 0.34715540999999994
+    },
+    {
+      "season": 2024,
+      "heightMm": 70.8,
+      "massKg": 0.5,
+      "assumedFrictionCoefficient": 0,
+      "assumedGuideSideLoadN": 50,
+      "accelerationMps2": 9.80665,
+      "closureSeconds": 0.120163145663583,
+      "stalled": false,
+      "impactSpeedMps": 1.178397912421776,
+      "releaseLatencyBudgetTo250ms": 0.129836854336417,
+      "availableGravitationalEnergyJ": 0.34715540999999994
+    },
+    {
+      "season": 2024,
+      "heightMm": 70.8,
+      "massKg": 0.5,
+      "assumedFrictionCoefficient": 0.05,
+      "assumedGuideSideLoadN": 0,
+      "accelerationMps2": 9.80665,
+      "closureSeconds": 0.120163145663583,
+      "stalled": false,
+      "impactSpeedMps": 1.178397912421776,
+      "releaseLatencyBudgetTo250ms": 0.129836854336417,
+      "availableGravitationalEnergyJ": 0.34715540999999994
+    },
+    {
+      "season": 2024,
+      "heightMm": 70.8,
+      "massKg": 0.5,
+      "assumedFrictionCoefficient": 0.05,
+      "assumedGuideSideLoadN": 50,
+      "accelerationMps2": 4.806649999999999,
+      "closureSeconds": 0.17163678729132567,
+      "stalled": false,
+      "impactSpeedMps": 0.8249979636338504,
+      "releaseLatencyBudgetTo250ms": 0.07836321270867433,
+      "availableGravitationalEnergyJ": 0.34715540999999994
+    },
+    {
+      "season": 2024,
+      "heightMm": 70.8,
+      "massKg": 0.5,
+      "assumedFrictionCoefficient": 0.1,
+      "assumedGuideSideLoadN": 0,
+      "accelerationMps2": 9.80665,
+      "closureSeconds": 0.120163145663583,
+      "stalled": false,
+      "impactSpeedMps": 1.178397912421776,
+      "releaseLatencyBudgetTo250ms": 0.129836854336417,
+      "availableGravitationalEnergyJ": 0.34715540999999994
+    },
+    {
+      "season": 2024,
+      "heightMm": 70.8,
+      "massKg": 0.5,
+      "assumedFrictionCoefficient": 0.1,
+      "assumedGuideSideLoadN": 50,
+      "accelerationMps2": -0.19335000000000058,
+      "closureSeconds": null,
+      "stalled": true,
+      "impactSpeedMps": null,
+      "releaseLatencyBudgetTo250ms": null,
+      "availableGravitationalEnergyJ": 0.34715540999999994
+    },
+    {
+      "season": 2025,
+      "heightMm": 134.3,
+      "massKg": 0.2,
+      "assumedFrictionCoefficient": 0,
+      "assumedGuideSideLoadN": 0,
+      "accelerationMps2": 9.80665,
+      "closureSeconds": 0.1654979682068247,
+      "stalled": false,
+      "impactSpeedMps": 1.6229806499154573,
+      "releaseLatencyBudgetTo250ms": 0.08450203179317531,
+      "availableGravitationalEnergyJ": 0.263406619
+    },
+    {
+      "season": 2025,
+      "heightMm": 134.3,
+      "massKg": 0.2,
+      "assumedFrictionCoefficient": 0,
+      "assumedGuideSideLoadN": 50,
+      "accelerationMps2": 9.80665,
+      "closureSeconds": 0.1654979682068247,
+      "stalled": false,
+      "impactSpeedMps": 1.6229806499154573,
+      "releaseLatencyBudgetTo250ms": 0.08450203179317531,
+      "availableGravitationalEnergyJ": 0.263406619
+    },
+    {
+      "season": 2025,
+      "heightMm": 134.3,
+      "massKg": 0.2,
+      "assumedFrictionCoefficient": 0.05,
+      "assumedGuideSideLoadN": 0,
+      "accelerationMps2": 9.80665,
+      "closureSeconds": 0.1654979682068247,
+      "stalled": false,
+      "impactSpeedMps": 1.6229806499154573,
+      "releaseLatencyBudgetTo250ms": 0.08450203179317531,
+      "availableGravitationalEnergyJ": 0.263406619
+    },
+    {
+      "season": 2025,
+      "heightMm": 134.3,
+      "massKg": 0.2,
+      "assumedFrictionCoefficient": 0.05,
+      "assumedGuideSideLoadN": 50,
+      "accelerationMps2": -2.6933500000000006,
+      "closureSeconds": null,
+      "stalled": true,
+      "impactSpeedMps": null,
+      "releaseLatencyBudgetTo250ms": null,
+      "availableGravitationalEnergyJ": 0.263406619
+    },
+    {
+      "season": 2025,
+      "heightMm": 134.3,
+      "massKg": 0.2,
+      "assumedFrictionCoefficient": 0.1,
+      "assumedGuideSideLoadN": 0,
+      "accelerationMps2": 9.80665,
+      "closureSeconds": 0.1654979682068247,
+      "stalled": false,
+      "impactSpeedMps": 1.6229806499154573,
+      "releaseLatencyBudgetTo250ms": 0.08450203179317531,
+      "availableGravitationalEnergyJ": 0.263406619
+    },
+    {
+      "season": 2025,
+      "heightMm": 134.3,
+      "massKg": 0.2,
+      "assumedFrictionCoefficient": 0.1,
+      "assumedGuideSideLoadN": 50,
+      "accelerationMps2": -15.19335,
+      "closureSeconds": null,
+      "stalled": true,
+      "impactSpeedMps": null,
+      "releaseLatencyBudgetTo250ms": null,
+      "availableGravitationalEnergyJ": 0.263406619
+    },
+    {
+      "season": 2025,
+      "heightMm": 134.3,
+      "massKg": 0.5,
+      "assumedFrictionCoefficient": 0,
+      "assumedGuideSideLoadN": 0,
+      "accelerationMps2": 9.80665,
+      "closureSeconds": 0.1654979682068247,
+      "stalled": false,
+      "impactSpeedMps": 1.6229806499154573,
+      "releaseLatencyBudgetTo250ms": 0.08450203179317531,
+      "availableGravitationalEnergyJ": 0.6585165475
+    },
+    {
+      "season": 2025,
+      "heightMm": 134.3,
+      "massKg": 0.5,
+      "assumedFrictionCoefficient": 0,
+      "assumedGuideSideLoadN": 50,
+      "accelerationMps2": 9.80665,
+      "closureSeconds": 0.1654979682068247,
+      "stalled": false,
+      "impactSpeedMps": 1.6229806499154573,
+      "releaseLatencyBudgetTo250ms": 0.08450203179317531,
+      "availableGravitationalEnergyJ": 0.6585165475
+    },
+    {
+      "season": 2025,
+      "heightMm": 134.3,
+      "massKg": 0.5,
+      "assumedFrictionCoefficient": 0.05,
+      "assumedGuideSideLoadN": 0,
+      "accelerationMps2": 9.80665,
+      "closureSeconds": 0.1654979682068247,
+      "stalled": false,
+      "impactSpeedMps": 1.6229806499154573,
+      "releaseLatencyBudgetTo250ms": 0.08450203179317531,
+      "availableGravitationalEnergyJ": 0.6585165475
+    },
+    {
+      "season": 2025,
+      "heightMm": 134.3,
+      "massKg": 0.5,
+      "assumedFrictionCoefficient": 0.05,
+      "assumedGuideSideLoadN": 50,
+      "accelerationMps2": 4.806649999999999,
+      "closureSeconds": 0.2363914443933371,
+      "stalled": false,
+      "impactSpeedMps": 1.1362509361932336,
+      "releaseLatencyBudgetTo250ms": 0.013608555606662909,
+      "availableGravitationalEnergyJ": 0.6585165475
+    },
+    {
+      "season": 2025,
+      "heightMm": 134.3,
+      "massKg": 0.5,
+      "assumedFrictionCoefficient": 0.1,
+      "assumedGuideSideLoadN": 0,
+      "accelerationMps2": 9.80665,
+      "closureSeconds": 0.1654979682068247,
+      "stalled": false,
+      "impactSpeedMps": 1.6229806499154573,
+      "releaseLatencyBudgetTo250ms": 0.08450203179317531,
+      "availableGravitationalEnergyJ": 0.6585165475
+    },
+    {
+      "season": 2025,
+      "heightMm": 134.3,
+      "massKg": 0.5,
+      "assumedFrictionCoefficient": 0.1,
+      "assumedGuideSideLoadN": 50,
+      "accelerationMps2": -0.19335000000000058,
+      "closureSeconds": null,
+      "stalled": true,
+      "impactSpeedMps": null,
+      "releaseLatencyBudgetTo250ms": null,
+      "availableGravitationalEnergyJ": 0.6585165475
+    },
+    {
+      "season": 2026,
+      "heightMm": 170,
+      "massKg": 0.2,
+      "assumedFrictionCoefficient": 0,
+      "assumedGuideSideLoadN": 0,
+      "accelerationMps2": 9.80665,
+      "closureSeconds": 0.18619976165733823,
+      "stalled": false,
+      "impactSpeedMps": 1.825995892656936,
+      "releaseLatencyBudgetTo250ms": 0.06380023834266177,
+      "availableGravitationalEnergyJ": 0.3334261
+    },
+    {
+      "season": 2026,
+      "heightMm": 170,
+      "massKg": 0.2,
+      "assumedFrictionCoefficient": 0,
+      "assumedGuideSideLoadN": 50,
+      "accelerationMps2": 9.80665,
+      "closureSeconds": 0.18619976165733823,
+      "stalled": false,
+      "impactSpeedMps": 1.825995892656936,
+      "releaseLatencyBudgetTo250ms": 0.06380023834266177,
+      "availableGravitationalEnergyJ": 0.3334261
+    },
+    {
+      "season": 2026,
+      "heightMm": 170,
+      "massKg": 0.2,
+      "assumedFrictionCoefficient": 0.05,
+      "assumedGuideSideLoadN": 0,
+      "accelerationMps2": 9.80665,
+      "closureSeconds": 0.18619976165733823,
+      "stalled": false,
+      "impactSpeedMps": 1.825995892656936,
+      "releaseLatencyBudgetTo250ms": 0.06380023834266177,
+      "availableGravitationalEnergyJ": 0.3334261
+    },
+    {
+      "season": 2026,
+      "heightMm": 170,
+      "massKg": 0.2,
+      "assumedFrictionCoefficient": 0.05,
+      "assumedGuideSideLoadN": 50,
+      "accelerationMps2": -2.6933500000000006,
+      "closureSeconds": null,
+      "stalled": true,
+      "impactSpeedMps": null,
+      "releaseLatencyBudgetTo250ms": null,
+      "availableGravitationalEnergyJ": 0.3334261
+    },
+    {
+      "season": 2026,
+      "heightMm": 170,
+      "massKg": 0.2,
+      "assumedFrictionCoefficient": 0.1,
+      "assumedGuideSideLoadN": 0,
+      "accelerationMps2": 9.80665,
+      "closureSeconds": 0.18619976165733823,
+      "stalled": false,
+      "impactSpeedMps": 1.825995892656936,
+      "releaseLatencyBudgetTo250ms": 0.06380023834266177,
+      "availableGravitationalEnergyJ": 0.3334261
+    },
+    {
+      "season": 2026,
+      "heightMm": 170,
+      "massKg": 0.2,
+      "assumedFrictionCoefficient": 0.1,
+      "assumedGuideSideLoadN": 50,
+      "accelerationMps2": -15.19335,
+      "closureSeconds": null,
+      "stalled": true,
+      "impactSpeedMps": null,
+      "releaseLatencyBudgetTo250ms": null,
+      "availableGravitationalEnergyJ": 0.3334261
+    },
+    {
+      "season": 2026,
+      "heightMm": 170,
+      "massKg": 0.5,
+      "assumedFrictionCoefficient": 0,
+      "assumedGuideSideLoadN": 0,
+      "accelerationMps2": 9.80665,
+      "closureSeconds": 0.18619976165733823,
+      "stalled": false,
+      "impactSpeedMps": 1.825995892656936,
+      "releaseLatencyBudgetTo250ms": 0.06380023834266177,
+      "availableGravitationalEnergyJ": 0.83356525
+    },
+    {
+      "season": 2026,
+      "heightMm": 170,
+      "massKg": 0.5,
+      "assumedFrictionCoefficient": 0,
+      "assumedGuideSideLoadN": 50,
+      "accelerationMps2": 9.80665,
+      "closureSeconds": 0.18619976165733823,
+      "stalled": false,
+      "impactSpeedMps": 1.825995892656936,
+      "releaseLatencyBudgetTo250ms": 0.06380023834266177,
+      "availableGravitationalEnergyJ": 0.83356525
+    },
+    {
+      "season": 2026,
+      "heightMm": 170,
+      "massKg": 0.5,
+      "assumedFrictionCoefficient": 0.05,
+      "assumedGuideSideLoadN": 0,
+      "accelerationMps2": 9.80665,
+      "closureSeconds": 0.18619976165733823,
+      "stalled": false,
+      "impactSpeedMps": 1.825995892656936,
+      "releaseLatencyBudgetTo250ms": 0.06380023834266177,
+      "availableGravitationalEnergyJ": 0.83356525
+    },
+    {
+      "season": 2026,
+      "heightMm": 170,
+      "massKg": 0.5,
+      "assumedFrictionCoefficient": 0.05,
+      "assumedGuideSideLoadN": 50,
+      "accelerationMps2": 4.806649999999999,
+      "closureSeconds": 0.26596115396937053,
+      "stalled": false,
+      "impactSpeedMps": 1.2783821807268747,
+      "releaseLatencyBudgetTo250ms": -0.015961153969370534,
+      "availableGravitationalEnergyJ": 0.83356525
+    },
+    {
+      "season": 2026,
+      "heightMm": 170,
+      "massKg": 0.5,
+      "assumedFrictionCoefficient": 0.1,
+      "assumedGuideSideLoadN": 0,
+      "accelerationMps2": 9.80665,
+      "closureSeconds": 0.18619976165733823,
+      "stalled": false,
+      "impactSpeedMps": 1.825995892656936,
+      "releaseLatencyBudgetTo250ms": 0.06380023834266177,
+      "availableGravitationalEnergyJ": 0.83356525
+    },
+    {
+      "season": 2026,
+      "heightMm": 170,
+      "massKg": 0.5,
+      "assumedFrictionCoefficient": 0.1,
+      "assumedGuideSideLoadN": 50,
+      "accelerationMps2": -0.19335000000000058,
+      "closureSeconds": null,
+      "stalled": true,
+      "impactSpeedMps": null,
+      "releaseLatencyBudgetTo250ms": null,
+      "availableGravitationalEnergyJ": 0.83356525
+    }
+  ],
+  "nativeCases": [
+    {
+      "season": 2024,
+      "pieceVelocityMmS": 0,
+      "closureSeconds": 0.120163145663583,
+      "releaseDelayAssumedSeconds": 0,
+      "relativeSpeedUpperBoundMmS": 1178.397912421776,
+      "status": "certified-2mm-clearance",
+      "samples": [
+        {
+          "timeS": 0,
+          "distanceMm": 38.80529573173851,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.03004078641589575,
+          "distanceMm": 35.756443855083674,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.0600815728317915,
+          "distanceMm": 27.78317403089063,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.09012235924768724,
+          "distanceMm": 20.341016877634015,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.120163145663583,
+          "distanceMm": 20.0,
+          "intersectionVolumeMm3": 0
+        }
+      ],
+      "witness": [],
+      "minimumCertifiedLeafBoundMm": 2.3000000000000007
+    },
+    {
+      "season": 2024,
+      "pieceVelocityMmS": 200,
+      "closureSeconds": 0.120163145663583,
+      "releaseDelayAssumedSeconds": 0,
+      "relativeSpeedUpperBoundMmS": 1195.2496140974067,
+      "status": "certified-2mm-clearance",
+      "samples": [
+        {
+          "timeS": 0,
+          "distanceMm": 38.80529573173851,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.0600815728317915,
+          "distanceMm": 38.348907272070214,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.120163145663583,
+          "distanceMm": 44.03262913271658,
+          "intersectionVolumeMm3": 0
+        }
+      ],
+      "witness": [],
+      "minimumCertifiedLeafBoundMm": 2.442668901288201
+    },
+    {
+      "season": 2024,
+      "pieceVelocityMmS": -400,
+      "closureSeconds": 0.120163145663583,
+      "releaseDelayAssumedSeconds": 0,
+      "relativeSpeedUpperBoundMmS": 1244.4362739811147,
+      "status": "collision-witness",
+      "samples": [
+        {
+          "timeS": 0,
+          "distanceMm": 38.80529573173851,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.120163145663583,
+          "distanceMm": 0.0,
+          "intersectionVolumeMm3": 47956.30690478962
+        }
+      ],
+      "witness": [
+        {
+          "timeS": 0.120163145663583,
+          "distanceMm": 0.0,
+          "intersectionVolumeMm3": 47956.30690478962
+        }
+      ],
+      "minimumCertifiedLeafBoundMm": null
+    },
+    {
+      "season": 2025,
+      "pieceVelocityMmS": 0,
+      "closureSeconds": 0.1654979682068247,
+      "releaseDelayAssumedSeconds": 0,
+      "relativeSpeedUpperBoundMmS": 1622.9806499154572,
+      "status": "certified-2mm-clearance",
+      "samples": [
+        {
+          "timeS": 0,
+          "distanceMm": 28.284271247461913,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.020687246025853086,
+          "distanceMm": 26.841496603978833,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.04137449205170617,
+          "distanceMm": 23.12368999667874,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.062061738077559256,
+          "distanceMm": 20.031004349605297,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.08274898410341235,
+          "distanceMm": 20.0,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.10343623012926542,
+          "distanceMm": 20.0,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.12412347615511851,
+          "distanceMm": 20.0,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.1448107221809716,
+          "distanceMm": 20.0,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.1654979682068247,
+          "distanceMm": 20.0,
+          "intersectionVolumeMm3": 0
+        }
+      ],
+      "witness": [],
+      "minimumCertifiedLeafBoundMm": 3.212499999999995
+    },
+    {
+      "season": 2025,
+      "pieceVelocityMmS": 200,
+      "closureSeconds": 0.1654979682068247,
+      "releaseDelayAssumedSeconds": 0,
+      "relativeSpeedUpperBoundMmS": 1635.2572244145567,
+      "status": "certified-2mm-clearance",
+      "samples": [
+        {
+          "timeS": 0,
+          "distanceMm": 28.284271247461913,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.020687246025853086,
+          "distanceMm": 30.05132932290348,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.04137449205170617,
+          "distanceMm": 30.564275211063276,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.062061738077559256,
+          "distanceMm": 32.43148798933968,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.08274898410341235,
+          "distanceMm": 36.549796820682445,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.12412347615511851,
+          "distanceMm": 44.824695231023725,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.1654979682068247,
+          "distanceMm": 53.09959364136495,
+          "intersectionVolumeMm3": 0
+        }
+      ],
+      "witness": [],
+      "minimumCertifiedLeafBoundMm": 2.7208283036648666
+    },
+    {
+      "season": 2025,
+      "pieceVelocityMmS": -400,
+      "closureSeconds": 0.1654979682068247,
+      "releaseDelayAssumedSeconds": 0,
+      "relativeSpeedUpperBoundMmS": 1671.5460478251862,
+      "status": "collision-witness",
+      "samples": [
+        {
+          "timeS": 0,
+          "distanceMm": 28.284271247461913,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.1654979682068247,
+          "distanceMm": 2.1314180094775704e-16,
+          "intersectionVolumeMm3": 12921.040716986186
+        }
+      ],
+      "witness": [
+        {
+          "timeS": 0.1654979682068247,
+          "distanceMm": 2.1314180094775704e-16,
+          "intersectionVolumeMm3": 12921.040716986186
+        }
+      ],
+      "minimumCertifiedLeafBoundMm": null
+    },
+    {
+      "season": 2026,
+      "pieceVelocityMmS": 0,
+      "closureSeconds": 0.18619976165733823,
+      "releaseDelayAssumedSeconds": 0,
+      "relativeSpeedUpperBoundMmS": 1825.995892656936,
+      "status": "certified-2mm-clearance",
+      "samples": [
+        {
+          "timeS": 0,
+          "distanceMm": 59.35028842544405,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.04654994041433456,
+          "distanceMm": 52.059594777411455,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.06982491062150184,
+          "distanceMm": 43.65631584143549,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.09309988082866912,
+          "distanceMm": 33.54146673046206,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.11637485103583639,
+          "distanceMm": 24.209891336814295,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.12801233613942004,
+          "distanceMm": 21.122716988188657,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.13964982124300368,
+          "distanceMm": 20.000000000002153,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.15128730634658732,
+          "distanceMm": 20.000000000073687,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.16292479145017097,
+          "distanceMm": 20.000000000016332,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.17456227655375461,
+          "distanceMm": 20.000000000000526,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.18619976165733823,
+          "distanceMm": 20.00000000000212,
+          "intersectionVolumeMm3": 0
+        }
+      ],
+      "witness": [],
+      "minimumCertifiedLeafBoundMm": 2.9598913368142945
+    },
+    {
+      "season": 2026,
+      "pieceVelocityMmS": 200,
+      "closureSeconds": 0.18619976165733823,
+      "releaseDelayAssumedSeconds": 0,
+      "relativeSpeedUpperBoundMmS": 1836.91616575172,
+      "status": "certified-2mm-clearance",
+      "samples": [
+        {
+          "timeS": 0,
+          "distanceMm": 59.35028842544405,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.04654994041433456,
+          "distanceMm": 59.16301367682466,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.09309988082866912,
+          "distanceMm": 50.162889803255666,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.13964982124300368,
+          "distanceMm": 47.929964248787996,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.18619976165733823,
+          "distanceMm": 57.23995233159857,
+          "intersectionVolumeMm3": 0
+        }
+      ],
+      "witness": [],
+      "minimumCertifiedLeafBoundMm": 5.175795217852759
+    },
+    {
+      "season": 2026,
+      "pieceVelocityMmS": -400,
+      "closureSeconds": 0.18619976165733823,
+      "releaseDelayAssumedSeconds": 0,
+      "relativeSpeedUpperBoundMmS": 1869.2942518501468,
+      "status": "collision-witness",
+      "samples": [
+        {
+          "timeS": 0,
+          "distanceMm": 59.35028842544405,
+          "intersectionVolumeMm3": 0
+        },
+        {
+          "timeS": 0.18619976165733823,
+          "distanceMm": 7.105427357601002e-15,
+          "intersectionVolumeMm3": 95544.51132265423
+        }
+      ],
+      "witness": [
+        {
+          "timeS": 0.18619976165733823,
+          "distanceMm": 7.105427357601002e-15,
+          "intersectionVolumeMm3": 95544.51132265423
+        }
+      ],
+      "minimumCertifiedLeafBoundMm": null
+    }
+  ],
+  "sourceCodeSha256": {
+    "scripts/guided-gravity-retention.py": "e3347784b9dace129ca93f10a3d5705a5815254401d563b1e64d9e5931845ffc",
+    "scripts/time-resolved-catcher-closure.py": "9ba446d130f3cce913e13229f4b016c66ab76a7857a977e286de88dfbfd77309",
+    "scripts/native-catcher-sweep.py": "27fa93f89ee366156b35b12cfd74f81d421113468f3225be8dc8d0027c5508d4",
+    "scripts/native-catcher-envelopes.py": "773cb6de6a0b325c3bfa54bdad2da6bfb847f31c202910de7fb3cc3c8361e3be",
+    "scripts/pose-clearance-contract.py": "11318473993ca41212410a6d223d51b9c61369f63d13982037efbc374780ae36",
+    "scripts/prepare-segmented-replay.py": "eab5479d6228ff3f975baa42838bb36a5cb4d1d22da33e0e8bb58e1837c0d1d8",
+    "scripts/segmented-fuel-contact.py": "52d0172956bd0c4f2973b73b939c6dbe458a9f0878006134bdc02add8305f1d3",
+    "case-studies/guided-retention-evidence.json": "96b72399ac3683a02acdc2a0e28c77f475ca54c02589ed6bff79f72e68427d74"
+  },
+  "runtime": {
+    "python": "3.13.12 (tags/v3.13.12:1cbe481, Feb  3 2026, 18:22:25) [MSC v.1944 64 bit (AMD64)]",
+    "ocp": "8.0.1.0"
+  },
+  "geometryEvidenceSha256": {
+    "case-studies/2024/note-fixture-nominal.json": "d0aad462e9bdf99b6fc83cd1db15ca7abe1f7768a3d9afd75ba33663e176e008",
+    "case-studies/2025/coral-fixture-nominal.json": "a82751de2ebcd7be4ca03ba99a469957c33194a81bd3aef6ef82d0b4e87a0567",
+    "case-studies/2026/intake-fixture-nominal.json": "c99db72594738e48424db574244cfa70aa1140f424a2772ac1f85702c0e81c56",
+    "case-studies/native-season-wheel-units.json": "13d5c9b44a1e1b533146f290292e19d67375dfb4b9533a09da3bfa119b2ed602",
+    "case-studies/2026/native-wheel-stack-exploration.json": "64eb367be67960e5124cdc3ca8717c83d53fd761bad8eebb9f48ffb930df8ff6"
+  },
+  "proof": "Rigid distance Lipschitz bound uses maximum relative translation speed over the full parabolic drop, not average gate speed; every certified adjacent sample interval must reconstruct the2mm lower bound.",
+  "limitations": [
+    "Gravity-only closure is optimistic: latch release delay is set to zero, not measured",
+    "Mass, friction and50N side load are hypothetical sensitivity inputs, not selected materials or load qualification",
+    "Native paths prescribe constant piece velocity and fixed pose; not the coupled intake/catcher plant",
+    "Guide binding, latch engagement, striker approach force, impact absorption, fasteners and full power-loss response are unmodeled",
+    "No rated load or phase-specific loss-of-power behavior for exact latch established; all power-off architecture acceptance remains blocked"
+  ],
+  "engineeringAcceptance": "blocked",
+  "calibration": null
+}

@@ -1,0 +1,1490 @@
+{
+  "schema": "frc-acquisition-contract/v1",
+  "pins": {
+    "scripts/acquisition-contract.py": "9e2d09f0c0470b343fc6c6bc6c43cbc6fd5a54c12715db762f5dd0302bd41b5a",
+    "case-studies/integrated-prototype-targets.json": "292b3b764c63ed9db4cbe2c5d59d50cdc18845e387da65bcf3e4fd41a676ab2d",
+    "case-studies/coral-mass-evidence.json": "874d97b8bd125adaa4b876bb2b9b230a7e979f87757684f779caab79b810f94c",
+    "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/IntegratedPregripPrototype.java": "ddf59535e4991ba7e7ad3699ff22705dd039bb0c7495d9ca6dd4f91338cee2c6",
+    "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/PoweredGuidePlant.java": "e975380a4da17783f9cbb30947dbbda8a21bf907d014c67011abf176e90393e3"
+  },
+  "cases": [
+    {
+      "season": 2024,
+      "scenario": "nominal",
+      "inputs": {
+        "massKg": 0.235,
+        "pitchRad": 0.8726646259971648,
+        "sourceSpeedMps": 0.6,
+        "distanceM": 0.02,
+        "dragN": 0.02,
+        "stopPresent": true,
+        "restitution": 0,
+        "retentionEvidence": "verified-virtual",
+        "stopEnergyCapacityJ": 0.2,
+        "dwellS": 0.2
+      },
+      "trace": [
+        {
+          "timeS": 0,
+          "qM": -0.02,
+          "vMps": 0.6,
+          "event": "source-boundary"
+        },
+        {
+          "timeS": 0.04779773264134302,
+          "qM": 0.0,
+          "vMps": 0.23685977952438875,
+          "event": "pre-impact"
+        },
+        {
+          "timeS": 0.04779773264134302,
+          "qM": 0.0,
+          "vMps": 0.0,
+          "event": "impulse-accounted-impact"
+        },
+        {
+          "timeS": 0.24779773264134303,
+          "qM": 0.0,
+          "vMps": 0,
+          "event": "conditional-latch-dwell"
+        }
+      ],
+      "sourceKineticEnergyJ": 0.0423,
+      "potentialGainJ": 0.03530794976912981,
+      "guideLossJ": 0.0004,
+      "impactLossJ": 0.0065920502308701905,
+      "remainingKineticEnergyJ": 0.0,
+      "energyResidualJ": 0.0,
+      "requiredImpulseNs": -0.05566204818823135,
+      "requiredStaticRetentionForceN": 1.7653974884564902,
+      "reason": "conditional-retained-rest",
+      "conditionalStateEligible": true,
+      "javaHandoffExecuted": false,
+      "terminalState": {
+        "qM": 0.0,
+        "vMps": 0.0
+      },
+      "unresolvedPostTerminalDynamics": false
+    },
+    {
+      "season": 2024,
+      "scenario": "no-stop",
+      "inputs": {
+        "massKg": 0.235,
+        "pitchRad": 0.8726646259971648,
+        "sourceSpeedMps": 0.6,
+        "distanceM": 0.02,
+        "dragN": 0.02,
+        "stopPresent": false,
+        "restitution": 0,
+        "retentionEvidence": "verified-virtual",
+        "stopEnergyCapacityJ": 0.2,
+        "dwellS": 0.2
+      },
+      "trace": [
+        {
+          "timeS": 0,
+          "qM": -0.02,
+          "vMps": 0.6,
+          "event": "source-boundary"
+        },
+        {
+          "timeS": 0.04779773264134302,
+          "qM": 0.0,
+          "vMps": 0.23685977952438875,
+          "event": "travel-terminal"
+        }
+      ],
+      "sourceKineticEnergyJ": 0.0423,
+      "potentialGainJ": 0.03530794976912981,
+      "guideLossJ": 0.0004,
+      "impactLossJ": 0,
+      "remainingKineticEnergyJ": 0.0065920502308701905,
+      "energyResidualJ": 0.0,
+      "requiredImpulseNs": 0,
+      "requiredStaticRetentionForceN": 1.7653974884564902,
+      "reason": "stop-absent",
+      "conditionalStateEligible": false,
+      "javaHandoffExecuted": false,
+      "terminalState": {
+        "qM": 0.0,
+        "vMps": 0.23685977952438875
+      },
+      "unresolvedPostTerminalDynamics": true
+    },
+    {
+      "season": 2024,
+      "scenario": "elastic-no-damping",
+      "inputs": {
+        "massKg": 0.235,
+        "pitchRad": 0.8726646259971648,
+        "sourceSpeedMps": 0.6,
+        "distanceM": 0.02,
+        "dragN": 0,
+        "stopPresent": true,
+        "restitution": 1,
+        "retentionEvidence": "verified-virtual",
+        "stopEnergyCapacityJ": 0.2,
+        "dwellS": 0.2
+      },
+      "trace": [
+        {
+          "timeS": 0,
+          "qM": -0.02,
+          "vMps": 0.6,
+          "event": "source-boundary"
+        },
+        {
+          "timeS": 0.047396724364522025,
+          "qM": 0.0,
+          "vMps": 0.2439401780672692,
+          "event": "pre-impact"
+        },
+        {
+          "timeS": 0.047396724364522025,
+          "qM": 0.0,
+          "vMps": -0.2439401780672692,
+          "event": "impulse-accounted-impact"
+        }
+      ],
+      "sourceKineticEnergyJ": 0.0423,
+      "potentialGainJ": 0.03530794976912981,
+      "guideLossJ": 0.0,
+      "impactLossJ": 0.0,
+      "remainingKineticEnergyJ": 0.006992050230870192,
+      "energyResidualJ": -1.734723475976807e-18,
+      "requiredImpulseNs": -0.11465188369161651,
+      "requiredStaticRetentionForceN": 1.7653974884564902,
+      "reason": "rebound-no-settling",
+      "conditionalStateEligible": false,
+      "javaHandoffExecuted": false,
+      "terminalState": {
+        "qM": 0.0,
+        "vMps": -0.2439401780672692
+      },
+      "unresolvedPostTerminalDynamics": true
+    },
+    {
+      "season": 2024,
+      "scenario": "excess-speed",
+      "inputs": {
+        "massKg": 0.235,
+        "pitchRad": 0.8726646259971648,
+        "sourceSpeedMps": 4,
+        "distanceM": 0.02,
+        "dragN": 0.02,
+        "stopPresent": true,
+        "restitution": 0,
+        "retentionEvidence": "verified-virtual",
+        "stopEnergyCapacityJ": 0.2,
+        "dwellS": 0.2
+      },
+      "trace": [
+        {
+          "timeS": 0,
+          "qM": -0.02,
+          "vMps": 4,
+          "event": "source-boundary"
+        },
+        {
+          "timeS": 0.0050239701733611865,
+          "qM": 0.0,
+          "vMps": 3.9618307075336197,
+          "event": "pre-impact"
+        },
+        {
+          "timeS": 0.0050239701733611865,
+          "qM": 0.0,
+          "vMps": 0.0,
+          "event": "impulse-accounted-impact"
+        }
+      ],
+      "sourceKineticEnergyJ": 1.88,
+      "potentialGainJ": 0.03530794976912981,
+      "guideLossJ": 0.0004,
+      "impactLossJ": 1.8442920502308702,
+      "remainingKineticEnergyJ": 0.0,
+      "energyResidualJ": 0.0,
+      "requiredImpulseNs": -0.9310302162704006,
+      "requiredStaticRetentionForceN": 1.7653974884564902,
+      "reason": "stop-energy-capacity-exceeded",
+      "conditionalStateEligible": false,
+      "javaHandoffExecuted": false,
+      "terminalState": {
+        "qM": 0.0,
+        "vMps": 0.0
+      },
+      "unresolvedPostTerminalDynamics": true
+    },
+    {
+      "season": 2024,
+      "scenario": "missing-retention",
+      "inputs": {
+        "massKg": 0.235,
+        "pitchRad": 0.8726646259971648,
+        "sourceSpeedMps": 0.6,
+        "distanceM": 0.02,
+        "dragN": 0.02,
+        "stopPresent": true,
+        "restitution": 0,
+        "retentionEvidence": "missing",
+        "stopEnergyCapacityJ": 0.2,
+        "dwellS": 0.2
+      },
+      "trace": [
+        {
+          "timeS": 0,
+          "qM": -0.02,
+          "vMps": 0.6,
+          "event": "source-boundary"
+        },
+        {
+          "timeS": 0.04779773264134302,
+          "qM": 0.0,
+          "vMps": 0.23685977952438875,
+          "event": "pre-impact"
+        },
+        {
+          "timeS": 0.04779773264134302,
+          "qM": 0.0,
+          "vMps": 0.0,
+          "event": "impulse-accounted-impact"
+        }
+      ],
+      "sourceKineticEnergyJ": 0.0423,
+      "potentialGainJ": 0.03530794976912981,
+      "guideLossJ": 0.0004,
+      "impactLossJ": 0.0065920502308701905,
+      "remainingKineticEnergyJ": 0.0,
+      "energyResidualJ": 0.0,
+      "requiredImpulseNs": -0.05566204818823135,
+      "requiredStaticRetentionForceN": 1.7653974884564902,
+      "reason": "retention-not-established",
+      "conditionalStateEligible": false,
+      "javaHandoffExecuted": false,
+      "terminalState": {
+        "qM": 0.0,
+        "vMps": 0.0
+      },
+      "unresolvedPostTerminalDynamics": true
+    },
+    {
+      "season": 2024,
+      "scenario": "uncertain-retention",
+      "inputs": {
+        "massKg": 0.235,
+        "pitchRad": 0.8726646259971648,
+        "sourceSpeedMps": 0.6,
+        "distanceM": 0.02,
+        "dragN": 0.02,
+        "stopPresent": true,
+        "restitution": 0,
+        "retentionEvidence": "uncertain",
+        "stopEnergyCapacityJ": 0.2,
+        "dwellS": 0.2
+      },
+      "trace": [
+        {
+          "timeS": 0,
+          "qM": -0.02,
+          "vMps": 0.6,
+          "event": "source-boundary"
+        },
+        {
+          "timeS": 0.04779773264134302,
+          "qM": 0.0,
+          "vMps": 0.23685977952438875,
+          "event": "pre-impact"
+        },
+        {
+          "timeS": 0.04779773264134302,
+          "qM": 0.0,
+          "vMps": 0.0,
+          "event": "impulse-accounted-impact"
+        }
+      ],
+      "sourceKineticEnergyJ": 0.0423,
+      "potentialGainJ": 0.03530794976912981,
+      "guideLossJ": 0.0004,
+      "impactLossJ": 0.0065920502308701905,
+      "remainingKineticEnergyJ": 0.0,
+      "energyResidualJ": 0.0,
+      "requiredImpulseNs": -0.05566204818823135,
+      "requiredStaticRetentionForceN": 1.7653974884564902,
+      "reason": "retention-not-established",
+      "conditionalStateEligible": false,
+      "javaHandoffExecuted": false,
+      "terminalState": {
+        "qM": 0.0,
+        "vMps": 0.0
+      },
+      "unresolvedPostTerminalDynamics": true
+    },
+    {
+      "season": 2024,
+      "scenario": "underfed",
+      "inputs": {
+        "massKg": 0.235,
+        "pitchRad": 0.8726646259971648,
+        "sourceSpeedMps": 0.05,
+        "distanceM": 0.02,
+        "dragN": 0.02,
+        "stopPresent": true,
+        "restitution": 0,
+        "retentionEvidence": "verified-virtual",
+        "stopEnergyCapacityJ": 0.2,
+        "dwellS": 0.2
+      },
+      "trace": [
+        {
+          "timeS": 0,
+          "qM": -0.02,
+          "vMps": 0.05,
+          "event": "source-boundary"
+        },
+        {
+          "timeS": 0.0065811675416649635,
+          "qM": -0.019835470811458377,
+          "vMps": 0.0,
+          "event": "travel-terminal"
+        }
+      ],
+      "sourceKineticEnergyJ": 0.00029375000000000007,
+      "potentialGainJ": 0.0002904594162291676,
+      "guideLossJ": 3.2905837708324823e-06,
+      "impactLossJ": 0,
+      "remainingKineticEnergyJ": 0.0,
+      "energyResidualJ": 4.235164736271502e-21,
+      "requiredImpulseNs": 0,
+      "requiredStaticRetentionForceN": 1.7653974884564902,
+      "reason": "stalled-before-stop",
+      "conditionalStateEligible": false,
+      "javaHandoffExecuted": false,
+      "terminalState": {
+        "qM": -0.019835470811458377,
+        "vMps": 0.0
+      },
+      "unresolvedPostTerminalDynamics": true
+    },
+    {
+      "season": 2025,
+      "scenario": "nominal",
+      "inputs": {
+        "massKg": 0.498951607,
+        "pitchRad": 0.0,
+        "sourceSpeedMps": 0.6,
+        "distanceM": 0.02,
+        "dragN": 0.02,
+        "stopPresent": true,
+        "restitution": 0,
+        "retentionEvidence": "verified-virtual",
+        "stopEnergyCapacityJ": 0.2,
+        "dwellS": 0.2
+      },
+      "trace": [
+        {
+          "timeS": 0,
+          "qM": -0.02,
+          "vMps": 0.6,
+          "event": "source-boundary"
+        },
+        {
+          "timeS": 0.033370531073840796,
+          "qM": 0.0,
+          "vMps": 0.5986623740416637,
+          "event": "pre-impact"
+        },
+        {
+          "timeS": 0.033370531073840796,
+          "qM": 0.0,
+          "vMps": 0.0,
+          "event": "impulse-accounted-impact"
+        },
+        {
+          "timeS": 0.23337053107384081,
+          "qM": 0.0,
+          "vMps": 0,
+          "event": "conditional-latch-dwell"
+        }
+      ],
+      "sourceKineticEnergyJ": 0.08981128926,
+      "potentialGainJ": 0.0,
+      "guideLossJ": 0.0004,
+      "impactLossJ": 0.08941128925999998,
+      "remainingKineticEnergyJ": 0.0,
+      "energyResidualJ": 1.3877787807814457e-17,
+      "requiredImpulseNs": -0.2987035535785232,
+      "requiredStaticRetentionForceN": 0.0,
+      "reason": "conditional-retained-rest",
+      "conditionalStateEligible": true,
+      "javaHandoffExecuted": false,
+      "terminalState": {
+        "qM": 0.0,
+        "vMps": 0.0
+      },
+      "unresolvedPostTerminalDynamics": false
+    },
+    {
+      "season": 2025,
+      "scenario": "no-stop",
+      "inputs": {
+        "massKg": 0.498951607,
+        "pitchRad": 0.0,
+        "sourceSpeedMps": 0.6,
+        "distanceM": 0.02,
+        "dragN": 0.02,
+        "stopPresent": false,
+        "restitution": 0,
+        "retentionEvidence": "verified-virtual",
+        "stopEnergyCapacityJ": 0.2,
+        "dwellS": 0.2
+      },
+      "trace": [
+        {
+          "timeS": 0,
+          "qM": -0.02,
+          "vMps": 0.6,
+          "event": "source-boundary"
+        },
+        {
+          "timeS": 0.033370531073840796,
+          "qM": 0.0,
+          "vMps": 0.5986623740416637,
+          "event": "travel-terminal"
+        }
+      ],
+      "sourceKineticEnergyJ": 0.08981128926,
+      "potentialGainJ": 0.0,
+      "guideLossJ": 0.0004,
+      "impactLossJ": 0,
+      "remainingKineticEnergyJ": 0.08941128925999998,
+      "energyResidualJ": 1.3877787807814457e-17,
+      "requiredImpulseNs": 0,
+      "requiredStaticRetentionForceN": 0.0,
+      "reason": "stop-absent",
+      "conditionalStateEligible": false,
+      "javaHandoffExecuted": false,
+      "terminalState": {
+        "qM": 0.0,
+        "vMps": 0.5986623740416637
+      },
+      "unresolvedPostTerminalDynamics": true
+    },
+    {
+      "season": 2025,
+      "scenario": "elastic-no-damping",
+      "inputs": {
+        "massKg": 0.498951607,
+        "pitchRad": 0.0,
+        "sourceSpeedMps": 0.6,
+        "distanceM": 0.02,
+        "dragN": 0,
+        "stopPresent": true,
+        "restitution": 1,
+        "retentionEvidence": "verified-virtual",
+        "stopEnergyCapacityJ": 0.2,
+        "dwellS": 0.2
+      },
+      "trace": [
+        {
+          "timeS": 0,
+          "qM": -0.02,
+          "vMps": 0.6,
+          "event": "source-boundary"
+        },
+        {
+          "timeS": 0.03333333333333333,
+          "qM": 0.0,
+          "vMps": 0.6,
+          "event": "pre-impact"
+        },
+        {
+          "timeS": 0.03333333333333333,
+          "qM": 0.0,
+          "vMps": -0.6,
+          "event": "impulse-accounted-impact"
+        }
+      ],
+      "sourceKineticEnergyJ": 0.08981128926,
+      "potentialGainJ": 0.0,
+      "guideLossJ": 0.0,
+      "impactLossJ": 0.0,
+      "remainingKineticEnergyJ": 0.08981128926,
+      "energyResidualJ": 0.0,
+      "requiredImpulseNs": -0.5987419284,
+      "requiredStaticRetentionForceN": 0.0,
+      "reason": "rebound-no-settling",
+      "conditionalStateEligible": false,
+      "javaHandoffExecuted": false,
+      "terminalState": {
+        "qM": 0.0,
+        "vMps": -0.6
+      },
+      "unresolvedPostTerminalDynamics": true
+    },
+    {
+      "season": 2025,
+      "scenario": "excess-speed",
+      "inputs": {
+        "massKg": 0.498951607,
+        "pitchRad": 0.0,
+        "sourceSpeedMps": 4,
+        "distanceM": 0.02,
+        "dragN": 0.02,
+        "stopPresent": true,
+        "restitution": 0,
+        "retentionEvidence": "verified-virtual",
+        "stopEnergyCapacityJ": 0.2,
+        "dwellS": 0.2
+      },
+      "trace": [
+        {
+          "timeS": 0,
+          "qM": -0.02,
+          "vMps": 4,
+          "event": "source-boundary"
+        },
+        {
+          "timeS": 0.0050001252689258445,
+          "qM": 0.0,
+          "vMps": 3.9997995747403645,
+          "event": "pre-impact"
+        },
+        {
+          "timeS": 0.0050001252689258445,
+          "qM": 0.0,
+          "vMps": 0.0,
+          "event": "impulse-accounted-impact"
+        }
+      ],
+      "sourceKineticEnergyJ": 3.991612856,
+      "potentialGainJ": 0.0,
+      "guideLossJ": 0.0004,
+      "impactLossJ": 3.991212856,
+      "remainingKineticEnergyJ": 0.0,
+      "energyResidualJ": 0.0,
+      "requiredImpulseNs": -1.9957064254946215,
+      "requiredStaticRetentionForceN": 0.0,
+      "reason": "stop-energy-capacity-exceeded",
+      "conditionalStateEligible": false,
+      "javaHandoffExecuted": false,
+      "terminalState": {
+        "qM": 0.0,
+        "vMps": 0.0
+      },
+      "unresolvedPostTerminalDynamics": true
+    },
+    {
+      "season": 2025,
+      "scenario": "missing-retention",
+      "inputs": {
+        "massKg": 0.498951607,
+        "pitchRad": 0.0,
+        "sourceSpeedMps": 0.6,
+        "distanceM": 0.02,
+        "dragN": 0.02,
+        "stopPresent": true,
+        "restitution": 0,
+        "retentionEvidence": "missing",
+        "stopEnergyCapacityJ": 0.2,
+        "dwellS": 0.2
+      },
+      "trace": [
+        {
+          "timeS": 0,
+          "qM": -0.02,
+          "vMps": 0.6,
+          "event": "source-boundary"
+        },
+        {
+          "timeS": 0.033370531073840796,
+          "qM": 0.0,
+          "vMps": 0.5986623740416637,
+          "event": "pre-impact"
+        },
+        {
+          "timeS": 0.033370531073840796,
+          "qM": 0.0,
+          "vMps": 0.0,
+          "event": "impulse-accounted-impact"
+        }
+      ],
+      "sourceKineticEnergyJ": 0.08981128926,
+      "potentialGainJ": 0.0,
+      "guideLossJ": 0.0004,
+      "impactLossJ": 0.08941128925999998,
+      "remainingKineticEnergyJ": 0.0,
+      "energyResidualJ": 1.3877787807814457e-17,
+      "requiredImpulseNs": -0.2987035535785232,
+      "requiredStaticRetentionForceN": 0.0,
+      "reason": "retention-not-established",
+      "conditionalStateEligible": false,
+      "javaHandoffExecuted": false,
+      "terminalState": {
+        "qM": 0.0,
+        "vMps": 0.0
+      },
+      "unresolvedPostTerminalDynamics": true
+    },
+    {
+      "season": 2025,
+      "scenario": "uncertain-retention",
+      "inputs": {
+        "massKg": 0.498951607,
+        "pitchRad": 0.0,
+        "sourceSpeedMps": 0.6,
+        "distanceM": 0.02,
+        "dragN": 0.02,
+        "stopPresent": true,
+        "restitution": 0,
+        "retentionEvidence": "uncertain",
+        "stopEnergyCapacityJ": 0.2,
+        "dwellS": 0.2
+      },
+      "trace": [
+        {
+          "timeS": 0,
+          "qM": -0.02,
+          "vMps": 0.6,
+          "event": "source-boundary"
+        },
+        {
+          "timeS": 0.033370531073840796,
+          "qM": 0.0,
+          "vMps": 0.5986623740416637,
+          "event": "pre-impact"
+        },
+        {
+          "timeS": 0.033370531073840796,
+          "qM": 0.0,
+          "vMps": 0.0,
+          "event": "impulse-accounted-impact"
+        }
+      ],
+      "sourceKineticEnergyJ": 0.08981128926,
+      "potentialGainJ": 0.0,
+      "guideLossJ": 0.0004,
+      "impactLossJ": 0.08941128925999998,
+      "remainingKineticEnergyJ": 0.0,
+      "energyResidualJ": 1.3877787807814457e-17,
+      "requiredImpulseNs": -0.2987035535785232,
+      "requiredStaticRetentionForceN": 0.0,
+      "reason": "retention-not-established",
+      "conditionalStateEligible": false,
+      "javaHandoffExecuted": false,
+      "terminalState": {
+        "qM": 0.0,
+        "vMps": 0.0
+      },
+      "unresolvedPostTerminalDynamics": true
+    },
+    {
+      "season": 2025,
+      "scenario": "underfed",
+      "inputs": {
+        "massKg": 0.498951607,
+        "pitchRad": 0.0,
+        "sourceSpeedMps": 0.05,
+        "distanceM": 0.02,
+        "dragN": 0.02,
+        "stopPresent": true,
+        "restitution": 0,
+        "retentionEvidence": "verified-virtual",
+        "stopEnergyCapacityJ": 0.2,
+        "dwellS": 0.2
+      },
+      "trace": [
+        {
+          "timeS": 0,
+          "qM": -0.02,
+          "vMps": 0.05,
+          "event": "source-boundary"
+        },
+        {
+          "timeS": 0.5003507721844259,
+          "qM": 0.0,
+          "vMps": 0.0299439157960493,
+          "event": "pre-impact"
+        },
+        {
+          "timeS": 0.5003507721844259,
+          "qM": 0.0,
+          "vMps": 0.0,
+          "event": "impulse-accounted-impact"
+        },
+        {
+          "timeS": 0.700350772184426,
+          "qM": 0.0,
+          "vMps": 0,
+          "event": "conditional-latch-dwell"
+        }
+      ],
+      "sourceKineticEnergyJ": 0.0006236895087500001,
+      "potentialGainJ": 0.0,
+      "guideLossJ": 0.0004,
+      "impactLossJ": 0.00022368950875000014,
+      "remainingKineticEnergyJ": 0.0,
+      "energyResidualJ": -5.421010862427522e-20,
+      "requiredImpulseNs": -0.014940564906311484,
+      "requiredStaticRetentionForceN": 0.0,
+      "reason": "conditional-retained-rest",
+      "conditionalStateEligible": true,
+      "javaHandoffExecuted": false,
+      "terminalState": {
+        "qM": 0.0,
+        "vMps": 0.0
+      },
+      "unresolvedPostTerminalDynamics": false
+    },
+    {
+      "season": 2025,
+      "scenario": "nominal",
+      "inputs": {
+        "massKg": 0.816466266,
+        "pitchRad": 0.0,
+        "sourceSpeedMps": 0.6,
+        "distanceM": 0.02,
+        "dragN": 0.02,
+        "stopPresent": true,
+        "restitution": 0,
+        "retentionEvidence": "verified-virtual",
+        "stopEnergyCapacityJ": 0.2,
+        "dwellS": 0.2
+      },
+      "trace": [
+        {
+          "timeS": 0,
+          "qM": -0.02,
+          "vMps": 0.6,
+          "event": "source-boundary"
+        },
+        {
+          "timeS": 0.03335604555512258,
+          "qM": 0.0,
+          "vMps": 0.5991829167488195,
+          "event": "pre-impact"
+        },
+        {
+          "timeS": 0.03335604555512258,
+          "qM": 0.0,
+          "vMps": 0.0,
+          "event": "impulse-accounted-impact"
+        },
+        {
+          "timeS": 0.2333560455551226,
+          "qM": 0.0,
+          "vMps": 0,
+          "event": "conditional-latch-dwell"
+        }
+      ],
+      "sourceKineticEnergyJ": 0.14696392788,
+      "potentialGainJ": 0.0,
+      "guideLossJ": 0.0004,
+      "impactLossJ": 0.14656392788,
+      "remainingKineticEnergyJ": 0.0,
+      "energyResidualJ": 0.0,
+      "requiredImpulseNs": -0.4892126386888976,
+      "requiredStaticRetentionForceN": 0.0,
+      "reason": "conditional-retained-rest",
+      "conditionalStateEligible": true,
+      "javaHandoffExecuted": false,
+      "terminalState": {
+        "qM": 0.0,
+        "vMps": 0.0
+      },
+      "unresolvedPostTerminalDynamics": false
+    },
+    {
+      "season": 2025,
+      "scenario": "no-stop",
+      "inputs": {
+        "massKg": 0.816466266,
+        "pitchRad": 0.0,
+        "sourceSpeedMps": 0.6,
+        "distanceM": 0.02,
+        "dragN": 0.02,
+        "stopPresent": false,
+        "restitution": 0,
+        "retentionEvidence": "verified-virtual",
+        "stopEnergyCapacityJ": 0.2,
+        "dwellS": 0.2
+      },
+      "trace": [
+        {
+          "timeS": 0,
+          "qM": -0.02,
+          "vMps": 0.6,
+          "event": "source-boundary"
+        },
+        {
+          "timeS": 0.03335604555512258,
+          "qM": 0.0,
+          "vMps": 0.5991829167488195,
+          "event": "travel-terminal"
+        }
+      ],
+      "sourceKineticEnergyJ": 0.14696392788,
+      "potentialGainJ": 0.0,
+      "guideLossJ": 0.0004,
+      "impactLossJ": 0,
+      "remainingKineticEnergyJ": 0.14656392788,
+      "energyResidualJ": 0.0,
+      "requiredImpulseNs": 0,
+      "requiredStaticRetentionForceN": 0.0,
+      "reason": "stop-absent",
+      "conditionalStateEligible": false,
+      "javaHandoffExecuted": false,
+      "terminalState": {
+        "qM": 0.0,
+        "vMps": 0.5991829167488195
+      },
+      "unresolvedPostTerminalDynamics": true
+    },
+    {
+      "season": 2025,
+      "scenario": "elastic-no-damping",
+      "inputs": {
+        "massKg": 0.816466266,
+        "pitchRad": 0.0,
+        "sourceSpeedMps": 0.6,
+        "distanceM": 0.02,
+        "dragN": 0,
+        "stopPresent": true,
+        "restitution": 1,
+        "retentionEvidence": "verified-virtual",
+        "stopEnergyCapacityJ": 0.2,
+        "dwellS": 0.2
+      },
+      "trace": [
+        {
+          "timeS": 0,
+          "qM": -0.02,
+          "vMps": 0.6,
+          "event": "source-boundary"
+        },
+        {
+          "timeS": 0.03333333333333333,
+          "qM": 0.0,
+          "vMps": 0.6,
+          "event": "pre-impact"
+        },
+        {
+          "timeS": 0.03333333333333333,
+          "qM": 0.0,
+          "vMps": -0.6,
+          "event": "impulse-accounted-impact"
+        }
+      ],
+      "sourceKineticEnergyJ": 0.14696392788,
+      "potentialGainJ": 0.0,
+      "guideLossJ": 0.0,
+      "impactLossJ": 0.0,
+      "remainingKineticEnergyJ": 0.14696392788,
+      "energyResidualJ": 0.0,
+      "requiredImpulseNs": -0.9797595192,
+      "requiredStaticRetentionForceN": 0.0,
+      "reason": "rebound-no-settling",
+      "conditionalStateEligible": false,
+      "javaHandoffExecuted": false,
+      "terminalState": {
+        "qM": 0.0,
+        "vMps": -0.6
+      },
+      "unresolvedPostTerminalDynamics": true
+    },
+    {
+      "season": 2025,
+      "scenario": "excess-speed",
+      "inputs": {
+        "massKg": 0.816466266,
+        "pitchRad": 0.0,
+        "sourceSpeedMps": 4,
+        "distanceM": 0.02,
+        "dragN": 0.02,
+        "stopPresent": true,
+        "restitution": 0,
+        "retentionEvidence": "verified-virtual",
+        "stopEnergyCapacityJ": 0.2,
+        "dwellS": 0.2
+      },
+      "trace": [
+        {
+          "timeS": 0,
+          "qM": -0.02,
+          "vMps": 4,
+          "event": "source-boundary"
+        },
+        {
+          "timeS": 0.005000076551738565,
+          "qM": 0.0,
+          "vMps": 3.9998775190902562,
+          "event": "pre-impact"
+        },
+        {
+          "timeS": 0.005000076551738565,
+          "qM": 0.0,
+          "vMps": 0.0,
+          "event": "impulse-accounted-impact"
+        }
+      ],
+      "sourceKineticEnergyJ": 6.531730128,
+      "potentialGainJ": 0.0,
+      "guideLossJ": 0.0004,
+      "impactLossJ": 6.5313301280000005,
+      "remainingKineticEnergyJ": 0.0,
+      "energyResidualJ": 0.0,
+      "requiredImpulseNs": -3.2657650624689656,
+      "requiredStaticRetentionForceN": 0.0,
+      "reason": "stop-energy-capacity-exceeded",
+      "conditionalStateEligible": false,
+      "javaHandoffExecuted": false,
+      "terminalState": {
+        "qM": 0.0,
+        "vMps": 0.0
+      },
+      "unresolvedPostTerminalDynamics": true
+    },
+    {
+      "season": 2025,
+      "scenario": "missing-retention",
+      "inputs": {
+        "massKg": 0.816466266,
+        "pitchRad": 0.0,
+        "sourceSpeedMps": 0.6,
+        "distanceM": 0.02,
+        "dragN": 0.02,
+        "stopPresent": true,
+        "restitution": 0,
+        "retentionEvidence": "missing",
+        "stopEnergyCapacityJ": 0.2,
+        "dwellS": 0.2
+      },
+      "trace": [
+        {
+          "timeS": 0,
+          "qM": -0.02,
+          "vMps": 0.6,
+          "event": "source-boundary"
+        },
+        {
+          "timeS": 0.03335604555512258,
+          "qM": 0.0,
+          "vMps": 0.5991829167488195,
+          "event": "pre-impact"
+        },
+        {
+          "timeS": 0.03335604555512258,
+          "qM": 0.0,
+          "vMps": 0.0,
+          "event": "impulse-accounted-impact"
+        }
+      ],
+      "sourceKineticEnergyJ": 0.14696392788,
+      "potentialGainJ": 0.0,
+      "guideLossJ": 0.0004,
+      "impactLossJ": 0.14656392788,
+      "remainingKineticEnergyJ": 0.0,
+      "energyResidualJ": 0.0,
+      "requiredImpulseNs": -0.4892126386888976,
+      "requiredStaticRetentionForceN": 0.0,
+      "reason": "retention-not-established",
+      "conditionalStateEligible": false,
+      "javaHandoffExecuted": false,
+      "terminalState": {
+        "qM": 0.0,
+        "vMps": 0.0
+      },
+      "unresolvedPostTerminalDynamics": true
+    },
+    {
+      "season": 2025,
+      "scenario": "uncertain-retention",
+      "inputs": {
+        "massKg": 0.816466266,
+        "pitchRad": 0.0,
+        "sourceSpeedMps": 0.6,
+        "distanceM": 0.02,
+        "dragN": 0.02,
+        "stopPresent": true,
+        "restitution": 0,
+        "retentionEvidence": "uncertain",
+        "stopEnergyCapacityJ": 0.2,
+        "dwellS": 0.2
+      },
+      "trace": [
+        {
+          "timeS": 0,
+          "qM": -0.02,
+          "vMps": 0.6,
+          "event": "source-boundary"
+        },
+        {
+          "timeS": 0.03335604555512258,
+          "qM": 0.0,
+          "vMps": 0.5991829167488195,
+          "event": "pre-impact"
+        },
+        {
+          "timeS": 0.03335604555512258,
+          "qM": 0.0,
+          "vMps": 0.0,
+          "event": "impulse-accounted-impact"
+        }
+      ],
+      "sourceKineticEnergyJ": 0.14696392788,
+      "potentialGainJ": 0.0,
+      "guideLossJ": 0.0004,
+      "impactLossJ": 0.14656392788,
+      "remainingKineticEnergyJ": 0.0,
+      "energyResidualJ": 0.0,
+      "requiredImpulseNs": -0.4892126386888976,
+      "requiredStaticRetentionForceN": 0.0,
+      "reason": "retention-not-established",
+      "conditionalStateEligible": false,
+      "javaHandoffExecuted": false,
+      "terminalState": {
+        "qM": 0.0,
+        "vMps": 0.0
+      },
+      "unresolvedPostTerminalDynamics": true
+    },
+    {
+      "season": 2025,
+      "scenario": "underfed",
+      "inputs": {
+        "massKg": 0.816466266,
+        "pitchRad": 0.0,
+        "sourceSpeedMps": 0.05,
+        "distanceM": 0.02,
+        "dragN": 0.02,
+        "stopPresent": true,
+        "restitution": 0,
+        "retentionEvidence": "verified-virtual",
+        "stopEnergyCapacityJ": 0.2,
+        "dwellS": 0.2
+      },
+      "trace": [
+        {
+          "timeS": 0,
+          "qM": -0.02,
+          "vMps": 0.05,
+          "event": "source-boundary"
+        },
+        {
+          "timeS": 0.44949209922877303,
+          "qM": 0.0,
+          "vMps": 0.03898932832997725,
+          "event": "pre-impact"
+        },
+        {
+          "timeS": 0.44949209922877303,
+          "qM": 0.0,
+          "vMps": 0.0,
+          "event": "impulse-accounted-impact"
+        },
+        {
+          "timeS": 0.649492099228773,
+          "qM": 0.0,
+          "vMps": 0,
+          "event": "conditional-latch-dwell"
+        }
+      ],
+      "sourceKineticEnergyJ": 0.0010205828325000003,
+      "potentialGainJ": 0.0,
+      "guideLossJ": 0.0004,
+      "impactLossJ": 0.0006205828325000001,
+      "remainingKineticEnergyJ": 0.0,
+      "energyResidualJ": 2.168404344971009e-19,
+      "requiredImpulseNs": -0.03183347131542454,
+      "requiredStaticRetentionForceN": 0.0,
+      "reason": "conditional-retained-rest",
+      "conditionalStateEligible": true,
+      "javaHandoffExecuted": false,
+      "terminalState": {
+        "qM": 0.0,
+        "vMps": 0.0
+      },
+      "unresolvedPostTerminalDynamics": false
+    },
+    {
+      "season": 2026,
+      "scenario": "nominal",
+      "inputs": {
+        "massKg": 0.215,
+        "pitchRad": 1.0471975511965976,
+        "sourceSpeedMps": 0.6,
+        "distanceM": 0.02,
+        "dragN": 0.02,
+        "stopPresent": true,
+        "restitution": 0,
+        "retentionEvidence": "verified-virtual",
+        "stopEnergyCapacityJ": 0.2,
+        "dwellS": 0.2
+      },
+      "trace": [
+        {
+          "timeS": 0,
+          "qM": -0.02,
+          "vMps": 0.6,
+          "event": "source-boundary"
+        },
+        {
+          "timeS": 0.05489137882095234,
+          "qM": 0.0,
+          "vMps": 0.1287118826159234,
+          "event": "pre-impact"
+        },
+        {
+          "timeS": 0.05489137882095234,
+          "qM": 0.0,
+          "vMps": 0.0,
+          "event": "impulse-accounted-impact"
+        },
+        {
+          "timeS": 0.25489137882095236,
+          "qM": 0.0,
+          "vMps": 0,
+          "event": "conditional-latch-dwell"
+        }
+      ],
+      "sourceKineticEnergyJ": 0.0387,
+      "potentialGainJ": 0.03651907451189746,
+      "guideLossJ": 0.0004,
+      "impactLossJ": 0.0017809254881025387,
+      "remainingKineticEnergyJ": 0.0,
+      "energyResidualJ": -8.673617379884035e-19,
+      "requiredImpulseNs": -0.02767305476242353,
+      "requiredStaticRetentionForceN": 1.825953725594873,
+      "reason": "conditional-retained-rest",
+      "conditionalStateEligible": true,
+      "javaHandoffExecuted": false,
+      "terminalState": {
+        "qM": 0.0,
+        "vMps": 0.0
+      },
+      "unresolvedPostTerminalDynamics": false
+    },
+    {
+      "season": 2026,
+      "scenario": "no-stop",
+      "inputs": {
+        "massKg": 0.215,
+        "pitchRad": 1.0471975511965976,
+        "sourceSpeedMps": 0.6,
+        "distanceM": 0.02,
+        "dragN": 0.02,
+        "stopPresent": false,
+        "restitution": 0,
+        "retentionEvidence": "verified-virtual",
+        "stopEnergyCapacityJ": 0.2,
+        "dwellS": 0.2
+      },
+      "trace": [
+        {
+          "timeS": 0,
+          "qM": -0.02,
+          "vMps": 0.6,
+          "event": "source-boundary"
+        },
+        {
+          "timeS": 0.05489137882095234,
+          "qM": 0.0,
+          "vMps": 0.1287118826159234,
+          "event": "travel-terminal"
+        }
+      ],
+      "sourceKineticEnergyJ": 0.0387,
+      "potentialGainJ": 0.03651907451189746,
+      "guideLossJ": 0.0004,
+      "impactLossJ": 0,
+      "remainingKineticEnergyJ": 0.0017809254881025387,
+      "energyResidualJ": -8.673617379884035e-19,
+      "requiredImpulseNs": 0,
+      "requiredStaticRetentionForceN": 1.825953725594873,
+      "reason": "stop-absent",
+      "conditionalStateEligible": false,
+      "javaHandoffExecuted": false,
+      "terminalState": {
+        "qM": 0.0,
+        "vMps": 0.1287118826159234
+      },
+      "unresolvedPostTerminalDynamics": true
+    },
+    {
+      "season": 2026,
+      "scenario": "elastic-no-damping",
+      "inputs": {
+        "massKg": 0.215,
+        "pitchRad": 1.0471975511965976,
+        "sourceSpeedMps": 0.6,
+        "distanceM": 0.02,
+        "dragN": 0,
+        "stopPresent": true,
+        "restitution": 1,
+        "retentionEvidence": "verified-virtual",
+        "stopEnergyCapacityJ": 0.2,
+        "dwellS": 0.2
+      },
+      "trace": [
+        {
+          "timeS": 0,
+          "qM": -0.02,
+          "vMps": 0.6,
+          "event": "source-boundary"
+        },
+        {
+          "timeS": 0.05387678316172705,
+          "qM": 0.0,
+          "vMps": 0.14243482354780165,
+          "event": "pre-impact"
+        },
+        {
+          "timeS": 0.05387678316172705,
+          "qM": 0.0,
+          "vMps": -0.14243482354780165,
+          "event": "impulse-accounted-impact"
+        }
+      ],
+      "sourceKineticEnergyJ": 0.0387,
+      "potentialGainJ": 0.03651907451189746,
+      "guideLossJ": 0.0,
+      "impactLossJ": 0.0,
+      "remainingKineticEnergyJ": 0.0021809254881025395,
+      "energyResidualJ": -1.734723475976807e-18,
+      "requiredImpulseNs": -0.06124697412555471,
+      "requiredStaticRetentionForceN": 1.825953725594873,
+      "reason": "rebound-no-settling",
+      "conditionalStateEligible": false,
+      "javaHandoffExecuted": false,
+      "terminalState": {
+        "qM": 0.0,
+        "vMps": -0.14243482354780165
+      },
+      "unresolvedPostTerminalDynamics": true
+    },
+    {
+      "season": 2026,
+      "scenario": "excess-speed",
+      "inputs": {
+        "massKg": 0.215,
+        "pitchRad": 1.0471975511965976,
+        "sourceSpeedMps": 4,
+        "distanceM": 0.02,
+        "dragN": 0.02,
+        "stopPresent": true,
+        "restitution": 0,
+        "retentionEvidence": "verified-virtual",
+        "stopEnergyCapacityJ": 0.2,
+        "dwellS": 0.2
+      },
+      "trace": [
+        {
+          "timeS": 0,
+          "qM": -0.02,
+          "vMps": 4,
+          "event": "source-boundary"
+        },
+        {
+          "timeS": 0.005027122599843669,
+          "qM": 0.0,
+          "vMps": 3.9568379735246344,
+          "event": "pre-impact"
+        },
+        {
+          "timeS": 0.005027122599843669,
+          "qM": 0.0,
+          "vMps": 0.0,
+          "event": "impulse-accounted-impact"
+        }
+      ],
+      "sourceKineticEnergyJ": 1.72,
+      "potentialGainJ": 0.03651907451189746,
+      "guideLossJ": 0.0004,
+      "impactLossJ": 1.6830809254881025,
+      "remainingKineticEnergyJ": 0.0,
+      "energyResidualJ": 0.0,
+      "requiredImpulseNs": -0.8507201643077964,
+      "requiredStaticRetentionForceN": 1.825953725594873,
+      "reason": "stop-energy-capacity-exceeded",
+      "conditionalStateEligible": false,
+      "javaHandoffExecuted": false,
+      "terminalState": {
+        "qM": 0.0,
+        "vMps": 0.0
+      },
+      "unresolvedPostTerminalDynamics": true
+    },
+    {
+      "season": 2026,
+      "scenario": "missing-retention",
+      "inputs": {
+        "massKg": 0.215,
+        "pitchRad": 1.0471975511965976,
+        "sourceSpeedMps": 0.6,
+        "distanceM": 0.02,
+        "dragN": 0.02,
+        "stopPresent": true,
+        "restitution": 0,
+        "retentionEvidence": "missing",
+        "stopEnergyCapacityJ": 0.2,
+        "dwellS": 0.2
+      },
+      "trace": [
+        {
+          "timeS": 0,
+          "qM": -0.02,
+          "vMps": 0.6,
+          "event": "source-boundary"
+        },
+        {
+          "timeS": 0.05489137882095234,
+          "qM": 0.0,
+          "vMps": 0.1287118826159234,
+          "event": "pre-impact"
+        },
+        {
+          "timeS": 0.05489137882095234,
+          "qM": 0.0,
+          "vMps": 0.0,
+          "event": "impulse-accounted-impact"
+        }
+      ],
+      "sourceKineticEnergyJ": 0.0387,
+      "potentialGainJ": 0.03651907451189746,
+      "guideLossJ": 0.0004,
+      "impactLossJ": 0.0017809254881025387,
+      "remainingKineticEnergyJ": 0.0,
+      "energyResidualJ": -8.673617379884035e-19,
+      "requiredImpulseNs": -0.02767305476242353,
+      "requiredStaticRetentionForceN": 1.825953725594873,
+      "reason": "retention-not-established",
+      "conditionalStateEligible": false,
+      "javaHandoffExecuted": false,
+      "terminalState": {
+        "qM": 0.0,
+        "vMps": 0.0
+      },
+      "unresolvedPostTerminalDynamics": true
+    },
+    {
+      "season": 2026,
+      "scenario": "uncertain-retention",
+      "inputs": {
+        "massKg": 0.215,
+        "pitchRad": 1.0471975511965976,
+        "sourceSpeedMps": 0.6,
+        "distanceM": 0.02,
+        "dragN": 0.02,
+        "stopPresent": true,
+        "restitution": 0,
+        "retentionEvidence": "uncertain",
+        "stopEnergyCapacityJ": 0.2,
+        "dwellS": 0.2
+      },
+      "trace": [
+        {
+          "timeS": 0,
+          "qM": -0.02,
+          "vMps": 0.6,
+          "event": "source-boundary"
+        },
+        {
+          "timeS": 0.05489137882095234,
+          "qM": 0.0,
+          "vMps": 0.1287118826159234,
+          "event": "pre-impact"
+        },
+        {
+          "timeS": 0.05489137882095234,
+          "qM": 0.0,
+          "vMps": 0.0,
+          "event": "impulse-accounted-impact"
+        }
+      ],
+      "sourceKineticEnergyJ": 0.0387,
+      "potentialGainJ": 0.03651907451189746,
+      "guideLossJ": 0.0004,
+      "impactLossJ": 0.0017809254881025387,
+      "remainingKineticEnergyJ": 0.0,
+      "energyResidualJ": -8.673617379884035e-19,
+      "requiredImpulseNs": -0.02767305476242353,
+      "requiredStaticRetentionForceN": 1.825953725594873,
+      "reason": "retention-not-established",
+      "conditionalStateEligible": false,
+      "javaHandoffExecuted": false,
+      "terminalState": {
+        "qM": 0.0,
+        "vMps": 0.0
+      },
+      "unresolvedPostTerminalDynamics": true
+    },
+    {
+      "season": 2026,
+      "scenario": "underfed",
+      "inputs": {
+        "massKg": 0.215,
+        "pitchRad": 1.0471975511965976,
+        "sourceSpeedMps": 0.05,
+        "distanceM": 0.02,
+        "dragN": 0.02,
+        "stopPresent": true,
+        "restitution": 0,
+        "retentionEvidence": "verified-virtual",
+        "stopEnergyCapacityJ": 0.2,
+        "dwellS": 0.2
+      },
+      "trace": [
+        {
+          "timeS": 0,
+          "qM": -0.02,
+          "vMps": 0.05,
+          "event": "source-boundary"
+        },
+        {
+          "timeS": 0.005823547931319746,
+          "qM": -0.019854411301717008,
+          "vMps": 0.0,
+          "event": "travel-terminal"
+        }
+      ],
+      "sourceKineticEnergyJ": 0.00026875000000000005,
+      "potentialGainJ": 0.0002658382260343402,
+      "guideLossJ": 2.9117739656598735e-06,
+      "impactLossJ": 0,
+      "remainingKineticEnergyJ": 0.0,
+      "energyResidualJ": -1.6940658945086007e-21,
+      "requiredImpulseNs": 0,
+      "requiredStaticRetentionForceN": 1.825953725594873,
+      "reason": "stalled-before-stop",
+      "conditionalStateEligible": false,
+      "javaHandoffExecuted": false,
+      "terminalState": {
+        "qM": -0.019854411301717008,
+        "vMps": 0.0
+      },
+      "unresolvedPostTerminalDynamics": true
+    }
+  ],
+  "assumptions": [
+    "New constrained straight approach, same pitch as powered guide; prior floor or pad geometry not reused",
+    "Source delivers moving body at q=-.02m, speed.6m/s; its kinetic energy is explicit external input, not simulated human/intake acquisition",
+    "Hypothetical rigid stop with zero restitution plus passive latch; instantaneous velocity change is an explicitly accounted impulse, not hidden state reset",
+    "Hypothetical .2J stop capacity, .02N guide drag, .2s retained dwell; no sourced material or actuator rating",
+    "Latch supplies uphill weight reaction without motion/work during dwell; verified-virtual is a prescribed observation, not real evidence",
+    "No spin, lateral pose, deformation, peak impact force, compliance or source geometry modeled"
+  ],
+  "handoff": {
+    "runtimeConnected": false,
+    "required": [
+      "Import actual terminal q,v,time into shared plant, no fresh feed(0) reset",
+      "Demonstrate center q=0 registration and body pose to actual guide",
+      "Establish physical retention through nip closure and gate sequence",
+      "Validate bumper stroke/load and latch release path; currently ideal impulse",
+      "Keep acquisition source energy separate from subsequent motor work"
+    ],
+    "currentJavaBoundary": "IntegratedPregripPrototype constructs a fresh PoweredGuidePlant and calls feed(0); it accepts no acquisition state"
+  },
+  "calibration": null,
+  "officialScore": null,
+  "engineeringAcceptance": "blocked"
+}

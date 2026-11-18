@@ -1,0 +1,2308 @@
+{
+  "schema": "frc-decision-chain/v1",
+  "season": 2026,
+  "branches": [
+    {
+      "id": "shared",
+      "parent": null
+    },
+    {
+      "id": "kit-baseline",
+      "parent": "shared"
+    },
+    {
+      "id": "compact",
+      "parent": "shared"
+    },
+    {
+      "id": "payload",
+      "parent": "shared"
+    },
+    {
+      "id": "hypothetical-square",
+      "parent": "shared"
+    },
+    {
+      "id": "hypothetical-long",
+      "parent": "shared"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "game-2026",
+      "kind": "game-analysis",
+      "branch": "shared",
+      "season": 2026,
+      "revision": 1,
+      "previous": null,
+      "status": "hypothesis",
+      "inputs": [],
+      "content": {
+        "fieldModel": {
+          "schema": "frc-field-semantics/v1",
+          "season": 2026,
+          "sources": [
+            {
+              "id": "2026-dimensions.pdf",
+              "kind": "official-drawing",
+              "season": 2026,
+              "url": "https://firstfrc.blob.core.windows.net/frc2026/FieldAssets/2026-field-dimension-dwgs.pdf",
+              "revision": "FE-2026 Rev B 2026-02-26; GE-26500 Rev A; mixed other sheets",
+              "retrieved": "2026-11-16T01:44:39.851944+00:00",
+              "locator": "2026-dimensions.pdf",
+              "sha256": "3e2c1a0c35424a66821186584dda4f6709221ac8eb88036e09091452b8235f82",
+              "bytes": 29824139,
+              "lastModified": "Fri, 27 Feb 2026 21:36:11 GMT",
+              "etag": "0x8DE764839CE224C",
+              "ingestionStatus": "downloaded-sha256-verified",
+              "geometryValidation": "selected-drawing-dimensions-only"
+            },
+            {
+              "id": "2026-field.step",
+              "kind": "official-cad",
+              "season": 2026,
+              "url": "https://firstfrc.blob.core.windows.net/frc2026/FieldAssets/FE-2026-rev-rebuilt-playing-field.step",
+              "revision": "STEP export 2026-01-07T21:47:03Z (predates FE-2026 Rev A/B)",
+              "retrieved": "2026-11-16T01:44:42.391530+00:00",
+              "locator": "2026-field.step",
+              "sha256": "2ad90e42f2c2db0fab5b22bb65aa0851089e414d568d4ebd127624fa230c7671",
+              "bytes": 35707894,
+              "lastModified": "Sat, 10 Jan 2026 17:31:49 GMT",
+              "etag": "0x8DE506E22D259DB",
+              "ingestionStatus": "downloaded-sha256-verified",
+              "geometryValidation": "not-validated"
+            },
+            {
+              "id": "2026-full-drawings.pdf",
+              "kind": "official-drawing",
+              "season": 2026,
+              "url": "https://firstfrc.blob.core.windows.net/frc2026/FieldAssets/2026-field-dwg-complete.pdf",
+              "revision": "Mixed per-sheet revisions; not yet inspected",
+              "retrieved": "2026-11-16T01:47:55.133764+00:00",
+              "locator": "2026-full-drawings.pdf",
+              "sha256": "2aecd9406ced5a39d026788a3678a6c1594b119fb37046e598051f0d37063726",
+              "bytes": 301627283,
+              "lastModified": "Fri, 27 Feb 2026 21:36:45 GMT",
+              "etag": "0x8DE76484E546A57",
+              "ingestionStatus": "downloaded-sha256-verified",
+              "geometryValidation": "not-validated"
+            },
+            {
+              "id": "2026-manual.pdf",
+              "kind": "rulebook",
+              "season": 2026,
+              "url": "https://firstfrc.blob.core.windows.net/frc2026/Manual/2026GameManual.pdf",
+              "revision": "TU22; 166 pages",
+              "retrieved": "2026-11-16T01:49:27.463741+00:00",
+              "locator": "2026-manual.pdf",
+              "sha256": "5c67300fc412a1eed8ca9dc37fb6644aee05795a2befed1f69736643cbf95139",
+              "bytes": 5057812,
+              "ingestionStatus": "downloaded-sha256-verified"
+            }
+          ],
+          "frames": [],
+          "locations": [
+            {
+              "id": "hub",
+              "purpose": "scoring",
+              "reachability": "not-assessed",
+              "geometry": {
+                "status": "unknown",
+                "reason": "Assets ingested; scoring/retrieval world transform and usable geometry not yet verified"
+              },
+              "semantics": {
+                "phases": [
+                  "AUTO",
+                  "TRANSITION",
+                  "SHIFT1",
+                  "SHIFT2",
+                  "SHIFT3",
+                  "SHIFT4",
+                  "ENDGAME"
+                ],
+                "conditions": "FUEL through top opening and sensor array; only active HUB earns points, with processing grace; bumper overlap own ALLIANCE ZONE required to launch.",
+                "possession": "No numerical in-match cap encoded; preload at most 8 is not an in-match capacity limit",
+                "replenishment": "Processed FUEL exits into neutral zone"
+              },
+              "semanticSourceRefs": [
+                "2026-manual.pdf"
+              ],
+              "ruleLocator": "5.4 p23;6.4.1 pp44-45;6.5.1 p46;G407 p65"
+            },
+            {
+              "id": "depot",
+              "purpose": "retrieval",
+              "reachability": "not-assessed",
+              "geometry": {
+                "status": "unknown",
+                "reason": "Assets ingested; scoring/retrieval world transform and usable geometry not yet verified"
+              },
+              "semantics": {
+                "phases": [
+                  "AUTO",
+                  "TELEOP"
+                ],
+                "conditions": "Initial FUEL reservoir, dynamic depletion.",
+                "possession": "Not encoded",
+                "replenishment": "24 FUEL initially each depot, not uniform positions"
+              },
+              "semanticSourceRefs": [
+                "2026-manual.pdf"
+              ],
+              "ruleLocator": "5.7 p26;6.3.4 p43"
+            },
+            {
+              "id": "outpost",
+              "purpose": "retrieval",
+              "reachability": "not-assessed",
+              "geometry": {
+                "status": "unknown",
+                "reason": "Assets ingested; scoring/retrieval world transform and usable geometry not yet verified"
+              },
+              "semantics": {
+                "phases": null,
+                "conditions": "CHUTE feed and floor exchange are distinct interactions; HP rules not fully encoded.",
+                "possession": "Not encoded",
+                "replenishment": "24 FUEL initially each chute; subsequent inventory dynamic"
+              },
+              "semanticSourceRefs": [
+                "2026-manual.pdf"
+              ],
+              "ruleLocator": "6.3.4 p43"
+            },
+            {
+              "id": "neutral-zone-fuel",
+              "purpose": "retrieval",
+              "reachability": "not-assessed",
+              "geometry": {
+                "status": "unknown",
+                "reason": "Assets ingested; scoring/retrieval world transform and usable geometry not yet verified"
+              },
+              "semantics": {
+                "phases": [
+                  "AUTO",
+                  "TELEOP"
+                ],
+                "conditions": "Dynamic floor pickup; HUB-exit fuel must first contact something besides collecting robot or its controlled fuel, per G408.",
+                "possession": "Not encoded",
+                "replenishment": "360-408 initially plus stochastic tolerance; event quantity may increase to 600 total; HUB returns"
+              },
+              "semanticSourceRefs": [
+                "2026-manual.pdf"
+              ],
+              "ruleLocator": "5.4 p23;6.3.4 p43;G408 pp65-66"
+            }
+          ],
+          "zones": [],
+          "obstacles": [],
+          "referenceGeometry": {
+            "schema": "frc-nominal-field-references/v1",
+            "season": 2026,
+            "revision": 1,
+            "status": "reference-only",
+            "frames": [
+              {
+                "id": "2026-welded-drawing",
+                "variant": "welded",
+                "unit": "mm",
+                "dimensions": 3,
+                "origin": "Blue alliance diamond-plate plane / scoring-table-side guardrail polycarbonate plane / carpet surface intersection",
+                "axes": "+X toward red alliance; +Y away from scoring table; +Z up",
+                "sourcePin": {
+                  "id": "2026-dimensions.pdf",
+                  "revision": "FE-2026 Rev B 2026-02-26; GE-26500 Rev A; mixed other sheets",
+                  "sha256": "3e2c1a0c35424a66821186584dda4f6709221ac8eb88036e09091452b8235f82"
+                },
+                "locator": "FE-2026 Rev B sheet 11, PDF p11",
+                "certifiedCadTransform": null
+              },
+              {
+                "id": "2026-andymark-drawing",
+                "variant": "andymark",
+                "unit": "mm",
+                "dimensions": 3,
+                "origin": "Blue alliance extrusion-frame plane / scoring-table-side extrusion-frame plane / carpet surface intersection",
+                "axes": "+X toward red alliance; +Y away from scoring table; +Z up",
+                "sourcePin": {
+                  "id": "2026-dimensions.pdf",
+                  "revision": "FE-2026 Rev B 2026-02-26; GE-26500 Rev A; mixed other sheets",
+                  "sha256": "3e2c1a0c35424a66821186584dda4f6709221ac8eb88036e09091452b8235f82"
+                },
+                "locator": "FE-2026 Rev B sheet 11, PDF p11",
+                "certifiedCadTransform": null
+              }
+            ],
+            "features": [
+              {
+                "id": "blue-hub-opening-center-welded",
+                "role": "hub-opening-center-reference",
+                "shape": "point",
+                "variant": "welded",
+                "alliance": "blue",
+                "frame": "2026-welded-drawing",
+                "coordinatesMm": [
+                  [
+                    4625.594,
+                    4034.536,
+                    1828.8
+                  ]
+                ],
+                "originalInches": [
+                  182.11,
+                  158.84,
+                  72
+                ],
+                "sourcePin": {
+                  "id": "2026-dimensions.pdf",
+                  "revision": "FE-2026 Rev B 2026-02-26; GE-26500 Rev A; mixed other sheets",
+                  "sha256": "3e2c1a0c35424a66821186584dda4f6709221ac8eb88036e09091452b8235f82"
+                },
+                "locator": "FE-2026 RevB sheet3; GE-26300 sheet4 PDFp25; manual5.4 p23",
+                "derivation": "X hub center from alliance wall; red X=fieldLength-blueX; Y field midline; Z=72in controlled opening height (+/-0.5in in assembly drawing). XY reference tolerance unknown.",
+                "status": "nominal-reference",
+                "confidence": "drawing-derived-nominal",
+                "uncertaintyMm": null,
+                "reachability": "not-assessed",
+                "allowedUses": [
+                  "visualization",
+                  "preliminary-strategy-reference"
+                ],
+                "forbiddenUses": [
+                  "robot-goal",
+                  "approach-pose",
+                  "collision",
+                  "path-planning",
+                  "path-execution",
+                  "drivetrain-feasibility",
+                  "scoring-success",
+                  "pickup-availability",
+                  "certified-transform"
+                ]
+              },
+              {
+                "id": "red-hub-opening-center-welded",
+                "role": "hub-opening-center-reference",
+                "shape": "point",
+                "variant": "welded",
+                "alliance": "red",
+                "frame": "2026-welded-drawing",
+                "coordinatesMm": [
+                  [
+                    11915.394,
+                    4034.536,
+                    1828.8
+                  ]
+                ],
+                "originalInches": [
+                  469.11,
+                  158.84,
+                  72
+                ],
+                "sourcePin": {
+                  "id": "2026-dimensions.pdf",
+                  "revision": "FE-2026 Rev B 2026-02-26; GE-26500 Rev A; mixed other sheets",
+                  "sha256": "3e2c1a0c35424a66821186584dda4f6709221ac8eb88036e09091452b8235f82"
+                },
+                "locator": "FE-2026 RevB sheet3; GE-26300 sheet4 PDFp25; manual5.4 p23",
+                "derivation": "X hub center from alliance wall; red X=fieldLength-blueX; Y field midline; Z=72in controlled opening height (+/-0.5in in assembly drawing). XY reference tolerance unknown.",
+                "status": "nominal-reference",
+                "confidence": "drawing-derived-nominal",
+                "uncertaintyMm": null,
+                "reachability": "not-assessed",
+                "allowedUses": [
+                  "visualization",
+                  "preliminary-strategy-reference"
+                ],
+                "forbiddenUses": [
+                  "robot-goal",
+                  "approach-pose",
+                  "collision",
+                  "path-planning",
+                  "path-execution",
+                  "drivetrain-feasibility",
+                  "scoring-success",
+                  "pickup-availability",
+                  "certified-transform"
+                ]
+              },
+              {
+                "id": "blue-depot-interior-centroid-welded",
+                "role": "depot-reservoir-centroid-reference",
+                "shape": "point",
+                "variant": "welded",
+                "alliance": "blue",
+                "frame": "2026-welded-drawing",
+                "coordinatesMm": [
+                  [
+                    304.8,
+                    5965.19,
+                    0
+                  ]
+                ],
+                "originalInches": [
+                  12,
+                  234.85,
+                  0
+                ],
+                "sourcePin": {
+                  "id": "2026-dimensions.pdf",
+                  "revision": "FE-2026 Rev B 2026-02-26; GE-26500 Rev A; mixed other sheets",
+                  "sha256": "3e2c1a0c35424a66821186584dda4f6709221ac8eb88036e09091452b8235f82"
+                },
+                "locator": "FE-2026 RevB sheet3; GE-26600 sheet1 PDFp29; manual5.7 p26 and6.3.4 p43",
+                "derivation": "Interior depth24in and width36in from GE-26600; centroid12in from alliance wall. Lateral center82.84in welded/82.32in AndyMark from nearest guardrail; blueY=width-offset. Rounding of chained references may differ0.01in.",
+                "status": "nominal-reference",
+                "confidence": "drawing-derived-nominal",
+                "uncertaintyMm": null,
+                "reachability": "not-assessed",
+                "allowedUses": [
+                  "visualization",
+                  "preliminary-strategy-reference"
+                ],
+                "forbiddenUses": [
+                  "robot-goal",
+                  "approach-pose",
+                  "collision",
+                  "path-planning",
+                  "path-execution",
+                  "drivetrain-feasibility",
+                  "scoring-success",
+                  "pickup-availability",
+                  "certified-transform"
+                ]
+              },
+              {
+                "id": "red-depot-interior-centroid-welded",
+                "role": "depot-reservoir-centroid-reference",
+                "shape": "point",
+                "variant": "welded",
+                "alliance": "red",
+                "frame": "2026-welded-drawing",
+                "coordinatesMm": [
+                  [
+                    16236.188,
+                    2104.136,
+                    0
+                  ]
+                ],
+                "originalInches": [
+                  639.22,
+                  82.84,
+                  0
+                ],
+                "sourcePin": {
+                  "id": "2026-dimensions.pdf",
+                  "revision": "FE-2026 Rev B 2026-02-26; GE-26500 Rev A; mixed other sheets",
+                  "sha256": "3e2c1a0c35424a66821186584dda4f6709221ac8eb88036e09091452b8235f82"
+                },
+                "locator": "FE-2026 RevB sheet3; GE-26600 sheet1 PDFp29; manual5.7 p26 and6.3.4 p43",
+                "derivation": "Interior depth24in and width36in from GE-26600; centroid12in from alliance wall. Lateral center82.84in welded/82.32in AndyMark from nearest guardrail; blueY=width-offset. Rounding of chained references may differ0.01in.",
+                "status": "nominal-reference",
+                "confidence": "drawing-derived-nominal",
+                "uncertaintyMm": null,
+                "reachability": "not-assessed",
+                "allowedUses": [
+                  "visualization",
+                  "preliminary-strategy-reference"
+                ],
+                "forbiddenUses": [
+                  "robot-goal",
+                  "approach-pose",
+                  "collision",
+                  "path-planning",
+                  "path-execution",
+                  "drivetrain-feasibility",
+                  "scoring-success",
+                  "pickup-availability",
+                  "certified-transform"
+                ]
+              },
+              {
+                "id": "blue-hub-opening-center-andymark",
+                "role": "hub-opening-center-reference",
+                "shape": "point",
+                "variant": "andymark",
+                "alliance": "blue",
+                "frame": "2026-andymark-drawing",
+                "coordinatesMm": [
+                  [
+                    4611.624,
+                    4021.328,
+                    1828.8
+                  ]
+                ],
+                "originalInches": [
+                  181.56,
+                  158.32,
+                  72
+                ],
+                "sourcePin": {
+                  "id": "2026-dimensions.pdf",
+                  "revision": "FE-2026 Rev B 2026-02-26; GE-26500 Rev A; mixed other sheets",
+                  "sha256": "3e2c1a0c35424a66821186584dda4f6709221ac8eb88036e09091452b8235f82"
+                },
+                "locator": "FE-2026 RevB sheet5; GE-26300 sheet4 PDFp25; manual5.4 p23",
+                "derivation": "X hub center from alliance wall; red X=fieldLength-blueX; Y field midline; Z=72in controlled opening height (+/-0.5in in assembly drawing). XY reference tolerance unknown.",
+                "status": "nominal-reference",
+                "confidence": "drawing-derived-nominal",
+                "uncertaintyMm": null,
+                "reachability": "not-assessed",
+                "allowedUses": [
+                  "visualization",
+                  "preliminary-strategy-reference"
+                ],
+                "forbiddenUses": [
+                  "robot-goal",
+                  "approach-pose",
+                  "collision",
+                  "path-planning",
+                  "path-execution",
+                  "drivetrain-feasibility",
+                  "scoring-success",
+                  "pickup-availability",
+                  "certified-transform"
+                ]
+              },
+              {
+                "id": "red-hub-opening-center-andymark",
+                "role": "hub-opening-center-reference",
+                "shape": "point",
+                "variant": "andymark",
+                "alliance": "red",
+                "frame": "2026-andymark-drawing",
+                "coordinatesMm": [
+                  [
+                    11901.424,
+                    4021.328,
+                    1828.8
+                  ]
+                ],
+                "originalInches": [
+                  468.56,
+                  158.32,
+                  72
+                ],
+                "sourcePin": {
+                  "id": "2026-dimensions.pdf",
+                  "revision": "FE-2026 Rev B 2026-02-26; GE-26500 Rev A; mixed other sheets",
+                  "sha256": "3e2c1a0c35424a66821186584dda4f6709221ac8eb88036e09091452b8235f82"
+                },
+                "locator": "FE-2026 RevB sheet5; GE-26300 sheet4 PDFp25; manual5.4 p23",
+                "derivation": "X hub center from alliance wall; red X=fieldLength-blueX; Y field midline; Z=72in controlled opening height (+/-0.5in in assembly drawing). XY reference tolerance unknown.",
+                "status": "nominal-reference",
+                "confidence": "drawing-derived-nominal",
+                "uncertaintyMm": null,
+                "reachability": "not-assessed",
+                "allowedUses": [
+                  "visualization",
+                  "preliminary-strategy-reference"
+                ],
+                "forbiddenUses": [
+                  "robot-goal",
+                  "approach-pose",
+                  "collision",
+                  "path-planning",
+                  "path-execution",
+                  "drivetrain-feasibility",
+                  "scoring-success",
+                  "pickup-availability",
+                  "certified-transform"
+                ]
+              },
+              {
+                "id": "blue-depot-interior-centroid-andymark",
+                "role": "depot-reservoir-centroid-reference",
+                "shape": "point",
+                "variant": "andymark",
+                "alliance": "blue",
+                "frame": "2026-andymark-drawing",
+                "coordinatesMm": [
+                  [
+                    304.8,
+                    5951.728,
+                    0
+                  ]
+                ],
+                "originalInches": [
+                  12,
+                  234.32,
+                  0
+                ],
+                "sourcePin": {
+                  "id": "2026-dimensions.pdf",
+                  "revision": "FE-2026 Rev B 2026-02-26; GE-26500 Rev A; mixed other sheets",
+                  "sha256": "3e2c1a0c35424a66821186584dda4f6709221ac8eb88036e09091452b8235f82"
+                },
+                "locator": "FE-2026 RevB sheet5; GE-26600 sheet1 PDFp29; manual5.7 p26 and6.3.4 p43",
+                "derivation": "Interior depth24in and width36in from GE-26600; centroid12in from alliance wall. Lateral center82.84in welded/82.32in AndyMark from nearest guardrail; blueY=width-offset. Rounding of chained references may differ0.01in.",
+                "status": "nominal-reference",
+                "confidence": "drawing-derived-nominal",
+                "uncertaintyMm": null,
+                "reachability": "not-assessed",
+                "allowedUses": [
+                  "visualization",
+                  "preliminary-strategy-reference"
+                ],
+                "forbiddenUses": [
+                  "robot-goal",
+                  "approach-pose",
+                  "collision",
+                  "path-planning",
+                  "path-execution",
+                  "drivetrain-feasibility",
+                  "scoring-success",
+                  "pickup-availability",
+                  "certified-transform"
+                ]
+              },
+              {
+                "id": "red-depot-interior-centroid-andymark",
+                "role": "depot-reservoir-centroid-reference",
+                "shape": "point",
+                "variant": "andymark",
+                "alliance": "red",
+                "frame": "2026-andymark-drawing",
+                "coordinatesMm": [
+                  [
+                    16208.248,
+                    2090.928,
+                    0
+                  ]
+                ],
+                "originalInches": [
+                  638.12,
+                  82.32,
+                  0
+                ],
+                "sourcePin": {
+                  "id": "2026-dimensions.pdf",
+                  "revision": "FE-2026 Rev B 2026-02-26; GE-26500 Rev A; mixed other sheets",
+                  "sha256": "3e2c1a0c35424a66821186584dda4f6709221ac8eb88036e09091452b8235f82"
+                },
+                "locator": "FE-2026 RevB sheet5; GE-26600 sheet1 PDFp29; manual5.7 p26 and6.3.4 p43",
+                "derivation": "Interior depth24in and width36in from GE-26600; centroid12in from alliance wall. Lateral center82.84in welded/82.32in AndyMark from nearest guardrail; blueY=width-offset. Rounding of chained references may differ0.01in.",
+                "status": "nominal-reference",
+                "confidence": "drawing-derived-nominal",
+                "uncertaintyMm": null,
+                "reachability": "not-assessed",
+                "allowedUses": [
+                  "visualization",
+                  "preliminary-strategy-reference"
+                ],
+                "forbiddenUses": [
+                  "robot-goal",
+                  "approach-pose",
+                  "collision",
+                  "path-planning",
+                  "path-execution",
+                  "drivetrain-feasibility",
+                  "scoring-success",
+                  "pickup-availability",
+                  "certified-transform"
+                ]
+              },
+              {
+                "id": "blue-scoring-table-bump-crossing-reference-welded",
+                "role": "bump-crossing-reference",
+                "shape": "line",
+                "variant": "welded",
+                "alliance": "blue",
+                "frame": "2026-welded-drawing",
+                "coordinatesMm": [
+                  [
+                    4061.714,
+                    2510.536,
+                    0
+                  ],
+                  [
+                    5189.474,
+                    2510.536,
+                    0
+                  ]
+                ],
+                "originalInches": null,
+                "sourcePin": {
+                  "id": "2026-dimensions.pdf",
+                  "revision": "FE-2026 Rev B 2026-02-26; GE-26500 Rev A; mixed other sheets",
+                  "sha256": "3e2c1a0c35424a66821186584dda4f6709221ac8eb88036e09091452b8235f82"
+                },
+                "locator": "FE-2026 RevB sheets3 and8; GE-26100 sheet2 PDFp20; manual5.5 p25",
+                "derivation": "X crossing centerline from HUB axis +/- half44.40in nominal BUMP depth. Lateral center=field midline +/- (half47in HUB body + half73in ramp width). Ground projection only, not drivable path. This is a nominal crossing reference, not a measured physical ramp centerline. In the separately inspected welded STEP, nominal-versus-part midpoint differs by approximately 1.7935 mm laterally; no AndyMark CAD comparison was performed. No silent correction or physical path claim.",
+                "status": "nominal-reference",
+                "confidence": "nominal-layout-inference",
+                "uncertaintyMm": null,
+                "reachability": "not-assessed",
+                "allowedUses": [
+                  "visualization",
+                  "preliminary-strategy-reference"
+                ],
+                "forbiddenUses": [
+                  "robot-goal",
+                  "approach-pose",
+                  "collision",
+                  "path-planning",
+                  "path-execution",
+                  "drivetrain-feasibility",
+                  "scoring-success",
+                  "pickup-availability",
+                  "certified-transform"
+                ]
+              },
+              {
+                "id": "blue-audience-bump-crossing-reference-welded",
+                "role": "bump-crossing-reference",
+                "shape": "line",
+                "variant": "welded",
+                "alliance": "blue",
+                "frame": "2026-welded-drawing",
+                "coordinatesMm": [
+                  [
+                    4061.714,
+                    5558.536,
+                    0
+                  ],
+                  [
+                    5189.474,
+                    5558.536,
+                    0
+                  ]
+                ],
+                "originalInches": null,
+                "sourcePin": {
+                  "id": "2026-dimensions.pdf",
+                  "revision": "FE-2026 Rev B 2026-02-26; GE-26500 Rev A; mixed other sheets",
+                  "sha256": "3e2c1a0c35424a66821186584dda4f6709221ac8eb88036e09091452b8235f82"
+                },
+                "locator": "FE-2026 RevB sheets3 and8; GE-26100 sheet2 PDFp20; manual5.5 p25",
+                "derivation": "X crossing centerline from HUB axis +/- half44.40in nominal BUMP depth. Lateral center=field midline +/- (half47in HUB body + half73in ramp width). Ground projection only, not drivable path. This is a nominal crossing reference, not a measured physical ramp centerline. In the separately inspected welded STEP, nominal-versus-part midpoint differs by approximately 1.7935 mm laterally; no AndyMark CAD comparison was performed. No silent correction or physical path claim.",
+                "status": "nominal-reference",
+                "confidence": "nominal-layout-inference",
+                "uncertaintyMm": null,
+                "reachability": "not-assessed",
+                "allowedUses": [
+                  "visualization",
+                  "preliminary-strategy-reference"
+                ],
+                "forbiddenUses": [
+                  "robot-goal",
+                  "approach-pose",
+                  "collision",
+                  "path-planning",
+                  "path-execution",
+                  "drivetrain-feasibility",
+                  "scoring-success",
+                  "pickup-availability",
+                  "certified-transform"
+                ]
+              },
+              {
+                "id": "red-scoring-table-bump-crossing-reference-welded",
+                "role": "bump-crossing-reference",
+                "shape": "line",
+                "variant": "welded",
+                "alliance": "red",
+                "frame": "2026-welded-drawing",
+                "coordinatesMm": [
+                  [
+                    11351.514,
+                    2510.536,
+                    0
+                  ],
+                  [
+                    12479.274,
+                    2510.536,
+                    0
+                  ]
+                ],
+                "originalInches": null,
+                "sourcePin": {
+                  "id": "2026-dimensions.pdf",
+                  "revision": "FE-2026 Rev B 2026-02-26; GE-26500 Rev A; mixed other sheets",
+                  "sha256": "3e2c1a0c35424a66821186584dda4f6709221ac8eb88036e09091452b8235f82"
+                },
+                "locator": "FE-2026 RevB sheets3 and8; GE-26100 sheet2 PDFp20; manual5.5 p25",
+                "derivation": "X crossing centerline from HUB axis +/- half44.40in nominal BUMP depth. Lateral center=field midline +/- (half47in HUB body + half73in ramp width). Ground projection only, not drivable path. This is a nominal crossing reference, not a measured physical ramp centerline. In the separately inspected welded STEP, nominal-versus-part midpoint differs by approximately 1.7935 mm laterally; no AndyMark CAD comparison was performed. No silent correction or physical path claim.",
+                "status": "nominal-reference",
+                "confidence": "nominal-layout-inference",
+                "uncertaintyMm": null,
+                "reachability": "not-assessed",
+                "allowedUses": [
+                  "visualization",
+                  "preliminary-strategy-reference"
+                ],
+                "forbiddenUses": [
+                  "robot-goal",
+                  "approach-pose",
+                  "collision",
+                  "path-planning",
+                  "path-execution",
+                  "drivetrain-feasibility",
+                  "scoring-success",
+                  "pickup-availability",
+                  "certified-transform"
+                ]
+              },
+              {
+                "id": "red-audience-bump-crossing-reference-welded",
+                "role": "bump-crossing-reference",
+                "shape": "line",
+                "variant": "welded",
+                "alliance": "red",
+                "frame": "2026-welded-drawing",
+                "coordinatesMm": [
+                  [
+                    11351.514,
+                    5558.536,
+                    0
+                  ],
+                  [
+                    12479.274,
+                    5558.536,
+                    0
+                  ]
+                ],
+                "originalInches": null,
+                "sourcePin": {
+                  "id": "2026-dimensions.pdf",
+                  "revision": "FE-2026 Rev B 2026-02-26; GE-26500 Rev A; mixed other sheets",
+                  "sha256": "3e2c1a0c35424a66821186584dda4f6709221ac8eb88036e09091452b8235f82"
+                },
+                "locator": "FE-2026 RevB sheets3 and8; GE-26100 sheet2 PDFp20; manual5.5 p25",
+                "derivation": "X crossing centerline from HUB axis +/- half44.40in nominal BUMP depth. Lateral center=field midline +/- (half47in HUB body + half73in ramp width). Ground projection only, not drivable path. This is a nominal crossing reference, not a measured physical ramp centerline. In the separately inspected welded STEP, nominal-versus-part midpoint differs by approximately 1.7935 mm laterally; no AndyMark CAD comparison was performed. No silent correction or physical path claim.",
+                "status": "nominal-reference",
+                "confidence": "nominal-layout-inference",
+                "uncertaintyMm": null,
+                "reachability": "not-assessed",
+                "allowedUses": [
+                  "visualization",
+                  "preliminary-strategy-reference"
+                ],
+                "forbiddenUses": [
+                  "robot-goal",
+                  "approach-pose",
+                  "collision",
+                  "path-planning",
+                  "path-execution",
+                  "drivetrain-feasibility",
+                  "scoring-success",
+                  "pickup-availability",
+                  "certified-transform"
+                ]
+              },
+              {
+                "id": "blue-scoring-table-bump-crossing-reference-andymark",
+                "role": "bump-crossing-reference",
+                "shape": "line",
+                "variant": "andymark",
+                "alliance": "blue",
+                "frame": "2026-andymark-drawing",
+                "coordinatesMm": [
+                  [
+                    4047.744,
+                    2497.328,
+                    0
+                  ],
+                  [
+                    5175.504,
+                    2497.328,
+                    0
+                  ]
+                ],
+                "originalInches": null,
+                "sourcePin": {
+                  "id": "2026-dimensions.pdf",
+                  "revision": "FE-2026 Rev B 2026-02-26; GE-26500 Rev A; mixed other sheets",
+                  "sha256": "3e2c1a0c35424a66821186584dda4f6709221ac8eb88036e09091452b8235f82"
+                },
+                "locator": "FE-2026 RevB sheets5 and10; GE-26100 sheet2 PDFp20; manual5.5 p25",
+                "derivation": "X crossing centerline from HUB axis +/- half44.40in nominal BUMP depth. Lateral center=field midline +/- (half47in HUB body + half73in ramp width). Ground projection only, not drivable path. This is a nominal crossing reference, not a measured physical ramp centerline. In the separately inspected welded STEP, nominal-versus-part midpoint differs by approximately 1.7935 mm laterally; no AndyMark CAD comparison was performed. No silent correction or physical path claim.",
+                "status": "nominal-reference",
+                "confidence": "nominal-layout-inference",
+                "uncertaintyMm": null,
+                "reachability": "not-assessed",
+                "allowedUses": [
+                  "visualization",
+                  "preliminary-strategy-reference"
+                ],
+                "forbiddenUses": [
+                  "robot-goal",
+                  "approach-pose",
+                  "collision",
+                  "path-planning",
+                  "path-execution",
+                  "drivetrain-feasibility",
+                  "scoring-success",
+                  "pickup-availability",
+                  "certified-transform"
+                ]
+              },
+              {
+                "id": "blue-audience-bump-crossing-reference-andymark",
+                "role": "bump-crossing-reference",
+                "shape": "line",
+                "variant": "andymark",
+                "alliance": "blue",
+                "frame": "2026-andymark-drawing",
+                "coordinatesMm": [
+                  [
+                    4047.744,
+                    5545.328,
+                    0
+                  ],
+                  [
+                    5175.504,
+                    5545.328,
+                    0
+                  ]
+                ],
+                "originalInches": null,
+                "sourcePin": {
+                  "id": "2026-dimensions.pdf",
+                  "revision": "FE-2026 Rev B 2026-02-26; GE-26500 Rev A; mixed other sheets",
+                  "sha256": "3e2c1a0c35424a66821186584dda4f6709221ac8eb88036e09091452b8235f82"
+                },
+                "locator": "FE-2026 RevB sheets5 and10; GE-26100 sheet2 PDFp20; manual5.5 p25",
+                "derivation": "X crossing centerline from HUB axis +/- half44.40in nominal BUMP depth. Lateral center=field midline +/- (half47in HUB body + half73in ramp width). Ground projection only, not drivable path. This is a nominal crossing reference, not a measured physical ramp centerline. In the separately inspected welded STEP, nominal-versus-part midpoint differs by approximately 1.7935 mm laterally; no AndyMark CAD comparison was performed. No silent correction or physical path claim.",
+                "status": "nominal-reference",
+                "confidence": "nominal-layout-inference",
+                "uncertaintyMm": null,
+                "reachability": "not-assessed",
+                "allowedUses": [
+                  "visualization",
+                  "preliminary-strategy-reference"
+                ],
+                "forbiddenUses": [
+                  "robot-goal",
+                  "approach-pose",
+                  "collision",
+                  "path-planning",
+                  "path-execution",
+                  "drivetrain-feasibility",
+                  "scoring-success",
+                  "pickup-availability",
+                  "certified-transform"
+                ]
+              },
+              {
+                "id": "red-scoring-table-bump-crossing-reference-andymark",
+                "role": "bump-crossing-reference",
+                "shape": "line",
+                "variant": "andymark",
+                "alliance": "red",
+                "frame": "2026-andymark-drawing",
+                "coordinatesMm": [
+                  [
+                    11337.544,
+                    2497.328,
+                    0
+                  ],
+                  [
+                    12465.304,
+                    2497.328,
+                    0
+                  ]
+                ],
+                "originalInches": null,
+                "sourcePin": {
+                  "id": "2026-dimensions.pdf",
+                  "revision": "FE-2026 Rev B 2026-02-26; GE-26500 Rev A; mixed other sheets",
+                  "sha256": "3e2c1a0c35424a66821186584dda4f6709221ac8eb88036e09091452b8235f82"
+                },
+                "locator": "FE-2026 RevB sheets5 and10; GE-26100 sheet2 PDFp20; manual5.5 p25",
+                "derivation": "X crossing centerline from HUB axis +/- half44.40in nominal BUMP depth. Lateral center=field midline +/- (half47in HUB body + half73in ramp width). Ground projection only, not drivable path. This is a nominal crossing reference, not a measured physical ramp centerline. In the separately inspected welded STEP, nominal-versus-part midpoint differs by approximately 1.7935 mm laterally; no AndyMark CAD comparison was performed. No silent correction or physical path claim.",
+                "status": "nominal-reference",
+                "confidence": "nominal-layout-inference",
+                "uncertaintyMm": null,
+                "reachability": "not-assessed",
+                "allowedUses": [
+                  "visualization",
+                  "preliminary-strategy-reference"
+                ],
+                "forbiddenUses": [
+                  "robot-goal",
+                  "approach-pose",
+                  "collision",
+                  "path-planning",
+                  "path-execution",
+                  "drivetrain-feasibility",
+                  "scoring-success",
+                  "pickup-availability",
+                  "certified-transform"
+                ]
+              },
+              {
+                "id": "red-audience-bump-crossing-reference-andymark",
+                "role": "bump-crossing-reference",
+                "shape": "line",
+                "variant": "andymark",
+                "alliance": "red",
+                "frame": "2026-andymark-drawing",
+                "coordinatesMm": [
+                  [
+                    11337.544,
+                    5545.328,
+                    0
+                  ],
+                  [
+                    12465.304,
+                    5545.328,
+                    0
+                  ]
+                ],
+                "originalInches": null,
+                "sourcePin": {
+                  "id": "2026-dimensions.pdf",
+                  "revision": "FE-2026 Rev B 2026-02-26; GE-26500 Rev A; mixed other sheets",
+                  "sha256": "3e2c1a0c35424a66821186584dda4f6709221ac8eb88036e09091452b8235f82"
+                },
+                "locator": "FE-2026 RevB sheets5 and10; GE-26100 sheet2 PDFp20; manual5.5 p25",
+                "derivation": "X crossing centerline from HUB axis +/- half44.40in nominal BUMP depth. Lateral center=field midline +/- (half47in HUB body + half73in ramp width). Ground projection only, not drivable path. This is a nominal crossing reference, not a measured physical ramp centerline. In the separately inspected welded STEP, nominal-versus-part midpoint differs by approximately 1.7935 mm laterally; no AndyMark CAD comparison was performed. No silent correction or physical path claim.",
+                "status": "nominal-reference",
+                "confidence": "nominal-layout-inference",
+                "uncertaintyMm": null,
+                "reachability": "not-assessed",
+                "allowedUses": [
+                  "visualization",
+                  "preliminary-strategy-reference"
+                ],
+                "forbiddenUses": [
+                  "robot-goal",
+                  "approach-pose",
+                  "collision",
+                  "path-planning",
+                  "path-execution",
+                  "drivetrain-feasibility",
+                  "scoring-success",
+                  "pickup-availability",
+                  "certified-transform"
+                ]
+              }
+            ],
+            "cadCandidates": [
+              {
+                "id": "welded-cad-frame-candidate",
+                "variant": "welded",
+                "targetFrame": "2026-welded-drawing",
+                "sourcePin": {
+                  "id": "2026-field.step",
+                  "revision": "STEP export 2026-01-07T21:47:03Z (predates FE-2026 Rev A/B)",
+                  "sha256": "2ad90e42f2c2db0fab5b22bb65aa0851089e414d568d4ebd127624fa230c7671"
+                },
+                "targetSourcePin": {
+                  "id": "2026-dimensions.pdf",
+                  "revision": "FE-2026 Rev B 2026-02-26; GE-26500 Rev A; mixed other sheets",
+                  "sha256": "3e2c1a0c35424a66821186584dda4f6709221ac8eb88036e09091452b8235f82"
+                },
+                "inputUnit": "mm",
+                "outputUnit": "mm",
+                "matrix": [
+                  [
+                    -1,
+                    0,
+                    0,
+                    8270.494
+                  ],
+                  [
+                    0,
+                    -1,
+                    0,
+                    4034.536
+                  ],
+                  [
+                    0,
+                    0,
+                    1,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    1
+                  ]
+                ],
+                "status": "candidate-not-certified",
+                "allowedUses": [
+                  "inspection-only"
+                ],
+                "certified": false,
+                "reason": "Candidate mapping from parser working millimetres to drawing frame. Vinyl component origins are not certified front-face centers; two candidate surfaces exist. STEP export predates drawing corrections. No transform execution authorized."
+              }
+            ],
+            "coverage": "Eight nominal feature points and eight nominal ground-projected crossing references only; no complete obstacle, corridor, aperture, pickup-state or robot-approach geometry.",
+            "auditLimitations": [
+              "Hub and Depot references are not robot goals, approach poses, scoring predicates or guaranteed pickup points.",
+              "BUMP references are not measured ramp centerlines or traversable paths. In the separately inspected welded STEP, nominal-versus-part midpoint differs by approximately 1.7935 mm laterally; no AndyMark CAD comparison was performed. No silent correction or physical path claim.",
+              "Welded and AndyMark frame origins are distinct; no automatic mirroring, variant substitution or frame transform.",
+              "The candidate welded CAD transform is not certified; no AndyMark CAD transform is inferred.",
+              "Source hashes establish attribution/consistency, not field acceptance, physical authenticity or robot reachability."
+            ]
+          }
+        },
+        "fieldPackageHash": "508c080dc1244f8636901343aa7865a9d617ccd0bf77fd90b091baa42a375837",
+        "dimensions": [
+          {
+            "id": "trench-welded-clearance",
+            "season": 2026,
+            "originalUnit": "inch",
+            "values": {
+              "height": 22.25,
+              "width": 50.34
+            },
+            "valuesMm": {
+              "height": 565.15,
+              "width": 1278.636
+            },
+            "drawingLocator": "2026-dimensions.pdf PDF p8 FE-2026 RevB sheet8",
+            "manualLocator": "2026-manual.pdf section5.6 p25",
+            "crossCheck": "Visual dimension arrows checked; agrees manual nominal. Hinged arm closed/locked.",
+            "toleranceInch": {
+              "height": 0.25,
+              "width": 2
+            },
+            "reachability": "not-assessed",
+            "sourceRef": {
+              "id": "2026-dimensions.pdf",
+              "sha256": "3e2c1a0c35424a66821186584dda4f6709221ac8eb88036e09091452b8235f82",
+              "revision": "FE-2026 Rev B 2026-02-26; GE-26500 Rev A; mixed other sheets",
+              "locator": "2026-dimensions.pdf PDF p8 FE-2026 RevB sheet8"
+            }
+          },
+          {
+            "id": "trench-andymark-clearance",
+            "season": 2026,
+            "originalUnit": "inch",
+            "values": {
+              "height": 22.25,
+              "width": 49.82
+            },
+            "valuesMm": {
+              "height": 565.15,
+              "width": 1265.428
+            },
+            "drawingLocator": "2026-dimensions.pdf PDF p10 FE-2026 RevB sheet10",
+            "manualLocator": "2026-manual.pdf section5.6 p25",
+            "crossCheck": "Both variant dimension sheets visually reviewed; AndyMark width differs from welded nominal. This scalar dimension does not establish a world-space corridor.",
+            "toleranceInch": {
+              "height": 0.25,
+              "width": 2
+            },
+            "reachability": "not-assessed",
+            "sourceRef": {
+              "id": "2026-dimensions.pdf",
+              "sha256": "3e2c1a0c35424a66821186584dda4f6709221ac8eb88036e09091452b8235f82",
+              "revision": "FE-2026 Rev B 2026-02-26; GE-26500 Rev A; mixed other sheets",
+              "locator": "2026-dimensions.pdf PDF p10 FE-2026 RevB sheet10"
+            }
+          }
+        ],
+        "robotRuleCaps": {
+          "season": 2026,
+          "source": "2026-manual.pdf",
+          "locator": "R104/R105/R106 p79; R107 p81",
+          "perimeterLimitInch": 110,
+          "startingHeightLimitInch": 30,
+          "extensionLimitInch": 12,
+          "notChosenRobotDimensions": true,
+          "notes": "Bumpers excluded from rule perimeter but included in physical clearance. Read all contextual game and bumper rules. 2026 extension one side at a time and total height max30in."
+        },
+        "massRule": {
+          "source": "2026-manual.pdf",
+          "locator": "R103; section 8.1",
+          "limitLb": 115,
+          "qualifier": "Read exclusions and configuration accounting; not gross transport weight."
+        },
+        "eventApplicability": "unresolved",
+        "revisionWarnings": [
+          "FE-2026 Rev B dimension drawings postdate January 7 STEP export; geometry agreement unresolved.",
+          "Welded and AndyMark trench dimensions are visually reviewed separately; variant frames and geometry are not interchangeable."
+        ]
+      },
+      "sha256": "50fa0467cb6abaa3218c497f4d4407119a669bf35523e0f0835580e6253c3047"
+    },
+    {
+      "id": "resources-2026",
+      "kind": "resource-baseline",
+      "branch": "shared",
+      "season": 2026,
+      "revision": 1,
+      "previous": null,
+      "status": "hypothesis",
+      "inputs": [],
+      "content": {
+        "schema": "frc-resource-baseline/v1",
+        "season": 2026,
+        "teamNumber": null,
+        "teamStatus": "unknown",
+        "inventoryCoverage": "unknown",
+        "evidence": [],
+        "physicalInventory": [],
+        "kitExpectations": [],
+        "credits": [],
+        "budget": null,
+        "fabrication": [],
+        "schedule": null
+      },
+      "sha256": "f24dd00ccf7d7a85bf02ba608be0cdae7dd69933aab734e18f9365734d7d2368"
+    },
+    {
+      "id": "kit-baseline-strategy",
+      "kind": "strategy-brief",
+      "branch": "kit-baseline",
+      "season": 2026,
+      "revision": 1,
+      "previous": null,
+      "status": "hypothesis",
+      "inputs": [
+        {
+          "id": "game-2026",
+          "revision": 1,
+          "sha256": "50fa0467cb6abaa3218c497f4d4407119a669bf35523e0f0835580e6253c3047"
+        },
+        {
+          "id": "resources-2026",
+          "revision": 1,
+          "sha256": "f24dd00ccf7d7a85bf02ba608be0cdae7dd69933aab734e18f9365734d7d2368"
+        }
+      ],
+      "content": {
+        "role": "Evaluate a season-specific kit-based candidate only if actual parts are confirmed",
+        "decision": "not-selected",
+        "fieldPackageHash": "508c080dc1244f8636901343aa7865a9d617ccd0bf77fd90b091baa42a375837",
+        "scoringLocationIds": [
+          "hub"
+        ],
+        "retrievalLocationIds": [
+          "depot",
+          "outpost",
+          "neutral-zone-fuel"
+        ],
+        "resourceAssessment": [],
+        "resourceCoverage": "unknown",
+        "assumptions": [
+          {
+            "id": "route-role",
+            "value": "Evaluate a season-specific kit-based candidate only if actual parts are confirmed",
+            "kind": "hypothesis"
+          }
+        ],
+        "unknowns": [
+          "Source/retrieval world geometry and approach poses",
+          "Scoring flight/contact model",
+          "Actual complete hardware and engineering resources"
+        ]
+      },
+      "sha256": "5226bd58a1a35ee8a203c9c72da19b521dccfa776c122f2c4eeadbeed2696788"
+    },
+    {
+      "id": "kit-baseline-envelope",
+      "kind": "robot-envelope",
+      "branch": "kit-baseline",
+      "season": 2026,
+      "revision": 1,
+      "previous": null,
+      "status": "hypothesis",
+      "inputs": [
+        {
+          "id": "game-2026",
+          "revision": 1,
+          "sha256": "50fa0467cb6abaa3218c497f4d4407119a669bf35523e0f0835580e6253c3047"
+        },
+        {
+          "id": "resources-2026",
+          "revision": 1,
+          "sha256": "f24dd00ccf7d7a85bf02ba608be0cdae7dd69933aab734e18f9365734d7d2368"
+        },
+        {
+          "id": "kit-baseline-strategy",
+          "revision": 1,
+          "sha256": "5226bd58a1a35ee8a203c9c72da19b521dccfa776c122f2c4eeadbeed2696788"
+        }
+      ],
+      "content": {
+        "candidate": "kit-baseline",
+        "decision": "not-selected",
+        "status": "unresolved",
+        "hardLegalityBounds": {
+          "sourceId": "2026-manual.pdf",
+          "locator": "R104/R105/R106 p79; R107 p81",
+          "perimeterMm": 2794,
+          "heightMm": 762,
+          "extensionMm": 304.79999999999995,
+          "massLimitKg": 52.163122550000004,
+          "qualifiers": [
+            "Bumpers excluded from rule perimeter but included in physical clearance. Read all contextual game and bumper rules. 2026 extension one side at a time and total height max30in.",
+            "Read exclusions and configuration accounting; not gross transport weight."
+          ],
+          "eventApplicability": "unresolved"
+        },
+        "target": {
+          "lengthMm": null,
+          "widthMm": null,
+          "heightMm": null
+        },
+        "basis": {
+          "kind": "unresolved",
+          "evidenceRefs": []
+        },
+        "footprintReference": "unknown",
+        "calculated": {
+          "rectangularPerimeterMm": null,
+          "perimeterCheck": "unresolved",
+          "trenchHeightLowerMm": 558.8,
+          "assumedStaticHeightCeilingMm": null,
+          "staticClearanceCheck": "not-requested"
+        },
+        "assumptions": {
+          "clearanceMarginMm": null,
+          "heightUncertaintyMm": null,
+          "fieldVariant": "unknown"
+        },
+        "budget": {
+          "allocatedMassKg": null,
+          "extensionTargetMm": null,
+          "bumperProjectionMm": null,
+          "payloadVolumeMm3": null,
+          "powerW": null
+        },
+        "reachability": "not-assessed",
+        "openChecks": [
+          "Actual event/update applicability",
+          "Bumpers and moving mechanism swept envelope",
+          "Pitch/roll, loaded deflection, ground clearance and traversal dynamics",
+          "Complete robot mass and power budgets",
+          "Scoring/retrieval approach and robot reach",
+          "Field variant and geometry/revision reconciliation"
+        ]
+      },
+      "sha256": "6839a0446a8db99d7891be9ae4b5b3d1b6e873cd79a906fe19048547bccf5e67"
+    },
+    {
+      "id": "compact-strategy",
+      "kind": "strategy-brief",
+      "branch": "compact",
+      "season": 2026,
+      "revision": 1,
+      "previous": null,
+      "status": "hypothesis",
+      "inputs": [
+        {
+          "id": "game-2026",
+          "revision": 1,
+          "sha256": "50fa0467cb6abaa3218c497f4d4407119a669bf35523e0f0835580e6253c3047"
+        },
+        {
+          "id": "resources-2026",
+          "revision": 1,
+          "sha256": "f24dd00ccf7d7a85bf02ba608be0cdae7dd69933aab734e18f9365734d7d2368"
+        }
+      ],
+      "content": {
+        "role": "Investigate trench-oriented FUEL collection and active-window delivery",
+        "decision": "not-selected",
+        "fieldPackageHash": "508c080dc1244f8636901343aa7865a9d617ccd0bf77fd90b091baa42a375837",
+        "scoringLocationIds": [
+          "hub"
+        ],
+        "retrievalLocationIds": [
+          "depot",
+          "outpost",
+          "neutral-zone-fuel"
+        ],
+        "resourceAssessment": [],
+        "resourceCoverage": "unknown",
+        "assumptions": [
+          {
+            "id": "route-role",
+            "value": "Investigate trench-oriented FUEL collection and active-window delivery",
+            "kind": "hypothesis"
+          }
+        ],
+        "unknowns": [
+          "Source/retrieval world geometry and approach poses",
+          "Scoring flight/contact model",
+          "Actual complete hardware and engineering resources"
+        ]
+      },
+      "sha256": "83691c95470f2b58f23559b69db5ccb949f07f6f093803207d00e5333224a6d2"
+    },
+    {
+      "id": "compact-envelope",
+      "kind": "robot-envelope",
+      "branch": "compact",
+      "season": 2026,
+      "revision": 1,
+      "previous": null,
+      "status": "hypothesis",
+      "inputs": [
+        {
+          "id": "game-2026",
+          "revision": 1,
+          "sha256": "50fa0467cb6abaa3218c497f4d4407119a669bf35523e0f0835580e6253c3047"
+        },
+        {
+          "id": "resources-2026",
+          "revision": 1,
+          "sha256": "f24dd00ccf7d7a85bf02ba608be0cdae7dd69933aab734e18f9365734d7d2368"
+        },
+        {
+          "id": "compact-strategy",
+          "revision": 1,
+          "sha256": "83691c95470f2b58f23559b69db5ccb949f07f6f093803207d00e5333224a6d2"
+        }
+      ],
+      "content": {
+        "candidate": "compact",
+        "decision": "not-selected",
+        "status": "unresolved",
+        "hardLegalityBounds": {
+          "sourceId": "2026-manual.pdf",
+          "locator": "R104/R105/R106 p79; R107 p81",
+          "perimeterMm": 2794,
+          "heightMm": 762,
+          "extensionMm": 304.79999999999995,
+          "massLimitKg": 52.163122550000004,
+          "qualifiers": [
+            "Bumpers excluded from rule perimeter but included in physical clearance. Read all contextual game and bumper rules. 2026 extension one side at a time and total height max30in.",
+            "Read exclusions and configuration accounting; not gross transport weight."
+          ],
+          "eventApplicability": "unresolved"
+        },
+        "target": {
+          "lengthMm": null,
+          "widthMm": null,
+          "heightMm": null
+        },
+        "basis": {
+          "kind": "unresolved",
+          "evidenceRefs": []
+        },
+        "footprintReference": "unknown",
+        "calculated": {
+          "rectangularPerimeterMm": null,
+          "perimeterCheck": "unresolved",
+          "trenchHeightLowerMm": 558.8,
+          "assumedStaticHeightCeilingMm": null,
+          "staticClearanceCheck": "unresolved"
+        },
+        "assumptions": {
+          "clearanceMarginMm": null,
+          "heightUncertaintyMm": null,
+          "fieldVariant": "unknown"
+        },
+        "budget": {
+          "allocatedMassKg": null,
+          "extensionTargetMm": null,
+          "bumperProjectionMm": null,
+          "payloadVolumeMm3": null,
+          "powerW": null
+        },
+        "reachability": "not-assessed",
+        "openChecks": [
+          "Actual event/update applicability",
+          "Bumpers and moving mechanism swept envelope",
+          "Pitch/roll, loaded deflection, ground clearance and traversal dynamics",
+          "Complete robot mass and power budgets",
+          "Scoring/retrieval approach and robot reach",
+          "Field variant and geometry/revision reconciliation"
+        ]
+      },
+      "sha256": "a16315e910cd12e25506e61621b715fd20c1fce6b7e8bc6b97fa62eee38297c5"
+    },
+    {
+      "id": "payload-strategy",
+      "kind": "strategy-brief",
+      "branch": "payload",
+      "season": 2026,
+      "revision": 1,
+      "previous": null,
+      "status": "hypothesis",
+      "inputs": [
+        {
+          "id": "game-2026",
+          "revision": 1,
+          "sha256": "50fa0467cb6abaa3218c497f4d4407119a669bf35523e0f0835580e6253c3047"
+        },
+        {
+          "id": "resources-2026",
+          "revision": 1,
+          "sha256": "f24dd00ccf7d7a85bf02ba608be0cdae7dd69933aab734e18f9365734d7d2368"
+        }
+      ],
+      "content": {
+        "role": "Investigate larger buffering with an alternate route; no trench requirement assumed",
+        "decision": "not-selected",
+        "fieldPackageHash": "508c080dc1244f8636901343aa7865a9d617ccd0bf77fd90b091baa42a375837",
+        "scoringLocationIds": [
+          "hub"
+        ],
+        "retrievalLocationIds": [
+          "depot",
+          "outpost",
+          "neutral-zone-fuel"
+        ],
+        "resourceAssessment": [],
+        "resourceCoverage": "unknown",
+        "assumptions": [
+          {
+            "id": "route-role",
+            "value": "Investigate larger buffering with an alternate route; no trench requirement assumed",
+            "kind": "hypothesis"
+          }
+        ],
+        "unknowns": [
+          "Source/retrieval world geometry and approach poses",
+          "Scoring flight/contact model",
+          "Actual complete hardware and engineering resources"
+        ]
+      },
+      "sha256": "45408e22bfc4caa2128ad64bbd3d8635df813cdce386e363768e41b1fe8d8273"
+    },
+    {
+      "id": "payload-envelope",
+      "kind": "robot-envelope",
+      "branch": "payload",
+      "season": 2026,
+      "revision": 1,
+      "previous": null,
+      "status": "hypothesis",
+      "inputs": [
+        {
+          "id": "game-2026",
+          "revision": 1,
+          "sha256": "50fa0467cb6abaa3218c497f4d4407119a669bf35523e0f0835580e6253c3047"
+        },
+        {
+          "id": "resources-2026",
+          "revision": 1,
+          "sha256": "f24dd00ccf7d7a85bf02ba608be0cdae7dd69933aab734e18f9365734d7d2368"
+        },
+        {
+          "id": "payload-strategy",
+          "revision": 1,
+          "sha256": "45408e22bfc4caa2128ad64bbd3d8635df813cdce386e363768e41b1fe8d8273"
+        }
+      ],
+      "content": {
+        "candidate": "payload",
+        "decision": "not-selected",
+        "status": "unresolved",
+        "hardLegalityBounds": {
+          "sourceId": "2026-manual.pdf",
+          "locator": "R104/R105/R106 p79; R107 p81",
+          "perimeterMm": 2794,
+          "heightMm": 762,
+          "extensionMm": 304.79999999999995,
+          "massLimitKg": 52.163122550000004,
+          "qualifiers": [
+            "Bumpers excluded from rule perimeter but included in physical clearance. Read all contextual game and bumper rules. 2026 extension one side at a time and total height max30in.",
+            "Read exclusions and configuration accounting; not gross transport weight."
+          ],
+          "eventApplicability": "unresolved"
+        },
+        "target": {
+          "lengthMm": null,
+          "widthMm": null,
+          "heightMm": null
+        },
+        "basis": {
+          "kind": "unresolved",
+          "evidenceRefs": []
+        },
+        "footprintReference": "unknown",
+        "calculated": {
+          "rectangularPerimeterMm": null,
+          "perimeterCheck": "unresolved",
+          "trenchHeightLowerMm": 558.8,
+          "assumedStaticHeightCeilingMm": null,
+          "staticClearanceCheck": "not-requested"
+        },
+        "assumptions": {
+          "clearanceMarginMm": null,
+          "heightUncertaintyMm": null,
+          "fieldVariant": "unknown"
+        },
+        "budget": {
+          "allocatedMassKg": null,
+          "extensionTargetMm": null,
+          "bumperProjectionMm": null,
+          "payloadVolumeMm3": null,
+          "powerW": null
+        },
+        "reachability": "not-assessed",
+        "openChecks": [
+          "Actual event/update applicability",
+          "Bumpers and moving mechanism swept envelope",
+          "Pitch/roll, loaded deflection, ground clearance and traversal dynamics",
+          "Complete robot mass and power budgets",
+          "Scoring/retrieval approach and robot reach",
+          "Field variant and geometry/revision reconciliation"
+        ]
+      },
+      "sha256": "34c162b8d929b934eba3cda8c84fd51e9472577fe3bffabe73bad91d3900e98c"
+    },
+    {
+      "id": "hardware-rules-2026",
+      "kind": "hardware-catalog",
+      "branch": "shared",
+      "season": 2026,
+      "revision": 1,
+      "previous": null,
+      "status": "hypothesis",
+      "inputs": [],
+      "content": {
+        "schema": "frc-hardware-rule-catalog/v1",
+        "season": 2026,
+        "sources": [
+          {
+            "id": "manual-2026",
+            "url": "https://firstfrc.blob.core.windows.net/frc2026/Manual/2026GameManual.pdf",
+            "revision": "TU22; 166 pages",
+            "sha256": "5c67300fc412a1eed8ca9dc37fb6644aee05795a2befed1f69736643cbf95139",
+            "locator": "Selected construction/control rules; exact rule locators on entries",
+            "verification": {
+              "method": "local-byte-hash-and-text-review",
+              "checkedAt": "2026-11-16"
+            },
+            "season": 2026
+          }
+        ],
+        "coverage": "partial",
+        "eventApplicability": "unresolved",
+        "entries": [
+          {
+            "id": "generic-brushed-linear",
+            "category": "motor-class",
+            "statement": "The listed generic class includes COTS brushed motors and linear actuators rated for 12 V; supply uses an approved power regulating device downstream of a breaker rated no more than 20 A.",
+            "conditions": [
+              "Applies only to this pinned season/manual snapshot; event applicability unresolved",
+              "20 A describes the breaker requirement, not a motor stall-current or software current-limit specification",
+              "This does not admit arbitrary brushless motors or establish controller/installation compatibility"
+            ],
+            "sourceRefs": [
+              {
+                "sourceId": "manual-2026",
+                "ruleId": "R501",
+                "locator": "R501 / Table 8-1"
+              },
+              {
+                "sourceId": "manual-2026",
+                "ruleId": "R505",
+                "locator": "R505 / Table 8-2"
+              }
+            ],
+            "specificationStatus": "rule-constraint-only",
+            "manufacturerPerformance": null
+          },
+          {
+            "id": "named-motor-exemplars",
+            "category": "motor-class",
+            "statement": "Named table exemplars include NEO, NEO 550, NEO Vortex, Falcon 500, Kraken X44/X60, Minion and CIM.",
+            "conditions": [
+              "Applies only to this pinned season/manual snapshot; event applicability unresolved",
+              "Examples are not exhaustive; exact manufacturer part identifiers and permitted modifications must be checked",
+              "Motor names do not provide torque, RPM, current, voltage or thermal models"
+            ],
+            "sourceRefs": [
+              {
+                "sourceId": "manual-2026",
+                "ruleId": "R501",
+                "locator": "R501 / Table 8-1"
+              }
+            ],
+            "specificationStatus": "rule-constraint-only",
+            "manufacturerPerformance": null
+          },
+          {
+            "id": "propulsion-count",
+            "category": "propulsion",
+            "statement": "No more than four propulsion motors; the definition concerns motion over the carpet.",
+            "conditions": [
+              "Applies only to this pinned season/manual snapshot; event applicability unresolved",
+              "Steering/alignment, insignificant incidental thrust and shifting without significant propulsion are excluded",
+              "This snapshot also excludes movement via non-carpeted field-element contact",
+              "A mechanism motor contacting carpet is excluded only under the stated insignificant-thrust condition"
+            ],
+            "sourceRefs": [
+              {
+                "sourceId": "manual-2026",
+                "ruleId": "R502",
+                "locator": "R502"
+              }
+            ],
+            "specificationStatus": "rule-constraint-only",
+            "manufacturerPerformance": null
+          },
+          {
+            "id": "controller-allowance",
+            "category": "motor-controller-compatibility",
+            "statement": "R504 specifies permitted power regulating devices, including SPARK variants, Talon variants, Koors40, Thrifty Nova and Victor variants.",
+            "conditions": [
+              "Applies only to this pinned season/manual snapshot; event applicability unresolved",
+              "Selected examples only, not every product from each manufacturer",
+              "Allowed device names do not establish every motor/controller pairing"
+            ],
+            "sourceRefs": [
+              {
+                "sourceId": "manual-2026",
+                "ruleId": "R504",
+                "locator": "R504"
+              }
+            ],
+            "specificationStatus": "rule-constraint-only",
+            "manufacturerPerformance": null
+          },
+          {
+            "id": "controller-loads",
+            "category": "motor-controller-compatibility",
+            "statement": "The default is one electrical load per regulating device, subject to Table 8-2 exceptions; Falcon, Venom and Kraken motors use their integral controller category.",
+            "conditions": [
+              "Applies only to this pinned season/manual snapshot; event applicability unresolved",
+              "Other brushed motors and linear actuators use the table motor-controller or relay allowance with a 20 A maximum breaker",
+              "Check every exact load class and exception before selecting a pairing"
+            ],
+            "sourceRefs": [
+              {
+                "sourceId": "manual-2026",
+                "ruleId": "R505",
+                "locator": "R505 / Table 8-2"
+              }
+            ],
+            "specificationStatus": "rule-constraint-only",
+            "manufacturerPerformance": null
+          },
+          {
+            "id": "main-battery",
+            "category": "power",
+            "statement": "One main battery is a 12 V sealed lead-acid unit rated 17–18.2 Ah at the 20-hour rate.",
+            "conditions": [
+              "Applies only to this pinned season/manual snapshot; event applicability unresolved",
+              "Auxiliary power exceptions have separate R602 conditions; not every secondary source is permitted",
+              "Battery eligibility is not a battery sag or capacity model",
+              "Voltage/capacity alone are insufficient; all additional R601 battery requirements apply"
+            ],
+            "sourceRefs": [
+              {
+                "sourceId": "manual-2026",
+                "ruleId": "R601",
+                "locator": "R601"
+              },
+              {
+                "sourceId": "manual-2026",
+                "ruleId": "R602",
+                "locator": "R602"
+              }
+            ],
+            "specificationStatus": "rule-constraint-only",
+            "manufacturerPerformance": null
+          },
+          {
+            "id": "main-distribution",
+            "category": "power",
+            "statement": "Specified PDP, PDP 2.0, PDH or AMPD distribution, main 120 A breaker, prescribed SB connectors and minimum 6 AWG main wiring are governed by R609.",
+            "conditions": [
+              "Applies only to this pinned season/manual snapshot; event applicability unresolved",
+              "Read exact part identifiers, connection requirements and all branch wiring rules",
+              "This is not a complete wiring acceptance checklist"
+            ],
+            "sourceRefs": [
+              {
+                "sourceId": "manual-2026",
+                "ruleId": "R609",
+                "locator": "R609"
+              }
+            ],
+            "specificationStatus": "rule-constraint-only",
+            "manufacturerPerformance": null
+          },
+          {
+            "id": "control-authority",
+            "category": "control-system",
+            "statement": "One roboRIO or roboRIO 2.0 with 2026_v1.2 or later image controls the robot; coprocessors may assist but device enable/disable commands originate from the roboRIO.",
+            "conditions": [
+              "Applies only to this pinned season/manual snapshot; event applicability unresolved",
+              "Camera/coprocessor selection remains separate from actuator command authority"
+            ],
+            "sourceRefs": [
+              {
+                "sourceId": "manual-2026",
+                "ruleId": "R701",
+                "locator": "R701"
+              }
+            ],
+            "specificationStatus": "rule-constraint-only",
+            "manufacturerPerformance": null
+          },
+          {
+            "id": "event-radio",
+            "category": "network",
+            "statement": "One event-keyed VH-109 is the specified match radio; China events use OM5P-AN/AC instead.",
+            "conditions": [
+              "Applies only to this pinned season/manual snapshot; event applicability unresolved",
+              "Event region, hardware revision and current event configuration must be resolved",
+              "Do not carry another season radio exception into this snapshot"
+            ],
+            "sourceRefs": [
+              {
+                "sourceId": "manual-2026",
+                "ruleId": "R702",
+                "locator": "R702"
+              }
+            ],
+            "specificationStatus": "rule-constraint-only",
+            "manufacturerPerformance": null
+          },
+          {
+            "id": "rio-port-topology",
+            "category": "network",
+            "statement": "R703 connection topology depends on VH-109 hardware revision: v1.5 uses RIO directly or permitted pigtail/passive PoE; v1.0 requires protected RIO wiring or AUX1/AUX2 with the corresponding DIP switch off.",
+            "conditions": [
+              "Applies only to this pinned season/manual snapshot; event applicability unresolved",
+              "OM5P has separate specified topology",
+              "No universal switch-between-radio-and-roboRIO recommendation is implied"
+            ],
+            "sourceRefs": [
+              {
+                "sourceId": "manual-2026",
+                "ruleId": "R703",
+                "locator": "R703"
+              }
+            ],
+            "specificationStatus": "rule-constraint-only",
+            "manufacturerPerformance": null
+          },
+          {
+            "id": "bandwidth-ports",
+            "category": "network",
+            "statement": "Robot-console communication limits are 7 Mbit/s for VH-109 and 4 Mbit/s for OpenMesh, using the ports permitted in Table 8-5.",
+            "conditions": [
+              "Applies only to this pinned season/manual snapshot; event applicability unresolved",
+              "These are rule ceilings, not guaranteed throughput or a complete telemetry budget",
+              "Port table and event network conditions require separate review"
+            ],
+            "sourceRefs": [
+              {
+                "sourceId": "manual-2026",
+                "ruleId": "R704",
+                "locator": "R704"
+              }
+            ],
+            "specificationStatus": "rule-constraint-only",
+            "manufacturerPerformance": null
+          },
+          {
+            "id": "field-communications",
+            "category": "network",
+            "statement": "Operator signals use the arena network; permitted wireless exceptions are narrowly specified.",
+            "conditions": [
+              "Applies only to this pinned season/manual snapshot; event applicability unresolved",
+              "RFID/NFC exclusively within the robot and event-provided location tags have stated exceptions",
+              "Wi-Fi/Bluetooth data links are not admitted merely because a device is a camera"
+            ],
+            "sourceRefs": [
+              {
+                "sourceId": "manual-2026",
+                "ruleId": "R706",
+                "locator": "R706"
+              },
+              {
+                "sourceId": "manual-2026",
+                "ruleId": "R707",
+                "locator": "R707"
+              }
+            ],
+            "specificationStatus": "rule-constraint-only",
+            "manufacturerPerformance": null
+          },
+          {
+            "id": "vision-sensing",
+            "category": "vision",
+            "statement": "Cameras and non-RF sensors without human-originated commands are not wireless communication devices for R707; coprocessors may assist under R701 control authority.",
+            "conditions": [
+              "Applies only to this pinned season/manual snapshot; event applicability unresolved",
+              "This does not certify an entire product, RF module, laser, illuminator, wiring or power arrangement",
+              "Frames, timestamps, confidence and failure behavior remain design-contract requirements, not hardware specifications"
+            ],
+            "sourceRefs": [
+              {
+                "sourceId": "manual-2026",
+                "ruleId": "R701",
+                "locator": "R701"
+              },
+              {
+                "sourceId": "manual-2026",
+                "ruleId": "R707",
+                "locator": "R707"
+              }
+            ],
+            "specificationStatus": "rule-constraint-only",
+            "manufacturerPerformance": null
+          },
+          {
+            "id": "status-lights",
+            "category": "control-system",
+            "statement": "The control system uses one or two required robot signal lights as specified.",
+            "conditions": [
+              "Applies only to this pinned season/manual snapshot; event applicability unresolved",
+              "Exact part, wiring and placement requirements must be checked"
+            ],
+            "sourceRefs": [
+              {
+                "sourceId": "manual-2026",
+                "ruleId": "R709",
+                "locator": "R709"
+              }
+            ],
+            "specificationStatus": "rule-constraint-only",
+            "manufacturerPerformance": null
+          },
+          {
+            "id": "targeting-light-safety",
+            "category": "vision",
+            "statement": "Intentional interference with another robot's remote sensing is prohibited. Lasers must meet the listed Class 1 or Exempt classifications; high-intensity targeting illumination has restricted use.",
+            "conditions": [
+              "Pinned TU22 snapshot only; event applicability unresolved",
+              "Do not mimic field AprilTags or assume a camera product certifies its illuminator",
+              "Review R203 classification standards, targeting-use limits and any required shrouding; device evidence is still required"
+            ],
+            "sourceRefs": [
+              {
+                "sourceId": "manual-2026",
+                "ruleId": "R203",
+                "locator": "R203, PDF pp81–82"
+              }
+            ],
+            "specificationStatus": "rule-constraint-only",
+            "manufacturerPerformance": null
+          }
+        ],
+        "unresolved": [
+          "Selected rule subset, not a complete device allowance or prohibition list",
+          "Exact part/revision and complete installation require review against all applicable rules and event updates",
+          "Actual ownership, quantity, condition and team resources are not inferred",
+          "Manufacturer geometry, mounting, connectors, electrical curves, calibration and redistribution rights are separate evidence"
+        ]
+      },
+      "sha256": "ef281eb9710a2a2873bebc260351a1890c88766f3ecc55a01165e47031633fe3"
+    },
+    {
+      "id": "hypothetical-square-components",
+      "kind": "component-assumptions",
+      "branch": "hypothetical-square",
+      "season": 2026,
+      "revision": 1,
+      "previous": null,
+      "status": "hypothesis",
+      "inputs": [
+        {
+          "id": "game-2026",
+          "revision": 1,
+          "sha256": "50fa0467cb6abaa3218c497f4d4407119a669bf35523e0f0835580e6253c3047"
+        },
+        {
+          "id": "resources-2026",
+          "revision": 1,
+          "sha256": "f24dd00ccf7d7a85bf02ba608be0cdae7dd69933aab734e18f9365734d7d2368"
+        },
+        {
+          "id": "hardware-rules-2026",
+          "revision": 1,
+          "sha256": "ef281eb9710a2a2873bebc260351a1890c88766f3ecc55a01165e47031633fe3"
+        }
+      ],
+      "content": {
+        "schema": "frc-hypothetical-component-assumptions/v1",
+        "basis": "hypothetical-not-owned",
+        "source": {
+          "id": "andymark-am14u6-guide-2026",
+          "url": "https://s3.amazonaws.com/docusync-files/ba4541200a971b9831639ab2d15fd7976e32a7bc67ccb858a5261d40d9ac33e3/am-14U6%20UserGuide%20Jan%2010%202026.pdf",
+          "revision": "Jan 10 2026",
+          "sha256": "ba4541200a971b9831639ab2d15fd7976e32a7bc67ccb858a5261d40d9ac33e3",
+          "locator": "PDF p8 frame diagrams; p3 gearboxes; p4-p5 wheels",
+          "facts": "Manufacturer guide specifies square and long bare-frame configurations; six 6-inch HiGrip wheels, direct-driven center wheel and belt-driven outer wheels; two ToughBox Mini S gearboxes with included 8.45:1 ratio. No motor performance, complete robot mass or upper mechanism envelope inferred."
+        },
+        "frame": {
+          "configuration": "square",
+          "lengthInch": 26.3,
+          "widthInch": 26.5,
+          "lengthMm": 668.02,
+          "widthMm": 673.0999999999999,
+          "scope": "bare-frame"
+        },
+        "assumptions": {
+          "bumperProjectionPerSideMm": 88.9,
+          "completeHeightMm": 508,
+          "uncertaintyMm": {
+            "length": 6.35,
+            "width": 6.35,
+            "height": 6.35
+          },
+          "statement": "Hypothetical square AM14U6-based packaging target. Add 3.5 inches per side to bare frame for assumed bumper-inclusive box; assume complete stowed height 20 inches and 0.25 inch positive dimensional uncertainty per full dimension. These are design targets/reserves, not measured bounds, certified bumper construction, verified mechanism fit or team-owned hardware. No mass/power/performance claim."
+        },
+        "unknowns": [
+          "Actual team ownership, availability, fabrication capability and budget",
+          "Whole-robot packing and mechanism stowage within assumed bounding box",
+          "Bumper construction, support, coverage and rule compliance",
+          "Mass, center of mass, battery current, power and thermal budgets",
+          "Motor selection and drivetrain performance calibration",
+          "Field/event applicability and complete robot legality",
+          "Swept envelope, pitch/roll, deflection, approach and traversal",
+          "Intake, storage, release and scoring physics; no full match prediction"
+        ]
+      },
+      "sha256": "70e1d05e6bc5ac20fa687b347164625622fe892ab229b8dc73a0f27a20946be0"
+    },
+    {
+      "id": "hypothetical-square-strategy",
+      "kind": "strategy-brief",
+      "branch": "hypothetical-square",
+      "season": 2026,
+      "revision": 1,
+      "previous": null,
+      "status": "hypothesis",
+      "inputs": [
+        {
+          "id": "game-2026",
+          "revision": 1,
+          "sha256": "50fa0467cb6abaa3218c497f4d4407119a669bf35523e0f0835580e6253c3047"
+        },
+        {
+          "id": "resources-2026",
+          "revision": 1,
+          "sha256": "f24dd00ccf7d7a85bf02ba608be0cdae7dd69933aab734e18f9365734d7d2368"
+        },
+        {
+          "id": "hardware-rules-2026",
+          "revision": 1,
+          "sha256": "ef281eb9710a2a2873bebc260351a1890c88766f3ecc55a01165e47031633fe3"
+        },
+        {
+          "id": "hypothetical-square-components",
+          "revision": 1,
+          "sha256": "70e1d05e6bc5ac20fa687b347164625622fe892ab229b8dc73a0f27a20946be0"
+        }
+      ],
+      "content": {
+        "role": "Investigate low-profile FUEL collection and delivery",
+        "basis": "hypothesis",
+        "decision": "not-selected",
+        "teamFeasibility": "not-assessed",
+        "unknowns": [
+          "Actual team ownership, availability, fabrication capability and budget",
+          "Whole-robot packing and mechanism stowage within assumed bounding box",
+          "Bumper construction, support, coverage and rule compliance",
+          "Mass, center of mass, battery current, power and thermal budgets",
+          "Motor selection and drivetrain performance calibration",
+          "Field/event applicability and complete robot legality",
+          "Swept envelope, pitch/roll, deflection, approach and traversal",
+          "Intake, storage, release and scoring physics; no full match prediction"
+        ]
+      },
+      "sha256": "4be994be257d852cb30265c0dace6767608f4d2212b966d78500f2f1a3e8cee6"
+    },
+    {
+      "id": "hypothetical-square-envelope",
+      "kind": "robot-envelope",
+      "branch": "hypothetical-square",
+      "season": 2026,
+      "revision": 1,
+      "previous": null,
+      "status": "hypothesis",
+      "inputs": [
+        {
+          "id": "game-2026",
+          "revision": 1,
+          "sha256": "50fa0467cb6abaa3218c497f4d4407119a669bf35523e0f0835580e6253c3047"
+        },
+        {
+          "id": "resources-2026",
+          "revision": 1,
+          "sha256": "f24dd00ccf7d7a85bf02ba608be0cdae7dd69933aab734e18f9365734d7d2368"
+        },
+        {
+          "id": "hardware-rules-2026",
+          "revision": 1,
+          "sha256": "ef281eb9710a2a2873bebc260351a1890c88766f3ecc55a01165e47031633fe3"
+        },
+        {
+          "id": "hypothetical-square-strategy",
+          "revision": 1,
+          "sha256": "4be994be257d852cb30265c0dace6767608f4d2212b966d78500f2f1a3e8cee6"
+        },
+        {
+          "id": "hypothetical-square-components",
+          "revision": 1,
+          "sha256": "70e1d05e6bc5ac20fa687b347164625622fe892ab229b8dc73a0f27a20946be0"
+        }
+      ],
+      "content": {
+        "schema": "frc-hypothetical-robot-envelope/v1",
+        "candidateInput": {
+          "schema": "frc-static-envelope-input/v1",
+          "id": "hypothetical-square-envelope",
+          "basis": "hypothetical-design-assumption",
+          "configuration": "stowed-static-upright",
+          "alignment": "width-across-aperture",
+          "footprintReference": "complete-robot-including-bumpers",
+          "dimensionsMm": {
+            "length": 845.8199999999999,
+            "width": 850.8999999999999,
+            "height": 508
+          },
+          "uncertaintyMm": {
+            "length": 6.35,
+            "width": 6.35,
+            "height": 6.35
+          },
+          "assumptionStatement": "Hypothetical square AM14U6-based packaging target. Add 3.5 inches per side to bare frame for assumed bumper-inclusive box; assume complete stowed height 20 inches and 0.25 inch positive dimensional uncertainty per full dimension. These are design targets/reserves, not measured bounds, certified bumper construction, verified mechanism fit or team-owned hardware. No mass/power/performance claim.",
+          "sourceArtifactPin": {
+            "id": "hypothetical-square-components",
+            "revision": 1,
+            "sha256": "70e1d05e6bc5ac20fa687b347164625622fe892ab229b8dc73a0f27a20946be0"
+          }
+        },
+        "componentInputPin": {
+          "id": "hypothetical-square-components",
+          "revision": 1,
+          "sha256": "70e1d05e6bc5ac20fa687b347164625622fe892ab229b8dc73a0f27a20946be0"
+        },
+        "decision": "not-selected",
+        "status": "unresolved",
+        "teamFeasibility": "not-assessed",
+        "budgets": {
+          "massKg": null,
+          "powerW": null,
+          "batteryCurrentA": null,
+          "centerOfMassMm": null
+        },
+        "calculated": {
+          "bareFramePerimeterMm": 2682.24,
+          "completeBoxPerimeterMm": 3393.4399999999996,
+          "legality": "not-established",
+          "physicalReachability": "not-assessed"
+        },
+        "openChecks": [
+          "Actual team ownership, availability, fabrication capability and budget",
+          "Whole-robot packing and mechanism stowage within assumed bounding box",
+          "Bumper construction, support, coverage and rule compliance",
+          "Mass, center of mass, battery current, power and thermal budgets",
+          "Motor selection and drivetrain performance calibration",
+          "Field/event applicability and complete robot legality",
+          "Swept envelope, pitch/roll, deflection, approach and traversal",
+          "Intake, storage, release and scoring physics; no full match prediction"
+        ]
+      },
+      "sha256": "07babd6612f28f676064851dcc1f53ea91af68dbc8baa3ea886e15ee9ba6db94"
+    },
+    {
+      "id": "hypothetical-long-components",
+      "kind": "component-assumptions",
+      "branch": "hypothetical-long",
+      "season": 2026,
+      "revision": 1,
+      "previous": null,
+      "status": "hypothesis",
+      "inputs": [
+        {
+          "id": "game-2026",
+          "revision": 1,
+          "sha256": "50fa0467cb6abaa3218c497f4d4407119a669bf35523e0f0835580e6253c3047"
+        },
+        {
+          "id": "resources-2026",
+          "revision": 1,
+          "sha256": "f24dd00ccf7d7a85bf02ba608be0cdae7dd69933aab734e18f9365734d7d2368"
+        },
+        {
+          "id": "hardware-rules-2026",
+          "revision": 1,
+          "sha256": "ef281eb9710a2a2873bebc260351a1890c88766f3ecc55a01165e47031633fe3"
+        }
+      ],
+      "content": {
+        "schema": "frc-hypothetical-component-assumptions/v1",
+        "basis": "hypothetical-not-owned",
+        "source": {
+          "id": "andymark-am14u6-guide-2026",
+          "url": "https://s3.amazonaws.com/docusync-files/ba4541200a971b9831639ab2d15fd7976e32a7bc67ccb858a5261d40d9ac33e3/am-14U6%20UserGuide%20Jan%2010%202026.pdf",
+          "revision": "Jan 10 2026",
+          "sha256": "ba4541200a971b9831639ab2d15fd7976e32a7bc67ccb858a5261d40d9ac33e3",
+          "locator": "PDF p8 frame diagrams; p3 gearboxes; p4-p5 wheels",
+          "facts": "Manufacturer guide specifies square and long bare-frame configurations; six 6-inch HiGrip wheels, direct-driven center wheel and belt-driven outer wheels; two ToughBox Mini S gearboxes with included 8.45:1 ratio. No motor performance, complete robot mass or upper mechanism envelope inferred."
+        },
+        "frame": {
+          "configuration": "long",
+          "lengthInch": 32.3,
+          "widthInch": 22.5,
+          "lengthMm": 820.4199999999998,
+          "widthMm": 571.5,
+          "scope": "bare-frame"
+        },
+        "assumptions": {
+          "bumperProjectionPerSideMm": 88.9,
+          "completeHeightMm": 609.5999999999999,
+          "uncertaintyMm": {
+            "length": 6.35,
+            "width": 6.35,
+            "height": 6.35
+          },
+          "statement": "Hypothetical long AM14U6-based packaging target. Add 3.5 inches per side to bare frame for assumed bumper-inclusive box; assume complete stowed height 24 inches and 0.25 inch positive dimensional uncertainty per full dimension. These are design targets/reserves, not measured bounds, certified bumper construction, verified mechanism fit or team-owned hardware. No mass/power/performance claim."
+        },
+        "unknowns": [
+          "Actual team ownership, availability, fabrication capability and budget",
+          "Whole-robot packing and mechanism stowage within assumed bounding box",
+          "Bumper construction, support, coverage and rule compliance",
+          "Mass, center of mass, battery current, power and thermal budgets",
+          "Motor selection and drivetrain performance calibration",
+          "Field/event applicability and complete robot legality",
+          "Swept envelope, pitch/roll, deflection, approach and traversal",
+          "Intake, storage, release and scoring physics; no full match prediction"
+        ]
+      },
+      "sha256": "c1fc07aa4aed94c64c39986efc8ba9a02700382432ff0c6fbd9b5daece08310c"
+    },
+    {
+      "id": "hypothetical-long-strategy",
+      "kind": "strategy-brief",
+      "branch": "hypothetical-long",
+      "season": 2026,
+      "revision": 1,
+      "previous": null,
+      "status": "hypothesis",
+      "inputs": [
+        {
+          "id": "game-2026",
+          "revision": 1,
+          "sha256": "50fa0467cb6abaa3218c497f4d4407119a669bf35523e0f0835580e6253c3047"
+        },
+        {
+          "id": "resources-2026",
+          "revision": 1,
+          "sha256": "f24dd00ccf7d7a85bf02ba608be0cdae7dd69933aab734e18f9365734d7d2368"
+        },
+        {
+          "id": "hardware-rules-2026",
+          "revision": 1,
+          "sha256": "ef281eb9710a2a2873bebc260351a1890c88766f3ecc55a01165e47031633fe3"
+        },
+        {
+          "id": "hypothetical-long-components",
+          "revision": 1,
+          "sha256": "c1fc07aa4aed94c64c39986efc8ba9a02700382432ff0c6fbd9b5daece08310c"
+        }
+      ],
+      "content": {
+        "role": "Investigate longer storage layout and alternative routes",
+        "basis": "hypothesis",
+        "decision": "not-selected",
+        "teamFeasibility": "not-assessed",
+        "unknowns": [
+          "Actual team ownership, availability, fabrication capability and budget",
+          "Whole-robot packing and mechanism stowage within assumed bounding box",
+          "Bumper construction, support, coverage and rule compliance",
+          "Mass, center of mass, battery current, power and thermal budgets",
+          "Motor selection and drivetrain performance calibration",
+          "Field/event applicability and complete robot legality",
+          "Swept envelope, pitch/roll, deflection, approach and traversal",
+          "Intake, storage, release and scoring physics; no full match prediction"
+        ]
+      },
+      "sha256": "779887b28878057e85c4f4fce321124c1d39d79300761f322725b1fa300db198"
+    },
+    {
+      "id": "hypothetical-long-envelope",
+      "kind": "robot-envelope",
+      "branch": "hypothetical-long",
+      "season": 2026,
+      "revision": 1,
+      "previous": null,
+      "status": "hypothesis",
+      "inputs": [
+        {
+          "id": "game-2026",
+          "revision": 1,
+          "sha256": "50fa0467cb6abaa3218c497f4d4407119a669bf35523e0f0835580e6253c3047"
+        },
+        {
+          "id": "resources-2026",
+          "revision": 1,
+          "sha256": "f24dd00ccf7d7a85bf02ba608be0cdae7dd69933aab734e18f9365734d7d2368"
+        },
+        {
+          "id": "hardware-rules-2026",
+          "revision": 1,
+          "sha256": "ef281eb9710a2a2873bebc260351a1890c88766f3ecc55a01165e47031633fe3"
+        },
+        {
+          "id": "hypothetical-long-strategy",
+          "revision": 1,
+          "sha256": "779887b28878057e85c4f4fce321124c1d39d79300761f322725b1fa300db198"
+        },
+        {
+          "id": "hypothetical-long-components",
+          "revision": 1,
+          "sha256": "c1fc07aa4aed94c64c39986efc8ba9a02700382432ff0c6fbd9b5daece08310c"
+        }
+      ],
+      "content": {
+        "schema": "frc-hypothetical-robot-envelope/v1",
+        "candidateInput": {
+          "schema": "frc-static-envelope-input/v1",
+          "id": "hypothetical-long-envelope",
+          "basis": "hypothetical-design-assumption",
+          "configuration": "stowed-static-upright",
+          "alignment": "width-across-aperture",
+          "footprintReference": "complete-robot-including-bumpers",
+          "dimensionsMm": {
+            "length": 998.2199999999998,
+            "width": 749.3,
+            "height": 609.5999999999999
+          },
+          "uncertaintyMm": {
+            "length": 6.35,
+            "width": 6.35,
+            "height": 6.35
+          },
+          "assumptionStatement": "Hypothetical long AM14U6-based packaging target. Add 3.5 inches per side to bare frame for assumed bumper-inclusive box; assume complete stowed height 24 inches and 0.25 inch positive dimensional uncertainty per full dimension. These are design targets/reserves, not measured bounds, certified bumper construction, verified mechanism fit or team-owned hardware. No mass/power/performance claim.",
+          "sourceArtifactPin": {
+            "id": "hypothetical-long-components",
+            "revision": 1,
+            "sha256": "c1fc07aa4aed94c64c39986efc8ba9a02700382432ff0c6fbd9b5daece08310c"
+          }
+        },
+        "componentInputPin": {
+          "id": "hypothetical-long-components",
+          "revision": 1,
+          "sha256": "c1fc07aa4aed94c64c39986efc8ba9a02700382432ff0c6fbd9b5daece08310c"
+        },
+        "decision": "not-selected",
+        "status": "unresolved",
+        "teamFeasibility": "not-assessed",
+        "budgets": {
+          "massKg": null,
+          "powerW": null,
+          "batteryCurrentA": null,
+          "centerOfMassMm": null
+        },
+        "calculated": {
+          "bareFramePerimeterMm": 2783.8399999999997,
+          "completeBoxPerimeterMm": 3495.0399999999995,
+          "legality": "not-established",
+          "physicalReachability": "not-assessed"
+        },
+        "openChecks": [
+          "Actual team ownership, availability, fabrication capability and budget",
+          "Whole-robot packing and mechanism stowage within assumed bounding box",
+          "Bumper construction, support, coverage and rule compliance",
+          "Mass, center of mass, battery current, power and thermal budgets",
+          "Motor selection and drivetrain performance calibration",
+          "Field/event applicability and complete robot legality",
+          "Swept envelope, pitch/roll, deflection, approach and traversal",
+          "Intake, storage, release and scoring physics; no full match prediction"
+        ]
+      },
+      "sha256": "e1060bf4d36c5ef8b74847a21c34ebeac43eddd1d78ca1da24513d3b85a3122b"
+    }
+  ],
+  "decisions": []
+}

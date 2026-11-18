@@ -1,0 +1,24 @@
+{
+  "schema":"frc-fabrication-plan/v1",
+  "id":"draft-parts",
+  "revision":1,
+  "assumption":"all-required-tools-assumed-for-design-only",
+  "evidence":[],
+  "parts":[{
+    "id":"example-bracket",
+    "description":"Unresolved custom bracket example, not a manufacturing drawing",
+    "designRef":{"id":"replace-with-exact-design-record","revision":1,"sha256":"0000000000000000000000000000000000000000000000000000000000000000"},
+    "routeCoverage":"partial",
+    "routes":[{
+      "id":"machined-route",
+      "description":"Provisional milling route requiring qualified feasibility review",
+      "operations":[{
+        "id":"shape-and-holes","processId":"milling","machineClass":"mill","materialId":null,
+        "setupEnvelopeMm":null,"envelopeBasis":"stock-and-fixture-XYZ-no-rotation","allowedDeviationMm":null,
+        "fixtureIds":null,"operatorCapabilityId":null,"basis":"assumed","evidenceRefs":[],
+        "unresolvedInputs":["Identify actual material/stock/drawing tolerances, tooling, workholding, tool access and process sequence"]
+      }]
+    }],
+    "unresolvedInputs":["Replace placeholder design pin; this is not a viable-part or manufacturing-ready claim"]
+  }]
+}

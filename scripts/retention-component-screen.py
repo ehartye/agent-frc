@@ -1,0 +1,18 @@
+"""Source-bound integration rejection/architecture screen, not component acceptance."""
+import pathlib,json,hashlib,math
+ROOT=pathlib.Path(__file__).resolve().parents[1]
+def pin(n):return hashlib.sha256((ROOT/n).read_text(encoding='utf-8-sig').encode()).hexdigest()
+def screen(distance,speed,timeout):
+ for x in (distance,speed,timeout):
+  if isinstance(x,bool) or not isinstance(x,(float,int)) or not math.isfinite(x):raise ValueError('finite numeric input required')
+ if distance<0 or speed<=0 or timeout<=0:raise ValueError('nonnegative distance and positive speed/time required')
+ t=distance/speed
+ return dict(optimisticNoLoadTransitSeconds=t,exceedsTimeoutEvenAtNoLoad=t>timeout,timeoutSeconds=timeout)
+def report():
+ n='case-studies/retention-component-evidence.json';g='case-studies/native-catcher-envelopes.json';e=json.loads((ROOT/n).read_text());geo=json.loads((ROOT/g).read_text())['cases'];rows=[]
+ for year,c in geo.items():
+  for a in e['actuators']:
+   rows.append(dict(season=int(year),part=a['part'],gateStrokeMm=c['gateRaisedBottomZmm'],strokeRangeFits=c['gateRaisedBottomZmm']<=a['strokeMm'],gate=screen(c['gateRaisedBottomZmm'],a['noLoadSpeedMmS'],.25),pad=screen(c['pinchPadRetractionMm']+c['pinchCompressionPositiveControlMm'],a['noLoadSpeedMmS'],.02),gate20msSpeedRequiredMmS=c['gateRaisedBottomZmm']/.02,directArchitectureAccepted=False))
+ cell=e['loadCell'];fs=cell['capacityN'];bridgeV=cell['ratedOutputMvPerV']/1000*cell['calibrationExcitationV'];lsb=5/(2**12)
+ return dict(schema='frc-retention-component-integration/v1',sourceCodeSha256={x:pin(x) for x in [n,g,'scripts/retention-component-screen.py']},directDriveCases=rows,retentionPair=[dict(actuator=a['part'],pin=e['retentionPin']['part'],optimisticUnloadedPullSeconds=e['retentionPin']['strokeMm']/a['noLoadSpeedMmS'],catalogBackdriveExceedsPinSpring=a['backdriveN']>e['retentionPin']['springEndApproxN'],automaticPowerOffReengagementEstablished=False,reason='Rigid coupling can retain the pin retracted; spring return is not established against actuator backdrive resistance') for a in e['actuators']],loadMeasurement=dict(rawBridgeFullScaleV=bridgeV,rawBridgeVoltsAt2N=bridgeV*2/fs,roboRioIdealLsbV=lsb,idealDirectBridgeNewtonsPerLsb=lsb*fs/bridgeV,listedStaticErrorTermsLinearSumN=fs*(.1+.1+.05)/100,totalSystemErrorBoundEstablished=False,rawBridgeDirectConnectionAccepted=False,amplifierDefaultBipolarDirectConnectionAccepted=False),position=dict(p16RepeatabilityMm=.8,previousVirtualTravelBandMm=.2,p16RepeatabilityExceedsVirtualBand=True,hallTypicalHysteresisMm=5,hallCanProvePointTwoMmTravel=False),architecture=dict(directWholeGate='rejected by optimistic speed screen',separateRetention='candidate passive mechanically latched retention with guided load path, separately powered unloaded release; GN817 threaded-stem indexing pin candidate, not accepted',loadPath='pad -> strain-gauge cell -> guided carrier; guide bypasses shear/moment and must not bypass sensed normal load',independence='position potentiometer, magnetic endpoint and strain bridge use different physical principles but common mechanics/power/ground/wiring remain common causes',unresolved=['actual latch/guide/pin geometry, disengaging coupling and load paths','actuator side-load, power-off dynamic/backdrive and jam tests','closed-gate mass, gravity and structural loads','amplifier revision, protected unipolar interface and brownout power','compression calibration and full error budget','season-specific legality and power/control approval','native assembly, clearances and force-coupled timing']),calibration=None,engineeringAcceptance='blocked',procurementSelected=False)
+if __name__=='__main__':print(json.dumps(report(),indent=2,allow_nan=False))

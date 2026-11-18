@@ -1,0 +1,13 @@
+{
+ "schema":"frc-motor-source-discrepancy/v1",
+ "reviewedAt":"2026-11-16T06:17:32Z",
+ "status":"unresolved-test-conditions-not-calibrated",
+ "profiles":[
+  {"id":"WPILIB_2026_2_1_PRODUCT_SPEC","source":"https://docs.revrobotics.com/brushless/neo/v1.1.md","retrievedBytesSha256":"07c80235c4126c3686ef7e348c164008448d0da643da2d4f5f6efb2116296c65","purpose":"manufacturer-product-specification; pinned WPILib2026.2.1 default","volts":12,"stallAmps":105,"stallTorqueNm":2.6,"freeAmps":1.8,"freeRpm":5676},
+  {"id":"REV_RELATIVE_DYNO_UNCALIBRATED","source":"https://docs.revrobotics.com/brushless/neo/compare.md","retrievedBytesSha256":"9c9629b345882030d0c3cb7057f92646013427f06220c441d60e702ea5d7c1dc","purpose":"relative common-dynamometer comparison, not replacement calibrated specification","volts":12,"stallAmps":160,"stallTorqueNm":3,"freeAmps":2.065,"freeRpm":5820}
+ ],
+ "temperatureWiringControllerFirmwareConditions":null,
+ "installedHardwareCalibration":null,
+ "selectionOfTrueProfile":null,
+ "mixingOrAveragingAllowed":false
+}

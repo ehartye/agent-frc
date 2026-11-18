@@ -1,0 +1,26 @@
+{
+  "schema": "frc-fuel-plane-experiment/v1",
+  "pieceSource": {
+    "url": "https://firstfrc.blob.core.windows.net/frc2026/Manual/2026GameManual.pdf",
+    "sha256": "5c67300fc412a1eed8ca9dc37fb6644aee05795a2befed1f69736643cbf95139",
+    "revision": "TU22",
+    "locator": "pp32-33 section5.10.1"
+  },
+  "diameterConvention": "150mm-displayed-metric-nominal",
+  "massSelection": "manual-range-midpoint-not-measured",
+  "inertiaBasis": "assumed-uniform-solid-sphere",
+  "plane": "hypothetical-infinite-rigid-horizontal-fixture-Z0",
+  "normalLaw": "perfectly-inelastic-unilateral",
+  "frictionCoefficient": 0.2,
+  "initial": {
+    "xM": 0,
+    "centerHeightM": 0.275,
+    "vxMps": 1,
+    "vzMps": 0,
+    "omegaRadps": 0
+  },
+  "durationSeconds": 1,
+  "stepSeconds": 0.001,
+  "engineeringAcceptance": "blocked",
+  "robotGeometryIncluded": false
+}

@@ -92,8 +92,8 @@
   "status": {
     "rules": "selected-sections-reviewed",
     "strategy": "original-proposal",
-    "java": "compiled and tested in 42-test suite",
-    "cad": "script-and-DXF-only; Fusion sign-in blocked",
+    "java": "compiled and tested in 44-test suite plus bounded demo, 2026-11-16",
+    "cad": "Script and DXF only for this case; native case execution unperformed. Fusion access restored separately.",
     "simulation": "nominal plant plus boundary/fault cases executed",
     "hardware": "not-operated"
   },

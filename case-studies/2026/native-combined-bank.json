@@ -1,0 +1,1944 @@
+{
+  "sourceCodeSha256": {
+    "inspect-combined-bank.py": "b3d6c6a80a092b31beed08e4f718062f8a231af50f0b44f9e0c62f2a41fba91a",
+    "inspect-support-stack.py": "23706a3eaf2e298ab1d83bfcc88787689246704da43d80deb2ac360b4347d13c",
+    "inspect-accessory-stack.py": "6a6f0d1fbc80c376d735538cdbcf90820d5a176b8edc2dc5583f0002d23a3916",
+    "inspect-wheel-stack.py": "748848f06a7d0f2f85bf21e17a272004a4dda5ab8038ad6527dc4ad07a47c8f5"
+  },
+  "sourceCodePinBasis": "UTF-8 text without BOM, universal newlines normalized to LF",
+  "runtime": {
+    "python": "3.13.12 (tags/v3.13.12:1cbe481, Feb  3 2026, 18:22:25) [MSC v.1944 64 bit (AMD64)]",
+    "ocp": "8.0.1.0.0"
+  },
+  "instanceBoundsMm": {
+    "shaft": [
+      -150.0,
+      -6.350000000000078,
+      -6.875,
+      150.0,
+      6.350000000000061,
+      6.875000000000029
+    ],
+    "w0": [
+      -99.31875009999999,
+      -38.1,
+      -38.1,
+      -75.30624990000001,
+      38.1,
+      38.1
+    ],
+    "hL0": [
+      -101.60000009999999,
+      -17.462500100000003,
+      -17.454199807851335,
+      -92.86875,
+      17.462500100000003,
+      17.454199807851335
+    ],
+    "hR0": [
+      -81.75625,
+      -17.462500100000003,
+      -17.454199807851335,
+      -73.02499990000001,
+      17.462500100000003,
+      17.454199807851335
+    ],
+    "sR0": [
+      -99.21875,
+      -16.66875,
+      -3.9687500000000036,
+      -68.9927499,
+      -8.73125,
+      3.9687499999999973
+    ],
+    "sL0": [
+      -105.6322501,
+      8.73125,
+      -3.9687500000000036,
+      -75.40625,
+      16.66875,
+      3.9687499999999973
+    ],
+    "spacer0": [
+      -73.025,
+      -8.5,
+      -8.5,
+      -66.67500000000001,
+      8.5,
+      8.5
+    ],
+    "w1": [
+      -64.39375009999999,
+      -38.1,
+      -38.1,
+      -40.3812499,
+      38.1,
+      38.1
+    ],
+    "hL1": [
+      -66.6750001,
+      -17.462500100000003,
+      -17.454199807851335,
+      -57.94375,
+      17.462500100000003,
+      17.454199807851335
+    ],
+    "hR1": [
+      -46.831250000000004,
+      -17.462500100000003,
+      -17.454199807851335,
+      -38.0999999,
+      17.462500100000003,
+      17.454199807851335
+    ],
+    "sR1": [
+      -64.29375,
+      -16.66875,
+      -3.9687500000000036,
+      -34.0677499,
+      -8.73125,
+      3.9687499999999973
+    ],
+    "sL1": [
+      -70.7072501,
+      8.73125,
+      -3.9687500000000036,
+      -40.48125,
+      16.66875,
+      3.9687499999999973
+    ],
+    "spacer1": [
+      -38.1,
+      -8.5,
+      -8.5,
+      -31.75,
+      8.5,
+      8.5
+    ],
+    "w2": [
+      -29.4687501,
+      -38.1,
+      -38.1,
+      -5.456249899999999,
+      38.1,
+      38.1
+    ],
+    "hL2": [
+      -31.7500001,
+      -17.462500100000003,
+      -17.454199807851335,
+      -23.018749999999997,
+      17.462500100000003,
+      17.454199807851335
+    ],
+    "hR2": [
+      -11.90625,
+      -17.462500100000003,
+      -17.454199807851335,
+      -3.1749998999999973,
+      17.462500100000003,
+      17.454199807851335
+    ],
+    "sR2": [
+      -29.36875,
+      -16.66875,
+      -3.9687500000000036,
+      0.8572500999999971,
+      -8.73125,
+      3.9687499999999973
+    ],
+    "sL2": [
+      -35.7822501,
+      8.73125,
+      -3.9687500000000036,
+      -5.556249999999999,
+      16.66875,
+      3.9687499999999973
+    ],
+    "spacer2": [
+      -3.175,
+      -8.5,
+      -8.5,
+      3.1750000000000016,
+      8.5,
+      8.5
+    ],
+    "w3": [
+      5.456249899999999,
+      -38.1,
+      -38.1,
+      29.4687501,
+      38.1,
+      38.1
+    ],
+    "hL3": [
+      3.1749998999999973,
+      -17.462500100000003,
+      -17.454199807851335,
+      11.90625,
+      17.462500100000003,
+      17.454199807851335
+    ],
+    "hR3": [
+      23.018749999999997,
+      -17.462500100000003,
+      -17.454199807851335,
+      31.7500001,
+      17.462500100000003,
+      17.454199807851335
+    ],
+    "sR3": [
+      5.556249999999999,
+      -16.66875,
+      -3.9687500000000036,
+      35.7822501,
+      -8.73125,
+      3.9687499999999973
+    ],
+    "sL3": [
+      -0.8572500999999971,
+      8.73125,
+      -3.9687500000000036,
+      29.36875,
+      16.66875,
+      3.9687499999999973
+    ],
+    "spacer3": [
+      31.75,
+      -8.5,
+      -8.5,
+      38.1,
+      8.5,
+      8.5
+    ],
+    "w4": [
+      40.3812499,
+      -38.1,
+      -38.1,
+      64.39375009999999,
+      38.1,
+      38.1
+    ],
+    "hL4": [
+      38.0999999,
+      -17.462500100000003,
+      -17.454199807851335,
+      46.831250000000004,
+      17.462500100000003,
+      17.454199807851335
+    ],
+    "hR4": [
+      57.94375,
+      -17.462500100000003,
+      -17.454199807851335,
+      66.6750001,
+      17.462500100000003,
+      17.454199807851335
+    ],
+    "sR4": [
+      40.48125,
+      -16.66875,
+      -3.9687500000000036,
+      70.7072501,
+      -8.73125,
+      3.9687499999999973
+    ],
+    "sL4": [
+      34.0677499,
+      8.73125,
+      -3.9687500000000036,
+      64.29375,
+      16.66875,
+      3.9687499999999973
+    ],
+    "spacer4": [
+      66.675,
+      -8.5,
+      -8.5,
+      73.02499999999999,
+      8.5,
+      8.5
+    ],
+    "w5": [
+      75.30624990000001,
+      -38.1,
+      -38.1,
+      99.31875009999999,
+      38.1,
+      38.1
+    ],
+    "hL5": [
+      73.02499990000001,
+      -17.462500100000003,
+      -17.454199807851335,
+      81.75625,
+      17.462500100000003,
+      17.454199807851335
+    ],
+    "hR5": [
+      92.86875,
+      -17.462500100000003,
+      -17.454199807851335,
+      101.60000009999999,
+      17.462500100000003,
+      17.454199807851335
+    ],
+    "sR5": [
+      75.40625,
+      -16.66875,
+      -3.9687500000000036,
+      105.6322501,
+      -8.73125,
+      3.9687499999999973
+    ],
+    "sL5": [
+      68.9927499,
+      8.73125,
+      -3.9687500000000036,
+      99.21875,
+      16.66875,
+      3.9687499999999973
+    ],
+    "endR": [
+      101.6,
+      -8.5,
+      -8.5,
+      121.03125,
+      8.5,
+      8.500000000000002
+    ],
+    "endL": [
+      -121.03125,
+      -8.5,
+      -8.5,
+      -101.6,
+      8.5,
+      8.500000000000002
+    ],
+    "bearing-1": [
+      -128.96875,
+      -15.557499999999997,
+      -15.557499999999997,
+      -121.03125,
+      15.557499999999997,
+      15.557499999999997
+    ],
+    "collar-1": [
+      -135.31875010000005,
+      -13.970038766569324,
+      -13.970000100000034,
+      -128.9687498999993,
+      13.970023931605894,
+      13.947432155310398
+    ],
+    "bearing1": [
+      121.03125,
+      -15.557499999999997,
+      -15.557499999999997,
+      128.96875,
+      15.557499999999997,
+      15.557499999999997
+    ],
+    "collar1": [
+      128.9687498999993,
+      -13.970038766569324,
+      -13.947432155310398,
+      135.31875010000005,
+      13.970023931605894,
+      13.970000100000034
+    ]
+  },
+  "nativeCommonCalls": 38,
+  "schema": "frc-combined-fuel-local-frame-evidence/v1",
+  "sourceRecords": {
+    "bearing": {
+      "url": "https://www.revrobotics.com/content/cad/REV-21-1916.STEP",
+      "sha256": "3e16cb3f5f215288b8706eb8228d9580fea78c425eee536ef95195b5b98f02e6",
+      "bytes": 70890
+    },
+    "collar": {
+      "url": "https://www.revrobotics.com/content/cad/REV-21-2900.STEP",
+      "sha256": "9167c2167b9470f9b33ef368b81d1cc52038c7914f220cc7dd83f142c2022ee9",
+      "bytes": 236513
+    },
+    "socket": {
+      "url": "https://www.revrobotics.com/content/cad/REV-29-2922.STEP",
+      "sha256": "53bf4bac9c31d0d7c47bdaf50315612161f04bce4011e6704b5c93064733df40",
+      "bytes": 61467
+    },
+    "hub": {
+      "url": "https://www.revrobotics.com/content/cad/REV-21-2037.STEP",
+      "sha256": "994be447326c5e10fa86f4d9addd0abc218dd82b7bef9efbcac9e8259c268807",
+      "bytes": 406016
+    },
+    "wheel": {
+      "url": "https://www.revrobotics.com/content/cad/Compliant-Wheel-3in-MAXSpline.STEP",
+      "sha256": "b6e6ad137251120e3acb7650f947534b732f05841fa7b0a36a7c61a571e0e599",
+      "bytes": 5782314
+    }
+  },
+  "partCount": 42,
+  "pairCount": 861,
+  "boundingBoxCulled": 768,
+  "equivalenceReused": 55,
+  "pairEvidence": [
+    {
+      "parts": [
+        "shaft",
+        "w0"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": -87.3125,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "shaft",
+        "hL0"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": -87.3125,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "shaft",
+        "hR0"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": -87.3125,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "shaft",
+        "spacer0"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": 0,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "shaft",
+        "w1"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "shaft",
+        "w0"
+      ],
+      "translationXMm": 34.925,
+      "reuseBasis": "uniform-prism-local-intersection-with-part-strictly-inside-shaft-ends",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "shaft",
+        "hL1"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "shaft",
+        "hL0"
+      ],
+      "translationXMm": 34.925,
+      "reuseBasis": "uniform-prism-local-intersection-with-part-strictly-inside-shaft-ends",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "shaft",
+        "hR1"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "shaft",
+        "hR0"
+      ],
+      "translationXMm": 34.925,
+      "reuseBasis": "uniform-prism-local-intersection-with-part-strictly-inside-shaft-ends",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "shaft",
+        "spacer1"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": 0,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "shaft",
+        "w2"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "shaft",
+        "w0"
+      ],
+      "translationXMm": 69.85,
+      "reuseBasis": "uniform-prism-local-intersection-with-part-strictly-inside-shaft-ends",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "shaft",
+        "hL2"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "shaft",
+        "hL0"
+      ],
+      "translationXMm": 69.85,
+      "reuseBasis": "uniform-prism-local-intersection-with-part-strictly-inside-shaft-ends",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "shaft",
+        "hR2"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "shaft",
+        "hR0"
+      ],
+      "translationXMm": 69.85,
+      "reuseBasis": "uniform-prism-local-intersection-with-part-strictly-inside-shaft-ends",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "shaft",
+        "spacer2"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": 0,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "shaft",
+        "w3"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "shaft",
+        "w0"
+      ],
+      "translationXMm": 104.775,
+      "reuseBasis": "uniform-prism-local-intersection-with-part-strictly-inside-shaft-ends",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "shaft",
+        "hL3"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "shaft",
+        "hL0"
+      ],
+      "translationXMm": 104.775,
+      "reuseBasis": "uniform-prism-local-intersection-with-part-strictly-inside-shaft-ends",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "shaft",
+        "hR3"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "shaft",
+        "hR0"
+      ],
+      "translationXMm": 104.775,
+      "reuseBasis": "uniform-prism-local-intersection-with-part-strictly-inside-shaft-ends",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "shaft",
+        "spacer3"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": 0,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "shaft",
+        "w4"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "shaft",
+        "w0"
+      ],
+      "translationXMm": 139.7,
+      "reuseBasis": "uniform-prism-local-intersection-with-part-strictly-inside-shaft-ends",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "shaft",
+        "hL4"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "shaft",
+        "hL0"
+      ],
+      "translationXMm": 139.7,
+      "reuseBasis": "uniform-prism-local-intersection-with-part-strictly-inside-shaft-ends",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "shaft",
+        "hR4"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "shaft",
+        "hR0"
+      ],
+      "translationXMm": 139.7,
+      "reuseBasis": "uniform-prism-local-intersection-with-part-strictly-inside-shaft-ends",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "shaft",
+        "spacer4"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": 0,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "shaft",
+        "w5"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "shaft",
+        "w0"
+      ],
+      "translationXMm": 174.625,
+      "reuseBasis": "uniform-prism-local-intersection-with-part-strictly-inside-shaft-ends",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "shaft",
+        "hL5"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "shaft",
+        "hL0"
+      ],
+      "translationXMm": 174.625,
+      "reuseBasis": "uniform-prism-local-intersection-with-part-strictly-inside-shaft-ends",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "shaft",
+        "hR5"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "shaft",
+        "hR0"
+      ],
+      "translationXMm": 174.625,
+      "reuseBasis": "uniform-prism-local-intersection-with-part-strictly-inside-shaft-ends",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "shaft",
+        "endR"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": 0,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "shaft",
+        "endL"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": 0,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "shaft",
+        "bearing-1"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": 0,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "shaft",
+        "collar-1"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": 0,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "shaft",
+        "bearing1"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": 0,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "shaft",
+        "collar1"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": 0,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "w0",
+        "hL0"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": -87.3125,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "w0",
+        "hR0"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": -87.3125,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "w0",
+        "sR0"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": -87.3125,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "w0",
+        "sL0"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": -87.3125,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "hL0",
+        "sR0"
+      ],
+      "volumeMm3": 32.59478280122095,
+      "boundsMm": [
+        -99.0171375,
+        -15.113,
+        -2.4130000000000003,
+        -92.86875,
+        -10.286999999999999,
+        2.4129999999999994
+      ],
+      "localFrameTranslatedXMm": -87.3125,
+      "classification": "thread-proxy-pair-not-engagement-proof"
+    },
+    {
+      "parts": [
+        "hL0",
+        "sL0"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": -87.3125,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "hL0",
+        "endL"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": 0,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "hR0",
+        "sR0"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": -87.3125,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "hR0",
+        "sL0"
+      ],
+      "volumeMm3": 32.594782801220944,
+      "boundsMm": [
+        -81.75625,
+        10.286999999999999,
+        -2.4130000000000003,
+        -75.6078625,
+        15.113,
+        2.4129999999999994
+      ],
+      "localFrameTranslatedXMm": -87.3125,
+      "classification": "thread-proxy-pair-not-engagement-proof"
+    },
+    {
+      "parts": [
+        "hR0",
+        "spacer0"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": 0,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "spacer0",
+        "hL1"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": 0,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "w1",
+        "hL1"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "w0",
+        "hL0"
+      ],
+      "translationXMm": 34.925,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "w1",
+        "hR1"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "w0",
+        "hR0"
+      ],
+      "translationXMm": 34.925,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "w1",
+        "sR1"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "w0",
+        "sR0"
+      ],
+      "translationXMm": 34.925,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "w1",
+        "sL1"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "w0",
+        "sL0"
+      ],
+      "translationXMm": 34.925,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "hL1",
+        "sR1"
+      ],
+      "volumeMm3": 32.59478280122095,
+      "boundsMm": [
+        -64.0921375,
+        -15.113,
+        -2.4130000000000003,
+        -57.94375000000001,
+        -10.286999999999999,
+        2.4129999999999994
+      ],
+      "reusedRigidTranslationOf": [
+        "hL0",
+        "sR0"
+      ],
+      "translationXMm": 34.925,
+      "reuseBasis": "rigid-translation",
+      "classification": "thread-proxy-pair-not-engagement-proof"
+    },
+    {
+      "parts": [
+        "hL1",
+        "sL1"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "hL0",
+        "sL0"
+      ],
+      "translationXMm": 34.925,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "hR1",
+        "sR1"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "hR0",
+        "sR0"
+      ],
+      "translationXMm": 34.925,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "hR1",
+        "sL1"
+      ],
+      "volumeMm3": 32.594782801220944,
+      "boundsMm": [
+        -46.83125,
+        10.286999999999999,
+        -2.4130000000000003,
+        -40.6828625,
+        15.113,
+        2.4129999999999994
+      ],
+      "reusedRigidTranslationOf": [
+        "hR0",
+        "sL0"
+      ],
+      "translationXMm": 34.925,
+      "reuseBasis": "rigid-translation",
+      "classification": "thread-proxy-pair-not-engagement-proof"
+    },
+    {
+      "parts": [
+        "hR1",
+        "spacer1"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": 0,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "spacer1",
+        "hL2"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": 0,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "w2",
+        "hL2"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "w0",
+        "hL0"
+      ],
+      "translationXMm": 69.85,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "w2",
+        "hR2"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "w0",
+        "hR0"
+      ],
+      "translationXMm": 69.85,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "w2",
+        "sR2"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "w0",
+        "sR0"
+      ],
+      "translationXMm": 69.85,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "w2",
+        "sL2"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "w0",
+        "sL0"
+      ],
+      "translationXMm": 69.85,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "hL2",
+        "sR2"
+      ],
+      "volumeMm3": 32.59478280122095,
+      "boundsMm": [
+        -29.16713750000001,
+        -15.113,
+        -2.4130000000000003,
+        -23.01875000000001,
+        -10.286999999999999,
+        2.4129999999999994
+      ],
+      "reusedRigidTranslationOf": [
+        "hL0",
+        "sR0"
+      ],
+      "translationXMm": 69.85,
+      "reuseBasis": "rigid-translation",
+      "classification": "thread-proxy-pair-not-engagement-proof"
+    },
+    {
+      "parts": [
+        "hL2",
+        "sL2"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "hL0",
+        "sL0"
+      ],
+      "translationXMm": 69.85,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "hR2",
+        "sR2"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "hR0",
+        "sR0"
+      ],
+      "translationXMm": 69.85,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "hR2",
+        "sL2"
+      ],
+      "volumeMm3": 32.594782801220944,
+      "boundsMm": [
+        -11.90625,
+        10.286999999999999,
+        -2.4130000000000003,
+        -5.757862500000002,
+        15.113,
+        2.4129999999999994
+      ],
+      "reusedRigidTranslationOf": [
+        "hR0",
+        "sL0"
+      ],
+      "translationXMm": 69.85,
+      "reuseBasis": "rigid-translation",
+      "classification": "thread-proxy-pair-not-engagement-proof"
+    },
+    {
+      "parts": [
+        "hR2",
+        "spacer2"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": 0,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "spacer2",
+        "hL3"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": 0,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "w3",
+        "hL3"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "w0",
+        "hL0"
+      ],
+      "translationXMm": 104.775,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "w3",
+        "hR3"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "w0",
+        "hR0"
+      ],
+      "translationXMm": 104.775,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "w3",
+        "sR3"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "w0",
+        "sR0"
+      ],
+      "translationXMm": 104.775,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "w3",
+        "sL3"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "w0",
+        "sL0"
+      ],
+      "translationXMm": 104.775,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "hL3",
+        "sR3"
+      ],
+      "volumeMm3": 32.59478280122095,
+      "boundsMm": [
+        5.757862500000002,
+        -15.113,
+        -2.4130000000000003,
+        11.90625,
+        -10.286999999999999,
+        2.4129999999999994
+      ],
+      "reusedRigidTranslationOf": [
+        "hL0",
+        "sR0"
+      ],
+      "translationXMm": 104.775,
+      "reuseBasis": "rigid-translation",
+      "classification": "thread-proxy-pair-not-engagement-proof"
+    },
+    {
+      "parts": [
+        "hL3",
+        "sL3"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "hL0",
+        "sL0"
+      ],
+      "translationXMm": 104.775,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "hR3",
+        "sR3"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "hR0",
+        "sR0"
+      ],
+      "translationXMm": 104.775,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "hR3",
+        "sL3"
+      ],
+      "volumeMm3": 32.594782801220944,
+      "boundsMm": [
+        23.01875000000001,
+        10.286999999999999,
+        -2.4130000000000003,
+        29.16713750000001,
+        15.113,
+        2.4129999999999994
+      ],
+      "reusedRigidTranslationOf": [
+        "hR0",
+        "sL0"
+      ],
+      "translationXMm": 104.775,
+      "reuseBasis": "rigid-translation",
+      "classification": "thread-proxy-pair-not-engagement-proof"
+    },
+    {
+      "parts": [
+        "hR3",
+        "spacer3"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": 0,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "spacer3",
+        "hL4"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": 0,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "w4",
+        "hL4"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "w0",
+        "hL0"
+      ],
+      "translationXMm": 139.7,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "w4",
+        "hR4"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "w0",
+        "hR0"
+      ],
+      "translationXMm": 139.7,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "w4",
+        "sR4"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "w0",
+        "sR0"
+      ],
+      "translationXMm": 139.7,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "w4",
+        "sL4"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "w0",
+        "sL0"
+      ],
+      "translationXMm": 139.7,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "hL4",
+        "sR4"
+      ],
+      "volumeMm3": 32.59478280122095,
+      "boundsMm": [
+        40.682862499999985,
+        -15.113,
+        -2.4130000000000003,
+        46.83124999999998,
+        -10.286999999999999,
+        2.4129999999999994
+      ],
+      "reusedRigidTranslationOf": [
+        "hL0",
+        "sR0"
+      ],
+      "translationXMm": 139.7,
+      "reuseBasis": "rigid-translation",
+      "classification": "thread-proxy-pair-not-engagement-proof"
+    },
+    {
+      "parts": [
+        "hL4",
+        "sL4"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "hL0",
+        "sL0"
+      ],
+      "translationXMm": 139.7,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "hR4",
+        "sR4"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "hR0",
+        "sR0"
+      ],
+      "translationXMm": 139.7,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "hR4",
+        "sL4"
+      ],
+      "volumeMm3": 32.594782801220944,
+      "boundsMm": [
+        57.943749999999994,
+        10.286999999999999,
+        -2.4130000000000003,
+        64.09213749999999,
+        15.113,
+        2.4129999999999994
+      ],
+      "reusedRigidTranslationOf": [
+        "hR0",
+        "sL0"
+      ],
+      "translationXMm": 139.7,
+      "reuseBasis": "rigid-translation",
+      "classification": "thread-proxy-pair-not-engagement-proof"
+    },
+    {
+      "parts": [
+        "hR4",
+        "spacer4"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": 0,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "spacer4",
+        "hL5"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": 0,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "w5",
+        "hL5"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "w0",
+        "hL0"
+      ],
+      "translationXMm": 174.625,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "w5",
+        "hR5"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "w0",
+        "hR0"
+      ],
+      "translationXMm": 174.625,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "w5",
+        "sR5"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "w0",
+        "sR0"
+      ],
+      "translationXMm": 174.625,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "w5",
+        "sL5"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "w0",
+        "sL0"
+      ],
+      "translationXMm": 174.625,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "hL5",
+        "sR5"
+      ],
+      "volumeMm3": 32.59478280122095,
+      "boundsMm": [
+        75.6078625,
+        -15.113,
+        -2.4130000000000003,
+        81.75625,
+        -10.286999999999999,
+        2.4129999999999994
+      ],
+      "reusedRigidTranslationOf": [
+        "hL0",
+        "sR0"
+      ],
+      "translationXMm": 174.625,
+      "reuseBasis": "rigid-translation",
+      "classification": "thread-proxy-pair-not-engagement-proof"
+    },
+    {
+      "parts": [
+        "hL5",
+        "sL5"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "hL0",
+        "sL0"
+      ],
+      "translationXMm": 174.625,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "hR5",
+        "sR5"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "reusedRigidTranslationOf": [
+        "hR0",
+        "sR0"
+      ],
+      "translationXMm": 174.625,
+      "reuseBasis": "rigid-translation",
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "hR5",
+        "sL5"
+      ],
+      "volumeMm3": 32.594782801220944,
+      "boundsMm": [
+        92.86875,
+        10.286999999999999,
+        -2.4130000000000003,
+        99.0171375,
+        15.113,
+        2.4129999999999994
+      ],
+      "reusedRigidTranslationOf": [
+        "hR0",
+        "sL0"
+      ],
+      "translationXMm": 174.625,
+      "reuseBasis": "rigid-translation",
+      "classification": "thread-proxy-pair-not-engagement-proof"
+    },
+    {
+      "parts": [
+        "hR5",
+        "endR"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": 0,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "endR",
+        "bearing1"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": 0,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "endL",
+        "bearing-1"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": 0,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "bearing-1",
+        "collar-1"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": 0,
+      "classification": "nonthread-interface"
+    },
+    {
+      "parts": [
+        "bearing1",
+        "collar1"
+      ],
+      "volumeMm3": 0.0,
+      "boundsMm": null,
+      "localFrameTranslatedXMm": 0,
+      "classification": "nonthread-interface"
+    }
+  ],
+  "threadProxyOverlaps": [
+    {
+      "parts": [
+        "hL0",
+        "sR0"
+      ],
+      "volumeMm3": 32.59478280122095,
+      "boundsMm": [
+        -99.0171375,
+        -15.113,
+        -2.4130000000000003,
+        -92.86875,
+        -10.286999999999999,
+        2.4129999999999994
+      ],
+      "localFrameTranslatedXMm": -87.3125,
+      "classification": "thread-proxy-pair-not-engagement-proof"
+    },
+    {
+      "parts": [
+        "hR0",
+        "sL0"
+      ],
+      "volumeMm3": 32.594782801220944,
+      "boundsMm": [
+        -81.75625,
+        10.286999999999999,
+        -2.4130000000000003,
+        -75.6078625,
+        15.113,
+        2.4129999999999994
+      ],
+      "localFrameTranslatedXMm": -87.3125,
+      "classification": "thread-proxy-pair-not-engagement-proof"
+    },
+    {
+      "parts": [
+        "hL1",
+        "sR1"
+      ],
+      "volumeMm3": 32.59478280122095,
+      "boundsMm": [
+        -64.0921375,
+        -15.113,
+        -2.4130000000000003,
+        -57.94375000000001,
+        -10.286999999999999,
+        2.4129999999999994
+      ],
+      "reusedRigidTranslationOf": [
+        "hL0",
+        "sR0"
+      ],
+      "translationXMm": 34.925,
+      "reuseBasis": "rigid-translation",
+      "classification": "thread-proxy-pair-not-engagement-proof"
+    },
+    {
+      "parts": [
+        "hR1",
+        "sL1"
+      ],
+      "volumeMm3": 32.594782801220944,
+      "boundsMm": [
+        -46.83125,
+        10.286999999999999,
+        -2.4130000000000003,
+        -40.6828625,
+        15.113,
+        2.4129999999999994
+      ],
+      "reusedRigidTranslationOf": [
+        "hR0",
+        "sL0"
+      ],
+      "translationXMm": 34.925,
+      "reuseBasis": "rigid-translation",
+      "classification": "thread-proxy-pair-not-engagement-proof"
+    },
+    {
+      "parts": [
+        "hL2",
+        "sR2"
+      ],
+      "volumeMm3": 32.59478280122095,
+      "boundsMm": [
+        -29.16713750000001,
+        -15.113,
+        -2.4130000000000003,
+        -23.01875000000001,
+        -10.286999999999999,
+        2.4129999999999994
+      ],
+      "reusedRigidTranslationOf": [
+        "hL0",
+        "sR0"
+      ],
+      "translationXMm": 69.85,
+      "reuseBasis": "rigid-translation",
+      "classification": "thread-proxy-pair-not-engagement-proof"
+    },
+    {
+      "parts": [
+        "hR2",
+        "sL2"
+      ],
+      "volumeMm3": 32.594782801220944,
+      "boundsMm": [
+        -11.90625,
+        10.286999999999999,
+        -2.4130000000000003,
+        -5.757862500000002,
+        15.113,
+        2.4129999999999994
+      ],
+      "reusedRigidTranslationOf": [
+        "hR0",
+        "sL0"
+      ],
+      "translationXMm": 69.85,
+      "reuseBasis": "rigid-translation",
+      "classification": "thread-proxy-pair-not-engagement-proof"
+    },
+    {
+      "parts": [
+        "hL3",
+        "sR3"
+      ],
+      "volumeMm3": 32.59478280122095,
+      "boundsMm": [
+        5.757862500000002,
+        -15.113,
+        -2.4130000000000003,
+        11.90625,
+        -10.286999999999999,
+        2.4129999999999994
+      ],
+      "reusedRigidTranslationOf": [
+        "hL0",
+        "sR0"
+      ],
+      "translationXMm": 104.775,
+      "reuseBasis": "rigid-translation",
+      "classification": "thread-proxy-pair-not-engagement-proof"
+    },
+    {
+      "parts": [
+        "hR3",
+        "sL3"
+      ],
+      "volumeMm3": 32.594782801220944,
+      "boundsMm": [
+        23.01875000000001,
+        10.286999999999999,
+        -2.4130000000000003,
+        29.16713750000001,
+        15.113,
+        2.4129999999999994
+      ],
+      "reusedRigidTranslationOf": [
+        "hR0",
+        "sL0"
+      ],
+      "translationXMm": 104.775,
+      "reuseBasis": "rigid-translation",
+      "classification": "thread-proxy-pair-not-engagement-proof"
+    },
+    {
+      "parts": [
+        "hL4",
+        "sR4"
+      ],
+      "volumeMm3": 32.59478280122095,
+      "boundsMm": [
+        40.682862499999985,
+        -15.113,
+        -2.4130000000000003,
+        46.83124999999998,
+        -10.286999999999999,
+        2.4129999999999994
+      ],
+      "reusedRigidTranslationOf": [
+        "hL0",
+        "sR0"
+      ],
+      "translationXMm": 139.7,
+      "reuseBasis": "rigid-translation",
+      "classification": "thread-proxy-pair-not-engagement-proof"
+    },
+    {
+      "parts": [
+        "hR4",
+        "sL4"
+      ],
+      "volumeMm3": 32.594782801220944,
+      "boundsMm": [
+        57.943749999999994,
+        10.286999999999999,
+        -2.4130000000000003,
+        64.09213749999999,
+        15.113,
+        2.4129999999999994
+      ],
+      "reusedRigidTranslationOf": [
+        "hR0",
+        "sL0"
+      ],
+      "translationXMm": 139.7,
+      "reuseBasis": "rigid-translation",
+      "classification": "thread-proxy-pair-not-engagement-proof"
+    },
+    {
+      "parts": [
+        "hL5",
+        "sR5"
+      ],
+      "volumeMm3": 32.59478280122095,
+      "boundsMm": [
+        75.6078625,
+        -15.113,
+        -2.4130000000000003,
+        81.75625,
+        -10.286999999999999,
+        2.4129999999999994
+      ],
+      "reusedRigidTranslationOf": [
+        "hL0",
+        "sR0"
+      ],
+      "translationXMm": 174.625,
+      "reuseBasis": "rigid-translation",
+      "classification": "thread-proxy-pair-not-engagement-proof"
+    },
+    {
+      "parts": [
+        "hR5",
+        "sL5"
+      ],
+      "volumeMm3": 32.594782801220944,
+      "boundsMm": [
+        92.86875,
+        10.286999999999999,
+        -2.4130000000000003,
+        99.0171375,
+        15.113,
+        2.4129999999999994
+      ],
+      "reusedRigidTranslationOf": [
+        "hR0",
+        "sL0"
+      ],
+      "translationXMm": 174.625,
+      "reuseBasis": "rigid-translation",
+      "classification": "thread-proxy-pair-not-engagement-proof"
+    }
+  ],
+  "unexpectedOverlaps": [],
+  "geometryGate": "no-unexpected-nominal-solid-intersections",
+  "engineeringAcceptance": "blocked",
+  "originalSpacers": "17mmOD/14mmID with6.35mm inter-wheel and19.43125mm end lengths; no material/SKU/tolerances",
+  "limitations": [
+    "Nominal external shaft only, no hollow bore, mass or end features",
+    "No housings, retainer, drivetrain or mounting screws",
+    "No thread engagement, axial preload, fit tolerances, face contact or tool access accepted",
+    "Wheel material/hardness source conflict unresolved",
+    "No contact validity transferred; no dynamic simulation or real fit proven"
+  ],
+  "vendorAssetsRetained": false,
+  "priorAttempt": "Global-coordinate booleans did not complete in bounded attempts; stopped without result. This run evaluates source templates in local frames, with rigid-translation/unit and uniform-prism local-section equivalence. It is not a completed global-coordinate exhaustive replay."
+}

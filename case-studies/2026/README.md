@@ -29,7 +29,7 @@ The implemented slice accepts enabled/score-request/availability/alignment input
 
 Run the shared [Java case laboratory](../../examples/java-2026-sim/CASES.md). All cases use the explicitly pinned 2026 software baseline; that does not verify historical deployment compatibility. Synthetic setpoints and CAD dimensions are design assumptions, never official dimensions.
 
-[CAD package](../../examples/fusion-case-concepts/README.md) contains the shared geometry generator, sideplate DXF/SVG outputs and native Fusion script. The script was not executed because Fusion reported Sign in Failure. No native F3D, STEP export/reopen or CAD interference result is claimed.
+[CAD package](../../examples/fusion-case-concepts/README.md) contains the shared geometry generator, sideplate DXF/SVG outputs and native Fusion script. The original batch script remains unexecuted. A separate [guarded adaptation](../../examples/fusion-guarded/README.md) created these two sideplates, changed thickness from 6.35 to 7 mm and verified F3D/STEP geometry and native history on 2026-11-16. No full assembly, interference, loads or manufacturing approval is claimed.
 
 CAD inputs feed the simplified plant through generated properties: flywheel inertia uses an assumed solid cylinder; the lift uses assumed mass, gearing, drum radius and travel. This coupling validates parameter consistency, not CAD-derived mass properties or contact behavior.
 
@@ -48,3 +48,5 @@ CAD inputs feed the simplified plant through generated properties: flywheel iner
 Use the [selected rule locators and evidence tasks](rule-reading-map.json) with the [cross-season review workflow](../../docs/rulebook-hardware-review.md). R106/R107 add direction and total-height constraints; a sideplate sketch is not a whole-robot envelope check. Radio exceptions and wiring depend on location and revision.
 
 [Sensor/model boundary](../../examples/java-2026-sim/SIMULATION-BOUNDARIES.md): controller feedback comes directly from the mathematical plant. CAN encoder integration and physical parameter identification are unverified.
+
+Review the [Game-to-Robot Strategy Brief](strategy-brief.md) before freezing subsystem choices. Its recommendation is a proposal; no user selection has been recorded.

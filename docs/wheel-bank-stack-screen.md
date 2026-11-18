@@ -1,0 +1,20 @@
+# Inter-wheel spacer and support-stack dimensional study
+
+Research candidates only, reviewed 2026-11-16. This extends the explicitly pinned wheel/hub experiment in `native-wheel-stack.md`; it does not replay native geometry, supersede supplier revisions, authorize procurement or transfer old continuous-sleeve contact validity.
+
+## Exact components and source boundaries
+
+- Screw candidate: REV-29-2951-PK50, #10-32 x 1in button-head hex drive, two individual screws per proposed opposed-hub pair. [Product table](https://www.revrobotics.com/10-32-Button-Head-Hex-Drive-Screws/) establishes SKU and under-head length convention. [Manufacturer drawing](https://www.revrobotics.com/content/docs/10-32-Button-Head-Cap-Screws-DR.pdf), dated 2024-12-09, visually inspected, gives 25.4mm under-head length, 2.6mm head height, 9.2mm head diameter and 1/8in drive. Dimensions are rounded drawing values, not tolerance limits. This drawing postdates the 2024 season; historical applicability is not established. [Product-linked STEP](https://www.revrobotics.com/content/cad/REV-29-2951.STEP) located but not imported or pinned in this study.
+- Spacer candidates: REV-21-2004-PK10 (1/8in) and REV-21-2005-PK10 (1/4in). [Product table](https://www.revrobotics.com/.5in-Hex-Shaft-Spacers/) identifies POM, 0.72in OD and 0.125/0.250in widths. Nominal spacer end faces are hypothesized to meet the hub bosses. Neither radial interference nor mating-face overlap has been checked natively.
+- Supports: REV-21-1916-PK4 rounded-hex flanged bearing and REV-21-2286-PK10 retaining plate remain research candidates. [Manufacturer guide](https://docs.revrobotics.com/ion-build/motion/bearings-bearing-blocks) specifies the bearing/shaft family and retainer compatibility, not this bank's load capacity. Housing and mounting fasteners remain unselected.
+- Axial retention: REV-21-2900-PK4 narrow aluminum collar. [Product page](https://www.revrobotics.com/Shaft-Collars-0.5in-Hex-Bore/) gives 6.35mm thickness, 27.9mm OD, M3 x 0.5 x 12mm screw and a bearing-inner-race boss. Do not assume thickness includes every boss/screw envelope or that a collar load rating has been established. Stock REV-21-1135 is untapped; no shaft-end screw retention is assumed.
+
+## Reproducible scalar screen
+
+Run `python -B scripts/screen-wheel-bank.py`; tests use `--test`. All scalar output is an original conditional calculation. From the pinned experiment's proposed seating, opposing head seats are +/-13.49375mm. Adding the drawing's 2.6mm head height yields a 32.1875mm full axial head envelope. Boss-to-boss span is 28.575mm.
+
+A 3.175mm spacer implies 31.75mm pitch, with -0.4375mm head-envelope separation. That is an overlapping axial projection, NOT proof of solid collision: radial positions and clocking could avoid contact. It does not pass the conservative axial-envelope screen.
+
+A 6.35mm spacer implies 34.925mm pitch, with 2.7375mm nominal head-envelope separation. Six stations span 203.2mm boss-to-boss and 206.8125mm head-to-head, exceeding the earlier 200mm packaging target. Their centered outer head extent is +/-103.40625mm. Against the prior hypothetical bearing centers +/-125mm this leaves 21.59375mm to each center, NOT usable support clearance: bearing width/orientation, collar boss, end spacers, retainer and housing occupy it. A 300mm shaft leaves only25mm beyond each hypothetical bearing center. These are design tradeoffs, not a selected shaft or support stack.
+
+No specific support axial stack is accepted yet. Next check must pin/import the screw, spacer, bearing, collar and housing, place exact hole axes and mating faces, then verify screw engagement/runout, radial interference and tool access. Bearing outer-race retention and rotating inner-race spacing must be separate load paths; avoid applying unknown axial preload through both races. Tolerance accumulation, allowable clamp load/torque, shaft bending, bearing loads, impact, spacer creep and thermal behavior remain unverified. The new segmented contact geometry needs new simulation and calibration evidence.

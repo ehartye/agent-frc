@@ -1,0 +1,210 @@
+{
+  "schema": "frc-hardware-rule-catalog/v1",
+  "season": 2025,
+  "sources": [
+    {
+      "id": "manual-2025",
+      "season": 2025,
+      "url": "https://firstfrc.blob.core.windows.net/frc2025/Manual/2025GameManual.pdf",
+      "revision": "Construction section V11; 164 pages",
+      "sha256": "dc6aa9ddbeba25c679c58bae746bde14dba2af79a61a65d8c5f575ca6cdfd523",
+      "locator": "Selected construction/control rules; exact rule locators on entries",
+      "verification": {
+        "method": "local-byte-hash-and-text-review",
+        "checkedAt": "2026-11-16"
+      }
+    }
+  ],
+  "coverage": "partial",
+  "eventApplicability": "unresolved",
+  "entries": [
+    {
+      "id": "named-motor-exemplars",
+      "category": "motor-class",
+      "statement": "Named motor entries include Minion identifiers 24-777378/WCP-1691 and Kraken X44 WCP-0941.",
+      "conditions": [
+        "Only this pinned season/snapshot; not a complete allowance list",
+        "Examples only; do not infer an exhaustive catalog or actual ownership"
+      ],
+      "sourceRefs": [
+        {
+          "sourceId": "manual-2025",
+          "ruleId": "R501",
+          "locator": "R501"
+        }
+      ],
+      "specificationStatus": "rule-constraint-only",
+      "manufacturerPerformance": null
+    },
+    {
+      "id": "linear-actuator-class",
+      "category": "motor-class",
+      "statement": "The generic COTS category covers 12 V linear actuators, solenoids and electromagnets downstream of a breaker rated 20 A or less.",
+      "conditions": [
+        "Only this pinned season/snapshot; not a complete allowance list",
+        "No generic brushed-motor class is provided in this snapshot",
+        "Breaker rating is not motor stall current",
+        "Solenoids/electromagnets operated at 24 V must be rated for 24 V under the stated exception"
+      ],
+      "sourceRefs": [
+        {
+          "sourceId": "manual-2025",
+          "ruleId": "R501",
+          "locator": "R501"
+        }
+      ],
+      "specificationStatus": "rule-constraint-only",
+      "manufacturerPerformance": null
+    },
+    {
+      "id": "servo-class",
+      "category": "motor-class",
+      "statement": "PWM rotational servos are limited to 4 A stall and 8 W mechanical output at 6 V; linear servos to 1 A stall at 6 V.",
+      "conditions": [
+        "Only this pinned season/snapshot; not a complete allowance list",
+        "Manufacturer evidence at the specified voltage is required; not inferred from price"
+      ],
+      "sourceRefs": [
+        {
+          "sourceId": "manual-2025",
+          "ruleId": "R501",
+          "locator": "R501"
+        }
+      ],
+      "specificationStatus": "rule-constraint-only",
+      "manufacturerPerformance": null
+    },
+    {
+      "id": "propulsion-count",
+      "category": "propulsion",
+      "statement": "No more than four propulsion motors, with stated exclusions including swerve steering.",
+      "conditions": [
+        "Only this pinned season/snapshot; not a complete allowance list",
+        "Apply the season-specific role definition and exclusions"
+      ],
+      "sourceRefs": [
+        {
+          "sourceId": "manual-2025",
+          "ruleId": "R502",
+          "locator": "R502"
+        }
+      ],
+      "specificationStatus": "rule-constraint-only",
+      "manufacturerPerformance": null
+    },
+    {
+      "id": "controller-subset",
+      "category": "motor-controller-compatibility",
+      "statement": "R504 includes older DMC60, PWM-only Jaguar, Nidec, SD540 and Victor 884/888 as well as Koors40, Talon FXS and Thrifty Nova; Table 8-2 governs loads.",
+      "conditions": [
+        "Only this pinned season/snapshot; not a complete allowance list",
+        "Integral-only categories include Falcon, Nidec, Venom and Kraken X44/X60",
+        "Allowed controller names do not establish arbitrary motor compatibility"
+      ],
+      "sourceRefs": [
+        {
+          "sourceId": "manual-2025",
+          "ruleId": "R504",
+          "locator": "R504"
+        },
+        {
+          "sourceId": "manual-2025",
+          "ruleId": "R505",
+          "locator": "R505"
+        }
+      ],
+      "specificationStatus": "rule-constraint-only",
+      "manufacturerPerformance": null
+    },
+    {
+      "id": "main-distribution",
+      "category": "power",
+      "statement": "R609 lists PDP, PDP 2.0 and PDH distribution options.",
+      "conditions": [
+        "Only this pinned season/snapshot; not a complete allowance list",
+        "Do not import the later AMPD allowance",
+        "Exact part, breaker, connector and wiring conditions remain required"
+      ],
+      "sourceRefs": [
+        {
+          "sourceId": "manual-2025",
+          "ruleId": "R609",
+          "locator": "R609"
+        }
+      ],
+      "specificationStatus": "rule-constraint-only",
+      "manufacturerPerformance": null
+    },
+    {
+      "id": "control-radio",
+      "category": "control-system",
+      "statement": "The image requirement is 2025_v2.0 or later. VH-109 is specified except China and Chinese Taipei events use OM5P-AN/AC.",
+      "conditions": [
+        "Only this pinned season/snapshot; not a complete allowance list",
+        "Regional exceptions differ from 2026; resolve actual event applicability"
+      ],
+      "sourceRefs": [
+        {
+          "sourceId": "manual-2025",
+          "ruleId": "R701",
+          "locator": "R701"
+        },
+        {
+          "sourceId": "manual-2025",
+          "ruleId": "R702",
+          "locator": "R702"
+        }
+      ],
+      "specificationStatus": "rule-constraint-only",
+      "manufacturerPerformance": null
+    },
+    {
+      "id": "status-lights",
+      "category": "control-system",
+      "statement": "One or two prescribed robot signal lights are required.",
+      "conditions": [
+        "Only this pinned season/snapshot; not a complete allowance list",
+        "Check exact wiring, permitted device and placement"
+      ],
+      "sourceRefs": [
+        {
+          "sourceId": "manual-2025",
+          "ruleId": "R709",
+          "locator": "R709"
+        }
+      ],
+      "specificationStatus": "rule-constraint-only",
+      "manufacturerPerformance": null
+    },
+    {
+      "id": "main-battery",
+      "category": "power",
+      "statement": "One main non-spillable sealed lead-acid battery is nominally 12 V and rated 17–18.2 Ah at the 20-hour rate.",
+      "conditions": [
+        "Pinned season snapshot only; actual event applicability unresolved",
+        "Voltage/capacity alone are insufficient: shape, dimensions, weight and terminal requirements also apply",
+        "R602 auxiliary-source exceptions are separate; no physical battery model inferred"
+      ],
+      "sourceRefs": [
+        {
+          "sourceId": "manual-2025",
+          "ruleId": "R601",
+          "locator": "R601"
+        },
+        {
+          "sourceId": "manual-2025",
+          "ruleId": "R602",
+          "locator": "R602"
+        }
+      ],
+      "specificationStatus": "rule-constraint-only",
+      "manufacturerPerformance": null
+    }
+  ],
+  "unresolved": [
+    "Selected rule subset, not a complete device allowance or prohibition list",
+    "Exact part/revision and complete installation require review against all applicable rules and event updates",
+    "Actual ownership, quantity, condition and team resources are not inferred",
+    "Manufacturer geometry, mounting, connectors, electrical curves, calibration and redistribution rights are separate evidence"
+  ]
+}
