@@ -1,0 +1,383 @@
+{
+  "season": 0,
+  "game": "Training field",
+  "edition": "Invented classroom exercise",
+  "manual": "https://github.com/ehartye/agent-frc/blob/main/examples/kickoff/training-field.json",
+  "units": "in",
+  "field": {
+    "length": 480,
+    "width": 264,
+    "source": "Authored classroom field dimensions in this file."
+  },
+  "limits": {
+    "perimeter": 116,
+    "height": 46,
+    "source": "Invented starting-volume constraints for the exercise."
+  },
+  "landmarks": [
+    {
+      "name": "West pedestal",
+      "x": 150,
+      "y": 132,
+      "sides": 6,
+      "acrossFlats": 46,
+      "height": 22
+    },
+    {
+      "name": "East pedestal",
+      "x": 330,
+      "y": 132,
+      "sides": 6,
+      "acrossFlats": 46,
+      "height": 22
+    }
+  ],
+  "levels": [
+    {
+      "name": "Drop shelf",
+      "height": 36
+    }
+  ],
+  "geometrySource": "Classroom diagram with two pedestals. All geometry and scoring values are hypothetical.",
+  "omissions": "The exercise omits mechanism contact, field tolerances, scoring adjudication and hardware behavior.",
+  "scoring": {
+    "source": "Invented allocation and timing exercise. Two robots may approach the same scoring corridor.",
+    "inventory": [
+      {
+        "piece": "Tile",
+        "total": 20,
+        "distribution": "Ten pieces are available near each team's pickup corner."
+      }
+    ],
+    "phases": [
+      {
+        "name": "Opening",
+        "seconds": 10
+      },
+      {
+        "name": "Main play",
+        "seconds": 45
+      }
+    ],
+    "fieldMap": {
+      "basis": "Illustrative start poses and scoring spots.",
+      "starts": [
+        [
+          90,
+          48
+        ],
+        [
+          90,
+          132
+        ],
+        [
+          90,
+          216
+        ]
+      ],
+      "sources": {
+        "Tile": [
+          [
+            55,
+            50
+          ],
+          [
+            55,
+            214
+          ]
+        ]
+      },
+      "targets": {
+        "shelf": [
+          [
+            118,
+            108
+          ],
+          [
+            118,
+            156
+          ]
+        ],
+        "bay": [
+          [
+            193,
+            197
+          ]
+        ]
+      },
+      "routes": [
+        {
+          "piece": "Tile",
+          "goal": "shelf"
+        },
+        {
+          "piece": "Tile",
+          "goal": "bay"
+        }
+      ]
+    },
+    "targets": [
+      {
+        "name": "Shelf",
+        "goal": "shelf",
+        "piece": "Tile",
+        "points": [
+          4,
+          2
+        ]
+      },
+      {
+        "name": "Bay",
+        "goal": "bay",
+        "piece": "Tile",
+        "points": [
+          2,
+          1
+        ]
+      }
+    ]
+  },
+  "rehearsal": {
+    "schema": "field-rehearsal/v1",
+    "basis": "Prescribed classroom routes with constant-speed translation. Every dimension and pose is invented.",
+    "boundsNote": "A wide beam marks a shared opening. A raised setup changes the height available under its rails. The occupancy calculation excludes contact forces and moving game pieces.",
+    "sources": [
+      "https://github.com/ehartye/agent-frc/blob/main/examples/kickoff/training-field.json"
+    ],
+    "resourceLabel": "practice gate",
+    "setups": [
+      "lowered",
+      "raised"
+    ],
+    "planes": [
+      {
+        "name": "West corner face",
+        "at": [
+          20,
+          20
+        ],
+        "inwardDeg": 45
+      },
+      {
+        "name": "East corner face",
+        "at": [
+          460,
+          244
+        ],
+        "inwardDeg": -135
+      }
+    ],
+    "obstacles": [
+      {
+        "name": "Gate rail south",
+        "poly": [
+          [
+            226,
+            122
+          ],
+          [
+            254,
+            122
+          ],
+          [
+            254,
+            142
+          ],
+          [
+            226,
+            142
+          ]
+        ],
+        "lower": {
+          "lowered": 3,
+          "raised": 35
+        },
+        "kind": "height"
+      },
+      {
+        "name": "Gate rail north",
+        "poly": [
+          [
+            226,
+            178
+          ],
+          [
+            254,
+            178
+          ],
+          [
+            254,
+            198
+          ],
+          [
+            226,
+            198
+          ]
+        ],
+        "lower": {
+          "lowered": 3,
+          "raised": 35
+        },
+        "kind": "height"
+      }
+    ],
+    "bands": [
+      {
+        "name": "Gate entry",
+        "from": [
+          226,
+          122
+        ],
+        "to": [
+          226,
+          198
+        ]
+      },
+      {
+        "name": "Gate exit",
+        "from": [
+          254,
+          122
+        ],
+        "to": [
+          254,
+          198
+        ]
+      }
+    ],
+    "starts": [
+      [
+        90,
+        48
+      ],
+      [
+        90,
+        132
+      ],
+      [
+        90,
+        216
+      ]
+    ],
+    "mirror": {
+      "redX": true,
+      "redY": true
+    },
+    "periods": [
+      {
+        "name": "Opening",
+        "seconds": 10
+      },
+      {
+        "name": "Main play",
+        "seconds": 45
+      }
+    ],
+    "defaults": {
+      "length": 24,
+      "width": 24,
+      "height": 26,
+      "bumper": 3,
+      "heading": 0,
+      "speed": 78,
+      "orders": [
+        "cross",
+        "shuttle",
+        "hold"
+      ]
+    },
+    "programs": {
+      "hold": {
+        "label": "Hold position",
+        "steps": []
+      },
+      "cross": {
+        "label": "Cross practice gate",
+        "steps": [
+          {
+            "at": {
+              "blue": [
+                195,
+                100
+              ],
+              "red": [
+                285,
+                220
+              ]
+            },
+            "label": "Stage at gate",
+            "frame": "field"
+          },
+          {
+            "at": {
+              "blue": [
+                200,
+                160
+              ],
+              "red": [
+                280,
+                160
+              ]
+            },
+            "label": "Request reserved passage",
+            "frame": "field",
+            "lock": true
+          },
+          {
+            "at": {
+              "blue": [
+                280,
+                160
+              ],
+              "red": [
+                200,
+                160
+              ]
+            },
+            "label": "Traverse gate",
+            "frame": "field",
+            "lock": true,
+            "straight": true
+          },
+          {
+            "at": {
+              "blue": [
+                295, 76
+              ],
+              "red": [
+                178,
+                222
+              ]
+            },
+            "label": "Vacate gate",
+            "frame": "field",
+            "lock": true,
+            "release": true
+          }
+        ]
+      },
+      "shuttle": {
+        "label": "Move tiles to bay",
+        "loop": true,
+        "steps": [
+          {
+            "at": [
+              60,
+              48
+            ],
+            "label": "Pick up tile",
+            "dwell": 0.4
+          },
+          {
+            "at": [
+              175,
+              194
+            ],
+            "label": "Deliver to bay",
+            "dwell": 0.6
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,7 +1,7 @@
 {
   "resources": {
     "schema": "frc-resource-baseline/v1",
-    "season": 2026,
+    "season": null,
     "teamNumber": null,
     "teamStatus": "unknown",
     "inventoryCoverage": "unknown",

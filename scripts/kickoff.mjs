@@ -1,21 +1,44 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, realpath, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { analyzeWindow } from './kickoff-window.mjs';
 import { routeStudy } from './kickoff-routes.mjs';
+import { fieldGeometry } from './field-rehearsal-geometry.mjs';
+import { createFieldRehearsal } from './field-rehearsal.mjs';
 import { fileURLToPath } from 'node:url';
 
 const plugin = new URL('../', import.meta.url);
 const positive = n => Number.isFinite(n) && n > 0;
 const label = s => typeof s === 'string' && s.trim().length > 0;
 
+function sourceLocator(s) {
+  if(!label(s) || s!==s.trim() || /[\u0000-\u001f\u007f]/u.test(s))return false;
+  if(/^https?:\/\//i.test(s)){
+    try {const u=new URL(s);return Boolean(u.hostname) && !u.username && !u.password;} catch {return false;}
+  }
+  const file=s.replaceAll('\\','/');
+  return !file.startsWith('/') && !/^[a-z][a-z0-9+.-]*:/i.test(file) &&
+    file.split('/').every(part=>part && part!=='.' && part!=='..');
+}
+
+export function initialTrial(p) {
+  const seed=p.trial || p.rehearsal?.defaults;
+  const relative=Math.min(p.field.length,p.field.width)/12;
+  return {length:seed?.length ?? relative,width:seed?.width ?? relative,height:seed?.height ?? relative,
+    heading:seed?.heading ?? 0,x:p.trial?.x ?? p.field.length/4,y:p.trial?.y ?? p.field.width/3};
+}
+
 export function validateProfile(p) {
-  if (!p || !Number.isInteger(p.season) || !label(p.game) || !label(p.edition) ||
-      !label(p.manual) || !/^https?:\/\//.test(p.manual) || p.units !== 'in') {
-    throw Error('Specify a season, game, release edition, manual URL and inch units.');
+  if (!p || (p.season!==undefined && !Number.isInteger(p.season)) || !label(p.game) || !label(p.edition) ||
+      !sourceLocator(p.manual) || p.units !== 'in') {
+    throw Error('Specify a game, edition, manual URL or project-relative source file, and inch units.');
   }
   if (![p.field?.length, p.field?.width].every(positive) || !label(p.field.source)) {
     throw Error('Field extents need positive dimensions and a source section.');
   }
+  if(p.trial && (![p.trial.length,p.trial.width,p.trial.height].every(positive) ||
+     p.trial.heading!==undefined && (!Number.isFinite(p.trial.heading) || Math.abs(p.trial.heading)>180) ||
+     ['x','y'].some((axis,i)=>p.trial[axis]!==undefined && (!Number.isFinite(p.trial[axis]) ||
+       p.trial[axis]<0 || p.trial[axis]>[p.field.length,p.field.width][i])))) throw Error('Invalid trial box or starting pose.');
   if (!p.limits || ![p.limits.height, p.limits.perimeter].every(n => n === null || positive(n)) ||
       !label(p.limits.source)) throw Error('Provide sourced limits or use null for an unknown.');
   if (!label(p.geometrySource) || !label(p.omissions) || !Array.isArray(p.landmarks) || !Array.isArray(p.levels)) {
@@ -44,9 +67,52 @@ export function validateProfile(p) {
     if (!label(map.basis) || !locations(map.starts) || !map.sources || !map.targets ||
         !Array.isArray(map.routes) || !map.routes.length ||
         !map.routes.every(r=>p.scoring.inventory.some(i=>i.piece===r.piece) && locations(map.sources[r.piece]) &&
-          (!r.autoSource || locations(map.sources[r.autoSource])) && locations(map.targets[r.goal])) ||
+          (!r.autoSource || locations(map.sources[r.autoSource])) && locations(map.targets[r.goal]) &&
+          Object.entries(r.sourceByPhase || {}).every(([name,key])=>p.scoring.phases.some(v=>v.name===name) && locations(map.sources[key])) &&
+          (!r.preloadPhases || Array.isArray(r.preloadPhases) && r.preloadPhases.every(name=>p.scoring.phases.some(v=>v.name===name)))) ||
+        (map.mirror && (typeof map.mirror.redX!=='boolean' || typeof map.mirror.redY!=='boolean')) ||
         !p.scoring.targets.every(t=>map.routes.some(r=>r.piece===t.piece && r.goal===t.goal))) {
       throw Error('Each modeled opportunity needs starting slots, piece locations and a compatible scoring location.');
+    }
+  }
+  if(p.rehearsal){
+    const r=p.rehearsal, pt=q=>Array.isArray(q) && q.length===2 && q.every(Number.isFinite);
+    const nonnegative=n=>Number.isFinite(n) && n>=0;
+    const labels=a=>Array.isArray(a) && a.length>0 && a.every(label) && new Set(a).size===a.length;
+    if(r.schema!=='field-rehearsal/v1' || !label(r.basis) || !label(r.boundsNote) || !labels(r.sources) ||
+      !label(r.resourceLabel) || !labels(r.setups) || !Array.isArray(r.planes) ||
+      !r.planes.every(f=>label(f.name) && pt(f.at) && Number.isFinite(f.inwardDeg)) ||
+      !Array.isArray(r.obstacles) || !r.obstacles.every(o=>label(o.name) && label(o.kind) &&
+        Array.isArray(o.poly) && o.poly.length>=3 && o.poly.every(pt) &&
+        (nonnegative(o.lower) || (o.lower && r.setups.every(s=>nonnegative(o.lower[s]))))) ||
+      !Array.isArray(r.bands) || !r.bands.every(v=>pt(v.from) && pt(v.to)) ||
+      !Array.isArray(r.starts) || r.starts.length!==3 || !r.starts.every(pt) ||
+      typeof r.mirror?.redX!=='boolean' || typeof r.mirror.redY!=='boolean' ||
+      !Array.isArray(r.periods) || !labels(r.periods.map(v=>v.name)) ||
+      !r.periods.every(v=>positive(v.seconds) && Number.isSafeInteger(v.seconds*20)) ||
+      !r.programs || !Object.keys(r.programs).length) throw Error('Invalid rehearsal geometry, setups, starts or periods.');
+    for(const ob of r.obstacles){
+      // Require a consistently wound convex polygon with no degenerate edges.
+      let sign=0;
+      for(let i=0;i<ob.poly.length;i++){
+        const a=ob.poly[i],b=ob.poly[(i+1)%ob.poly.length],c=ob.poly[(i+2)%ob.poly.length];
+        const cross=(b[0]-a[0])*(c[1]-b[1])-(b[1]-a[1])*(c[0]-b[0]);
+        if(!cross || (sign && Math.sign(cross)!==sign))throw Error('Use a convex rehearsal obstacle polygon.');
+        sign=Math.sign(cross);
+      }
+    }
+    const d=r.defaults;
+    if(!d || ![d.length,d.width,d.height,d.speed].every(positive) || d.speed>500 ||
+       !Number.isFinite(d.heading) || !nonnegative(d.bumper) || !Array.isArray(d.orders) || d.orders.length!==3 ||
+       !d.orders.every(k=>Object.hasOwn(r.programs,k)))throw Error('Invalid rehearsal robot defaults.');
+    const waypoint=w=>w && label(w.label) && (!w.frame || ['alliance','field'].includes(w.frame)) &&
+      (w.lock===undefined || w.lock===true || label(w.lock)) && (w.release===undefined || w.release===true && Boolean(w.lock)) &&
+      (w.dwell===undefined || nonnegative(w.dwell)) && (pt(w.at) || (w.at && (pt(w.at.blue) && pt(w.at.red) ||
+        pt(w.at.default) && Object.values(w.at.slots || {}).every(pt))));
+    for(const program of Object.values(r.programs)){
+      if(!label(program.label) || !Array.isArray(program.steps) || !program.steps.every(waypoint) ||
+         Object.entries(program.byPeriod || {}).some(([name,steps])=>!r.periods.some(p=>p.name===name) ||
+           !Array.isArray(steps) || !steps.every(waypoint)))throw Error('Invalid rehearsal behavior or waypoint.');
     }
   }
   return p;
@@ -56,11 +122,11 @@ export function rulesModel(profile) {
   validateProfile(profile);
   const {routeHypotheses: previous, ...model}=profile;
   if(!model.scoring?.fieldMap) return model;
-  const hypotheses=[];
+  const hypotheses=[],trial=initialTrial(model),width=Math.max(trial.length,trial.width);
   for(const phase of model.scoring.phases) for(const route of model.scoring.fieldMap.routes) {
-    const study=routeStudy(model,route.piece,route.goal,phase.name,null,30);
+    const study=routeStudy(model,route.piece,route.goal,phase.name,null,width);
     hypotheses.push({phase:phase.name,piece:route.piece,destination:route.goal,
-      trialBoxWidthIn:30,routeIn:study.line,lengthIn:study.length,traffic:study.traffic});
+      trialBoxWidthIn:width,routeIn:study.line,lengthIn:study.length,traffic:study.traffic});
   }
   return {...model,routeHypotheses:hypotheses};
 }
@@ -68,28 +134,34 @@ export function rulesModel(profile) {
 export async function buildLab(input, destination) {
   const profile=rulesModel(input);
   const asset = name => readFile(new URL('templates/kickoff/' + name, plugin), 'utf8');
-  const [page, renderer, controls, opportunities] = await Promise.all(['index.html', 'scene.js', 'lab.js', 'opportunities.js'].map(asset));
+  const [page, renderer, controls, opportunities, rehearsalUI] = await Promise.all(['index.html', 'scene.js', 'lab.js', 'opportunities.js', 'rehearsal.js'].map(asset));
   const json = JSON.stringify(profile).replaceAll('<', '\\u003c');
-  const output = page.replace('/* PROFILE */', () => json)
-    .replace('/* SCENE */', () => renderer).replace('/* LAB */', () => controls)
-    .replace('/* ROUTE MODEL */', () => routeStudy.toString())
-    .replace('/* WINDOW MODEL */', () => analyzeWindow.toString())
-    .replace('/* OPPORTUNITIES */', () => opportunities);
+  const replacements={
+    PROFILE:json, SCENE:renderer, LAB:controls, 'ROUTE MODEL':routeStudy.toString(), 'WINDOW MODEL':analyzeWindow.toString(),
+    'REHEARSAL MODEL':[initialTrial.toString(),fieldGeometry.toString(),createFieldRehearsal.toString(),
+      'const rehearsal=createFieldRehearsal(profile); const rehearsalNotes=[];'].join('\n'),
+    OPPORTUNITIES:opportunities, 'REHEARSAL UI':rehearsalUI
+  };
+  // Match the original template once. Project-owned strings may legitimately contain a template marker.
+  const output=page.replace(/\/\* ([A-Z ]+) \*\//g,(token,key)=>Object.hasOwn(replacements,key)?replacements[key]:token);
   await writeFile(destination, output, {flag: 'wx'});
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const [option, input, out, destination, ...extra] = process.argv.slice(2);
-    if (!input || !['--output','--model-output'].includes(out) || !destination || extra.length || !['--season', '--profile'].includes(option)) {
-      throw Error('Usage: node scripts/kickoff.mjs (--season 2025 | --profile profile.json) --output field.html');
+    if(option==='--season')throw Error('Supply a project-owned profile with --profile. A season number cannot identify the rules edition and geometry.');
+    if(!input || option!=='--profile' || !['--output','--model-output'].includes(out) || !destination || extra.length) {
+      throw Error('Usage: node scripts/kickoff.mjs --profile project.json (--model-output rules.json | --output field.html)');
     }
-    if (option === '--season' && input !== '2025') {
-      throw Error('Only 2025 has a bundled kickoff profile. Supply --profile with release-day sources for this season.');
-    }
-    const source = option === '--season' ? new URL('case-studies/2025/kickoff-field.json', plugin) : input;
-    const profile=validateProfile(JSON.parse(await readFile(source,'utf8')));
+    const profile=validateProfile(JSON.parse(await readFile(input,'utf8')));
     if(out==='--model-output') {
+      const pluginRoot=await realpath(fileURLToPath(plugin));
+      const parent=await realpath(path.dirname(path.resolve(destination)));
+      const relative=path.relative(pluginRoot,parent);
+      if(!relative || (!path.isAbsolute(relative) && relative!=='..' && !relative.startsWith('..'+path.sep))){
+        throw Error('Save the rules model in your team project, outside the plugin checkout or installed plugin folder.');
+      }
       await writeFile(destination,JSON.stringify(rulesModel(profile),null,2)+'\n',{flag:'wx'});
     } else {
       await buildLab(profile,destination);

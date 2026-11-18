@@ -1,5 +1,0 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {readCase,validateCase} from '../scripts/case-study.mjs';
-test('Three cases retain distinct official manual and requirement traces',()=>{for(const y of [2024,2025,2026]){const c=readCase(y);assert.deepEqual(validateCase(c),[]);assert.equal(c.season,y);assert.equal(c.requirements.length,c.trace.length);}assert.notEqual(readCase(2024).selected,readCase(2026).selected);});
-test('Unsupported seasons and mixed manual evidence fail',()=>{assert.throws(()=>readCase(2027));const c=readCase(2025);c.manual=readCase(2024).manual;assert.ok(validateCase(c).includes('season/manual mismatch'));});
-test('Trace breaks and geometry/model drift are detected',()=>{const c=readCase(2024);c.trace[0].requirement='missing';c.model.inertiaKgM2*=2;assert.ok(validateCase(c).includes('broken trace'));assert.ok(validateCase(c).includes('CAD/model inertia mismatch'));});
-test('Concept geometry boundary checks reject an axle outside its plate',()=>{const c=readCase(2026);c.cad.axles[0][0]=0;assert.ok(validateCase(c).includes('roller outside concept plate'));});

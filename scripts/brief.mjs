@@ -16,8 +16,7 @@ export function buildBrief(options,env=process.env){
  steps:definition.steps,acceptance:definition.acceptance,deliverable:definition.deliverable,
  sources:shown,retrievedCandidateCount:records.length,sourcesOmittedFromRetrieved:Math.max(0,records.length-shown.length),lookupPerQueryLimit:20,
  unmatchedQueries,groundingState:!shown.length?'missing-matching-source-links':unmatchedQueries.length?'partial-links-require-reading':'links-require-reading',
- lab:definition.lab?{path:definition.lab,testedBaseline:'Java17 / WPILib2026.2.1 / Windows x86-64',
- status:season===2026?'available-as-separate-pinned-exercise':'not-verified-for-selected-season'}:null,
+ lab:null,
  rulesAuthority:'requires-current-official-source-review',
  limits:['Static checklist and metadata only; no source body read or automatic rules interpretation',
  'No robot operation, deployment, CAD execution or installed-plugin effectiveness claim',
@@ -25,5 +24,5 @@ export function buildBrief(options,env=process.env){
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href){
  try{const args=process.argv.slice(2),options={};for(let i=0;i<args.length;i++){const key=args[i];if(key==='--historical')options.includeHistorical=true;else if(['--workflow','--season','--as-of'].includes(key)){if(!args[i+1])throw Error('Missing value');const value=args[++i];options[key==='--as-of'?'asOf':key.slice(2)]=key==='--season'?Number(value):value;}else throw Error('Unknown argument');}console.log(JSON.stringify(buildBrief(options),null,2));}
- catch{console.error('Brief failed: provide --workflow season|java|mechanism-cad|vision|modes|troubleshoot|case-study --season YEAR --as-of YYYY-MM-DD; check any explicitly configured catalog.');process.exitCode=1;}
+ catch{console.error('Brief failed: provide --workflow season|swerve|java|mechanism-cad|vision|modes|troubleshoot|case-study --season YEAR --as-of YYYY-MM-DD; check any explicitly configured catalog.');process.exitCode=1;}
 }

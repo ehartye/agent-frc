@@ -8,6 +8,6 @@ Generate a local preview with Node 22 from the repository root. Choose an empty 
 node .github/pages/build.mjs artifacts/workflow-guide
 ```
 
-The build generates the 2025 lab from the plugin’s current kickoff profile and renderer. Each push to main rebuilds the published guide and lab. Relevant pull requests build the site for review. Only the generated output is uploaded to GitHub Pages.
+The build generates the classroom lab from the invented training profile and current renderer. Real season models belong to their team projects. Each push to main rebuilds the published guide and lab. Relevant pull requests build the site for review. Only the generated output is uploaded to GitHub Pages.
 
-Keep original illustrations and explanatory text here. Link back to the project’s season records for sourced rules. The illustrative poses and the loader-rate exercise are teaching assumptions. Update the workflow mapping whenever skills or educational objectives change.
+Keep original illustrations and explanatory text here. Link to the project-owned model authoring guide for source and revision requirements. The illustrative poses and the loader-rate exercise are teaching assumptions. Update the workflow mapping whenever skills or educational objectives change.

@@ -24,6 +24,14 @@ select{width:100%;font:inherit;color:inherit;padding:5px;border:1px solid #9aa99
 #scoreResult{display:block;white-space:pre-line;border-left:4px solid #527d6d;background:#e1ebdf;padding:12px 16px;margin-top:12px}
 #opportunity .fields{margin:12px 0}.fields input[type=number]{display:block;width:100%;padding:6px;font:inherit}h3{margin-bottom:2px}
 #modelSummary table{border-collapse:collapse;margin:10px 0}#modelSummary td,#modelSummary th{border-bottom:1px solid #bdc6bc;padding:3px 16px 3px 0;text-align:left}
+.rehearsal-board{margin:12px 0}.rehearsal-board canvas{height:auto;aspect-ratio:2.02;touch-action:auto;cursor:default}
+.replay-tools,.replay-robot-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:9px 0}
+#replayClock{font-size:24px;font-variant-numeric:tabular-nums;margin-right:8px}
+#replayRoster{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:8px;margin:10px 0}
+.replay-robot{border:1px solid #a3b1ab;border-left:5px solid #357bd3;background:#f0f3ed;padding:8px}
+.replay-robot.red{border-left-color:#c04450}.replay-robot strong{font-size:17px}.replay-robot label{font-size:13px}
+.replay-robot select,.replay-robot button{font-size:14px}.replay-robot output{display:block;font-size:14px;margin:5px 0}
+.replay-tools label{font-size:13px}.replay-tools select{width:auto;margin-left:5px}#replayQueue,#replayNotice{font-size:14px}
 </style>
 </head>
 <body>
@@ -33,16 +41,27 @@ select{width:100%;font:inherit;color:inherit;padding:5px;border:1px solid #9aa99
 <div class="layout"><div>
 <figure><nav aria-label="Camera"><button data-view="field">Field</button><button data-view="robot">Robot</button><button data-view="target">Target</button><button data-view="top">Overhead</button><button id="zoomIn" aria-label="Zoom in">+</button><button id="zoomOut" aria-label="Zoom out">−</button></nav>
 <canvas id="field" aria-label="Rotatable field with an adjustable robot box. Use the sliders to move and resize it."></canvas>
-<figcaption>Lime shows your box. Drag to orbit. Scroll to zoom. Click the floor to place the box. Grid squares are 36 inches.</figcaption></figure>
+<figcaption>Lime shows your trial box. Blue and red lines show candidate alliance routes. Drag to orbit. Scroll to zoom. Click the floor to place the box. Grid squares are 36 inches.</figcaption></figure>
 <div class="actions"><button id="markA">Mark A at robot</button><button id="markB">Mark B at robot</button><button id="clearRoute">Clear route</button><output id="routeLabel"></output></div>
 <details><summary>Field dimensions, sources and omissions</summary><div id="sources"></div></details>
 </div><aside><fieldset><legend>Robot volume</legend><div id="sizes"></div></fieldset><p id="screen" role="status"></p>
 <fieldset><legend>Field pose</legend><div id="pose"></div></fieldset>
 <div id="elevations"><label for="level">Compare box top with</label><select id="level"></select><p id="difference"></p></div></aside></div>
+<article id="rehearsal" hidden><h2>Rehearse a match</h2>
+<p>Assign up to three robots per alliance. Each robot follows its prescribed route with its full bumper footprint. Use the timer to see who waits and which trips finish.</p>
+<figure class="rehearsal-board"><canvas id="replayField" aria-label="Timed overhead field showing labeled blue and red robots, structures and blocked positions. The roster below describes each robot."></canvas>
+<figcaption>Blue and red rectangles show occupied robot footprints. Amber circles mark accumulated waiting. Hatched obstacles block the selected height or reserve uncertain space. Dotted lines show planned robot paths.</figcaption></figure>
+<div class="replay-tools"><b id="replayClock" aria-label="Remaining match period time"></b>
+<button id="replayRun" class="primary">Start period</button><button id="replayStep">Step 1 s</button>
+<button id="replayFast">Run to period end</button><button id="replayReset">Reset match</button><button id="replaySave">Save rehearsal snapshot</button>
+<label>Obstacle setup<select id="replaySetup"></select></label></div>
+<p id="replayNotice" role="status"></p><div class="actions"><button id="addBlue">Add blue robot</button><button id="addRed">Add red robot</button></div>
+<div id="replayRoster"></div><p id="replayQueue"></p><details><summary>Field assumptions and phase log</summary><p id="replayBasis"></p><ol id="replayEvents"></ol></details>
+</article>
 <article id="opportunity"><h2>What can we score in this window?</h2>
 <p id="inventory"></p><p class="muted" id="scoreSource"></p>
 <div class="fields" id="choices"></div>
-<p class="muted">Allocate pieces to this robot at this location. Use one window per opportunity. Compare overlapping windows separately.</p>
+<p class="muted">Allocate pieces to this robot at A for a shuttle or at B for locally staged supply. Each empty return follows the loaded route at the same assumed speed. Service time includes handling and release. Enter other non-scoring time once per window.</p>
 <div class="fields" id="numbers"></div>
 <label>Supply and timing assumptions<input id="allocation" type="text" placeholder="Where are the pieces, who else needs them, and when can they arrive?"></label>
 <h3>Route and mechanism exposure</h3><p>The model suggests a pickup-to-goal route. Amber marks show possible shared corridors. Move the robot and mark A or B to compare another route.</p>
@@ -64,10 +83,12 @@ select{width:100%;font:inherit;color:inherit;padding:5px;border:1px solid #9aa99
 <script>
 'use strict';
 const profile = JSON.parse(document.querySelector('#profile').textContent);
+/* REHEARSAL MODEL */
 /* SCENE */
 /* ROUTE MODEL */
 /* WINDOW MODEL */
 /* LAB */
 /* OPPORTUNITIES */
+/* REHEARSAL UI */
 </script>
 </body></html>

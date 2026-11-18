@@ -7,7 +7,7 @@ import {parseJavaVersion,inspectJavaEnvironment} from '../scripts/java-health.mj
 import {inspectEnvironment,parseArgs} from '../scripts/setup-health.mjs';
 
 const jdk = path.resolve('fixture jdk');
-const success = (exe) => ({status:0, stdout:exe.includes('javac') ? 'javac 17.0.21\r\n' : '', stderr:exe.includes('javac') ? '' : 'openjdk version "17.0.21" 2026-10-20\r\nOpenJDK Runtime Environment\r\n'});
+const success = (exe) => ({status:0, stdout:exe.includes('javac') ? 'javac 17.0.21\r\n' : '', stderr:exe.includes('javac') ? '' : 'openjdk version "17.0.21" 2096-10-20\r\nOpenJDK Runtime Environment\r\n'});
 test('Java profile probes only runtime and compiler in the selected JDK without a shell', () => {
   const calls=[];
   const report=inspectEnvironment({task:'java',jdk,expectedJava:'17',run:(exe,args,options) => {
@@ -32,7 +32,7 @@ test('timeout, thrown spawn, nonzero exit and malformed output fail closed', () 
 });
 test('version parser accepts standard modern and legacy output, rejects ambiguous banners', () => {
   assert.deepEqual(parseJavaVersion('java version "1.8.0_402"\n','java'),{version:'1.8.0_402',major:8});
-  assert.deepEqual(parseJavaVersion('openjdk version "25-ea" 2025-09-16','java'),{version:'25-ea',major:25});
+  assert.deepEqual(parseJavaVersion('openjdk version "25-ea" 2095-09-16','java'),{version:'25-ea',major:25});
   assert.equal(parseJavaVersion('javac 17.0.1\njavac 21.0.1','javac'),null);
   assert.equal(parseJavaVersion('openjdk version "garbage"','java'),null);
   assert.equal(parseJavaVersion('javac 0','javac'),null);

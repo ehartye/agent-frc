@@ -1,9 +1,0 @@
-# MAXLift corner, before a complete guide
-
-Exact official REV-21-2618 block, REV-21-2710 standard endcap and REV-21-2162 standard 2x1 tube STEP revisions are pinned separately. They are not mixed with the light-tube family. The [official starter-bot build guide](https://docs.revrobotics.com/frc-kickoff-concepts/2025/build-guide), steps 39–43, establishes the corner family and opposed-stage construction, not an installed pregrip design.
-
-Keeping the block's source coordinate system, both mating parts rotate −90 degrees about X. The endcap translates (0, −22.098, 0) mm and the tube (0, −25.4, 0) mm. Native checks find zero rigid intersection for all three pairs. Block-to-cap and block-to-tube distances are nominally zero; cap-to-tube clearance is 0.127 mm. That clearance is not clamped retention. A cap shifted 3 mm into the block intersects it by about 2354.8 mm³, preserving a positive obstruction control.
-
-Native face inspection supplied the nominal hole-coordinate evidence: three 5 mm block through-hole axes along Y at X=0 and Z=−12.7/0/12.7 mm, versus simplified 2.0193 mm radius tapped-cap geometry. The report transforms those recorded coordinates and checks coincidence; it does not re-extract faces on every run or claim thread engagement. No screws, cut tube, opposed running stage, longitudinal restraint, stops, load-bearing web attachment, tolerances or actuation are assembled here.
-
-This closes a corner-registration question only. The next step is the opposing tube and bearing contact arrangement, including runout over the requested 60 mm stroke, then a fastened adapter to each season's support. NOTE's collar collision and shaft-datum counterexamples remain preserved. CORAL/FUEL support assemblies, fresh pregrip force dynamics, real sensing and season scoring chains remain unverified.

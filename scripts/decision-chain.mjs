@@ -2,7 +2,6 @@ import {validateChassisArtifact} from './chassis-chain-validation.mjs';
 import {validateFabricationArtifact} from './fabrication-chain-validation.mjs';
 import {validateHardwareCatalogArtifact} from './hardware-catalog.mjs';
 import {validateHypotheticalEnvelopeArtifact} from './hypothetical-envelope-validation.mjs';
-import {validateFuelAnnotationArtifact} from './fuel-annotation-validation.mjs';
 import {validateComparisonArtifact} from './comparison-link-validation.mjs';
 import {validateResources} from './resource-baseline.mjs';
 import {validateFieldModel} from './field-semantics.mjs';
@@ -25,10 +24,6 @@ const prerequisites = {
  'comparison-input': ['game-analysis', 'resource-baseline'],
  'comparison-experiment': ['game-analysis', 'resource-baseline', 'comparison-input'],
  'comparison-run-evidence': ['comparison-experiment'],
- 'fuel-assessor-model': ['game-analysis'],
- 'hypothetical-fuel-source': ['game-analysis'],
- 'hypothetical-fuel-event-set': ['comparison-experiment', 'game-analysis', 'fuel-assessor-model'],
- 'fuel-assessment-evidence': ['hypothetical-fuel-event-set', 'fuel-assessor-model']
 };
 const identifier = x => typeof x === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(x);
 const canonical = x => {
@@ -100,7 +95,6 @@ export function validateStudy(study) {
    kinds.add(upstream.kind);
   }
   validateComparisonArtifact(a,seen,digest);
-  validateFuelAnnotationArtifact(a,seen,digest);
   validateHypotheticalEnvelopeArtifact(a,seen,digest);
   validateHardwareCatalogArtifact(a);
   validateFabricationArtifact(a,seen,digest);

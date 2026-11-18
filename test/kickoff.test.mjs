@@ -9,31 +9,35 @@ import { buildLab, rulesModel, validateProfile } from '../scripts/kickoff.mjs';
 import { analyzeWindow } from '../scripts/kickoff-window.mjs';
 import { routeStudy } from '../scripts/kickoff-routes.mjs';
 
-const profile = JSON.parse(await readFile(new URL('../case-studies/2025/kickoff-field.json',import.meta.url)));
+const profile = JSON.parse(await readFile(new URL('../examples/kickoff/training-field.json',import.meta.url)));
 const cli = fileURLToPath(new URL('../scripts/kickoff.mjs',import.meta.url));
 
 test('release-day profile generates a standalone page outside the plugin and preserves prior exports', async t => {
   const cwd = await mkdtemp(path.join(tmpdir(),'frc-kickoff-'));
   t.after(()=>rm(cwd,{recursive:true,force:true}));
   const run = (...args)=>execFileSync(process.execPath,[cli,...args],{cwd,stdio:'pipe'});
-  run('--season','2025','--model-output','model.json');
+  await writeFile(path.join(cwd,'team-profile.json'),JSON.stringify(profile));
+  run('--profile','team-profile.json','--model-output','model.json');
   const saved=JSON.parse(await readFile(path.join(cwd,'model.json'),'utf8'));
   assert.ok(saved.routeHypotheses.every(h=>h.routeIn.length>=2));
   assert.deepEqual(rulesModel(saved),saved);
   run('--profile','model.json','--output','lab.html');
   const html=await readFile(path.join(cwd,'lab.html'),'utf8');
-  assert.match(html,/Kickoff · V0/);
+  assert.match(html,/Invented classroom exercise/);
   assert.ok(!html.includes('/* LAB */'));
   assert.doesNotMatch(html,/<script[^>]+src=/i);
-  assert.throws(()=>run('--season','2026','--output','other.html'),/release-day sources/);
+  assert.throws(()=>run('--season','0','--output','other.html'),/project-owned profile/);
+  assert.throws(()=>run('--profile','team-profile.json','--model-output',path.join(path.dirname(cli),'model.json')),/outside the plugin/);
   await assert.rejects(buildLab(profile,path.join(cwd,'lab.html')),{code:'EEXIST'});
-  const custom = {...profile,season:2030, game:'Example </script>',limits:{perimeter:null,height:null,source:'Unknown'},landmarks:[],levels:[]};
-  delete custom.scoring;
+  const custom = {...profile,season:1, game:'Example </script> /* LAB */',manual:'sources/game-release.pdf',
+    trial:{length:19.75,width:23,height:26},limits:{perimeter:null,height:null,source:'Unknown'},landmarks:[],levels:[]};
+  delete custom.scoring;delete custom.rehearsal;
   await writeFile(path.join(cwd,'profile.json'),JSON.stringify(custom));
   run('--profile','profile.json','--output','custom.html');
   const page=await readFile(path.join(cwd,'custom.html'),'utf8');
   const data=page.match(/<script id="profile" type="application\/json">([\s\S]*?)<\/script>/)[1];
   assert.deepEqual(JSON.parse(data),custom);
+  assert.match(page,/const state=initialTrial\(profile\)/);
 });
 
 test('screen rate, deadline, supply, points and limited slots independently',()=>{
@@ -53,15 +57,31 @@ test('screen rate, deadline, supply, points and limited slots independently',()=
   assert.throws(()=>analyzeWindow({...trial,cycle:0}));
 });
 
+test('one-at-a-time shuttle budgets every loaded leg and empty return',()=>{
+  const trial={stock:4,opening:4,incoming:0,arrival:0,goal:3,window:15,cycle:1.5,setup:1,travel:2.4,points:2,cap:null};
+  assert.equal(analyzeWindow({...trial,delivery:'staged'}).delivered,4);
+  const shuttle=analyzeWindow({...trial,delivery:'shuttle'});
+  assert.equal(shuttle.delivered,2);
+  assert.equal(shuttle.outboundLegs,3);
+  assert.equal(shuttle.returnLegs,2);
+  assert.equal(analyzeWindow({...trial,delivery:'shuttle',opening:0,incoming:4,arrival:14}).delivered,0);
+  assert.equal(analyzeWindow({...trial,delivery:'shuttle',travel:2,returnTravel:1,window:13.5}).delivered,3);
+});
+
 test('model infers exposure from start slots and routes without student risk labels',()=>{
-  const route=routeStudy(profile,'CORAL','reef','AUTO',null,30);
+  const model=structuredClone(profile),map=model.scoring.fieldMap;
+  map.sources.preplaced=[[90,48]];
+  map.routes[0].sourceByPhase={Opening:'preplaced'};
+  map.routes[0].preloadPhases=['Opening'];
+  validateProfile(model);
+  const route=routeStudy(model,'Tile','shelf','Opening',null,30);
   assert.equal(route.peers.length,5);
   assert.ok(route.hot.some(p=>p.count>=2));
   assert.ok(route.traffic.includes('slot'));
-  assert.notDeepEqual(route.line,routeStudy(profile,'CORAL','reef','TELEOP',null,30).line);
+  assert.notDeepEqual(route.line,routeStudy(model,'Tile','shelf','Main play',null,30).line);
   const unmodeled={...profile,scoring:undefined};
-  assert.match(routeStudy(unmodeled,'CORAL','reef','AUTO',null,30).traffic,/Unknown/);
-  const reroute=routeStudy(profile,'CORAL','reef','AUTO',{a:[80,158.5],b:[270,158.5]},30);
+  assert.match(routeStudy(unmodeled,'Tile','shelf','Opening',null,30).traffic,/Unknown/);
+  const reroute=routeStudy(profile,'Tile','shelf','Opening',{a:[80,132],b:[280,132]},30);
   assert.ok(reroute.line.length>2);
   assert.ok(reroute.length>190);
   assert.throws(()=>validateProfile({...profile,scoring:{...profile.scoring,fieldMap:{...profile.scoring.fieldMap,starts:[]}}}));
@@ -69,7 +89,8 @@ test('model infers exposure from start slots and routes without student risk lab
 
 test('reject ungrounded dimensions and invalid scene coordinates',()=>{
   for(const bad of [{units:'m'}, {field:{...profile.field,source:''}},
-    {landmarks:[{...profile.landmarks[0],x:-1}]},{edition:''},
+    {landmarks:[{...profile.landmarks[0],x:-1}]},{edition:''},{manual:'file:///manual.pdf'},
+    {manual:'../private.pdf'},{manual:'https://user:password@example.org/file'},{trial:{length:0,width:1,height:1}},
     {limits:{height:0,perimeter:100,source:'Example'}}]) {
     assert.throws(()=>validateProfile({...profile,...bad}));
   }

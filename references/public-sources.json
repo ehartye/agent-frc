@@ -1,470 +1,249 @@
 {
-  "as_of": "2026-11-15",
+  "as_of": "2026-11-18",
   "sources": [
     {
       "title": "Season Materials",
       "url": "https://www.firstinspires.org/resources/library/frc/season-materials",
-      "scope": "2026 REBUILT gateway",
+      "scope": "Locate the official manual edition and updates for your project.",
       "handling": "link-only; recheck before use",
       "id": "P01",
-      "seasons": [
-        2026
-      ],
+      "seasons": [],
       "authority_state": "technical",
       "reviewed": "2026-11-15",
       "review_due": "2026-12-15",
-      "topics": []
-    },
-    {
-      "title": "Game and Season",
-      "url": "https://www.firstinspires.org/programs/frc/game-and-season",
-      "scope": "2027 BIOCORE announcement",
-      "handling": "link-only; recheck before use",
-      "id": "P02",
-      "seasons": [
-        2027
+      "topics": [
+        "Game and Season",
+        "Game Manual"
       ],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": []
+      "designUse": "Which manual edition and updates govern this design?"
     },
     {
       "title": "Kit of Parts",
       "url": "https://www.firstinspires.org/resources/library/frc/kit-of-parts",
-      "scope": "2027 planning page",
+      "scope": "Verify the exact parts and revisions available to the project.",
       "handling": "link-only; recheck before use",
       "id": "P03",
-      "seasons": [
-        2027
-      ],
+      "seasons": [],
       "authority_state": "technical",
       "reviewed": "2026-11-15",
       "review_due": "2026-11-17",
       "topics": [
         "kit-of-parts"
-      ]
-    },
-    {
-      "title": "Safety resource portal",
-      "url": "https://www.firstinspires.org/resources/library/safety",
-      "scope": "rolling safety gateway",
-      "handling": "link-only; recheck before use",
-      "id": "P04",
-      "seasons": [],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": []
-    },
-    {
-      "title": "WPILib 2026.2.1 release",
-      "url": "https://github.com/wpilibsuite/allwpilib/releases/tag/v2026.2.1",
-      "scope": "v2026.2.1 stable",
-      "handling": "link-only; recheck before use",
-      "id": "P05",
-      "seasons": [
-        2026
       ],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "java"
-      ]
+      "designUse": "Which supplied part and revision can the team actually use?"
     },
     {
       "title": "Command-based project structure",
       "url": "https://docs.wpilib.org/en/stable/docs/software/commandbased/structuring-command-based-project.html",
-      "scope": "stable alias observed 2026-11-15",
+      "scope": "Command-based project structure reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; recheck before use",
       "id": "P06",
-      "seasons": [
-        2026
-      ],
+      "seasons": [],
       "authority_state": "technical",
       "reviewed": "2026-11-15",
       "review_due": "2026-12-15",
       "topics": [
-        "java"
-      ]
+        "Java",
+        "commands",
+        "modes"
+      ],
+      "designUse": "Which subsystem owns the actuator while two commands overlap?"
     },
     {
       "title": "Unit Testing",
       "url": "https://docs.wpilib.org/en/stable/docs/software/wpilib-tools/robot-simulation/unit-testing.html",
-      "scope": "stable; Java JUnit 5",
+      "scope": "Unit Testing reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; recheck before use",
       "id": "P07",
       "seasons": [],
       "authority_state": "technical",
       "reviewed": "2026-11-15",
       "review_due": "2026-12-15",
-      "topics": []
+      "topics": [],
+      "designUse": "How will an offline test observe interruption and cleanup?"
     },
     {
       "title": "Robot Simulation introduction",
       "url": "https://docs.wpilib.org/en/stable/docs/software/wpilib-tools/robot-simulation/introduction.html",
-      "scope": "stable alias",
+      "scope": "Robot Simulation introduction reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; recheck before use",
       "id": "P08",
       "seasons": [],
       "authority_state": "technical",
       "reviewed": "2026-11-15",
       "review_due": "2026-12-15",
-      "topics": []
-    },
-    {
-      "title": "WPILib Example Projects",
-      "url": "https://docs.wpilib.org/en/stable/docs/software/examples-tutorials/wpilib-examples.html",
-      "scope": "stable; examples tied to release",
-      "handling": "link-only; recheck before use",
-      "id": "P09",
-      "seasons": [],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "java"
-      ]
+      "topics": [],
+      "designUse": "Which simulated feedback can exercise this command?"
     },
     {
       "title": "Pose Estimators",
       "url": "https://docs.wpilib.org/en/stable/docs/software/advanced-controls/state-space/state-space-pose-estimators.html",
-      "scope": "stable alias",
+      "scope": "Pose Estimators reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; recheck before use",
       "id": "P10",
       "seasons": [],
       "authority_state": "technical",
       "reviewed": "2026-11-15",
       "review_due": "2026-12-15",
-      "topics": []
+      "topics": [],
+      "designUse": "How should measurement uncertainty affect a pose update?"
     },
     {
       "title": "Coordinate System",
       "url": "https://docs.wpilib.org/en/stable/docs/software/basic-programming/coordinate-system.html",
-      "scope": "stable alias",
+      "scope": "Coordinate System reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; recheck before use",
       "id": "P11",
       "seasons": [],
       "authority_state": "technical",
       "reviewed": "2026-11-15",
       "review_due": "2026-12-15",
-      "topics": []
-    },
-    {
-      "title": "Autodesk FIRST Robotics resources",
-      "url": "https://www.autodesk.com/education/competitions/first",
-      "scope": "rolling; 2026 resources linked",
-      "handling": "link-only; recheck before use",
-      "id": "P12",
-      "seasons": [
-        2026
-      ],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": []
+      "topics": [],
+      "designUse": "What axis and heading convention connects the robot, field and sensors?"
     },
     {
       "title": "Fusion components",
       "url": "https://help.autodesk.com/view/fusion360/ENU/?contextId=ASM-COMPONENTS",
-      "scope": "rolling Fusion help",
+      "scope": "Fusion components reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; recheck before use",
       "id": "P13",
       "seasons": [],
       "authority_state": "technical",
       "reviewed": "2026-11-15",
       "review_due": "2026-12-15",
-      "topics": []
+      "topics": [],
+      "designUse": "Which bodies must move as one component?"
     },
     {
       "title": "Fusion assembly relationships",
       "url": "https://help.autodesk.com/view/fusion360/ENU/?contextId=ASM-JOINTS",
-      "scope": "rolling Fusion help",
+      "scope": "Fusion assembly relationships reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; recheck before use",
       "id": "P14",
       "seasons": [],
       "authority_state": "technical",
       "reviewed": "2026-11-15",
       "review_due": "2026-12-15",
-      "topics": []
+      "topics": [],
+      "designUse": "Which joint axis, limits and parent represent the intended motion?"
     },
     {
       "title": "Fusion export designs",
       "url": "https://help.autodesk.com/view/fusion360/ENU/?contextId=ASM-EXPORT-DESIGN",
-      "scope": "rolling Fusion help",
+      "scope": "Fusion export designs reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; recheck before use",
       "id": "P15",
       "seasons": [],
       "authority_state": "technical",
       "reviewed": "2026-11-15",
       "review_due": "2026-12-15",
-      "topics": []
-    },
-    {
-      "title": "Team 254 FRC 2024 public code",
-      "url": "https://github.com/Team254/FRC-2024-Public",
-      "scope": "2024; commit 040f653744c9b18182be5f6bc51a7e505e346e59",
-      "handling": "link-only; recheck before use",
-      "id": "P16",
-      "seasons": [
-        2024
-      ],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": []
-    },
-    {
-      "title": "Team 6328 RobotCode2024Public",
-      "url": "https://github.com/Mechanical-Advantage/RobotCode2024Public",
-      "scope": "2024; commit 45144b3daefaca93a54de1d5c5e163c29d9ad378",
-      "handling": "link-only; recheck before use",
-      "id": "P17",
-      "seasons": [
-        2024
-      ],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": []
+      "topics": [],
+      "designUse": "Which native or exchange format preserves the deliverable this reviewer needs?"
     },
     {
       "title": "PhotonVision pose estimator",
       "url": "https://docs.photonvision.org/en/latest/docs/programming/photonlib/robot-pose-estimator.html",
-      "scope": "rolling latest; API differs from some 2026 docs",
+      "scope": "PhotonVision pose estimator reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; recheck before use",
       "id": "P18",
-      "seasons": [
-        2026
-      ],
+      "seasons": [],
       "authority_state": "technical",
       "reviewed": "2026-11-15",
       "review_due": "2026-12-15",
-      "topics": []
+      "topics": [],
+      "designUse": "Which camera pose and timestamp feed the estimator?"
     },
     {
       "title": "Limelight MegaTag2 localization",
       "url": "https://docs.limelightvision.io/docs/docs-limelight/pipeline-apriltag/apriltag-robot-localization-megatag2",
-      "scope": "rolling documentation",
+      "scope": "Limelight MegaTag2 localization reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; recheck before use",
       "id": "P19",
       "seasons": [],
       "authority_state": "technical",
       "reviewed": "2026-11-15",
       "review_due": "2026-12-15",
-      "topics": []
+      "topics": [],
+      "designUse": "Which heading input does the selected localization pipeline require?"
     },
     {
       "title": "Phoenix 6 current limits",
       "url": "https://v6.docs.ctr-electronics.com/en/stable/docs/hardware-reference/talonfx/improving-performance-with-current-limits.html",
-      "scope": "Phoenix 6 stable; Talon-specific",
+      "scope": "Phoenix 6 current limits reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; recheck before use",
       "id": "P20",
       "seasons": [],
       "authority_state": "technical",
       "reviewed": "2026-11-15",
       "review_due": "2026-12-15",
-      "topics": []
-    },
-    {
-      "id": "P21",
-      "title": "2026 Java build template",
-      "url": "https://raw.githubusercontent.com/wpilibsuite/vscode-wpilib/v2026.2.1/vscode-wpilib/resources/gradle/java/build.gradle",
-      "scope": "v2026.2.1",
-      "seasons": [
-        2026
-      ],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "java",
-        "testing"
-      ],
-      "handling": "link-only; upstream BSD notice retained for adapted build"
+      "topics": [],
+      "designUse": "Which configured current limit bounds the actuator model?"
     },
     {
       "id": "PUBLIC-N01",
       "title": "Trajectory generation",
-      "url": "https://raw.githubusercontent.com/wpilibsuite/allwpilib/v2026.2.1/wpimath/src/main/java/edu/wpi/first/math/trajectory/TrajectoryGenerator.java",
-      "scope": "v2026.2.1",
+      "url": "https://raw.githubusercontent.com/wpilibsuite/allwpilib/c89401250fbd412ba050f595551d0a451b7307a2/wpimath/src/main/java/edu/wpi/first/math/trajectory/TrajectoryGenerator.java",
+      "scope": "Trajectory generation reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; original lesson references",
-      "seasons": [
-        2026
-      ],
+      "seasons": [],
       "authority_state": "technical",
       "reviewed": "2026-11-15",
       "review_due": "2026-12-15",
       "topics": [
         "trajectory"
-      ]
+      ],
+      "designUse": "How should route waypoints become a time-parameterized path?"
     },
     {
       "id": "PUBLIC-N02",
       "title": "Trajectory configuration",
-      "url": "https://raw.githubusercontent.com/wpilibsuite/allwpilib/v2026.2.1/wpimath/src/main/java/edu/wpi/first/math/trajectory/TrajectoryConfig.java",
-      "scope": "v2026.2.1",
+      "url": "https://raw.githubusercontent.com/wpilibsuite/allwpilib/c89401250fbd412ba050f595551d0a451b7307a2/wpimath/src/main/java/edu/wpi/first/math/trajectory/TrajectoryConfig.java",
+      "scope": "Trajectory configuration reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; original lesson references",
-      "seasons": [
-        2026
-      ],
+      "seasons": [],
       "authority_state": "technical",
       "reviewed": "2026-11-15",
       "review_due": "2026-12-15",
       "topics": [
         "trajectory"
-      ]
-    },
-    {
-      "id": "PUBLIC-N03",
-      "title": "LTV unicycle controller",
-      "url": "https://raw.githubusercontent.com/wpilibsuite/allwpilib/v2026.2.1/wpimath/src/main/java/edu/wpi/first/math/controller/LTVUnicycleController.java",
-      "scope": "v2026.2.1",
-      "handling": "link-only; original lesson references",
-      "seasons": [
-        2026
       ],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "trajectory"
-      ]
+      "designUse": "Which constraints bound the trajectory?"
     },
     {
       "id": "PUBLIC-N04",
       "title": "Differential drive kinematics",
-      "url": "https://raw.githubusercontent.com/wpilibsuite/allwpilib/v2026.2.1/wpimath/src/main/java/edu/wpi/first/math/kinematics/DifferentialDriveKinematics.java",
-      "scope": "v2026.2.1",
+      "url": "https://raw.githubusercontent.com/wpilibsuite/allwpilib/c89401250fbd412ba050f595551d0a451b7307a2/wpimath/src/main/java/edu/wpi/first/math/kinematics/DifferentialDriveKinematics.java",
+      "scope": "Differential drive kinematics reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; original lesson references",
-      "seasons": [
-        2026
-      ],
+      "seasons": [],
       "authority_state": "technical",
       "reviewed": "2026-11-15",
       "review_due": "2026-12-15",
       "topics": [
         "trajectory"
-      ]
-    },
-    {
-      "id": "PUBLIC-N05",
-      "title": "Upstream LTV tests",
-      "url": "https://raw.githubusercontent.com/wpilibsuite/allwpilib/v2026.2.1/wpimath/src/test/java/edu/wpi/first/math/controller/LTVUnicycleControllerTest.java",
-      "scope": "v2026.2.1",
-      "handling": "link-only; original lesson references",
-      "seasons": [
-        2026
       ],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "trajectory"
-      ]
-    },
-    {
-      "id": "PUBLIC-N06",
-      "title": "Legacy Ramsete controller",
-      "url": "https://raw.githubusercontent.com/wpilibsuite/allwpilib/v2026.2.1/wpimath/src/main/java/edu/wpi/first/math/controller/RamseteController.java",
-      "scope": "v2026.2.1",
-      "handling": "link-only; original lesson references",
-      "seasons": [
-        2026
-      ],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "trajectory"
-      ]
+      "designUse": "How do commanded chassis speeds map to left and right wheel speeds?"
     },
     {
       "id": "PUBLIC-N07",
       "title": "Differential drive pose estimator",
-      "url": "https://raw.githubusercontent.com/wpilibsuite/allwpilib/v2026.2.1/wpimath/src/main/java/edu/wpi/first/math/estimator/DifferentialDrivePoseEstimator.java",
-      "scope": "v2026.2.1",
+      "url": "https://raw.githubusercontent.com/wpilibsuite/allwpilib/c89401250fbd412ba050f595551d0a451b7307a2/wpimath/src/main/java/edu/wpi/first/math/estimator/DifferentialDrivePoseEstimator.java",
+      "scope": "Differential drive pose estimator reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; original lesson references",
-      "seasons": [
-        2026
-      ],
+      "seasons": [],
       "authority_state": "technical",
       "reviewed": "2026-11-15",
       "review_due": "2026-12-15",
       "topics": [
         "pose-estimation"
-      ]
-    },
-    {
-      "id": "PUBLIC-N08",
-      "title": "Pose estimator implementation",
-      "url": "https://raw.githubusercontent.com/wpilibsuite/allwpilib/v2026.2.1/wpimath/src/main/java/edu/wpi/first/math/estimator/PoseEstimator.java",
-      "scope": "v2026.2.1",
-      "handling": "link-only; original lesson references",
-      "seasons": [
-        2026
       ],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "pose-estimation"
-      ]
-    },
-    {
-      "id": "PUBLIC-N09",
-      "title": "Time interpolation buffer",
-      "url": "https://raw.githubusercontent.com/wpilibsuite/allwpilib/v2026.2.1/wpimath/src/main/java/edu/wpi/first/math/interpolation/TimeInterpolatableBuffer.java",
-      "scope": "v2026.2.1",
-      "handling": "link-only; original lesson references",
-      "seasons": [
-        2026
-      ],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "pose-estimation"
-      ]
-    },
-    {
-      "id": "PUBLIC-N10",
-      "title": "Odometry implementation",
-      "url": "https://raw.githubusercontent.com/wpilibsuite/allwpilib/v2026.2.1/wpimath/src/main/java/edu/wpi/first/math/kinematics/Odometry.java",
-      "scope": "v2026.2.1",
-      "handling": "link-only; original lesson references",
-      "seasons": [
-        2026
-      ],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "pose-estimation"
-      ]
-    },
-    {
-      "id": "PUBLIC-N11",
-      "title": "Upstream pose-estimator tests",
-      "url": "https://raw.githubusercontent.com/wpilibsuite/allwpilib/v2026.2.1/wpimath/src/test/java/edu/wpi/first/math/estimator/DifferentialDrivePoseEstimatorTest.java",
-      "scope": "v2026.2.1",
-      "handling": "link-only; original lesson references",
-      "seasons": [
-        2026
-      ],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "pose-estimation"
-      ]
+      "designUse": "Which encoder and gyro inputs belong to this pose update?"
     },
     {
       "id": "PUBLIC-PWR01",
       "title": "REV PDH specifications",
       "url": "https://docs.revrobotics.com/ion-control/pdh/specs",
-      "scope": "REV-11-1850; living documentation",
+      "scope": "REV PDH specifications reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; original lesson references",
       "seasons": [],
       "authority_state": "technical",
@@ -472,13 +251,14 @@
       "review_due": "2026-12-15",
       "topics": [
         "power"
-      ]
+      ],
+      "designUse": "Which branch and connector ratings govern the proposed load?"
     },
     {
       "id": "PUBLIC-PWR02",
       "title": "REV PDH wiring",
       "url": "https://docs.revrobotics.com/ion-control/pdh/gs/wiring",
-      "scope": "REV-11-1850; living documentation",
+      "scope": "REV PDH wiring reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; original lesson references",
       "seasons": [],
       "authority_state": "technical",
@@ -486,111 +266,14 @@
       "review_due": "2026-12-15",
       "topics": [
         "power"
-      ]
-    },
-    {
-      "id": "PUBLIC-PWR03",
-      "title": "REV Hardware Client 2",
-      "url": "https://docs.revrobotics.com/rev-hardware-client-2",
-      "scope": "PDH support; firmware26.x or newer",
-      "handling": "link-only; original lesson references",
-      "seasons": [],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "power"
-      ]
-    },
-    {
-      "id": "PUBLIC-PWR04",
-      "title": "Legacy PDH Hardware Client page",
-      "url": "https://docs.revrobotics.com/rev-hardware-client/ion/power-distribution-hub",
-      "scope": "legacy client; 2026 migration notice",
-      "handling": "link-only; original lesson references",
-      "seasons": [],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "power"
-      ]
-    },
-    {
-      "id": "PUBLIC-PWR05",
-      "title": "CTRE PDP2 manual",
-      "url": "https://ctre.download/files/user-manual/PDP%202.0%20User%27s%20Guide.pdf",
-      "scope": "24-806880; cover1.0 Jan27 2025; history1.1 Jun30 2025",
-      "handling": "link-only; original lesson references",
-      "seasons": [],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "power"
-      ]
-    },
-    {
-      "id": "PUBLIC-PWR06",
-      "title": "CTRE PDP2 product",
-      "url": "https://store.ctr-electronics.com/products/pdp-2",
-      "scope": "PDP2; current product page",
-      "handling": "link-only; original lesson references",
-      "seasons": [],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "power"
-      ]
-    },
-    {
-      "id": "PUBLIC-PWR07",
-      "title": "NOCO GEN charger guide",
-      "url": "https://no.co/media/wysiwyg/downloads/User_Guides/GEN/GEN_Series_NA_User_Guide_10.30.2024A.pdf",
-      "scope": "GEN5X1/GEN5X2/GEN5X3; filename10.30.2024A",
-      "handling": "link-only; original lesson references",
-      "seasons": [],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "battery"
-      ]
-    },
-    {
-      "id": "PUBLIC-PWR08",
-      "title": "Power-Sonic SLA AGM SDS",
-      "url": "https://cdn.power-sonic.com/documents/Power-Sonic_Lead-Acid_SDS-Report-70.405.23.0485.01.pdf",
-      "scope": "70.405.23.0485.01; 2023-02-24 v1.0",
-      "handling": "link-only; original lesson references",
-      "seasons": [],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "battery"
-      ]
-    },
-    {
-      "id": "PUBLIC-PWR09",
-      "title": "East Penn VRLA SDS",
-      "url": "https://www.eastpennmanufacturing.com/wp-content/uploads/Valve-Regulated-Lead-Acid-Battery_SDS_US-English-1.pdf",
-      "scope": "967664 v01; 2024-02-06",
-      "handling": "link-only; original lesson references",
-      "seasons": [],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "battery"
-      ]
+      ],
+      "designUse": "How should the electrical drawing identify branch connections?"
     },
     {
       "id": "PUBLIC-PN01",
       "title": "REV PH wiring",
       "url": "https://docs.revrobotics.com/ion-control/ph/gs/wiring",
-      "scope": "REV-11-1852; living documentation",
+      "scope": "REV PH wiring reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; original lesson references",
       "seasons": [],
       "authority_state": "technical",
@@ -598,13 +281,14 @@
       "review_due": "2026-12-15",
       "topics": [
         "pneumatics"
-      ]
+      ],
+      "designUse": "Which terminals should appear in the pneumatic controls drawing?"
     },
     {
       "id": "PUBLIC-PN02",
       "title": "REV PH specifications",
       "url": "https://docs.revrobotics.com/ion-control/ph/specs",
-      "scope": "REV-11-1852; connector revisions differ",
+      "scope": "REV PH specifications reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; original lesson references",
       "seasons": [],
       "authority_state": "technical",
@@ -612,13 +296,14 @@
       "review_due": "2026-12-15",
       "topics": [
         "pneumatics"
-      ]
+      ],
+      "designUse": "What electrical loads and sensors can this hub support?"
     },
     {
       "id": "PUBLIC-PN03",
       "title": "REV PH firmware changelog",
       "url": "https://docs.revrobotics.com/ion-control/ph/ph-changelog",
-      "scope": "through26.1.3; dates unspecified",
+      "scope": "REV PH firmware changelog reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; original lesson references",
       "seasons": [],
       "authority_state": "technical",
@@ -626,13 +311,14 @@
       "review_due": "2026-12-15",
       "topics": [
         "pneumatics"
-      ]
+      ],
+      "designUse": "Could the project firmware revision explain the observed hub behavior?"
     },
     {
       "id": "PUBLIC-PN04",
       "title": "CTRE PCM manual",
       "url": "https://ctre.download/files/user-manual/PCM%20User%27s%20Guide.pdf",
-      "scope": "revision1.4; 2018-03-30",
+      "scope": "CTRE PCM manual reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; original lesson references",
       "seasons": [],
       "authority_state": "technical",
@@ -640,125 +326,14 @@
       "review_due": "2026-12-15",
       "topics": [
         "pneumatics"
-      ]
-    },
-    {
-      "id": "PUBLIC-H01",
-      "title": "Team254 superstructure factories",
-      "url": "https://raw.githubusercontent.com/Team254/FRC-2024-Public/040f653744c9b18182be5f6bc51a7e505e346e59/src/main/java/com/team254/frc2024/command_factories/SuperstructureFactory.java",
-      "scope": "2024; commit040f653744c9b18182be5f6bc51a7e505e346e59; selected first325lines",
-      "handling": "link-only; original lesson references",
-      "seasons": [
-        2024
       ],
-      "authority_state": "historical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "mechanisms"
-      ]
-    },
-    {
-      "id": "PUBLIC-H02",
-      "title": "Team254 aiming factory",
-      "url": "https://raw.githubusercontent.com/Team254/FRC-2024-Public/040f653744c9b18182be5f6bc51a7e505e346e59/src/main/java/com/team254/frc2024/command_factories/AimFactory.java",
-      "scope": "2024; commit040f653744c9b18182be5f6bc51a7e505e346e59",
-      "handling": "link-only; original lesson references",
-      "seasons": [
-        2024
-      ],
-      "authority_state": "historical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "mechanisms"
-      ]
-    },
-    {
-      "id": "PUBLIC-H03",
-      "title": "Team254 branching autonomous",
-      "url": "https://raw.githubusercontent.com/Team254/FRC-2024-Public/040f653744c9b18182be5f6bc51a7e505e346e59/src/main/java/com/team254/frc2024/commands/autocommands/BranchingAutoInterrupt.java",
-      "scope": "2024; commit040f653744c9b18182be5f6bc51a7e505e346e59",
-      "handling": "link-only; original lesson references",
-      "seasons": [
-        2024
-      ],
-      "authority_state": "historical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "autonomous"
-      ]
-    },
-    {
-      "id": "PUBLIC-H04",
-      "title": "Team6328 roller coordinator",
-      "url": "https://raw.githubusercontent.com/Mechanical-Advantage/RobotCode2024Public/45144b3daefaca93a54de1d5c5e163c29d9ad378/src/main/java/org/littletonrobotics/frc2024/subsystems/rollers/Rollers.java",
-      "scope": "2024; commit45144b3daefaca93a54de1d5c5e163c29d9ad378",
-      "handling": "link-only; original lesson references",
-      "seasons": [
-        2024
-      ],
-      "authority_state": "historical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "mechanisms"
-      ]
-    },
-    {
-      "id": "PUBLIC-H05",
-      "title": "Team6328 superstructure coordinator",
-      "url": "https://raw.githubusercontent.com/Mechanical-Advantage/RobotCode2024Public/45144b3daefaca93a54de1d5c5e163c29d9ad378/src/main/java/org/littletonrobotics/frc2024/subsystems/superstructure/Superstructure.java",
-      "scope": "2024; commit45144b3daefaca93a54de1d5c5e163c29d9ad378",
-      "handling": "link-only; original lesson references",
-      "seasons": [
-        2024
-      ],
-      "authority_state": "historical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "mechanisms"
-      ]
-    },
-    {
-      "id": "PUBLIC-PWR10",
-      "title": "AndyMark AMPD product",
-      "url": "https://andymark.com/products/ampd-andymark-power-distribution",
-      "scope": "am-5754; living page, date unspecified",
-      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
-      "license": "Redistribution permission not established",
-      "seasons": [],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "AMPD",
-        "power"
-      ]
-    },
-    {
-      "id": "PUBLIC-PWR11",
-      "title": "AndyMark AMPD installation overview",
-      "url": "https://docs.andymark.com/frc-electronics/power-distribution/ampd-andymark-power-distribution-am-5754",
-      "scope": "am-5754; living page, date unspecified",
-      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
-      "license": "Redistribution permission not established",
-      "seasons": [],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "AMPD",
-        "power"
-      ]
+      "designUse": "Which outputs and diagnostics does this module revision support?"
     },
     {
       "id": "PUBLIC-B01",
       "title": "MK ES17-12 manufacturer datasheet",
       "url": "https://documents.andymark.com/cacc1eb873bfa1d6bda7b8a738560a16992dd936cd4f6e119a512326d85e2759/am-0844%20ES17-12%20User%20Guide.pdf",
-      "scope": "copyright2018; exact ES17-12; current revision not verified",
+      "scope": "MK ES17-12 manufacturer datasheet reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
       "license": "MK expressly restricts reproduction without written permission",
       "seasons": [],
@@ -768,13 +343,14 @@
       "topics": [
         "battery",
         "charging"
-      ]
+      ],
+      "designUse": "Which load and current assumptions apply to the selected battery?"
     },
     {
       "id": "PUBLIC-B02",
       "title": "Power-Sonic PS-12180 official datasheet",
       "url": "https://www.power-sonic.com/wp-content/uploads/datasheets/ps-12180-12181.pdf",
-      "scope": "v1.2; updated2026-08-18; F2/FR M5/M5/NB2 variants",
+      "scope": "Power-Sonic PS-12180 official datasheet reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
       "license": "Power-Sonic all rights reserved",
       "seasons": [],
@@ -784,357 +360,14 @@
       "topics": [
         "battery",
         "charging"
-      ]
-    },
-    {
-      "id": "PUBLIC-B03",
-      "title": "Power-Sonic NB-labeled historical datasheet",
-      "url": "https://files.batteryjunction.com/frontend/files/powersonic/datasheet/POWERSONIC-PS-12180-NB-DataSheet.pdf",
-      "scope": "Rev1:08/20; copyright2018; NB illustration/NB2 drawing",
-      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
-      "license": "Power-Sonic all rights reserved",
-      "seasons": [],
-      "authority_state": "historical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "battery",
-        "charging"
-      ]
-    },
-    {
-      "id": "PUBLIC-H06",
-      "title": "Team254 RobotContainer caller audit",
-      "url": "https://raw.githubusercontent.com/Team254/FRC-2024-Public/040f653744c9b18182be5f6bc51a7e505e346e59/src/main/java/com/team254/frc2024/RobotContainer.java",
-      "scope": "2024 commit040f653744c9b18182be5f6bc51a7e505e346e59; selected bindings/defaults",
-      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
-      "license": "File-level WPILib BSD header; root MIT is insufficient alone",
-      "seasons": [
-        2024
       ],
-      "authority_state": "historical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "mechanisms",
-        "caller"
-      ]
-    },
-    {
-      "id": "PUBLIC-H07",
-      "title": "Team254 ShooterFactory",
-      "url": "https://raw.githubusercontent.com/Team254/FRC-2024-Public/040f653744c9b18182be5f6bc51a7e505e346e59/src/main/java/com/team254/frc2024/command_factories/ShooterFactory.java",
-      "scope": "2024 commit040f653744c9b18182be5f6bc51a7e505e346e59",
-      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
-      "license": "Root MIT previously verified; file/dependency terms must be checked before copying",
-      "seasons": [
-        2024
-      ],
-      "authority_state": "historical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "mechanisms",
-        "cleanup"
-      ]
-    },
-    {
-      "id": "PUBLIC-H08",
-      "title": "Team254 ShooterStage1Subsystem",
-      "url": "https://raw.githubusercontent.com/Team254/FRC-2024-Public/040f653744c9b18182be5f6bc51a7e505e346e59/src/main/java/com/team254/frc2024/subsystems/shooterStage1/ShooterStage1Subsystem.java",
-      "scope": "2024 commit040f653744c9b18182be5f6bc51a7e505e346e59",
-      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
-      "license": "Root MIT previously verified; file/dependency terms must be checked before copying",
-      "seasons": [
-        2024
-      ],
-      "authority_state": "historical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "mechanisms",
-        "cleanup"
-      ]
-    },
-    {
-      "id": "PUBLIC-H09",
-      "title": "Team254 ServoMotorSubsystem",
-      "url": "https://raw.githubusercontent.com/Team254/FRC-2024-Public/040f653744c9b18182be5f6bc51a7e505e346e59/src/main/java/com/team254/lib/subsystems/ServoMotorSubsystem.java",
-      "scope": "2024 commit040f653744c9b18182be5f6bc51a7e505e346e59",
-      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
-      "license": "Root MIT previously verified; file/dependency terms must be checked before copying",
-      "seasons": [
-        2024
-      ],
-      "authority_state": "historical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "mechanisms",
-        "cleanup"
-      ]
-    },
-    {
-      "id": "PUBLIC-H10",
-      "title": "Team254 FeederSubsystem",
-      "url": "https://raw.githubusercontent.com/Team254/FRC-2024-Public/040f653744c9b18182be5f6bc51a7e505e346e59/src/main/java/com/team254/frc2024/subsystems/feeder/FeederSubsystem.java",
-      "scope": "2024 commit040f653744c9b18182be5f6bc51a7e505e346e59",
-      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
-      "license": "Root MIT previously verified; file/dependency terms must be checked before copying",
-      "seasons": [
-        2024
-      ],
-      "authority_state": "historical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "mechanisms",
-        "cleanup"
-      ]
-    },
-    {
-      "id": "PUBLIC-H11",
-      "title": "Team6328 RobotContainer caller audit",
-      "url": "https://raw.githubusercontent.com/Mechanical-Advantage/RobotCode2024Public/45144b3daefaca93a54de1d5c5e163c29d9ad378/src/main/java/org/littletonrobotics/frc2024/RobotContainer.java",
-      "scope": "2024 commit45144b3daefaca93a54de1d5c5e163c29d9ad378; selected shooting bindings",
-      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
-      "license": "Root MIT previously verified; file/dependency terms must be checked before copying",
-      "seasons": [
-        2024
-      ],
-      "authority_state": "historical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "mechanisms",
-        "caller"
-      ]
-    },
-    {
-      "id": "PUBLIC-H12",
-      "title": "Team6328 autonomous feed helper",
-      "url": "https://raw.githubusercontent.com/Mechanical-Advantage/RobotCode2024Public/45144b3daefaca93a54de1d5c5e163c29d9ad378/src/main/java/org/littletonrobotics/frc2024/commands/auto/AutoCommands.java",
-      "scope": "2024 commit45144b3daefaca93a54de1d5c5e163c29d9ad378",
-      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
-      "license": "Root MIT previously verified; file/dependency terms must be checked before copying",
-      "seasons": [
-        2024
-      ],
-      "authority_state": "historical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "autonomous",
-        "caller"
-      ]
-    },
-    {
-      "id": "PUBLIC-H13",
-      "title": "Team6328 autonomous caller policies",
-      "url": "https://raw.githubusercontent.com/Mechanical-Advantage/RobotCode2024Public/45144b3daefaca93a54de1d5c5e163c29d9ad378/src/main/java/org/littletonrobotics/frc2024/commands/auto/AutoBuilder.java",
-      "scope": "2024 commit45144b3daefaca93a54de1d5c5e163c29d9ad378; selected routes",
-      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
-      "license": "Root MIT previously verified; file/dependency terms must be checked before copying",
-      "seasons": [
-        2024
-      ],
-      "authority_state": "historical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "autonomous",
-        "caller"
-      ]
-    },
-    {
-      "id": "PUBLIC-H14",
-      "title": "Team6328 feeder goals",
-      "url": "https://raw.githubusercontent.com/Mechanical-Advantage/RobotCode2024Public/45144b3daefaca93a54de1d5c5e163c29d9ad378/src/main/java/org/littletonrobotics/frc2024/subsystems/rollers/feeder/Feeder.java",
-      "scope": "2024 commit45144b3daefaca93a54de1d5c5e163c29d9ad378",
-      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
-      "license": "Root MIT previously verified; file/dependency terms must be checked before copying",
-      "seasons": [
-        2024
-      ],
-      "authority_state": "historical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "mechanisms",
-        "cleanup"
-      ]
-    },
-    {
-      "id": "PUBLIC-H15",
-      "title": "Team6328 generic roller output",
-      "url": "https://raw.githubusercontent.com/Mechanical-Advantage/RobotCode2024Public/45144b3daefaca93a54de1d5c5e163c29d9ad378/src/main/java/org/littletonrobotics/frc2024/subsystems/rollers/GenericRollerSystem.java",
-      "scope": "2024 commit45144b3daefaca93a54de1d5c5e163c29d9ad378",
-      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
-      "license": "Root MIT previously verified; file/dependency terms must be checked before copying",
-      "seasons": [
-        2024
-      ],
-      "authority_state": "historical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "mechanisms",
-        "cleanup"
-      ]
-    },
-    {
-      "id": "PUBLIC-Q01",
-      "title": "WPILib sequential command lifecycle",
-      "url": "https://raw.githubusercontent.com/wpilibsuite/allwpilib/v2026.2.1/wpilibNewCommands/src/main/java/edu/wpi/first/wpilibj2/command/SequentialCommandGroup.java",
-      "scope": "v2026.2.1; edu.wpi.first command API",
-      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
-      "license": "WPILib BSD-3-Clause; existing notice retained",
-      "seasons": [
-        2026
-      ],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "commands",
-        "cleanup"
-      ]
-    },
-    {
-      "id": "PUBLIC-Q02",
-      "title": "WPILib command factories",
-      "url": "https://raw.githubusercontent.com/wpilibsuite/allwpilib/v2026.2.1/wpilibNewCommands/src/main/java/edu/wpi/first/wpilibj2/command/Commands.java",
-      "scope": "v2026.2.1; edu.wpi.first command API",
-      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
-      "license": "WPILib BSD-3-Clause; existing notice retained",
-      "seasons": [
-        2026
-      ],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "commands",
-        "cleanup"
-      ]
-    },
-    {
-      "id": "PUBLIC-Q03",
-      "title": "WPILib command scheduler",
-      "url": "https://raw.githubusercontent.com/wpilibsuite/allwpilib/v2026.2.1/wpilibNewCommands/src/main/java/edu/wpi/first/wpilibj2/command/CommandScheduler.java",
-      "scope": "v2026.2.1; edu.wpi.first command API",
-      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
-      "license": "WPILib BSD-3-Clause; existing notice retained",
-      "seasons": [
-        2026
-      ],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "commands",
-        "cleanup"
-      ]
-    },
-    {
-      "id": "PUBLIC-Q04",
-      "title": "WPILib trigger edge behavior",
-      "url": "https://raw.githubusercontent.com/wpilibsuite/allwpilib/v2026.2.1/wpilibNewCommands/src/main/java/edu/wpi/first/wpilibj2/command/button/Trigger.java",
-      "scope": "v2026.2.1; edu.wpi.first command API",
-      "handling": "link-only; original concise synthesis; no third-party body or CAD redistributed",
-      "license": "WPILib BSD-3-Clause; existing notice retained",
-      "seasons": [
-        2026
-      ],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "commands",
-        "cleanup"
-      ]
-    },
-    {
-      "id": "PUBLIC-H16",
-      "title": "Team254 declared build baseline",
-      "url": "https://raw.githubusercontent.com/Team254/FRC-2024-Public/040f653744c9b18182be5f6bc51a7e505e346e59/build.gradle",
-      "scope": "2024; commit040f653744c9b18182be5f6bc51a7e505e346e59",
-      "handling": "link-only; original concise metadata/synthesis; no source body or configuration values copied",
-      "license": "Root MIT previously reviewed; file/dependency terms require separate check before copying",
-      "seasons": [
-        2024
-      ],
-      "authority_state": "historical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "historical",
-        "lifecycle",
-        "build"
-      ]
-    },
-    {
-      "id": "PUBLIC-H17",
-      "title": "Team6328 declared build baseline",
-      "url": "https://raw.githubusercontent.com/Mechanical-Advantage/RobotCode2024Public/45144b3daefaca93a54de1d5c5e163c29d9ad378/build.gradle",
-      "scope": "2024; commit45144b3daefaca93a54de1d5c5e163c29d9ad378",
-      "handling": "link-only; original concise metadata/synthesis; no source body or configuration values copied",
-      "license": "Root MIT previously reviewed; file/dependency terms require separate check before copying",
-      "seasons": [
-        2024
-      ],
-      "authority_state": "historical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "historical",
-        "lifecycle",
-        "build"
-      ]
-    },
-    {
-      "id": "PUBLIC-H18",
-      "title": "Team254 Robot lifecycle",
-      "url": "https://raw.githubusercontent.com/Team254/FRC-2024-Public/040f653744c9b18182be5f6bc51a7e505e346e59/src/main/java/com/team254/frc2024/Robot.java",
-      "scope": "2024; commit040f653744c9b18182be5f6bc51a7e505e346e59",
-      "handling": "link-only; original concise metadata/synthesis; no source body or configuration values copied",
-      "license": "File-level WPILib BSD header",
-      "seasons": [
-        2024
-      ],
-      "authority_state": "historical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "historical",
-        "lifecycle",
-        "build"
-      ]
-    },
-    {
-      "id": "PUBLIC-H19",
-      "title": "Team6328 Robot lifecycle",
-      "url": "https://raw.githubusercontent.com/Mechanical-Advantage/RobotCode2024Public/45144b3daefaca93a54de1d5c5e163c29d9ad378/src/main/java/org/littletonrobotics/frc2024/Robot.java",
-      "scope": "2024; commit45144b3daefaca93a54de1d5c5e163c29d9ad378",
-      "handling": "link-only; original concise metadata/synthesis; no source body or configuration values copied",
-      "license": "Root MIT previously reviewed; file/dependency terms require separate check before copying",
-      "seasons": [
-        2024
-      ],
-      "authority_state": "historical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "historical",
-        "lifecycle",
-        "build"
-      ]
+      "designUse": "Does the datasheet describe the exact selected battery variant?"
     },
     {
       "id": "PUBLIC-PWR12",
       "title": "Anderson SB connector assembly sheet",
       "url": "https://p1.aprimocdn.net/idealindustries/844e8917-e9ae-4321-a8d3-b3f00073abcc/ap-web_product-assets_default_instructions_1S1030A_Original%20file.pdf",
-      "scope": "1S1030A REV 19; two pages",
+      "scope": "Anderson SB connector assembly sheet reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; original concise annotation; no PDF, table or asset copied",
       "license": "Redistribution permission not established",
       "seasons": [],
@@ -1147,13 +380,14 @@
         "connector",
         "SB50"
       ],
-      "limits": "No physical inspection, crimp qualification, full numerical-table transcription or season legality determination"
+      "limits": "No physical inspection, crimp qualification, full numerical-table transcription or season legality determination",
+      "designUse": "Which terminal assembly fits the proposed connector?"
     },
     {
       "id": "PUBLIC-PWR13",
       "title": "Anderson SB50 crimp specification",
       "url": "https://p1.aprimocdn.net/idealindustries/355cb8ff-28fc-4230-92cd-b3f00073ac76/ap-web_product-assets_default_instructions_1S6603-delete_Original%20file.pdf",
-      "scope": "1S6603 REV 2; ECN 2023-0043; two pages",
+      "scope": "Anderson SB50 crimp specification reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; original concise annotation; no PDF, table or asset copied",
       "license": "Redistribution permission not established",
       "seasons": [],
@@ -1166,13 +400,14 @@
         "connector",
         "SB50"
       ],
-      "limits": "No physical inspection, crimp qualification, full numerical-table transcription or season legality determination"
+      "limits": "No physical inspection, crimp qualification, full numerical-table transcription or season legality determination",
+      "designUse": "Which conductor and crimp belong to the selected contact?"
     },
     {
       "id": "PUBLIC-PWR14",
       "title": "Anderson SB50 datasheet",
       "url": "https://p1.aprimocdn.net/idealindustries/d7c0a682-e691-4b60-8e76-b3f000737d74/ap-web_product-assets_default_data-sheets_ds-sb50_Original%20file.pdf",
-      "scope": "Seven-page official linked datasheet; revision date not established",
+      "scope": "Anderson SB50 datasheet reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; original concise annotation; no PDF, table or asset copied",
       "license": "Redistribution permission not established",
       "seasons": [],
@@ -1185,13 +420,14 @@
         "connector",
         "SB50"
       ],
-      "limits": "No physical inspection, crimp qualification, full numerical-table transcription or season legality determination"
+      "limits": "No physical inspection, crimp qualification, full numerical-table transcription or season legality determination",
+      "designUse": "Does this connector rating apply to the chosen conductor and service condition?"
     },
     {
       "id": "PUBLIC-W11",
       "title": "Robot Battery Basics",
       "url": "https://docs.wpilib.org/en/stable/docs/hardware/hardware-basics/robot-battery.html",
-      "scope": "stable alias",
+      "scope": "Robot Battery Basics reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; original concise commentary only",
       "license": "Redistribution permission not established",
       "seasons": [],
@@ -1202,13 +438,14 @@
         "safety",
         "electrical"
       ],
-      "limits": "Living page; no installed-device, hardware or season-rule verification"
+      "limits": "Living page; no installed-device, hardware or season-rule verification",
+      "designUse": "What battery behavior should the power model account for?"
     },
     {
       "id": "PUBLIC-W13",
       "title": "roboRIO brownouts and current draw",
       "url": "https://docs.wpilib.org/en/stable/docs/software/roborio-info/roborio-brownouts.html",
-      "scope": "roboRIO 1/2, not a Systemcore specification",
+      "scope": "roboRIO brownouts and current draw reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; original concise commentary only",
       "license": "Redistribution permission not established",
       "seasons": [],
@@ -1219,70 +456,14 @@
         "electrical",
         "troubleshooting"
       ],
-      "limits": "Living page; no installed-device, hardware or season-rule verification"
-    },
-    {
-      "id": "PUBLIC-CS01",
-      "title": "2024 CRESCENDO Game Manual",
-      "url": "https://firstfrc.blob.core.windows.net/frc2024/Manual/2024GameManual.pdf",
-      "scope": "153 pages; section 6 V10 and section 7 V13; retrieved 2026-11-15",
-      "handling": "link-only; original concise annotations; no manual, sample body or vendor asset copied",
-      "license": "Redistribution permission not established",
-      "seasons": [
-        2024
-      ],
-      "authority_state": "historical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "manual",
-        "strategy",
-        "case study"
-      ]
-    },
-    {
-      "id": "PUBLIC-CS02",
-      "title": "2025 REEFSCAPE Game Manual",
-      "url": "https://firstfrc.blob.core.windows.net/frc2025/Manual/2025GameManual.pdf",
-      "scope": "164 pages; section 6 V13 and section 7 V11; retrieved 2026-11-15",
-      "handling": "link-only; original concise annotations; no manual, sample body or vendor asset copied",
-      "license": "Redistribution permission not established",
-      "seasons": [
-        2025
-      ],
-      "authority_state": "historical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "manual",
-        "strategy",
-        "case study"
-      ]
-    },
-    {
-      "id": "PUBLIC-CS03",
-      "title": "Pinned WPILib ElevatorSim source",
-      "url": "https://raw.githubusercontent.com/wpilibsuite/allwpilib/v2026.2.1/wpilibj/src/main/java/edu/wpi/first/wpilibj/simulation/ElevatorSim.java",
-      "scope": "v2026.2.1",
-      "handling": "link-only; original concise annotations; no manual, sample body or vendor asset copied",
-      "license": "WPILib BSD; linked only",
-      "seasons": [
-        2026
-      ],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "simulation",
-        "Java",
-        "case study"
-      ]
+      "limits": "Living page; no installed-device, hardware or season-rule verification",
+      "designUse": "What should the controls test observe when supply voltage falls?"
     },
     {
       "id": "PUBLIC-CS04",
       "title": "Fusion extrusion API",
       "url": "https://autodeskfusion360.github.io/FusionAPIReference/Fusion_API_Documentation/files/ExtrudeFeatures_addSimple.htm",
-      "scope": "Living API reference; accessed 2026-11-15",
+      "scope": "Fusion extrusion API reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; original concise annotations; no manual, sample body or vendor asset copied",
       "license": "Redistribution permission not established",
       "seasons": [],
@@ -1293,13 +474,14 @@
         "CAD",
         "Fusion",
         "case study"
-      ]
+      ],
+      "designUse": "Which Fusion extrusion operation creates the intended solid?"
     },
     {
       "id": "PUBLIC-CS05",
       "title": "Fusion export API sample documentation",
       "url": "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/ExportToOtherFormats_Sample.htm",
-      "scope": "Living API reference; accessed 2026-11-15",
+      "scope": "Fusion export API sample documentation reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; original concise annotations; no manual, sample body or vendor asset copied",
       "license": "Redistribution permission not established",
       "seasons": [],
@@ -1310,13 +492,14 @@
         "CAD",
         "Fusion",
         "case study"
-      ]
+      ],
+      "designUse": "How can the CAD review reproduce the derivative export?"
     },
     {
       "id": "PUBLIC-CS06",
       "title": "Fusion script workflow",
       "url": "https://help.autodesk.com/view/fusion360/ENU/?guid=GUID-9701BBA7-EC0E-4016-A9C8-964AA4838954",
-      "scope": "Living script/add-in workflow; accessed 2026-11-15",
+      "scope": "Fusion script workflow reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; original concise annotations; no manual, sample body or vendor asset copied",
       "license": "Redistribution permission not established",
       "seasons": [],
@@ -1327,70 +510,14 @@
         "CAD",
         "Fusion",
         "case study"
-      ]
-    },
-    {
-      "id": "PUBLIC-F03",
-      "title": "2026 REBUILT Game Manual",
-      "url": "https://firstfrc.blob.core.windows.net/frc2026/Manual/2026GameManual.pdf",
-      "scope": "2026 TU22; 166 pages; selected section 6.4 and 6.4.1 reviewed 2026-11-15",
-      "handling": "link-only; original concise commentary; no manual body copied",
-      "license": "Redistribution permission not established",
-      "seasons": [
-        2026
       ],
-      "authority_state": "official",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "manual",
-        "strategy",
-        "case study"
-      ]
-    },
-    {
-      "id": "PUBLIC-CS07",
-      "title": "2024 Team Update 21: final update and radio transition",
-      "url": "https://firstfrc.blob.core.windows.net/frc2024/Manual/TeamUpdates/TeamUpdate21.pdf",
-      "scope": "April 9, 2024; 2 pages; final season update",
-      "handling": "link-only; original concise commentary only",
-      "license": "FIRST link-only policy",
-      "seasons": [
-        2024
-      ],
-      "authority_state": "historical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "rules",
-        "manual",
-        "hardware",
-        "radio",
-        "case study"
-      ]
-    },
-    {
-      "id": "PUBLIC-CS08",
-      "title": "WPILib Windows JVM runtime and bundled JDK guidance",
-      "url": "https://docs.wpilib.org/en/stable/docs/software/advanced-gradlerio/jvm-runtime.html",
-      "scope": "Living stable documentation; reviewed 2026-11-15",
-      "handling": "link-only; original concise commentary",
-      "license": "Link-only reference; consult upstream documentation license before copying",
-      "seasons": [],
-      "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
-      "topics": [
-        "java",
-        "runtime",
-        "simulation"
-      ]
+      "designUse": "How can the team reproduce a scripted model inside Fusion?"
     },
     {
       "id": "PUBLIC-SIM01",
       "title": "WPILib simulated encoder and vendor-device boundary",
       "url": "https://docs.wpilib.org/en/stable/docs/software/wpilib-tools/robot-simulation/drivesim-tutorial/simulation-instance.html",
-      "scope": "Living stable alias, accessed 2026-11-15",
+      "scope": "WPILib simulated encoder and vendor-device boundary reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; original concise synthesis; no source body copied",
       "license": "Link-only reference; upstream source license retained by upstream",
       "seasons": [],
@@ -1402,13 +529,14 @@
         "simulation",
         "encoder",
         "CAN"
-      ]
+      ],
+      "designUse": "Which device feedback is simulated and which needs a project adapter?"
     },
     {
       "id": "PUBLIC-SIM02",
       "title": "WPILib physics simulation and sensor feedback",
       "url": "https://docs.wpilib.org/en/stable/docs/software/wpilib-tools/robot-simulation/physics-sim.html",
-      "scope": "Living stable alias, accessed 2026-11-15",
+      "scope": "WPILib physics simulation and sensor feedback reference. Verify applicability to your selected hardware or software revision.",
       "handling": "link-only; original concise synthesis; no source body copied",
       "license": "Link-only reference; upstream source license retained by upstream",
       "seasons": [],
@@ -1420,27 +548,51 @@
         "simulation",
         "encoder",
         "CAN"
-      ]
+      ],
+      "designUse": "How does the plant return a measured state to the software loop?"
     },
     {
-      "id": "PUBLIC-SIM03",
-      "title": "Pinned WPILib EncoderSim implementation",
-      "url": "https://raw.githubusercontent.com/wpilibsuite/allwpilib/v2026.2.1/wpilibj/src/main/java/edu/wpi/first/wpilibj/simulation/EncoderSim.java",
-      "scope": "allwpilib v2026.2.1",
-      "handling": "link-only; original concise synthesis; no source body copied",
-      "license": "Link-only reference; upstream source license retained by upstream",
-      "seasons": [
-        2026
-      ],
+      "id": "SW01",
+      "title": "WPILib swerve control and kinematics",
+      "url": "https://github.com/wpilibsuite/allwpilib/tree/c89401250fbd412ba050f595551d0a451b7307a2",
+      "scope": "WPILib swerve control and kinematics reference. Verify applicability to your selected hardware or software revision.",
+      "seasons": [],
       "authority_state": "technical",
-      "reviewed": "2026-11-15",
-      "review_due": "2026-12-15",
+      "reviewed": "2026-11-18",
       "topics": [
-        "java",
-        "simulation",
-        "encoder",
-        "CAN"
-      ]
+        "swerve control"
+      ],
+      "handling": "link-only",
+      "designUse": "How do module location and coordinate signs affect wheel commands?"
+    },
+    {
+      "id": "SW02",
+      "title": "REV MAXSwerve module hardware and interfaces",
+      "url": "https://docs.revrobotics.com/ion-build/motion/maxswerve",
+      "scope": "REV MAXSwerve module hardware and interfaces reference. Verify applicability to your selected hardware or software revision.",
+      "seasons": [],
+      "authority_state": "technical",
+      "reviewed": "2026-11-18",
+      "topics": [
+        "swerve module"
+      ],
+      "handling": "link-only",
+      "designUse": "Which mounting interfaces, reductions and service clearances fit the design?"
+    },
+    {
+      "id": "SW03",
+      "title": "REV swerve control template",
+      "url": "https://github.com/REVrobotics/MAXSwerve-Java-Template/tree/b6145898c3103c22dc060c8133f6672a8afa1844",
+      "scope": "REV swerve control template reference. Verify applicability to your selected hardware or software revision.",
+      "seasons": [],
+      "authority_state": "technical",
+      "reviewed": "2026-11-18",
+      "topics": [
+        "swerve module",
+        "swerve control"
+      ],
+      "handling": "link-only",
+      "designUse": "Where should the project own encoder calibration and module order?"
     }
   ]
 }

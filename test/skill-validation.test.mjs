@@ -68,10 +68,13 @@ function fixture(t) {
     assert.ok(path.basename(dir).startsWith('agent-frc-skills-'));
     fs.rmSync(dir, { recursive: true, force: true });
   });
-  for (const file of ['scripts/validate.mjs', 'scripts/skill-validation.mjs', 'plugin.json', '.claude-plugin/plugin.json', '.codex-plugin/plugin.json']) {
+  for (const file of ['scripts/validate.mjs', 'scripts/skill-validation.mjs', 'scripts/check-design-references.mjs', 'plugin.json', '.claude-plugin/plugin.json', '.codex-plugin/plugin.json']) {
     fs.mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
     fs.copyFileSync(path.join(root, file), path.join(dir, file));
   }
+  for (const name of ['docs','examples','references','templates','worksheets']) fs.mkdirSync(path.join(dir,name));
+  fs.writeFileSync(path.join(dir,'README.md'),'# Test plugin');
+  fs.writeFileSync(path.join(dir,'references/public-sources.json'),JSON.stringify({sources:[]}));
   fs.mkdirSync(path.join(dir, 'skills/example'), { recursive: true });
   fs.writeFileSync(path.join(dir, 'skills/example/SKILL.md'), valid.replaceAll('\n', '\r\n'));
   return { dir, run: () => spawnSync(process.execPath, ['scripts/validate.mjs'], { cwd: dir, encoding: 'utf8' }) };

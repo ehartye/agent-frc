@@ -13,11 +13,11 @@ function sourcePin(pin,sources,kind,season){closed(pin,['id','revision','sha256'
 export function validateReferenceGeometry(c,sources,season){
  check(Array.isArray(sources)&&new Set(sources.map(s=>s.id)).size===sources.length,'Unique reference source catalog required');
  closed(c,['schema','season','revision','status','frames','features','cadCandidates','coverage','auditLimitations']);
- check(c.schema==='frc-nominal-field-references/v1'&&c.season===season&&season===2026&&Number.isSafeInteger(c.revision)&&c.revision>0,'Reference schema/season/revision mismatch');
+ check(c.schema==='frc-nominal-field-references/v1'&&c.season===season&&Number.isSafeInteger(season)&&Number.isSafeInteger(c.revision)&&c.revision>0,'Reference schema/season/revision mismatch');
  check(c.status==='reference-only'&&text(c.coverage)&&Array.isArray(c.auditLimitations)&&c.auditLimitations.length>0,'Reference status/coverage required');
  check(Array.isArray(c.frames)&&c.frames.length<=8&&Array.isArray(c.features)&&c.features.length<=256&&Array.isArray(c.cadCandidates)&&c.cadCandidates.length<=8,'Reference collection limit');
  const frames=new Map(),ids=new Set();
- for(const f of c.frames){closed(f,['id','variant','unit','dimensions','origin','axes','sourcePin','locator','certifiedCadTransform']);check(ident(f.id)&&!frames.has(f.id),'Duplicate/invalid reference frame');check(['welded','andymark'].includes(f.variant)&&f.unit==='mm'&&f.dimensions===3&&text(f.origin)&&text(f.axes)&&text(f.locator),'Explicit reference frame/units required');check(f.certifiedCadTransform===null,'Reference frame cannot carry certified transform');sourcePin(f.sourcePin,sources,'official-drawing',season);frames.set(f.id,f);}
+ for(const f of c.frames){closed(f,['id','variant','unit','dimensions','origin','axes','sourcePin','locator','certifiedCadTransform']);check(ident(f.id)&&!frames.has(f.id),'Duplicate/invalid reference frame');check(ident(f.variant)&&f.unit==='mm'&&f.dimensions===3&&text(f.origin)&&text(f.axes)&&text(f.locator),'Explicit reference frame/units required');check(f.certifiedCadTransform===null,'Reference frame cannot carry certified transform');sourcePin(f.sourcePin,sources,'official-drawing',season);frames.set(f.id,f);}
  for(const r of c.features){
   closed(r,['id','role','shape','variant','alliance','frame','coordinatesMm','originalInches','sourcePin','locator','derivation','status','confidence','uncertaintyMm','reachability','allowedUses','forbiddenUses']);
   check(ident(r.id)&&!ids.has(r.id),'Duplicate/invalid feature reference');ids.add(r.id);const f=frames.get(r.frame);
@@ -25,16 +25,16 @@ export function validateReferenceGeometry(c,sources,season){
   check(r.status==='nominal-reference'&&r.uncertaintyMm===null&&r.reachability==='not-assessed','Nominal references cannot be promoted to verified geometry/reachability');
   check(same(r.allowedUses,REFERENCE_USES)&&same(r.forbiddenUses,FORBIDDEN_USES),'Reference uses cannot be broadened');
   check(text(r.locator)&&text(r.derivation),'Reference derivation/locator required');sourcePin(r.sourcePin,sources,'official-drawing',season);check(same(r.sourcePin,f.sourcePin),'Mixed frame/feature source revision');
-  const bump=r.role==='bump-crossing-reference';check(bump||['hub-opening-center-reference','depot-reservoir-centroid-reference'].includes(r.role),'Unknown nominal reference role');
-  check(r.shape===(bump?'line':'point')&&r.confidence===(bump?'nominal-layout-inference':'drawing-derived-nominal'),'Role/shape/confidence mismatch');
-  check(Array.isArray(r.coordinatesMm)&&r.coordinatesMm.length===(bump?2:1)&&r.coordinatesMm.every(point),'Invalid reference coordinates');
-  if(bump)check(r.originalInches===null&&r.coordinatesMm.every(p=>p[2]===0),'Bump line is only a ground-projected reference');
+  const line=r.shape==='line';check(ident(r.role) && (line || r.shape==='point'),'Explicit role and supported shape required');
+  check(r.confidence===(line?'nominal-layout-inference':'drawing-derived-nominal'),'Role/shape/confidence mismatch');
+  check(Array.isArray(r.coordinatesMm)&&r.coordinatesMm.length===(line?2:1)&&r.coordinatesMm.every(point),'Invalid reference coordinates');
+  if(line)check(r.originalInches===null&&r.coordinatesMm.every(p=>p[2]===0),'Layout line is only a ground-projected reference');
   else check(point(r.originalInches)&&r.originalInches.every((v,i)=>Math.abs(v*25.4-r.coordinatesMm[0][i])<1e-6),'Reference unit conversion mismatch');
  }
  for(const t of c.cadCandidates){
   closed(t,['id','variant','targetFrame','sourcePin','targetSourcePin','inputUnit','outputUnit','matrix','status','allowedUses','certified','reason']);
   check(ident(t.id)&&!ids.has(t.id),'Duplicate/invalid transform candidate');ids.add(t.id);const f=frames.get(t.targetFrame);
-  check(t.variant==='welded'&&f?.variant==='welded'&&t.inputUnit==='mm'&&t.outputUnit==='mm','Only explicit welded parser-mm candidate supported');
+  check(f && t.variant===f.variant&&t.inputUnit==='mm'&&t.outputUnit==='mm','Candidate must use its declared frame and millimetres');
   check(t.status==='candidate-not-certified'&&t.certified===false&&same(t.allowedUses,['inspection-only'])&&text(t.reason),'Candidate transform cannot be promoted');
   sourcePin(t.sourcePin,sources,'official-cad',season);sourcePin(t.targetSourcePin,sources,'official-drawing',season);check(same(t.targetSourcePin,f.sourcePin),'Transform target source mismatch');
   check(Array.isArray(t.matrix)&&t.matrix.length===4&&t.matrix.every(row=>Array.isArray(row)&&row.length===4&&row.every(Number.isFinite))&&same(t.matrix[3],[0,0,0,1]),'Invalid inspection-only candidate matrix');
@@ -42,9 +42,9 @@ export function validateReferenceGeometry(c,sources,season){
  return true;
 }
 function prepare(pkg,request){
- check(pkg?.schema==='frc-sourced-field-package/v1'&&pkg.season===2026&&pkg.fieldModel?.season===2026,'Sourced 2026 field package required');
+ check(pkg?.schema==='frc-sourced-field-package/v1'&&Number.isSafeInteger(pkg.season)&&pkg.fieldModel?.season===pkg.season,'Sourced project field package required');
  check(request.expectedPackageSha256===digest(pkg),'Field reference package hash mismatch');
- check(['welded','andymark'].includes(request.fieldVariant),'Explicit field variant required');
+ check(ident(request.fieldVariant),'Explicit field variant required');
  const c=pkg.fieldModel.referenceGeometry;check(c,'No nominal reference catalog');validateReferenceGeometry(c,pkg.fieldModel.sources,pkg.season);return c;
 }
 export function getFieldReference(pkg,request){

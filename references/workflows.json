@@ -26,6 +26,29 @@
       ],
       "deliverable": "A dated decision table with claim, authority, applicability and unresolved items"
     },
+    "swerve": {
+      "title": "Swerve hardware and programming review",
+      "queries": [
+        "swerve module",
+        "swerve control"
+      ],
+      "context": [
+        "Exact module revision and motor-to-wheel ratio",
+        "Robot frame, module order and encoder zero",
+        "WPILib, vendor library and firmware versions"
+      ],
+      "steps": [
+        "Use skills/frc-swerve/SKILL.md to connect the maneuver and package to the two axes.",
+        "Inspect examples/swerve/README.md and the original Fusion archive for steering and wheel motion.",
+        "Replay straight, strafe, wrap and rotation cases before interpreting localization drift."
+      ],
+      "acceptance": [
+        "Module locations and measured distances share one frame and order",
+        "Ratios and offsets have one documented owner",
+        "Geometry, replay and measured performance retain separate evidence"
+      ],
+      "deliverable": "A module and controls contract with CAD revision, offline checks and unresolved measurements"
+    },
     "java": {
       "title": "Java implementation and test plan",
       "queries": [
@@ -39,7 +62,7 @@
       ],
       "steps": [
         "Trace inputs, units, subsystem state, command ownership and cleanup",
-        "Build the isolated learning project at its pinned baseline",
+        "Run desktop checks in the project using its pinned toolchain",
         "Exercise timeout, interruption, disable and invalid-input paths before tuning"
       ],
       "acceptance": [
@@ -47,8 +70,7 @@
         "Requested output and measured output are distinguished",
         "Historical projects are not treated as reproduced by another release"
       ],
-      "deliverable": "A code/test change plan with source versions and failure-path assertions",
-      "lab": "examples/java-2026-sim/README.md"
+      "deliverable": "A code/test change plan with source versions and failure-path assertions"
     },
     "mechanism-cad": {
       "title": "Mechanism and CAD evidence plan",
@@ -96,8 +118,7 @@
         "Fixture thresholds are not recommendations for every camera",
         "No vision accuracy claim follows solely from source review"
       ],
-      "deliverable": "A frame/time contract and rejection-policy test table",
-      "lab": "examples/java-2026-sim/NAVIGATION.md"
+      "deliverable": "A frame/time contract and rejection-policy test table"
     },
     "modes": {
       "title": "Teleop and autonomous acceptance plan",
@@ -120,8 +141,7 @@
         "Driver Station disable is distinguished from scheduler.disable",
         "Trajectory reference limits are separate from corrected actuator commands"
       ],
-      "deliverable": "A mode/trigger transition matrix with expected software observations",
-      "lab": "examples/java-2026-sim/CLEANUP.md"
+      "deliverable": "A mode/trigger transition matrix with expected software observations"
     },
     "troubleshoot": {
       "title": "Device and evidence troubleshooting plan",
@@ -155,7 +175,7 @@
     "case-study": {
       "title": "Rulebook-to-robot case study",
       "queries": [
-        "Game Manual",
+        "Season Materials",
         "simulation",
         "CAD"
       ],
@@ -178,8 +198,7 @@
         "Native CAD and simulator claims name executed artifacts and actual results",
         "No hardware operation, automatic deployment or publication"
       ],
-      "deliverable": "A season-specific evidence package with strategy comparison, subsystem contracts, runnable code, CAD inputs, simulator results and unresolved gates",
-      "lab": "examples/java-2026-sim/CASES.md"
+      "deliverable": "A season-specific evidence package with strategy comparison, subsystem contracts, runnable code, CAD inputs, simulator results and unresolved gates"
     }
   }
 }

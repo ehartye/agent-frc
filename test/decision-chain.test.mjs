@@ -4,7 +4,7 @@ import {createStudy,forkBranch,appendArtifact,pin,digest,validateStudy,impactRep
 const head=(s,id)=>s.artifacts.filter(x=>x.id===id).at(-1);
 const add=(s,id,kind,branch,ids,content={note:'unverified teaching hypothesis'})=>appendArtifact(s,{id,kind,branch,inputs:ids.map(id=>pin(head(s,id))),content});
 function fixture(){
- let s=createStudy(2026);
+ let s=createStudy(2096);
  s=add(s,'rules','game-analysis','shared',[],{sourceRevision:'fixture only',event:'unknown'});
  s=add(s,'resources','resource-baseline','shared',[],{inventoryStatus:'unknown',physicalInventory:[],kitExpectations:[],credits:[]});
  for(const branch of ['bounded','burst']){
@@ -49,14 +49,14 @@ test('Tampering, forged approval, stale writes and invalid handoffs fail closed'
  bad=structuredClone(s);bad.decisions=[{selectedByUser:'fake'}];assert.throws(()=>validateStudy(bad),/authenticated/);
  assert.throws(()=>appendArtifact(s,{id:'resources',kind:'resource-baseline',content:{},expectedRevision:0}),/conflict/);
  assert.throws(()=>add(s,'missing','evidence','burst',[]),/Missing subsystem/);
- bad=structuredClone(s);bad.artifacts[0].season=2025;const {sha256,...body}=bad.artifacts[0];bad.artifacts[0].sha256=digest(body);assert.throws(()=>validateStudy(bad),/Season/);
+ bad=structuredClone(s);bad.artifacts[0].season=2095;const {sha256,...body}=bad.artifacts[0];bad.artifacts[0].sha256=digest(body);assert.throws(()=>validateStudy(bad),/Season/);
 });
 
 import {validateFieldModel} from '../scripts/field-semantics.mjs';
-const fieldFixture=()=>({schema:'frc-field-semantics/v1',season:2026,sources:[{id:'rules',kind:'rulebook',season:2026,url:'https://example.test/fixture',revision:'fixture, not actual rules',retrieved:'2026-11-16',locator:'fixture',sha256:'0'.repeat(64)}],frames:[],locations:[{id:'target',purpose:'scoring',semanticSourceRefs:['rules'],semantics:{phases:null,conditions:null,possession:null,replenishment:null},geometry:{status:'unknown',reason:'No verified geometry imported'},reachability:'not-assessed'}],zones:[],obstacles:[]});
+const fieldFixture=()=>({schema:'frc-field-semantics/v1',season:2096,sources:[{id:'rules',kind:'rulebook',season:2096,url:'https://example.test/fixture',revision:'fixture, not actual rules',retrieved:'2096-11-16',locator:'fixture',sha256:'0'.repeat(64)}],frames:[],locations:[{id:'target',purpose:'scoring',semanticSourceRefs:['rules'],semantics:{phases:null,conditions:null,possession:null,replenishment:null},geometry:{status:'unknown',reason:'No verified geometry imported'},reachability:'not-assessed'}],zones:[],obstacles:[]});
 test('Field semantics share pinned source revisions without invented coordinates',()=>{
  const model=fieldFixture();assert.equal(validateFieldModel(model),true);
- let s=createStudy(2026);s=add(s,'field','game-analysis','shared',[],{fieldModel:model});
+ let s=createStudy(2096);s=add(s,'field','game-analysis','shared',[],{fieldModel:model});
  const bad=structuredClone(model);bad.locations[0].geometry.coordinates=[[0,0]];assert.throws(()=>validateFieldModel(bad),/invent/);
  bad.locations[0].geometry={status:'sourced',shape:'point',frame:'field',coordinates:[[1,2]],sourceRefs:['rules'],uncertainty:null};bad.frames=[{id:'field',unit:'m',dimensions:2,origin:'fixture only',axes:'fixture +x and +y'}];assert.throws(()=>validateFieldModel(bad),/CAD/);
  bad.sources.push({...bad.sources[0],id:'drawing',kind:'official-drawing'});bad.locations[0].geometry.sourceRefs=['drawing'];assert.equal(validateFieldModel(bad),true);

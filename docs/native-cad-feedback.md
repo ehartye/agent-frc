@@ -82,7 +82,7 @@ Use [the occurrence identity checker](native-identity.md) when imported solids i
 
 ## Cross-discipline phase handoffs
 
-Use the [simulator continuation and handoff contract](simulator-equivalence.md) when a modeled contact state becomes a proposed carried pose. Preserve actual state and require geometry corridor, achievable wrench and continuity separately. A local patch or position dwell is not capture. This is source-reviewed guidance; no new contact solver or checkpoint loader is implemented here.
+Use the [simulator continuation and handoff contract](simulation-checks.md) when a modeled contact state becomes a proposed carried pose. Preserve actual state and require geometry corridor, achievable wrench and continuity separately. A local patch or position dwell is not capture. This is source-reviewed guidance; no new contact solver or checkpoint loader is implemented here.
 
 ## Boolean and interior-witness disagreement
 

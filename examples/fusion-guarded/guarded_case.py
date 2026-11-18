@@ -100,7 +100,7 @@ def run(_context: str):
     try:
         if stage=='create':
             target=app.documents.add(adsk.core.DocumentTypes.FusionDesignDocumentType)
-            target.name='Disposable FRC 2026 guarded sideplates'
+            target.name='Disposable guarded sideplates'
             design=adsk.fusion.Design.cast(app.activeProduct)
             design.designType=adsk.fusion.DesignTypes.ParametricDesignType
             root=design.rootComponent
@@ -136,7 +136,7 @@ def run(_context: str):
             output.mkdir(parents=True,exist_ok=False)
             files=[]
             for extension in ('f3d','step'):
-                file=output/('case-2026.'+extension)
+                file=output/('sideplates.'+extension)
                 manager=design.exportManager
                 options=manager.createFusionArchiveExportOptions(str(file)) if extension=='f3d' else manager.createSTEPExportOptions(str(file))
                 if not manager.execute(options): raise RuntimeError('Export failed')
@@ -145,13 +145,18 @@ def run(_context: str):
         if stage=='reopen':
             reopened=[]
             for extension in ('f3d','step'):
-                file=Path(c['outputDirectory'])/('case-2026.'+extension)
+                files=list(Path(c['outputDirectory']).glob('*.'+extension))
+                if len(files)!=1: raise ValueError('Expected one archive per format in the export directory')
+                file=files[0]
                 if hashlib.sha256(file.read_bytes()).hexdigest()!=c['expectedHashes'][extension]: raise ValueError('Export changed')
                 manager=app.importManager
                 options=manager.createFusionArchiveImportOptions(str(file)) if extension=='f3d' else manager.createSTEPImportOptions(str(file))
                 doc=manager.importToNewDocument(options)
-                report=inspect(design_for(doc)); verify(report,dims,c['thicknessMm'],history=extension=='f3d')
-                reopened.append({'format':extension,'geometry':report})
+                try:
+                    report=inspect(design_for(doc)); verify(report,dims,c['thicknessMm'],history=extension=='f3d')
+                    reopened.append({'format':extension,'geometry':report})
+                finally:
+                    doc.close(False)
             receipt['reopened']=reopened
         revision=read_attr(root,'revision')+1
         write_attr(root,'revision',revision)

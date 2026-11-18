@@ -30,6 +30,8 @@ An incompatible or incomplete declaration leaves the run unknown. For comparable
 
 When testing the model time derived from an integer tick against the numerical horizon, the checker allows floating-point rounding in the multiplication and addition. It caps the allowance at one millionth of a controller period. Ticks, recorded target values, phases and event ordering compare exactly.
 
+For independent replay checks inside each run and continuous sample-time equality, use [simulation checks](simulation-checks.md).
+
 ## Coverage
 
 Each study in the request names a nonempty `coverage` list. Each run in the evidence contains its observations. Every record has a named time `origin` and `units` of `s`. The same origin and units must cover the request.

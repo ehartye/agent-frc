@@ -1,6 +1,6 @@
 const scoring=profile.scoring;
 const area=byId('modelSummary');
-paragraph(area,profile.season+' '+profile.game+' · '+profile.edition+' · '+profile.field.source);
+paragraph(area,gameTitle+' · '+profile.edition+' · '+profile.field.source);
 if(scoring) {
   for(const i of scoring.inventory) paragraph(area,i.piece+' · '+i.total+' distinct pieces. '+i.distribution);
   paragraph(area,scoring.phases.map(p=>p.name+' '+p.seconds+' seconds').join(' / '));
@@ -24,7 +24,7 @@ if(scoring) {
 } else paragraph(area,'Scoring inventory, phase timing and route locations are open in this profile.');
 byId('modelFile').onclick=()=>{
   const url=URL.createObjectURL(new Blob([JSON.stringify(profile,null,2)],{type:'application/json'}));
-  const a=document.createElement('a');a.href=url;a.download=profile.season+'-rules-model.json';a.click();
+  const a=document.createElement('a');a.href=url;a.download=exportName+'-rules-model.json';a.click();
   setTimeout(()=>URL.revokeObjectURL(url),30000);
 };
 
@@ -40,13 +40,16 @@ function control(group,id,title,options) {
 }
 const targetBox=control('choices','opTarget','Scoring target',scoring?.targets.map(t=>t.name) || ['Custom opportunity']);
 const phaseBox=control('choices','opPhase','Match phase',scoring?.phases.map(v=>v.name) || ['Custom window']);
+const delivery=control('choices','opDelivery','Piece delivery',
+  ['Shuttle · fetch one piece from A for every score at B','Staged at B · transit once, then score locally']);
 const inputs={};
 for(const [key,title,initial] of [
   ['stock','Distinct pieces in match',null],['points','Points per scored piece',null],
   ['window','Window length (s)',10],['opening','Accessible here at start',1],
   ['incoming','Additional pieces arriving here',0],['arrival','Their arrival time from window start (s)',0],
   ['goal','Pieces this robot aims to score',1],['setup','Non-scoring time beyond transit (s)',0],
-  ['speed','Assumed average transit speed (in/s)',100],['cycle','Candidate time per completed piece (s)',1],
+  ['speed','Assumed average transit speed (in/s)',profile.rehearsal?.defaults?.speed ?? null],['cycle','Non-travel service per piece (s)',1],
+  ['bumper','Trial bumper projection per side (in)',profile.rehearsal?.defaults?.bumper ?? null],
   ['capacity','Open target slots (optional)',null]
 ]){
   const input=control('numbers','op-'+key,title);input.min=0;input.step='any';
@@ -54,7 +57,7 @@ for(const [key,title,initial] of [
   inputs[key]=input;
 }
 const overrides={};
-let study;
+let study, clearance;
 const read=key=>inputs[key].value===''?NaN:Number(inputs[key].value);
 const selected=()=>scoring?.targets[Number(targetBox.value)];
 const phase=()=>scoring?.phases[Number(phaseBox.value)];
@@ -75,7 +78,13 @@ function selectOpportunity() {
 }
 function updateRoute() {
   const t=selected();
-  study=routeStudy(profile,t?.piece,t?.goal,phase()?.name,overrides,Math.max(state.length,state.width));
+  const bumper=read('bumper');
+  const occupied=Number.isFinite(bumper) && bumper>=0;
+  study=routeStudy(profile,t?.piece,t?.goal,phase()?.name,overrides,Math.max(state.length,state.width)+(occupied?2*bumper:0));
+  if(!occupied)study.traffic+=' · frame-width estimate, bumper unknown';
+  clearance=Number.isFinite(bumper) && bumper>=0 && study.line.length?
+    rehearsal.assessRoute(study.line,{length:state.length,width:state.width,height:state.height,heading:state.heading,bumper}):
+    {status:'unknown',obstacle:null,segment:null};
   const endpoints=study.line.length?[study.line[0],study.line.at(-1)]:[];
   const labels=['A','B'];
   scene.setRoute(endpoints.map((q,i)=>({x:q[0],y:q[1],name:labels[i]})),study);
@@ -94,15 +103,23 @@ function evaluate() {
   const trial={};
   for(const key of ['stock','opening','incoming','goal','window','cycle','arrival','setup','points']) trial[key]=read(key);
   trial.cap=cap;trial.travel=study.length?study.length/speed:0;
+  trial.delivery=delivery.value==='0'?'shuttle':'staged';
   const result=analyzeWindow(trial);
   const n=v=>Number(v.toFixed(3));
   const rate=Number.isFinite(result.rate)?n(result.rate)+' pieces/s':'unattainable in the remaining time';
-  const lines=[
+  const routeStatus=clearance.status==='clear'?'Footprint clears the modeled static obstacles.':
+    clearance.status==='blocked'?'Footprint blocked by '+clearance.obstacle+' on route segment '+(clearance.segment+1)+'.':
+    'Footprint clearance unknown.';
+  const lines=[routeStatus,
     'Supply and target ceiling: '+result.available+' pieces · goal '+trial.goal+'.',
-    'Transit '+n(trial.travel)+' s + other non-scoring time '+trial.setup+' s leaves '+n(result.usable)+' s.',
+    trial.delivery==='shuttle'?'Goal requires '+result.outboundLegs+' loaded and '+result.returnLegs+' empty legs ('+
+      n(result.goalTransit)+' s transit). After setup, '+n(result.usable)+' s remain for service.':
+      'One transit '+n(trial.travel)+' s + other non-scoring time '+trial.setup+' s leaves '+n(result.usable)+' s.',
     'Required throughput: '+rate+(result.rate>0 && Number.isFinite(result.rate)?' (at most '+n(1/result.rate)+' s/piece).':'.'),
     'Candidate: '+n(1/trial.cycle)+' pieces/s. At most '+result.delivered+' scored for '+result.points+' points. '+
-      (result.attainable?'Meets the arithmetic screen.':result.available<trial.goal?'Supply or scoring slots rule out this goal.':'Candidate misses this window.')
+      (result.available<trial.goal?'Supply or scoring slots rule out this goal.':
+        !result.attainable?'Candidate misses this window.':clearance.status==='clear'?'Meets the arithmetic screen.':
+        'Arithmetic bound only. A feasible route is required.')
   ];
   if(!study.line.length) lines.unshift('Transit unknown. The rate below assumes zero travel time.');
   return {lines,trial};
@@ -116,9 +133,10 @@ for(const name of ['A','B']) byId('mark'+name).onclick=()=>{
 };
 byId('clearRoute').textContent='Restore modeled route';
 byId('clearRoute').onclick=()=>{delete overrides.a;delete overrides.b;updateRoute();};
-targetBox.onchange=selectOpportunity;phaseBox.onchange=selectOpportunity;
+targetBox.onchange=selectOpportunity;phaseBox.onchange=selectOpportunity;delivery.onchange=reviewWindow;
 Object.values(inputs).forEach(input=>input.oninput=reviewWindow);
-for(const key of ['width','length']) sliders.get(key).input.addEventListener('input',updateRoute);
+inputs.bumper.oninput=updateRoute;
+for(const key of ['width','length','height','heading']) sliders.get(key).input.addEventListener('input',updateRoute);
 byId('saveWindow').onclick=()=>{
   const notes=byId('allocation').value.trim();
   if(!notes){byId('windowStatus').textContent='Record the location and basis for the assumed supply and timing.';byId('allocation').focus();return;}
@@ -128,9 +146,11 @@ byId('saveWindow').onclick=()=>{
   const report=[text,scoring?.source || '',i?i.distribution:'',
     'Distinct inventory '+trial.stock+'. Opening allocation '+trial.opening+', plus '+trial.incoming+' at '+trial.arrival+
     ' s. Window '+trial.window+' s. Value '+trial.points+' points/piece. Slots '+(trial.cap ?? 'unspecified')+'.',
-    'Assumptions: '+notes,'Route: '+byId('routeLabel').textContent+' at assumed '+inputs.speed.value+' in/s.',
+    'Assumptions: '+notes,'Delivery: '+delivery.selectedOptions[0].textContent+
+    '. For a shuttle, incoming pieces arrive at A and the empty return uses the same route and assumed speed. For staged supply, incoming pieces arrive at B.',
+    'Route: '+byId('routeLabel').textContent+' at assumed '+inputs.speed.value+' in/s.',
     'Traffic inference: '+study.traffic+'. '+(scoring?.fieldMap?.basis || ''),
-    'Trial box '+state.length+' × '+state.width+' × '+state.height+' in. Candidate cycle '+trial.cycle+' s/piece.',
+    'Trial box '+state.length+' × '+state.width+' × '+state.height+' in, heading '+state.heading+'°, bumper projection '+(Number.isFinite(read('bumper'))?read('bumper')+' in per side':'unknown')+'. Candidate non-travel cycle '+trial.cycle+' s/piece.',
     ...lines,'Provisional scoring requirement: sustain this opportunity’s required throughput over its usable window. Resolve supply shortfalls before adopting the target.',
     'Capture mechanism and exposed state: '+(byId('exposure').value.trim() || 'Open.'),
     'Provisional contact requirement: assess the exposed capture mechanism along this route and verify retained function under the specified contact case.',

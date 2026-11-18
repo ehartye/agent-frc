@@ -4,6 +4,8 @@ description: "Use when designing, implementing or testing WPILib Java code."
 ---
 # Java implementation and test plan
 
+For swerve kinematics, module conversions or odometry, use the [dedicated swerve skill](../frc-swerve/SKILL.md) to align geometry, software units and tests.
+
 Read [grounding policy](../../docs/grounding.md). Start with the [learning brief](../../docs/briefs.md): npm run brief -- --workflow java --season YEAR --as-of YYYY-MM-DD. The brief is optional scaffolding, not a source-reading substitute. No vault is required; local catalog use must be explicitly configured.
 
 ## Establish context
@@ -28,9 +30,9 @@ Deliver a code/test change plan with source versions and failure-path assertions
 - Requested output and measured output are distinguished.
 - Historical projects are not treated as reproduced by another release.
 
-Use the [pinned desktop exercise](../../examples/java-2026-sim/README.md) only with its stated baseline. No hardware operation or deployment is authorized by this skill. Do not infer physical safety, CAD validity or model effectiveness from static review or passing software fixtures. Source/file/dependency licenses must be checked before copying.
+Run offline tests in the team project using its declared JDK and WPILib versions.
 
-Read [simulation interface boundaries](../../examples/java-2026-sim/SIMULATION-BOUNDARIES.md). Identify whether feedback comes from plant truth, a WPILib Encoder/EncoderSim pair, or a versioned vendor device adapter. EncoderSim is not a CAN-controller encoder substitute. Record adapter/library/firmware versions only when chosen and verified; test production-API readback and unit/sign/reset conversions separately from plant dynamics. Keep unknown physical parameters and unsupported faults explicit.
+Identify the source of each feedback signal and state its units, frame and sample time.
 
 ## Simulator frame and fault checks
 
@@ -38,7 +40,7 @@ Read [rotating observation and fault-transition checks](../../docs/planar-observ
 
 ## Optimization and continuation
 
-Read [simulator equivalence and handoff contracts](../../docs/simulator-equivalence.md) before optimizing repeated queries or restoring a physical checkpoint. Preserve full-state/energy traces and failure behavior, validate exact checkpoint shapes and source identity, and distinguish a dwell from geometry-and-force-supported capture. These are evidence-guided test requirements, not a generic motor model or physical acceptance tool.
+Use [simulation checks](../../docs/simulation-checks.md) for replay inventories and shared-time comparisons.
 
 When a simulation stops at a boundary, ask whether it is a study assumption, model-validity limit or physical interference. Follow the study-boundary and controller-clock contracts in simulator-equivalence.md: rebuild dependent obstacle filters, preserve held commands and absolute tick phase, and compare like-time timestep evidence before claiming progress.
 
@@ -47,8 +49,10 @@ For existing frozen simulation trace receipts, use [read-only trace diagnostics]
 ## Choose the simulation for the question
 
 Use [iterative simulator selection](../../docs/simulator-selection.md) to compare block-bot rehearsal, kinematic checks, bounded mechanism/contact fixtures, controls/drive and integrated field/adversary scenarios. Select by decision and evidence needed, not visual complexity or a mandatory fidelity ladder. Preserve model limits and explicit transition gates.
-## Integrated assumption-bounded season prototypes
+## Verify the design project
 
-For a runnable 2024/2025/2026 simulation, use `scripts/run-prototype.ps1` with an existing JDK17 and populated WPILib Gradle cache selected by `JAVA_HOME` and `GRADLE_USER_HOME`. It runs offline, creates a fresh bound execution receipt and derives `targets.json` from actual powered exit states. See `docs/integrated-prototypes.md` for design assumptions and scope. Do not install tools, deploy code, imply measured calibration or replace hypothetical target registration with an installed transform. Treat explicit mounting, ideal attachment and virtual feedback as simulation inputs, not reasons to block exploratory runs. Preserve faults and target misses as useful results.
+Run the selected project experiment from its own entry point. Record code, inputs, toolchain and actual observations.
 
 The same runner now includes preloaded season robot slices: ideal approach/docking, pose-stop authorization, mechanism and actual pose-derived target registration. Start with generated `HANDOFF.md`; see `docs/season-robot-handoff.md`. Keep acquisition, drive energy/sensor fidelity, complete field geometry and official scoring distinct from these runnable slices.
+
+For a released game piece, use the [recorded height screen](../../docs/recorded-release-height.md) to determine whether to continue with a target-passage test.

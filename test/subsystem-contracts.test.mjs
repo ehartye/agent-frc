@@ -5,7 +5,7 @@ import {createStudy,forkBranch,appendArtifact,pin} from '../scripts/decision-cha
 import {validateSubsystemContract,reviewSubsystemContract} from '../scripts/subsystem-contracts.mjs';
 const template=()=>JSON.parse(fs.readFileSync(new URL('../templates/subsystem-contract.json',import.meta.url),'utf8'));
 function fixture(){
- let s=createStudy(2026);const head=id=>s.artifacts.filter(x=>x.id===id).at(-1);
+ let s=createStudy(2096);const head=id=>s.artifacts.filter(x=>x.id===id).at(-1);
  const add=(id,kind,ids=[],content={note:'test-only hypothesis'})=>{s=appendArtifact(s,{id,kind,branch:['game-analysis','resource-baseline'].includes(kind)?'shared':'candidate',inputs:ids.map(x=>pin(head(x))),content});};
  add('game','game-analysis');add('resources','resource-baseline');s=forkBranch(s,'candidate');
  add('strategy','strategy-brief',['game','resources']);add('envelope','robot-envelope',['game','resources','strategy']);add('capability','capability-contract',['strategy','envelope']);add('architecture','architecture-trade',['capability']);
