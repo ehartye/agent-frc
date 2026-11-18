@@ -14,6 +14,8 @@ To use the skills from this checkout in Codex, follow [local plugin setup](docs/
 
 Node 20.11+; no Node dependencies. Run `npm test`, `npm run validate`, `npm run evaluate` and `npm run cases:validate`. The current Node regression suite is run with npm test; 29 deterministic grounding cases are available separately. They do not establish model/learner effectiveness.
 
+For the separate reviewed acquisition-history route, see [historical verification](docs/historical-verification.md). It distinguishes preflight from execution and preserves exact source/receipt identities; existing Python npm commands remain working-tree study checks.
+
 `npm run case -- --season 2025`
 
 `npm run brief -- --workflow case-study --season 2025 --as-of 2026-11-15`
