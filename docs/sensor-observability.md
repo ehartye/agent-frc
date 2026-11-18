@@ -1,5 +1,9 @@
 # Can the sensor see the state the controller needs?
 
+A supported release applies to the declared support geometry at the observed pose. For withdrawal, register every surface that can still touch the piece, including compliant grips at their travel limits. Check when a sensor can witness clearance of that assembly and propagate observation, processing, scheduling and actuator delays to the actual motion onset.
+
+For a field detector, register the empty path and the uncertainty in both optical endpoints. Distinguish occlusion of every permitted path from a single center-ray hit. Preserve the piece identity and the order of passage and detection. Count one continuous occupancy once. Compare powered and stopped mechanisms with the same incoming release. Keep a valid detector observation when earlier travel is infeasible. [Review the route to the event](field-route-evidence.md)
+
 Mount each candidate optical path in the carriage frame and move one identified piece through it. Inspect which port can see the seated piece and how far the piece still overlaps the exit support when the last port clears. A software input that changes at the expected time can still give the controller the wrong signal to withdraw.
 
 Try the invented fixture in a fresh output directory:
