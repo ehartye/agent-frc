@@ -5,6 +5,8 @@ description: "Guide a student through editable robot-space blockouts, field reac
 
 # Previsualization
 
+Before using a saved blockout to choose the next experiment, follow the [design continuation procedure](../../docs/strategy-first-continuation.md) to identify the current route, alternatives and decision history.
+
 
 ## Advice and process guidance
 

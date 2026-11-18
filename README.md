@@ -1,6 +1,6 @@
 # agent-frc
 
-Version **0.8.0**, portable verification and native-viewer evidence contracts. Ten FRC engineering skills connect rules, strategy, subsystems, working Java code, Fusion inputs and simulator evidence. Independent educational work; no FIRST/vendor endorsement. Installation and native CAD execution require separate verification.
+Version **0.9.0** adds [strategy-first continuation](docs/strategy-first-continuation.md) for resuming a design investigation. The [practice project and review rubric](examples/continuation/README.md) exercise source discovery and the next experiment decision. Ten FRC engineering skills connect rules, strategy, subsystems, working Java code, Fusion inputs and simulator evidence. Independent educational work; no FIRST/vendor endorsement. Installation and native CAD execution require separate verification.
 
 Start with the [end-to-end case workflow](case-studies/README.md): [2024 CRESCENDO](case-studies/2024/README.md), [2025 REEFSCAPE](case-studies/2025/README.md), or [2026 REBUILT](case-studies/2026/README.md). Each compares three strategies and implements a deliberately bounded mechanism slice. Complete robot design remains future work.
 
