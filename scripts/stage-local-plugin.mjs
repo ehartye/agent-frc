@@ -44,7 +44,7 @@ let promoted = false;
 let movedPrevious = false;
 try {
   const files = git('ls-files', '-z').split('\0').filter(Boolean)
-    .filter(file => !file.startsWith('.agents/') && !file.startsWith('.codex/'));
+    .filter(file => !file.startsWith('.agents/') && !file.startsWith('.codex/') && !file.startsWith('.github/'));
   const inventory = [];
   for (const file of files) {
     const source = path.resolve(root, file);
