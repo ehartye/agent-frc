@@ -1,13 +1,13 @@
 {
   "schema": "agent-frc/assembly-accounting@1",
-  "revision": "eae45eaed010f5080c2a0533603c034609c006f67f484f2b62dcf1af6f62cbaa",
+  "revision": "f792df71850e95b09d984124f2f487ea89ba28758e540a844b2fbb5df4bcba6f",
   "configuration": "student bench",
   "scope": "complete",
   "sources": [
     {
       "id": "bench",
       "file": "bench.json",
-      "sha256": "eae45eaed010f5080c2a0533603c034609c006f67f484f2b62dcf1af6f62cbaa"
+      "sha256": "f792df71850e95b09d984124f2f487ea89ba28758e540a844b2fbb5df4bcba6f"
     }
   ],
   "exports": [
@@ -116,7 +116,7 @@
     {
       "id": "shield",
       "configuration": "student bench",
-      "revision": "eae45eaed010f5080c2a0533603c034609c006f67f484f2b62dcf1af6f62cbaa",
+      "revision": "f792df71850e95b09d984124f2f487ea89ba28758e540a844b2fbb5df4bcba6f",
       "remove": [],
       "add": [
         "shield"
@@ -134,7 +134,7 @@
     {
       "id": "retainer",
       "configuration": "student bench",
-      "revision": "eae45eaed010f5080c2a0533603c034609c006f67f484f2b62dcf1af6f62cbaa",
+      "revision": "f792df71850e95b09d984124f2f487ea89ba28758e540a844b2fbb5df4bcba6f",
       "remove": [],
       "add": [
         "retainer"
@@ -158,7 +158,7 @@
   "mass": {
     "unit": "kg",
     "configuration": "student bench",
-    "revision": "eae45eaed010f5080c2a0533603c034609c006f67f484f2b62dcf1af6f62cbaa",
+    "revision": "f792df71850e95b09d984124f2f487ea89ba28758e540a844b2fbb5df4bcba6f",
     "baseline": {
       "source": "bench",
       "pointer": "/mass/base",
@@ -169,6 +169,7 @@
       ]
     },
     "limitKg": 4,
+    "limitEvidence": {"source": "bench", "pointer": "/mass/inspectionLimitKg"},
     "omissions": []
   }
 }
