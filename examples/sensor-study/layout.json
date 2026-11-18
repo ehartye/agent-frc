@@ -1,0 +1,71 @@
+{
+  "units": "m",
+  "frame": "carrier",
+  "clock": "design-run",
+  "maxAgeS": 0.02,
+  "clearanceM": 0.003,
+  "support": {
+    "axis": "x",
+    "direction": 1,
+    "end": 0.14
+  },
+  "pieceSolids": [
+    {
+      "kind": "tube",
+      "center": [
+        0,
+        0,
+        0
+      ],
+      "axis": "y",
+      "halfLength": 0.11,
+      "radius": 0.04,
+      "bore": 0.025
+    }
+  ],
+  "obstacles": [],
+  "sensors": [
+    {
+      "id": "inner",
+      "mode": "reflective",
+      "origin": [
+        0.04,
+        0,
+        -0.09
+      ],
+      "axis": "z",
+      "direction": 1,
+      "range": 0.14
+    },
+    {
+      "id": "outer",
+      "mode": "reflective",
+      "origin": [
+        0.075,
+        0,
+        -0.09
+      ],
+      "axis": "z",
+      "direction": 1,
+      "range": 0.14
+    }
+  ],
+  "expected": {
+    "approach": {
+      "inner": false,
+      "outer": true
+    },
+    "seated": {
+      "inner": true,
+      "outer": true
+    },
+    "early-exit": {
+      "inner": false,
+      "outer": false
+    },
+    "cleared": {
+      "inner": false,
+      "outer": false
+    }
+  }
+}
