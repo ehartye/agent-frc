@@ -310,3 +310,45 @@ test('a valid long v1 study and shared run identity remain addressable', t => {
   assert.equal(report.numerical.status, 'within-declared-bounds');
   assert.equal(code, 0);
 });
+
+test('one bad inventory entry preserves each independently assessable schedule and local finding', t => {
+  for (const variant of ['invalid run ID', 'duplicate run', 'duplicate request', 'invalid request ID']) {
+    const f = copyFixture(t);
+    const temporalRun = f.evidence.runs.find(run => run.id === 'coarse-time');
+    temporalRun.schedule.events[1].tick++;
+    const finding = { interval: [0, 0.2], outcome: 'failed', detail: 'Support below weight' };
+    temporalRun.coverage[0].findings.push(finding);
+    if (variant === 'duplicate run') {
+      const repeated = structuredClone(f.evidence.runs.find(run => run.id === 'mid-space'));
+      repeated.schedule.events = [];
+      f.evidence.runs.unshift(repeated);
+    }
+    if (variant === 'invalid run ID') f.evidence.runs.push({});
+    if (variant === 'duplicate request') {
+      const repeated = structuredClone(f.request.studies.find(study => study.id === 'spatial'));
+      repeated.schedule.entry[0].target = 9;
+      f.request.studies.push(repeated);
+    }
+    if (variant === 'invalid request ID') f.request.studies.push({ id: ' ' });
+    const { report, code } = evaluate(f.dir, f.save());
+    assert.equal(code, 2, variant);
+    assert.match(report.issues.join(' '), variant.startsWith('duplicate') ? /duplicate/ : /invalid/);
+    const [temporal, spatial] = report.studies;
+    assert.equal(temporal.schedule.status, 'different-inputs');
+    assert.equal(temporal.schedule.runs.find(row => row.id === 'coarse-time').status, 'different-inputs');
+    assert.equal(temporal.coverage.status, 'covered');
+    assert.deepEqual(temporal.coverage.runs[0].observations[0].findings, [finding]);
+    if (variant === 'duplicate run') {
+      assert.equal(spatial.schedule.runs.find(row => row.id === 'mid-space').status, 'unknown');
+      assert.equal(spatial.schedule.runs.find(row => row.id === 'shared').status, 'matched');
+      assert.equal(spatial.coverage.runs.find(row => row.id === 'mid-space').status, 'unknown');
+    } else if (variant === 'duplicate request') {
+      assert.equal(spatial.schedule.status, 'unknown');
+      assert.equal(spatial.coverage.status, 'unknown');
+      assert.equal(spatial.coverage.runs[0].observations[0].kind, 'startup');
+    } else {
+      assert.equal(spatial.schedule.status, 'matched');
+      assert.equal(spatial.coverage.status, 'covered');
+    }
+  }
+});

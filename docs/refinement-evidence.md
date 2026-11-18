@@ -51,3 +51,5 @@ For each observation include `findings`, an array that may be empty. A finding s
 The checker compares declarations against a caller-supplied expectation. Source authentication, solver execution, calibration and physical qualification require separate evidence. A [producer recipe](simulation-input-roles.md) illustrates binding repeated filenames and ordered configuration overrides.
 
 The report retains readable numerical evidence if a companion file or request pin is missing. With `binding: unbound`, schedule and coverage remain unknown. Valid local findings can still be inspected as producer declarations. A malformed finding within a valid scope produces an issue while its valid siblings remain attached. If a discrete outcome changes while a required metric is absent, the original numerical verdict remains `not-converged` and the companion returns 2 with the missing run and metric.
+
+An invalid inventory entry or duplicate ID also returns 2. The affected ID stays unresolved. Other uniquely identified runs and studies retain their individual comparisons and local findings.

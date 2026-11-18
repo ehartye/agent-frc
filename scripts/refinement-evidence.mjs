@@ -18,11 +18,22 @@ function array(value, limit, name, min = 1) {
   return value;
 }
 
-function indexBy(rows, key, limit, name, maxIdLength = 256) {
+function inventoryById(rows, limit, name, issues) {
   const index = new Map();
-  for (const row of array(rows, limit, name, 0)) {
-    requireValue(record(row) && label(row[key], maxIdLength) && !index.has(row[key]), name + ' contains an invalid or duplicate ' + key);
-    index.set(row[key], row);
+  if (!Array.isArray(rows) || rows.length > limit) {
+    issues.push(name + ' must contain at most ' + limit + ' entries');
+    return index;
+  }
+  for (const [position, row] of rows.entries()) {
+    if (!record(row) || !label(row.id, 2000)) {
+      issues.push(name + '[' + position + '] has an invalid id');
+    } else if (index.has(row.id)) {
+      // Reserve an ambiguous ID. A third copy must never make it usable again.
+      if (index.get(row.id) !== null) issues.push(name + ' has duplicate id: ' + row.id);
+      index.set(row.id, null);
+    } else {
+      index.set(row.id, row);
+    }
   }
   return index;
 }
@@ -50,7 +61,12 @@ function readSchedule(schedule, horizon) {
     requireValue(label(id) && label(unit) && !units.has(id), 'invalid channel inventory or units');
     units.set(id, unit);
   }
-  const held = indexBy(entry, 'channel', 64, 'entry');
+  const held = new Map();
+  for (const command of array(entry, 64, 'entry', 0)) {
+    requireValue(record(command) && label(command.channel) && !held.has(command.channel),
+      'entry contains an invalid or duplicate channel');
+    held.set(command.channel, command);
+  }
   requireValue(held.size === units.size, 'entry must supply every channel held at the start');
   const validCommand = command => record(command) && units.has(command.channel) &&
     Number.isFinite(command.target) && label(command.phase);
@@ -242,9 +258,9 @@ export function assessRefinementEvidence({ manifest, receipt, request, evidence 
         }
       }
     }
-    const requests = result.binding === 'bound' ? indexBy(request.studies, 'id', 32, 'requested studies', 2000) : new Map();
+    const requests = result.binding === 'bound' ? inventoryById(request.studies, 32, 'requested studies', result.issues) : new Map();
     const observations = evidence?.schema === 'agent-frc/refinement-evidence@1'
-      ? indexBy(evidence.runs, 'id', 1024, 'observed runs', 2000) : new Map();
+      ? inventoryById(evidence.runs, 1024, 'observed runs', result.issues) : new Map();
     const studyIds = new Set(manifest.studies.map(study => study.id));
     const runIds = new Set(manifest.studies.flatMap(study => study.levels.map(level => level.runId)));
     for (const id of requests.keys()) if (!studyIds.has(id)) result.issues.push('unexpected requested study: ' + id);
