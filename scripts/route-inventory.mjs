@@ -1,6 +1,7 @@
 // Project-owned source catalogs and time-bound custody for field-route observations.
 const named=x=>typeof x==='string' && x.trim().length>0;
 const finite=Number.isFinite;
+const digest = value => typeof value === 'string' && /^[0-9a-f]{64}$/.test(value);
 const states=['placed','carried','stock','removed','unknown'];
 const validBox=b=>Array.isArray(b) && b.length===6 && b.every(finite) && [0,1,2].every(i=>b[i]<b[i+3]);
 function check(value,message){if(!value) throw Error(message);}
@@ -47,7 +48,7 @@ export async function loadInventory(ref,scenario,read) {
   } else doc=await read(scenario.sources.field);
   // A producer can select one source collection for a bounded experiment. Only
   // the source catalog can declare which collections comprise the whole field.
-  const key=r=>JSON.stringify([r.path,r.format,r.initial,r.idKey??null,r.bounds??null]);
+  const key=r=>JSON.stringify([r.path,r.format,r.initial,r.idKey??null,r.bounds??null,r.geometryKey??null]);
   const coverageIssues=[];
   if(inv.scope.kind==='whole-field') {
     const full=doc.fieldRouteInventory;
@@ -64,7 +65,10 @@ export async function loadInventory(ref,scenario,read) {
       check(named(id) && !initial.has(id),'Missing or duplicate source field object.');
       const extent=rule.bounds==='value'?row:rule.bounds===undefined?null:row?.[rule.bounds];
       check(rule.bounds===undefined || (rule.initial==='placed' && validBox(extent)),'Invalid initial object bounds.');
-      initial.set(id,{state:rule.initial,extent});
+      const geometry = rule.geometryKey === undefined ? undefined : row?.[rule.geometryKey];
+      check(rule.geometryKey === undefined || (named(rule.geometryKey) && digest(geometry)),
+        'Missing or invalid installed object geometry digest.');
+      initial.set(id,{state:rule.initial,extent,geometry});
     }
   }
   const changes=[],exclusions=[];
@@ -78,6 +82,8 @@ export async function loadInventory(ref,scenario,read) {
       && r.timeS>=inv.startS && named(r.method) && states.includes(r.to) && current.get(r.id).state===r.from
       && usedTimes.get(r.id)!==r.timeS,'Unbound, ambiguous or discontinuous inventory transition.');
     if(r.to==='placed') check(validBox(r.bounds),'A placed or moved object needs its new occupied bounds.');
+    if (r.geometrySha256 !== undefined || (r.to === 'placed' && initial.get(r.id).geometry))
+      check(digest(r.geometrySha256),'Supply the installed geometry revision for the new state.');
     await read(r.sourceEvidence,false);
     usedTimes.set(r.id,r.timeS);
     current.set(r.id,{state:r.to,extent:r.bounds});
@@ -92,6 +98,27 @@ export async function loadInventory(ref,scenario,read) {
     exclusions.push(r);
   }
   return {scope:inv.scope,initial,changes,exclusions,coverageIssues};
+}
+
+export function contactRegistrationIssue(inventory,scenario,observation,witness) {
+  if (!inventory) return null;
+  function stateAt(id) {
+    let state = inventory.initial.get(id);
+    for (const change of inventory.changes) {
+      if (change.timeS > witness.timeS) break;
+      if (change.id === id) state = {state:change.to,extent:change.bounds,geometry:change.geometrySha256};
+    }
+    return state;
+  }
+  const obstacle = stateAt(witness.obstacle);
+  if (obstacle?.state !== 'placed') return 'Obstacle is not registered as placed at contact.';
+  if (obstacle.extent && !contains(observation?.obstacles?.[witness.obstacle],obstacle.extent))
+    return 'Witness sweep does not enclose the registered obstacle at contact.';
+  if (obstacle.geometry && witness.obstacleGeometrySha256 !== obstacle.geometry)
+    return 'Witness does not match the registered obstacle geometry revision.';
+  if (!scenario.robotBodies.includes(witness.moving) && stateAt(witness.moving)?.state !== 'carried')
+    return 'Moving piece is not registered as carried at contact.';
+  return null;
 }
 
 export function inventoryIssues(inventory,scenario,slice,observed,until) {

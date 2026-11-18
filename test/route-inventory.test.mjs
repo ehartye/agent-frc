@@ -17,6 +17,12 @@ async function trial(t,change) {
   s.sources.field=await save('field.json',field);
   i.fieldSha256=s.sources.field.sha256;
   const bound={scenario:await save('scenario.json',s)};
+  for (const [index,contact] of (extra?.contacts??[]).entries()) {
+    sweep.refinements.push(await save('contact-'+index+'.json',{
+      schema:'field-route/refinement@1',clock:s.clock,scenarioSha256:bound.scenario.sha256,
+      fromS:0,toS:1,timeS:.5,moving:'frame',obstacle:'post',backend:'synthetic-native-fixture',
+      method:'material-intersection',volumeMm3:10,toleranceMm3:.01,sourceEvidence:s.sources.robot,...contact}));
+  }
   if(extra?.transition) {
     const record={...extra.transition,fieldSha256:i.fieldSha256,trajectorySha256:s.sources.trajectory.sha256,clock:s.clock};
     i.transitions=[await save('change.json',record)];
@@ -94,4 +100,47 @@ test('a derived catalog must match the exact native field revision',async t=>{
   }),/another field/);
   const scoped=await trial(t,({i})=>{i.scope.outsideScope=['unmeasured annex'];});
   assert.equal(scoped.wholeFieldStatus,'pending');
+});
+
+function registeredPost({field,i,sweep},extent,geometry) {
+  const box=[.5,0,0,1.5,1,2];
+  field.obstacles=[{id:'post',box:extent??box,geometry}];
+  const rule={path:['obstacles'],format:'rows',idKey:'id',initial:'placed',bounds:'box'};
+  if (geometry) rule.geometryKey='geometry';
+  i.collections[0]=rule;
+  field.fieldRouteInventory.collections[0]=rule;
+  sweep.intervals[0].obstacles.post=box;
+}
+
+test('contacts from an incompatible installed pose remain visible and withhold a rejection',async t=>{
+  const r=await trial(t,v=>{registeredPost(v,[.5,0,0,1.5,1,3]);return {contacts:[{}]};});
+  assert.equal(r.declaredRouteStatus,'infeasible');
+  assert.equal(r.routeStatus,'pending');
+  assert.equal(r.wholeFieldStatus,'pending');
+  assert.equal(r.contacts.length,1);
+  assert.match(r.contacts[0].registrationIssue,/enclose/);
+  assert.deepEqual(r.qualifiedContacts,[]);
+});
+
+test('matching and different solids with the same envelope are distinguished by source digest',async t=>{
+  for (const [digest,expected] of [['a'.repeat(64),'infeasible'],['b'.repeat(64),'pending'],[undefined,'pending']]) {
+    const r=await trial(t,v=>{
+      registeredPost(v,undefined,'a'.repeat(64));
+      v.field.missing=['elsewhere'];
+      v.i.collections.push({path:['missing'],format:'ids',initial:'unknown'});
+      return {contacts:[{obstacleGeometrySha256:digest}]};
+    });
+    assert.equal(r.routeStatus,expected);
+    assert.equal(r.qualifiedContacts.length,expected==='infeasible'?1:0);
+  }
+});
+
+test('a witness at the instant of removal uses the new custody state',async t=>{
+  const r=await trial(t,v=>{
+    registeredPost(v);
+    return {contacts:[{timeS:1}],transition:{schema:'field-route/state-change@1',id:'post',
+      from:'placed',to:'removed',timeS:1,method:'withdrawal',sourceEvidence:v.s.sources.trajectory}};
+  });
+  assert.equal(r.routeStatus,'pending');
+  assert.match(r.contacts[0].registrationIssue,/placed at contact/);
 });
