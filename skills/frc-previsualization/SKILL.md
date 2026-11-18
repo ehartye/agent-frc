@@ -10,6 +10,8 @@ Before using a saved blockout to choose the next experiment, follow the [design 
 
 ## Advice and process guidance
 
+First build the release-day rules model with `--model-output` in the kickoff guide below. Review inventory, scoring windows and inferred traffic corridors. Open that same model in the lab. Translate shared-route exposure into a retained-function requirement and an open load test.
+
 **Fresh kickoff.** Start the [kickoff field lab](../../docs/kickoff-field-lab.md) as soon as the release-day field dimensions are sourced. Open the page for students. Have them resize and move a plain robot, save observations, and draft a match story, alternative, provisional capability and next test. Take the downloaded draft into strategic narrative before selecting mechanisms. For an unsupported season, prepare its own release-day profile.
 
 **After a narrative exists**, reopen the team's saved artifact and use the following steps to investigate its provisional requirements.

@@ -4,6 +4,7 @@ function fieldScene(canvas, profile, state, place) {
   const field = profile.field;
   const camera = {view: 'field', yaw: -0.27, tilt: 0.77, zoom: 1};
   let project, unproject;
+  let route=[], study=null;
   function draw() {
     const {width, height} = canvas.getBoundingClientRect();
     if (!width || !height) return;
@@ -48,6 +49,24 @@ function fieldScene(canvas, profile, state, place) {
     for(let x=36;x<L;x+=36) path([[x,0],[x,W]],'#40696c');
     for(let y=36;y<W;y+=36) path([[0,y],[L,y]],'#40696c');
     path([[L/2,0],[L/2,W]],'#afc8bd');
+    if(study) {
+      for(const peer of study.peers) for(const leg of peer.paths) path(leg,'#669295');
+      for(const h of study.hot) {
+        const [px,py]=project(...h.point);
+        ctx.fillStyle=h.count>=2?'#d89569':'#ae9d70';ctx.beginPath();ctx.arc(px,py,3,0,Math.PI*2);ctx.fill();
+      }
+      if(study.line.length) {ctx.lineWidth=2;path(study.line,'#ffcb77');ctx.lineWidth=1;}
+    }
+    if(!study && route.length===2) {
+      ctx.lineWidth=3;
+      path(route.map(p=>[p.x,p.y]),'#ffcb77');
+      ctx.lineWidth=1;
+    }
+    for (const p of route) {
+      const [px,py]=project(p.x,p.y);
+      ctx.fillStyle='#ffcb77';ctx.beginPath();ctx.arc(px,py,6,0,Math.PI*2);ctx.fill();
+      ctx.font='bold 15px system-ui';ctx.fillText(p.name,px+9,py+12);
+    }
     const objects = profile.landmarks.map(m => {
       const r = m.acrossFlats / (2*Math.cos(Math.PI/m.sides));
       const points = Array.from({length:m.sides},(_,i) => {
@@ -112,7 +131,7 @@ function fieldScene(canvas, profile, state, place) {
   function zoom(factor) {camera.zoom=Math.max(.5,Math.min(6,camera.zoom*factor));draw();}
   canvas.addEventListener('wheel',e=>{e.preventDefault();zoom(e.deltaY<0?1.12:1/1.12);},{passive:false});
   new ResizeObserver(draw).observe(canvas);
-  return {draw,zoom,view(name){
+  return {draw,zoom,setRoute(points,analysis){route=points;study=analysis;draw();},view(name){
     camera.view=name;camera.yaw=name==='top'?0:-.27;camera.tilt=name==='top'?Math.PI/2:.77;
     camera.zoom=1;draw();
   }};
