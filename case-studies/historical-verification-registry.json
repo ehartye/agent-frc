@@ -1,0 +1,59 @@
+{
+  "schema": "agent-frc/historical-verification-registry@1",
+  "cases": [
+    {
+      "id": "acquisition-contract",
+      "locator": "ff8e87665b76b8491606ac6847333809ee82b526",
+      "argv": [
+        "-I",
+        "-B",
+        "scripts/test-acquisition-contract.py"
+      ],
+      "tests": [
+        "test_controls",
+        "test_domain",
+        "test_energy_and_continuity",
+        "test_fresh",
+        "test_mass_bounds",
+        "test_rebound_and_stop_loss"
+      ],
+      "files": [
+        {
+          "path": "scripts/acquisition-contract.py",
+          "blob": "7882efec5df0fa26b9087c84b3d41989c41b4317",
+          "sha256": "9e2d09f0c0470b343fc6c6bc6c43cbc6fd5a54c12715db762f5dd0302bd41b5a"
+        },
+        {
+          "path": "case-studies/integrated-prototype-targets.json",
+          "blob": "62435446fd44cd25fc50b564c2c4910ce6b88063",
+          "sha256": "292b3b764c63ed9db4cbe2c5d59d50cdc18845e387da65bcf3e4fd41a676ab2d"
+        },
+        {
+          "path": "case-studies/coral-mass-evidence.json",
+          "blob": "6b269915f651ea6fff47417d5f69697366b07d4c",
+          "sha256": "874d97b8bd125adaa4b876bb2b9b230a7e979f87757684f779caab79b810f94c"
+        },
+        {
+          "path": "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/IntegratedPregripPrototype.java",
+          "blob": "94da2d0ebbb1f83fd87242c00b31f8ac354a110a",
+          "sha256": "ddf59535e4991ba7e7ad3699ff22705dd039bb0c7495d9ca6dd4f91338cee2c6"
+        },
+        {
+          "path": "examples/java-2026-sim/src/main/java/org/agentfrc/lesson/PoweredGuidePlant.java",
+          "blob": "4337ef8e9d3947654770c57a1496e89f304d1111",
+          "sha256": "e975380a4da17783f9cbb30947dbbda8a21bf907d014c67011abf176e90393e3"
+        },
+        {
+          "path": "case-studies/acquisition-contract.json",
+          "blob": "f4805c08d2a7f36906f31f590e6d492280d0c0af",
+          "sha256": "69565e8c3355d5b3f5342996f671d24ca3c53e1154cd77902cba846d5b108408"
+        },
+        {
+          "path": "scripts/test-acquisition-contract.py",
+          "blob": "6d9cd1c60a6dd557fcfb9a15ed480517abb9e3d4",
+          "sha256": "3ba42c04b46a67c0c9cf050cc2720269018997088ec6ad5c0ec477574f5f886c"
+        }
+      ]
+    }
+  ]
+}
