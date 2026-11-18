@@ -20,6 +20,8 @@ Node 20.11+; no Node dependencies. Run `npm test`, `npm run validate`, `npm run 
 
 ## Boundaries
 
+See [experimental studies and verification scope](docs/experimental-studies.md) before replaying preserved contact, acquisition or target studies. Historical receipts retain their original source pins; integration does not make them fresh evidence for the combined checkout.
+
 Historical game analysis uses a common pinned 2026 teaching runtime, not historical robot binaries. Selected requirements are not complete rule compliance. Final 2027 game rules and production Systemcore compatibility remain unverified. No physical IO, deploy target, robot operation, plugin installation or model-effectiveness test is provided.
 
 Original code, prose and concept vectors are MIT. FIRST manuals and manufacturer documentation stay link-only. [Manual fingerprints](case-studies/manual-fingerprints.json) identify retrieved bytes without bundling them. [Third-party notices](examples/java-2026-sim/THIRD_PARTY.md) cover selected build/wrapper sources; dependencies are not bundled. No private catalog, team data or credentials are shipped.

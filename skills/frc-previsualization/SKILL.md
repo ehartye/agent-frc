@@ -105,7 +105,6 @@ Our design inference: a changed signature is a reason to inspect, not a diagnosi
 
 Read [native CAD verification lessons](../../docs/native-cad-feedback.md) before claiming clearance or validating a mounting interface. Audit static support/cartridge interfaces separately from moving/game-piece sweeps; preserve baseline contacts and failing intermediate poses. Require method-qualified bounds, negative controls and source-bound incremental progress for expensive checks. Do not describe the proposed native backend optimizations as implemented by the portable blockout CLI.
 
-<<<<<<< HEAD
 ## Operating-space iteration
 
 Use [define, check and iterate the operating space](../../docs/operating-space.md) when the student needs to set functional ranges, assess tolerances or recheck a changed design. Reuse the existing narrative/artifact; maintain the linked worksheet as a sidecar, classify physical versus study/model limits, and invalidate affected evidence after changes. Keep consequential choices with the student.
@@ -117,9 +116,7 @@ Use the [CAD color convention](../../docs/cad-color-convention.md) for new/revis
 ## Choose the simulation for the question
 
 Use [iterative simulator selection](../../docs/simulator-selection.md) to compare block-bot rehearsal, kinematic checks, bounded mechanism/contact fixtures, controls/drive and integrated field/adversary scenarios. Select by decision and evidence needed, not visual complexity or a mandatory fidelity ladder. Preserve model limits and explicit transition gates.
-=======
 
 ## Carry rehearsal decisions into trustworthy simulation
 
 When a student changes a command policy, ask which controller state changes and which physical state must continue unchanged. Use the [continuation and verification guidance](../../docs/simulator-equivalence.md) to distinguish a newly initialized controller from a preserved plant, current-source tests from historical evidence, and same-time comparisons from mismatched midpoint samples. Retain failed or still-moving outcomes. A matching plot or a green historical test is not capture, stopping, mechanical acceptance or a complete mission.
->>>>>>> 39bfeaf (Guide historical source verification and controller-only transitions)

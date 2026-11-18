@@ -4,7 +4,7 @@ This CAD-only experiment creates three separate native solids: one upper annular
 
 ## Source and authored geometry
 
-The exact pinned 2025 manual, Arena V4 section5.7.1 page33, gives nominal11 7/8in length,4.5in OD and4in ID,1.1–1.8lb. These yield301.625mm length,57.15mm outer radius and50.8mm inner radius. The foam-core PVC description supplies no stiffness/friction/density calibration. The full hollow native proxy is an idealized source-sized shape, not manufacturer CAD. Its mass is NOT inferred from native volume. The source interval remains separate; no midpoint is silently selected here.
+The exact pinned 2025 manual, Arena V4 section5.7.1 page33, gives nominal11 7/8in length,4.5in OD and4in ID,1.1â€“1.8lb. These yield301.625mm length,57.15mm outer radius and50.8mm inner radius. The foam-core PVC description supplies no stiffness/friction/density calibration. The full hollow native proxy is an idealized source-sized shape, not manufacturer CAD. Its mass is NOT inferred from native volume. The source interval remains separate; no midpoint is silently selected here.
 
 Original sleeve assumptions: radius25.4mm, bore radius6.35mm, span152.4mm, uniform density1200kg/m3, gear10 and one motor. Only the sleeve has assumed-density mass and native axis inertia. Its axis is +Y atX0,Z137.7mm compressed or139.7mm nominal. Floor clearances112.3/114.3mm imply2/0mm nominal overlap with114.3mm OD, not a sourced compliant design recommendation.
 
