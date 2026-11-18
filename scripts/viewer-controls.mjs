@@ -121,13 +121,14 @@ export function compareViewerControls(expected,observed){
    if(!equal(want,t.event))mismatch('event-mismatch',q+'/event','Observed event differs from independent scenario');
    if(!equal(sortedHeld(t.priorHeld),active))mismatch('prior-held-mismatch',q+'/priorHeld','Prior held state breaks the scenario continuity');
    // Compute from required inputs and supplied engine observations, never from claimed final state.
+   const wasHeld=active.some(a=>a.code===required.code);
    if(required.type==='focus-loss')active=[];
    else if(required.type==='keyup')active=active.filter(a=>a.code!==required.code);
    else if(!active.some(a=>a.code===required.code)){
     const binding=apps.find(a=>chord(a)===chord(required));if(binding)active=sortedHeld([...active,{code:binding.code,action:binding.action}]);
    }
    const display={...t.postEngine};
-   if(required.type!=='focus-loss')for(const option of collisions.get(chord(required))??[])display[option]=expected.restoreValues[option];
+   if(required.type==='keydown'||(required.type==='keyup'&&wasHeld))for(const option of collisions.get(chord(required))??[])display[option]=expected.restoreValues[option];
    if(!equal(sortedHeld(t.finalHeld),active))mismatch('held-mismatch',q+'/finalHeld','Final application actions differ from the routing policy');
    if(!equal(t.finalDisplay,display))mismatch('display-mismatch',q+'/finalDisplay','Only colliding display options may be restored; other observed values must remain unchanged');
   }

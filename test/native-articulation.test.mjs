@@ -78,6 +78,15 @@ test('only manifest tolerances govern comparisons and malformed tolerances fail'
  check('mismatch','origin-mismatch',(e,o)=>{o.joints[0].origin[0]=0.01;o.joints[0].tolerances={origin:100};});
  for(const value of [-1,NaN,Infinity,undefined])check('invalid','tolerance-invalid',e=>e.joints[0].tolerances.coordinate=value);
 });
+test('axis tolerance is normalized angular separation in radians, not per-component distance',()=>{
+ const [e,o]=pair(),angle=0.2;
+ const expected=e.joints.find(j=>j.id==='hinge'),observed=o.joints.find(j=>j.id==='hinge');
+ expected.axis=[0,0,1];observed.axis=[Math.sin(angle)/Math.sqrt(2),Math.sin(angle)/Math.sqrt(2),Math.cos(angle)];
+ expected.tolerances.axis=0.15;
+ assert.ok(observed.axis.every((v,i)=>Math.abs(v-expected.axis[i])<0.15),'Every component fits 0.15, but the angular separation is 0.2 rad');
+ const result=compareNativeArticulation(e,o);assert.equal(result.status,'mismatch');assert.ok(result.issues.some(i=>i.code==='axis-mismatch'));
+ expected.tolerances.axis=0.21;assert.equal(compareNativeArticulation(e,o).status,'matched');
+});
 test('malformed documents and diagnostics are deterministic without input mutation',()=>{
  for(const v of [null,[],false,{}])assert.equal(compareNativeArticulation(v,v).status,'invalid');
  const [e,o]=pair();o.joints[0].sign=0;delete o.witnesses[0].reopen;const before=JSON.stringify([e,o]);

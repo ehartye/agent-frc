@@ -26,6 +26,25 @@ test('modifier changes release original physical binding, repeat is idempotent, 
  for(const idx of [2,5,6]){const r=compare((e,o)=>{o.cases[0].events[idx].finalHeld=[{code:'KeyD',action:'drive-right'}];});assert.equal(r.status,'mismatch');assert.ok(has(r,'held-mismatch'));}
  assert.equal(compare((e,o)=>{o.cases[0].events[1].finalHeld.push({code:'KeyD',action:'drive-right'});}).status,'invalid');
 });
+test('colliding late keyup after focus loss is inert while release of a held key restores its collision',()=>{
+ for(const middle of ['focus-loss','keyup']){
+  const [e,o]=pair();
+  const release=middle==='focus-loss'?{type:'focus-loss'}:{type:'keyup',code:'KeyD',modifiers:[]};
+  e.cases=[{id:'late-collision',initialHeld:[],events:[
+   {id:'press',type:'keydown',code:'KeyD',modifiers:[]},
+   {id:'release',...release},
+   {id:'late',type:'keyup',code:'KeyD',modifiers:[]}
+  ]}];
+  o.cases=[{id:'late-collision',events:[
+   {id:'press',event:{type:'keydown',code:'KeyD',modifiers:[]},priorHeld:[],postEngine:{floor:false,camera:'orbit'},finalHeld:[{code:'KeyD',action:'drive-right'}],finalDisplay:{floor:true,camera:'orbit'}},
+   {id:'release',event:release,priorHeld:[{code:'KeyD',action:'drive-right'}],postEngine:{floor:false,camera:'follow'},finalHeld:[],finalDisplay:{floor:middle==='keyup',camera:'follow'}},
+   {id:'late',event:{type:'keyup',code:'KeyD',modifiers:[]},priorHeld:[],postEngine:{floor:false,camera:'follow'},finalHeld:[],finalDisplay:{floor:false,camera:'follow'}}
+  ]}];
+  const result=compareViewerControls(e,o);assert.equal(result.status,'matched',JSON.stringify(result));
+  o.cases[0].events[2].finalDisplay.floor=true;
+  const wrong=compareViewerControls(e,o);assert.equal(wrong.status,'mismatch');assert.ok(has(wrong,'display-mismatch'));
+ }
+});
 test('missing observed post-engine state, event fields, incomplete transitions reject',()=>{
  for(const f of ['postEngine','priorHeld','finalHeld','finalDisplay','event'])assert.equal(compare((e,o)=>{delete o.cases[0].events[0][f];}).status,'invalid',f);
  assert.equal(compare((e,o)=>{o.cases[0].events.pop();}).status,'invalid');
