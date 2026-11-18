@@ -10,6 +10,8 @@ Start with the [end-to-end case workflow](case-studies/README.md): [2024 CRESCEN
 
 ## Use and validate
 
+To use the skills from this checkout in Codex, follow [local plugin setup](docs/local-plugin.md). The included `agent-frc-local` marketplace points to this repository and keeps local installation separate from public releases.
+
 Node 20.11+; no Node dependencies. Run `npm test`, `npm run validate`, `npm run evaluate` and `npm run cases:validate`. The current Node regression suite is run with npm test; 29 deterministic grounding cases are available separately. They do not establish model/learner effectiveness.
 
 `npm run case -- --season 2025`

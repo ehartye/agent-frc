@@ -37,6 +37,7 @@
     "test:coral-placement": "python -B scripts/test-coral-placement.py",
     "test:acquisition-contract": "python -B scripts/test-acquisition-contract.py",
     "test:acquiring-robot": "python -B scripts/test-acquiring-robot.py",
-    "test:acquired-targets": "python -B scripts/test-acquiring-robot-targets.py"
+    "test:acquired-targets": "python -B scripts/test-acquiring-robot-targets.py",
+    "plugin:stage": "node scripts/stage-local-plugin.mjs"
   }
 }
