@@ -14,6 +14,8 @@ When an imported or untitled design becomes the working draft, give it a name th
 
 For a requested Fusion save, use the intended document and the authorized project and folder. Check who can access the destination when the design includes restricted geometry. After saving, read back the active tab title, document saved state and resulting design location and version. A local F3D export preserves a native archive and can leave the working tab untitled and unsaved. If only local storage is authorized, record the archive and the tab state separately.
 
+If the immediate readback fails, check the destination folder for the saved design's file ID and version and inspect the tab again. Retry only after resolving whether the first save completed.
+
 Prefer one clearly named active assembly, a small set of useful comparison documents and source-linked evidence. Reuse a verified existing saved copy when it already preserves the exact state. Do not create a new archive for every cleanup or accumulate redundant exports by default. A distinct failed experiment may deserve preservation because its counterexample explains a decision; duplicate views of the same verified file may not need another artifact.
 
 For each proposed closure, record the exact document identity, disposition and recoverable source. Save only within authorization. If a new archive is necessary, use a descriptive project-relative name and provenance note, keeping original/imported/proxy and supplier restrictions explicit. Do not overwrite the canonical assembly or relabel a rejected trial as current.
