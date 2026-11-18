@@ -1,5 +1,13 @@
 # Task-specific environment health
 
+For a Python suite that uses both native CAD and simulation, run the combined check with the suite's Python executable and its working directory.
+
+```sh
+node scripts/check-environment.mjs --task cad-physics --python PYTHON_EXECUTABLE --cwd TEST_DIRECTORY
+```
+
+The probe imports MuJoCo, NumPy and OCP in one Python process. Matplotlib is optional. Supply exact project pins with repeated `--expect distribution=version` arguments. The child inherits the caller's environment and uses the test directory for imports as in `python -m unittest`. If the real suite appends extra import directories after its interpreter's packages, mirror them in order with repeated `--append-path DIRECTORY` arguments. Use trusted project directories and the same interpreter options and environment when running the suite. Keep the JSON report private. It includes working directory, import path order, module origins, versions and import exceptions. A successful check establishes that the selected interpreter can import these libraries together. Run the suite to verify the design.
+
 For a Java simulation project, use `npm run setup:check -- --task java --jdk ABSOLUTE_JDK_PATH --expect-java PROJECT_MAJOR`. Both options are required: reuse the project's existing trusted JDK and its documented major version. For a project requiring Java 17, PowerShell can pass an already selected absolute path with `--jdk "$env:JAVA_HOME" --expect-java 17`. An unset variable fails; this tool does not search for or select another installation.
 
 The Java profile runs only `bin/java -version` and `bin/javac -version` (`.exe` on Windows), directly without a shell. Each probe has a 20-second timeout and 1 MiB output limit. The report retains executable paths, observed versions and expected major; missing runtime/compiler, nonzero exit, timeout, ambiguous/unrecognized version output or a major mismatch yields `ready:false` and exit 2. Java options on a different task and Python options on the Java task are rejected. No Python process, Gradle wrapper, build, dependency resolution or installer is launched.

@@ -12,6 +12,8 @@ For core artifact/trace work, Python physics libraries are not required. For a s
 
 ## Current project checks
 
+For a suite that imports native CAD and simulation packages together, use `setup:check -- --task cad-physics --python PYTHON_EXECUTABLE --cwd TEST_DIRECTORY`. Match the project's actual test import paths and retain the private diagnostic before running its tests.
+
 For Java simulation work, use `setup:check -- --task java --jdk ABSOLUTE_JDK_PATH --expect-java PROJECT_MAJOR` before a build. Select one existing trusted JDK from project guidance; runtime and compiler must both match the requested major. Missing compiler, timeout and unrecognized version output remain failed prerequisites. This check does not run Gradle or prove cache, WPILib, native dependency or build readiness. Keep environment output private and preserve the established project build command as the next separate verification step.
 
 Run the selected project’s offline checks with its declared prerequisites. Record the command, revision, versions and outcome. Keep an unavailable prerequisite visible.
