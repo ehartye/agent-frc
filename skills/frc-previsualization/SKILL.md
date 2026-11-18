@@ -10,7 +10,9 @@ Before using a saved blockout to choose the next experiment, follow the [design 
 
 ## Advice and process guidance
 
-**Entry:** a saved narrative, provisional requirements, and source-bounded field/game-piece dimensions. Reopen an existing artifact rather than discarding the student's prior decisions.
+**Fresh kickoff.** Start the [kickoff field lab](../../docs/kickoff-field-lab.md) as soon as the release-day field dimensions are sourced. Open the page for students. Have them resize and move a plain robot, save observations, and draft a match story, alternative, provisional capability and next test. Take the downloaded draft into strategic narrative before selecting mechanisms. For an unsupported season, prepare its own release-day profile.
+
+**After a narrative exists**, reopen the team's saved artifact and use the following steps to investigate its provisional requirements.
 
 1. Build the smallest useful editable scene: robot-space cube, game piece and actual target volume. Show units and the origin. Explain assumed registration when the source drawing is not an installed-field survey.
 2. Add purpose-labeled volumes only as needed: battery, indexer, intake travel, shooter/lift, wiring/service access. Ask 'What needs to pass through here?' before refining how the part looks.

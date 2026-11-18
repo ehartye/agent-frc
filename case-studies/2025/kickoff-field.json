@@ -1,0 +1,21 @@
+{
+  "season": 2025,
+  "game": "REEFSCAPE",
+  "edition": "Kickoff · V0",
+  "manual": "https://manuals.plus/m/e98a748723b248f34e890accab1c49c809276fe44de713321834e30736d1e04a.pdf",
+  "units": "in",
+  "field": {"length": 690.875, "width": 317, "source": "§5.1, p. 19. Rectangular field extents."},
+  "limits": {"perimeter": 120, "height": 42, "source": "R101–R104. Rectangular robot perimeter excluding bumpers and height in starting configuration."},
+  "landmarks": [
+    {"name": "Blue reef", "x": 176.75, "y": 158.5, "sides": 6, "acrossFlats": 65.5, "height": 18},
+    {"name": "Red reef", "x": 514.125, "y": 158.5, "sides": 6, "acrossFlats": 65.5, "height": 18}
+  ],
+  "levels": [
+    {"name": "L1 lip", "height": 18},
+    {"name": "L2 tip", "height": 31.875},
+    {"name": "L3 tip", "height": 47.625},
+    {"name": "L4 tip", "height": 72}
+  ],
+  "geometrySource": "§5.3, pp. 23–24. Each reef is centered across the field. Its modeled center is 144 in plus half its width from the alliance wall. The rings mark elevations only.",
+  "omissions": "Corners, barge, stations, game pieces, bumpers and deployed mechanisms are omitted. Field outlines and height rings support scale comparisons only."
+}

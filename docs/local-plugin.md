@@ -17,6 +17,8 @@ Commit tracked changes before staging. The staging command copies tracked files 
 
 Codex installs a cached copy of that export. After changing or pulling plugin files, rerun `npm run plugin:stage` and the install command, then start a new session; do not edit the installed cache. This setup does not publish to a public directory or modify any other marketplace.
 
+For a release-day exercise, ask Agent FRC to open the kickoff field lab. The [kickoff guide](kickoff-field-lab.md) includes the standalone command and student narrative handoff.
+
 Validate the source with `npm test` and `npm run validate`. A successful plugin installation does not install Java, WPILib, Python physics packages or Fusion. Optional vault grounding remains explicitly configured and is not required for installation.
 
 See the [OpenAI local plugin packaging documentation](https://developers.openai.com/plugins/build/plugins) for current marketplace and cache behavior.

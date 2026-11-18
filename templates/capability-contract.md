@@ -1,6 +1,7 @@
 # Capability and Verification Contract v1 — draft
 
 Season / event / manual + update revision:
+Kickoff narrative file and supporting observation IDs (for a fresh season):
 Strategy brief revision and actual reviewer decision:
 Decision date and unresolved assumptions:
 

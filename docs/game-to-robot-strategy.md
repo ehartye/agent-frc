@@ -2,6 +2,8 @@
 
 The next artifact is a **Game-to-Robot Strategy Brief**, before subsystem choices are frozen. The plugin generates one for [2024](../case-studies/2024/strategy-brief.md), [2025](../case-studies/2025/strategy-brief.md) and [2026](../case-studies/2026/strategy-brief.md). They are review proposals, not decisions Eric or a school has already made.
 
+For a fresh kickoff, begin with the [student field lab](kickoff-field-lab.md) and use its saved observations to draft the first match story. Keep the release-day evidence cutoff when evaluating that draft. The historical teaching briefs below use their own later snapshots.
+
 ## Agent-led sequence
 
 1. Select season and pin manual/update revision, source fingerprint and intended event stage. Inspect the case's rule trace and the official selected sections. If the intended event is unknown, write it as unresolved and proceed with a clearly bounded educational proposal.
