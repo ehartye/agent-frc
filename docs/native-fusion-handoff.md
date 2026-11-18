@@ -4,6 +4,8 @@ Choose the required deliverable with the project owner. If the project requires 
 
 ## Before changing a document
 
+As soon as an imported design becomes the active draft, follow the [draft naming and save checks](project-tidying.md#decide-what-actually-needs-keeping). Record the visible Fusion document name and saved version so the operator can resume the correct design.
+
 Inspect the target document identity, design mode and existing state. Define the native script entrypoint explicitly (run(context) for the audited Python execution interface); do not rely on prior globals. Query the current version's API rather than assuming a property exists across classes. Direct imported designs may not offer timeline/user-parameter operations. Preserve partial-execution evidence and inspect it before retrying creation, so retries do not duplicate assemblies.
 
 ## Placement and parameter edits must be observed
