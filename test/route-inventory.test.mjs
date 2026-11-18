@@ -144,3 +144,14 @@ test('a witness at the instant of removal uses the new custody state',async t=>{
   assert.equal(r.routeStatus,'pending');
   assert.match(r.contacts[0].registrationIssue,/placed at contact/);
 });
+
+test('a caller selecting only identities cannot erase the field catalog geometry revision',async t=>{
+  const r=await trial(t,v=>{
+    registeredPost(v,undefined,'a'.repeat(64));
+    v.i.scope.kind='bounded-study';
+    v.i.collections[0]={path:['obstacles'],format:'rows',idKey:'id',initial:'placed'};
+    return {contacts:[{obstacleGeometrySha256:'b'.repeat(64)}]};
+  });
+  assert.equal(r.routeStatus,'pending');
+  assert.match(r.contacts[0].registrationIssue,/geometry revision/);
+});

@@ -58,19 +58,25 @@ export async function loadInventory(ref,scenario,read) {
       || !wanted.length || JSON.stringify(wanted)!==JSON.stringify(authoritative))
       coverageIssues.push('Complete independent field catalog unavailable or collection selection differs.');
   }
-  const initial=new Map();
-  for(const rule of inv.collections) {
-    check(states.includes(rule.initial) && rule.initial!=='removed','Invalid initial occupancy.');
-    for(const [id,row] of collect(doc,rule)) {
-      check(named(id) && !initial.has(id),'Missing or duplicate source field object.');
-      const extent=rule.bounds==='value'?row:rule.bounds===undefined?null:row?.[rule.bounds];
-      check(rule.bounds===undefined || (rule.initial==='placed' && validBox(extent)),'Invalid initial object bounds.');
-      const geometry = rule.geometryKey === undefined ? undefined : row?.[rule.geometryKey];
-      check(rule.geometryKey === undefined || (named(rule.geometryKey) && digest(geometry)),
-        'Missing or invalid installed object geometry digest.');
-      initial.set(id,{state:rule.initial,extent,geometry});
+  function readStates(collections) {
+    const initial=new Map();
+    for(const rule of collections) {
+      check(states.includes(rule.initial) && rule.initial!=='removed','Invalid initial occupancy.');
+      for(const [id,row] of collect(doc,rule)) {
+        check(named(id) && !initial.has(id),'Missing or duplicate source field object.');
+        const extent=rule.bounds==='value'?row:rule.bounds===undefined?null:row?.[rule.bounds];
+        check(rule.bounds===undefined || (rule.initial==='placed' && validBox(extent)),'Invalid initial object bounds.');
+        const geometry = rule.geometryKey === undefined ? undefined : row?.[rule.geometryKey];
+        check(rule.geometryKey === undefined || (named(rule.geometryKey) && digest(geometry)),
+          'Missing or invalid installed object geometry digest.');
+        initial.set(id,{state:rule.initial,extent,geometry});
+      }
     }
+    return initial;
   }
+  const initial=readStates(inv.collections);
+  const catalog=doc.fieldRouteInventory;
+  const contactInitial=Array.isArray(catalog?.collections) ? readStates(catalog.collections) : null;
   const changes=[],exclusions=[];
   const current=new Map(initial);
   const usedTimes=new Map();
@@ -82,7 +88,7 @@ export async function loadInventory(ref,scenario,read) {
       && r.timeS>=inv.startS && named(r.method) && states.includes(r.to) && current.get(r.id).state===r.from
       && usedTimes.get(r.id)!==r.timeS,'Unbound, ambiguous or discontinuous inventory transition.');
     if(r.to==='placed') check(validBox(r.bounds),'A placed or moved object needs its new occupied bounds.');
-    if (r.geometrySha256 !== undefined || (r.to === 'placed' && initial.get(r.id).geometry))
+    if (r.geometrySha256 !== undefined || (r.to === 'placed' && (initial.get(r.id).geometry || contactInitial?.get(r.id)?.geometry)))
       check(digest(r.geometrySha256),'Supply the installed geometry revision for the new state.');
     await read(r.sourceEvidence,false);
     usedTimes.set(r.id,r.timeS);
@@ -97,16 +103,23 @@ export async function loadInventory(ref,scenario,read) {
     await read(r.sourceEvidence,false);
     exclusions.push(r);
   }
-  return {scope:inv.scope,initial,changes,exclusions,coverageIssues};
+  return {scope:inv.scope,initial,contactInitial,catalogComplete:catalog?.complete===true,changes,exclusions,coverageIssues};
 }
 
 export function contactRegistrationIssue(inventory,scenario,observation,witness) {
   if (!inventory) return null;
   function stateAt(id) {
-    let state = inventory.initial.get(id);
+    const declared = inventory.initial.get(id);
+    const catalog = inventory.contactInitial?.get(id);
+    if (inventory.contactInitial && inventory.catalogComplete && !catalog) return undefined;
+    let state = catalog ? {state:catalog.state, extent:catalog.extent??declared?.extent,
+      geometry:catalog.geometry??declared?.geometry} : declared;
     for (const change of inventory.changes) {
       if (change.timeS > witness.timeS) break;
-      if (change.id === id) state = {state:change.to,extent:change.bounds,geometry:change.geometrySha256};
+      if (change.id === id) {
+        if (state?.state !== change.from) return undefined;
+        state = {state:change.to,extent:change.bounds,geometry:change.geometrySha256};
+      }
     }
     return state;
   }
