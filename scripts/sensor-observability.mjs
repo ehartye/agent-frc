@@ -225,6 +225,8 @@ export function reviewSensors(model, trace, witness = null) {
     ? finiteSupportGapM !== null && finiteSupportGapM >= model.clearanceM
     : samples.at(-1).gapM >= model.clearanceM;
   return {samples, finiteSupportGapM, seatDistinguishable, designConsistent, observationsConsistent,
+    releaseScope: {geometry: model.support.material ? 'declared-support-material' : 'declared-exit-plane',
+      wholeRobotClearance: 'requires-separate-assembly-evidence'},
     independentClearance: Boolean(independentClearance),
     releaseSupportedInStudy: Boolean(independentClearance && designConsistent && observationsConsistent
       && clearsSupport),

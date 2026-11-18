@@ -38,9 +38,9 @@ export const stages = [
   {
     id: 'verify', name: 'Test and revise', question: 'Which decision does the evidence support?',
     objective: 'Test the assumption with the greatest consequence for the design. Record the exact candidate, inputs, observed result and limitations.',
-    activity: 'Repeat a clearance study on the saved CAD assembly. Verify its version, placements and joints, then check which bodies overlap at the sampled poses. Use the result to revise the mechanism or its match role.',
+    activity: 'Check whether the robot and its carried piece can reach each scoring observation. Follow an overlapping swept bound into the native geometry, then decide whether the route or mechanism needs to change.',
     handoff: 'A result tied to the tested revision, the team’s next decision and any remaining physical verification.',
-    skills: ['frc-setup','frc-troubleshoot','frc-java','frc-mechanism-cad'], docs: [['Replay a saved native study','docs/native-study-replay.md'],['Recorded release height','docs/recorded-release-height.md'],['Simulation selection','docs/simulator-selection.md'],['Resume a design investigation','docs/strategy-first-continuation.md']]
+    skills: ['frc-setup','frc-troubleshoot','frc-java','frc-mechanism-cad'], docs: [['Review the route to a scoring event','docs/field-route-evidence.md'],['Replay a saved native study','docs/native-study-replay.md'],['Recorded release height','docs/recorded-release-height.md'],['Simulation selection','docs/simulator-selection.md'],['Resume a design investigation','docs/strategy-first-continuation.md']]
   }
 ];
 export const purpose = {
