@@ -14,29 +14,35 @@ For conflicting records, say which claim each record supports and how its date, 
 
 Start with the current project and the locators supplied by the team. If a selection is missing or two records materially disagree, look for a relevant local branch or registered worktree of this repository. A plain folder, or a project without Git available, still has its files and any records the owner supplied. Describe what is missing and use the shared-work and priority question above.
 
-In PowerShell, start in the project directory. First inspect the names and paths. Limit the search to plausible review branches, decision files and their directly related records.
+In PowerShell, start in the project directory. First check Git's effective configuration. A partial clone can fetch missing objects during an ordinary read. If a partial-clone or promisor setting is present, or the configuration cannot be checked, end Git discovery here. Use existing files and owner-supplied locators and identify any unavailable decision. The same fallback applies when the directory is outside a Git worktree.
 
 ```powershell
 $project = (Get-Location).Path
 git -C "$project" rev-parse --show-toplevel
+if ($LASTEXITCODE -ne 0) { throw 'Use existing project files and supplied locators.' }
+git -C "$project" config --includes --name-only --get-regexp '^(extensions\.partialclone|remote\..*\.(promisor|partialclonefilter))$'
+if ($LASTEXITCODE -eq 0) { throw 'Partial or promisor clone. Use existing files and supplied locators.' }
+if ($LASTEXITCODE -ne 1) { throw 'Cannot verify the local object configuration. Use existing files.' }
+$prefix = [string](git -C "$project" rev-parse --show-prefix)
+if ($LASTEXITCODE -ne 0) { throw 'Cannot locate the selected project.' }
 git -C "$project" worktree list --porcelain
 git -C "$project" for-each-ref --count=20 --format="%(refname) %(objectname)" refs/heads/
 ```
 
-In a large repository narrow the final argument to a relevant local ref prefix. Report the refs you actually checked if a decision remains missing. To read a committed choice on a branch with no mounted worktree, use its full commit ID from the listing. Substitute the selected commit, the relevant folders and the exact path discovered there.
+In a large repository narrow the final argument to a relevant local ref prefix. Report the refs you actually checked if a decision remains missing. To read a committed choice on a branch with no mounted worktree, use its full commit ID from the listing. Substitute the selected commit and relevant project folders below. Keep the full repository-relative path printed by `ls-tree --full-name`, including any project prefix.
 
 ```powershell
 $revision = '<commit ID>'
-git -C "$project" ls-tree -r --name-only "$revision" -- notes strategy design | Select-Object -First 30
-$record = 'notes/owner review.md'
+git -C "$project" ls-tree -r --full-name --name-only "$revision" -- notes strategy design | Select-Object -First 30
+$record = '<full repository-relative path from the listing>'
 git -C "$project" show "${revision}:$record"
 ```
 
-For a plausible registered worktree, use the path from the worktree listing. Inspect the current file itself to recover an uncommitted correction. Paths below are relative to that worktree's root.
+For a plausible registered worktree, use its root from the worktree listing and keep the selected project's folder prefix. Porcelain v1 status displays repository-relative paths. Read the current file to recover an uncommitted correction. For a different modified or untracked record, set `$record` to its exact repository-relative path.
 
 ```powershell
 $other = '<registered worktree path>'
-git --no-optional-locks -C "$other" status --short --untracked-files=all -- notes strategy design
+git --no-optional-locks -C "$other" status --porcelain=v1 --untracked-files=all -- "${prefix}notes" "${prefix}strategy" "${prefix}design"
 Get-Content -LiteralPath (Join-Path "$other" "$record")
 ```
 
