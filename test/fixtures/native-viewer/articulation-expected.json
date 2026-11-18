@@ -1,0 +1,16 @@
+{
+  "schema": "agent-frc/native-articulation-manifest@1",
+  "sourcePins": {"archiveSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "producerSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
+  "units": {"length": "m", "angle": "rad"},
+  "allowedEvidenceBases": ["synthetic"],
+  "nativeBodies": ["base", "arm", "carriage"],
+  "frames": ["robot"],
+  "joints": [
+    {"id": "hinge", "parentBodyId": "base", "childBodyId": "arm", "kind": "revolute", "frameId": "robot", "unit": "rad", "axis": [0,0,1], "origin": [0,0,0.2], "sign": -1, "offset": 0.5, "nativeLimits": [-1,1], "physicalLimits": [-0.5,1.5], "tolerances": {"axis": 0.00001, "origin": 0.00001, "coordinate": 0.00001}},
+    {"id": "slide", "parentBodyId": "arm", "childBodyId": "carriage", "kind": "prismatic", "frameId": "robot", "unit": "m", "axis": [1,0,0], "origin": [0,0,0.3], "sign": 1, "offset": 0.1, "nativeLimits": [0,0.5], "physicalLimits": [0.1,0.6], "tolerances": {"axis": 0.00001, "origin": 0.00001, "coordinate": 0.00001}}
+  ],
+  "witnesses": [
+    {"jointId": "hinge", "poseId": "raised", "frameId": "robot", "native": 0.25, "physical": 0.25, "reopen": {"saved": true, "reopened": true, "archiveSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}},
+    {"jointId": "slide", "poseId": "extended", "frameId": "robot", "native": 0.2, "physical": 0.3, "reopen": {"saved": true, "reopened": true, "archiveSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}
+  ]
+}
