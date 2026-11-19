@@ -78,6 +78,7 @@ export async function checkChapters(filename, project=path.dirname(path.resolve(
     animations=JSON.parse(exec.stdout);
   }
   const seen=new Set(), eventIds=new Set(), usedAnimations=new Set();
+  const observedEvents=new Map();
   let previous, lastClipS;
   const chapters=config.chapters.map((c,i)=>{
     check(label(c.id) && !seen.has(c.id) && label(c.label),'Invalid or duplicate chapter');
@@ -124,8 +125,22 @@ export async function checkChapters(filename, project=path.dirname(path.resolve(
       const outcome=v.qualified===null?'unresolved':v.qualified===false?'missed':v.kind==='score'?'scored':'reached';
       check([true,false,null].includes(v.qualified) && e.outcome===outcome && (v.kind!=='score'||label(v.rule)),
         'Independent event qualification or rule differs');
-      return {id:e.id,type:v.type,target:v.target,criterion:v.criterion,rule:v.rule,outcome,timeS:v.timeS,
-        clipS:clipTime(a,v.timeS),pointer:e.pointer};
+      // A marker names a view. The source names the underlying observation.
+      check(v.observationId===undefined || label(v.observationId),'Invalid source observation ID');
+      const locator=v.observationId===undefined ? ['pointer',e.pointer] :
+        ['source observation',...identity.map(k=>v[k]),v.observationId];
+      const observationKey=createHash('sha256').update(JSON.stringify([config.observations.sha256,...locator])).digest('hex');
+      const evidence={type:v.type,target:v.target,criterion:v.criterion,rule:v.rule,outcome,timeS:v.timeS};
+      const first=observedEvents.get(observationKey);
+      const marker={id:e.id,...evidence,clipS:clipTime(a,v.timeS),pointer:e.pointer,observationKey};
+      if (first) {
+        check(isDeepStrictEqual(first.evidence,evidence),'Conflicting values for the same independent observation');
+        check(e.viewOf===first.id,'Repeated independent observation; identify its original marker with viewOf');
+        return {...marker,outcome:'repeat-view',observedOutcome:outcome,viewOf:first.id};
+      }
+      check(e.viewOf===undefined,'Repeated view needs an earlier marker for the identical source observation');
+      observedEvents.set(observationKey,{id:e.id,evidence});
+      return marker;
     });
     return {id:c.id,label:c.label,classification,animation:c.animation,revision:start.revision,attempt:start.attempt,
       piece:start.piece,clock:start.clock,startS:a[0].clipS,endS:lastClipS,events};

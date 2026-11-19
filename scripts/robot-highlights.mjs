@@ -166,6 +166,17 @@ export async function buildHighlights(manifest, directory) {
       '</p><p>Source-declared event register · observed revision '+escape(observedRevision)+' · '+escape(record.scope)+' · piece '+escape(piece)+' · start '+escape(start)+'</p><ul class="events">'+events+'</ul><p>Event observations · '+citation(motion.observations)+
       '</p><p class="seek-status" role="status"></p>';
   }
+  const pageObservations=new Map();
+  function eventLabel(e) {
+    const first=pageObservations.get(e.observationKey);
+    const facts=JSON.stringify([e.type,e.target,e.criterion,e.rule,e.observedOutcome??e.outcome,e.timeS]);
+    if (first) {
+      requireValue(first.facts===facts,'Conflicting values for the same independent observation across films');
+      return e.target+' · another view of '+first.id;
+    }
+    pageObservations.set(e.observationKey,{id:e.id,facts});
+    return e.target+' · '+e.outcome;
+  }
   async function chapterList(spec, asset) {
     const register=source(spec.register), trace=source(spec.trace), observations=source(spec.observations);
     requireValue([register,trace,observations].every(s=>s.type==='.json' && s.sha256),'Expected local checked chapter records');
@@ -176,12 +187,13 @@ export async function buildHighlights(manifest, directory) {
     const seek=(time,label)=>'<button type="button" data-clip-time="'+time+'">'+escape(label)+'</button>';
     const rows=result.chapters.map(c=>'<li>'+seek(c.startS,c.label)+' · '+escape(c.classification)+
       '<p>'+[c.revision,c.attempt,c.piece,c.clock].map(escape).join(' · ')+'</p><ul>'+c.events.map(e=>
-        '<li>'+seek(e.clipS,e.target+' · '+e.outcome)+' · '+escape(e.type)+' · '+escape(c.clock)+' '+e.timeS+
+        '<li>'+seek(e.clipS,eventLabel(e))+' · '+escape(e.type)+' · '+escape(c.clock)+' '+e.timeS+
         ' s · '+escape(e.criterion)+(e.rule?' · '+escape(e.rule):'')+'</li>').join('')+'</ul></li>');
     return '<h3>Replay chapters</h3><ol>'+rows.join('')+'</ol><p>Checkpoints · '+citation(spec.trace)+
       ' · Event observations · '+citation(spec.observations)+' · '+citation(spec.register)+'</p><p class="seek-status" role="status"></p>';
   }
-  const media = (await Promise.all(list(data.media ?? [], 'media').map(async row => {
+  let media='';
+  for (const row of list(data.media ?? [], 'media')) {
     const asset = source(row.asset);
     const caption = escape(string(row.caption, 'media description'));
     const alt = escape(string(row.description, 'media alternative'));
@@ -200,9 +212,9 @@ export async function buildHighlights(manifest, directory) {
       requireValue(['.png','.jpg','.jpeg','.webp'].includes(asset.type), 'Expected local evidence image or film');
       item = '<img loading="lazy" alt="' + alt + '" src="' + escape(asset.href) + '">';
     }
-    return '<figure>' + item + '<figcaption>' + caption + ' · ' + citation(row.source) + '</figcaption>' +
+    media += '<figure>' + item + '<figcaption>' + caption + ' · ' + citation(row.source) + '</figcaption>' +
       (row.chapters ? await chapterList(row.chapters,asset) : row.motion ? await replay(row.motion,asset) : '') + '</figure>';
-  }))).join('');
+  }
   let campaign = '';
   if (data.campaign !== undefined) {
     const c = data.campaign;
