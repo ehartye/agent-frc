@@ -1,3 +1,4 @@
+import {publicFusionHandoff} from './public-fusion-handoff.mjs';
 import {execFileSync} from 'node:child_process';
 import {existsSync, mkdirSync, readFileSync, statSync, writeFileSync, realpathSync} from 'node:fs';
 import path from 'node:path';
@@ -81,6 +82,7 @@ export function inspect(root) {
   if (existsSync(path.join(root,indexPath))) {
     try {workflowRows(root);} catch (error) {problems.add(error.message);}
   }
+  try {publicFusionHandoff(root);} catch (error) {problems.add(error.message);}
   return [...problems].sort();
 }
 

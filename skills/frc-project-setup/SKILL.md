@@ -30,3 +30,5 @@ Use the [component palette](../../docs/cad-color-convention.md) during CAD setup
 Keep each completed analysis, strategic narrative, constraint register, design review and verification report in the project checkout, beside its subject. A private wiki can carry team history and research. Students should be able to read the deliverables from a clean checkout. Link the project workflow from the README and showcase.
 
 Initialization creates `docs/workflow.md`. Its table uses the columns **Agent FRC skill**, **Project output** and **Supporting evidence**. Use the invoked skill name, relative Markdown links to committed outputs, and relevant evidence or an em dash. Existing kickoff and design documents stay in their canonical directories. The layout check verifies index references when the index exists. For the standard showcase, add the pinned [workflow link configuration](../../docs/showcase-evidence.md).
+
+For a publicly downloadable whole robot, bind the student archive to its own reopened component, feature and joint evidence. [Verify the public Fusion handoff](../../docs/public-fusion-handoff.md).

@@ -97,3 +97,5 @@ Use the [native viewer contract guide](../../docs/native-viewer-contracts.md) fo
 Before using a sensor to advance the mechanism, [check the mounted optical path and release evidence](../../docs/sensor-observability.md). Compare the seated and early-exit readings with the actual material and require an independent clearance observation for withdrawal.
 
 Trace the same camera rays with the piece removed at pickup and during travel. Identify which rays still see a calibrated surface as the mechanism moves. Use those rays to distinguish a seated piece from an empty or shifted one. [Check the traveling camera view](../../docs/camera-reference.md).
+
+For a publicly downloadable whole robot, bind the student archive to its own reopened component, feature and joint evidence. [Verify the public Fusion handoff](../../docs/public-fusion-handoff.md).

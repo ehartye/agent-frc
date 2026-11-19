@@ -1,4 +1,5 @@
 import { checkChapters, clipTime } from './replay-chapters.mjs';
+import {publicFusionHandoff} from './public-fusion-handoff.mjs';
 import { workflowRows } from './project-layout.mjs';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -301,6 +302,15 @@ export async function buildHighlights(manifest, directory) {
       '</p><table><thead><tr><th>Skill</th><th>Project output</th><th>Supporting evidence</th></tr></thead><tbody>'+
       rows.map(row => '<tr><th scope="row">'+escape(row.skill)+'</th><td>'+row.output.map(documentLink).join(', ')+'</td><td>'+
         (row.evidence.map(documentLink).join(', ') || escape(row.evidenceNote))+'</td></tr>').join('')+'</tbody></table></section>';
+  }
+  const student = publicFusionHandoff(root);
+  if (student) {
+    requireValue(student.revision===data.revision,'Public Fusion handoff revision differs from the showcase');
+    const filename = student.sha256+path.extname(student.name).toLowerCase();
+    assets.set(filename,student.file);
+    workflow += '<section id="student-cad"><h2>Editable Fusion assembly</h2><p><a download="'+escape(path.basename(student.name))+
+      '" href="evidence/'+filename+'">Download the student assembly</a> · '+escape(student.revision)+'</p><p>Native reopen evidence covers '+
+      student.components+' named components and '+student.joints+' declared joints. Signed direction checked for '+student.signedJoints+' joints.</p></section>';
   }
   let lab;
   if (data.fieldLab !== undefined) {

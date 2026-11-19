@@ -52,3 +52,5 @@ After the first successful deployment, open the URL reported by the deploy job. 
 Use the [publication checks](../../docs/showcase-evidence.md) for a kickoff-only analysis page, a project workflow index, a published model inventory and observed pickup or release markers on the film clock. Keep chances and conditional point estimates distinct from an independently reached target. For a cut between studies, show the checked chapter boundary and compare the event type, time and qualification to independent observations. For a named animation, seek the event in its own clip.
 
 Publish the project’s generated student field lab with the `fieldLab` entry and link it directly from the README. Verify the stable `field-lab.html` in the deployed site.
+
+For a publicly downloadable whole robot, bind the student archive to its own reopened component, feature and joint evidence. [Verify the public Fusion handoff](../../docs/public-fusion-handoff.md).
