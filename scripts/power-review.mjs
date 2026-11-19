@@ -57,10 +57,10 @@ function parseDocument(bytes) {
   });
   if (!hasAlternateLabels) return doc;
   const labels = JSON.parse(raw);
-  if (doc?.schema === 'frc-power-comparison/v1') {
+  if (['frc-power-comparison/v1','frc-power-comparison/v2'].includes(doc?.schema)) {
     checkClockLabels(doc, labels, ['maxSampleIntervalS']);
     checkClockLabels(doc.window, labels.window, ['fromS','toS']);
-  } else if (doc?.schema === 'frc-power-trace/v1' && Array.isArray(doc.rows)) {
+  } else if (['frc-power-trace/v1','frc-power-trace/v2'].includes(doc?.schema) && Array.isArray(doc.rows)) {
     for (const [i, row] of doc.rows.entries()) {
       checkClockLabels(row, labels.rows[i], ['fromS','toS']);
       if (Array.isArray(row?.voltages)) row.voltages.forEach((v,j) =>
@@ -70,8 +70,59 @@ function parseDocument(bytes) {
   return doc;
 }
 
+function stateKey(entry) {
+  requireInput(named(entry?.location) && named(entry.state), 'Declare a physical voltage location and operating state');
+  return JSON.stringify([entry.location, entry.state]);
+}
+
+function validateUpperRequirements(requirements) {
+  requireInput(Array.isArray(requirements) && requirements.length > 0, 'Declare upperRequirements for a v2 comparison');
+  unique(requirements.map(stateKey), 'upper requirement for a location and state');
+  for (const requirement of requirements) {
+    requireInput(requirement.maxV === null || finite(requirement.maxV), 'Declare a finite ceiling or explicit null');
+    requireInput(named(requirement.ratingSource), 'Identify the ceiling source or the missing rating');
+  }
+}
+
+function assessUpper(requirements, evidence) {
+  requireInput(Array.isArray(evidence), 'Declare upperEvidence, using an empty array for missing observations');
+  const states = new Set(requirements.map(stateKey));
+  const byState = new Map();
+  for (const row of evidence) {
+    const key = stateKey(row);
+    requireInput(states.has(key) && !byState.has(key), 'Undeclared or duplicate upper evidence for ' + key);
+    requireInput(['upper-bound','maximum','point'].includes(row.kind) && finite(row.valueV) && named(row.source),
+      'Identify the upper evidence kind, voltage and source');
+    requireInput(row.fresh === undefined || typeof row.fresh === 'boolean', 'Invalid upper evidence freshness');
+    byState.set(key, row);
+  }
+  return requirements.map(requirement => {
+    const row = byState.get(stateKey(requirement)) ?? null;
+    let status = 'incomplete', marginV = null, reason;
+    if (!row) reason = 'No evidence for this location and state';
+    else if (row.fresh === false) reason = 'Evidence is stale';
+    else if (requirement.maxV === null) reason = 'Device ceiling is unknown';
+    else {
+      marginV = requirement.maxV - row.valueV;
+      requireInput(finite(marginV), 'Upper voltage margin must be finite');
+      if (row.kind === 'upper-bound' && marginV < 0) reason = 'Upper guarantee lost, exceedance unproven';
+      else if (row.kind === 'point' && marginV >= 0) reason = 'Point leaves the rest of the state unresolved';
+      else if (marginV < 0) {
+        status = 'violated';
+        reason = 'Attained voltage exceeds ceiling';
+      } else {
+        status = 'complete';
+        reason = 'Evidence covers the declared state within the ceiling';
+      }
+    }
+    return {...requirement, evidence:row, status, marginV, reason};
+  });
+}
+
 function validateComparison(c) {
-  requireInput(c?.schema === 'frc-power-comparison/v1', 'Expected frc-power-comparison/v1');
+  requireInput(['frc-power-comparison/v1','frc-power-comparison/v2'].includes(c?.schema), 'Expected a supported power comparison version');
+  if (c.schema === 'frc-power-comparison/v2') validateUpperRequirements(c.upperRequirements);
+  else requireInput(!Object.hasOwn(c, 'upperRequirements'), 'Upper requirements require a v2 comparison');
   for (const key of ['actionId', 'busId', 'clockId']) requireInput(named(c[key]), 'Missing ' + key);
   interval(c.window, 'action window');
   requireInput(finite(c.maxSampleIntervalS) && c.maxSampleIntervalS > 0, 'Expected positive maximum sample interval');
@@ -81,7 +132,7 @@ function validateComparison(c) {
   unique(c.locations.map(v => v?.id), 'voltage location');
   for (const location of c.locations) {
     requireInput(!Object.hasOwn(location, 'maxV'),
-      'Location ' + location.id + ' declares maxV. This format checks minimum voltage only. Review the device ceiling separately.');
+      'Location ' + location.id + ' declares maxV. The locations table checks minimum voltage only. Declare a state and ceiling in v2 upperRequirements.');
     requireInput(location.minV == null || finite(location.minV), 'Invalid minimum voltage');
   }
   requireInput(Array.isArray(c.trials) && c.trials.length === 2, 'Compare exactly two trials');
@@ -110,7 +161,9 @@ function overlap(a, b) {
 }
 
 function validateTrace(c, trial, trace) {
-  requireInput(trace?.schema === 'frc-power-trace/v1', 'Expected frc-power-trace/v1');
+  const version = c.schema.split('/')[1];
+  requireInput(trace?.schema === 'frc-power-trace/' + version, 'Expected frc-power-trace/' + version);
+  if (version === 'v1') requireInput(!Object.hasOwn(trace, 'upperEvidence'), 'Upper evidence requires a v2 comparison');
   for (const key of ['actionId', 'busId', 'clockId']) requireInput(trace[key] === c[key], 'Incompatible ' + key);
   requireInput(trace.trialId === trial.id && trace.condition === trial.condition, 'Incompatible trial or condition');
   requireInput(trace.units?.time === 's' && trace.units.voltage === 'V' && trace.units.current === 'A', 'Incompatible units');
@@ -243,7 +296,7 @@ function assess(c, trial, trace) {
 
 function interpret(trial) {
   const v = trial.limiting;
-  const lines = [trial.condition + ' (' + trial.provenance.kind + ' electrical evidence) is ' + trial.status + ' for the minimum-voltage check.'];
+  const lines = [trial.condition + ' (' + trial.provenance.kind + ' electrical evidence) is ' + (trial.minimumStatus ?? trial.status) + ' for the minimum-voltage check.'];
   if (v) {
     const when = v.atS === undefined ? v.fromS + '–' + v.toS + ' s' : v.atS + ' s';
     lines.push('At ' + v.location + ' (' + when + '), the ' + v.kind + ' is ' + v.valueV +
@@ -263,6 +316,11 @@ function interpret(trial) {
   lines.push('The ' + trial.provenance.kind + ' outcome (' + trial.outcome.status + ') for the action — ' +
     trial.outcome.description + '.');
   if (trial.unknowns.length) lines.push(trial.unknowns.join('. ') + '.');
+  for (const item of trial.upper ?? []) {
+    const value = item.evidence ? item.evidence.kind + ' ' + item.evidence.valueV + ' V' : 'no voltage value';
+    const ceiling = item.maxV === null ? 'unknown ceiling' : item.maxV + ' V ceiling';
+    lines.push(item.location + ' (' + item.state + '), ' + value + ', ' + ceiling + '. ' + item.reason + '.');
+  }
   return lines.join(' ');
 }
 
@@ -274,11 +332,23 @@ export async function reviewPower(file) {
     const bytes = await readFile(path.resolve(path.dirname(file), trial.trace.file));
     requireInput(createHash('sha256').update(bytes).digest('hex') === trial.trace.sha256,
       'SHA-256 mismatch for ' + trial.trace.file);
-    trials.push(assess(c, trial, parseDocument(bytes)));
+    const trace = parseDocument(bytes);
+    const result = assess(c, trial, trace);
+    if (c.schema === 'frc-power-comparison/v2') {
+      result.minimumStatus = result.status;
+      result.upper = assessUpper(c.upperRequirements, trace.upperEvidence);
+      const statuses = [result.minimumStatus, ...result.upper.map(state => state.status)];
+      result.status = statuses.includes('violated') ? 'violated' : statuses.includes('incomplete') ? 'incomplete' : 'complete';
+    }
+    trials.push(result);
   }
   const report = {schema:'frc-power-review/v1',voltageAssessment:'minimum-only',actionId:c.actionId,busId:c.busId,clockId:c.clockId,
     window:c.window,requiredLoads:c.requiredLoads,maxSampleIntervalS:c.maxSampleIntervalS,
     trials,interpretation:trials.map(interpret).join(' ')};
+  if (c.schema === 'frc-power-comparison/v2') {
+    report.schema = 'frc-power-review/v2';
+    report.voltageAssessment = 'minimum-and-state-ceilings';
+  }
   if (c.fallback) {
     const match = trials.find(t => t.id === c.fallback.trialId);
     report.fallback = {...c.fallback,status:match?.status === 'complete' && match.outcome.status === 'observed-success'

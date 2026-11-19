@@ -333,9 +333,81 @@ test('the Pages exercise shows the two outcomes produced by the real review',asy
   const run=spawnSync(process.execPath,[build,folder],{cwd:root,encoding:'utf8'});
   assert.equal(run.status,0,run.stderr);
   const html=await readFile(path.join(folder,'index.html'),'utf8');
+  assert.doesNotMatch(html,/[\u00c2\u00e2][^\x00-\x7f]/u, 'Guide contains misdecoded punctuation');
   assert.match(html,/id="power-choice"/);
   assert.match(html,/data-power-trial="overlap"/);
   assert.match(html,/8\.3 V/);
   assert.match(html,/9\.8 V/);
-  assert.match(html,/voltage ceiling also needs a separate check at that inlet/);
+  assert.match(html,/Standard trim<\/strong> gives a 5\.20 V upper bound/);
+  assert.match(html,/Raised trim<\/strong> gives a 5\.35 V upper bound\. Upper guarantee lost/);
+});
+
+function withCeiling(config, traces) {
+  const scope = {location:'arm-inlet', state:'on load release'};
+  config.schema = 'frc-power-comparison/v2';
+  config.upperRequirements = [{...scope,maxV:10,ratingSource:'Actuator design brief'}];
+  for (const trial of traces) {
+    trial.schema = 'frc-power-trace/v2';
+    trial.upperEvidence = [{...scope,kind:'upper-bound',valueV:10,source:'Transient envelope'}];
+    trial.outcome = {description:'Actuator completed travel', status:'observed-success'};
+  }
+}
+
+test('ceilings distinguish attained excursions, guarantees and single observations when choosing a fallback', async t => {
+  for (const [kind, voltage, status] of [
+    ['maximum',11,'violated'], ['maximum',10,'complete'], ['upper-bound',11,'incomplete'],
+    ['upper-bound',10,'complete'], ['point',11,'violated'], ['point',10,'incomplete']
+  ]) {
+    const file = await fixture(t, (config, traces) => {
+      withCeiling(config,traces);
+      Object.assign(traces[1].upperEvidence[0], {kind,valueV:voltage});
+    });
+    const report = await reviewPower(file);
+    const trial = report.trials[1];
+    assert.equal(report.schema,'frc-power-review/v2');
+    assert.equal(trial.minimumStatus,'complete');
+    assert.equal(trial.status,status);
+    assert.equal(trial.upper[0].status,status);
+    assert.equal(trial.upper[0].marginV,10-voltage);
+    assert.equal(report.fallback.status,status === 'complete' ? 'supported' : 'unverified');
+    assert.equal(report.trials[0].status,'violated');
+  }
+});
+
+test('unknown rating, stale evidence and absent operating states leave ceiling coverage unresolved', async t => {
+  const file = await fixture(t, (config,traces) => {
+    withCeiling(config,traces);
+    const requirement = config.upperRequirements[0];
+    config.upperRequirements.push({...requirement,state:'startup'}, {...requirement,location:'second-inlet',maxV:null});
+    const record = traces[1].upperEvidence[0];
+    traces[1].upperEvidence.push({...record,location:'second-inlet'});
+    record.fresh = false;
+  });
+  const trial = (await reviewPower(file)).trials[1];
+  assert.deepEqual(trial.upper.map(row => row.status),Array(3).fill('incomplete'));
+  assert.deepEqual(trial.upper.map(row => row.marginV),[null,null,null]);
+  assert.deepEqual(trial.upper.map(row => row.reason),['Evidence is stale','No evidence for this location and state','Device ceiling is unknown']);
+});
+
+test('incompatible electrical states, unsupported versions and ambiguous sources fail validation', async t => {
+  for (const mutate of [
+    c => { c.schema = 'frc-power-comparison/v1'; },
+    (c,tr) => { tr[0].schema = 'frc-power-trace/v1'; },
+    c => { c.upperRequirements.push(c.upperRequirements[0]); },
+    c => { delete c.upperRequirements[0].ratingSource; },
+    (c,tr) => { tr[0].upperEvidence[0].location = 'upstream-bus'; },
+    (c,tr) => { tr[0].upperEvidence[0].state = 'other state'; },
+    (c,tr) => { tr[0].upperEvidence[0].kind = 'nominal'; },
+    (c,tr) => { tr[0].upperEvidence.push(tr[0].upperEvidence[0]); }
+  ]) {
+    const file = await fixture(t,(c,tr) => { withCeiling(c,tr); mutate(c,tr); });
+    await assert.rejects(reviewPower(file));
+  }
+});
+
+test('regulator teaching study gives independent loaded and settled headroom at both trims', async () => {
+  const file = fileURLToPath(new URL('../examples/power/regulator/comparison.json', import.meta.url));
+  const report = await reviewPower(file);
+  assert.deepEqual(report.trials.map(t => [t.minimumStatus,t.upper[0].status,t.upper[0].evidence.valueV]),
+    [['complete','complete',5.2],['complete','incomplete',5.35]]);
 });

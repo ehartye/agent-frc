@@ -12,7 +12,21 @@ The carriage needs 9 V while it travels from 0 to 1 s in this example. It draws 
 
 For your own project, replace the example argument with your comparison path. Read the `interpretation` for each trial's modeled or measured electrical result and functional outcome, including an unknown outcome. It names the limiting row's source, phase and total current readings and any remaining evidence gaps. Open `limiting` for the voltage location, witness time or interval, margin and concurrent readings. Check the status of any proposed fallback before choosing a schedule. Zero source current is valid evidence for a scheduled-off load. An absent current channel leaves its contribution unknown.
 
-The report identifies its scope as `voltageAssessment: "minimum-only"`. A device that also has a maximum input voltage needs a separate review at that same inlet. Compare its rated ceiling with a sourced upper bound that covers the relevant operating states, including load release when applicable. An upper bound above the ceiling leaves headroom unproven. An attained peak above it establishes an exceedance in the supplied model or measurement. A nominal regulator setting or an upstream bus reading leaves the device peak unresolved. The comparison rejects a location containing `maxV`, including `maxV: null`, so an upper requirement cannot disappear from the result.
+### Check the device ceiling across operating states
+
+Run `npm run power:review -- examples/power/regulator/comparison.json` to compare two regulator settings. Both keep the synthetic sensor above its 4.80 V floor under load. At its settled, open connector the standard trim gives a 5.20 V upper bound against a 5.30 V ceiling. Raising the trim gives a 5.35 V upper bound. That leaves a 0.05 V gap in the guarantee. An actual overvoltage would require an attained value above the ceiling. Startup, disconnection transients and the connected input each need evidence for their own state. [Editable study](../examples/power/regulator/comparison.json)
+
+Use `frc-power-comparison/v2` and `frc-power-trace/v2` on both trace files. Keep the loaded action, floor and current channels described below. Add the following fields.
+
+| Field | What to record |
+|---|---|
+| Comparison `upperRequirements` | One entry per physical `location` and operating `state`. Include the device ceiling `maxV` and `ratingSource`. Use an explicit null and explain the gap when the rating is unknown. |
+| Trace `upperEvidence` | For each supported pair give `location`, `state`, `kind`, `valueV` and `source`. Use an empty array for a missing study. Identify model or instrument, revision, wiring, supply and load conditions in the source. The trace digest binds the record to the trial. |
+| `upper-bound` | Maximum possible voltage under the named conditions. A bound at or below the ceiling covers that state. A higher bound leaves it unresolved. |
+| `maximum` | Highest **attained** value across the entire declared state. The value must also bound that state. Use `point` for the largest sampled value when behavior between samples is unknown. |
+| `point` | An attained value above the ceiling proves an exceedance. A point at or below the ceiling leaves other instants unresolved. Set `fresh: false` for stale evidence. |
+
+The report preserves each trial's `minimumStatus` and gives its `upper` assessments with source, state, signed margin and reason. Positive upper margin means headroom. A witnessed violation takes precedence over missing evidence. A supported fallback requires the minimum, every named ceiling and a successful functional outcome in the same trial. The v1 minimum-only format still rejects ceilings. Use v2 to include them in the verdict.
 
 ## Project file contract
 

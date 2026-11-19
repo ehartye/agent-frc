@@ -1,0 +1,46 @@
+{
+  "schema": "frc-power-trace/v2",
+  "actionId": "read-sensor",
+  "busId": "regulated-branch",
+  "clockId": "study-clock",
+  "trialId": "standard",
+  "condition": "Standard trim",
+  "units": {
+    "time": "s",
+    "voltage": "V",
+    "current": "A"
+  },
+  "provenance": {
+    "kind": "modeled",
+    "source": "Invented tolerance exercise. Loaded minimum is trim minus 0.10 V of regulator tolerance and 0.10 V of wire drop at 1 A."
+  },
+  "rows": [
+    {
+      "fromS": 0,
+      "toS": 1,
+      "voltages": [
+        {
+          "location": "sensor-connector",
+          "kind": "lower-bound",
+          "valueV": 4.9
+        }
+      ],
+      "currents": [
+        {
+          "id": "sensor",
+          "kind": "source",
+          "valueA": 1
+        }
+      ]
+    }
+  ],
+  "upperEvidence": [
+    {
+      "location": "sensor-connector",
+      "state": "settled open connector at zero load",
+      "kind": "upper-bound",
+      "valueV": 5.2,
+      "source": "Invented settled no-load model. Trim 5.10 V plus 0.10 V setpoint tolerance, zero wire drop."
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "schema": "frc-power-comparison/v2",
+  "actionId": "read-sensor",
+  "busId": "regulated-branch",
+  "clockId": "study-clock",
+  "window": {
+    "fromS": 0,
+    "toS": 1
+  },
+  "maxSampleIntervalS": 1,
+  "requiredLoads": [
+    "sensor"
+  ],
+  "locations": [
+    {
+      "id": "sensor-connector",
+      "minV": 4.8
+    }
+  ],
+  "upperRequirements": [
+    {
+      "location": "sensor-connector",
+      "state": "settled open connector at zero load",
+      "maxV": 5.3,
+      "ratingSource": "Invented sensor design brief, maximum input 5.30 V."
+    }
+  ],
+  "trials": [
+    {
+      "id": "standard",
+      "condition": "Standard trim",
+      "trace": {
+        "file": "standard.json",
+        "sha256": "9fe62492e4121eb503c681359294fabbe3cdc51c824795407902cfc00158568f"
+      }
+    },
+    {
+      "id": "raised",
+      "condition": "Raised trim",
+      "trace": {
+        "file": "raised.json",
+        "sha256": "d62f1aa39161389f3f535ed37d0a53456901b242d90b4028940447bffc252be2"
+      }
+    }
+  ]
+}
