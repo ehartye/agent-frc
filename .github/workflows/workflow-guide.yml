@@ -5,6 +5,8 @@ on:
   pull_request:
     paths:
       - '.github/pages/**'
+      - '.github/readme/**'
+      - 'references/cad-color-convention.json'
       - '.github/workflows/workflow-guide.yml'
       - 'skills/**'
       - 'docs/**'
