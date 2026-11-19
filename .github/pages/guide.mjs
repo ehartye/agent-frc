@@ -26,7 +26,7 @@ export const stages = [
     objective: 'Translate each important part of the chosen cycle into a requirement with units, operating conditions and a measurable acceptance check.',
     activity: 'Specify the capture cadence. If route overlap exposes the intake, identify the contact direction and assumptions about speed, mass and compliance. Define which function must survive and how to check it afterward.',
     handoff: 'A capability contract tying each requirement to a rule, observation or assumption and a planned verification activity.',
-    skills: ['frc-strategic-narrative','frc-mechanism-cad','frc-modes'], docs: [['Capability contract','templates/capability-contract.md'],['Impact-load example','docs/impact-load-envelope.md']]
+    skills: ['frc-strategic-narrative','frc-mechanism-cad','frc-modes'], docs: [['Capability contract','templates/capability-contract.md'],['Follow stored pieces through a loaded gate','docs/storage-to-service.md'],['Impact-load example','docs/impact-load-envelope.md']]
   },
   {
     id: 'design', milestone: 'Fusion candidate and control design', name: 'Build a candidate', question: 'Which design can meet the contract?',

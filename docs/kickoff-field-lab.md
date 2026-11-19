@@ -26,6 +26,8 @@ Allocate the pieces available to one robot at the selected supply location, incl
 
 For example, 25 pieces over five usable seconds require five pieces per second. A serial loader completing a piece every 0.25 seconds can deliver at most 20 in that window. A 0.20-second candidate reaches 25 under ideal conditions. Late arrivals, repeated transit and occupied scoring positions can change the requirement.
 
+For a loaded mechanism, identify the accessible IDs, first handoff latency and repeat interval before entering a service cycle. Save the limiting interface and any unserved pieces in the supply and timing assumptions. [Compare three feed paths on one clock](storage-to-service.md).
+
 One opportunity represents distinct pieces, one robot and one window. Before combining opportunities, reconcile shared supply, recycled pieces, occupied positions and overlapping times.
 
 ## Infer traffic and test physical space
