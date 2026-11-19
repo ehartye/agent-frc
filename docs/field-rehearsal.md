@@ -31,4 +31,6 @@ Matching period and scoring-phase names share the clock automatically. To split 
 
 The model translates fixed-heading rectangles. The swept footprint includes the bumper allowance. It checks clipped walls, eligible polygon obstacles and moving robots across every segment of a 50 ms step. An approaching robot waits if it cannot claim a collision-free move for the entire tick. On free-route legs the planner can bend around known obstacles. A prescribed direct leg must clear the course as written.
 
+If the loaded robot turns near a wall or structure, trace the rotating bumper corners, carried piece and moving mechanisms across each turn on the same clock as the target event. A piece can reach the detector after the robot has already intersected the field. Carry both findings into the project record. [Verify continuous field-route clearance](field-route-evidence.md).
+
 A reported wait can reflect a narrow opening, mutually blocking behaviors or conservative right-of-way. Each trip counts a completed prescribed task. A score requires additional evidence about game-piece possession and successful release. Acceleration, turning sweeps, mechanism articulation, collision loads and damage need their own experiments. Unknown field contours should be marked as assumptions and modeled conservatively in the external profile.
