@@ -18,6 +18,7 @@
     ],
     "shield": 0.16,
     "retainer": 0.09,
+    "swapShieldForRetainer": -0.07,
     "guard": 0.14
   }
 }

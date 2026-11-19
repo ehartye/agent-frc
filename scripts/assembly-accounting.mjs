@@ -92,7 +92,7 @@ function configure(request, instances, active) {
     requireValue(options.has(id),'Unknown selected change: '+id);
     return options.get(id);
   });
-  const groups=new Set(),removals=new Set(),additions=new Set();
+  const groups=new Set(), additions=new Set(), configured=new Set(active);
   for(const change of selected){
     if(change.exclusiveGroup!==undefined){
       requireValue(named(change.exclusiveGroup)&&!groups.has(change.exclusiveGroup),'Incompatible alternatives selected.');
@@ -102,19 +102,19 @@ function configure(request, instances, active) {
     const removed=names(change.remove,'removed instances'),added=names(change.add,'added instances');
     requireValue(removed.length+added.length>0,'Change needs physical instance identities.');
     for(const id of removed){
-      requireValue(active.has(id)&&!removals.has(id),'Absent or twice-credited removal: '+id);
-      removals.add(id);
+      requireValue(configured.delete(id),'Absent or twice-credited removal: '+id);
     }
     for(const id of added){
       requireValue(instances.get(id)?.presence==='candidate'&&!additions.has(id),'Unknown or repeated added instance: '+id);
       additions.add(id);
+      configured.add(id);
     }
     if(change.delta!==null){
       const [low,high]=evidence(change.delta,true);
       requireValue((removed.length||low>=0)&&(added.length||high<=0),'Mass sign contradicts the physical change.');
     }
   }
-  return {selected,configured:new Set([...active].filter(id=>!removals.has(id)).concat([...additions]))};
+  return {selected,configured};
 }
 
 function inventory(instances, configured, articles) {
