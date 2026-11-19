@@ -36,7 +36,8 @@ export function attachChapterControls(container, register, player) {
     row.append(context);
     for (const e of c.events) {
       const line=doc.createElement('p');
-      line.append(button(e.target+' · '+e.outcome,c,e.clipS),' · '+e.type+' · '+c.clock+' '+e.timeS+' s · '+e.criterion+(e.rule?' · '+e.rule:''));
+      const result=e.outcome==='repeat-view' ? 'another view of '+e.viewOf : e.outcome;
+      line.append(button(e.target+' · '+result,c,e.clipS),' · '+e.type+' · '+c.clock+' '+e.timeS+' s · '+e.criterion+(e.rule?' · '+e.rule:''));
       row.append(line);
     }
     list.append(row);

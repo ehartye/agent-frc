@@ -49,6 +49,52 @@ test('checked chapter joins and target events survive the student build',async t
   cfg.observations.sha256='0'.repeat(64);await issue(cfg,/Changed replay source/);
 });
 
+test('another view of one independent event never becomes a second qualification',async t=>{
+  const root=await mkdtemp(path.join(os.tmpdir(),'event-identity-'));
+  t.after(()=>rm(root,{recursive:true,force:true}));
+  await cp(new URL('../examples/highlights/',import.meta.url),root,{recursive:true});
+  const file=name=>path.join(root,name);
+  const get=async name=>JSON.parse(await readFile(file(name),'utf8'));
+  const put=async(name,obj)=>{
+    const bytes=JSON.stringify(obj);await writeFile(file(name),bytes);
+    return createHash('sha256').update(bytes).digest('hex');
+  };
+  const name='stroke-chapters.json',cfg=await get(name),obs=await get(cfg.observations.file);
+  const events=cfg.chapters[1].events,first=events[0],again={...first,id:'replay'};
+  Object.assign(obs.clear,{kind:'score',rule:'Both beams clear again',observationId:'edge-1'});
+  first.outcome=again.outcome='scored';
+  events.push(again);
+  const validate=async()=>{
+    cfg.observations.sha256=await put(cfg.observations.file,obs);
+    await put(name,cfg);return checkChapters(file(name));
+  };
+  await assert.rejects(validate,/Repeated independent observation/);
+  again.viewOf=first.id;
+  const rows=(await validate()).chapters[1].events;
+  assert.deepEqual(rows.map(x=>x.outcome),['scored','repeat-view']);
+  assert.equal(rows[1].observedOutcome,'scored');
+  assert.equal(rows[0].observationKey,rows[1].observationKey);
+  obs.preserved={...obs.clear};again.pointer='/preserved';await validate();
+  obs.preserved.qualified=false;again.outcome='missed';
+  await assert.rejects(validate,/Conflicting values/);
+  obs.preserved.observationId='different-edge';
+  await assert.rejects(validate,/identical source observation/);
+  delete again.viewOf;
+  assert.deepEqual((await validate()).chapters[1].events.map(x=>x.outcome),['scored','missed']);
+  obs.preserved={...obs.clear};again.viewOf=first.id;again.outcome='scored';
+  await validate();
+  const page=await get('stroke-chapter-page.json');
+  for (const source of page.sources) {
+    if(source.file===cfg.observations.file) source.sha256=cfg.observations.sha256;
+    if(source.file===name) source.sha256=await put(name,cfg);
+  }
+  page.media.push({...page.media[0],caption:'Second view'});
+  await put('page.json',page);
+  const html=await readFile(await buildHighlights(file('page.json'),file('site')),'utf8');
+  assert.equal((html.match(/Target plane · scored<\/button>/g)||[]).length,1);
+  assert.equal((html.match(/Target plane · another view of clear<\/button>/g)||[]).length,3);
+});
+
 test('animated GLB checks the packed clocks and the piece origin across named clips',async t=>{
   const root=await mkdtemp(path.join(os.tmpdir(),'glb-chapters-'));
   t.after(()=>rm(root,{recursive:true,force:true}));
