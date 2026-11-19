@@ -17,6 +17,7 @@ Read [grounding policy](../../docs/grounding.md). Start with the [learning brief
 1. Document frame transforms and timestamp origin before fusion.
 2. Exercise stale/future/outlier/duplicate/pre-reset behavior.
 3. Record calibration evidence separately from synthetic estimator tests.
+4. [Challenge the field reference](../../docs/field-references.md#challenge-the-field-reference). Replay an achieved pose or release against an independently shifted target map. Compare the observer's decision with a geometric margin in the independent field frame. Record a missing observer verdict when the study supplies geometry alone.
 
 Inspect unmatchedQueries, omitted counts, source versions and review dates. Open relevant official/pinned sources before factual decisions. Keep source findings, recommendations and unknowns separate. Never infer compatibility from an empty season list or a matching keyword.
 
