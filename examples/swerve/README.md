@@ -1,5 +1,9 @@
 # Independent-axis swerve teaching module
 
+[![Original teaching swerve module rendered in Fusion](assembly.png)](independent-swerve.f3d)
+
+*Plugin teaching example · Independent-axis swerve module, as saved in Fusion.*
+
 Open [the original Fusion archive](independent-swerve.f3d). It illustrates a wheel and fork with independent revolute joints. The fixed steer motor drives the azimuth gear pitch envelope. A gearmotor rides on the fork and drives the wheel through parallel belt spans. This arrangement makes the two motions easy to inspect and introduces a rotating wire-harness design problem. The dimensions are original classroom choices.
 
 | Feature | Value |

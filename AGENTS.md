@@ -1,5 +1,13 @@
 # agent-frc project
 
+## Student CAD and project documentation
+
+Use four-module swerve as the default for a new robot drivetrain unless the project specifies another architecture. Guide the student through exact manufacturer options and a custom shop-built option before selecting hardware.
+
+Use Autodesk Fusion as the standard for student CAD authoring and handoff. Prefer the manufacturer's model of each purchased part in its exact revision and configuration. Preserve its source, file identity, license and installed transform. Document the specific engineering justification for external shape authoring, how the selected result returns to Fusion and what remains editable. Label every approximation and its limits.
+
+Maintain a CAD-rendered still immediately below the title of each project-owned README. Bind it to the selected assembly and the same geometry used by the interactive showcase. Identify the pose, revision and scope so students can distinguish a current robot, historical assembly or subsystem fixture. Regenerate and verify both views when the selected CAD changes.
+
 ## Maintain the public workflow guide
 
 Update the GitHub Pages guide in the same change whenever a workflow, skill, student objective, artifact contract or user-facing behavior changes. Check the guide against the installed skill inventory, build it, exercise the changed interaction and verify the published result after merge.

@@ -25,22 +25,22 @@
       if(fill){context.closePath();context.fillStyle=fill;context.fill();}
       context.strokeStyle=color;context.lineWidth=width;context.stroke();
     }
-    line(rehearsal.geom.boundary,'#dce9e1',2,'#31565a');
+    line(rehearsal.geom.boundary,'#dce8f6',2,'#274a70');
     context.save();context.clip();
-    for(let x=36;x<L;x+=36)line([[x,0],[x,W]],'#41666a');
-    for(let y=36;y<W;y+=36)line([[0,y],[L,y]],'#41666a');
-    context.setLineDash([4,4]);for(const band of config.bands)line([band.from,band.to],'#bfcac1');
+    for(let x=36;x<L;x+=36)line([[x,0],[x,W]],'#446887');
+    for(let y=36;y<W;y+=36)line([[0,y],[L,y]],'#446887');
+    context.setLineDash([4,4]);for(const band of config.bands)line([band.from,band.to],'#c8d7e5');
     context.setLineDash([]);
     const maxH=Math.max(0,...roster.map(r=>r.height));
     for(const ob of rehearsal.geom.obstacles(setup)){
       if(ob.kind==='overlay' && maxH<ob.low)continue;
       const blocks=maxH>=ob.low;
-      line(ob.poly,blocks?'#dae6d8':'#94b5b1',1,blocks?'#6e827a':'#567470');
+      line(ob.poly,blocks?'#dce7f3':'#a4b9cb',1,blocks?'#667d93':'#506d88');
       if(blocks && ob.kind!=='landmark'){
         context.save();context.clip();
         const left=Math.min(...ob.poly.map(q=>q[0])),right=Math.max(...ob.poly.map(q=>q[0]));
         const bottom=Math.min(...ob.poly.map(q=>q[1])),top=Math.max(...ob.poly.map(q=>q[1]));
-        for(let x=left-(top-bottom);x<right;x+=7)line([[x,bottom],[x+top-bottom,top]],'#a8b7a6');
+        for(let x=left-(top-bottom);x<right;x+=7)line([[x,bottom],[x+top-bottom,top]],'#bbcad7');
         context.restore();
       }
     }
@@ -55,7 +55,7 @@
     }
     for(const r of sim.robots){
       const blue=r.side==='blue';
-      line(rehearsal.geom.footprint(r.p,r),'#f3f7e9',1.3,blue?'#2867ab':'#af3849');
+      line(rehearsal.geom.footprint(r.p,r),'#f7faff',1.3,blue?'#2867ab':'#af3849');
       line(rehearsal.geom.footprint(r.p,{...r,bumper:0}),blue?'#9ccbff':'#ffadaf',1,blue?'#22518a':'#8e3240');
       const [x,y]=at(r.p);context.font='bold '+Math.max(10,Math.min(17,12*scale))+'px system-ui';
       context.textAlign='center';context.textBaseline='middle';context.fillStyle='white';context.fillText(r.id,x,y);

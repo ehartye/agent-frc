@@ -1,0 +1,16 @@
+{
+  "schema": "agent-frc/robot-highlights@1",
+  "title": "Docking fixture",
+  "role": "Align a pickup with a narrow opening while holding chassis heading. This example uses synthetic observations.",
+  "revision": "desk-fixture-r2",
+  "cad": {"receipt":"docs/robot/cad/receipt.json","title":"Mounting plate","scope":"Independent Fusion teaching fixture. The plate is stationary. Docking observations below are synthetic.","shareable":true},
+  "sources": [
+    {"id":"record","label":"Fixture observations","revision":"desk-fixture-r2","file":"observations.json","sha256":"8d7678af49937f23a12ff8bdc8533e0fc01bf431dfc9cf737ae58c58b80b102d","shareable":true}
+  ],
+  "results": [
+    {"basis":"modeled","claim":"3 mm lateral error at the stop","conditions":"The centered development approach reached the stop in 2.4 s.","limit":"A second evaluation start exceeded the 5 mm target.","source":"record"},
+    {"basis":"open","claim":"Full-route pickup","conditions":"The fixture tests the approach and stop.","limit":"Pickup and retention need a piece-contact run.","source":"record"}
+  ],
+  "build":[{"subsystem":"Drive","configuration":"Four wheels with a 0.5 m track. Pose is reported at the chassis center.","source":"record"}],
+  "campaign":{"criterion":"Stop within 5 mm of the docking centerline","total":3,"required":3,"passed":1,"failed":1,"unresolved":1,"source":"record"}
+}

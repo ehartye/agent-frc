@@ -1,0 +1,28 @@
+{
+  "schema": "agent-frc/cad-still@1",
+  "source": "mounting-plate.step",
+  "sourceSha256": "be105145f738eaa522beca0d2eb38c3a49092989baa58b64a3cbf3657adb1e97",
+  "imageSha256": "bc69df7ddb1d2d2166d366410fefbea03f3861f5182e126f7beddc7e2c100a90",
+  "meshSha256": "386338efef9b2098d1a49b99a25b2d9a49beeaea6ab767ca109093427b24fe3d",
+  "solids": 1,
+  "triangles": 1148,
+  "units": "mm",
+  "nativeBounds": [
+    0.0,
+    60.0,
+    0.0,
+    40.0,
+    0.0,
+    4.0
+  ],
+  "meshBounds": [
+    0.0,
+    60.0,
+    0.0,
+    40.0,
+    0.0,
+    4.0
+  ],
+  "chordMm": 0.18,
+  "angleRad": 0.18
+}

@@ -1,3 +1,6 @@
 * text=auto eol=lf
 *.jar binary
 *.f3d binary
+examples/highlights/mounting-plate.step -text whitespace=-blank-at-eol
+*.png binary
+*.gz binary

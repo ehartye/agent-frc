@@ -1,5 +1,9 @@
 # Guarded local Fusion workflow
 
+[![Original teaching swerve module rendered in Fusion](../swerve/assembly.png)](../swerve/independent-swerve.f3d)
+
+*Plugin teaching example · Independent-axis swerve module, as saved in Fusion.*
+
 Use the bundled Python client and Fusion recipe to compare two parametric sideplates across a native archive and a STEP export. Start the official local MCP only in a session authorized by its owner. Keep the request journal beside the project's engineering evidence.
 
 ## Transaction contract
