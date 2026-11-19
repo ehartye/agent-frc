@@ -16,6 +16,7 @@ on:
       - 'examples/kickoff/training-field.json'
       - 'examples/highlights/**'
       - 'examples/swerve/**'
+      - 'examples/sensor-study/**'
       - '**/README.md'
       - 'README.md'
       - 'scripts/robot-highlights.mjs'

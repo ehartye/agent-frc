@@ -1,0 +1,6 @@
+[
+  {"id": "empty", "permit": false, "occupied": []},
+  {"id": "seated-and-secured", "permit": true, "occupied": ["side", "center"]},
+  {"id": "seated-but-loose", "permit": false, "occupied": ["side", "center"]},
+  {"id": "shifted", "permit": false, "occupied": ["side", "rim"]}
+]

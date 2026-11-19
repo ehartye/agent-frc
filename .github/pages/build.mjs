@@ -7,6 +7,7 @@ import { buildLab, rulesModel } from '../../scripts/kickoff.mjs';
 import { fieldGeometry } from '../../scripts/field-rehearsal-geometry.mjs';
 import { stages, purpose } from './guide.mjs';
 import { reviewPower } from '../../scripts/power-review.mjs';
+import { review as reviewCamera } from '../../examples/sensor-study/camera-reference.mjs';
 
 const source=path.dirname(fileURLToPath(import.meta.url));
 const root=path.resolve(source,'../..');
@@ -15,6 +16,16 @@ const escape=s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replace
 const repo='https://github.com/ehartye/agent-frc';
 const link=(label,pathname)=>'<a href="'+repo+'/blob/main/'+pathname+'">'+escape(label)+'</a>';
 const powerGuide='docs/shared-power-review.md';
+const cameraStudy = JSON.parse(await readFile(path.join(root,'examples/sensor-study/camera-frames.json'),'utf8'));
+const retentionStates = JSON.parse(await readFile(path.join(root,'examples/sensor-study/retention-states.json'),'utf8'));
+const trayView = study => reviewCamera(study).find(frame => frame.frame === 'tray-backed');
+const position = trayView(cameraStudy);
+const retention = trayView({...cameraStudy, states: retentionStates});
+const cameraComparison = `<details class="reading"><summary>Could the design premise be wrong?</summary>
+<p>A camera sees a part sitting on a moving tray. Does that image prove the tray can hold it through a turn?</p>
+<p>Checking position gives <strong>${escape(position.decision)}</strong>. Include a loose part with the same outline and the same image gives <strong>${escape(retention.decision)}</strong>. Both ${retention.possible.map(escape).join(' and ')} fit.</p>
+<p>Compare a better camera view with sensing grip or changing how the tray captures the part. Test which one distinguishes the failure.</p>
+${link('Run the comparison','docs/camera-reference.md')}</details>`;
 const power = await reviewPower(path.join(root,'examples/power/comparison.json'));
 const powerOptions = power.trials.map(t=>'<option value="'+escape(t.id)+'">'+escape(t.condition)+'</option>').join('');
 const powerResults = power.trials.map((trial,i)=>{
@@ -43,7 +54,7 @@ const highlightsLink='<a href="robot/index.html">Explore the example robot evide
 const chapters=stages.map((s,i)=>`<details id="${s.id}" class="chapter"${i===0?' open':''}>
 <summary><span class="ordinal">${chapter(i)}</span><span>${escape(s.name)}</span><span class="toggle" aria-hidden="true"></span></summary>
 <div class="chapter-body"><h3>${escape(s.question)}</h3><p>${escape(s.objective)}</p><p>${escape(s.activity)}</p>
-<div class="handoff"><h4>Carry forward</h4><p>${escape(s.handoff)}</p></div>
+<div class="handoff"><h4>Carry forward</h4><p>${escape(s.handoff)}</p></div>${s.docs.some(([,p])=>p==='docs/camera-reference.md')?cameraComparison:''}
 <h4>Supporting skills</h4><div class="chips">${s.skills.map(k=>link(k,'skills/'+k+'/SKILL.md')).join('')}</div>
 <div class="reading">${s.id==='verify'?highlightsLink:''}${s.id==='rules'?'<a href="rules.json" download>Download the training rules model ↓</a> · ':''}${s.docs.some(([,p])=>p===powerGuide)?'<a href="#power">Try the shared-power comparison ↓</a> · ':''}${s.docs.map(([label,p])=>link(label+' ↗',p)).join(' · ')}</div></div></details>`).join('\n');
 const directory=Object.keys(purpose).map(k=>{

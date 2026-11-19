@@ -15,6 +15,8 @@ npm run sensor:review -- artifacts/optics-trial/request.json
 
 Both ports see the seated sample. Both read clear at early exit with 55 mm of the projected piece still behind the end plane. At the last sample the trailing surface has passed the plane by 20 mm. The readings and comparison witness in this example are synthetic.
 
+Use the [camera reference study](camera-reference.md) to compare the same mounted view at pickup and during travel.
+
 ## Supply a project study
 
 - **Layout.** Use metres and name one clock and carriage frame. Define the piece as a union of positive-volume boxes (half sizes), spheres or finite axial tubes (half length, outer radius and inner bore radius). Specify the actual material, including holes. An origin, signed cardinal axis (or unitDirection vector) and finite range define each ideal sensor segment. Include opaque carriage structures as solids in the obstruction inventory. A through-beam can be blocked anywhere on its segment. A reflective ray requires the piece to be its first visible surface.
