@@ -19,20 +19,55 @@ function interval(value, label) {
 
 // Compare decimal clock labels without subtracting large binary timestamps or admitting an epoch-sized tolerance.
 function decimalParts(value) {
-  const [mantissa, exponent = '0'] = String(value).split('e');
+  const [mantissa, exponent = '0'] = String(value).toLowerCase().split('e');
   const [whole, fraction = ''] = mantissa.split('.');
-  return {digits:BigInt(whole + fraction), power:Number(exponent) - fraction.length};
+  const coefficient = (whole + fraction).replace(/^(-?)0+/, '$1');
+  const digits = coefficient.replace(/0+$/, '');
+  if (digits === '' || digits === '-') return {digits:'0',power:0};
+  return {digits,power:Number(exponent) - fraction.length + coefficient.length - digits.length};
 }
 
 function withinPeriod(row, period) {
   const parts = [row.fromS, row.toS, period].map(decimalParts);
   const power = Math.min(...parts.map(p => p.power));
-  const [start, end, limit] = parts.map(p => p.digits * 10n ** BigInt(p.power - power));
+  const [start, end, limit] = parts.map(p => BigInt(p.digits) * 10n ** BigInt(p.power - power));
   return end - start <= limit;
 }
 
+function checkClockLabels(values, labels, keys) {
+  for (const key of keys) {
+    const value = values?.[key], label = labels?.[key];
+    if (typeof value !== 'number' || typeof label !== 'string') continue;
+    const original = decimalParts(label), rounded = decimalParts(value);
+    requireInput(finite(value) && original.digits === rounded.digits && original.power === rounded.power,
+      'Clock precision lost in ' + key + ' at ' + label + '. Use seconds from a local time origin.');
+  }
+}
+
 function parseDocument(bytes) {
-  return JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(bytes));
+  const text = new TextDecoder('utf-8', {fatal:true}).decode(bytes);
+  const doc = JSON.parse(text);
+  // Older Node versions do not expose number lexemes to JSON.parse's reviver. Consume quoted
+  // strings as entire tokens so escaped quotes, property names and embedded examples stay intact.
+  let hasAlternateLabels = false;
+  const raw = text.replace(/"(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g, token => {
+    if (token[0] === '"' || String(Number(token)) === token) return token;
+    hasAlternateLabels = true;
+    return '"' + token + '"';
+  });
+  if (!hasAlternateLabels) return doc;
+  const labels = JSON.parse(raw);
+  if (doc?.schema === 'frc-power-comparison/v1') {
+    checkClockLabels(doc, labels, ['maxSampleIntervalS']);
+    checkClockLabels(doc.window, labels.window, ['fromS','toS']);
+  } else if (doc?.schema === 'frc-power-trace/v1' && Array.isArray(doc.rows)) {
+    for (const [i, row] of doc.rows.entries()) {
+      checkClockLabels(row, labels.rows[i], ['fromS','toS']);
+      if (Array.isArray(row?.voltages)) row.voltages.forEach((v,j) =>
+        checkClockLabels(v, labels.rows[i].voltages[j], ['atS']));
+    }
+  }
+  return doc;
 }
 
 function validateComparison(c) {
@@ -206,11 +241,16 @@ function assess(c, trial, trace) {
 
 function interpret(trial) {
   const v = trial.limiting;
-  const lines = [trial.condition + ' is ' + trial.status + '.'];
+  const lines = [trial.condition + ' (' + trial.provenance.kind + ' electrical evidence) is ' + trial.status + '.'];
   if (v) {
     const when = v.atS === undefined ? v.fromS + '–' + v.toS + ' s' : v.atS + ' s';
     lines.push('At ' + v.location + ' (' + when + '), the ' + v.kind + ' is ' + v.valueV +
       ' V against a ' + v.minV + ' V floor.');
+    if (v.currents.length) {
+      const kinds = {source:'source current',phase:'phase current','bus-total':'bus total current'};
+      const readings = v.currents.map(c => c.id + ' ' + kinds[c.kind] + ' ' + c.valueA + ' A');
+      lines.push('Coincident readings were ' + readings.join(', ') + '.');
+    } else lines.push('The limiting row supplies no current readings.');
   }
   for (const endpoint of trial.endpoints) {
     const sample = endpoint.lowestEvidence;
@@ -218,9 +258,8 @@ function interpret(trial) {
     else if (endpoint.minV === null) lines.push(endpoint.id + ' has a ' + sample.kind + ' of ' + sample.valueV +
       ' V with no floor supplied. Its margin is unknown.');
   }
-  if (trial.outcome.status !== 'unknown') {
-    lines.push(trial.provenance.kind + ' outcome (' + trial.outcome.status + ') — ' + trial.outcome.description + '.');
-  }
+  lines.push('The ' + trial.provenance.kind + ' outcome (' + trial.outcome.status + ') for the action — ' +
+    trial.outcome.description + '.');
   if (trial.unknowns.length) lines.push(trial.unknowns.join('. ') + '.');
   return lines.join(' ');
 }

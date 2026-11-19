@@ -8,6 +8,58 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { reviewPower } from '../scripts/power-review.mjs';
 
+test('final review explains electrical evidence, each current kind and unknown functional outcomes',async t=>{
+  const file=await fixture(t,(_,traces)=>{
+    traces[0].provenance.kind='measured';
+    traces[0].rows[0].currents.push({id:'arm',kind:'phase',valueA:15},{id:'panel',kind:'bus-total',valueA:6});
+  });
+  const {interpretation}=await reviewPower(file);
+  assert.match(interpretation,/together[^.]*measured[^.]*electrical[^.]*violated/i);
+  assert.match(interpretation,/staggered[^.]*modeled[^.]*electrical[^.]*complete/i);
+  for (const kind of ['measured','modeled']) assert.match(interpretation,new RegExp(kind+' outcome \\(unknown\\)','i'));
+  for (const [id,kind,amps] of [['arm','source',4],['pump','source',2],['arm','phase',15],['panel','bus total',6]]) {
+    assert.match(interpretation,new RegExp(id+' '+kind+'[^,;.]*?'+amps+' A','i'));
+  }
+});
+
+test('final review rejects lossy raw clock labels in windows, periods, sample edges and witnesses',async t=>{
+  for (const [document,field] of [['manifest','fromS'],['manifest','toS'],['manifest','maxSampleIntervalS'],
+      ['trace','fromS'],['trace','toS'],['trace','atS']]) {
+    const file=await fixture(t,(c,traces)=>{
+      c.window={fromS:1800000000,toS:1800000000};
+      c.maxSampleIntervalS=1800000000;
+      for(const tr of traces) tr.rows=[row(1800000000,1800000000,9,{
+        voltages:[{location:'arm-inlet',kind:'point',valueV:9,atS:1800000000}]})];
+    });
+    const c=JSON.parse(await readFile(file));
+    const input=document==='manifest' ? file : path.join(path.dirname(file),c.trials[0].trace.file);
+    const original='"'+field+'":1800000000';
+    const source=await readFile(input,'utf8');
+    assert.ok(source.includes(original));
+    const revised=source.replace(original,original+'.00000001');
+    await writeFile(input,revised);
+    if(document==='trace') {
+      c.trials[0].trace.sha256=createHash('sha256').update(revised).digest('hex');
+      await writeFile(file,JSON.stringify(c));
+    }
+    await assert.rejects(reviewPower(file),/clock.*precision|precision.*clock/i);
+  }
+});
+
+test('final review accepts equivalent exponent and high precision labels and ignores numbers in strings',async t=>{
+  const time=0.12345678901234566;
+  const file=await fixture(t,(c,traces)=>{
+    c.window={fromS:time,toS:time};
+    for(const tr of traces) {
+      tr.provenance.source='Literal example: "atS": 1800000000.00000001 with a backslash \\ and a quote ".';
+      tr.rows=[row(time,time,9)];
+    }
+  });
+  const source=await readFile(file,'utf8');
+  await writeFile(file,source.replaceAll(String(time),'1234567890123456600E-19'));
+  assert.deepEqual((await reviewPower(file)).trials.map(v=>v.status),['complete','complete']);
+});
+
 test('hardening rejects malformed UTF-8 in comparison and pinned trace bytes',async t=>{
   for (const target of ['manifest','trace']) {
     const file=await fixture(t);
