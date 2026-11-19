@@ -4,9 +4,14 @@
   const rosterBox=byId('replayRoster'), clock=byId('replayClock'),notice=byId('replayNotice');
   panel.hidden=false;
   let roster=[rehearsal.defaults('blue',1),rehearsal.defaults('red',1)];
-  let setup=profile.rehearsal.setups[0],sim=rehearsal.create(roster,setup),frame=null,lastTime=0;
+  let setup=profile.rehearsal.setups[0],frame=null,lastTime=0;
   let series=null,seriesPaused=false;
   const config=profile.rehearsal, L=profile.field.length,W=profile.field.width;
+  const student=createRehearsalSetup(rehearsal,roster,setup,config.series?.matches);
+  let sim=student.reset(),activeSource='';
+  const seriesSource=byId('replaySeriesSource');
+  if(config.series?.matches?.length)seriesSource.add(new Option('Published scenarios','published'));
+  seriesSource.add(new Option('My roster · 3 matches','student'));
   for(const setup of config.setups)byId('replaySetup').add(new Option(setup,setup));
   byId('replayBasis').textContent=config.basis+' '+config.boundsNote+
     ' The default bumper adds '+config.defaults.bumper+' in per side. Priorities follow request time, then robot ID for same-tick requests. Completed trips count arrivals and service, with scoring evaluated separately by the project station model.';
@@ -129,7 +134,7 @@
   }
   function setRoster(newRoster,newSetup=setup){
     try{
-      const next=rehearsal.create(newRoster,newSetup);
+      const next=student.edit(newRoster,newSetup);
       roster=newRoster;setup=newSetup;sim=next;notice.textContent='';
     } catch(e){notice.textContent=e.message;}
     byId('replaySetup').value=setup;
@@ -185,11 +190,11 @@
     const end=sim.ended;
     byId('replayRun').disabled=!roster.length || (end && sim.phaseIndex===config.periods.length-1);
     if(series)byId('replayRun').disabled=true;
-    byId('replaySeries').disabled=!roster.length;
+    seriesSource.disabled=Boolean(series && !series.done);
     byId('replaySeries').textContent=series && !series.done ? (seriesPaused?'Resume series at 10×':'Pause series') : 'Play match series at 10×';
     byId('replayScore').textContent=(config.stations?.length?'Modeled rehearsal score · Blue '+sim.game.score.blue+' · Red '+sim.game.score.red+
       '. '+config.stations.filter(s=>s.kind==='retrieval').map(s=>s.label+' '+sim.game.stock[s.id].length+' '+s.piece+' available').join(' · '):
-      'This profile has no registered piece or scoring stations.')+(series?' · Match '+series.match.id+' · '+series.match.basis:'');
+      'This profile has no registered piece or scoring stations.')+(series?' · '+activeSource+' · Match '+series.match.id+' · '+series.match.basis:'');
     for(const s of stations){
       const count=s.kind==='retrieval'?sim.game.stock[s.id].length+' available':
         sim.game.attempts[s.id]+' attempted'+(s.capacity===undefined?'':' · '+sim.game.occupied[s.id]+'/'+s.capacity+' occupied');
@@ -230,9 +235,10 @@
     stopFrame();
     if(series && !series.done){seriesPaused=!seriesPaused;}
     else{
-      const matches=config.series?.matches ?? [1,2,3].map(i=>({id:'Trial '+i,basis:'Repeat current prescribed behavior',roster,setup}));
-      try{series=createMatchSeries(rehearsal,matches);}catch(error){notice.textContent=error.message;return;}
-      sim=series.sim;setup=sim.setup;roster=series.match.roster;seriesPaused=false;listRoster();seriesResults();
+      try{series=student.series(seriesSource.value);}catch(error){notice.textContent=error.message;return;}
+      activeSource=seriesSource.selectedOptions[0].text;
+      sim=series.sim;setup=sim.setup;roster=series.match.roster;seriesPaused=false;
+      byId('replaySetup').value=setup;notice.textContent='';listRoster();seriesResults();
     }
     lastTime=performance.now();if(!seriesPaused)frame=requestAnimationFrame(playSeries);render();
   };
@@ -252,7 +258,12 @@
   function advancePaused(seconds){sim.paused=false;rehearsal.advance(sim,seconds);sim.paused=true;render();}
   byId('replayStep').onclick=()=>advancePaused(1);
   byId('replayFast').onclick=()=>advancePaused(rehearsal.phaseSeconds(sim.phase));
-  byId('replayReset').onclick=()=>{stopFrame();series=null;seriesPaused=false;seriesResults();setRoster(roster,setup);notice.textContent='Same roster and behaviors restored at '+sim.phase+' start.';};
+  byId('replayReset').onclick=()=>{
+    stopFrame();series=null;seriesPaused=false;activeSource='';seriesResults();
+    sim=student.reset();roster=student.roster;setup=student.setup;
+    byId('replaySetup').value=setup;listRoster();render();
+    notice.textContent='Your roster, period behaviors and obstacle setup are restored at '+sim.phase+' start.';
+  };
   byId('replaySave').onclick=()=>{
     const id='MATCH-'+(rehearsalNotes.length+1);
     const lines=[id+' · '+profile.game+' '+profile.edition+' prescribed rehearsal',
@@ -263,6 +274,7 @@
         'Position '+r.p.map(x=>x.toFixed(2)).join(', ')+' in. '+r.visits+' completed trips, '+(r.wait*rehearsal.dt).toFixed(2)+
         ' s waiting; '+(r.blocked || r.action || 'at start')+'.'),
       queues()];
+    if(series)lines.push('Match series: '+activeSource+'.');
     for(const summary of sim.phaseHistory)lines.push(summary.phase+' cutoff at '+summary.seconds+' s: '+
       summary.robots.map(r=>r.id+' '+r.visits+' trips, '+r.waitSeconds.toFixed(2)+' s waiting').join('; ')+'.');
     const waits=sim.hotspots.slice().sort((a,b)=>b.ticks-a.ticks).slice(0,3);
