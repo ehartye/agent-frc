@@ -58,7 +58,7 @@ Retain minimal native/nested/imported controls, failed appearance attempts, mate
 
 ## Check volume on the operand being measured
 
-Use the native component solid to measure material volume and the occurrence transform to register it in the assembly. Compare its native direct volume and very-high-accuracy physical properties to an independent calculation. On a temporary copy, record both readings again. The [disposable Fusion volume and machining study](../examples/fusion-volume/README.md) reproduces a rotated and translated 24 cm³ plate whose temporary physical properties report zero, including a true 2 cm³ Boolean intersection with six faces. The separate control returns an empty face set across a known 2 cm gap.
+Use the native component solid to measure material volume and the occurrence transform to register it in the assembly. Compare its native direct volume and very-high-accuracy physical properties to an independent calculation. On a temporary copy, record both readings again. The [disposable Fusion volume and machining study](fusion-volume-study.md) reproduces a rotated and translated 24 cm³ plate whose temporary physical properties report zero, including a true 2 cm³ Boolean intersection with six faces. The separate control returns an empty face set across a known 2 cm gap.
 
 For scripted machining, set `participantBodies` to the intended native bodies before adding the extrusion. Check the target against its finished volume and verify that every neighboring solid crossed by the tool keeps its own pre-cut volume after a fresh reopen. The study includes an unrestricted cut whose neighbor loses material while its outside dimensions stay unchanged.
 
