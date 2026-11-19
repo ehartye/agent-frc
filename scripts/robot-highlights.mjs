@@ -270,11 +270,11 @@ export async function buildHighlights(manifest, directory) {
     const ref = url.pathname.split('/').filter(Boolean).at(-1);
     const rows = workflowRows(root,ref);
     requireValue(rows.length, 'Add at least one completed output to the published workflow index');
-    const documentLink = item => '<a href="'+escape(base+item.file.split('/').map(encodeURIComponent).join('/'))+'">'+escape(item.label)+'</a>';
+    const documentLink = item => '<a href="'+escape(item.url ?? (base+item.file.split('/').map(encodeURIComponent).join('/')))+'">'+escape(item.label)+'</a>';
     workflow = '<section id="workflow"><h2>Project workflow</h2><p>'+documentLink({file:'docs/workflow.md',label:'Open the versioned workflow index'})+
       '</p><table><thead><tr><th>Skill</th><th>Project output</th><th>Supporting evidence</th></tr></thead><tbody>'+
       rows.map(row => '<tr><th scope="row">'+escape(row.skill)+'</th><td>'+row.output.map(documentLink).join(', ')+'</td><td>'+
-        row.evidence.map(documentLink).join(', ')+'</td></tr>').join('')+'</tbody></table></section>';
+        (row.evidence.map(documentLink).join(', ') || escape(row.evidenceNote))+'</td></tr>').join('')+'</tbody></table></section>';
   }
   const buildSection = build ? '<section id="build"><h2>Build sheet</h2><table><thead><tr><th>Subsystem</th><th>Configuration</th><th>Evidence</th></tr></thead><tbody>'+build+'</tbody></table></section>' : '';
   const fields = {title, role, revision, results, workflow, buildSection, buildLink:build ? '<a href="#build">Build sheet</a>' : '',

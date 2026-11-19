@@ -18,10 +18,15 @@ export function workflowRows(root, ref) {
     readFileSync(path.join(root,relative),'utf8');
   if (!tracked.has(indexPath)) throw Error('Track the project workflow index at '+indexPath);
   const links = (cell,required) => {
-    if (!required && ['�','-',''].includes(cell)) return [];
+    if (!required && ['—','-',''].includes(cell)) return [];
     const parsed = [...cell.matchAll(/\[([^\]]+)\]\(([^)]+)\)/g)];
-    if (!parsed.length) throw Error('Expected a project document link in '+indexPath);
-    return parsed.map(([,label,href]) => {
+    if (!parsed.length && required) throw Error('Expected a project document link in '+indexPath);
+    const items=parsed.map(([,label,href]) => {
+      if (/^https:\/\//i.test(href)) {
+        const url=new URL(href);
+        if(url.username || url.password)throw Error('Expected public supporting URL');
+        return {label,url:url.href};
+      }
       if (/[\\:#?]/.test(href) || href.startsWith('/')) throw Error('Expected a local workflow document: '+href);
       const file = path.posix.normalize(path.posix.join('docs',href));
       if (file.startsWith('../') || file.startsWith('artifacts/') || !tracked.has(file))
@@ -30,20 +35,30 @@ export function workflowRows(root, ref) {
         throw Error('Workflow link leaves the project: '+file);
       return {label,file};
     });
+    if(required && !items.some(item=>item.file)) throw Error('Expected a committed project output in '+indexPath);
+    return items;
   };
   const rows = [];
-  let table = false, found = false;
-  for (const raw of read(indexPath).split(/\r?\n/)) {
+  let columns, found=false;
+  for(const raw of read(indexPath).split(/\r?\n/)) {
     const line=raw.trim();
-    if (/^\|\s*Agent FRC skill\s*\|\s*Project output\s*\|\s*Supporting evidence\s*\|$/i.test(line)) {
-      found=true; table=true; continue;
-    }
-    if (!line.startsWith('|')) {table=false; continue;}
-    if (!table || /^\|[ :|\-]+$/.test(line)) continue;
+    if (!line.startsWith('|')) {columns=undefined;continue;}
     const cells=line.slice(1,-1).split('|').map(c=>c.trim());
-    const skill=cells[0].replaceAll('`','').replace(/^agent-frc:/,'');
-    if(cells.length!==3 || !/^frc-[a-z][a-z-]+$/.test(skill)) throw Error('Invalid project workflow row: '+line);
-    rows.push({skill,output:links(cells[1],true),evidence:links(cells[2],false)});
+    if (!columns) {
+      const positions=[/skill/i,/project.*(?:output|document|artifact)/i,/evidence|what to check/i].map(re=>cells.findIndex(c=>re.test(c)));
+      if(positions.every(i=>i>=0)){columns=positions;found=true;}
+      continue;
+    }
+    if (/^\|[ :|\-]+$/.test(line)) continue;
+    if (columns.some(i=>i>=cells.length)) throw Error('Invalid project workflow row: '+line);
+    const [skillCell,output,evidence]=columns.map(i=>cells[i]);
+    const names=[...new Set(skillCell.match(/\bfrc-[a-z]+(?:-[a-z]+)*\b/g))];
+    const description=/^Agent FRC (.+)$/i.exec(skillCell);
+    if (!names.length && description) for(const part of description[1].toLowerCase().split(' and ')) names.push('frc-'+part.trim().replaceAll(' ','-'));
+    if (!names.length) throw Error('Name the skill in the project workflow row: '+line);
+    const supporting=links(evidence,false);
+    rows.push({skill:names.join(', '),output:links(output,true),evidence:supporting,
+      evidenceNote:supporting.length || ['—','-'].includes(evidence) ? '' : evidence});
   }
   if(!found) throw Error('Missing project workflow table in '+indexPath);
   return rows;
