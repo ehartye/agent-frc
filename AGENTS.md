@@ -2,6 +2,8 @@
 
 ## Student CAD and project documentation
 
+Use the plugin's default CAD component palette for new robot designs. A robot repository can override individual roles or add named roles in `cad/component-palette.json`. Apply the resolved palette consistently to editable Fusion appearances, public CAD views and README stills. Preserve supplier finishes and use the project's documented alliance colors on bumper covers.
+
 Use four-module swerve as the default for a new robot drivetrain unless the project specifies another architecture. Guide the student through exact manufacturer options and a custom shop-built option before selecting hardware.
 
 Use Autodesk Fusion as the standard for student CAD authoring and handoff. Prefer the manufacturer's model of each purchased part in its exact revision and configuration. Preserve its source, file identity, license and installed transform. Document the specific engineering justification for external shape authoring, how the selected result returns to Fusion and what remains editable. Label every approximation and its limits.

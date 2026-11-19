@@ -39,9 +39,17 @@ def run(root, update, template):
     checked(root / config["source"], receipt["sourceSha256"])
     checked(folder / "assembly.png", receipt["imageSha256"])
     mesh = checked(folder / "assembly.stl.gz", receipt["meshSha256"])
+    layout = receipt["nativeBounds"]
+    if "appearances" in config or receipt.get("schema") == "agent-frc/cad-still@2":
+        from cad_appearances import validated_groups
+        if not config.get("appearances") or config["appearances"] != receipt.get("appearances", {}).get("file"):
+            raise ValueError("Selected appearance manifest differs from the export")
+        layout = dict(bounds=layout, groups=validated_groups(root, receipt, folder / "assembly.stl.gz"))
+    elif receipt.get("schema") != "agent-frc/cad-still@1":
+        raise ValueError("Unknown CAD receipt schema")
     fields = dict(title=html.escape(config["title"]), scope=html.escape(config["scope"]),
                   facts=f'{receipt["solids"]:,} solids · {receipt["triangles"]:,} triangles · {receipt["chordMm"]} mm chord setting',
-                  bounds=json.dumps(receipt["nativeBounds"]), mesh=base64.b64encode(mesh).decode("ascii"))
+                  bounds=json.dumps(layout), mesh=base64.b64encode(mesh).decode("ascii"))
     viewer = re.sub(r"\{\{(\w+)\}\}", lambda match: fields[match[1]], template.read_text(encoding="utf-8"))
     output(folder / "index.html", viewer.encode(), update)
     paths = subprocess.check_output(["git", "ls-files", "-co", "--exclude-standard", "-z"], cwd=root)

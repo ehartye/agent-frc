@@ -50,7 +50,7 @@ export const purpose = {
   'frc-case-study': 'Trace game objectives through strategy, subsystems and engineering evidence.',
   'frc-previsualization': 'Explore field reach, robot space and reversible design comparisons.',
   'frc-strategic-narrative': 'Turn match roles into explicit stories and provisional requirements.',
-  'frc-mechanism-cad': 'Develop the mechanism, its interfaces and the CAD evidence it needs.',
+  'frc-mechanism-cad': 'Develop the mechanism and its interfaces. Use the default component palette or the project’s overrides across Fusion, the README still and the showcase.',
   'frc-modes': 'Define autonomous, teleop, trigger and interruption behavior.',
   'frc-java': 'Implement and test the robotâ€™s WPILib Java control behavior.',
   'frc-vision': 'Check sensor geometry, localization and targeting assumptions.',
