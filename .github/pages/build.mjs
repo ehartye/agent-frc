@@ -79,6 +79,6 @@ await writeFile(path.join(output,'index.html'),page);
 for(const file of ['guide.css','interact.js']) await copyFile(path.join(source,file),path.join(output,file));
 await writeFile(path.join(output,'rules.json'),JSON.stringify(model,null,2)+'\n');
 await buildHighlights(path.join(root,'examples/highlights/project.json'),path.join(output,'robot'));
-await buildHighlights(path.join(root,'examples/highlights/stroke-page.json'),path.join(output,'stroke'));
+await buildHighlights(path.join(root,'examples/highlights/stroke-chapter-page.json'),path.join(output,'stroke'));
 await buildLab(profile,path.join(output,'field-lab.html'));
 console.log('Built '+stages.length+' workflow stages, '+ownedSkills.length+' skills and the current kickoff lab.');

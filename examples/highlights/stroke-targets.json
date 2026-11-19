@@ -1,0 +1,18 @@
+{
+  "trace": {
+    "file": "stroke.json",
+    "sha256": "ea233f8abe234e2669b30fc27900c921711e52de404f0d0cc36ff36ad375c51a"
+  },
+  "clear": {
+    "revision": "linear-fixture-r1",
+    "attempt": "centered",
+    "piece": "sample-A",
+    "clock": "fixture",
+    "type": "trailing-edge-crossing",
+    "target": "Target plane",
+    "criterion": "Trailing edge first reached 105 mm on the recorded sample clock.",
+    "kind": "target",
+    "qualified": true,
+    "timeS": 13.1
+  }
+}

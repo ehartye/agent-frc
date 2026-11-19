@@ -1,3 +1,4 @@
+import { checkChapters, clipTime } from './replay-chapters.mjs';
 import { workflowRows } from './project-layout.mjs';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -155,23 +156,36 @@ export async function buildHighlights(manifest, directory) {
       seen.add(id);
       requireValue(['reached','scored','missed','unresolved'].includes(event.outcome), 'Invalid observed outcome');
       requireValue(record.scope !== 'capacity-only' || event.outcome === 'unresolved', 'A capacity target cannot establish a reached outcome');
-      const endIndex = anchors.findIndex((point,i) => i > 0 && event.timeS <= point.runS);
-      requireValue(endIndex > 0 && event.timeS >= anchors[0].runS, 'Observation outside this clip');
-      const before = anchors[endIndex-1], after = anchors[endIndex];
-      const clipTime = before.clipS + (event.timeS-before.runS)*(after.clipS-before.clipS)/(after.runS-before.runS);
+      const clipAt = clipTime(anchors,event.timeS);
       const label = escape(string(event.target,'observed target'));
-      return '<li><button type="button" data-clip-time="'+clipTime+'">Seek to '+clipTime.toFixed(2)+' s</button> '+
+      return '<li><button type="button" data-clip-time="'+clipAt+'">Seek to '+clipAt.toFixed(2)+' s</button> '+
         label+' · <strong>'+event.outcome+'</strong> · '+escape(record.clock)+' '+event.timeS+' s. '+
         escape(string(event.criterion,'observation criterion'))+'</li>';
     }).join('');
     return '<p>'+escape(string(motion.movingPart,'moving part'))+' · '+mode+' motion · '+citation(motion.trace)+
-      '</p><p>Observed revision '+escape(observedRevision)+' · '+escape(record.scope)+' · piece '+escape(piece)+' · start '+escape(start)+'</p><ul class="events">'+events+'</ul><p>Event observations · '+citation(motion.observations)+
+      '</p><p>Source-declared event register · observed revision '+escape(observedRevision)+' · '+escape(record.scope)+' · piece '+escape(piece)+' · start '+escape(start)+'</p><ul class="events">'+events+'</ul><p>Event observations · '+citation(motion.observations)+
       '</p><p class="seek-status" role="status"></p>';
+  }
+  async function chapterList(spec, asset) {
+    const register=source(spec.register), trace=source(spec.trace), observations=source(spec.observations);
+    requireValue([register,trace,observations].every(s=>s.type==='.json' && s.sha256),'Expected local checked chapter records');
+    const result=await checkChapters(assets.get(path.basename(register.href)),root);
+    requireValue(result.revision===data.revision && result.mediaSha256===asset.sha256 &&
+      result.traceSha256===trace.sha256 && result.observationsSha256===observations.sha256,
+      'Chapter register differs from displayed media, revision or sources');
+    const seek=(time,label)=>'<button type="button" data-clip-time="'+time+'">'+escape(label)+'</button>';
+    const rows=result.chapters.map(c=>'<li>'+seek(c.startS,c.label)+' · '+escape(c.classification)+
+      '<p>'+[c.revision,c.attempt,c.piece,c.clock].map(escape).join(' · ')+'</p><ul>'+c.events.map(e=>
+        '<li>'+seek(e.clipS,e.target+' · '+e.outcome)+' · '+escape(e.type)+' · '+escape(c.clock)+' '+e.timeS+
+        ' s · '+escape(e.criterion)+(e.rule?' · '+escape(e.rule):'')+'</li>').join('')+'</ul></li>');
+    return '<h3>Replay chapters</h3><ol>'+rows.join('')+'</ol><p>Checkpoints · '+citation(spec.trace)+
+      ' · Event observations · '+citation(spec.observations)+' · '+citation(spec.register)+'</p><p class="seek-status" role="status"></p>';
   }
   const media = (await Promise.all(list(data.media ?? [], 'media').map(async row => {
     const asset = source(row.asset);
     const caption = escape(string(row.caption, 'media description'));
     const alt = escape(string(row.description, 'media alternative'));
+    requireValue(!(row.chapters && row.motion),'Choose a chapter register or a single motion record');
     let item;
     if (['.mp4', '.webm'].includes(asset.type)) {
       let poster = '';
@@ -182,12 +196,12 @@ export async function buildHighlights(manifest, directory) {
       }
       item = '<video controls playsinline preload="metadata" aria-label="' + alt + '"' + poster + ' src="' + escape(asset.href) + '"></video>';
     } else {
-      requireValue(!row.motion, 'Motion playback requires a local video');
+      requireValue(!row.motion && !row.chapters, 'Motion playback requires a local video');
       requireValue(['.png','.jpg','.jpeg','.webp'].includes(asset.type), 'Expected local evidence image or film');
       item = '<img loading="lazy" alt="' + alt + '" src="' + escape(asset.href) + '">';
     }
     return '<figure>' + item + '<figcaption>' + caption + ' · ' + citation(row.source) + '</figcaption>' +
-      (row.motion ? await replay(row.motion,asset) : '') + '</figure>';
+      (row.chapters ? await chapterList(row.chapters,asset) : row.motion ? await replay(row.motion,asset) : '') + '</figure>';
   }))).join('');
   let campaign = '';
   if (data.campaign !== undefined) {

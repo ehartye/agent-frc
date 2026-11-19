@@ -1,0 +1,65 @@
+{
+  "trace": {
+    "file": "stroke.json",
+    "sha256": "ea233f8abe234e2669b30fc27900c921711e52de404f0d0cc36ff36ad375c51a"
+  },
+  "checkpoints": [
+    {
+      "revision": "linear-fixture-r1",
+      "attempt": "centered",
+      "piece": "sample-A",
+      "clock": "fixture",
+      "checkpoint": "sample-0",
+      "timeS": 10,
+      "frame": "fixture",
+      "unit": "mm",
+      "position": [
+        70,
+        0,
+        0
+      ],
+      "state": {
+        "pieceMm": 70,
+        "jawMm": 20
+      }
+    },
+    {
+      "revision": "linear-fixture-r1",
+      "attempt": "centered",
+      "piece": "sample-A",
+      "clock": "fixture",
+      "checkpoint": "sample-20",
+      "timeS": 12,
+      "frame": "fixture",
+      "unit": "mm",
+      "position": [
+        70,
+        0,
+        0
+      ],
+      "state": {
+        "pieceMm": 70,
+        "jawMm": 60
+      }
+    },
+    {
+      "revision": "linear-fixture-r1",
+      "attempt": "centered",
+      "piece": "sample-A",
+      "clock": "fixture",
+      "checkpoint": "sample-40",
+      "timeS": 14,
+      "frame": "fixture",
+      "unit": "mm",
+      "position": [
+        130,
+        0,
+        0
+      ],
+      "state": {
+        "pieceMm": 130,
+        "jawMm": 20
+      }
+    }
+  ]
+}
