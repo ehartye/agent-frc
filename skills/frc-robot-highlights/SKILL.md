@@ -50,3 +50,5 @@ After the first successful deployment, open the URL reported by the deploy job. 
 
 
 Use the [publication checks](../../docs/showcase-evidence.md) for a kickoff-only analysis page, a project workflow index, a published model inventory and observed pickup or release markers on the film clock. Keep chances and conditional point estimates distinct from an independently reached target. Label the piece, starting checkpoint and source revision when combining studies.
+
+Publish the project’s generated student field lab with the `fieldLab` entry and link it directly from the README. Verify the stable `field-lab.html` in the deployed site.

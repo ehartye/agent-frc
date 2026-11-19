@@ -18,6 +18,7 @@ export function createRehearsalGame(profile) {
       s.areaIn[0].every((v,i)=>v<s.areaIn[1][i]),'Invalid rectangular station area');
     if (s.kind === 'retrieval') legal(count(s.stock) && s.stock<=10000,'Invalid initial station stock');
     else {
+      legal(s.capacity===undefined || count(s.capacity),'Invalid target piece capacity');
       legal(label(s.criterion) && (count(s.points) || s.points && typeof s.points==='object' &&
         [...periods.keys()].every(phase=>count(s.points[phase]))),'Supply a scoring criterion and period points');
       for (const w of s.activeWindows ?? []) legal(periods.has(w.phase) && Number.isFinite(w.fromS) &&
@@ -29,7 +30,7 @@ export function createRehearsalGame(profile) {
   for (const s of stations.values()) {
     for (const [outcome,rule] of Object.entries(s.returns ?? {})) {
       const target=stations.get(rule.station);
-      legal(s.kind==='scoring' && ['credited','missed','inactive','unresolved'].includes(outcome) &&
+      legal(s.kind==='scoring' && ['credited','missed','inactive','unresolved','occupied'].includes(outcome) &&
         target?.kind==='retrieval' && target.piece===s.piece && Number.isFinite(rule.delayS) && rule.delayS>=0,
         'Returns need a compatible retrieval station and nonnegative delay');
     }
@@ -40,7 +41,10 @@ export function createRehearsalGame(profile) {
   function replenish(sim,t) {
     const time=elapsed(sim,t), pending=[];
     for (const entry of sim.game.returning) {
-      if(entry.readyAtS<=time+1e-9) sim.game.stock[entry.station].push(entry.piece);
+      if(entry.readyAtS<=time+1e-9) {
+        sim.game.stock[entry.station].push(entry.piece);
+        if(entry.releaseSlot)sim.game.occupied[entry.releaseSlot]--;
+      }
       else pending.push(entry);
     }
     sim.game.returning=pending;
@@ -79,7 +83,7 @@ export function createRehearsalGame(profile) {
       cargo[robot.id]=stock[key].splice(0,quantity);
     }
     const attempts=Object.fromEntries([...stations.values()].filter(s=>s.kind==='scoring').map(s=>[s.id,0]));
-    return {stock,initial,cargo,capacity,score,attempts,returning:[],tieWinner,firstPeriodCount:{blue:0,red:0},terminal:[],events:[]};
+    return {stock,initial,cargo,capacity,score,attempts,occupied:{...attempts},returning:[],tieWinner,firstPeriodCount:{blue:0,red:0},terminal:[],events:[]};
   }
   function record(sim,robot,station,operation,outcome,pieces,timeS) {
     const entry={phase:sim.phase,timeS,robot:robot.id,station:station.id,operation,outcome,pieces:pieces.map(p=>p.id)};
@@ -116,16 +120,27 @@ export function createRehearsalGame(profile) {
         outcome=activity;
       }
     }
-    const event=record(sim,robot,s,'attempt',outcome,pieces,timeS);
-    const points=outcome==='credited' ? pieces.length*(typeof s.points==='number'?s.points:s.points[sim.phase]) : 0;
-    event.points=points;event.prescribedOutcome=step.outcome ?? 'unresolved';event.activity=activity;
-    g.score[robot.side]+=points;
-    if (outcome==='credited' && sim.phaseIndex===0) g.firstPeriodCount[robot.side]+=pieces.length;
-    g.attempts[key]+=pieces.length;
-    for (const piece of pieces) {
-      const rule=s.returns?.[outcome];
-      if(rule) g.returning.push({piece,station:rule.station,readyAtS:elapsed(sim,timeS)+rule.delayS});
-      else g.terminal.push({...piece,station:key,outcome});
+    const admitted=outcome==='credited' && s.capacity!==undefined ?
+      Math.min(pieces.length,Math.max(0,s.capacity-g.occupied[key])) : pieces.length;
+    for(const [result,batch] of [[outcome,pieces.slice(0,admitted)],['occupied',pieces.slice(admitted)]]){
+      if(!batch.length)continue;
+      const event=record(sim,robot,s,'attempt',result,batch,timeS);
+      const points=result==='credited'?batch.length*(typeof s.points==='number'?s.points:s.points[sim.phase]):0;
+      event.points=points;event.prescribedOutcome=step.outcome ?? 'unresolved';event.activity=activity;
+      g.score[robot.side]+=points;
+      if(result==='credited'){
+        g.occupied[key]+=batch.length;
+        if(sim.phaseIndex===0)g.firstPeriodCount[robot.side]+=batch.length;
+      }
+      g.attempts[key]+=batch.length;
+      for (const piece of batch) {
+        const rule=s.returns?.[result];
+        if(rule){
+          const entry={piece,station:rule.station,readyAtS:elapsed(sim,timeS)+rule.delayS};
+          if(result==='credited')entry.releaseSlot=key;
+          g.returning.push(entry);
+        }else g.terminal.push({...piece,station:key,outcome:result});
+      }
     }
   }
   return {start,apply,replenish};

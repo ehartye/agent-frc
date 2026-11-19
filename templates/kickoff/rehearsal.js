@@ -10,6 +10,20 @@
   for(const setup of config.setups)byId('replaySetup').add(new Option(setup,setup));
   byId('replayBasis').textContent=config.basis+' '+config.boundsNote+
     ' The default bumper adds '+config.defaults.bumper+' in per side. Priorities follow request time, then robot ID for same-tick requests. Completed trips count arrivals and service, with scoring evaluated separately by the project station model.';
+  const stations=config.stations ?? [], legend=byId('replayStations'), counters=new Map();
+  let highlighted=null;
+  for(const [i,s] of stations.entries()){
+    const row=document.createElement('li'), select=document.createElement('button'), counts=document.createElement('span');
+    select.type='button';select.textContent=(i+1)+' · '+s.label;
+    select.setAttribute('aria-pressed','false');
+    select.onclick=()=>{
+      highlighted=highlighted===s.id?null:s.id;
+      for(const [id,c] of counters)c.button.setAttribute('aria-pressed',String(highlighted===id));
+      draw();
+    };
+    row.append(select,counts);legend.append(row);counters.set(s.id,{button:select,counts});
+  }
+  legend.parentElement.hidden=!stations.length;
   function draw() {
     const box=canvas.getBoundingClientRect();if(!box.width || !box.height)return;
     const dpr=window.devicePixelRatio || 1;
@@ -60,9 +74,6 @@
         context.fillRect(x-4,y-4,8,8);
         for(let i=0;i<Math.min(6,stock);i++){context.beginPath();context.arc(x+(i%3-1)*4,y-6-Math.floor(i/3)*4,1.7,0,Math.PI*2);context.fill();}
       }else{context.beginPath();context.arc(x,y,5,0,Math.PI*2);context.stroke();}
-      context.font='bold 11px system-ui';context.textAlign='center';context.textBaseline='bottom';
-      const n=retrieval?sim.game.stock[station.id].length+' left':sim.game.attempts[station.id]+' tried';
-      context.fillText(station.label+' · '+n,x,y-12);
     }
     for(const h of sim.hotspots){
       const xy=at(h.point);context.fillStyle='#ffbd6e91';context.beginPath();
@@ -83,6 +94,35 @@
       if(r.blocked){context.strokeStyle='#ffc66f';context.lineWidth=2;context.beginPath();context.arc(x,y,17*scale,0,Math.PI*2);context.stroke();}
     }
     context.restore();
+    // Render station keys after releasing the field clip. Keep physical anchors
+    // exact and lead to a readable badge when several objectives share a face.
+    const placed=[];
+    for(const [i,s] of stations.entries()){
+      if(highlighted && highlighted!==s.id)continue;
+      const [x,y]=at(s.displayAt ?? s.at);
+      const count=s.kind==='retrieval'?sim.game.stock[s.id].length:sim.game.attempts[s.id];
+      const label=(i+1)+'·'+count;
+      context.font='bold 11px system-ui';
+      const w=context.measureText(label).width+8,h=16;
+      let best;
+      for(let ring=0;ring<=4;ring++){
+        for(const [dx,dy] of [[0,-1],[1,0],[-1,0],[0,1],[1,-1],[-1,-1],[1,1],[-1,1]]){
+          const bx=Math.max(1,Math.min(box.width-w-1,x-w/2+dx*(10+ring*14)));
+          const by=Math.max(1,Math.min(box.height-h-1,y-h/2+dy*(10+ring*14)));
+          const overlap=placed.reduce((sum,b)=>sum+Math.max(0,Math.min(bx+w,b.x+b.w)-Math.max(bx,b.x))*
+            Math.max(0,Math.min(by+h,b.y+b.h)-Math.max(by,b.y)),0);
+          const cost=overlap*100+Math.hypot(bx+w/2-x,by+h/2-y);
+          if(!best || cost<best.cost)best={x:bx,y:by,w,h,cost};
+        }
+        if(best.cost<100)break;
+      }
+      placed.push(best);
+      context.strokeStyle='#f5e0a3';context.lineWidth=1;context.beginPath();context.moveTo(x,y);
+      context.lineTo(best.x+w/2,best.y+h/2);context.stroke();
+      context.fillStyle=s.kind==='retrieval'?'#f2cc72':'#d6f1e0';context.fillRect(best.x,best.y,w,h);
+      context.fillStyle='#102b33';context.textBaseline='middle';context.textAlign='center';
+      context.fillText(label,best.x+w/2,best.y+h/2);
+    }
   }
   function button(label,fn) {
     const b=document.createElement('button');b.textContent=label;b.type='button';b.onclick=fn;return b;
@@ -150,6 +190,12 @@
     byId('replayScore').textContent=(config.stations?.length?'Modeled rehearsal score · Blue '+sim.game.score.blue+' · Red '+sim.game.score.red+
       '. '+config.stations.filter(s=>s.kind==='retrieval').map(s=>s.label+' '+sim.game.stock[s.id].length+' '+s.piece+' available').join(' · '):
       'This profile has no registered piece or scoring stations.')+(series?' · Match '+series.match.id+' · '+series.match.basis:'');
+    for(const s of stations){
+      const count=s.kind==='retrieval'?sim.game.stock[s.id].length+' available':
+        sim.game.attempts[s.id]+' attempted'+(s.capacity===undefined?'':' · '+sim.game.occupied[s.id]+'/'+s.capacity+' occupied');
+      const output=counters.get(s.id).counts,next=' '+s.piece+' · '+count;
+      if(output.textContent!==next)output.textContent=next;
+    }
     const following=config.periods[sim.phaseIndex+1];
     byId('replayRun').textContent=end?(following?'Start '+following.name:'Match complete'):(!sim.paused?'Pause':used?'Resume':'Start '+sim.phase);
     for(const id of ['replayStep','replayFast'])byId(id).disabled=Boolean(series) || !sim.paused || end || !roster.length;

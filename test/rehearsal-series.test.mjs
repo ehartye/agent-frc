@@ -49,3 +49,19 @@ test('finite stock, typed cargo, inactive/tied targets and delayed return preser
   assert.equal(sim.game.score.red,0);conserved(sim.game);
   assert.throws(()=>game.start([{...b,preload:{station:supply.id,quantity:2}}]),/Preload exceeds/);
 });
+
+test('only available scoring slots admit a batch, and a returning piece reopens its slot',()=>{
+  const p=structuredClone(profile);
+  const [supply,target]=p.rehearsal.stations;
+  target.capacity=1;target.returns={credited:{station:supply.id,delayS:2}};
+  const robot={id:'B1',side:'blue',p:target.at,capacity:3,preload:{station:supply.id,quantity:3}};
+  const game=createRehearsalGame(p),sim={game:game.start([robot]),phase:'Opening',phaseIndex:0,phaseHistory:[]};
+  const attempt={operation:'attempt',station:target.id,outcome:'credited',quantity:2};
+  game.apply(sim,robot,attempt,.5);
+  assert.deepEqual(sim.game.events.map(e=>[e.outcome,e.points]),[['credited',1],['occupied',0]]);
+  assert.equal(sim.game.occupied[target.id],1);assert.equal(sim.game.cargo.B1.length,1);
+  game.replenish(sim,2.49);assert.equal(sim.game.occupied[target.id],1);
+  game.replenish(sim,2.5);assert.equal(sim.game.occupied[target.id],0);
+  game.apply(sim,robot,attempt,2.55);assert.equal(sim.game.score.blue,2);
+  assert.equal(sim.game.attempts[target.id],3);conserved(sim.game);
+});

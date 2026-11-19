@@ -32,3 +32,8 @@ Omit `--require-complete` to report a partial study. A wrong placement or missin
 ## Let students open each workflow document
 
 Keep the documents in the robot repository. Use the [project setup convention](../skills/frc-project-setup/SKILL.md) to index the actual skill, output and supporting evidence in `docs/workflow.md`. Include `workflow:{"revisionUrl":"https://github.com/OWNER/PROJECT/blob/COMMIT"}` in the manifest, using a full commit SHA available in the checkout. The generated table links the documents at that revision. Keep restricted sources local and link a distributable project-authored record of the conclusions.
+
+
+## Publish the actual interactive field lab
+
+Add `fieldLab:{"file":"kickoff/field-lab.html","sha256":"…","shareable":true}` to the project manifest. Keep a Markdown link to that source or its hosted `/field-lab.html` in the project README. The standard page builder copies the verified, self-contained HTML into its output as `field-lab.html` and adds **Open the field lab** to the showcase navigation. Publish that entire directory. In the hosted lab, open the rehearsal and check the project-specific station names and piece stocks. When updating the lab, regenerate its digest with the new source.
