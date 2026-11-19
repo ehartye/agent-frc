@@ -26,6 +26,12 @@ const powerResults = power.trials.map((trial,i)=>{
     <div><strong>${margin>0?'+':''}${margin} V</strong><span>margin to required floor</span></div></div>
     <p>At ${v.fromS}â€“${v.toS} s Â· ${amps}.</p><p>${escape(trial.outcome.description)}.</p></div>`;
 }).join('');
+const regulator = await reviewPower(path.join(root,'examples/power/regulator/comparison.json'));
+const regulatorResults = regulator.trials.map(trial => {
+  const inlet = trial.upper[0];
+  return '<li><strong>' + escape(trial.condition) + '</strong> gives a ' + inlet.evidence.valueV.toFixed(2) +
+    ' V upper bound. ' + escape(inlet.reason) + '.</li>';
+}).join('');
 const chapter=n=>String(n+1).padStart(2,'0');
 const ownedSkills=(await readdir(path.join(root,'skills'),{withFileTypes:true})).filter(v=>v.isDirectory()).map(v=>v.name).sort();
 if(ownedSkills.join()!==Object.keys(purpose).sort().join()) throw Error('Update the guide when the skill inventory changes.');
@@ -52,6 +58,7 @@ const geo=fieldGeometry(profile);
 const diagram={field:model.field,boundary:geo.boundary,obstacles:geo.obstacles(),body:model.rehearsal.defaults,
   route:model.routeHypotheses[0].routeIn};
 const page=style.replace('<!-- journey map -->',()=>journeyMap(stages,false,escape)+journeyMap(stages,true,escape)).replace('<!-- chapters -->',()=>chapters).replace('<!-- skills -->',()=>directory)
+  .replace('<!-- regulator results -->',()=>regulatorResults)
   .replace('<!-- power options -->',()=>powerOptions).replace('<!-- power results -->',()=>powerResults)
   .replace('<!-- stage options -->',()=>stages.map(s=>'<option value="'+s.id+'">'+escape(s.name)+'</option>').join(''))
   .replace('/* field model */',()=>JSON.stringify(diagram).replaceAll('<','\\u003c'));
