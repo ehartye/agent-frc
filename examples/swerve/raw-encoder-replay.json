@@ -1,0 +1,180 @@
+{
+  "schema": "swerve-encoder-replay/v2",
+  "basis": "Synthetic synchronized sensor captures. The fork turns while the wheel is locked, then all four wheels roll forward. Calibration and coupling are classroom assumptions.",
+  "wheelDiameterM": 0.1,
+  "motorTurnsPerPulleyTurn": 3,
+  "pulleyTurnsPerWheelTurn": 2,
+  "velocityToleranceMps": 1e-05,
+  "modules": [
+    {
+      "id": "front-left",
+      "xM": 0.25,
+      "yM": 0.25,
+      "encoderAtForwardDeg": 350,
+      "driveSign": 1,
+      "steerSign": 1,
+      "couplingMotorTurnsPerSteerTurn": 1
+    },
+    {
+      "id": "front-right",
+      "xM": 0.25,
+      "yM": -0.25,
+      "encoderAtForwardDeg": 10,
+      "driveSign": -1,
+      "steerSign": -1,
+      "couplingMotorTurnsPerSteerTurn": -1
+    },
+    {
+      "id": "back-left",
+      "xM": -0.25,
+      "yM": 0.25,
+      "encoderAtForwardDeg": 350,
+      "driveSign": 1,
+      "steerSign": 1,
+      "couplingMotorTurnsPerSteerTurn": -1
+    },
+    {
+      "id": "back-right",
+      "xM": -0.25,
+      "yM": -0.25,
+      "encoderAtForwardDeg": 10,
+      "driveSign": -1,
+      "steerSign": -1,
+      "couplingMotorTurnsPerSteerTurn": 1
+    }
+  ],
+  "cases": [
+    {
+      "name": "Locked wheel while steering through phase wrap",
+      "fieldVelocityMps": [
+        0,
+        0
+      ],
+      "gyroDeg": 0,
+      "yawRateRadPerSec": 0,
+      "pivotM": [
+        0,
+        0
+      ],
+      "frames": [
+        {
+          "timeS": 0,
+          "readings": [
+            [
+              "front-left",
+              350,
+              0.0
+            ],
+            [
+              "front-right",
+              10,
+              -0.0
+            ],
+            [
+              "back-left",
+              350,
+              0.0
+            ],
+            [
+              "back-right",
+              10,
+              -0.0
+            ]
+          ]
+        },
+        {
+          "timeS": 0.25,
+          "readings": [
+            [
+              "front-left",
+              5,
+              0.0416666667
+            ],
+            [
+              "front-right",
+              355,
+              0.0416666667
+            ],
+            [
+              "back-left",
+              5,
+              -0.0416666667
+            ],
+            [
+              "back-right",
+              355,
+              -0.0416666667
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Forward roll with four signed encoders",
+      "fieldVelocityMps": [
+        0.5,
+        0
+      ],
+      "gyroDeg": 0,
+      "yawRateRadPerSec": 0,
+      "pivotM": [
+        0,
+        0
+      ],
+      "frames": [
+        {
+          "timeS": 0,
+          "readings": [
+            [
+              "front-left",
+              350,
+              0.0
+            ],
+            [
+              "front-right",
+              10,
+              -0.0
+            ],
+            [
+              "back-left",
+              350,
+              0.0
+            ],
+            [
+              "back-right",
+              10,
+              -0.0
+            ]
+          ]
+        },
+        {
+          "timeS": 0.25,
+          "readings": [
+            [
+              "front-left",
+              350,
+              2.3873241464
+            ],
+            [
+              "front-right",
+              10,
+              -2.3873241464
+            ],
+            [
+              "back-left",
+              350,
+              2.3873241464
+            ],
+            [
+              "back-right",
+              10,
+              -2.3873241464
+            ]
+          ]
+        }
+      ]
+    }
+  ],
+  "phaseResolutionDeg": 0,
+  "maxSteerRateDegPerS": 90
+}
