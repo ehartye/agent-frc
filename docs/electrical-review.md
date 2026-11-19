@@ -4,6 +4,8 @@ Reviewed 2026-11-15. This is an original paper-review exercise, not an installat
 
 ## Four evidence gates
 
+For a movement that shares power with other loads, compare their source-side contributions and the device's voltage during the action. The [shared electrical supply review](shared-power-review.md) runs on a pair of project-owned traces.
+
 1. **Identity:** record the exact battery suffix, board model, terminal style/revision, connector housing/contact part numbers, conductor construction, controller and firmware. An attractive family-level specification is not confirmation for the actual part.
 2. **Applicability:** cite the exact manufacturer section and distinguish electrical ratings, terminal acceptance, installation requirements and season rules. Mark an inaccessible or contradictory item unresolved; never fill it from a neighboring product.
 3. **Observability:** identify the measurement source, timestamp, units and missing channels before interpreting a fault. Preserve existing logs; this exercise requires no new robot operation.
