@@ -47,3 +47,6 @@ When the team wants a public site, keep `highlights.json`, its CAD receipt and i
 For a dedicated showcase site, copy the [Pages workflow](../../templates/robot-showcase-pages.yml) into the project as `.github/workflows/robot-showcase.yml`. Select **GitHub Actions** under **Settings → Pages → Build and deployment**. The workflow checks pull requests and publishes from the default branch. Its pinned builder verifies the project manifest and uploads only the newly generated site. Keep external references public and pin them to the revision the claim describes.
 
 After the first successful deployment, open the URL reported by the deploy job. Verify the full-screen model, still image and film playback on the hosted page. Add the live URL to the project README. Refresh evidence in the project and merge to the default branch to update the site. Local and offline builds use the same manifest.
+
+
+Use the [publication checks](../../docs/showcase-evidence.md) for a kickoff-only analysis page, a project workflow index, a published model inventory and observed pickup or release markers on the film clock. Keep chances and conditional point estimates distinct from an independently reached target. Label the piece, starting checkpoint and source revision when combining studies.

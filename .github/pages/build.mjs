@@ -50,7 +50,7 @@ for(const stage of stages){
   for(const skill of stage.skills) if(!purpose[skill]) throw Error('Unknown workflow skill '+skill);
   for(const [,p] of stage.docs) await access(path.join(root,p));
 }
-const highlightsLink='<a href="robot/index.html">Explore the example robot evidence page ↗</a> · ';
+const highlightsLink='<a href="robot/index.html">Explore the example robot evidence page ↗</a> · <a href="stroke/index.html">Play the jaw and inspect the target event ↗</a> · ';
 const chapters=stages.map((s,i)=>`<details id="${s.id}" class="chapter"${i===0?' open':''}>
 <summary><span class="ordinal">${chapter(i)}</span><span>${escape(s.name)}</span><span class="toggle" aria-hidden="true"></span></summary>
 <div class="chapter-body"><h3>${escape(s.question)}</h3><p>${escape(s.objective)}</p><p>${escape(s.activity)}</p>
@@ -79,5 +79,6 @@ await writeFile(path.join(output,'index.html'),page);
 for(const file of ['guide.css','interact.js']) await copyFile(path.join(source,file),path.join(output,file));
 await writeFile(path.join(output,'rules.json'),JSON.stringify(model,null,2)+'\n');
 await buildHighlights(path.join(root,'examples/highlights/project.json'),path.join(output,'robot'));
+await buildHighlights(path.join(root,'examples/highlights/stroke-page.json'),path.join(output,'stroke'));
 await buildLab(profile,path.join(output,'field-lab.html'));
 console.log('Built '+stages.length+' workflow stages, '+ownedSkills.length+' skills and the current kickoff lab.');

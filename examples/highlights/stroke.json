@@ -1,0 +1,211 @@
+{
+  "basis": "Commanded teaching fixture",
+  "piece": "sample-A",
+  "frames": [
+    {
+      "runS": 10.0,
+      "jawMm": 20.0,
+      "pieceMm": 70
+    },
+    {
+      "runS": 10.1,
+      "jawMm": 24.0,
+      "pieceMm": 70
+    },
+    {
+      "runS": 10.2,
+      "jawMm": 28.0,
+      "pieceMm": 70
+    },
+    {
+      "runS": 10.3,
+      "jawMm": 32.0,
+      "pieceMm": 70
+    },
+    {
+      "runS": 10.4,
+      "jawMm": 36.0,
+      "pieceMm": 70
+    },
+    {
+      "runS": 10.5,
+      "jawMm": 40.0,
+      "pieceMm": 70
+    },
+    {
+      "runS": 10.6,
+      "jawMm": 44.0,
+      "pieceMm": 70
+    },
+    {
+      "runS": 10.7,
+      "jawMm": 48.0,
+      "pieceMm": 70
+    },
+    {
+      "runS": 10.8,
+      "jawMm": 52.0,
+      "pieceMm": 70
+    },
+    {
+      "runS": 10.9,
+      "jawMm": 56.0,
+      "pieceMm": 70
+    },
+    {
+      "runS": 11.0,
+      "jawMm": 60,
+      "pieceMm": 70
+    },
+    {
+      "runS": 11.1,
+      "jawMm": 60,
+      "pieceMm": 70
+    },
+    {
+      "runS": 11.2,
+      "jawMm": 60,
+      "pieceMm": 70
+    },
+    {
+      "runS": 11.3,
+      "jawMm": 60,
+      "pieceMm": 70
+    },
+    {
+      "runS": 11.4,
+      "jawMm": 60,
+      "pieceMm": 70
+    },
+    {
+      "runS": 11.5,
+      "jawMm": 60,
+      "pieceMm": 70
+    },
+    {
+      "runS": 11.6,
+      "jawMm": 60,
+      "pieceMm": 70
+    },
+    {
+      "runS": 11.7,
+      "jawMm": 60,
+      "pieceMm": 70
+    },
+    {
+      "runS": 11.8,
+      "jawMm": 60,
+      "pieceMm": 70
+    },
+    {
+      "runS": 11.9,
+      "jawMm": 60,
+      "pieceMm": 70
+    },
+    {
+      "runS": 12.0,
+      "jawMm": 60.0,
+      "pieceMm": 70.0
+    },
+    {
+      "runS": 12.1,
+      "jawMm": 56.0,
+      "pieceMm": 74.0
+    },
+    {
+      "runS": 12.2,
+      "jawMm": 52.0,
+      "pieceMm": 78.0
+    },
+    {
+      "runS": 12.3,
+      "jawMm": 48.0,
+      "pieceMm": 82.0
+    },
+    {
+      "runS": 12.4,
+      "jawMm": 44.0,
+      "pieceMm": 86.0
+    },
+    {
+      "runS": 12.5,
+      "jawMm": 40.0,
+      "pieceMm": 90.0
+    },
+    {
+      "runS": 12.6,
+      "jawMm": 36.0,
+      "pieceMm": 94.0
+    },
+    {
+      "runS": 12.7,
+      "jawMm": 32.0,
+      "pieceMm": 98.0
+    },
+    {
+      "runS": 12.8,
+      "jawMm": 28.0,
+      "pieceMm": 102.0
+    },
+    {
+      "runS": 12.9,
+      "jawMm": 24.0,
+      "pieceMm": 106.0
+    },
+    {
+      "runS": 13.0,
+      "jawMm": 20,
+      "pieceMm": 110.0
+    },
+    {
+      "runS": 13.1,
+      "jawMm": 20,
+      "pieceMm": 114.0
+    },
+    {
+      "runS": 13.2,
+      "jawMm": 20,
+      "pieceMm": 118.0
+    },
+    {
+      "runS": 13.3,
+      "jawMm": 20,
+      "pieceMm": 122.0
+    },
+    {
+      "runS": 13.4,
+      "jawMm": 20,
+      "pieceMm": 126.0
+    },
+    {
+      "runS": 13.5,
+      "jawMm": 20,
+      "pieceMm": 130
+    },
+    {
+      "runS": 13.6,
+      "jawMm": 20,
+      "pieceMm": 130
+    },
+    {
+      "runS": 13.7,
+      "jawMm": 20,
+      "pieceMm": 130
+    },
+    {
+      "runS": 13.8,
+      "jawMm": 20,
+      "pieceMm": 130
+    },
+    {
+      "runS": 13.9,
+      "jawMm": 20,
+      "pieceMm": 130
+    },
+    {
+      "runS": 14.0,
+      "jawMm": 20,
+      "pieceMm": 130
+    }
+  ]
+}
