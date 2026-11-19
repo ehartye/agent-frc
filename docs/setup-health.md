@@ -1,5 +1,27 @@
 # Task-specific environment health
 
+## Resolve the plugin used by this check
+
+Run the [runtime resolver](../scripts/resolve-plugin-runtime.mjs) from a stable Agent FRC checkout. Determine whether the project accepts a compatible active installation or requires the source revision named in a historical experiment.
+
+For an active local marketplace installation, request a fresh host inventory immediately before launching the project check. The resolver checks the installed cache manifest for the selected identity, marketplace and version. It prints the root and version as JSON.
+
+```sh
+codex plugin list --marketplace agent-frc-local --json | node scripts/resolve-plugin-runtime.mjs active agent-frc-local
+```
+
+Pass the returned root to the project runner and record the version with its results. Use the configured marketplace name if different. For a custom cache parent, supply the directory containing the marketplace subdirectories as the last argument. The marketplace source checkout can advance independently. If an update removes the resolved directory, discard the incomplete run, resolve again and rerun the full check. The project tests establish compatibility.
+
+For a pinned replay, read the full commit from the project receipt and select an existing clean checkout of that commit. The resolver checks the Git root, revision, pending changes and tracked plugin manifest. It reports failure if the reviewed source is absent.
+
+```sh
+node scripts/resolve-plugin-runtime.mjs pinned PATH_TO_REVIEWED_CHECKOUT FULL_COMMIT
+```
+
+Compare the recorded input hashes and toolchain versions separately. For a self-contained historical archive, use the project's archive verification and registered digest. Keep local paths in the private run record.
+
+## Check the selected toolchain
+
 For a Python suite that uses both native CAD and simulation, run the combined check with the suite's Python executable and its working directory.
 
 ```sh
