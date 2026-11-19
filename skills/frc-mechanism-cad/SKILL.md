@@ -76,6 +76,8 @@ Use the [CAD color convention](../../docs/cad-color-convention.md) for new/revis
 
 Use [safe project tidying](../../docs/project-tidying.md) when choosing an active Fusion draft or handing it back. Give the draft a recognizable name, verify the requested save in its authorized destination, and report the active tab. Inventory exact document identities, preserve unknown or unsaved work, reuse verified saved states, and reconcile long-running operations before closing inspection copies or retrying.
 
+Before relying on a Fusion mass or Boolean result, compare direct native and temporary volume readings on a known solid, check a material-overlap control and a disjoint control, and inspect the face set. For a machining change, restrict the cut participants and reopen both the intended body and each neighbor crossed by the tool. [Run the two-plate Fusion experiment](../../examples/fusion-volume/README.md).
+
 Before using generated primitives for clearance, verify actual world bounds/registration and analytic volume with translated/axis/near-axis controls. Use the bounded placement-witness helper described in native-fusion-handoff.md; correct volume alone cannot establish correct placement, and matching witnesses do not establish clearance.
 
 For an authorized official local Fusion session, use the [guarded disposable recipe](../../examples/fusion-guarded/README.md): unique document match plus job marker, expected geometry/revision, durable intent, no uncertain replay, feature health and separate native/STEP reopen evidence. Do not generalize the executed sideplate test to a full robot or untested client crash recovery.

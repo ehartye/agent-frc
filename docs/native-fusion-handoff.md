@@ -56,6 +56,12 @@ Use [project tidying](project-tidying.md) to isolate documents safely: preserve 
 
 Retain minimal native/nested/imported controls, failed appearance attempts, material/volume invariants and final save/reopen captures with any reported graphics recovery. No automated scene-repair tool is installed by this reference.
 
+## Check volume on the operand being measured
+
+Use the native component solid to measure material volume and the occurrence transform to register it in the assembly. Compare its native direct volume and very-high-accuracy physical properties to an independent calculation. On a temporary copy, record both readings again. The [disposable Fusion volume and machining study](../examples/fusion-volume/README.md) reproduces a rotated and translated 24 cm³ plate whose temporary physical properties report zero, including a true 2 cm³ Boolean intersection with six faces. The separate control returns an empty face set across a known 2 cm gap.
+
+For scripted machining, set `participantBodies` to the intended native bodies before adding the extrusion. Check the target against its finished volume and verify that every neighboring solid crossed by the tool keeps its own pre-cut volume after a fresh reopen. The study includes an unrestricted cut whose neighbor loses material while its outside dimensions stay unchanged.
+
 ## Verify primitive world placement before clearance queries
 
 A valid solid and correct analytic volume do not prove a primitive was placed at the requested center or orientation. Before using generated test geometry, compare requested versus observed world bounds, validated geometric center and analytic extents in explicit units. Check translated, axis-aligned, nearly axis-aligned and tilted cases, with an intentionally wrong-location negative control. A volume-only test is invariant under translation and cannot catch this failure.

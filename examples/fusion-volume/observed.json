@@ -1,0 +1,277 @@
+{
+  "schema": "fusion-volume-example@1",
+  "fusionVersion": "2706.1.17",
+  "sourceSha256": "b229c32defbc412b86681980a79bad0cfd43366a4c0d2fa3d79397c5ac339c55",
+  "lengthUnits": "cm",
+  "volumeUnits": "cm3",
+  "allParticipants": {
+    "before": {
+      "target": {
+        "solid": true,
+        "boundsCm": [
+          0.0,
+          0.0,
+          0.0,
+          6.0,
+          4.0,
+          1.0
+        ],
+        "directCm3": 24.0,
+        "veryHighCm3": 24.0
+      },
+      "neighbor": {
+        "solid": true,
+        "boundsCm": [
+          0.0,
+          0.0,
+          2.0,
+          6.0,
+          4.0,
+          3.0
+        ],
+        "directCm3": 24.0,
+        "veryHighCm3": 24.0
+      }
+    },
+    "afterCut": {
+      "target": {
+        "solid": true,
+        "boundsCm": [
+          0.0,
+          0.0,
+          0.0,
+          6.0,
+          4.0,
+          1.0
+        ],
+        "directCm3": 23.21460183660252,
+        "veryHighCm3": 23.21460183660252
+      },
+      "neighbor": {
+        "solid": true,
+        "boundsCm": [
+          0.0,
+          0.0,
+          2.0,
+          6.0,
+          4.0,
+          3.0
+        ],
+        "directCm3": 23.21460183660252,
+        "veryHighCm3": 23.21460183660252
+      }
+    },
+    "archiveSha256": "d2615c26c930279da7a46e96a892cb4e80476ce9d815d52dca87f3e660cc2fb7",
+    "reopened": {
+      "target": {
+        "solid": true,
+        "boundsCm": [
+          0.0,
+          0.0,
+          0.0,
+          6.0,
+          4.0,
+          1.0
+        ],
+        "directCm3": 23.21460183660252,
+        "veryHighCm3": 23.21460183660252
+      },
+      "neighbor": {
+        "solid": true,
+        "boundsCm": [
+          0.0,
+          0.0,
+          2.0,
+          6.0,
+          4.0,
+          3.0
+        ],
+        "directCm3": 23.21460183660252,
+        "veryHighCm3": 23.21460183660252
+      }
+    }
+  },
+  "targetOnly": {
+    "before": {
+      "target": {
+        "solid": true,
+        "boundsCm": [
+          0.0,
+          0.0,
+          0.0,
+          6.0,
+          4.0,
+          1.0
+        ],
+        "directCm3": 24.0,
+        "veryHighCm3": 24.0
+      },
+      "neighbor": {
+        "solid": true,
+        "boundsCm": [
+          0.0,
+          0.0,
+          2.0,
+          6.0,
+          4.0,
+          3.0
+        ],
+        "directCm3": 24.0,
+        "veryHighCm3": 24.0
+      }
+    },
+    "primitive": {
+      "native": {
+        "solid": true,
+        "boundsCm": [
+          0.0,
+          0.0,
+          0.0,
+          6.0,
+          4.0,
+          1.0
+        ],
+        "directCm3": 24.0,
+        "veryHighCm3": 24.0
+      },
+      "untransformedCopy": {
+        "solid": true,
+        "boundsCm": [
+          0.0,
+          0.0,
+          0.0,
+          6.0,
+          4.0,
+          1.0
+        ],
+        "directCm3": 24.0,
+        "veryHighCm3": 0.0
+      },
+      "transformedCopy": {
+        "solid": true,
+        "boundsCm": [
+          5.999999999999999,
+          7.999999999999999,
+          5.0,
+          9.999999999999998,
+          14.0,
+          6.0
+        ],
+        "directCm3": 24.0,
+        "veryHighCm3": 0.0
+      },
+      "matrixCm": [
+        -2.220446049250313e-16,
+        -1.0000000000000002,
+        0.0,
+        10.0,
+        1.0000000000000002,
+        -2.220446049250313e-16,
+        0.0,
+        8.0,
+        0.0,
+        0.0,
+        1.0,
+        5.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "overlap": {
+        "toolBoundsCm": [
+          9.0,
+          10.0,
+          5.0,
+          11.0,
+          12.0,
+          6.0
+        ],
+        "returned": true,
+        "faceCount": 6,
+        "measurement": {
+          "solid": true,
+          "boundsCm": [
+            9.0,
+            10.0,
+            5.0,
+            10.0,
+            12.0,
+            6.0
+          ],
+          "directCm3": 2.0,
+          "veryHighCm3": 0.0
+        }
+      },
+      "separate": {
+        "toolBoundsCm": [
+          12.0,
+          10.0,
+          5.0,
+          14.0,
+          12.0,
+          6.0
+        ],
+        "returned": true,
+        "faceCount": 0
+      }
+    },
+    "afterCut": {
+      "target": {
+        "solid": true,
+        "boundsCm": [
+          0.0,
+          0.0,
+          0.0,
+          6.0,
+          4.0,
+          1.0
+        ],
+        "directCm3": 23.21460183660252,
+        "veryHighCm3": 23.21460183660252
+      },
+      "neighbor": {
+        "solid": true,
+        "boundsCm": [
+          0.0,
+          0.0,
+          2.0,
+          6.0,
+          4.0,
+          3.0
+        ],
+        "directCm3": 24.0,
+        "veryHighCm3": 24.0
+      }
+    },
+    "archiveSha256": "9ae635ad71f12152acf90a8bb9e9a3dfe27108c6c66c2121f0a50bdc7481b98c",
+    "reopened": {
+      "target": {
+        "solid": true,
+        "boundsCm": [
+          0.0,
+          0.0,
+          0.0,
+          6.0,
+          4.0,
+          1.0
+        ],
+        "directCm3": 23.21460183660252,
+        "veryHighCm3": 23.21460183660252
+      },
+      "neighbor": {
+        "solid": true,
+        "boundsCm": [
+          0.0,
+          0.0,
+          2.0,
+          6.0,
+          4.0,
+          3.0
+        ],
+        "directCm3": 24.0,
+        "veryHighCm3": 24.0
+      }
+    }
+  }
+}
