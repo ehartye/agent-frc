@@ -10,7 +10,7 @@ export const stages = [
   {
     id: 'field', milestone: 'Recorded pre-sim observations', name: 'Explore the field', question: 'What changes when the robot changes shape?',
     objective: 'Give students an adjustable box and a scale field. Try different widths, headings and approaches using the same manual edition.',
-    activity: 'Change the box dimensions, then assign routes to red and blue robots. Watch the match clock and queue markers. Save the crossing, time lost and exposed capture mechanism as evidence for the match story.',
+    activity: 'Change the box dimensions and assign routes to red and blue robots. A rehearsal can split a scoring phase into shorter periods. Their times must add up to its full duration. Use the clock and queue markers to record how much scoring time a crossing costs.',
     handoff: 'Recorded poses, robot dimensions and student observations that the team can cite in its match story.',
     skills: ['frc-previsualization','frc-season'], docs: [['Kickoff field lab','docs/kickoff-field-lab.md'],['Match rehearsal','docs/field-rehearsal.md']]
   },

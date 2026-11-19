@@ -38,11 +38,12 @@ Read-Utf8 { git -c core.quotePath=false -C "$project" worktree list --porcelain 
 Read-Utf8 { git -C "$project" for-each-ref --count=20 --format="%(refname) %(objectname)" refs/heads/ }
 ```
 
-In a large repository narrow the final argument to a relevant local ref prefix. Report the refs you actually checked if a decision remains missing. To read a committed choice on a branch with no mounted worktree, use its full commit ID from the listing. Substitute the selected commit and relevant project folders below. Keep the full repository-relative path printed by `ls-tree --full-name`, including any project prefix.
+In a large repository narrow the final argument to a relevant local ref prefix. Report the refs you actually checked if a decision remains missing. For an unmounted branch, use its full commit ID and search the canonical kickoff folder first. Follow the strategy record’s locators into the current experiment or design. For older projects the second command checks legacy decision locations. Keep the full repository-relative path printed by `ls-tree --full-name`, including any project prefix. [Student project layout](../skills/frc-project-setup/SKILL.md)
 
 ```powershell
 $revision = '<commit ID>'
-Read-Utf8 { git --literal-pathspecs -c core.quotePath=false -C "$project" ls-tree -r --full-name --name-only "$revision" -- notes strategy design | Select-Object -First 30 }
+Read-Utf8 { git --literal-pathspecs -c core.quotePath=false -C "$project" ls-tree -r --full-name --name-only "$revision" -- kickoff | Select-Object -First 30 }
+Read-Utf8 { git --literal-pathspecs -c core.quotePath=false -C "$project" ls-tree -r --full-name --name-only "$revision" -- STRATEGY.md DECISIONS.md notes strategy design | Select-Object -First 30 }
 $record = '<full repository-relative path from the listing>'
 if ([string]::IsNullOrWhiteSpace($record)) { throw 'Select an exact record before opening it.' }
 Read-Utf8 { git --literal-pathspecs -C "$project" show "${revision}:$record" }
@@ -52,7 +53,7 @@ For a plausible registered worktree, use its root from the worktree listing and 
 
 ```powershell
 $other = '<registered worktree path>'
-Read-Utf8 { git --no-optional-locks --literal-pathspecs -c core.quotePath=false -C "$other" status --porcelain=v1 --untracked-files=all -- "${prefix}notes" "${prefix}strategy" "${prefix}design" }
+Read-Utf8 { git --no-optional-locks --literal-pathspecs -c core.quotePath=false -C "$other" status --porcelain=v1 --untracked-files=all -- "${prefix}kickoff" "${prefix}STRATEGY.md" "${prefix}DECISIONS.md" "${prefix}notes" "${prefix}strategy" "${prefix}design" }
 Get-Content -LiteralPath (Join-Path "$other" "$record")
 ```
 

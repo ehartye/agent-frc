@@ -10,6 +10,7 @@ import { createInterface } from 'node:readline/promises';
 const seed = path.join(import.meta.dirname, 'project');
 const proposalPath = 'notes/06-options.md';
 const choicePath = 'notes/05-review.md';
+const kickoffChoice = 'kickoff/role-decision.md';
 const cases = ['unmounted', 'correction', 'conflict', 'plain'];
 const configDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-frc-git-config-'));
 const emptyConfig = path.join(configDirectory, 'empty.gitconfig');
@@ -58,11 +59,12 @@ function createFixture(kind) {
     branchRecord(project, 'review-violet', proposalPath,
       '# Workshop proposal\n\nTry the corner pass first. The team has not selected this proposal.\n');
   } else {
-    branchRecord(project, 'review-violet', choicePath, original);
+    fs.mkdirSync(path.join(project, 'kickoff'));
+    branchRecord(project, 'review-violet', kickoffChoice, original);
     if (kind === 'correction') {
       const other = path.join(root, 'Workshop Notes');
       git(project, 'worktree', 'add', '--quiet', other, 'review-violet');
-      fs.appendFileSync(path.join(other, choicePath),
+      fs.appendFileSync(path.join(other, kickoffChoice),
         '\n## Owner correction before practice\n\nI changed the priority. Try a loaded corner pass first. Start with a shallow oblique entry and vary the partner angle. Save straight-pass alignment for a later session.\n');
       fs.writeFileSync(path.join(other, 'bench', 'observation pad.md'), '# Untracked setup notes\n');
     }

@@ -42,7 +42,7 @@ Read [rotating observation and fault-transition checks](../../docs/planar-observ
 
 Use [simulation checks](../../docs/simulation-checks.md) for replay inventories and shared-time comparisons.
 
-When a simulation stops at a boundary, ask whether it is a study assumption, model-validity limit or physical interference. Follow the study-boundary and controller-clock contracts in simulator-equivalence.md: rebuild dependent obstacle filters, preserve held commands and absolute tick phase, and compare like-time timestep evidence before claiming progress.
+When a simulation stops at a boundary, identify whether the cause is a study assumption, a model-validity limit or physical interference. Rebuild dependent obstacle filters after expanding a study range. Preserve held commands and absolute controller tick phase, then compare both runs at the same simulation time. [Gates when connecting or changing models](../../docs/simulator-selection.md#gates-when-connecting-or-changing-models)
 
 For existing frozen simulation trace receipts, use [read-only trace diagnostics](../../docs/trace-diagnostics.md) and npm run trace:inspect to create an offline HTML timeline and JSON report. Inspect missing fields, PARTIAL state, actual sample times, rejected trials and inherited residuals before interpreting progress. Do not read actively rewritten files or infer capture from horizon/contact.
 

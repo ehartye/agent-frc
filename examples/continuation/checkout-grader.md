@@ -6,8 +6,8 @@ For each path give a **fresh reader** the mechanism CAD skill entry point and th
 
 | Case printed to grader | Required discovery | What the recommendation must do |
 |---|---|---|
-| unmounted | Open `review-violet:notes/05-review.md` on the unmounted branch. Record its commit and heading. On main, read the D4 candidate, archived D1 proposal and limited B4 bench evidence. | Try loaded straight entry with a centered and offset pass. Explain why the archived scoop is historical and loaded transfer remains open. |
-| correction | Open `notes/05-review.md` in the registered **Workshop Notes** worktree. Report its worktree path, modified status and owner correction. The committed copy selects straight entry. | Change the next trial to a loaded corner pass and vary the oblique approach. Citing the correction while recommending straight entry fails. |
+| unmounted | Open `review-violet:kickoff/role-decision.md` on the unmounted branch. Record its commit and heading. On main, read the D4 candidate, archived D1 proposal and limited B4 bench evidence. | Try loaded straight entry with a centered and offset pass. Explain why the archived scoop is historical and loaded transfer remains open. |
+| correction | Open `kickoff/role-decision.md` in the registered **Workshop Notes** worktree. Report its worktree path, modified status and owner correction. The committed copy selects straight entry. | Change the next trial to a loaded corner pass and vary the oblique approach. Citing the correction while recommending straight entry fails. |
 | conflict | Resolve both local proposal refs to commits and read `notes/06-options.md` on each. Main's session 03 defers selection. | Explain the two equal proposals. Prepare common plane/orientation observations and ask which pass to prioritize. |
 | plain | Read the records in the plain folder, including session 03. It contains no selection. | Name the unresolved choice, propose shared setup, and ask the single priority question. |
 

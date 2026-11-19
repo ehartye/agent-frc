@@ -15,6 +15,37 @@ function example() {
   ];
   return register;
 }
+
+test('compiled rules and the lab share the ordered scoring clock', () => {
+  const register = example();
+  register.facts.push({id:'clock', sourceId:'handout', locator:'Clock table', topic:'timing',
+    statement:'Ordered scoring phases and active durations',status:'modeled',
+    pointer:'/scoring/phases',value:profile.scoring.phases});
+  function withPeriods(periods) {
+    return {...profile,rehearsal:{...profile.rehearsal,periods}};
+  }
+  const [opening,main] = profile.scoring.phases;
+  const split = [
+    opening,
+    {name:'Collect', scoringPhase:main.name, seconds:30},
+    {name:'Deliver', scoringPhase:main.name, seconds:15}
+  ];
+  assert.deepEqual(compileRules(register,withPeriods(split)).rehearsal.periods,split);
+  for (const periods of [
+    [{...opening,seconds:opening.seconds+1},main],
+    [opening],
+    [main,opening],
+    [...split,{name:'Overtime',scoringPhase:main.name,seconds:1}],
+    [opening,{...split[1],scoringPhase:'Unknown phase'},split[2]]
+  ]) {
+    assert.throws(()=>compileRules(register,withPeriods(periods)),/scoring (clock|phase)/);
+    assert.throws(()=>validateProfile(withPeriods(periods)),/scoring (clock|phase)/);
+  }
+  const standalone = {...withPeriods([opening])};
+  delete standalone.scoring;
+  assert.doesNotThrow(()=>validateProfile(standalone));
+  assert.throws(()=>validateProfile({...profile,scoring:{...profile.scoring,phases:[opening,opening]}}),/scoring profile/);
+});
 test('the project model retains reviewed facts and unsupported actions',() => {
   const register = example();
   const model = compileRules(register,profile);

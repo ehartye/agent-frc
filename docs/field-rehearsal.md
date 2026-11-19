@@ -14,10 +14,12 @@ The optional `rehearsal` section in a profile uses `schema: "field-rehearsal/v1"
 | `planes` | Named inward boundary half-planes with an on-plane point `at` and normal `inwardDeg`. These clip the rectangular field extents |
 | `obstacles`, `setups`, `bands` | Convex polygon footprints and lowest occupied height, either constant or keyed by setup name. The ground-based solid robot reaches that height when its height equals or exceeds it. Bands are visual references. The field’s existing landmark polygons also occupy floor space |
 | `starts`, `mirror` | Three first-alliance start centers and explicit second-alliance X/Y reflections |
-| `periods` | Ordered named periods with active duration in seconds on a 0.05-second grid |
+| `periods` | Ordered named periods with active duration in seconds on a 0.05-second grid. The rehearsal must cover each scoring phase in order for its full duration when the project supplies a scoring clock |
 | `defaults`, `programs`, `resourceLabel` | Trial frame, fixed heading, bumper projection per side, speed, and one initial program selection per start slot. Programs prescribe waypoints and optional service pauses, with optional per-period overrides. Shared-resource steps queue by robot ID when requests are simultaneous |
 
 A waypoint’s `at` may be an alliance-frame point, a `default` point with numbered `slots` overrides, or explicit `blue` and `red` points. Set `frame: "field"` for coordinates already in the common frame. Use `dwell` for seconds of service and `straight` for a mandatory direct leg. Set `lock: true` for the default shared resource or `lock` to a specific resource name. Keep that lock on the final reserved leg and set `release: true` when the robot vacates it. Different resources keep independent request queues. A completed `loop` program repeats. A non-looping program holds at the last destination.
+
+Matching period and scoring-phase names share the clock automatically. To split a scoring phase named `Main play` into separate robot programs, give each consecutive period `"scoringPhase": "Main play"`. For a 45-second phase, a 30-second collection period and a 15-second delivery period use the entire budget. Choose a distinct period name for each behavior. A project with only a rehearsal can supply its own clock.
 
 ## Run the rehearsal
 
