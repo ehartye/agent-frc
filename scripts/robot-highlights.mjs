@@ -41,6 +41,30 @@ export async function buildHighlights(manifest, directory) {
   const role = escape(string(data.role, 'robot role'));
   const revision = escape(string(data.revision, 'current candidate revision'));
   const assets = new Map();
+  let stylesheet;
+  if (data.stylesheet !== undefined) {
+    const css = data.stylesheet;
+    requireValue(css?.shareable === true && typeof css.file === 'string' &&
+      css.file.endsWith('.css') && !path.win32.isAbsolute(css.file) && !path.isAbsolute(css.file),
+      'Expected a shareable project-relative stylesheet');
+    const file = await realpath(path.resolve(root, css.file));
+    requireValue(within(root, file) && (await stat(file)).isFile() && /^[a-f0-9]{64}$/.test(css.sha256) &&
+      await digest(file) === css.sha256, 'Changed or invalid project stylesheet');
+    stylesheet = css.sha256 + '.css';
+    assets.set(stylesheet, file);
+  }
+  function applyStyle(markup, base = '') {
+    if (!stylesheet) return markup;
+    return markup.replace('</head>', '<link rel="stylesheet" href="' + base + 'evidence/' + stylesheet + '"></head>');
+  }
+  function backdrop(config) {
+    if (!Object.hasOwn(config, 'backdrop')) return undefined;
+    const value = config.backdrop;
+    requireValue(value && Object.keys(value).length === 2 &&
+      [value.center, value.edge].every(color => typeof color === 'string' && /^#[0-9a-f]{6}$/i.test(color)),
+      'Invalid CAD backdrop');
+    return {center: value.center.toUpperCase(), edge: value.edge.toUpperCase()};
+  }
   const sources = new Map();
   for (const ref of list(data.sources, 'sources', true)) {
     const id = string(ref.id, 'source ID');
@@ -137,6 +161,7 @@ export async function buildHighlights(manifest, directory) {
       // A showcase can also feature a separately registered historical assembly.
       if (selected.source === record.source || path.normalize(config.receipt) === path.join('docs','robot','cad','receipt.json')) {
         requireValue(selected.source === record.source, 'Selected CAD source differs from the export');
+        requireValue(JSON.stringify(backdrop(selected)) === JSON.stringify(backdrop(record)), 'Selected backdrop differs from the CAD export');
         const colored = record.schema === 'agent-frc/cad-still@2';
         requireValue(Object.hasOwn(selected,'appearances') === colored &&
           (!colored || selected.appearances === record.appearances?.file), 'Selected appearance manifest differs from the export');
@@ -155,19 +180,20 @@ export async function buildHighlights(manifest, directory) {
       const {stdout} = await promisify(execFile)(python,[validator,root,receiptFile],{encoding:'utf8'});
       layout = {bounds:record.nativeBounds, groups:JSON.parse(stdout)};
     }
+    if (backdrop(record)) layout = {...(Array.isArray(layout) ? {bounds: layout} : layout), backdrop: backdrop(record)};
     const values = {title:escape(string(config.title,'assembly name')), scope:escape(string(config.scope,'CAD scope')),
       facts:escape(record.solids+' solids · '+record.triangles+' triangles · '+record.chordMm+' mm chord setting'),
       bounds:JSON.stringify(layout), mesh:(await readFile(mesh)).toString('base64')};
     const viewer = await readFile(new URL('../templates/cad-orbit.html',import.meta.url),'utf8');
     // Content-address the viewer directory so a later generation cannot change an earlier page's model.
-    const rendered = viewer.replace(/\{\{(\w+)\}\}/g, (_, key) => values[key]);
+    const rendered = applyStyle(viewer.replace(/\{\{(\w+)\}\}/g, (_, key) => values[key]), '../');
     const dest = 'cad-' + createHash('sha256').update(rendered).update(await readFile(receiptFile)).update(record.imageSha256).digest('hex');
     modelFiles = {dest, still, receiptFile, rendered};
     model = '<section><h2>Explore the CAD</h2><iframe title="'+values.title+'" loading="lazy" style="width:100%;height: min(48rem,85vh);border:0" src="'+dest+'/index.html"></iframe><p><a href="'+dest+'/index.html">Open the model full screen</a></p></section>';
   }
   const fields = {title, role, revision, results, build, model, media:media ? '<section id="media"><h2>Evidence gallery</h2>' + media + '</section>' : '',
     campaign, campaignLink:campaign ? '<a href="#campaign">Repeatability</a>' : '', mediaLink:media ? '<a href="#media">Gallery</a>' : ''};
-  const html = template.replace(/\{\{(\w+)\}\}/g, (_, key) => fields[key]);
+  const html = applyStyle(template.replace(/\{\{(\w+)\}\}/g, (_, key) => fields[key]));
   await mkdir(directory, {recursive:true});
   const output = await realpath(directory);
   const page = path.join(output, 'index.html');

@@ -74,6 +74,7 @@ def fixture(root):
             "title": "Three-block fixture",
             "scope": "Two distinct component roles",
             "appearances": "roles.json",
+            "backdrop": {"center": "#738BA1", "edge": "#183857"},
         },
     )
     run(root, "export-showcase-cad.py")
@@ -91,6 +92,8 @@ def fixture(root):
     png.Update()
     pixels = vtk_to_numpy(png.GetOutput().GetPointData().GetScalars()).astype(float)
     r, g = pixels[:, 0], pixels[:, 1]
+    assert list(pixels[0, :3]) == [24, 56, 87], pixels[0]
+    assert record["backdrop"]["center"] == "#738BA1"
     assert (r > 1.5 * g + 30).sum() > 500 and (g > 1.5 * r + 30).sum() > 500
     assert "left-and-right" in (folder / "index.html").read_text(encoding="utf8")
     rows.reverse()
