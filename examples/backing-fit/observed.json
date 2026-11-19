@@ -1,0 +1,438 @@
+{
+  "schema": "backing-fit-observations@1",
+  "fusionVersion": "2706.1.17",
+  "sourceSha256": {
+    "study.py": "2f1ef3ecd86dce4a1d1b308f25016287b11e07e0fa5cb6370cca778040b7e0b9",
+    "geometry.py": "93c1fc8483c85aba5b63b2364e7edba27a8947df3263340343c1f43a22d3c505"
+  },
+  "candidate": {
+    "controls": {
+      "known1Mm3": 1.0000000000000002,
+      "disjointMm3": 0.0,
+      "known2Mm2": 2.0000000000000004,
+      "coplanarApartMm2": 0.0
+    },
+    "physical": [
+      {
+        "id": [
+          "cover:1",
+          "cloth"
+        ],
+        "boundsMm": [
+          -111.0,
+          -71.0,
+          0.0,
+          111.0,
+          71.0,
+          60.0
+        ],
+        "before": {
+          "bodyBulb": true,
+          "occurrenceBulb": true,
+          "occurrenceVisible": true
+        },
+        "after": {
+          "bodyBulb": true,
+          "occurrenceBulb": true,
+          "occurrenceVisible": true
+        }
+      },
+      {
+        "id": [
+          "front:1",
+          "wood"
+        ],
+        "boundsMm": [
+          100.0,
+          -60.0,
+          0.0,
+          110.0,
+          60.0,
+          60.0
+        ],
+        "before": {
+          "bodyBulb": true,
+          "occurrenceBulb": false,
+          "occurrenceVisible": false
+        },
+        "after": {
+          "bodyBulb": true,
+          "occurrenceBulb": false,
+          "occurrenceVisible": false
+        }
+      },
+      {
+        "id": [
+          "rear:1",
+          "wood"
+        ],
+        "boundsMm": [
+          -110.0,
+          -60.0,
+          0.0,
+          -100.0,
+          60.0,
+          60.0
+        ],
+        "before": {
+          "bodyBulb": true,
+          "occurrenceBulb": false,
+          "occurrenceVisible": false
+        },
+        "after": {
+          "bodyBulb": true,
+          "occurrenceBulb": false,
+          "occurrenceVisible": false
+        }
+      },
+      {
+        "id": [
+          "left:1",
+          "wood"
+        ],
+        "boundsMm": [
+          -110.0,
+          60.0,
+          0.0,
+          110.0,
+          70.0,
+          60.0
+        ],
+        "before": {
+          "bodyBulb": true,
+          "occurrenceBulb": false,
+          "occurrenceVisible": false
+        },
+        "after": {
+          "bodyBulb": true,
+          "occurrenceBulb": false,
+          "occurrenceVisible": false
+        }
+      },
+      {
+        "id": [
+          "right:1",
+          "wood"
+        ],
+        "boundsMm": [
+          -110.0,
+          -70.0,
+          0.0,
+          110.0,
+          -60.0,
+          60.0
+        ],
+        "before": {
+          "bodyBulb": true,
+          "occurrenceBulb": false,
+          "occurrenceVisible": false
+        },
+        "after": {
+          "bodyBulb": true,
+          "occurrenceBulb": false,
+          "occurrenceVisible": false
+        }
+      },
+      {
+        "id": [
+          "plate:1",
+          "support"
+        ],
+        "boundsMm": [
+          90.0,
+          -40.0,
+          10.0,
+          100.0,
+          40.0,
+          50.0
+        ],
+        "before": {
+          "bodyBulb": true,
+          "occurrenceBulb": true,
+          "occurrenceVisible": true
+        },
+        "after": {
+          "bodyBulb": true,
+          "occurrenceBulb": true,
+          "occurrenceVisible": true
+        }
+      },
+      {
+        "id": [
+          "old:1",
+          "support"
+        ],
+        "boundsMm": [
+          95.0,
+          -20.0,
+          10.0,
+          100.0,
+          20.0,
+          30.0
+        ],
+        "before": {
+          "bodyBulb": true,
+          "occurrenceBulb": true,
+          "occurrenceVisible": true
+        },
+        "after": {
+          "bodyBulb": true,
+          "occurrenceBulb": true,
+          "occurrenceVisible": true
+        }
+      }
+    ],
+    "pairs": [
+      {
+        "other": [
+          "cover:1",
+          "cloth"
+        ],
+        "intersectionMm3": 0.0,
+        "minimumDistanceMm": 10.0
+      },
+      {
+        "other": [
+          "front:1",
+          "wood"
+        ],
+        "intersectionMm3": 0.0,
+        "minimumDistanceMm": 0.0,
+        "opposedPlanarTrimAreaMm2": 2800.0
+      },
+      {
+        "other": [
+          "rear:1",
+          "wood"
+        ],
+        "intersectionMm3": 0.0,
+        "minimumDistanceMm": 190.0
+      },
+      {
+        "other": [
+          "left:1",
+          "wood"
+        ],
+        "intersectionMm3": 0.0,
+        "minimumDistanceMm": 20.0
+      },
+      {
+        "other": [
+          "right:1",
+          "wood"
+        ],
+        "intersectionMm3": 0.0,
+        "minimumDistanceMm": 20.0
+      },
+      {
+        "other": [
+          "old:1",
+          "support"
+        ],
+        "intersectionMm3": 4000.0,
+        "minimumDistanceMm": 0.0
+      }
+    ],
+    "archiveSha256": "a8eea8c6d4a49aa7e4b9923aa21bbdaee535e938ddc6fed97415381fafb2f2e7",
+    "reopened": true
+  },
+  "successor": {
+    "controls": {
+      "known1Mm3": 1.0000000000000002,
+      "disjointMm3": 0.0,
+      "known2Mm2": 2.0000000000000004,
+      "coplanarApartMm2": 0.0
+    },
+    "physical": [
+      {
+        "id": [
+          "cover:1",
+          "cloth"
+        ],
+        "boundsMm": [
+          -111.0,
+          -71.0,
+          0.0,
+          111.0,
+          71.0,
+          60.0
+        ],
+        "before": {
+          "bodyBulb": true,
+          "occurrenceBulb": true,
+          "occurrenceVisible": true
+        },
+        "after": {
+          "bodyBulb": true,
+          "occurrenceBulb": true,
+          "occurrenceVisible": true
+        }
+      },
+      {
+        "id": [
+          "front:1",
+          "wood"
+        ],
+        "boundsMm": [
+          100.0,
+          -60.0,
+          0.0,
+          110.0,
+          60.0,
+          60.0
+        ],
+        "before": {
+          "bodyBulb": true,
+          "occurrenceBulb": false,
+          "occurrenceVisible": false
+        },
+        "after": {
+          "bodyBulb": true,
+          "occurrenceBulb": false,
+          "occurrenceVisible": false
+        }
+      },
+      {
+        "id": [
+          "rear:1",
+          "wood"
+        ],
+        "boundsMm": [
+          -110.0,
+          -60.0,
+          0.0,
+          -100.0,
+          60.0,
+          60.0
+        ],
+        "before": {
+          "bodyBulb": true,
+          "occurrenceBulb": false,
+          "occurrenceVisible": false
+        },
+        "after": {
+          "bodyBulb": true,
+          "occurrenceBulb": false,
+          "occurrenceVisible": false
+        }
+      },
+      {
+        "id": [
+          "left:1",
+          "wood"
+        ],
+        "boundsMm": [
+          -110.0,
+          60.0,
+          0.0,
+          110.0,
+          70.0,
+          60.0
+        ],
+        "before": {
+          "bodyBulb": true,
+          "occurrenceBulb": false,
+          "occurrenceVisible": false
+        },
+        "after": {
+          "bodyBulb": true,
+          "occurrenceBulb": false,
+          "occurrenceVisible": false
+        }
+      },
+      {
+        "id": [
+          "right:1",
+          "wood"
+        ],
+        "boundsMm": [
+          -110.0,
+          -70.0,
+          0.0,
+          110.0,
+          -60.0,
+          60.0
+        ],
+        "before": {
+          "bodyBulb": true,
+          "occurrenceBulb": false,
+          "occurrenceVisible": false
+        },
+        "after": {
+          "bodyBulb": true,
+          "occurrenceBulb": false,
+          "occurrenceVisible": false
+        }
+      },
+      {
+        "id": [
+          "plate:1",
+          "support"
+        ],
+        "boundsMm": [
+          90.0,
+          -40.0,
+          10.0,
+          100.0,
+          40.0,
+          50.0
+        ],
+        "before": {
+          "bodyBulb": true,
+          "occurrenceBulb": true,
+          "occurrenceVisible": true
+        },
+        "after": {
+          "bodyBulb": true,
+          "occurrenceBulb": true,
+          "occurrenceVisible": true
+        }
+      }
+    ],
+    "pairs": [
+      {
+        "other": [
+          "cover:1",
+          "cloth"
+        ],
+        "intersectionMm3": 0.0,
+        "minimumDistanceMm": 10.0
+      },
+      {
+        "other": [
+          "front:1",
+          "wood"
+        ],
+        "intersectionMm3": 0.0,
+        "minimumDistanceMm": 0.0,
+        "opposedPlanarTrimAreaMm2": 2800.0
+      },
+      {
+        "other": [
+          "rear:1",
+          "wood"
+        ],
+        "intersectionMm3": 0.0,
+        "minimumDistanceMm": 190.0
+      },
+      {
+        "other": [
+          "left:1",
+          "wood"
+        ],
+        "intersectionMm3": 0.0,
+        "minimumDistanceMm": 20.0
+      },
+      {
+        "other": [
+          "right:1",
+          "wood"
+        ],
+        "intersectionMm3": 0.0,
+        "minimumDistanceMm": 20.0
+      }
+    ],
+    "archiveSha256": "443909a741631cd2c8b8d86222f59d52328551bbfdd499d3c92dc5e0eda6f547",
+    "reopened": true
+  }
+}
