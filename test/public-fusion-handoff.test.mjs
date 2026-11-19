@@ -66,6 +66,25 @@ test('opt-in native handoff binds downloadable bytes, components, edits and obse
     const obs=structuredClone(receipt); modify(obs); await bind(obs);
     assert.throws(()=>publicFusionHandoff(root),reason);
   }
+  const nested=structuredClone(receipt);
+  nested.components['arm assembly']={bodies:0};
+  nested.components['carrier assembly']={bodies:0,parent:'arm assembly'};
+  nested.components.mechanism.parent='carrier assembly';
+  nested.joints.travel.occurrenceTwo='arm assembly';
+  const nestedClaim={...manifest,joints:[{...joint,occurrenceTwo:'arm assembly'}]};
+  await bind(nested,nestedClaim);
+  assert.equal(publicFusionHandoff(root).components,3);
+  await bind(nested,manifest);
+  assert.throws(()=>publicFusionHandoff(root),/different joint endpoints/);
+  for (const [change,reason] of [
+    [o=>delete o.components.mechanism.parent,/different joint endpoints/],
+    [o=>o.components['carrier assembly'].parent='absent',/unknown native parent/],
+    [o=>o.components['arm assembly'].parent='carrier assembly',/cyclic native hierarchy/],
+    [o=>o.components.mechanism.parent='mechanism',/cyclic native hierarchy/],
+  ]) {
+    const obs=structuredClone(nested);change(obs);await bind(obs,nestedClaim);
+    assert.throws(()=>publicFusionHandoff(root),reason);
+  }
   const swing=structuredClone(receipt);
   swing.joints.travel.type='revolute';
   swing.joints.travel.samples=[{position:0,relativeTransform:matrix(0)},

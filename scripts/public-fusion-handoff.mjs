@@ -50,7 +50,29 @@ function motionSample(sample) {
   return m;
 }
 
-function checkJoint(claim, actual, components, direction, translationScale, frameKey) {
+function installedOccurrences(components) {
+  const validated = new Set(), installed = new Set();
+  for (const [id,node] of Object.entries(components)) {
+    requireValue(text(id) && Number.isSafeInteger(node?.bodies) && node.bodies>=0, 'invalid native body count for '+id);
+    if (node.parent !== undefined) requireValue(text(node.parent) && Object.hasOwn(components,node.parent),
+      'unknown native parent for '+id);
+  }
+  for (const id of Object.keys(components)) {
+    const chain=new Set();
+    for(let ancestor=id; ancestor!==undefined && !validated.has(ancestor); ancestor=components[ancestor].parent) {
+      requireValue(!chain.has(ancestor), 'cyclic native hierarchy at '+ancestor);
+      chain.add(ancestor);
+    }
+    for(const name of chain) validated.add(name);
+    if (components[id].bodies>0) {
+      for(let ancestor=id; ancestor!==undefined && !installed.has(ancestor); ancestor=components[ancestor].parent)
+        installed.add(ancestor);
+    }
+  }
+  return installed;
+}
+
+function checkJoint(claim, actual, installed, direction, translationScale, frameKey) {
   requireValue(Object.keys(claim).every(k=>['id','type','occurrenceOne','occurrenceTwo','direction'].includes(k)),'unsupported joint claim for '+claim.id);
   if (direction) {
     const axis=direction.axis;
@@ -61,7 +83,7 @@ function checkJoint(claim, actual, components, direction, translationScale, fram
   requireValue(['slider','revolute','rigid'].includes(claim.type) && actual?.type === claim.type, 'missing or different joint '+claim.id);
   requireValue(claim.occurrenceOne !== claim.occurrenceTwo &&
     ['occurrenceOne','occurrenceTwo'].every(key => text(claim[key]) && claim[key] === actual[key] &&
-      Object.hasOwn(components,claim[key]) && components[claim[key]]?.bodies > 0), 'different joint endpoints for '+claim.id);
+      installed.has(claim[key])), 'different joint endpoints for '+claim.id);
   if (claim.type === 'rigid') return;
   requireValue(actual.positionUnit===undefined || actual.positionUnit===(claim.type==='slider'?'mm':'deg'), 'different joint readback unit for '+claim.id);
   const samples = actual.samples;
@@ -119,6 +141,7 @@ export function publicFusionHandoff(project) {
   requireValue(obs.opened === true && obs.source === archive.file && obs.sha256 === archive.sha256,
     'reopen the exact student download and record its path and hash');
   requireValue(object(obs.components) && Array.isArray(components) && components.length && Array.isArray(joints), 'expected component inventory and explicit joint claim list');
+  const installed = installedOccurrences(obs.components);
   const ids = new Set(), covered = new Set();
   let editable = false;
   for (const c of components) {
@@ -129,6 +152,7 @@ export function publicFusionHandoff(project) {
     const item = obs.components[c.id];
     requireValue(Object.hasOwn(obs.components,c.id) && Number.isSafeInteger(item?.bodies) && item.bodies > 0,
       'missing physical component '+c.id);
+    if (c.parent !== undefined) requireValue(c.parent===item.parent, 'different native parent for '+c.id);
     if (c.bodyNames !== undefined) {
       requireValue(Array.isArray(c.bodyNames) && c.bodyNames.length && c.bodyNames.every(text) &&
         new Set(c.bodyNames).size===c.bodyNames.length && Array.isArray(item.bodyNames) &&
@@ -142,7 +166,6 @@ export function publicFusionHandoff(project) {
     }
   }
   for (const [id,item] of Object.entries(obs.components)) {
-    requireValue(Number.isSafeInteger(item?.bodies) && item.bodies >= 0, 'invalid native body count for '+id);
     if (item.bodies) requireValue(ids.has(id), 'declare representation and provenance for '+id);
   }
   requireValue(roles.every(role => covered.has(role)), 'identify separate frame, drive and mechanism occurrences');
@@ -164,7 +187,7 @@ export function publicFusionHandoff(project) {
       requireValue(Object.hasOwn(rules,j.id) && object(rules[j.id]),'missing source direction for '+j.id);
       direction=rules[j.id]; signedJoints++;
     }
-    jointIds.add(j.id); checkJoint(j,obs.joints[j.id],obs.components,direction,scale,frameKey);
+    jointIds.add(j.id); checkJoint(j,obs.joints[j.id],installed,direction,scale,frameKey);
     if (j.type!=='rigid') editable=true;
   }
   requireValue(editable,'identify a native edit feature or a verified moving joint');
