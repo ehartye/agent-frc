@@ -17,6 +17,24 @@ function interval(value, label) {
   requireInput(finite(value?.fromS) && finite(value.toS) && value.fromS <= value.toS, 'Invalid ' + label);
 }
 
+// Compare decimal clock labels without subtracting large binary timestamps or admitting an epoch-sized tolerance.
+function decimalParts(value) {
+  const [mantissa, exponent = '0'] = String(value).split('e');
+  const [whole, fraction = ''] = mantissa.split('.');
+  return {digits:BigInt(whole + fraction), power:Number(exponent) - fraction.length};
+}
+
+function withinPeriod(row, period) {
+  const parts = [row.fromS, row.toS, period].map(decimalParts);
+  const power = Math.min(...parts.map(p => p.power));
+  const [start, end, limit] = parts.map(p => p.digits * 10n ** BigInt(p.power - power));
+  return end - start <= limit;
+}
+
+function parseDocument(bytes) {
+  return JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(bytes));
+}
+
 function validateComparison(c) {
   requireInput(c?.schema === 'frc-power-comparison/v1', 'Expected frc-power-comparison/v1');
   for (const key of ['actionId', 'busId', 'clockId']) requireInput(named(c[key]), 'Missing ' + key);
@@ -32,7 +50,7 @@ function validateComparison(c) {
   requireInput(Array.isArray(c.trials) && c.trials.length === 2, 'Compare exactly two trials');
   unique(c.trials.map(t => t?.id), 'trial identity');
   for (const trial of c.trials) {
-    requireInput(named(trial.condition) && named(trial.trace?.file) && !path.isAbsolute(trial.trace.file),
+    requireInput(named(trial.condition) && named(trial.trace?.file) && !path.win32.parse(trial.trace.file).root,
       'A source condition and relative trace file are required');
     requireInput(/^[a-f0-9]{64}$/.test(trial.trace.sha256), 'A trace SHA-256 is required');
   }
@@ -117,6 +135,7 @@ function assess(c, trial, trace) {
     id, minV:minV ?? null, coverage:coverage(c.window), lowestEvidence:null, violation:null
   }]));
   const unknowns = new Set();
+  const instant = c.window.fromS === c.window.toS;
   let limiting = null, violation = null;
   for (const row of trace.rows) {
     const part = overlap(row, c.window);
@@ -125,10 +144,8 @@ function assess(c, trial, trace) {
       unknowns.add('Stale sample within the action window');
       continue;
     }
-    // Decimal clock labels can subtract to just over their declared period.
-    const rounding = Number.EPSILON * Math.max(Math.abs(row.fromS), Math.abs(row.toS));
-    const resolved = row.toS - row.fromS <= c.maxSampleIntervalS + rounding;
-    if (!resolved) unknowns.add('Sample exceeds maximum interval');
+    const resolved = withinPeriod(row, c.maxSampleIntervalS);
+    if (!resolved && (!instant || coverageByLoad.size)) unknowns.add('Sample exceeds maximum interval');
     for (const [id, evidence] of coverageByLoad) {
       if (row.currents.some(v => v.id === id && v.kind === 'source')) {
         if (resolved) evidence.add(part);
@@ -146,6 +163,7 @@ function assess(c, trial, trace) {
       const sample = {location:v.location, fromS:part.fromS, toS:part.toS, kind, valueV:v.valueV,
         minV:endpoint.minV, marginV:endpoint.minV === null ? null : v.valueV - endpoint.minV,
         currents:row.currents};
+      requireInput(sample.marginV === null || finite(sample.marginV), 'Voltage margin must be finite at ' + v.location);
       if (witnessed) sample.atS = v.atS;
       if (!endpoint.lowestEvidence || v.valueV < endpoint.lowestEvidence.valueV) endpoint.lowestEvidence = sample;
       if (endpoint.minV === null) continue;
@@ -158,9 +176,11 @@ function assess(c, trial, trace) {
           violation = lowerMargin(violation, sample);
         }
       }
-      if (resolved && (kind === 'minimum' || (kind === 'lower-bound' && sample.marginV >= 0) ||
-          (kind === 'point' && c.window.fromS === c.window.toS))) {
+      if ((instant && witnessed) || (resolved && (kind === 'minimum' ||
+          (kind === 'lower-bound' && sample.marginV >= 0) || (kind === 'point' && instant)))) {
         endpoint.coverage.add(part);
+      } else if (!resolved) {
+        unknowns.add('Sample exceeds maximum interval');
       }
     }
   }
@@ -201,18 +221,19 @@ function interpret(trial) {
   if (trial.outcome.status !== 'unknown') {
     lines.push(trial.provenance.kind + ' outcome (' + trial.outcome.status + ') — ' + trial.outcome.description + '.');
   }
+  if (trial.unknowns.length) lines.push(trial.unknowns.join('. ') + '.');
   return lines.join(' ');
 }
 
 export async function reviewPower(file) {
-  const c = JSON.parse(await readFile(file, 'utf8'));
+  const c = parseDocument(await readFile(file));
   validateComparison(c);
   const trials = [];
   for (const trial of c.trials) {
     const bytes = await readFile(path.resolve(path.dirname(file), trial.trace.file));
     requireInput(createHash('sha256').update(bytes).digest('hex') === trial.trace.sha256,
       'SHA-256 mismatch for ' + trial.trace.file);
-    trials.push(assess(c, trial, JSON.parse(bytes)));
+    trials.push(assess(c, trial, parseDocument(bytes)));
   }
   const report = {schema:'frc-power-review/v1',actionId:c.actionId,busId:c.busId,clockId:c.clockId,
     window:c.window,requiredLoads:c.requiredLoads,maxSampleIntervalS:c.maxSampleIntervalS,
@@ -221,6 +242,8 @@ export async function reviewPower(file) {
     const match = trials.find(t => t.id === c.fallback.trialId);
     report.fallback = {...c.fallback,status:match?.status === 'complete' && match.outcome.status === 'observed-success'
       ? 'supported' : 'unverified'};
+    const basis = match ? ' in trial ' + match.id + ' (' + match.provenance.kind + ')' : ' with no matching trial';
+    report.interpretation += ' Fallback “' + c.fallback.description + '” is ' + report.fallback.status + basis + '.';
   }
   return report;
 }

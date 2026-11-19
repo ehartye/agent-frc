@@ -8,6 +8,85 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { reviewPower } from '../scripts/power-review.mjs';
 
+test('hardening rejects malformed UTF-8 in comparison and pinned trace bytes',async t=>{
+  for (const target of ['manifest','trace']) {
+    const file=await fixture(t);
+    const c=JSON.parse(await readFile(file));
+    const input=target==='manifest' ? file : path.join(path.dirname(file),c.trials[0].trace.file);
+    const bytes=await readFile(input);
+    const index=bytes.indexOf(target==='manifest' ? 'Stagger the pump' : 'Synthetic fixture');
+    assert.ok(index>=0);
+    bytes[index]=0xff;
+    await writeFile(input,bytes);
+    if (target==='trace') {
+      c.trials[0].trace.sha256=createHash('sha256').update(bytes).digest('hex');
+      await writeFile(file,JSON.stringify(c));
+    }
+    await assert.rejects(reviewPower(file),/utf-?8/i);
+  }
+});
+
+test('hardening accepts an exact voltage witness in a wide row only for the requested instant',async t=>{
+  const file=await fixture(t,(c,traces)=>{
+    c.window={fromS:.25,toS:.25};
+    c.requiredLoads=[];
+    for (const [i,tr] of traces.entries()) tr.rows=[row(0,2,9,{
+      voltages:[{location:'arm-inlet',kind:'point',valueV:9,atS:i===0 ? .25 : .5}],currents:[]})];
+  });
+  const {trials}=await reviewPower(file);
+  assert.deepEqual(trials.map(v=>v.status),['complete','incomplete']);
+  assert.deepEqual(trials[0].unknowns,[]);
+  const c=JSON.parse(await readFile(file));
+  c.requiredLoads=['arm'];
+  await writeFile(file,JSON.stringify(c));
+  assert.equal((await reviewPower(file)).trials[0].status,'incomplete');
+});
+
+test('hardening student brief names missing evidence and the assessed fallback',async t=>{
+  const file=await fixture(t,(_,traces)=>{
+    traces[0].rows[0].currents=[];
+    traces[1].outcome={description:'Arm reached the stop',status:'observed-success'};
+  });
+  const supported=(await reviewPower(file)).interpretation;
+  assert.match(supported,/missing coincident source-current coverage for pump/i);
+  assert.match(supported,/fallback[^.]*Stagger the pump startup[^.]*supported/i);
+  const c=JSON.parse(await readFile(file));
+  delete c.fallback.trialId;
+  await writeFile(file,JSON.stringify(c));
+  assert.match((await reviewPower(file)).interpretation,/fallback[^.]*Stagger the pump startup[^.]*unverified/i);
+});
+
+test('hardening cannot certify coarse samples by using absolute clock magnitude as tolerance',async t=>{
+  const file=await fixture(t,(c,traces)=>{
+    c.window={fromS:1e16,toS:1e16+2};
+    c.maxSampleIntervalS=1;
+    for(const tr of traces) tr.rows=[row(c.window.fromS,c.window.toS,9)];
+  });
+  const {trials}=await reviewPower(file);
+  assert.equal(trials[0].status,'incomplete');
+  assert.match(trials[0].unknowns.join(' '),/maximum interval/);
+});
+
+test('hardening rejects unrepresentable signed voltage margins before serialization',async t=>{
+  for(const sign of [1,-1]) {
+    const file=await fixture(t,(c,traces)=>{
+      c.locations[0].minV=-sign*Number.MAX_VALUE;
+      traces[0].rows[0].voltages[0].valueV=sign*Number.MAX_VALUE;
+    });
+    await assert.rejects(reviewPower(file),/finite.*margin|margin.*finite/i);
+  }
+});
+
+test('hardening rejects drive-qualified and rooted trace paths before file access',async t=>{
+  const file=await fixture(t);
+  const c=JSON.parse(await readFile(file));
+  for(const tracePath of ['Q:sample.json','Q:/sample.json','//server/share/sample.json','/sample.json']) {
+    c.trials[0].trace.file=tracePath;
+    await writeFile(file,JSON.stringify(c));
+    await assert.rejects(reviewPower(file),/relative trace file/);
+  }
+});
+
 const action = {actionId:'position-arm', busId:'panel', clockId:'action-clock'};
 const comparison = {schema:'frc-power-comparison/v1', ...action, window:{fromS:0,toS:1},
   maxSampleIntervalS:0.5, requiredLoads:['arm','pump'], locations:[{id:'arm-inlet',minV:8}],

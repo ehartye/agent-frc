@@ -10,11 +10,11 @@ npm run power:review -- examples/power/comparison.json
 
 The carriage needs 9 V while it travels from 0 to 1 s in this example. It draws 6 A from the common supply. Starting the 10 A fan in the first half-second brings the modeled carriage inlet to **8.3 V**, 0.7 V below its floor. Starting the same fan after travel leaves **9.8 V** at the inlet throughout travel. Only the second trial also supplies a successful position outcome. These are synthetic teaching inputs. [Comparison](../examples/power/comparison.json) · [Overlapping loads](../examples/power/overlap.json) · [Staggered loads](../examples/power/stagger.json)
 
-For your own project, replace the example argument with your comparison path. Read each trial's `limiting` entry for the voltage location, witness time or interval, margin and concurrent currents. Check `unknowns` and the functional `outcome` separately before choosing a schedule. Zero source current is valid evidence for a scheduled-off load. An absent current channel leaves its contribution unknown.
+For your own project, replace the example argument with your comparison path. Read the `interpretation` for each trial's electrical result, evidence gaps and the status of any proposed fallback. Open `limiting` for the voltage location, witness time or interval, margin and concurrent currents. Check `unknowns` and the functional `outcome` separately before choosing a schedule. Zero source current is valid evidence for a scheduled-off load. An absent current channel leaves its contribution unknown.
 
 ## Project file contract
 
-Use two UTF-8 JSON traces and one comparison. All paths resolve relative to the comparison. Compute each trace's SHA-256 over its exact file bytes. Keep the original solver or log revision, conversion description and assumptions with the project. The digest lets another reader verify the supplied bytes. Sensor calibration, model validity and the choice of voltage floor require separate evidence.
+Save the comparison and both traces as UTF-8 JSON. Use a relative trace path such as `runs/first.json` with no drive prefix. Compute each trace's SHA-256 over its exact file bytes. Keep the original solver or log revision, conversion description and assumptions with the project. The digest lets another reader verify the supplied bytes. Sensor calibration, model validity and the choice of voltage floor require separate evidence.
 
 | Comparison field | Meaning |
 |---|---|
@@ -32,7 +32,7 @@ Supply ordered, nonoverlapping `rows`. Each has `fromS`, `toS`, a `voltages` arr
 
 | Observation | How to encode and interpret it |
 |---|---|
-| Voltage at an instant | `{location,kind:"point",valueV,atS}`. The time must lie in its row. It can prove a violation at that instant. |
+| Voltage at an instant | `{location,kind:"point",valueV,atS}`. The time must lie in its row. A fresh reading at the requested instant establishes the voltage there even in a wide bin. Required load currents still need their own coverage. |
 | Attained minimum | `{location,kind:"minimum",valueV,atS?}`. The voltage actually reached this value in the bin. A low minimum in a bin that crosses the action boundary needs a witness time inside the window to prove the violation happened during the action. |
 | Conservative lower bound | `{location,kind:"lower-bound",valueV}`. A bound at or above the floor supports the covered interval. A lower bound beneath the floor leaves the minimum unresolved. |
 | Current | `{id,kind,valueA}`. Use `source` for a named load's draw from the common source, `phase` for motor phase current, or `bus-total` with the common bus ID for total draw. Positive supply current denotes draw. In a duration row declare currents only when the source supports those values concurrently throughout that bin. Use a zero-duration row for a point reading. Retain time-varying or unmatched currents in the original trace until they can be aligned. |
