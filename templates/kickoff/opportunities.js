@@ -138,7 +138,7 @@ function evaluate() {
         'Arithmetic bound only. A feasible route is required.')
   ];
   if(loadedBatch()){
-    lines.splice(2,0,'One outbound trip. Capacity '+trial.carryCapacity+' pieces. Leave at 0 s for at most '+result.early.delivered+
+    lines.splice(2,0,'One outbound trip. Pieces must be aboard at A before departure. Capacity '+trial.carryCapacity+' pieces. Leave at 0 s for at most '+result.early.delivered+
       ' scored, or wait until '+n(result.late.time)+' s for at most '+result.late.delivered+'. Best departure '+n(result.bestDepartureS)+' s.');
   }
   if(!study.line.length) lines.unshift('Transit unknown. The rate below assumes zero travel time.');
