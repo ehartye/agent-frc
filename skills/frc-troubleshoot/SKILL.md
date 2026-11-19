@@ -24,7 +24,7 @@ Read the [electrical evidence exercise](../../docs/electrical-review.md). Identi
 
 ## Reviewable output
 
-When a device loses voltage as another load starts, compare two schedules or source conditions with the [shared electrical supply review](../../docs/shared-power-review.md). Identify the inlet, clock and required voltage in the project's evidence. Carry the limiting time and any missing branch measurements into the next design decision.
+When a device loses voltage as another load starts, compare two schedules or source conditions with the [shared electrical supply review](../../docs/shared-power-review.md). Identify the inlet, clock and minimum operating voltage in the project's evidence. When the device also specifies a ceiling, review the upper bound at its inlet separately, including any load-release condition. Carry the limiting time and any missing branch measurements into the next design decision.
 
 Deliver an expected/observed evidence table with source and next verification step. For each material claim identify source URL/version, applicability and verification level. Record actual commands/results separately from proposed tests.
 
