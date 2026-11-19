@@ -57,3 +57,26 @@ test('publication geometry uses placed model bytes and separates missing, unknow
   const result=spawnSync(process.platform==='win32'?'python':'python3',[script],{encoding:'utf8'});
   assert.equal(result.status,0,result.stderr+result.stdout);
 });
+
+test('exports the actual standalone project field lab at a stable linked address',async t=>{
+  const root=await mkdtemp(path.join(os.tmpdir(),'project-lab-'));
+  t.after(()=>rm(root,{recursive:true,force:true}));
+  await cp(example,root,{recursive:true});
+  const manifest=path.join(root,'project.json'),spec=JSON.parse(await readFile(manifest,'utf8'));
+  const file='kickoff/field-lab.html',out=path.join(root,'out');
+  await mkdir(path.join(root,'kickoff'));
+  const original='<html><details id="rehearsal"></details><canvas id="replayField"></canvas></html>';
+  await writeFile(path.join(root,file),original);
+  spec.fieldLab={file,shareable:true,sha256:bytesHash(original)};
+  const build=async()=>{await writeFile(manifest,JSON.stringify(spec));return buildHighlights(manifest,out);};
+  await assert.rejects(build,/README/);
+  await writeFile(path.join(root,'README.md'),'[Rehearse the match](kickoff/field-lab.html)');
+  assert.match(await readFile(await build(),'utf8'),/href="field-lab.html">Open the field lab/);
+  assert.equal(await readFile(path.join(out,'field-lab.html'),'utf8'),original);
+  const changed=original.replace('<canvas','<p>Revised</p><canvas');
+  await writeFile(path.join(root,file),changed);
+  await assert.rejects(build,/Changed field lab/);
+  spec.fieldLab.sha256=bytesHash(changed);await build();
+  await writeFile(path.join(out,'field-lab.html'),'independent');
+  await assert.rejects(build,/independently authored/);
+});

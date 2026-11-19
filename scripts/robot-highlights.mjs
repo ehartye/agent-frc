@@ -276,8 +276,26 @@ export async function buildHighlights(manifest, directory) {
       rows.map(row => '<tr><th scope="row">'+escape(row.skill)+'</th><td>'+row.output.map(documentLink).join(', ')+'</td><td>'+
         (row.evidence.map(documentLink).join(', ') || escape(row.evidenceNote))+'</td></tr>').join('')+'</tbody></table></section>';
   }
+  let lab;
+  if (data.fieldLab !== undefined) {
+    const spec=data.fieldLab;
+    requireValue(spec.shareable===true && /^[a-f0-9]{64}$/.test(spec.sha256),'Confirm field lab redistribution and digest');
+    const file=await projectFile(spec.file);
+    const bytes=await readFile(file);
+    requireValue(createHash('sha256').update(bytes).digest('hex')===spec.sha256,'Changed field lab');
+    const markup=bytes.toString('utf8');
+    requireValue(/<canvas\b[^>]*\bid=["']replayField["']/i.test(markup) && /\bid=["']rehearsal["']/i.test(markup),
+      'Expected the project field lab with a match rehearsal');
+    requireValue(!/<(?:script|img|iframe)\b[^>]*\bsrc\s*=\s*["'](?!data:)[^"']+/i.test(markup) &&
+      !/<link\b[^>]*rel=["']stylesheet["'][^>]*href=["'](?!data:)/i.test(markup), 'Publish a self-contained field lab');
+    const readme=await optionalRead(path.join(root,'README.md'));
+    const links=Array.from((readme ?? '').matchAll(/\]\(([^)]+)\)/g),m=>m[1].split('#')[0]);
+    requireValue(links.some(link=>(!link.includes(':') && path.resolve(root,link)===file) ||
+      /^https:\/\/[^\s]+\/field-lab\.html$/.test(link)),'Link the project field lab from README.md');
+    lab={bytes,sha256:spec.sha256};
+  }
   const buildSection = build ? '<section id="build"><h2>Build sheet</h2><table><thead><tr><th>Subsystem</th><th>Configuration</th><th>Evidence</th></tr></thead><tbody>'+build+'</tbody></table></section>' : '';
-  const fields = {title, role, revision, results, workflow, buildSection, buildLink:build ? '<a href="#build">Build sheet</a>' : '',
+  const fields = {title, role, revision, results, workflow, labLink:lab ? '<a href="field-lab.html">Open the field lab</a>' : '', buildSection, buildLink:build ? '<a href="#build">Build sheet</a>' : '',
     revisionLabel:stage === 'analysis' ? 'Analysis revision' : 'Candidate', model:model+coverage, media:media ? '<section id="media"><h2>Evidence gallery</h2>' + media + '</section>' : '',
     campaign, campaignLink:campaign ? '<a href="#campaign">Repeatability</a>' : '', mediaLink:media ? '<a href="#media">Gallery</a>' : ''};
   const html = applyStyle(template.replace(/\{\{(\w+)\}\}/g, (_, key) => fields[key]));
@@ -286,6 +304,17 @@ export async function buildHighlights(manifest, directory) {
   const page = path.join(output, 'index.html');
   const existing = await optionalRead(page);
   requireValue(existing === undefined || existing.split(/\r?\n/,1)[0] === marker, 'Existing page is independently authored. Choose another output directory.');
+  if(lab){
+    const target=path.join(output,'field-lab.html');
+    let current;
+    try{current=await digest(target);}catch(error){if(error.code!=='ENOENT')throw error;}
+    if(current!==lab.sha256){
+      const oldDigest=existing?.match(/<!-- published-field-lab ([a-f0-9]{64}) -->/)?.[1];
+      requireValue(current===undefined || current===oldDigest,'Existing field-lab.html is independently authored or modified');
+      const temporary=path.join(output,randomUUID()+'.tmp');
+      try{await writeFile(temporary,lab.bytes);await rename(temporary,target);}finally{await rm(temporary,{force:true});}
+    }
+  }
   if (modelFiles) {
     const target = path.join(output,modelFiles.dest);
     await mkdir(target,{recursive:true});
@@ -310,7 +339,7 @@ export async function buildHighlights(manifest, directory) {
   }
   const tempPage = path.join(output,randomUUID() + '.tmp');
   try {
-    await writeFile(tempPage,html);
+    await writeFile(tempPage,lab ? html+'\n<!-- published-field-lab '+lab.sha256+' -->\n' : html);
     await rename(tempPage,page);
   } finally { await rm(tempPage,{force:true}); }
   return page;
