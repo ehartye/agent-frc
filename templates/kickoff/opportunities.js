@@ -41,7 +41,7 @@ function control(group,id,title,options) {
 const targetBox=control('choices','opTarget','Scoring target',scoring?.targets.map(t=>t.name) || ['Custom opportunity']);
 const phaseBox=control('choices','opPhase','Match phase',scoring?.phases.map(v=>v.name) || ['Custom window']);
 const delivery=control('choices','opDelivery','Piece delivery',
-  ['Shuttle · fetch one piece from A for every score at B','Staged at B · transit once, then score locally']);
+  ['Shuttle · fetch one piece from A for every score at B','Staged at B · transit once, then score locally','One batch loaded at A · carry it to B']);
 const inputs={};
 for(const [key,title,initial] of [
   ['stock','Distinct pieces in match',null],['points','Points per scored piece',null],
@@ -50,12 +50,23 @@ for(const [key,title,initial] of [
   ['goal','Pieces this robot aims to score',1],['setup','Non-scoring time beyond transit (s)',0],
   ['speed','Assumed average transit speed (in/s)',profile.rehearsal?.defaults?.speed ?? null],['cycle','Non-travel service per piece (s)',1],
   ['bumper','Trial bumper projection per side (in)',profile.rehearsal?.defaults?.bumper ?? null],
-  ['capacity','Open target slots (optional)',null]
+  ['capacity','Open target slots (optional)',null],['carryCapacity','Robot carrying capacity (pieces per trip)',null]
 ]){
   const input=control('numbers','op-'+key,title);input.min=0;input.step='any';
   if(initial!==null) input.value=initial;
   inputs[key]=input;
 }
+const loadedBatch=()=>delivery.value==='2';
+function syncDelivery(){
+  const batch=loadedBatch();
+  inputs.carryCapacity.parentElement.hidden=!batch;
+  inputs.opening.parentElement.firstChild.textContent=batch?'Pieces ready to ride at A at window start':'Accessible here at start';
+  inputs.incoming.parentElement.firstChild.textContent=batch?'Additional pieces ready to ride at A':'Additional pieces arriving here';
+  inputs.arrival.parentElement.firstChild.textContent=batch?'Time additional pieces are aboard at A (s)':'Their arrival time from window start (s)';
+  inputs.setup.parentElement.firstChild.textContent=batch?'Setup at B after loaded transit (s)':'Non-scoring time beyond transit (s)';
+  inputs.cycle.parentElement.firstChild.textContent=batch?'Scoring service at B per piece (s)':'Non-travel service per piece (s)';
+}
+syncDelivery();
 const overrides={};
 let study, clearance;
 const read=key=>inputs[key].value===''?NaN:Number(inputs[key].value);
@@ -103,7 +114,8 @@ function evaluate() {
   const trial={};
   for(const key of ['stock','opening','incoming','goal','window','cycle','arrival','setup','points']) trial[key]=read(key);
   trial.cap=cap;trial.travel=study.length?study.length/speed:0;
-  trial.delivery=delivery.value==='0'?'shuttle':'staged';
+  trial.delivery=loadedBatch()?'loaded-batch':delivery.value==='0'?'shuttle':'staged';
+  if(loadedBatch())trial.carryCapacity=read('carryCapacity');
   const result=analyzeWindow(trial);
   const n=v=>Number(v.toFixed(3));
   const rate=Number.isFinite(result.rate)?n(result.rate)+' pieces/s':'unattainable in the remaining time';
@@ -112,15 +124,23 @@ function evaluate() {
     'Footprint clearance unknown.';
   const lines=[routeStatus,
     'Supply and target ceiling: '+result.available+' pieces · goal '+trial.goal+'.',
+    loadedBatch()?(result.targetDepartureS===null?'The target exceeds the available load or open slots. ':
+      'For the goal, depart A at '+n(result.targetDepartureS)+' s. ')+
+      'Transit '+n(trial.travel)+' s then setup '+n(trial.setup)+' s at B. '+n(result.usable)+' s of service after departure and setup.':
     trial.delivery==='shuttle'?'Goal requires '+result.outboundLegs+' loaded and '+result.returnLegs+' empty legs ('+
       n(result.goalTransit)+' s transit). After setup, '+n(result.usable)+' s remain for service.':
       'One transit '+n(trial.travel)+' s + other non-scoring time '+trial.setup+' s leaves '+n(result.usable)+' s.',
-    'Required throughput: '+rate+(result.rate>0 && Number.isFinite(result.rate)?' (at most '+n(1/result.rate)+' s/piece).':'.'),
+    loadedBatch() && result.targetDepartureS===null?'Required throughput: no service rate can fill the goal with this load and target capacity.':
+      'Required throughput: '+rate+(result.rate>0 && Number.isFinite(result.rate)?' (at most '+n(1/result.rate)+' s/piece).':'.'),
     'Candidate: '+n(1/trial.cycle)+' pieces/s. At most '+result.delivered+' scored for '+result.points+' points. '+
       (result.available<trial.goal?'Supply or scoring slots rule out this goal.':
         !result.attainable?'Candidate misses this window.':clearance.status==='clear'?'Meets the arithmetic screen.':
         'Arithmetic bound only. A feasible route is required.')
   ];
+  if(loadedBatch()){
+    lines.splice(2,0,'One outbound trip. Pieces must be aboard at A before departure. Capacity '+trial.carryCapacity+' pieces. Leave at 0 s for at most '+result.early.delivered+
+      ' scored, or wait until '+n(result.late.time)+' s for at most '+result.late.delivered+'. Best departure '+n(result.bestDepartureS)+' s.');
+  }
   if(!study.line.length) lines.unshift('Transit unknown. The rate below assumes zero travel time.');
   return {lines,trial};
 }
@@ -133,7 +153,7 @@ for(const name of ['A','B']) byId('mark'+name).onclick=()=>{
 };
 byId('clearRoute').textContent='Restore modeled route';
 byId('clearRoute').onclick=()=>{delete overrides.a;delete overrides.b;updateRoute();};
-targetBox.onchange=selectOpportunity;phaseBox.onchange=selectOpportunity;delivery.onchange=reviewWindow;
+targetBox.onchange=selectOpportunity;phaseBox.onchange=selectOpportunity;delivery.onchange=()=>{syncDelivery();reviewWindow();};
 Object.values(inputs).forEach(input=>input.oninput=reviewWindow);
 inputs.bumper.oninput=updateRoute;
 for(const key of ['width','length','height','heading']) sliders.get(key).input.addEventListener('input',updateRoute);
@@ -147,7 +167,8 @@ byId('saveWindow').onclick=()=>{
     'Distinct inventory '+trial.stock+'. Opening allocation '+trial.opening+', plus '+trial.incoming+' at '+trial.arrival+
     ' s. Window '+trial.window+' s. Value '+trial.points+' points/piece. Slots '+(trial.cap ?? 'unspecified')+'.',
     'Assumptions: '+notes,'Delivery: '+delivery.selectedOptions[0].textContent+
-    '. For a shuttle, incoming pieces arrive at A and the empty return uses the same route and assumed speed. For staged supply, incoming pieces arrive at B.',
+    (loadedBatch()?'. The arrival clock is confirmed loaded readiness at A up to the robot capacity. The single loaded A→B trip follows; setup and scoring follow arrival at B. Empty return is outside this window.':
+      '. For a shuttle, incoming pieces arrive at A and the empty return uses the same route and assumed speed. For staged supply, incoming pieces arrive at B.'),
     'Route: '+byId('routeLabel').textContent+' at assumed '+inputs.speed.value+' in/s.',
     'Traffic inference: '+study.traffic+'. '+(scoring?.fieldMap?.basis || ''),
     'Trial box '+state.length+' × '+state.width+' × '+state.height+' in, heading '+state.heading+'°, bumper projection '+(Number.isFinite(read('bumper'))?read('bumper')+' in per side':'unknown')+'. Candidate non-travel cycle '+trial.cycle+' s/piece.',

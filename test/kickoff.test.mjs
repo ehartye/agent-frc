@@ -95,3 +95,23 @@ test('reject ungrounded dimensions and invalid scene coordinates',()=>{
     assert.throws(()=>validateProfile({...profile,...bad}));
   }
 });
+
+
+test('one loaded batch departs only after its pieces are aboard; early and late alternatives never add together',()=>{
+  const trial={delivery:'loaded-batch',stock:50,opening:0,incoming:12,goal:12,cap:null,carryCapacity:12,
+    window:16,arrival:4,travel:3,setup:3,cycle:.5,points:2};
+  const r=analyzeWindow(trial);
+  assert.deepEqual([r.ready,r.usable,r.rate,r.points,r.bestDepartureS],[10,6,2,24,4]);
+  assert.equal(analyzeWindow({...trial,delivery:'staged'}).ready,6);
+  assert.equal(analyzeWindow({...trial,travel:6}).delivered,6);
+  const expired=analyzeWindow({...trial,arrival:10});
+  assert.deepEqual([expired.usable,expired.rate,expired.delivered],[0,Infinity,0]);
+  const tooSmall=analyzeWindow({...trial,carryCapacity:4});
+  assert.deepEqual([tooSmall.targetDepartureS,tooSmall.available,tooSmall.delivered,tooSmall.rate],[null,4,4,Infinity]);
+  const blocked=analyzeWindow({...trial,cap:0});assert.equal(blocked.delivered,0);
+  const early=analyzeWindow({...trial,opening:5,incoming:7,arrival:15});
+  assert.deepEqual([early.bestDepartureS,early.delivered,early.rate],[0,5,Infinity]);
+  const tie=analyzeWindow({...trial,opening:3,incoming:3,arrival:3,goal:3,cap:3});
+  assert.deepEqual([tie.targetDepartureS,tie.bestDepartureS,tie.points],[0,0,6]);
+  assert.throws(()=>analyzeWindow({...trial,carryCapacity:0}),/carrying capacity/);
+});

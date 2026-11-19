@@ -9,6 +9,26 @@ export function analyzeWindow(s) {
   }
   if (s.opening+s.incoming>s.stock) throw Error('Allocated pieces exceed the distinct match inventory.');
   if (s.cap !== null && !whole(s.cap)) throw Error('Target capacity must be a whole count.');
+  if (s.delivery==='loaded-batch') {
+    if (!whole(s.carryCapacity) || !s.carryCapacity) throw Error('Enter a positive whole-piece carrying capacity for the one loaded trip.');
+    const slots=s.cap ?? s.stock;
+    function departure(time,offered) {
+      const load=Math.min(offered,s.carryCapacity);
+      const ready=time+s.travel+s.setup;
+      const usable=Math.max(0,s.window-ready);
+      const available=Math.min(load,slots);
+      return {time,load,ready,usable,available,delivered:Math.min(available,Math.floor(usable/s.cycle+1e-10))};
+    }
+    const early=departure(0,s.opening);
+    const late=departure(s.arrival,s.opening+s.incoming);
+    // Leaving early forfeits the later load. Keep the two one-trip alternatives mutually exclusive.
+    const best=early.delivered>=late.delivered ? early : late;
+    const target=early.available>=s.goal ? early : late;
+    return {ready:target.ready,usable:target.usable,available:late.available,
+      rate:target.available>=s.goal && target.usable>0 ? s.goal/target.usable : Infinity,
+      delivered:best.delivered,attainable:best.delivered>=s.goal,points:best.delivered*s.points,
+      early,late,bestDepartureS:best.time,targetDepartureS:target.available>=s.goal?target.time:null};
+  }
   if (s.delivery==='shuttle') {
     const returning=s.returnTravel ?? s.travel;
     if(!finite(returning)) throw Error('Return transit must be finite and nonnegative.');

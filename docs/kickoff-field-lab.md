@@ -17,10 +17,12 @@ Open `field.html` in a browser. It runs offline. The model can omit unsupported 
 
 ## Explore a scoring opportunity
 
-Allocate the pieces available to one robot at the selected supply location, including any later delivery. Deduct setup, travel and service time. Check open scoring slots. Compare two delivery plans.
+Allocate the pieces available to one robot at the selected supply location, including any later delivery. Deduct setup, travel and service time. Check open scoring slots. Compare three delivery plans.
 
 - **One-piece shuttle.** Each score requires a loaded trip to the scoring location. Every additional piece requires an empty return. Three scores require five transit legs. The model uses the same path and speed for the return.
 - **Supply staged at the goal.** Make one initial transit, then service pieces at the scoring location. Identify who supplies those pieces and when the robot can use them.
+
+- **One batch loaded at A.** Give the time when additional pieces could actually be aboard, including pickup and retention. Enter onboard capacity independently from open target slots. Compare leaving with the opening load against waiting for that batch. Each choice pays one subsequent loaded trip and setup at B. The service cycle covers scoring at B. The return and later acquisitions belong to another window. A stock allocation or a piece reaching the source does not establish readiness to leave.
 
 For example, 25 pieces over five usable seconds require five pieces per second. A serial loader completing a piece every 0.25 seconds can deliver at most 20 in that window. A 0.20-second candidate reaches 25 under ideal conditions. Late arrivals, repeated transit and occupied scoring positions can change the requirement.
 
