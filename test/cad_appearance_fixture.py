@@ -57,6 +57,8 @@ def fixture(root):
                 "boundsMm": [x, 0, 0, x + 30, 30, 30],
             }
         )
+    for row in rows[:2]:
+        row["representation"] = "appearance-overlay"
     source = root / "fixture.step"
     writer = STEPControl_Writer()
     assert writer.Transfer(compound, STEPControl_AsIs) == IFSelect_RetDone
@@ -95,7 +97,10 @@ def fixture(root):
     assert list(pixels[0, :3]) == [24, 56, 87], pixels[0]
     assert record["backdrop"]["center"] == "#738BA1"
     assert (r > 1.5 * g + 30).sum() > 500 and (g > 1.5 * r + 30).sum() > 500
-    assert "left-and-right" in (folder / "index.html").read_text(encoding="utf8")
+    expected = [
+        [24, "#DC241F", "left-and-right"], [12, "#00BD3E", "middle", "appearance-overlay"]
+    ]
+    assert json.dumps(expected) in (folder / "index.html").read_text(encoding="utf8")
     rows.reverse()
     write(root / "roles.json", assign)
     assert "Solid bounds disagree" in run(root, "export-showcase-cad.py", ok=False)
