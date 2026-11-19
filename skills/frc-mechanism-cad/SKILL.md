@@ -82,6 +82,8 @@ For an authorized official local Fusion session, use the [guarded disposable rec
 
 ## Portable export, articulation and viewer contracts
 
+For each new assembly, run `python <plugin>/scripts/component_palette.py <project>` to resolve the default viewing palette and any overrides under `cad/component-palette.json`. Assign project parts by stable role in Fusion. Preserve purchased appearances and use the same part mapping for the published CAD.
+
 Use the [native viewer contract guide](../../docs/native-viewer-contracts.md) for independent expected/observed JSON comparisons. The native:export and native:articulation commands require exact inventories, archive identity, explicit frames/units and finite witnesses. The viewer:controls command checks supplied post-engine observations and collision-only restoration policy; it never hooks real input. Expected input comes first for these three commands. Preserve synthetic, native-observed, interactive-observed and human-reported evidence boundaries as allowed by each contract; a match does not execute CAD, prove a reopen or qualify a viewer/robot.
 
 Before using a sensor to advance the mechanism, [check the mounted optical path and release evidence](../../docs/sensor-observability.md). Compare the seated and early-exit readings with the actual material and require an independent clearance observation for withdrawal.

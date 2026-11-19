@@ -25,6 +25,20 @@ Keep evidence status separate from functional role: write UNKNOWN, NOT CHECKED, 
 
 ## Project override and recheck
 
+The plugin provides the six functional roles above. A new robot project can use all six without a configuration file. To change one color or add a role for a distinct component group, commit `cad/component-palette.json` to the robot repository. Each value is a six-digit sRGB hex color. Keep role IDs stable across CAD revisions.
+
+```json
+{
+  "schema": "agent-frc/component-palette@1",
+  "colors": {
+    "structure": "#657789",
+    "bumper-blue": "#285BA3"
+  }
+}
+```
+
+Run `python <plugin>/scripts/component_palette.py <robot-project>` to print the effective palette. The example replaces the structure swatch, adds a named bumper cover and inherits the other five roles. Use the same resolved RGB values for Fusion viewing appearances, the public orbit model and the README render. Keep the project palette alongside the part-to-role map, including an explicit role for each bumper cover and the selected alliance. Check the legend when an override changes the contrast of a label.
+
 A student/team may override colors for an established convention, accessibility needs or a specific comparison. Save the role-ID-to-appearance mapping, reason, revision and legend with the project, and use it consistently. Ask only when the choice is consequential; routine readable defaults do not need a separate design decision. Recheck semantic coverage, supplier preservation, label readability, native persistence and unchanged physical properties after updates. Keep the convention portable across Fusion, blockouts and rendered evidence, without implying an exchange format preserves native appearances.
 
 Tests validate the default role IDs, unique colors, explicit non-color cues, hex values and opaque swatch label contrast. They do not certify native application, actual rendered contrast, material assignments or physical correctness. The current robot's requirement for a native Fusion file remains separate from this viewing convention.

@@ -7,6 +7,8 @@ description: "Create or refresh a student robot showcase with explorable CAD mod
 
 ## Let students explore the model
 
+Resolve the project’s [component palette](../../docs/cad-color-convention.md) before exporting a colored assembly. Use the same stable part roles for Fusion, the README still and the orbit view. Check the bumper cover, adjacent moving parts and supplier finishes in all three.
+
 Lead the showcase with an orbitable, zoomable view of the selected robot assembly. Include reset, touch and keyboard controls, a CAD still, the assembly revision and pose, and a link to the student Fusion source or its authorized project location. Identify simplified purchased parts and incomplete subsystems in the caption. A subsystem-only export should identify the subsystem in the title. Inspect the reopened assembly against the [native export and articulation contracts](../../docs/native-viewer-contracts.md) before claiming the model matches a particular configuration.
 
 Use the same assembly for the still at the top of each project README. Link the image to the explorable model and identify whether it shows a current candidate, historical revision or fixture. For a shareable Fusion STEP export, set `source`, `title` and `scope` in the project's `cad-showcase.json`. Run `python <plugin>/scripts/export-showcase-cad.py <project>` with OCP and VTK, followed by `python <plugin>/scripts/cad-readmes.py <project> --update`. Run the second command without `--update` in CI. For the highlights builder add a `cad` object with `receipt` (the project-relative export receipt), `title`, `scope` and `shareable: true` to a project-root manifest. The receipt binds the source STEP, tessellated mesh and rendered PNG.
