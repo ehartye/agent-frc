@@ -17,10 +17,12 @@ export async function example(dir) {
   for(const [key,data] of Object.entries({
     field:{id:'teaching-course',revision:'A',obstacles:['post'],preloaded:['parcel'],
       fieldRouteInventory:{complete:true,unresolved:[],collections}},
-    robot:{id:'teaching-carriage',revision:'A',bodies:['frame']},
     transform:{from:'robot',to:'course',length:'m',alignment:'fixture origin'},
     trajectory:{id:'transfer',intervals:[[0,1],[1,2]],basis:'invented teaching evidence'},
   })) sources[key]=await save(key+'.json',data);
+  const geometry=await save('carriage.json',{id:'teaching-carriage',revision:'A',bodies:['frame']});
+  sources.robot=await save('robot.json',{schema:'field-route/robot@1',scope:'assembly',geometry,catalog:geometry,
+    collection:{path:['bodies'],format:'ids'}});
   const intervals=[{fromS:0,toS:1,carried:['parcel']},{fromS:1,toS:2,carried:['parcel']}];
   const scenario=await save('scenario.json',{schema:'field-route/scenario@1',clock:'trial',startS:0,
     marginM:.005,robotBodies:['frame'],obstacles:['post'],pieces:['parcel'],sources,intervals});

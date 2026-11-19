@@ -15,13 +15,32 @@ async function pinned(base, ref, json = false) {
   requireInput(named(ref?.file) && /^[0-9a-f]{64}$/.test(ref.sha256), 'Expected file and SHA-256.');
   const file=path.resolve(base,ref.file);
   const hash=createHash('sha256');
-  if(json) {
+  if(json === true) {
     const bytes=await readFile(file);
     requireInput(hash.update(bytes).digest('hex')===ref.sha256,'Changed input: '+ref.file);
     return JSON.parse(bytes);
   }
-  for await(const chunk of createReadStream(file)) hash.update(chunk);
+  // Older robot references can point straight at a large native file. Hash it
+  // as before; retain bytes for parsing only when its content is a JSON object.
+  let probe = json === 'robot';
+  let objectBytes;
+  for await (const chunk of createReadStream(file)) {
+    hash.update(chunk);
+    if (probe) {
+      const first = chunk.find(byte => ![9, 10, 13, 32].includes(byte));
+      if (first === undefined) continue;
+      if (first === 123) objectBytes = [];
+      probe = false;
+    }
+    if (objectBytes) objectBytes.push(chunk);
+  }
   requireInput(hash.digest('hex')===ref.sha256,'Changed input: '+ref.file);
+  if (json === 'robot') {
+    if (!objectBytes) return null;
+    // A legacy opaque asset may start with a brace without being JSON.
+    try { return JSON.parse(Buffer.concat(objectBytes)); }
+    catch (error) { if (error instanceof SyntaxError) return null; throw error; }
+  }
   return ref.sha256;
 }
 
@@ -69,23 +88,37 @@ function evaluateSlice(scenario, slice, route, evidence, until) {
   return issues;
 }
 
-async function readBodyObservations(base, scenario, scenarioDigest, detector) {
+async function reviewRobotCatalog(base, scenario) {
+  const source = scenario.sources?.robot;
+  const robot = source ? await pinned(base, source, 'robot') : null;
+  if (robot?.schema !== 'field-route/robot@1') {
+    return {scope: null, verified: false, reason: 'No independently registered robot body catalog.'};
+  }
+  if (robot.scope !== undefined) {
+    requireInput(['assembly', 'subassembly'].includes(robot.scope), 'Invalid robot inventory scope.');
+  }
+  if (robot.geometry) await pinned(base, robot.geometry);
+  const catalog = robot.catalog ? await pinned(base, robot.catalog, true) : null;
+  if (catalog && robot.collection) {
+    const bodyIds = collect(catalog, robot.collection).map(([id]) => id);
+    const bodies = new Set(bodyIds);
+    requireInput(ids(bodyIds) && bodies.size === scenario.robotBodies.length && scenario.robotBodies.every(id => bodies.has(id)),
+      'Scenario body list differs from the pinned robot catalog.');
+  }
+  if (!robot.scope || !robot.geometry || !catalog || !robot.collection) {
+    return {scope: robot.scope ?? null, verified: false, reason: 'Incomplete robot geometry or body catalog registration.'};
+  }
+  return {scope: robot.scope, verified: true, geometrySha256: robot.geometry.sha256};
+}
+
+async function readBodyObservations(base, scenario, scenarioDigest, detector, robot) {
   const bodyEvents = detector.events.filter(event => Object.hasOwn(event, 'robotBody'));
   if (bodyEvents.length === 0) return new Map();
-
-  const robot = await pinned(base, scenario.sources?.robot, true);
-  requireInput(robot.schema === 'field-route/robot@1' && ['assembly', 'subassembly'].includes(robot.scope),
-    'Supply the robot geometry and its body catalog.');
-  await pinned(base, robot.geometry);
-  const catalog = await pinned(base, robot.catalog, true);
-  const bodyIds = collect(catalog, robot.collection).map(([id]) => id);
-  const bodies = new Set(bodyIds);
-  requireInput(ids(bodyIds) && bodies.size === scenario.robotBodies.length && scenario.robotBodies.every(id => bodies.has(id)),
-    'Scenario body list differs from the pinned robot catalog.');
+  requireInput(robot.verified, 'Supply the robot geometry and its body catalog.');
 
   const journal = await pinned(base, detector.sourceEvidence, true);
   requireInput(journal.schema === 'field-route/body-observations@1' && journal.clock === scenario.clock &&
-    journal.scenarioSha256 === scenarioDigest && journal.geometrySha256 === robot.geometry.sha256 &&
+    journal.scenarioSha256 === scenarioDigest && journal.geometrySha256 === robot.geometrySha256 &&
     Array.isArray(journal.observations), 'Body observer clock, scenario or geometry mismatch.');
   const records = new Map();
   for (const record of journal.observations) {
@@ -96,7 +129,7 @@ async function readBodyObservations(base, scenario, scenarioDigest, detector) {
   const observations = new Map();
   for (const event of bodyEvents) {
     const row = records.get(event.id);
-    requireInput(!Object.hasOwn(event, 'piece') && bodies.has(event.robotBody) &&
+    requireInput(!Object.hasOwn(event, 'piece') && scenario.robotBodies.includes(event.robotBody) &&
       row?.robotBody === event.robotBody && row.timeS === event.timeS && named(row.criterion) && named(row.unit),
       'Body observation subject, time or criterion mismatch.');
     const key = JSON.stringify([row.measurement?.file, row.measurement?.sha256]);
@@ -106,7 +139,7 @@ async function readBodyObservations(base, scenario, scenarioDigest, detector) {
       'Supply a numeric body observation and its project threshold.');
     requireInput(row.comparison === 'above' ? value > row.threshold : value <= row.threshold,
       'Pinned body measurement does not meet the observation threshold.');
-    observations.set(event.id, {scope: robot.scope, geometrySha256: robot.geometry.sha256, criterion: row.criterion,
+    observations.set(event.id, {scope: robot.scope, geometrySha256: robot.geometrySha256, criterion: row.criterion,
       value, unit: row.unit, comparison: row.comparison, threshold: row.threshold, measurement: row.measurement, path: row.path});
   }
   return observations;
@@ -142,7 +175,8 @@ export async function reviewFieldRoute(file) {
   }
   const missing=[];
   for (const key of ['field','robot','transform','trajectory']) {
-    if (s.sources?.[key]) await pinned(base,s.sources[key]); else missing.push(key);
+    if (!s.sources?.[key]) missing.push(key);
+    else if (key !== 'robot') await pinned(base,s.sources[key]);
   }
   const inventory=s.sources?.field ? await loadInventory(req.inventory,s,(ref,json=true)=>pinned(base,ref,json)) : null;
   for (const journal of [route,detector]) {
@@ -162,7 +196,8 @@ export async function reviewFieldRoute(file) {
     if(r.method==='coupled-contact-response') await pinned(base,r.dynamicsEvidence);
     evidence.push({...r,source:ref.sha256});
   }
-  const bodyObservations = await readBodyObservations(base, s, req.scenario.sha256, detector);
+  const robotCoverage = await reviewRobotCatalog(base, s);
+  const bodyObservations = await readBodyObservations(base, s, req.scenario.sha256, detector, robotCoverage);
   const seen=new Set();
   const materialContacts=evidence.filter(materialContact).map(r=>{
     const matches=route.intervals.filter(i=>i.fromS===r.fromS && i.toS===r.toS);
@@ -200,12 +235,12 @@ export async function reviewFieldRoute(file) {
     let routeStatus=declaredRouteStatus;
     if (declaredRouteStatus==='infeasible' && !qualifiedContacts.length) routeStatus='pending';
     if (declaredRouteStatus==='supported' && (!inventory || inventoryGaps.length)) routeStatus='pending';
-    const wholeFieldStatus=routeStatus==='supported' && (inventory?.scope.kind!=='whole-field' || bodyObservation?.scope==='subassembly')?'pending':routeStatus;
+    const wholeFieldStatus=routeStatus==='supported' && (inventory?.scope.kind!=='whole-field' || !robotCoverage.verified || robotCoverage.scope!=='assembly')?'pending':routeStatus;
     return {detectorEvent:event, ...(bodyObservation ? {bodyObservation} : {}), routeStatus, wholeFieldStatus, declaredRouteStatus, gaps, inventoryGaps, contacts,qualifiedContacts};
   });
   return {schema:'field-route/result@2',scenarioSha256:req.scenario.sha256,routeSha256:req.route.sha256,
     inventorySha256:req.inventory?.sha256??null,inventoryScope:inventory?.scope??null,
-    detectorSha256:req.detector.sha256,missingRegistration:missing,events,
+    detectorSha256:req.detector.sha256,missingRegistration:missing,robotCoverage,events,
     scope:'Supplied route and recorded detector events. Rules, actual field scoring and physical qualification are independent.'};
 }
 
