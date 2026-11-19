@@ -6,7 +6,7 @@ Use this shared reference from previsualization, mechanism CAD or troubleshootin
 
 Name the task and observable outcome: acquire, retain during a specified motion, transfer, or release. Define coordinate frames, units, parts/versions, start state and state transitions. Separate commanded goals from measured/simulated states. Include simultaneous actions and realistic recovery paths, not only an ideal stopped robot.
 
-Classify every limit: physical geometry/stop; season rule with exact source/version; component rating; measured capability; chosen study extent; unsupported model regime; or numerical guard. An arbitrary study box is not a physical wall. A model-domain rejection is unknown, not proof the design fails. Do not remove it until dependent assumptions and coverage are extended; see the boundary contract in simulator-equivalence.md.
+Classify each limit by its source. Record physical stops, the governing rule and edition, component ratings and measured capabilities. Track the chosen study extent, supported model range and numerical guards separately. When a candidate exceeds the model range, its feasibility remains unknown. Extend the dependent obstacle filters and coverage before repeating the test. [Gates when connecting or changing models](simulator-selection.md#gates-when-connecting-or-changing-models)
 
 ## 2. Make variation and uncertainty explicit
 

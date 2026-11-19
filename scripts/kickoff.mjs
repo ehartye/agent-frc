@@ -11,6 +11,26 @@ const plugin = new URL('../', import.meta.url);
 const positive = n => Number.isFinite(n) && n > 0;
 const label = s => typeof s === 'string' && s.trim().length > 0;
 
+function verifyMatchClock(phases, periods) {
+  let phaseIndex = 0;
+  let elapsedTicks = 0;
+  for (const period of periods) {
+    const phase = phases[phaseIndex];
+    const parent = period.scoringPhase === undefined ? period.name : period.scoringPhase;
+    if (!phase || parent !== phase.name) {
+      throw Error('Rehearsal period ' + period.name + ' must belong to the next scoring phase: ' + (phase?.name ?? 'match already complete'));
+    }
+    elapsedTicks += period.seconds * 20;
+    const phaseTicks = phase.seconds * 20;
+    if (elapsedTicks > phaseTicks) throw Error('Rehearsal exceeds the scoring clock for ' + phase.name);
+    if (elapsedTicks === phaseTicks) {
+      phaseIndex++;
+      elapsedTicks = 0;
+    }
+  }
+  if (phaseIndex < phases.length) throw Error('Rehearsal does not complete the scoring clock for ' + phases[phaseIndex].name);
+}
+
 function sourceLocator(s) {
   if(!label(s) || s!==s.trim() || /[\u0000-\u001f\u007f]/u.test(s))return false;
   if(/^https?:\/\//i.test(s)){
@@ -58,7 +78,7 @@ export function validateProfile(p) {
     const count=n=>Number.isSafeInteger(n) && n>=0;
     if (!label(source) || ![inventory,phases,targets].every(a=>Array.isArray(a) && a.length) ||
         !inventory.every(i=>label(i.piece) && count(i.total) && label(i.distribution)) ||
-        !phases.every(v=>label(v.name) && positive(v.seconds)) ||
+        !phases.every(v=>label(v.name) && positive(v.seconds)) || new Set(phases.map(v=>v.name)).size!==phases.length ||
         !targets.every(t=>label(t.name) && inventory.some(i=>i.piece===t.piece) &&
           Array.isArray(t.points) && t.points.length===phases.length && t.points.every(count) &&
           (t.cap===undefined || count(t.cap)))) throw Error('Invalid scoring profile inventory, phases or targets.');
@@ -94,6 +114,8 @@ export function validateProfile(p) {
       !Array.isArray(r.periods) || !labels(r.periods.map(v=>v.name)) ||
       !r.periods.every(v=>positive(v.seconds) && Number.isSafeInteger(v.seconds*20)) ||
       !r.programs || !Object.keys(r.programs).length) throw Error('Invalid rehearsal geometry, setups, starts or periods.');
+    if (p.scoring) verifyMatchClock(p.scoring.phases,r.periods);
+    else if (r.periods.some(v=>v.scoringPhase!==undefined)) throw Error('A rehearsal scoringPhase needs a scoring clock.');
     for(const ob of r.obstacles){
       // Require a consistently wound convex polygon with no degenerate edges.
       let sign=0;

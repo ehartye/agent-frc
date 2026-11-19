@@ -1,5 +1,5 @@
 {
-  "as_of": "2026-11-18",
+  "as_of": "2026-11-19",
   "sources": [
     {
       "title": "Season Materials",
@@ -40,12 +40,13 @@
       "id": "P06",
       "seasons": [],
       "authority_state": "technical",
-      "reviewed": "2026-11-15",
+      "reviewed": "2026-11-19",
       "review_due": "2026-12-15",
       "topics": [
         "Java",
         "commands",
-        "modes"
+        "modes",
+        "autonomous"
       ],
       "designUse": "Which subsystem owns the actuator while two commands overlap?"
     },
@@ -122,9 +123,9 @@
       "id": "P14",
       "seasons": [],
       "authority_state": "technical",
-      "reviewed": "2026-11-15",
+      "reviewed": "2026-11-19",
       "review_due": "2026-12-15",
-      "topics": [],
+      "topics": ["mechanisms", "joints"],
       "designUse": "Which joint axis, limits and parent represent the intended motion?"
     },
     {
