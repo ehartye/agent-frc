@@ -106,3 +106,7 @@ function updateRate(){
     'Enter a positive whole piece count and positive times within the field limits.';
 }
 form.addEventListener('input',updateRate);form.addEventListener('submit',e=>e.preventDefault());updateRate();
+
+document.querySelectorAll('.journey-map [data-chapter]').forEach(link=>{
+  link.addEventListener('click',()=>{ document.getElementById(link.dataset.chapter).open=true; });
+});

@@ -1,0 +1,11 @@
+{
+  "revision": "desk-fixture-r2",
+  "basis": "synthetic teaching data",
+  "configuration": {"wheels": 4, "trackM": 0.5, "reference": "center of chassis"},
+  "cases": [
+    {"id": "development", "elapsedS": 2.4, "finalLateralErrorMm": 3},
+    {"id": "evaluation-a", "finalLateralErrorMm": 4},
+    {"id": "evaluation-b", "finalLateralErrorMm": 12},
+    {"id": "evaluation-c", "finalLateralErrorMm": null}
+  ]
+}

@@ -1,6 +1,6 @@
 # Native Fusion authoring and handoff checks
 
-Choose the required deliverable with the project owner. If the project requires a native Fusion file, scripts, MCP and headless geometry are implementation methods, not substitutes for that file. Verify an actual saved/reopened Fusion design. This is a project-specific requirement, not a universal restriction on every Agent FRC project.
+Use Fusion for the student design and handoff. Verify a saved and reopened native design, including any linked components. Agree on the authorized project location and archive form with the team. Record a concrete engineering reason for any external shape authoring and how the selected result returns to Fusion. Use exact manufacturer models for purchased parts wherever available.
 
 ## Before changing a document
 

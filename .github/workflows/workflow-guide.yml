@@ -12,6 +12,11 @@ on:
       - 'scripts/kickoff*.mjs'
       - 'scripts/field-rehearsal*.mjs'
       - 'examples/kickoff/training-field.json'
+      - 'examples/highlights/**'
+      - 'examples/swerve/**'
+      - '**/README.md'
+      - 'README.md'
+      - 'scripts/robot-highlights.mjs'
   workflow_dispatch:
 permissions:
   contents: read
@@ -26,6 +31,7 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
+      - run: python examples/swerve/check-readme-preview.py
       - run: node .github/pages/build.mjs artifacts/workflow-guide
       - if: github.event_name != 'pull_request'
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5

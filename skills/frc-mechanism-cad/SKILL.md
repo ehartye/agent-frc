@@ -4,6 +4,14 @@ description: "Use when planning an FRC intake, launcher, mechanism, Fusion CAD m
 ---
 # Mechanism and CAD evidence plan
 
+When the project has not specified a drivetrain, start with four-module swerve and use the [module selection workflow](../frc-swerve/SKILL.md) before committing mounting interfaces. Follow a specified drivetrain for that project.
+
+Use **Autodesk Fusion as the student authoring environment**. Start from the project's active Fusion design. Maintain student-editable sketches, parameters, components, joints and drawings there. Hand off a saved version and a reopened F3D or F3Z archive with linked components resolved. Record which features a student can edit and which came from imported solids.
+
+For each purchased part, look for the manufacturer's model of the exact part number, generation and installed configuration. Import an official STEP into Fusion when the supplier provides that format. Verify units, revision, mounting datums, occurrence count and installed orientation against the manufacturer drawing. Record the source, retrieval date, configuration, file digest and redistribution terms in the project's parts register. Keep restricted geometry in the authorized library and give students retrieval and relink instructions.
+
+External shape authoring requires a project-specific reason why that operation is impractical in Fusion, the result it enables, and a path back into the student assembly. For a large scripted family of candidates, for example, preserve the generator and its inputs and import the chosen solid into Fusion. Where an exact purchased model cannot be obtained, record the failed lookup or mismatch, mark the replacement as a proxy, cite its dimensional basis and identify which design decisions remain open.
+
 Before selecting parts or combining design changes, use the [assembly accounting check](../../docs/assembly-accounting.md) to reconcile installed instances, supplied articles and inspection mass. When a later revision replaces a candidate part, select the installing change first and record each revision’s own signed net mass. Trace the comparison limit to the project’s selected rule or budget before relying on a final margin.
 
 When a saved assembly replaces a temporary CAD document, use the [native study replay procedure](../../docs/native-study-replay.md) to verify the destination, assembly revision and moving geometry before repeating a clearance query. Save the binding and pose inputs in the design project.

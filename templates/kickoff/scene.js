@@ -12,7 +12,7 @@ function fieldScene(canvas, profile, state, place) {
     canvas.width = Math.round(width * ratio);
     canvas.height = Math.round(height * ratio);
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-    ctx.fillStyle = '#123338';
+    ctx.fillStyle = '#142f63';
     ctx.fillRect(0, 0, width, height);
     const c = Math.cos(camera.yaw), s = Math.sin(camera.yaw);
     const up = Math.sin(camera.tilt), lift = Math.cos(camera.tilt);
@@ -45,13 +45,13 @@ function fieldScene(canvas, profile, state, place) {
       ctx.stroke();
     }
     const L=field.length, W=field.width;
-    path(rehearsal.supported?rehearsal.geom.boundary:[[0,0],[L,0],[L,W],[0,W]], '#a9d4c9','#245158');
+    path(rehearsal.supported?rehearsal.geom.boundary:[[0,0],[L,0],[L,W],[0,W]], '#d6e5f5','#2c4c70');
     ctx.save();ctx.clip();
-    for(let x=36;x<L;x+=36) path([[x,0],[x,W]],'#40696c');
-    for(let y=36;y<W;y+=36) path([[0,y],[L,y]],'#40696c');
-    path([[L/2,0],[L/2,W]],'#afc8bd');
+    for(let x=36;x<L;x+=36) path([[x,0],[x,W]],'#486988');
+    for(let y=36;y<W;y+=36) path([[0,y],[L,y]],'#486988');
+    path([[L/2,0],[L/2,W]],'#d2e2ef');
     if(study) {
-      for(const peer of study.peers) for(const leg of peer.paths) path(leg,peer.alliance==='red'?'#b96d74':peer.alliance==='blue'?'#669be0':'#669295');
+      for(const peer of study.peers) for(const leg of peer.paths) path(leg,peer.alliance==='red'?'#b96d74':peer.alliance==='blue'?'#669be0':'#94a9c0');
       for(const h of study.hot) {
         const [px,py]=project(...h.point);
         ctx.fillStyle=h.count>=2?'#d89569':'#ae9d70';ctx.beginPath();ctx.arc(px,py,3,0,Math.PI*2);ctx.fill();
@@ -85,24 +85,24 @@ function fieldScene(canvas, profile, state, place) {
     ]});
     for(const obj of objects.sort((a,b)=>depth(b.x,b.y)-depth(a.x,a.y))) {
       const roof=obj.points.map(([x,y])=>[x,y,obj.height]);
-      const edge=obj.robot?'#edffbd':'#9ac3bf';
+      const edge=obj.robot?'#fff0cc':'#b5cede';
       const faces=obj.points.map((p,i)=>{
         const j=(i+1)%roof.length, q=obj.points[j];
         return {points:[p,q,roof[j],roof[i]], depth:depth((p[0]+q[0])/2,(p[1]+q[1])/2)};
       }).sort((a,b)=>b.depth-a.depth);
-      for(const face of faces) path(face.points,edge,obj.robot?'#7fa84d':'#42696a');
-      path(roof,edge,obj.robot?'#ceeb8c':'#557c79');
-      if(obj.robot) path([[...rotate(0,0),obj.height],[...rotate(halfL,0),obj.height]],'#234234');
+      for(const face of faces) path(face.points,edge,obj.robot?'#ba832d':'#476888');
+      path(roof,edge,obj.robot?'#ffd078':'#6285a5');
+      if(obj.robot) path([[...rotate(0,0),obj.height],[...rotate(halfL,0),obj.height]],'#49340b');
       let peak=obj.height;
       if(!obj.robot) {
         for(const level of profile.levels) {
           const ring=obj.points.map(([x,y])=>[x,y,level.height]);
-          path([...ring,ring[0]],level===profile.levels[state.level]?'#ffcb77':'#86aaa5');
+          path([...ring,ring[0]],level===profile.levels[state.level]?'#ffcb77':'#abc2d2');
           peak=Math.max(peak,level.height);
         }
       }
       const [px,py]=project(obj.x,obj.y,peak);
-      ctx.fillStyle=obj.robot?'#edffbd':'#e4f1ef';
+      ctx.fillStyle=obj.robot?'#fff0cc':'#f5f9ff';
       ctx.font='600 13px system-ui';ctx.textAlign='center';ctx.fillText(obj.name,px,py-12);
     }
   }
