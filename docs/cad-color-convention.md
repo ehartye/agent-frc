@@ -41,6 +41,8 @@ Run `python <plugin>/scripts/component_palette.py <robot-project>` to print the 
 
 ### Publish a colored assembly
 
+Give printed markings their own viewing role and label their solid rows with `"representation": "appearance-overlay"`. The orbit viewer biases raster depth for a group made entirely of cosmetic overlays so thin print remains visible on its supporting surface. Physical solids in a mixed group keep their original depth. Check legibility at the default camera angle, after rotating, and from the reverse side.
+
 In the project’s `cad-showcase.json`, set `appearances` to the relative path of the selected assembly’s part-to-role map. For an `agent-frc/assembly-appearances@1` map, set `sourceSha256` to the hash of the public STEP file. List every solid in STEP traversal order under `solids`. Each row needs a unique `id` and a resolved `role`. Include `boundsMm` as `[xmin, ymin, zmin, xmax, ymax, zmax]` from the registered assembly to check that assignments follow the correct solids, including identical parts mounted in different positions.
 
 Run `export-showcase-cad.py`, then `cad-readmes.py --update` with the project root. The colored receipt binds the part map, effective palette and colored mesh ranges. The highlights builder reads that receipt when producing the hosted site. After changing a palette or a part assignment, regenerate the still and viewer together. Run the installed tools directly or keep the Python helpers, palette reference and viewer template from the same plugin version together in vendored project tooling.

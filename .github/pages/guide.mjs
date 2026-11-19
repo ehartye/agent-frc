@@ -44,7 +44,7 @@ export const stages = [
   }
 ];
 export const purpose = {
-  'frc-robot-highlights': 'Rotate the CAD assembly, watch mechanism motion and trace each result to its source. Give the model a project backdrop and publish the styled showcase on GitHub Pages.',
+  'frc-robot-highlights': 'Rotate the CAD assembly, inspect printed markings and watch mechanism motion. Publish the styled showcase and its source evidence on GitHub Pages.',
   'frc-swerve': 'Connect module geometry, two independent motions and feedback conventions to drivetrain verification.',
   'frc-season': 'Pin the season, applicable manual edition and source boundaries.',
   'frc-case-study': 'Trace game objectives through strategy, subsystems and engineering evidence.',
