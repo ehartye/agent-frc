@@ -99,12 +99,12 @@ class Glb:
         scene=indexed(self.doc["scenes"],self.doc.get("scene",0),"scene")
         for root in scene["nodes"]: visit(root,IDENTITY)
 
-    def accessor(self, index, *, positions):
+    def accessor(self, index, *, positions=False, times=False):
         a=indexed(self.doc["accessors"],index,"accessor")
         view=indexed(self.doc["bufferViews"],a["bufferView"],"buffer view")
         require(view["buffer"]==0 and not a.get("sparse") and not a.get("normalized"),
                 "Unsupported accessor storage")
-        formats={5126:"<fff"} if positions else {5121:"<B",5123:"<H",5125:"<I"}
+        formats={5126:"<fff"} if positions else {5126:"<f"} if times else {5121:"<B",5123:"<H",5125:"<I"}
         require(a.get("type")==("VEC3" if positions else "SCALAR") and a.get("componentType") in formats,
                 "Unsupported position or triangle index")
         record=struct.Struct(formats[a["componentType"]])

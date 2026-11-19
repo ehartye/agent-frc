@@ -1,0 +1,64 @@
+{
+  "schema": "agent-frc/replay-chapters@1",
+  "revision": "linear-fixture-r1",
+  "media": {
+    "file": "stroke.webm",
+    "sha256": "e7612abb55808c7ed6740076450c61c1dc0eee00eeb162fcd3f2f81ddde2bd83"
+  },
+  "trace": {
+    "file": "stroke-checkpoints.json",
+    "sha256": "60a2d660cc773d992957de724be6368fd8fe4e44a542389ada8e91e5665903a8"
+  },
+  "observations": {
+    "file": "stroke-targets.json",
+    "sha256": "8251aa57cf4e145942ea74f5089d9380293aae53445ee6289d4684d9cab4691d"
+  },
+  "chapters": [
+    {
+      "id": "stroke-0",
+      "label": "Extend the jaw",
+      "start": "/checkpoints/0",
+      "end": "/checkpoints/1",
+      "sync": [
+        {
+          "clipS": 0,
+          "runS": 10
+        },
+        {
+          "clipS": 2,
+          "runS": 12
+        }
+      ],
+      "events": []
+    },
+    {
+      "id": "stroke-1",
+      "label": "Retract and release",
+      "start": "/checkpoints/1",
+      "end": "/checkpoints/2",
+      "join": {
+        "kind": "checkpoint",
+        "tolerance": 0
+      },
+      "sync": [
+        {
+          "clipS": 2,
+          "runS": 12
+        },
+        {
+          "clipS": 4,
+          "runS": 14
+        }
+      ],
+      "events": [
+        {
+          "id": "clear",
+          "pointer": "/clear",
+          "type": "trailing-edge-crossing",
+          "timeS": 13.1,
+          "outcome": "reached"
+        }
+      ]
+    }
+  ]
+}
