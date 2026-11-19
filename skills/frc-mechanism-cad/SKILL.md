@@ -66,7 +66,7 @@ Use [define, check and iterate the operating space](../../docs/operating-space.m
 
 For replacements or removals, use [native revision persistence](../../docs/native-revision.md). Check exact occurrence/body instances, empty-container ancestry, after-edit/recompute/reopen inventories and required persistent features. A delete return value or equal body count is insufficient. Recheck assembly interfaces independently from the game-piece path and preserve all new or increased interference witnesses.
 
-Read [native Fusion handoff checks](../../docs/native-fusion-handoff.md) when Fusion is selected or required. Confirm the project-specific output requirement; scripts and MCP may author it, but a required Fusion file must actually be saved and reopened. Verify grounding, transforms, symmetric edits, stored joint limits and complete native/export inventories, preserving supplier-content privacy and imported-versus-parametric distinctions.
+Use the [native Fusion handoff checks](../../docs/native-fusion-handoff.md) for the student assembly. Save and reopen the selected archive. Verify grounding, repeated physical placements, symmetric edits, stored joint limits and complete native/export inventories. Identify supplier access requirements and which features students can edit.
 
 ## Standing viewing convention
 
