@@ -30,7 +30,7 @@ Use the optional `media` array for recorded views. Each entry has `asset` (a loc
 Run the [offline page builder](../../scripts/robot-highlights.mjs) from the installed plugin with the project manifest and the desired site directory:
 
 ```sh
-node <plugin>/scripts/robot-highlights.mjs <project>/highlights/project.json <project>/site/robot
+node <plugin>/scripts/robot-highlights.mjs <project>/highlights.json <project>/docs/robot
 ```
 
 Open the generated `index.html` on desktop and at a narrow viewport, follow the source links and play each film. Use a fresh output directory for a clean publication artifact. Regeneration replaces the generated page while preserving an independently authored index. Link the finished page from the project’s existing navigation. Publish through the project’s chosen host when authorized. On later revisions, revisit every changed configuration, claim and media caption and regenerate from the updated evidence.

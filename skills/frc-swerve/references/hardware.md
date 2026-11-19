@@ -26,4 +26,6 @@ For chassis packaging, map the four steering axis centers relative to one robot 
 
 ## Inspect the teaching assembly
 
+Before reusing a purchased module at several corners, independently register each wheel center, axle direction, floor datum and fixed housing witness in the robot frame. After saving and reopening in Fusion, inspect the physical tread and housing for each full occurrence path. Apply the evaluated leaf transform once to native geometry and compare signed bounds, floor height, wheel center and housing orientation. A repeated component definition can have different assembly context at each instance. Reject a collapsed envelope or duplicate center, and deliberately rotate one housing to check that a correct tread center alone cannot pass. Keep this static placement evidence separate from full-azimuth clearance.
+
 Open the [original Fusion module](../../../examples/swerve/independent-swerve.f3d) and its [geometry and verification notes](../../../examples/swerve/README.md). Ground the mounting interface and isolate the two revolutes. Observe the fork when steering, then the axle when rolling. The belt spans and pulley pitch envelopes explain the drive path. They leave detailed tooth geometry, belt selection and tensioning open.

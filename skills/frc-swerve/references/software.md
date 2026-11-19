@@ -1,5 +1,7 @@
 # Connect the CAD frame to control and localization
 
+Use [raw encoder replay](../../../examples/swerve/README.md#check-raw-encoder-captures) when steering contributes to the drive motor reading or the absolute sensor reports a reversed phase. Capture raw absolute phase, accumulated rotor turns and time at all four corners. Test the selected gearing, forward zero, independent signs and signed steer-to-drive coupling before crediting wheel motion. Derive those values from the selected configuration. Keep measured steering phase separate from chassis gyro heading.
+
 Use the [offline encoder replay](../../../examples/swerve/README.md#reproduce-the-checks) to compare signed wheel vectors with their expected chassis motion. The same example checks rotations about the chassis center and an offset pivot.
 
 Use robot +X forward, +Y left and positive yaw counterclockwise when viewed from above. For a wheel centered at (x,y) metres, a chassis velocity (vx,vy,ω) produces a local velocity (vx−ωy, vy+ωx). Its magnitude sets wheel speed, and atan2 sets azimuth. Use the same module order in construction, commands and returned positions. Transform a field-relative request using the measured robot heading exactly once. [WPILib kinematics](https://docs.wpilib.org/en/stable/docs/software/kinematics-and-odometry/swerve-drive-kinematics.html)

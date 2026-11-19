@@ -1,5 +1,7 @@
 # Native occurrence ancestry and source identity
 
+Check physical placement separately when a native component appears more than once. A correct instance count and parent chain can coexist with coincident solids. Compare at least two independently registered physical witnesses per placement after reopening the assembly. The [swerve placement exercise](../examples/swerve/check_four_corners.py) checks the tread center, floor height and offset housing at each station, then introduces a duplicate center and a rotated housing in a disposable document.
+
 Run `npm run native:identity -- expected-manifest.json observed-receipt.json`. Exit 0 means supplied identities match, exit 1 means a well-formed mismatch, and exit 2 means malformed or unresolved evidence. This compares an independent body inventory with source identities resolved through supplied occurrence ancestry; it does not open CAD, authenticate a capture, resolve transforms or approve clearance. Evidence basis stays `synthetic`, `native-observed` or `human-reported`.
 
 Capture actual parent-child links. Do not infer ancestry by splitting display names, use body labels as source IDs, or flatten imported component trees. Instance IDs must distinguish repeated occurrences of one source component. Bind the inventory to the exact saved/reopened archive. A changed export or enumeration requires an independently reconciled mapping.
