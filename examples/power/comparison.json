@@ -1,0 +1,43 @@
+{
+  "schema": "frc-power-comparison/v1",
+  "actionId": "index-carriage",
+  "busId": "distribution",
+  "clockId": "test-clock",
+  "window": {
+    "fromS": 0,
+    "toS": 1
+  },
+  "maxSampleIntervalS": 0.5,
+  "requiredLoads": [
+    "carriage",
+    "fan"
+  ],
+  "locations": [
+    {
+      "id": "carriage-inlet",
+      "minV": 9
+    }
+  ],
+  "trials": [
+    {
+      "id": "overlap",
+      "condition": "Fan starts during travel",
+      "trace": {
+        "file": "overlap.json",
+        "sha256": "91153184c164151239aa3d0b4dcd1c5f34862134fc785551c50e5fd7d1df9683"
+      }
+    },
+    {
+      "id": "stagger",
+      "condition": "Fan starts after travel",
+      "trace": {
+        "file": "stagger.json",
+        "sha256": "9c2f0192c149c5488946adfb8d52bbbac582f2de149e4bc2dbe1f75a110e882e"
+      }
+    }
+  ],
+  "fallback": {
+    "description": "Move the fan startup until after carriage travel",
+    "trialId": "stagger"
+  }
+}

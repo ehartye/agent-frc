@@ -1,0 +1,92 @@
+{
+  "schema": "frc-power-trace/v1",
+  "actionId": "index-carriage",
+  "busId": "distribution",
+  "clockId": "test-clock",
+  "trialId": "overlap",
+  "condition": "Fan starts during travel",
+  "units": {
+    "time": "s",
+    "voltage": "V",
+    "current": "A"
+  },
+  "provenance": {
+    "kind": "modeled",
+    "source": "Invented constant-current bench exercise. A common 11 V source has 0.15 ohm series resistance and the carriage branch adds 0.05 ohm."
+  },
+  "rows": [
+    {
+      "fromS": 0,
+      "toS": 0.5,
+      "voltages": [
+        {
+          "location": "carriage-inlet",
+          "kind": "minimum",
+          "valueV": 8.3
+        }
+      ],
+      "currents": [
+        {
+          "id": "carriage",
+          "kind": "source",
+          "valueA": 6
+        },
+        {
+          "id": "fan",
+          "kind": "source",
+          "valueA": 10
+        }
+      ]
+    },
+    {
+      "fromS": 0.5,
+      "toS": 1,
+      "voltages": [
+        {
+          "location": "carriage-inlet",
+          "kind": "minimum",
+          "valueV": 9.8
+        }
+      ],
+      "currents": [
+        {
+          "id": "carriage",
+          "kind": "source",
+          "valueA": 6
+        },
+        {
+          "id": "fan",
+          "kind": "source",
+          "valueA": 0
+        }
+      ]
+    },
+    {
+      "fromS": 1,
+      "toS": 1.5,
+      "voltages": [
+        {
+          "location": "carriage-inlet",
+          "kind": "minimum",
+          "valueV": 11
+        }
+      ],
+      "currents": [
+        {
+          "id": "carriage",
+          "kind": "source",
+          "valueA": 0
+        },
+        {
+          "id": "fan",
+          "kind": "source",
+          "valueA": 0
+        }
+      ]
+    }
+  ],
+  "outcome": {
+    "description": "No carriage position outcome supplied",
+    "status": "unknown"
+  }
+}

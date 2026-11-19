@@ -1,5 +1,14 @@
 'use strict';
 
+const powerChoice = document.getElementById('power-choice');
+function selectPowerTrial() {
+  document.querySelectorAll('[data-power-trial]').forEach(result => {
+    result.hidden = result.dataset.powerTrial !== powerChoice.value;
+  });
+}
+powerChoice.addEventListener('change', selectPowerTrial);
+selectPowerTrial();
+
 const field=JSON.parse(document.getElementById('fieldModel').textContent);
 const pitch=document.getElementById('pitch');
 const ctx=pitch.getContext('2d');

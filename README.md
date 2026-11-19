@@ -10,6 +10,8 @@ Agent FRC helps students turn a new game manual into robot design decisions. Ope
 
 ## Run from a checkout
 
+Compare the voltage available to a device when two loads overlap or run at different times. Try the [shared electrical supply exercise](docs/shared-power-review.md), then supply the project's own traces and operating requirements.
+
 To repeat a geometric check on a saved Fusion assembly, use the [native study replay procedure](docs/native-study-replay.md). It verifies the document and geometry before testing the chosen poses.
 
 Use Node.js and npm. See the [local marketplace guide](docs/local-plugin.md) to stage and install this checkout. The plugin works with project files and has no required vault or robot connection.

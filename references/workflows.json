@@ -161,7 +161,8 @@
         "Match the device-specific manual and changelog before interpreting indicators",
         "Separate command, requested output, sensor reading and physical state",
         "Preserve fault history; formulate one software/log hypothesis before a qualified physical procedure",
-        "Use the electrical evidence review to separate terminal acceptance, circuit protection, model-specific brownout behavior and missing current telemetry"
+        "Use the electrical evidence review to separate terminal acceptance, circuit protection, model-specific brownout behavior and missing current telemetry",
+        "Use the shared electrical supply review to compare the voltage at the required device during overlapping loads, then check the observed action outcome separately"
       ],
       "acceptance": [
         "A warning indicator is not assumed to inhibit output",
