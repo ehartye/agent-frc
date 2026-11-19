@@ -85,3 +85,22 @@ test('uncertified refinement and stale clock cannot turn an overlapping bound in
   }
   await assert.rejects(run(t,({sweep})=>{sweep.clock='other';}),/clock mismatch/);
 });
+
+test('one clock supports registered body and carried-piece events together', async t => {
+  const result = await run(t, async ({s,d,save}) => {
+    const geometry = s.sources.robot;
+    s.sources.robot = await save('robot-catalog.json', {schema: 'field-route/robot@1', scope: 'assembly',
+      geometry, catalog: geometry, collection: {path: ['bodies'], format: 'ids'}});
+    const expected = await save('scenario-binding.json', s);
+    const event = {id: 'datum-clears-gate', robotBody: 'frame', timeS: 1};
+    d.events.push(event);
+    const measurement = await save('frame-gap.json', {gapM: .1});
+    d.sourceEvidence = await save('observer.json', {schema: 'field-route/body-observations@1',
+      clock: s.clock, scenarioSha256: expected.sha256, geometrySha256: geometry.sha256,
+      observations: [{...event, criterion: 'frame clears the gate', unit: 'm',
+        measurement, path: ['gapM'], comparison: 'above', threshold: 0}]});
+  });
+  assert.deepEqual(result.events.map(row => row.routeStatus), ['supported', 'supported']);
+  assert.equal(result.events[0].detectorEvent.piece, 'parcel');
+  assert.equal(result.events[1].bodyObservation.value, .1);
+});

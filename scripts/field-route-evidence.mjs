@@ -3,7 +3,7 @@ import { createReadStream } from 'node:fs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { loadInventory, inventoryIssues, contactRegistrationIssue } from './route-inventory.mjs';
+import { loadInventory, inventoryIssues, contactRegistrationIssue, collect, valueAt } from './route-inventory.mjs';
 
 const finite = Number.isFinite;
 const named = v => typeof v === 'string' && v.trim().length > 0;
@@ -69,13 +69,56 @@ function evaluateSlice(scenario, slice, route, evidence, until) {
   return issues;
 }
 
+async function readBodyObservations(base, scenario, scenarioDigest, detector) {
+  const bodyEvents = detector.events.filter(event => Object.hasOwn(event, 'robotBody'));
+  if (bodyEvents.length === 0) return new Map();
+
+  const robot = await pinned(base, scenario.sources?.robot, true);
+  requireInput(robot.schema === 'field-route/robot@1' && ['assembly', 'subassembly'].includes(robot.scope),
+    'Supply the robot geometry and its body catalog.');
+  await pinned(base, robot.geometry);
+  const catalog = await pinned(base, robot.catalog, true);
+  const bodyIds = collect(catalog, robot.collection).map(([id]) => id);
+  const bodies = new Set(bodyIds);
+  requireInput(ids(bodyIds) && bodies.size === scenario.robotBodies.length && scenario.robotBodies.every(id => bodies.has(id)),
+    'Scenario body list differs from the pinned robot catalog.');
+
+  const journal = await pinned(base, detector.sourceEvidence, true);
+  requireInput(journal.schema === 'field-route/body-observations@1' && journal.clock === scenario.clock &&
+    journal.scenarioSha256 === scenarioDigest && journal.geometrySha256 === robot.geometry.sha256 &&
+    Array.isArray(journal.observations), 'Body observer clock, scenario or geometry mismatch.');
+  const records = new Map();
+  for (const record of journal.observations) {
+    requireInput(named(record?.id) && !records.has(record.id), 'Duplicate or missing body observation ID.');
+    records.set(record.id, record);
+  }
+  const sources = new Map();
+  const observations = new Map();
+  for (const event of bodyEvents) {
+    const row = records.get(event.id);
+    requireInput(!Object.hasOwn(event, 'piece') && bodies.has(event.robotBody) &&
+      row?.robotBody === event.robotBody && row.timeS === event.timeS && named(row.criterion) && named(row.unit),
+      'Body observation subject, time or criterion mismatch.');
+    const key = JSON.stringify([row.measurement?.file, row.measurement?.sha256]);
+    if (!sources.has(key)) sources.set(key, await pinned(base, row.measurement, true));
+    const value = valueAt(sources.get(key), row.path);
+    requireInput(finite(value) && finite(row.threshold) && ['above', 'at-most'].includes(row.comparison),
+      'Supply a numeric body observation and its project threshold.');
+    requireInput(row.comparison === 'above' ? value > row.threshold : value <= row.threshold,
+      'Pinned body measurement does not meet the observation threshold.');
+    observations.set(event.id, {scope: robot.scope, geometrySha256: robot.geometry.sha256, criterion: row.criterion,
+      value, unit: row.unit, comparison: row.comparison, threshold: row.threshold, measurement: row.measurement, path: row.path});
+  }
+  return observations;
+}
+
 export async function reviewFieldRoute(file) {
   const base=path.dirname(path.resolve(file));
   const req=JSON.parse(await readFile(file,'utf8'));
   const [s,route,detector]=await Promise.all([req.scenario,req.route,req.detector].map(ref=>pinned(base,ref,true)));
   requireInput(s.schema==='field-route/scenario@1' && route.schema==='field-route/sweep@1'
     && detector.schema==='field-route/events@1','Unrecognized evidence contract.');
-  requireInput(ids(s.robotBodies) && (ids(s.obstacles) || (Array.isArray(s.obstacles) && s.obstacles.length===0)) && ids(s.pieces) && named(s.clock)
+  requireInput(ids(s.robotBodies) && (ids(s.obstacles) || (Array.isArray(s.obstacles) && s.obstacles.length===0)) && Array.isArray(s.pieces) && (!s.pieces.length || ids(s.pieces)) && named(s.clock)
     && finite(s.startS) && finite(s.marginM) && s.marginM>=0,'Invalid scenario inventory, clock or margin.');
   requireInput(s.robotBodies.every(id=>!s.pieces.includes(id) && !s.obstacles.includes(id)),
     'Robot body IDs must be distinct from pieces and obstacles.');
@@ -119,6 +162,7 @@ export async function reviewFieldRoute(file) {
     if(r.method==='coupled-contact-response') await pinned(base,r.dynamicsEvidence);
     evidence.push({...r,source:ref.sha256});
   }
+  const bodyObservations = await readBodyObservations(base, s, req.scenario.sha256, detector);
   const seen=new Set();
   const materialContacts=evidence.filter(materialContact).map(r=>{
     const matches=route.intervals.filter(i=>i.fromS===r.fromS && i.toS===r.toS);
@@ -127,13 +171,14 @@ export async function reviewFieldRoute(file) {
       ...(issue ? {registrationIssue:issue} : {})};
   }).sort((a,b)=>a.timeS-b.timeS);
   const events=detector.events.map(event=>{
-    requireInput(named(event.id) && !seen.has(event.id) && s.pieces.includes(event.piece)
+    requireInput(named(event.id) && !seen.has(event.id) && (bodyObservations.has(event.id) || s.pieces.includes(event.piece))
       && finite(event.timeS) && event.timeS>s.startS,'Duplicate or invalid detector observation.');
     seen.add(event.id);
     let covered=s.startS;
     const gaps=[];
     const inventoryGaps=[];
-    if(inventory?.scope.kind==='whole-field' && !inventory.initial.has(event.piece))
+    const bodyObservation = bodyObservations.get(event.id);
+    if(!bodyObservation && inventory?.scope.kind==='whole-field' && !inventory.initial.has(event.piece))
       inventoryGaps.push({fromS:s.startS,toS:event.timeS,reason:'Detector piece absent from source inventory: '+event.piece});
     for (const slice of slices) {
       if (slice.fromS>=event.timeS) break;
@@ -155,8 +200,8 @@ export async function reviewFieldRoute(file) {
     let routeStatus=declaredRouteStatus;
     if (declaredRouteStatus==='infeasible' && !qualifiedContacts.length) routeStatus='pending';
     if (declaredRouteStatus==='supported' && (!inventory || inventoryGaps.length)) routeStatus='pending';
-    const wholeFieldStatus=routeStatus==='supported' && inventory?.scope.kind!=='whole-field'?'pending':routeStatus;
-    return {detectorEvent:event, routeStatus, wholeFieldStatus, declaredRouteStatus, gaps, inventoryGaps, contacts,qualifiedContacts};
+    const wholeFieldStatus=routeStatus==='supported' && (inventory?.scope.kind!=='whole-field' || bodyObservation?.scope==='subassembly')?'pending':routeStatus;
+    return {detectorEvent:event, ...(bodyObservation ? {bodyObservation} : {}), routeStatus, wholeFieldStatus, declaredRouteStatus, gaps, inventoryGaps, contacts,qualifiedContacts};
   });
   return {schema:'field-route/result@2',scenarioSha256:req.scenario.sha256,routeSha256:req.route.sha256,
     inventorySha256:req.inventory?.sha256??null,inventoryScope:inventory?.scope??null,
