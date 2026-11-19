@@ -8,6 +8,18 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { reviewPower } from '../scripts/power-review.mjs';
 
+test('declared voltage ceilings cannot silently pass a minimum-voltage review', async t => {
+  for (const maxV of [10, null]) {
+    const file = await fixture(t, comparison => { comparison.locations[0].maxV = maxV; });
+    const run = spawnSync(process.execPath, ['scripts/power-review.mjs', file], {
+      cwd: fileURLToPath(new URL('../', import.meta.url)), encoding: 'utf8'
+    });
+    assert.equal(run.status, 1);
+    assert.equal(run.stdout, '');
+    assert.match(run.stderr, /arm-inlet declares maxV.*minimum voltage only/i);
+  }
+});
+
 test('final review explains electrical evidence, each current kind and unknown functional outcomes',async t=>{
   const file=await fixture(t,(_,traces)=>{
     traces[0].provenance.kind='measured';
@@ -302,7 +314,10 @@ test('public command and classroom routes use the neutral bundled comparison',as
   assert.equal(pkg.scripts['power:review'],'node scripts/power-review.mjs');
   const run=spawnSync(process.execPath,['scripts/power-review.mjs','examples/power/comparison.json'],{cwd:root,encoding:'utf8'});
   assert.equal(run.status,0,run.stderr);
-  assert.deepEqual(JSON.parse(run.stdout).trials.map(x=>x.status),['violated','complete']);
+  const report = JSON.parse(run.stdout);
+  assert.equal(report.voltageAssessment,'minimum-only');
+  assert.deepEqual(report.trials.map(x=>x.status),['violated','complete']);
+  assert.match(report.interpretation,/complete for the minimum-voltage check/);
   if (await readFile(path.join(root,'.github/pages/guide.mjs')).catch(()=>null)) {
     const {stages}=await import('../.github/pages/guide.mjs');
     for(const id of ['design','verify']) assert.ok(stages.find(s=>s.id===id).docs.some(([,p])=>p==='docs/shared-power-review.md'));
@@ -322,4 +337,5 @@ test('the Pages exercise shows the two outcomes produced by the real review',asy
   assert.match(html,/data-power-trial="overlap"/);
   assert.match(html,/8\.3 V/);
   assert.match(html,/9\.8 V/);
+  assert.match(html,/voltage ceiling also needs a separate check at that inlet/);
 });

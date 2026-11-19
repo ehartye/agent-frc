@@ -80,6 +80,8 @@ function validateComparison(c) {
   requireInput(Array.isArray(c.locations) && c.locations.length, 'Declare voltage locations');
   unique(c.locations.map(v => v?.id), 'voltage location');
   for (const location of c.locations) {
+    requireInput(!Object.hasOwn(location, 'maxV'),
+      'Location ' + location.id + ' declares maxV. This format checks minimum voltage only. Review the device ceiling separately.');
     requireInput(location.minV == null || finite(location.minV), 'Invalid minimum voltage');
   }
   requireInput(Array.isArray(c.trials) && c.trials.length === 2, 'Compare exactly two trials');
@@ -241,7 +243,7 @@ function assess(c, trial, trace) {
 
 function interpret(trial) {
   const v = trial.limiting;
-  const lines = [trial.condition + ' (' + trial.provenance.kind + ' electrical evidence) is ' + trial.status + '.'];
+  const lines = [trial.condition + ' (' + trial.provenance.kind + ' electrical evidence) is ' + trial.status + ' for the minimum-voltage check.'];
   if (v) {
     const when = v.atS === undefined ? v.fromS + '–' + v.toS + ' s' : v.atS + ' s';
     lines.push('At ' + v.location + ' (' + when + '), the ' + v.kind + ' is ' + v.valueV +
@@ -274,7 +276,7 @@ export async function reviewPower(file) {
       'SHA-256 mismatch for ' + trial.trace.file);
     trials.push(assess(c, trial, parseDocument(bytes)));
   }
-  const report = {schema:'frc-power-review/v1',actionId:c.actionId,busId:c.busId,clockId:c.clockId,
+  const report = {schema:'frc-power-review/v1',voltageAssessment:'minimum-only',actionId:c.actionId,busId:c.busId,clockId:c.clockId,
     window:c.window,requiredLoads:c.requiredLoads,maxSampleIntervalS:c.maxSampleIntervalS,
     trials,interpretation:trials.map(interpret).join(' ')};
   if (c.fallback) {
