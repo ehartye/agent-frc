@@ -56,6 +56,10 @@ Use [project tidying](project-tidying.md) to isolate documents safely: preserve 
 
 Retain minimal native/nested/imported controls, failed appearance attempts, material/volume invariants and final save/reopen captures with any reported graphics recovery. No automated scene-repair tool is installed by this reference.
 
+## Inspect hidden support interfaces
+
+Register hidden and visible physical occurrences, including both the proposed support and any older support still installed. A matching plane coordinate cannot establish the size of the contact patch. [Measure trimmed bearing area and check a replacement against hidden backing](hidden-backing-fit.md).
+
 ## Check volume on the operand being measured
 
 Use the native component solid to measure material volume and the occurrence transform to register it in the assembly. Compare its native direct volume and very-high-accuracy physical properties to an independent calculation. On a temporary copy, record both readings again. The [disposable Fusion volume and machining study](fusion-volume-study.md) reproduces a rotated and translated 24 cm³ plate whose temporary physical properties report zero, including a true 2 cm³ Boolean intersection with six faces. The separate control returns an empty face set across a known 2 cm gap.

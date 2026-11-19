@@ -1,0 +1,173 @@
+{
+  "schema": "backing-fit-plan@1",
+  "intersectionThresholdMm3": 0.01,
+  "locationToleranceMm": 0.001,
+  "support": [
+    "plate:1",
+    "support"
+  ],
+  "replacement": {
+    "remove": [
+      "old:1",
+      "support"
+    ],
+    "replaceWith": [
+      "plate:1",
+      "support"
+    ]
+  },
+  "installed": [
+    {
+      "id": [
+        "cover:1",
+        "cloth"
+      ],
+      "role": "cover",
+      "expectedBoundsMm": [
+        -111,
+        -71,
+        0,
+        111,
+        71,
+        60
+      ],
+      "expectedDisplay": {
+        "bodyBulb": true,
+        "occurrenceVisible": true
+      }
+    },
+    {
+      "id": [
+        "front:1",
+        "wood"
+      ],
+      "role": "backing",
+      "expectedBoundsMm": [
+        100,
+        -60,
+        0,
+        110,
+        60,
+        60
+      ],
+      "expectedDisplay": {
+        "bodyBulb": true,
+        "occurrenceVisible": false
+      }
+    },
+    {
+      "id": [
+        "rear:1",
+        "wood"
+      ],
+      "role": "backing",
+      "expectedBoundsMm": [
+        -110,
+        -60,
+        0,
+        -100,
+        60,
+        60
+      ],
+      "expectedDisplay": {
+        "bodyBulb": true,
+        "occurrenceVisible": false
+      }
+    },
+    {
+      "id": [
+        "left:1",
+        "wood"
+      ],
+      "role": "backing",
+      "expectedBoundsMm": [
+        -110,
+        60,
+        0,
+        110,
+        70,
+        60
+      ],
+      "expectedDisplay": {
+        "bodyBulb": true,
+        "occurrenceVisible": false
+      }
+    },
+    {
+      "id": [
+        "right:1",
+        "wood"
+      ],
+      "role": "backing",
+      "expectedBoundsMm": [
+        -110,
+        -70,
+        0,
+        110,
+        -60,
+        60
+      ],
+      "expectedDisplay": {
+        "bodyBulb": true,
+        "occurrenceVisible": false
+      }
+    },
+    {
+      "id": [
+        "plate:1",
+        "support"
+      ],
+      "role": "structure",
+      "expectedBoundsMm": [
+        90,
+        -40,
+        10,
+        100,
+        40,
+        50
+      ],
+      "expectedDisplay": {
+        "bodyBulb": true,
+        "occurrenceVisible": true
+      }
+    },
+    {
+      "id": [
+        "old:1",
+        "support"
+      ],
+      "role": "structure",
+      "expectedBoundsMm": [
+        95,
+        -20,
+        10,
+        100,
+        20,
+        30
+      ],
+      "expectedDisplay": {
+        "bodyBulb": true,
+        "occurrenceVisible": true
+      }
+    }
+  ],
+  "bearing": [
+    {
+      "id": [
+        "front:1",
+        "wood"
+      ],
+      "minimumMm2": 2799.99,
+      "maximumMm2": 2800.01
+    }
+  ],
+  "scopeNotes": {
+    "dimensions": "Practice specimen only. A competition design supplies its own dated rule edition and limits.",
+    "attachment": "No fasteners specified in the practice specimen.",
+    "impact": "No load or strength evidence."
+  },
+  "archives": {
+    "candidate": "a8eea8c6d4a49aa7e4b9923aa21bbdaee535e938ddc6fed97415381fafb2f2e7",
+    "successor": "443909a741631cd2c8b8d86222f59d52328551bbfdd499d3c92dc5e0eda6f547"
+  }
+}
