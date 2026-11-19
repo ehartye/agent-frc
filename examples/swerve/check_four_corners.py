@@ -3,6 +3,8 @@ import hashlib
 import json
 import math
 from pathlib import Path
+from shutil import copyfile
+from tempfile import TemporaryDirectory
 
 import adsk.core
 import adsk.fusion
@@ -74,10 +76,17 @@ def exercise(source, output):
         root = design.rootComponent
         first = root.occurrences.addNewComponent(adsk.core.Matrix3D.create())
         first.component.name = 'Classroom pod'
-        manager.importToTarget2(manager.createFusionArchiveImportOptions(str(source)),first.component)
+        # Fusion may materialize an _XRef_ folder beside an imported archive.
+        with TemporaryDirectory() as work:
+            input_copy = Path(work)/source.name
+            copyfile(source,input_copy)
+            manager.importToTarget2(manager.createFusionArchiveImportOptions(str(input_copy)),first.component)
         first.isGrounded = False
-        first.transform2 = placement(*STATIONS[0])
-        pods = [first] + [root.occurrences.addExistingComponent(first.component,placement(*p)) for p in STATIONS[1:]]
+        pods = [first]
+        for _ in STATIONS[1:]:
+            pods.append(root.occurrences.addExistingComponent(first.component,adsk.core.Matrix3D.create()))
+        for pod, pose in zip(pods,STATIONS,strict=True):
+            pod.transform2 = placement(*pose)
         paths = [pod.fullPathName for pod in pods]
         if len(set(paths)) != 4:
             raise ValueError('Expected four distinct physical instances.')
@@ -96,11 +105,23 @@ def exercise(source, output):
         original = changed.transform2
         controls = {}
         for label, pose in [('coincident',STATIONS[0]), ('rotated',(STATIONS[1][0],STATIONS[1][1],180))]:
-            changed.transform2 = placement(*pose)
+            # Imported assemblies can bake their placement into a child. Apply a change
+            # from the measured baseline pose to the requested pose in root coordinates.
+            bx,by,base_yaw = STATIONS[1]
+            delta = math.radians(pose[2]-base_yaw)
+            dx = pose[0]-(math.cos(delta)*bx-math.sin(delta)*by)
+            dy = pose[1]-(math.sin(delta)*bx+math.cos(delta)*by)
+            moved = original.copy()
+            moved.transformBy(placement(dx,dy,pose[2]-base_yaw))
+            changed.transform2 = moved
             adsk.doEvents()
             observed = inspect(root,paths)[1]
-            if observed['maxErrorMm'] <= .02:
-                raise ValueError('Missed negative control: ' + label)
+            angle = math.radians(pose[2])
+            target_housing = (pose[0]+51*math.cos(angle),pose[1]+51*math.sin(angle),165)
+            if (math.dist(observed['tread']['centerMm'],(*pose[:2],50)) > .02 or
+                math.dist(observed['housing']['centerMm'],target_housing) > .02 or
+                observed['maxErrorMm'] <= .02):
+                raise ValueError('Expected physical perturbation was not observed: ' + label + ' ' + json.dumps(observed))
             controls[label] = observed
         changed.transform2 = original
         adsk.doEvents()
