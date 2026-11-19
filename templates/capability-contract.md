@@ -11,6 +11,8 @@ Decision date and unresolved assumptions:
 
 Budgets: mass, packaging, electrical power/current, pneumatic energy where applicable, cycle time, development time and cost. Mark each allocation assumed, calculated or measured. Resolve actual vendor and season constraints separately.
 
+For a stored-piece feed requirement, record the starting IDs, usable path, first acceptance, repeat interval, and accepted/lost/remaining/unresolved counts at the deadline. Link the loaded trial and the downstream reset that admits the next ID.
+
 First experiment: identify the assumption most likely to invalidate the chosen strategy; write the smallest experiment and predeclared pass/fail criterion. Specify what a failure changes in the strategy, mechanism or interface.
 
 Evidence gates: rule applicability; software unit/simulation tests; CAD geometry/history; physical contact/load behavior; hardware safety; integrated match-task performance. Record each independently. A passing simulation does not close a physical or compliance gate.

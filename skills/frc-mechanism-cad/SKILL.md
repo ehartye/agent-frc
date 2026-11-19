@@ -72,6 +72,10 @@ Use the [native Fusion handoff checks](../../docs/native-fusion-handoff.md) for 
 
 Use the [CAD color convention](../../docs/cad-color-convention.md) for new/revised robot views: consistent functional roles, visible legend and non-color labels, with documented project overrides. Preserve supplier appearances and physical material properties; appearance never means safety or verified performance. Recheck native persistence and body inventory after application.
 
+## Loaded feed paths
+
+For a loader, hopper or circulating carrier, sweep the loaded gate and adjacent pieces, record downstream acceptance and trace the return path on one clock. Check the next ID after reset and compare the achieved spacing with the required service rate. [Trace storage to the receiver](../../docs/storage-to-service.md).
+
 ## Project tidying
 
 Use [safe project tidying](../../docs/project-tidying.md) when choosing an active Fusion draft or handing it back. Give the draft a recognizable name, verify the requested save in its authorized destination, and report the active tab. Inventory exact document identities, preserve unknown or unsaved work, reuse verified saved states, and reconcile long-running operations before closing inspection copies or retrying.

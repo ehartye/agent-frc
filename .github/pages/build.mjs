@@ -1,3 +1,4 @@
+import {analyzeWindow} from '../../scripts/kickoff-window.mjs';
 import {journeyMap} from './journey.mjs';
 import {buildHighlights} from '../../scripts/robot-highlights.mjs';
 import { mkdir, readFile, writeFile, copyFile, access, readdir } from 'node:fs/promises';
@@ -26,6 +27,14 @@ const cameraComparison = `<details class="reading"><summary>Could the design pre
 <p>Checking position gives <strong>${escape(position.decision)}</strong>. Include a loose part with the same outline and the same image gives <strong>${escape(retention.decision)}</strong>. Both ${retention.possible.map(escape).join(' and ')} fit.</p>
 <p>Compare a better camera view with sensing grip or changing how the tray captures the part. Test which one distinguishes the failure.</p>
 ${link('Run the comparison','docs/camera-reference.md')}</details>`;
+const serviceWindow = {stock:12, opening:7, incoming:0, arrival:0, goal:7, cycle:1.5,
+  travel:0, setup:0, window:6, delivery:'loaded-batch', carryCapacity:12, cap:null, points:1};
+const serviceComparison = `<details class="reading"><summary>Can a twelve-piece hopper deliver seven pieces in six seconds?</summary>
+<p>Seven pieces can reach the outlet. For each, the gate needs 0.25 s, the transfer 0.50 s and the receiver 0.75 s. Count a handoff when the receiver accepts the piece.</p>
+<ul><li>One interlock runs the stages in sequence: <strong>${analyzeWindow(serviceWindow).delivered} handoffs</strong>.</li>
+<li>Independent stages overlap: <strong>${analyzeWindow({...serviceWindow, setup:0.75, cycle:0.75}).delivered} handoffs</strong>. The first takes 1.50 s. The receiver then accepts one every 0.75 s.</li>
+<li>A fixed guide closes the port: <strong>${analyzeWindow({...serviceWindow, opening:0}).delivered} handoffs</strong>.</li></ul>
+<p>Which two consecutive pieces would you track to test the overlap? Record their port crossings, receiver signals and reset times.</p></details>`;
 const power = await reviewPower(path.join(root,'examples/power/comparison.json'));
 const powerOptions = power.trials.map(t=>'<option value="'+escape(t.id)+'">'+escape(t.condition)+'</option>').join('');
 const powerResults = power.trials.map((trial,i)=>{
@@ -54,7 +63,7 @@ const highlightsLink='<a href="robot/index.html">Explore the example robot evide
 const chapters=stages.map((s,i)=>`<details id="${s.id}" class="chapter"${i===0?' open':''}>
 <summary><span class="ordinal">${chapter(i)}</span><span>${escape(s.name)}</span><span class="toggle" aria-hidden="true"></span></summary>
 <div class="chapter-body"><h3>${escape(s.question)}</h3><p>${escape(s.objective)}</p><p>${escape(s.activity)}</p>
-<div class="handoff"><h4>Carry forward</h4><p>${escape(s.handoff)}</p></div>${s.docs.some(([,p])=>p==='docs/camera-reference.md')?cameraComparison:''}
+<div class="handoff"><h4>Carry forward</h4><p>${escape(s.handoff)}</p></div>${s.docs.some(([,p])=>p==='docs/camera-reference.md')?cameraComparison:''}${s.id==='contract'?serviceComparison:''}
 <h4>Supporting skills</h4><div class="chips">${s.skills.map(k=>link(k,'skills/'+k+'/SKILL.md')).join('')}</div>
 <div class="reading">${s.id==='verify'?highlightsLink:''}${s.id==='rules'?'<a href="rules.json" download>Download the training rules model ↓</a> · ':''}${s.docs.some(([,p])=>p===powerGuide)?'<a href="#power">Try the shared-power comparison ↓</a> · ':''}${s.docs.map(([label,p])=>link(label+' ↗',p)).join(' · ')}</div></div></details>`).join('\n');
 const directory=Object.keys(purpose).map(k=>{
