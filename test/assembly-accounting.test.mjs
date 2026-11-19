@@ -87,6 +87,37 @@ test('rejects conflicting alternatives, double removal credit, missing identitie
   for(const [edit,expected] of cases) await assert.rejects(()=>run(t,edit),expected);
 });
 
+test('counts only the final installation while retaining each signed revision',async t=>{
+  const result=await run(t,request=>{
+    request.selected=['shield','swap-shield'];
+    for(const part of request.instances.filter(p=>p.id==='shield'||p.id==='retainer')){
+      part.disposition='buy';
+      part.article='drive';
+    }
+  });
+  assert.deepEqual(result.buy.find(line=>line.article==='drive').instances,['drive','retainer']);
+  assert.deepEqual(result.mass.changes.map(row=>row.id),['shield','swap-shield']);
+  assert.deepEqual(result.mass.changes.map(row=>row.delta.rangeKg),[[0.16,0.16],[-0.07,-0.07]]);
+  for(const [index,expected] of [3.69,3.89].entries()){
+    assert.ok(Math.abs(result.mass.representedRangeKg[index]-expected)<1e-12);
+  }
+});
+
+test('requires a previously installed candidate and rejects repeated additions and removal credits',async t=>{
+  for(const order of [['swap-shield'],['swap-shield','shield']]){
+    await assert.rejects(run(t,request=>{request.selected=order;}),/Absent or twice-credited removal: shield/);
+  }
+  for(const [remove,add,error] of [
+    [['shield'],[],/Absent or twice-credited removal: shield/],
+    [[],['shield'],/Unknown or repeated added instance: shield/]
+  ]){
+    await assert.rejects(run(t,request=>{
+      request.changes.push({...request.changes[0],id:'last',remove,add,delta:null});
+      request.selected=['shield','swap-shield','last'];
+    }),error);
+  }
+});
+
 test('distinguishes a pinned limit from a planning allowance and an unknown limit', async t => {
   const pinned = await run(t, () => {});
   assert.equal(pinned.mass.limitBasis, 'source-pinned');
