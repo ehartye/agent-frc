@@ -17,7 +17,7 @@ export const stages = [
   {
     id: 'story', milestone: 'Team-selected match narrative', name: 'Choose a match role', question: 'Which scoring cycle should our team own?',
     objective: 'Use the field observations to tell two plausible match stories. Compare the contribution each role could make, the time it needs, the work left for partners and a fallback.',
-    activity: 'Allocate the pieces likely to reach one robot in one window. Subtract time spent traveling and aligning. Compare the required pieces per second with a candidate loaderâ€™s repeatable cycle time.',
+    activity: 'Allocate the pieces likely to reach one robot in one window. Subtract time spent traveling and aligning. Compare the required pieces per second with a candidate loader’s repeatable cycle time.',
     handoff: 'A team-selected role, a repeatable cycle, a fallback and the assumption most likely to change the choice.',
     skills: ['frc-strategic-narrative','frc-case-study'], docs: [['Strategy decision workflow','docs/game-to-robot-strategy.md']]
   },
@@ -52,7 +52,7 @@ export const purpose = {
   'frc-strategic-narrative': 'Turn match roles into explicit stories and provisional requirements.',
   'frc-mechanism-cad': 'Develop the mechanism and its interfaces. Use the default component palette or the project’s overrides across Fusion, the README still and the showcase.',
   'frc-modes': 'Define autonomous, teleop, trigger and interruption behavior.',
-  'frc-java': 'Implement and test the robotâ€™s WPILib Java control behavior.',
+  'frc-java': 'Implement and test the robot’s WPILib Java control behavior.',
   'frc-vision': 'Check sensor geometry, localization and targeting assumptions.',
   'frc-project-setup': 'Organize student projects and keep current Fusion CAD, experiments and published evidence easy to find.',
   'frc-setup': 'Check the toolchain for the experiment. For a combined CAD and simulation test, verify both libraries in the same Python process.',

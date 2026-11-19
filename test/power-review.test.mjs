@@ -333,6 +333,7 @@ test('the Pages exercise shows the two outcomes produced by the real review',asy
   const run=spawnSync(process.execPath,[build,folder],{cwd:root,encoding:'utf8'});
   assert.equal(run.status,0,run.stderr);
   const html=await readFile(path.join(folder,'index.html'),'utf8');
+  assert.doesNotMatch(html,/[\u00c2\u00e2][^\x00-\x7f]/u, 'Guide contains misdecoded punctuation');
   assert.match(html,/id="power-choice"/);
   assert.match(html,/data-power-trial="overlap"/);
   assert.match(html,/8\.3 V/);

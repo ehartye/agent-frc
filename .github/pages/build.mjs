@@ -19,12 +19,12 @@ const power = await reviewPower(path.join(root,'examples/power/comparison.json')
 const powerOptions = power.trials.map(t=>'<option value="'+escape(t.id)+'">'+escape(t.condition)+'</option>').join('');
 const powerResults = power.trials.map((trial,i)=>{
   const v=trial.limiting;
-  const amps=v.currents.filter(c=>c.kind==='source').map(c=>escape(c.id)+' '+c.valueA+' A').join(' Â· ');
+  const amps=v.currents.filter(c=>c.kind==='source').map(c=>escape(c.id)+' '+c.valueA+' A').join(' · ');
   const margin=Math.round(v.marginV*100)/100;
   return `<div data-power-trial="${escape(trial.id)}"${i?' hidden':''}>
     <div class="readout"><div><strong>${v.valueV} V</strong><span>at carriage inlet</span></div>
     <div><strong>${margin>0?'+':''}${margin} V</strong><span>margin to required floor</span></div></div>
-    <p>At ${v.fromS}â€“${v.toS} s Â· ${amps}.</p><p>${escape(trial.outcome.description)}.</p></div>`;
+    <p>At ${v.fromS}–${v.toS} s · ${amps}.</p><p>${escape(trial.outcome.description)}.</p></div>`;
 }).join('');
 const regulator = await reviewPower(path.join(root,'examples/power/regulator/comparison.json'));
 const regulatorResults = regulator.trials.map(trial => {
@@ -45,11 +45,11 @@ const chapters=stages.map((s,i)=>`<details id="${s.id}" class="chapter"${i===0?'
 <div class="chapter-body"><h3>${escape(s.question)}</h3><p>${escape(s.objective)}</p><p>${escape(s.activity)}</p>
 <div class="handoff"><h4>Carry forward</h4><p>${escape(s.handoff)}</p></div>
 <h4>Supporting skills</h4><div class="chips">${s.skills.map(k=>link(k,'skills/'+k+'/SKILL.md')).join('')}</div>
-<div class="reading">${s.id==='verify'?highlightsLink:''}${s.id==='rules'?'<a href="rules.json" download>Download the training rules model â†“</a> Â· ':''}${s.docs.some(([,p])=>p===powerGuide)?'<a href="#power">Try the shared-power comparison â†“</a> Â· ':''}${s.docs.map(([label,p])=>link(label+' â†—',p)).join(' Â· ')}</div></div></details>`).join('\n');
+<div class="reading">${s.id==='verify'?highlightsLink:''}${s.id==='rules'?'<a href="rules.json" download>Download the training rules model ↓</a> · ':''}${s.docs.some(([,p])=>p===powerGuide)?'<a href="#power">Try the shared-power comparison ↓</a> · ':''}${s.docs.map(([label,p])=>link(label+' ↗',p)).join(' · ')}</div></div></details>`).join('\n');
 const directory=Object.keys(purpose).map(k=>{
   const uses=stages.filter(s=>s.skills.includes(k));
   if(!uses.length) throw Error('Skill lacks a workflow stage: '+k);
-  return `<div class="skill" data-stages="${uses.map(s=>s.id).join(' ')}"><h3>${link(k,'skills/'+k+'/SKILL.md')}</h3><p>${escape(purpose[k])}</p><div class="used">${uses.map(s=>'<a href="#'+s.id+'">'+escape(s.name)+'</a>').join(' Â· ')}</div></div>`;
+  return `<div class="skill" data-stages="${uses.map(s=>s.id).join(' ')}"><h3>${link(k,'skills/'+k+'/SKILL.md')}</h3><p>${escape(purpose[k])}</p><div class="used">${uses.map(s=>'<a href="#'+s.id+'">'+escape(s.name)+'</a>').join(' · ')}</div></div>`;
 }).join('\n');
 const style=await readFile(path.join(source,'site.html'),'utf8');
 const profile=JSON.parse(await readFile(path.join(root,'examples/kickoff/training-field.json'),'utf8'));
