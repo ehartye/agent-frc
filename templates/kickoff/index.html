@@ -56,6 +56,7 @@ header{max-width:none;padding:23px max(clamp(14px,3vw,48px),calc((100vw - 1344px
 <figure class="rehearsal-board"><canvas id="replayField" aria-label="Timed overhead field showing labeled blue and red robots, structures and blocked positions. The roster below describes each robot."></canvas>
 <figcaption>Blue and red rectangles show occupied robot footprints. Amber circles mark accumulated waiting. Hatched obstacles block the selected height or reserve uncertain space. Dotted lines show planned robot paths.</figcaption></figure>
 <div class="replay-tools"><b id="replayClock" aria-label="Remaining match period time"></b>
+<label>Match series<select id="replaySeriesSource"></select></label>
 <button id="replaySeries">Play match series at 10×</button><button id="replayRun" class="primary">Start period</button><button id="replayStep">Step 1 s</button>
 <button id="replayFast">Run to period end</button><button id="replayReset">Reset match</button><button id="replaySave">Save rehearsal snapshot</button>
 <label>Obstacle setup<select id="replaySetup"></select></label></div>
