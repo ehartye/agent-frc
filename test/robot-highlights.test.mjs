@@ -1,9 +1,31 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp, mkdir, readFile, writeFile, rm} from 'node:fs/promises';
+import {cp, mkdtemp, mkdir, readFile, writeFile, rm} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {buildHighlights} from '../scripts/robot-highlights.mjs';
+
+test('bind the same approved project stylesheet to the showcase and its full-screen CAD', async t => {
+  const root = await mkdtemp(path.join(tmpdir(),'robot-style-'));
+  t.after(() => rm(root,{recursive:true,force:true}));
+  await cp(new URL('../examples/highlights/',import.meta.url), root, {recursive:true});
+  const manifest = path.join(root,'project.json'), out = path.join(root,'site');
+  const config = JSON.parse(await readFile(manifest,'utf8'));
+  const css = '.cad-viewer figure { border: 0; }';
+  const sha256 = createHash('sha256').update(css).digest('hex');
+  config.stylesheet = {file:'robot.css',shareable:true,sha256};
+  await writeFile(manifest,JSON.stringify(config));
+  await writeFile(path.join(root,'robot.css'),css);
+  const generated = await readFile(await buildHighlights(manifest,out),'utf8');
+  const asset = 'evidence/'+sha256+'.css';
+  assert.ok(generated.includes('href="'+asset+'"'));
+  const model = generated.match(/<iframe[^>]+src="([^"]+)"/)[1];
+  assert.ok((await readFile(path.join(out,model),'utf8')).includes('href="../'+asset+'"'));
+  assert.equal(await readFile(path.join(out,asset),'utf8'),css);
+  await writeFile(path.join(root,'robot.css'),css+' /* new revision */');
+  await assert.rejects(buildHighlights(manifest,out), /stylesheet/);
+});
 
 test('generate, refresh and protect an evidence page', async t => {
   const root = await mkdtemp(path.join(tmpdir(),'robot-page-'));
