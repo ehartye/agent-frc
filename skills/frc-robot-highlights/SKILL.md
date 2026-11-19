@@ -34,3 +34,10 @@ node <plugin>/scripts/robot-highlights.mjs <project>/highlights.json <project>/d
 ```
 
 Open the generated `index.html` on desktop and at a narrow viewport, follow the source links and play each film. Use a fresh output directory for a clean publication artifact. Regeneration replaces the generated page while preserving an independently authored index. Link the finished page from the project’s existing navigation. Publish through the project’s chosen host when authorized. On later revisions, revisit every changed configuration, claim and media caption and regenerate from the updated evidence.
+## Publish on the project's GitHub Pages site
+
+When the team wants a public site, keep `highlights.json`, its CAD receipt and its approved source files in the project repository. For a repository with an existing Pages site, build the showcase into a subdirectory of its existing publication artifact and link it from the site's navigation. GitHub Pages serves one site per repository.
+
+For a dedicated showcase site, copy the [Pages workflow](../../templates/robot-showcase-pages.yml) into the project as `.github/workflows/robot-showcase.yml`. Select **GitHub Actions** under **Settings → Pages → Build and deployment**. The workflow checks pull requests and publishes from the default branch. Its pinned builder verifies the project manifest and uploads only the newly generated site. Keep external references public and pin them to the revision the claim describes.
+
+After the first successful deployment, open the URL reported by the deploy job. Verify the full-screen model, still image and film playback on the hosted page. Add the live URL to the project README. Refresh evidence in the project and merge to the default branch to update the site. Local and offline builds use the same manifest.
