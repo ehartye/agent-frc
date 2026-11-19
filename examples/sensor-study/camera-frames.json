@@ -1,0 +1,34 @@
+{
+  "camera": "tray-camera",
+  "calibration": "fixed-lens-a",
+  "rays": [
+    {"id": "side", "reference": "bench-card-patch-a", "empty": [28, 52], "occupied": [160, 200]},
+    {"id": "center", "reference": "tray-center-patch-a", "empty": [32, 55], "occupied": [155, 195]},
+    {"id": "rim", "reference": "tray-rim-patch-a", "empty": [30, 50], "occupied": [165, 200]}
+  ],
+  "states": [
+    {"id": "empty", "permit": false, "occupied": []},
+    {"id": "seated", "permit": true, "occupied": ["side", "center"]},
+    {"id": "shifted", "permit": false, "occupied": ["side", "rim"]}
+  ],
+  "frames": [
+    {"id": "at-bench", "pose": "docked", "camera": "tray-camera", "calibration": "fixed-lens-a", "readings": {
+      "side": {"reference": "bench-card-patch-a", "value": 180},
+      "rim": {"reference": "tray-rim-patch-a", "value": 40}
+    }},
+    {"id": "departed", "pose": "travel", "camera": "tray-camera", "calibration": "fixed-lens-a", "readings": {
+      "side": {"reference": null, "value": 180},
+      "rim": {"reference": "tray-rim-patch-a", "value": 40}
+    }},
+    {"id": "tray-backed", "pose": "travel", "camera": "tray-camera", "calibration": "fixed-lens-a", "readings": {
+      "side": {"reference": null, "value": 180},
+      "center": {"reference": "tray-center-patch-a", "value": 175},
+      "rim": {"reference": "tray-rim-patch-a", "value": 40}
+    }},
+    {"id": "shifted-piece", "pose": "travel", "camera": "tray-camera", "calibration": "fixed-lens-a", "readings": {
+      "side": {"reference": null, "value": 180},
+      "center": {"reference": "tray-center-patch-a", "value": 40},
+      "rim": {"reference": "tray-rim-patch-a", "value": 180}
+    }}
+  ]
+}

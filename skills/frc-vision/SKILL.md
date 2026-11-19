@@ -21,6 +21,8 @@ Read [grounding policy](../../docs/grounding.md). Start with the [learning brief
 
 Inspect unmatchedQueries, omitted counts, source versions and review dates. Open relevant official/pinned sources before factual decisions. Keep source findings, recommendations and unknowns separate. Never infer compatibility from an empty season list or a matching keyword.
 
+When a camera authorizes motion, repeat its observation after the robot changes pose. Register the surface behind each measured feature, mask lost references and check which permitted and unsafe piece positions still fit. [Replay a change of camera background](../../docs/camera-reference.md).
+
 ## Reviewable output
 
 Deliver a frame/time contract and rejection-policy test table. For each material claim identify source URL/version, applicability and verification level. Record actual commands/results separately from proposed tests.
