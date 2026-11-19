@@ -1,0 +1,31 @@
+{
+  "schema": "agent-frc/replay-events@1",
+  "revision": "linear-fixture-r1",
+  "observedRevision": "linear-fixture-r1",
+  "scope": "same-attempt",
+  "clock": "fixture",
+  "attempt": "centered",
+  "initialState": "frame 0, sample centered at 70 mm",
+  "piece": "sample-A",
+  "traceSha256": "ea233f8abe234e2669b30fc27900c921711e52de404f0d0cc36ff36ad375c51a",
+  "clipSha256": "e7612abb55808c7ed6740076450c61c1dc0eee00eeb162fcd3f2f81ddde2bd83",
+  "sync": [
+    {
+      "clipS": 0,
+      "runS": 10
+    },
+    {
+      "clipS": 4,
+      "runS": 14
+    }
+  ],
+  "events": [
+    {
+      "id": "clear",
+      "timeS": 13.1,
+      "target": "Target plane",
+      "outcome": "reached",
+      "criterion": "Trailing sample edge first reaches 105 mm on the recorded 10 Hz clock."
+    }
+  ]
+}

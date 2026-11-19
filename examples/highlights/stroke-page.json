@@ -1,0 +1,64 @@
+{
+  "schema": "agent-frc/robot-highlights@1",
+  "title": "Linear release fixture",
+  "revision": "linear-fixture-r1",
+  "role": "Explore the jaw stroke and locate the first frame that clears the target plane.",
+  "sources": [
+    {
+      "id": "film",
+      "file": "stroke.webm",
+      "sha256": "e7612abb55808c7ed6740076450c61c1dc0eee00eeb162fcd3f2f81ddde2bd83",
+      "label": "Illustrated release",
+      "revision": "linear-fixture-r1",
+      "shareable": true
+    },
+    {
+      "id": "motion",
+      "file": "stroke.json",
+      "sha256": "ea233f8abe234e2669b30fc27900c921711e52de404f0d0cc36ff36ad375c51a",
+      "label": "Commanded positions",
+      "revision": "linear-fixture-r1",
+      "shareable": true
+    },
+    {
+      "id": "observations",
+      "file": "stroke-events.json",
+      "sha256": "d88f502c19cd0aa5034e39d95f739af2d00024d11f9438c651c2afe72a8d42c6",
+      "label": "Independent plane crossing check",
+      "revision": "linear-fixture-r1",
+      "shareable": true
+    }
+  ],
+  "build": [
+    {
+      "subsystem": "Slide",
+      "configuration": "Fixed guide with a moving jaw and one illustrated sample.",
+      "source": "motion"
+    }
+  ],
+  "results": [
+    {
+      "basis": "design",
+      "claim": "The trailing edge crossed the target plane",
+      "conditions": "One prescribed path sampled at 10 Hz.",
+      "limit": "Contact force, retention and competition points remain untested.",
+      "source": "observations"
+    }
+  ],
+  "media": [
+    {
+      "asset": "film",
+      "source": "motion",
+      "description": "A jaw extends and retracts; the released sample moves across the teal target plane.",
+      "caption": "Side view of the prescribed stroke.",
+      "motion": {
+        "movingPart": "Linear jaw",
+        "basis": "commanded",
+        "trace": "motion",
+        "observations": "observations",
+        "clock": "fixture",
+        "attempt": "centered"
+      }
+    }
+  ]
+}

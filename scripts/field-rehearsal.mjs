@@ -1,3 +1,4 @@
+import { createRehearsalGame } from './rehearsal-game.mjs';
 import { fieldGeometry } from './field-rehearsal-geometry.mjs';
 
 // Functions are serialized by the kickoff builder. Keep this factory self-contained.
@@ -5,6 +6,7 @@ export function createFieldRehearsal(profile) {
   const geom=fieldGeometry(profile);
   const model=profile.rehearsal, supported=Boolean(model?.schema==='field-rehearsal/v1');
   const L=profile.field.length,W=profile.field.width,dt=0.05;
+  const game=supported ? createRehearsalGame(profile) : null;
   const behaviors=Object.fromEntries(Object.entries(model?.programs || {}).map(([key,p])=>[key,p.label]));
   const phases=model?.periods || [];
   const duration=name=>Math.round((phases.find(p=>p.name===name)?.seconds || 0)/dt);
@@ -28,7 +30,7 @@ export function createFieldRehearsal(profile) {
     }
     return Object.fromEntries([...names].map(key=>[key,{owner:null,queue:[]}]));
   }
-  function create(roster,setup=model?.setups[0]) {
+  function create(roster,setup=model?.setups[0],tieWinner) {
     if(!supported)throw Error('Supply an external rehearsal geometry and behavior model.');
     if(!model.setups.includes(setup))throw Error('Unknown obstacle setup.');
     if(!Array.isArray(roster) || roster.length>6)throw Error('Use up to three robots per alliance.');
@@ -48,7 +50,7 @@ export function createFieldRehearsal(profile) {
       robots.push({...b,p,leg:0,waypoints:null,target:0,dwell:0,wait:0,visits:0,blocked:'',action:''});
     }
     robots.sort((a,b)=>a.id.localeCompare(b.id));
-    return {robots,setup,phase:phases[0].name,phaseIndex:0,ticks:0,paused:true,ended:false,resources:reservations(),hotspots:[],
+    return {robots,setup,game:game.start(robots,tieWinner),phase:phases[0].name,phaseIndex:0,ticks:0,paused:true,ended:false,resources:reservations(),hotspots:[],
       log:[], carry:0,phaseHistory:[]};
   }
   function program(r,sim){return model.programs[r.plans[sim.phase]];}
@@ -103,6 +105,7 @@ export function createFieldRehearsal(profile) {
     }
     if(r.target>=r.waypoints.length) {
       if(++r.dwell>=(leg.dwell || 0)) {
+        game.apply(sim,r,leg,(sim.ticks+1)*dt);
         if(leg.release)release(sim,r,key);
         r.leg++;r.dwell=0;r.waypoints=null;
         if(r.leg===legs.length){
@@ -118,6 +121,7 @@ export function createFieldRehearsal(profile) {
   }
   function step(sim) {
     if(sim.paused || sim.ended)return;
+    game.replenish(sim,(sim.ticks+1)*dt);
     const begins=sim.robots.map(r=>[...r.p]), ends=begins.map(p=>[...p]);
     // Each move reserves a continuous sweep. Earlier movers saw later peers stationary.
     // A later peer may move only if its simultaneous sweep also misses earlier movers.

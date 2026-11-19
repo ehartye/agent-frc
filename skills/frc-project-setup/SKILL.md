@@ -23,3 +23,10 @@ Run `node <plugin>/scripts/project-layout.mjs init <project>` to create the fold
 During adoption, move independent studies into their own directories. Move a historically interdependent campaign together when its receipts and loaders rely on relative paths. Keep its original runnable entry point and distinguish frozen inputs from current authoring files. Re-run a representative historical replay and test discovery from the new layout. Link the current Fusion design, strategic narrative, trials and showcase from the project README. Follow the [CAD and supplier handoff](../frc-mechanism-cad/SKILL.md) and [README still and highlights workflow](../frc-robot-highlights/SKILL.md).
 
 Use the [component palette](../../docs/cad-color-convention.md) during CAD setup. A new project inherits the plugin defaults. Keep project-specific role colors in version control at `cad/component-palette.json`. Reference that single mapping from native models and student-facing views.
+
+
+## Version the workflow outputs
+
+Keep each completed analysis, strategic narrative, constraint register, design review and verification report in the project checkout, beside its subject. A private wiki can carry team history and research. Students should be able to read the deliverables from a clean checkout. Link the project workflow from the README and showcase.
+
+Initialization creates `docs/workflow.md`. Its table uses the columns **Agent FRC skill**, **Project output** and **Supporting evidence**. Use the invoked skill name, relative Markdown links to committed outputs, and relevant evidence or an em dash. Existing kickoff and design documents stay in their canonical directories. The layout check verifies index references when the index exists. For the standard showcase, add the pinned [workflow link configuration](../../docs/showcase-evidence.md).

@@ -139,6 +139,135 @@
   },
   "rehearsal": {
     "schema": "field-rehearsal/v1",
+    "stations": [
+      {
+        "id": "blue-supply",
+        "label": "Blue supply",
+        "kind": "retrieval",
+        "side": "blue",
+        "piece": "tile",
+        "at": [
+          60,
+          48
+        ],
+        "radiusIn": 16,
+        "stock": 6
+      },
+      {
+        "id": "blue-bay",
+        "label": "Blue bay",
+        "kind": "scoring",
+        "side": "blue",
+        "piece": "tile",
+        "at": [
+          175,
+          194
+        ],
+        "radiusIn": 16,
+        "points": 1,
+        "criterion": "A carried tile reaches the release area after the authored service dwell."
+      },
+      {
+        "id": "red-supply",
+        "label": "Red supply",
+        "kind": "retrieval",
+        "side": "red",
+        "piece": "tile",
+        "at": [
+          420,
+          216
+        ],
+        "radiusIn": 16,
+        "stock": 6
+      },
+      {
+        "id": "red-bay",
+        "label": "Red bay",
+        "kind": "scoring",
+        "side": "red",
+        "piece": "tile",
+        "at": [
+          305,
+          70
+        ],
+        "radiusIn": 16,
+        "points": 1,
+        "criterion": "A carried tile reaches the release area after the authored service dwell."
+      }
+    ],
+    "series": {
+      "matches": [
+        {
+          "id": "trial-1",
+          "basis": "Local pickup in both periods",
+          "setup": "lowered",
+          "roster": [
+            {
+              "side": "blue",
+              "slot": 1,
+              "plans": {
+                "Opening": "shuttle",
+                "Main play": "shuttle"
+              }
+            },
+            {
+              "side": "red",
+              "slot": 1,
+              "plans": {
+                "Opening": "shuttle",
+                "Main play": "shuttle"
+              }
+            }
+          ]
+        },
+        {
+          "id": "trial-2",
+          "basis": "Opening gate traffic then delivery",
+          "setup": "lowered",
+          "roster": [
+            {
+              "side": "blue",
+              "slot": 1,
+              "plans": {
+                "Opening": "cross",
+                "Main play": "shuttle"
+              }
+            },
+            {
+              "side": "red",
+              "slot": 1,
+              "plans": {
+                "Opening": "cross",
+                "Main play": "shuttle"
+              }
+            }
+          ]
+        },
+        {
+          "id": "trial-3",
+          "basis": "Delayed first acquisition",
+          "setup": "lowered",
+          "roster": [
+            {
+              "side": "blue",
+              "slot": 1,
+              "plans": {
+                "Opening": "hold",
+                "Main play": "shuttle"
+              }
+            },
+            {
+              "side": "red",
+              "slot": 1,
+              "plans": {
+                "Opening": "hold",
+                "Main play": "shuttle"
+              }
+            }
+          ]
+        }
+      ]
+    },
     "basis": "Prescribed classroom routes with constant-speed translation. Every dimension and pose is invented.",
     "boundsNote": "A wide beam marks a shared opening. A raised setup changes the height available under its rails. The occupancy calculation excludes contact forces and moving game pieces.",
     "sources": [
@@ -365,7 +494,7 @@
               60,
               48
             ],
-            "label": "Pick up tile",
+            "label": "Pick up tile", "operation": "acquire", "station": {"blue": "blue-supply", "red": "red-supply"},
             "dwell": 0.4
           },
           {
@@ -373,7 +502,7 @@
               175,
               194
             ],
-            "label": "Deliver to bay",
+            "label": "Deliver to bay", "operation": "attempt", "station": {"blue": "blue-bay", "red": "red-bay"}, "outcome": "credited",
             "dwell": 0.6
           }
         ]

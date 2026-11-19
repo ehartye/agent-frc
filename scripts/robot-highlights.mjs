@@ -1,3 +1,4 @@
+import { workflowRows } from './project-layout.mjs';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createHash, randomUUID } from 'node:crypto';
@@ -40,7 +41,16 @@ export async function buildHighlights(manifest, directory) {
   const title = escape(string(data.title, 'robot name'));
   const role = escape(string(data.role, 'robot role'));
   const revision = escape(string(data.revision, 'current candidate revision'));
+  const stage = data.stage ?? 'design';
+  requireValue(['analysis', 'design'].includes(stage), 'Unknown showcase stage');
   const assets = new Map();
+  const python = process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3');
+  async function projectFile(relative) {
+    requireValue(typeof relative === 'string' && !path.win32.isAbsolute(relative) && !path.isAbsolute(relative), 'Expected project-relative file');
+    const file = await realpath(path.resolve(root, relative));
+    requireValue(within(root, file) && (await stat(file)).isFile(), 'File outside project');
+    return file;
+  }
   let stylesheet;
   if (data.stylesheet !== undefined) {
     const css = data.stylesheet;
@@ -89,7 +99,7 @@ export async function buildHighlights(manifest, directory) {
       requireValue(url.protocol === 'https:' && !url.username && !url.password, 'Expected public HTTPS evidence URL');
       href = url.href;
     }
-    sources.set(id, {label, version, href, type});
+    sources.set(id, {label, version, href, type, sha256:ref.sha256});
   }
   function source(id) {
     requireValue(sources.has(id), 'Unknown evidence reference ' + id);
@@ -107,10 +117,58 @@ export async function buildHighlights(manifest, directory) {
     '<article>' + kind(row) + '<h3>' + escape(string(row.claim, 'result')) + '</h3><p>' +
     escape(string(row.conditions, 'run conditions')) + '</p><p>' + escape(string(row.limit, 'result boundary')) +
     '</p><p>' + citation(row.source) + '</p></article>').join('');
-  const build = list(data.build, 'build sheet', true).map(row =>
+  const build = list(data.build ?? (stage === 'analysis' ? [] : undefined), 'build sheet', stage !== 'analysis').map(row =>
     '<tr><th scope="row">' + escape(string(row.subsystem, 'subsystem')) + '</th><td>' +
     escape(string(row.configuration, 'configuration')) + '</td><td>' + citation(row.source) + '</td></tr>').join('');
-  const media = list(data.media ?? [], 'media').map(row => {
+  const eventRecords = new Map();
+  async function replay(motion, clip) {
+    const evidence = source(motion.observations);
+    const trace = source(motion.trace);
+    requireValue(trace.sha256 && trace.href !== clip.href && evidence.href !== clip.href && evidence.href !== trace.href && evidence.type === '.json',
+      'Motion needs a trace and separate local observation evidence');
+    if (!eventRecords.has(evidence.href)) {
+      eventRecords.set(evidence.href, JSON.parse(await readFile(assets.get(path.basename(evidence.href)), 'utf8')));
+    }
+    const record = eventRecords.get(evidence.href);
+    requireValue(record.schema === 'agent-frc/replay-events@1' && record.revision === data.revision &&
+      record.clock === string(motion.clock, 'run clock') && record.attempt === string(motion.attempt, 'attempt'),
+      'Playback revision, attempt or clock differs from evidence');
+    requireValue(record.clipSha256 === clip.sha256 && record.traceSha256 === trace.sha256,
+      'Observation register does not reference this clip and motion trace');
+    const observedRevision = string(record.observedRevision, 'observed revision');
+    const piece = string(record.piece,'piece identity');
+    const start = string(record.initialState,'initial state or checkpoint');
+    requireValue(['same-attempt','independent-start','earlier-revision','capacity-only'].includes(record.scope) &&
+      (observedRevision === data.revision || record.scope === 'earlier-revision'),
+      'Identify earlier-revision evidence separately');
+    const anchors = list(record.sync, 'clock synchronization', true);
+    requireValue(anchors.length >= 2 && anchors[0].clipS === 0 && anchors.every((point,i) =>
+      Number.isFinite(point.clipS) && Number.isFinite(point.runS) &&
+      (i === 0 || point.clipS > anchors[i-1].clipS && point.runS > anchors[i-1].runS)),
+      'Clip and experiment clocks need increasing synchronization points');
+    const mode = motion.basis;
+    requireValue(['commanded','simulated','measured'].includes(mode), 'Invalid motion basis');
+    const seen = new Set();
+    const events = list(record.events,'observed events',true).map(event => {
+      const id = string(event.id,'event ID');
+      requireValue(!seen.has(id) && Number.isFinite(event.timeS), 'Invalid observed event time or repeated ID');
+      seen.add(id);
+      requireValue(['reached','scored','missed','unresolved'].includes(event.outcome), 'Invalid observed outcome');
+      requireValue(record.scope !== 'capacity-only' || event.outcome === 'unresolved', 'A capacity target cannot establish a reached outcome');
+      const endIndex = anchors.findIndex((point,i) => i > 0 && event.timeS <= point.runS);
+      requireValue(endIndex > 0 && event.timeS >= anchors[0].runS, 'Observation outside this clip');
+      const before = anchors[endIndex-1], after = anchors[endIndex];
+      const clipTime = before.clipS + (event.timeS-before.runS)*(after.clipS-before.clipS)/(after.runS-before.runS);
+      const label = escape(string(event.target,'observed target'));
+      return '<li><button type="button" data-clip-time="'+clipTime+'">Seek to '+clipTime.toFixed(2)+' s</button> '+
+        label+' · <strong>'+event.outcome+'</strong> · '+escape(record.clock)+' '+event.timeS+' s. '+
+        escape(string(event.criterion,'observation criterion'))+'</li>';
+    }).join('');
+    return '<p>'+escape(string(motion.movingPart,'moving part'))+' · '+mode+' motion · '+citation(motion.trace)+
+      '</p><p>Observed revision '+escape(observedRevision)+' · '+escape(record.scope)+' · piece '+escape(piece)+' · start '+escape(start)+'</p><ul class="events">'+events+'</ul><p>Event observations · '+citation(motion.observations)+
+      '</p><p class="seek-status" role="status"></p>';
+  }
+  const media = (await Promise.all(list(data.media ?? [], 'media').map(async row => {
     const asset = source(row.asset);
     const caption = escape(string(row.caption, 'media description'));
     const alt = escape(string(row.description, 'media alternative'));
@@ -124,11 +182,13 @@ export async function buildHighlights(manifest, directory) {
       }
       item = '<video controls playsinline preload="metadata" aria-label="' + alt + '"' + poster + ' src="' + escape(asset.href) + '"></video>';
     } else {
+      requireValue(!row.motion, 'Motion playback requires a local video');
       requireValue(['.png','.jpg','.jpeg','.webp'].includes(asset.type), 'Expected local evidence image or film');
       item = '<img loading="lazy" alt="' + alt + '" src="' + escape(asset.href) + '">';
     }
-    return '<figure>' + item + '<figcaption>' + caption + ' · ' + citation(row.source) + '</figcaption></figure>';
-  }).join('');
+    return '<figure>' + item + '<figcaption>' + caption + ' · ' + citation(row.source) + '</figcaption>' +
+      (row.motion ? await replay(row.motion,asset) : '') + '</figure>';
+  }))).join('');
   let campaign = '';
   if (data.campaign !== undefined) {
     const c = data.campaign;
@@ -145,12 +205,6 @@ export async function buildHighlights(manifest, directory) {
   if (data.cad) {
     const config = data.cad;
     requireValue(config.shareable === true, 'Confirm CAD redistribution');
-    async function projectFile(relative) {
-      requireValue(typeof relative === 'string' && !path.win32.isAbsolute(relative) && !path.isAbsolute(relative), 'Expected relative CAD path');
-      const file = await realpath(path.resolve(root,relative));
-      requireValue(within(root,file) && (await stat(file)).isFile(), 'CAD file outside project');
-      return file;
-    }
     const receiptFile = await projectFile(config.receipt);
     const record = JSON.parse(await readFile(receiptFile,'utf8'));
     requireValue(['agent-frc/cad-still@1','agent-frc/cad-still@2'].includes(record.schema) && await digest(await projectFile(record.source)) === record.sourceSha256,'Changed CAD source');
@@ -176,7 +230,6 @@ export async function buildHighlights(manifest, directory) {
     if (record.schema === 'agent-frc/cad-still@2') {
       await projectFile(record.appearances?.file);
       const validator = fileURLToPath(new URL('./cad_appearances.py',import.meta.url));
-      const python = process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3');
       const {stdout} = await promisify(execFile)(python,[validator,root,receiptFile],{encoding:'utf8'});
       layout = {bounds:record.nativeBounds, groups:JSON.parse(stdout)};
     }
@@ -191,14 +244,48 @@ export async function buildHighlights(manifest, directory) {
     modelFiles = {dest, still, receiptFile, rendered};
     model = '<section><h2>Explore the CAD</h2><iframe title="'+values.title+'" loading="lazy" style="width:100%;height: min(48rem,85vh);border:0" src="'+dest+'/index.html"></iframe><p><a href="'+dest+'/index.html">Open the model full screen</a></p></section>';
   }
-  const fields = {title, role, revision, results, build, model, media:media ? '<section id="media"><h2>Evidence gallery</h2>' + media + '</section>' : '',
+  let coverage = '';
+  if (data.inventory) {
+    const file = await projectFile(data.inventory.file);
+    requireValue(await digest(file) === data.inventory.sha256, 'Changed inventory mapping');
+    const checker = fileURLToPath(new URL('./check-showcase-inventory.py', import.meta.url));
+    const {stdout} = await promisify(execFile)(python,[checker,file,'--project',root],{encoding:'utf8',maxBuffer:8*1024*1024});
+    const result = JSON.parse(stdout);
+    requireValue(data.cad && result.revision === data.revision &&
+      result.modelSha256 === JSON.parse(await readFile(modelFiles.receiptFile,'utf8')).meshSha256,
+      'Inventory must match the featured CAD export and candidate revision');
+    const rows = result.articles.map(row => '<tr><th scope="row">'+escape(row.id)+'</th><td>'+escape(row.subsystem)+'</td><td>'+
+      escape(row.status)+'</td><td>'+escape(row.representation ?? row.reason)+'</td></tr>').join('');
+    coverage = '<section><h2>Published assembly coverage</h2><p>'+escape(result.revision)+' · '+escape(result.pose)+' · '+escape(result.status)+
+      '</p><details><summary>Inspect '+result.articles.length+' registered articles</summary><table><thead><tr><th>Article</th><th>Subsystem</th><th>Coverage</th><th>Representation</th></tr></thead><tbody>'+
+      rows+'</tbody></table></details></section>';
+  }
+  let workflow = '';
+  if (data.workflow !== undefined) {
+    const url = new URL(data.workflow.revisionUrl);
+    requireValue(url.protocol === 'https:' && url.hostname === 'github.com' && !url.username && !url.password &&
+      !url.port && !url.search && !url.hash && /^\/[-.\w]+\/[-.\w]+\/blob\/[0-9a-f]{40}\/?$/.test(url.pathname),
+      'Expected a public GitHub project URL pinned to a commit');
+    const base = url.href.replace(/\/?$/, '/');
+    const ref = url.pathname.split('/').filter(Boolean).at(-1);
+    const rows = workflowRows(root,ref);
+    requireValue(rows.length, 'Add at least one completed output to the published workflow index');
+    const documentLink = item => '<a href="'+escape(base+item.file.split('/').map(encodeURIComponent).join('/'))+'">'+escape(item.label)+'</a>';
+    workflow = '<section id="workflow"><h2>Project workflow</h2><p>'+documentLink({file:'docs/workflow.md',label:'Open the versioned workflow index'})+
+      '</p><table><thead><tr><th>Skill</th><th>Project output</th><th>Supporting evidence</th></tr></thead><tbody>'+
+      rows.map(row => '<tr><th scope="row">'+escape(row.skill)+'</th><td>'+row.output.map(documentLink).join(', ')+'</td><td>'+
+        row.evidence.map(documentLink).join(', ')+'</td></tr>').join('')+'</tbody></table></section>';
+  }
+  const buildSection = build ? '<section id="build"><h2>Build sheet</h2><table><thead><tr><th>Subsystem</th><th>Configuration</th><th>Evidence</th></tr></thead><tbody>'+build+'</tbody></table></section>' : '';
+  const fields = {title, role, revision, results, workflow, buildSection, buildLink:build ? '<a href="#build">Build sheet</a>' : '',
+    revisionLabel:stage === 'analysis' ? 'Analysis revision' : 'Candidate', model:model+coverage, media:media ? '<section id="media"><h2>Evidence gallery</h2>' + media + '</section>' : '',
     campaign, campaignLink:campaign ? '<a href="#campaign">Repeatability</a>' : '', mediaLink:media ? '<a href="#media">Gallery</a>' : ''};
   const html = applyStyle(template.replace(/\{\{(\w+)\}\}/g, (_, key) => fields[key]));
   await mkdir(directory, {recursive:true});
   const output = await realpath(directory);
   const page = path.join(output, 'index.html');
   const existing = await optionalRead(page);
-  requireValue(existing === undefined || existing.startsWith(marker + '\n'), 'Existing page is independently authored. Choose another output directory.');
+  requireValue(existing === undefined || existing.split(/\r?\n/,1)[0] === marker, 'Existing page is independently authored. Choose another output directory.');
   if (modelFiles) {
     const target = path.join(output,modelFiles.dest);
     await mkdir(target,{recursive:true});

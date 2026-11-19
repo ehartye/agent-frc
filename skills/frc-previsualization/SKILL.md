@@ -12,3 +12,6 @@ For a new game, extract the [project rules model](../../docs/project-rules-model
 3. Mark a source-to-target cycle. Account for loaded and return trips, pickup, staging, release and recovery. Use the opportunity calculation to determine the minimum sustained rate.
 4. Link each reservation of volume to a requirement. Compare stowed, moving, deployed and service envelopes. A reversible chassis cut must identify the frame and bumper support it affects and the load-path check it requires.
 5. Carry a saved observation into the student's match story. Use the [editable design artifact](../../docs/design-artifact.md) to preserve the chosen geometry, alternatives and open questions. Hand off frames, units, pose, revision and the next verification step to CAD.
+
+
+Use [complete match rehearsals](../../docs/match-series.md) to test likely per-period behaviors for both alliances with finite piece stock, occupied robot footprints and explicit target activity. Compare the independent matches at 10× and carry observed queues and unresolved scoring conditions into the project strategy.
