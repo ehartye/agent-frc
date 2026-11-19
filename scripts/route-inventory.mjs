@@ -6,7 +6,7 @@ const states=['placed','carried','stock','removed','unknown'];
 const validBox=b=>Array.isArray(b) && b.length===6 && b.every(finite) && [0,1,2].every(i=>b[i]<b[i+3]);
 function check(value,message){if(!value) throw Error(message);}
 
-function valueAt(doc,keys) {
+export function valueAt(doc,keys) {
   check(Array.isArray(keys) && keys.every(named),'Supply a path to the complete source collection.');
   for(const key of keys) {
     check(doc && typeof doc==='object' && Object.hasOwn(doc,key),'Inventory source collection not found.');
@@ -15,7 +15,7 @@ function valueAt(doc,keys) {
   return doc;
 }
 
-function collect(doc,rule) {
+export function collect(doc,rule) {
   const value=valueAt(doc,rule.path);
   if(rule.format==='keys') {
     check(value && typeof value==='object' && !Array.isArray(value),'Inventory path must select an object.');

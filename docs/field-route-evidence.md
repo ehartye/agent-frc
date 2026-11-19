@@ -41,3 +41,16 @@ Older requests still expose their declared-body result in `declaredRouteStatus`.
 At the witness time, the obstacle must still be placed and the swept bounds must enclose its registered bounds. A moving game piece must be in the carried state. A state change takes effect at its recorded instant. An unresolved contact stays in `contacts` with its `registrationIssue`. Read `qualifiedContacts` for the witnesses that apply to the route. A matching collision can reject the route even when coverage elsewhere is incomplete.
 
 Different solids or orientations can share an outer box. In this case use a source collection of records and set `geometryKey` to the property holding the SHA-256 of each installed occurrence's geometry and placement record. Put that same digest in `obstacleGeometrySha256` on its material witness. Supply `geometrySha256` when a transition places that occurrence again. The project owns the source record, including the local shape, transform and units that identify the installation.
+
+## Observe the robot reaching a region
+
+Run the synthetic carriage through a field with one column and an empty game-piece list.
+
+```sh
+node examples/field-route/make-body-example.mjs artifacts/body-route
+npm run field:route -- artifacts/body-route/request.json
+```
+
+Use a detector event with an `id`, `robotBody` and `timeS`. Piece observations use their existing `piece` property. For a body event, point the scenario’s robot source at a `field-route/robot@1` JSON manifest. Its `geometry` and `catalog` identify pinned project files. Its `collection` selects the complete body list from that catalog using the same `path` and `ids`, `keys` or `rows` format as field inventory. Every listed body needs sweep coverage. Use `scope: "subassembly"` for an isolated mechanism. A supported subassembly route leaves whole-field robot qualification pending.
+
+The detector’s `sourceEvidence` names a `field-route/body-observations@1` journal. Bind it to the scenario digest, geometry digest and clock. Each observation identifies the same body, event and time, describes the measured criterion, gives the numeric measurement’s unit in `unit`, and names a pinned JSON `measurement`. Its `path` selects a numeric field using an array of keys. The checker evaluates `above` or `at-most` against the project’s threshold and returns the value and source. For example, positive material volume in a region can record arrival. An observation at the deadline still requires continuous occupied-route evidence from the start. The project defines its geometry, measurement units, detector and scoring rule. [Complete working example](../examples/field-route/make-body-example.mjs)

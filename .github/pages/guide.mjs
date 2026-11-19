@@ -40,7 +40,7 @@ export const stages = [
     objective: 'Test the assumption with the greatest consequence for the design. Record the exact candidate, inputs, observed result and limitations.',
     activity: 'Follow a piece from supply to release. When a collision appears, check which field object was installed, how it was oriented and whether it was still there at that instant. Use the registered geometry to decide whether to change the route.',
     handoff: 'A result tied to the tested revision, the team’s next decision and any remaining physical verification.',
-    skills: ['frc-setup','frc-troubleshoot','frc-java','frc-mechanism-cad'], docs: [['Review the route to a scoring event','docs/field-route-evidence.md'],['Replay a saved native study','docs/native-study-replay.md'],['Recorded release height','docs/recorded-release-height.md'],['Check the experiment environment','docs/setup-health.md'],['Simulation selection','docs/simulator-selection.md'],['Resume a design investigation','docs/strategy-first-continuation.md']]
+    skills: ['frc-setup','frc-troubleshoot','frc-java','frc-mechanism-cad'], docs: [['Check the route to a robot or game-piece observation','docs/field-route-evidence.md'],['Replay a saved native study','docs/native-study-replay.md'],['Recorded release height','docs/recorded-release-height.md'],['Check the experiment environment','docs/setup-health.md'],['Simulation selection','docs/simulator-selection.md'],['Resume a design investigation','docs/strategy-first-continuation.md']]
   }
 ];
 export const purpose = {
