@@ -38,6 +38,13 @@ test('raw wheel lock, wrap, polarity, corner identity and timing observability',
     ['signed full rotations',()=>{},0],
     ['incorrect coupling',r=>{r.modules[0].couplingMotorTurnsPerSteerTurn*=-1;},1],
     ['incorrect steering polarity',r=>{r.modules[2].steerSign*=-1;},1],
+    ['exchanged channels with IDs retained',r=>{
+      for (const c of r.cases) for (const frame of c.frames) {
+        const [a,b] = [frame.readings[0],frame.readings[2]];
+        [a[1],b[1]] = [b[1],a[1]];
+        [a[2],b[2]] = [b[2],a[2]];
+      }
+    },1],
     ['out of order',r=>{r.cases[0].frames[0].readings.reverse();},2],
     ['ambiguous wrap',r=>{r.maxSteerRateDegPerS=1801;},2],
     ['duplicate time',r=>{r.cases[0].frames[1].timeS=0;},2],
