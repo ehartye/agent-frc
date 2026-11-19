@@ -31,3 +31,5 @@ Deliver a mode/trigger transition matrix with expected software observations. Fo
 Exercise each transition offline using the project’s commands. Check scheduler ownership, cancellation, stale data, disable and re-enable against expected outputs.
 
 Before using a sensor to advance the mechanism, [check the mounted optical path and release evidence](../../docs/sensor-observability.md). Compare the seated and early-exit readings with the actual material and require an independent clearance observation for withdrawal.
+
+When a mission must work across varied starts, freeze the controller and its observation access, then reconcile each achieved state, distinct item and final decision against the original roster. [Review a frozen mission cohort](../../docs/mission-cohort.md).
