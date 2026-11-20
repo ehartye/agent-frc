@@ -1,10 +1,10 @@
 /** Advance complete configured matches on one simulated clock, carrying fractional time through each boundary. */
-export function createMatchSeries(engine, matches, {allowEmptyRoster = false} = {}) {
+export function createMatchSeries(engine, matches) {
   if (!Array.isArray(matches) || !matches.length) throw Error('Supply at least one project-authored match');
   const ids=new Set();
   const configs=matches.map(match=>{
     if (typeof match.id!=='string' || !match.id.trim() || ids.has(match.id) || !match.basis?.trim() ||
-        !Array.isArray(match.roster) || (!allowEmptyRoster && !match.roster.length))
+        !Array.isArray(match.roster) || !match.roster.length)
       throw Error('Specify unique match IDs, behavior basis and roster');
     ids.add(match.id);
     const roster=match.roster.map(row=>{
@@ -12,7 +12,7 @@ export function createMatchSeries(engine, matches, {allowEmptyRoster = false} = 
         throw Error('Each scheduled robot needs a named behavior in every period');
       return {...engine.defaults(row.side,row.slot),...row};
     });
-    return {...match,roster};
+    return {...match,roster:engine.completeRoster(roster)};
   });
   let index=0, sim, remainingS=0;
   const results=[];
@@ -45,7 +45,7 @@ export function createMatchSeries(engine, matches, {allowEmptyRoster = false} = 
 
 /** Keep the student's editable starting configuration independent of match playback. */
 export function createRehearsalSetup(engine, initialRoster, initialSetup, publishedMatches = []) {
-  let roster = initialRoster, setup = initialSetup;
+  let roster = initialRoster ?? engine.startingRoster(), setup = initialSetup;
   function edit(nextRoster, nextSetup) {
     const sim = engine.create(nextRoster, nextSetup);
     roster = structuredClone(nextRoster);
@@ -64,7 +64,7 @@ export function createRehearsalSetup(engine, initialRoster, initialSetup, publis
       roster: structuredClone(roster),
       setup
     }));
-    return createMatchSeries(engine, trials, {allowEmptyRoster: true});
+    return createMatchSeries(engine, trials);
   }
   return {edit, reset, series, get roster(){return structuredClone(roster);}, get setup(){return setup;}};
 }

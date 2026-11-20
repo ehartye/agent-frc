@@ -1,3 +1,5 @@
+import {allocateOpeningTasks} from './auto-allocation.mjs';
+import {createFieldPieceMotion} from './field-piece-motion.mjs';
 import { createRehearsalGame,rehearsalFindings } from './rehearsal-game.mjs';
 import { createMatchSeries, createRehearsalSetup } from './rehearsal-series-core.mjs';
 import { createTerminalRehearsal } from './rehearsal-terminal.mjs';
@@ -185,7 +187,7 @@ export async function buildLab(input, destination, comparison) {
         ({role,context,match,roster,focalId:(focal.side==='blue'?'B':'R')+focal.slot,ordinary,terminal,margin,regret,byRobot}))
     } : null).replaceAll('<','\\u003c'),
     PROFILE:json, SCENE:renderer, LAB:controls, 'ROUTE MODEL':routeStudy.toString(), 'WINDOW MODEL':analyzeWindow.toString(),
-    'REHEARSAL MODEL':[framePlan.toString(),starterFrameProfile.toString(),initialTrial.toString(),fieldGeometry.toString(),createRehearsalGame.toString(),rehearsalFindings.toString(),createTerminalRehearsal.toString(),createFieldRehearsal.toString(),createMatchSeries.toString(),createRehearsalSetup.toString(),
+    'REHEARSAL MODEL':[framePlan.toString(),starterFrameProfile.toString(),initialTrial.toString(),fieldGeometry.toString(),createFieldPieceMotion.toString(),allocateOpeningTasks.toString(),createRehearsalGame.toString(),rehearsalFindings.toString(),createTerminalRehearsal.toString(),createFieldRehearsal.toString(),createMatchSeries.toString(),createRehearsalSetup.toString(),
       'const rehearsal=createFieldRehearsal(profile); const rehearsalNotes=[];'].join('\n'),
     OPPORTUNITIES:opportunities, 'REHEARSAL UI':rehearsalUI
   };

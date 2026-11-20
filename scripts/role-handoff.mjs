@@ -61,9 +61,13 @@ export function deriveRoleDemand(selection,read,compiled) {
   const firstTick=Math.max(1,Math.round(windowS[0]/engine.dt));
   for(let tick=firstTick;tick<Math.round(windowS[1]/engine.dt);tick++){
     const timeS=tick*engine.dt;
-    for(const entry of run.sim.game.returning)if(sourceIds.has(entry.station)&&entry.readyAtS<=offset+timeS+1e-9)
+    for(const entry of run.sim.game.returning)if(sourceIds.has(entry.station)&&!profile.rehearsal.stations.find(s=>s.id===entry.station)?.service&&entry.readyAtS<=offset+timeS+1e-9)
       replenishments.push({station:entry.station,piece:entry.piece.id,timeS});
+    const before=run.sim.game.events.length;
     run.advance(engine.dt);
+    for(const ev of run.sim.game.events.slice(before))if(sourceIds.has(ev.station)&&ev.operation==='release'&&ev.outcome==='available'){
+      for(const piece of ev.pieces)replenishments.push({station:ev.station,piece,timeS:ev.timeS});
+    }
   }
   const requiredPieces=pieces.length, seconds=windowS[1]-windowS[0];
   return {schema:'agent-frc/role-demand@1',identity,contractKey,fieldConditions,openingStock,preloadedPieces,replenishments,

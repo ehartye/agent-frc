@@ -25,7 +25,7 @@ function roster(side,slot,startS=0,met='met'){
 }
 function run(p,roster,extra={}) {
   const engine=createFieldRehearsal(p);
-  const match={id:'test',basis:'Synthetic shared rack',setup:'lowered',roster,...extra};
+  const match={id:'test',basis:'Synthetic shared rack',setup:'lowered',roster:engine.completeRoster(['blue','red'].flatMap(side=>[1,2,3].map(slot=>roster.find(r=>r.side===side&&r.slot===slot) ?? {side,slot,plans:{Opening:'hold','Main play':'hold'}}))),...extra};
   const series=createMatchSeries(engine,[match]);series.advance(100);
   assert.ok(series.done);return series.results[0].game;
 }
@@ -60,13 +60,14 @@ test('an occupied region, a post-cutoff slip and a late arrival grant no automat
 test('switching interrupts a real unfinished scoring task; ordinary stock and scores are preserved',()=>{
   const p=fixture(), row=roster('blue',1,0);row.plans['Main play']='shuttle';
   const usual=structuredClone(row);delete usual.endgame;
-  const planned=run(p,[row]), normal=run(p,[usual]);
-  assert.equal(planned.events.filter(e=>e.phase==='Main play').length,0);
+  const support=['blue','red'].map(side=>({side,slot:2,plans:{Opening:'receive','Main play':'receive'}}));
+  const planned=run(p,[row,...support]),normal=run(p,[usual,...support]);
+  assert.equal(planned.events.filter(e=>e.robot==='B1' && e.phase==='Main play').length,0);
   assert.ok(normal.events.some(e=>e.outcome==='credited'));
   assert.equal(planned.endgame.ordinaryScore.blue,0);assert.equal(planned.score.blue,6);
   assert.equal(normal.score.blue,normal.endgame.ordinaryScore.blue);
   assert.equal(planned.endgame.attempts[0].interruptedBehavior,'shuttle');
-  const p2=structuredClone(p);delete p2.rehearsal.endgame;const legacy=run(p2,[usual]);
+  const p2=structuredClone(p);delete p2.rehearsal.endgame;const legacy=run(p2,[usual,...support]);
   assert.equal('endgame' in legacy,false);assert.deepEqual(legacy.events,normal.events);
   assert.deepEqual(legacy.score,normal.score);
   const wrong=fixture();wrong.rehearsal.endgame.actions[0].eligibleRobots=['R1'];

@@ -1,5 +1,9 @@
+import {fieldGeometry} from './field-rehearsal-geometry.mjs';
+import {createFieldPieceMotion} from './field-piece-motion.mjs';
+import {allocateOpeningTasks} from './auto-allocation.mjs';
+
 /** Project-owned stations and finite stock for the fixed-step field rehearsal. */
-export function createRehearsalGame(profile) {
+export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=createFieldPieceMotion(profile,geom)) {
   const model = profile.rehearsal;
   const stations = new Map();
   const periods = new Map(model.periods.map(p => [p.name,p.seconds]));
@@ -25,15 +29,48 @@ export function createRehearsalGame(profile) {
         Number.isFinite(w.toS) && w.fromS>=0 && w.toS>w.fromS && w.toS<=periods.get(w.phase) &&
         (w.firstPeriodLeader===undefined || sides.includes(w.firstPeriodLeader)), 'Invalid station activity window');
     }
+    if(s.floor || s.service) {
+      const physical=s.floor ?? s.service;
+      legal(s.kind==='retrieval' && !(s.floor && s.service) && Number.isFinite(physical.radiusIn) && physical.radiusIn>0 &&
+        (physical.captureReachIn===undefined || Number.isFinite(physical.captureReachIn) && physical.captureReachIn>=0),
+        'Supply a physical retrieval radius and nonnegative capture reach.');
+      const location=s.floor?.positions?.[0] ?? s.service?.outlet ?? s.at;
+      motion.start([physicalPiece(s,{id:'validation',type:s.piece},location)]);
+      if(s.floor)legal(Array.isArray(s.floor.positions) && s.floor.positions.every(point),'Supply floor coordinates in field inches.');
+      if(s.service)legal(label(physical.operator) && Number.isFinite(physical.secondsPerPiece) && physical.secondsPerPiece>0 &&
+        count(physical.capacity) && physical.capacity>0 && point(physical.outlet) && Array.isArray(physical.phases) &&
+        physical.phases.length>0 && physical.phases.every(p=>periods.has(p)), 'Invalid human station operator, outlet, service time, capacity or phases.');
+    }
     stations.set(s.id,s);
   }
   for (const s of stations.values()) {
+    const job=s.service?.delivery;
+    if(job) {
+      const target=stations.get(job.station);
+      legal(sides.includes(s.side) && target?.kind==='scoring' && target.piece===s.piece &&
+        [s.side,'both'].includes(target.side) && ['credited','missed','unresolved'].includes(job.outcome) && label(job.basis),
+        'A human delivery needs a side-eligible target, compatible piece, outcome and basis.');
+    }
     for (const [outcome,rule] of Object.entries(s.returns ?? {})) {
       const target=stations.get(rule.station);
       legal(s.kind==='scoring' && ['credited','missed','inactive','unresolved','occupied'].includes(outcome) &&
-        target?.kind==='retrieval' && target.piece===s.piece && Number.isFinite(rule.delayS) && rule.delayS>=0,
+        target?.kind==='retrieval' && target.piece===s.piece && (!target.floor || point(rule.at)) && Number.isFinite(rule.delayS) && rule.delayS>=0,
         'Returns need a compatible retrieval station and nonnegative delay');
     }
+  }
+  function physicalPiece(station,piece,p) {
+    const {radiusIn,heightIn,massKg,dragInS2,restitution}=station.floor ?? station.service;
+    return {...piece,p,radiusIn,heightIn,massKg,dragInS2,restitution,station:station.id};
+  }
+  function receive(g,station,piece,p) {
+    if(station.service)g.reserve[station.id].push(piece);
+    else {
+      g.stock[station.id].push(piece);
+      if(station.floor)motion.put(g.motion,physicalPiece(station,piece,p));
+    }
+  }
+  function move(sim,dt,begins){
+    if(sim.game.motion.pieces.length)motion.advance(sim.game.motion,dt,sim.robots.map((r,i)=>({...r,previousP:begins[i]})),sim.setup);
   }
   function elapsed(sim,t) {
     return sim.phaseHistory.reduce((sum,p)=>sum+p.seconds,0)+t;
@@ -42,14 +79,41 @@ export function createRehearsalGame(profile) {
     const time=elapsed(sim,t), pending=[];
     for (const entry of sim.game.returning) {
       if(entry.readyAtS<=time+1e-9) {
-        sim.game.stock[entry.station].push(entry.piece);
+        receive(sim.game,stations.get(entry.station),entry.piece,entry.at);
         if(entry.releaseSlot)sim.game.occupied[entry.releaseSlot]--;
       }
       else pending.push(entry);
     }
     sim.game.returning=pending;
+    for(const operator of Object.values(sim.game.operators)){
+      const g=sim.game, choices=operator.stations;
+      const allowed=id=>stations.get(id).service.phases.includes(sim.phase);
+      if(operator.job && !allowed(operator.job.station))operator.job=null;
+      if(operator.job && operator.job.due<=time+1e-9){
+        const s=stations.get(operator.job.station),svc=s.service,piece=g.reserve[s.id].shift();
+        if(svc.delivery){
+          const actor={id:'human/'+svc.operator,side:s.side};
+          dispose(sim,actor,stations.get(svc.delivery.station),[piece],svc.delivery.outcome,t,svc.delivery.basis);
+        } else{
+          g.stock[s.id].push(piece);
+          motion.put(g.motion,physicalPiece(s,piece,svc.outlet));
+          record(sim,{id:'human/'+svc.operator},s,'release','available',[piece],t);
+        }
+        operator.job=null;
+      }
+      if(operator.job)continue;
+      for(let n=0;n<choices.length;n++){
+        const index=(operator.next+n)%choices.length,id=choices[index],s=stations.get(id);
+        if(!allowed(id)||!g.reserve[id].length||(!s.service.delivery&&g.stock[id].length>=s.service.capacity))continue;
+        operator.job={station:id,due:time+s.service.secondsPerPiece};
+        operator.next=(index+1)%choices.length;
+        break;
+      }
+    }
   }
   function validateStep(step) {
+    if(step.openingAlternatives!==undefined)legal(step.operation==='acquire' && Array.isArray(step.openingAlternatives) &&
+      step.openingAlternatives.every(id=>stations.get(id)?.kind==='retrieval'), 'Opening alternatives must be registered pickup sources.');
     if (step.operation===undefined && step.station===undefined) return;
     legal(['acquire','attempt'].includes(step.operation) && (step.quantity===undefined ||
       count(step.quantity) && step.quantity>0), 'Invalid piece operation or quantity');
@@ -64,7 +128,7 @@ export function createRehearsalGame(profile) {
   for (const program of Object.values(model.programs)) {
     for (const path of [program.steps,...Object.values(program.byPeriod ?? {})]) for (const step of path) validateStep(step);
   }
-  function start(robots, tieWinner) {
+  function start(robots, tieWinner,setup) {
     legal(tieWinner===undefined || sides.includes(tieWinner),'Invalid tied first-period decision');
     const stock={},cargo={},score={blue:0,red:0},initial={},capacity={};
     const supplies = [...stations.values()].filter(s=>s.kind==='retrieval');
@@ -82,8 +146,99 @@ export function createRehearsalGame(profile) {
         quantity<=capacity[robot.id] && quantity<=stock[key].length,'Preload exceeds compatible source stock or robot capacity');
       cargo[robot.id]=stock[key].splice(0,quantity);
     }
+    const reserve={},operators={},floor=[];
+    for(const s of supplies){
+      if(s.floor){
+        const available=stock[s.id],coords=s.floor.positions;
+        legal(coords.length===available.length || coords.length===s.stock,'Floor positions must account for each initial piece at '+s.id);
+        for(const [i,piece] of available.entries())floor.push(physicalPiece(s,piece,coords[coords.length-available.length+i]));
+      }else if(s.service){
+        reserve[s.id]=stock[s.id];stock[s.id]=[];
+        const op=operators[s.service.operator] ??= {stations:[],next:0,job:null};
+        op.stations.push(s.id);
+      }
+    }
+    const opening=openingTasks(robots,stock,cargo,floor,setup);
     const attempts=Object.fromEntries([...stations.values()].filter(s=>s.kind==='scoring').map(s=>[s.id,0]));
-    return {stock,initial,cargo,capacity,score,attempts,occupied:{...attempts},returning:[],tieWinner,firstPeriodCount:{blue:0,red:0},terminal:[],events:[]};
+    return {reserve,operators,motion:motion.start(floor),opening,stock,initial,cargo,capacity,score,attempts,occupied:{...attempts},returning:[],tieWinner,firstPeriodCount:{blue:0,red:0},terminal:[],events:[]};
+  }
+  function openingTasks(robots,stock,cargo,floor,setup) {
+    const phase=model.periods[0],places=new Map(floor.map(p=>[p.id,p.p]));
+    const destinations=new Map(),eligibleRobots=new Set();
+    const rows=robots.map(r=>{
+      const program=model.programs[r.plans?.[phase.name]],steps=program?.byPeriod?.[phase.name] ?? program?.steps ?? [];
+      const candidates=[],fallback=cargo[r.id].length?'preload':steps.length?'follow program':'hold position';
+      const row={robot:r.id,candidates,fallback},first=steps.findIndex(s=>s.operation==='acquire');
+      if(!r.p || first<0)return row;
+      if((r.capacity ?? model.defaults.capacity ?? 1)<=cargo[r.id].length && !steps.slice(0,first).some(s=>s.operation==='attempt'))return row;
+      let origin=r.p,spent=0;
+      const distance=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+      function routeTime(to,straight){
+        if(straight)return geom.hit(origin,to,r,setup)?Infinity:distance(origin,to)/r.speed;
+        const route=geom.plan(origin,to,r,setup);
+        return route.length?route.slice(1).reduce((n,p,i)=>n+distance(p,route[i]),0)/r.speed:Infinity;
+      }
+      for(const [index,leg] of steps.entries()){
+        const at=leg.at,q=Array.isArray(at)?at:at[r.side] ?? at.slots?.[r.slot] ?? at.default;
+        const to=leg.frame==='field'||r.side==='blue'?q:[model.mirror.redX?profile.field.length-q[0]:q[0],model.mirror.redY?profile.field.width-q[1]:q[1]];
+        spent+=leg.dwell??0;
+        if(index!==first){spent+=routeTime(to,leg.straight);origin=to;continue;}
+        const id=typeof leg.station==='string'?leg.station:leg.station[r.side];
+        for(const key of [id,...(leg.openingAlternatives??[])]){
+          const s=stations.get(key);
+          if(![r.side,'both'].includes(s.side) || s.piece!==stations.get(id).piece)continue;
+          if(stock[key].length)eligibleRobots.add(r.id);
+          const ranked=[];
+          for(const piece of stock[key]){
+            const p=places.get(piece.id);
+            let approach=key===id?to:s.at;
+            if(p){
+              const dx=p[0]-origin[0],dy=p[1]-origin[1],d=Math.hypot(dx,dy);
+              if(d>1e-8){
+                const angle=r.heading*Math.PI/180,ux=dx/d,uy=dy/d;
+                const length=(r.length/2+r.bumper)/Math.abs(ux*Math.cos(angle)+uy*Math.sin(angle));
+                const width=(r.width/2+r.bumper)/Math.abs(uy*Math.cos(angle)-ux*Math.sin(angle));
+                const offset=Math.min(d,Math.min(length,width)+s.floor.radiusIn+(s.floor.captureReachIn??0)*.5);
+                approach=[p[0]-ux*offset,p[1]-uy*offset];
+              }else approach=origin;
+              if(!canReach({...r,p:approach},p,s.floor))continue;
+            }
+            ranked.push({piece:piece.id,station:key,approach,lower:spent+distance(origin,approach)/r.speed});
+          }
+          ranked.sort((a,b)=>a.lower-b.lower||a.piece.localeCompare(b.piece));
+          const best=[];
+          for(const item of ranked){
+            if(item.lower>phase.seconds || best.length>=robots.length && item.lower>best.at(-1).timeS)break;
+            const timeS=spent+routeTime(item.approach,leg.straight);
+            if(timeS>phase.seconds)continue;
+            best.push({...item,timeS});best.sort((a,b)=>a.timeS-b.timeS||a.piece.localeCompare(b.piece));
+            if(best.length>robots.length)best.pop();
+          }
+          for(const choice of best){
+            candidates.push(choice);destinations.set(r.id+'/'+choice.piece,choice.approach);
+          }
+        }
+        break;
+      }
+      return row;
+    });
+    const assignment=allocateOpeningTasks(rows);
+    for(const [id,choice] of Object.entries(assignment)){
+      if(choice.piece)choice.approach=destinations.get(id+'/'+choice.piece);
+      else if(eligibleRobots.has(id))choice.yieldPickup=true;
+    }
+    return assignment;
+  }
+  function canReach(robot,p,physical){
+    const poly=geom.footprint(robot.p,robot);
+    if(poly.every((a,i)=>{const b=poly[(i+1)%poly.length];return (b[0]-a[0])*(p[1]-a[1])-(b[1]-a[1])*(p[0]-a[0])>=0;}) ||
+       poly.every((a,i)=>{const b=poly[(i+1)%poly.length];return (b[0]-a[0])*(p[1]-a[1])-(b[1]-a[1])*(p[0]-a[0])<=0;}))return true;
+    const reach=physical.radiusIn+(physical.captureReachIn??0)+1e-6;
+    return poly.some((a,i)=>{
+      const b=poly[(i+1)%poly.length],dx=b[0]-a[0],dy=b[1]-a[1];
+      const t=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/(dx*dx+dy*dy)));
+      return Math.hypot(p[0]-a[0]-t*dx,p[1]-a[1]-t*dy)<=reach;
+    });
   }
   function record(sim,robot,station,operation,outcome,pieces,timeS) {
     const entry={phase:sim.phase,timeS,robot:robot.id,station:station.id,operation,outcome,pieces:pieces.map(p=>p.id)};
@@ -96,11 +251,20 @@ export function createRehearsalGame(profile) {
     const s=stations.get(key),g=sim.game,bay=g.cargo[robot.id],n=step.quantity ?? 1;
     const inRange=s.areaIn ? robot.p.every((v,i)=>v>=s.areaIn[0][i] && v<=s.areaIn[1][i]) :
       Math.hypot(robot.p[0]-s.at[0],robot.p[1]-s.at[1])<=s.radiusIn;
-    if (![robot.side,'both'].includes(s.side) || !inRange) {
+    if (![robot.side,'both'].includes(s.side) || (!s.floor && !inRange)) {
       record(sim,robot,s,step.operation,'ineligible-position-or-alliance',[],timeS);return;
     }
     if (step.operation==='acquire') {
-      const pieces=g.stock[key].splice(0,Math.min(n,g.capacity[robot.id]-bay.length));
+      const own=g.opening[robot.id]?.piece;
+      const reserved=sim.phaseIndex===0?new Set(Object.entries(g.opening).filter(([id])=>id!==robot.id && id[0]===robot.id[0]).map(([,a])=>a.piece)):new Set();
+      const physical=s.floor ?? s.service;
+      const nearby=physical?new Set(g.motion.pieces.filter(p=>p.station===key && canReach(robot,p.p,physical)).map(p=>p.id)):null;
+      const eligible=g.stock[key].filter(p=>!reserved.has(p.id)&&(!nearby||nearby.has(p.id)));
+      if(sim.phaseIndex===0&&own)eligible.sort((a,b)=>Number(b.id===own)-Number(a.id===own));
+      const pieces=eligible.slice(0,Math.min(n,g.capacity[robot.id]-bay.length));
+      const ids=new Set(pieces.map(p=>p.id));
+      g.stock[key]=g.stock[key].filter(p=>!ids.has(p.id));
+      if(physical)for(const piece of pieces)motion.take(g.motion,piece.id);
       bay.push(...pieces);
       record(sim,robot,s,step.operation,pieces.length?'acquired':'empty-or-full',pieces,timeS);
       return;
@@ -109,7 +273,11 @@ export function createRehearsalGame(profile) {
     if (!pieces.length) {record(sim,robot,s,'attempt','no-compatible-cargo',[],timeS);return;}
     const used=new Set(pieces);
     g.cargo[robot.id]=bay.filter(p=>!used.has(p));
-    let outcome=step.outcome ?? 'unresolved';
+    dispose(sim,robot,s,pieces,step.outcome ?? 'unresolved',timeS);
+  }
+  function dispose(sim,robot,s,pieces,prescribed,timeS,basis){
+    const g=sim.game,key=s.id;
+    let outcome=prescribed;
     let activity='active';
     if (s.activeWindows) {
       const possible=s.activeWindows.filter(w=>w.phase===sim.phase && w.fromS<=timeS && timeS<w.toS);
@@ -126,7 +294,7 @@ export function createRehearsalGame(profile) {
       if(!batch.length)continue;
       const event=record(sim,robot,s,'attempt',result,batch,timeS);
       const points=result==='credited'?batch.length*(typeof s.points==='number'?s.points:s.points[sim.phase]):0;
-      event.points=points;event.prescribedOutcome=step.outcome ?? 'unresolved';event.activity=activity;
+      event.points=points;event.prescribedOutcome=prescribed;event.activity=activity;if(basis)event.basis=basis;
       g.score[robot.side]+=points;
       if(result==='credited'){
         g.occupied[key]+=batch.length;
@@ -136,14 +304,14 @@ export function createRehearsalGame(profile) {
       for (const piece of batch) {
         const rule=s.returns?.[result];
         if(rule){
-          const entry={piece,station:rule.station,readyAtS:elapsed(sim,timeS)+rule.delayS};
+          const entry={piece,at:rule.at,station:rule.station,readyAtS:elapsed(sim,timeS)+rule.delayS};
           if(result==='credited')entry.releaseSlot=key;
           g.returning.push(entry);
         }else g.terminal.push({...piece,station:key,outcome:result});
       }
     }
   }
-  return {start,apply,replenish};
+  return {start,apply,replenish,move};
 }
 
 
@@ -163,7 +331,7 @@ export function rehearsalFindings(id,basis,game,stations) {
       '. Terminal points Blue '+terminal.terminalScore.blue+' / Red '+terminal.terminalScore.red+'.');
   }
   for (const station of stations ?? []) {
-    if(station.kind==='retrieval') lines.push(station.label+' · '+station.piece+' stock '+game.initial[station.id]+' initially, '+game.stock[station.id].length+' available at snapshot.');
+    if(station.kind==='retrieval') lines.push(station.label+' · '+station.piece+' stock '+game.initial[station.id]+' initially, '+game.stock[station.id].length+' available at snapshot.'+(station.service?' '+game.reserve[station.id].length+' in human reserve at '+station.service.operator+'.':''));
     else lines.push(station.label+' · '+game.attempts[station.id]+' pieces attempted. Criterion: '+station.criterion);
   }
   const groups=new Map();

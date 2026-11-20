@@ -50,14 +50,14 @@ test('continuous relative sweep detects crossing, exchanging ends, rotation and 
 });
 
 test('exclusive opening queues competing arrivals and is physically unavailable to an oversized robot',()=>{
-  const sim=engine.create(both());sim.paused=false;engine.advance(sim,15);
+  const sim=engine.createProbe(both());sim.paused=false;engine.advance(sim,15);
   assert.ok(sim.robots.every(r=>r.visits===1));
   assert.ok(sim.robots.some(r=>r.wait>0));
   const events=sim.log.map(e=>e.message);
   assert.ok(events.includes('B1 requested practice gate'));
   assert.ok(events.indexOf('B1 entered practice gate')>events.indexOf('R1 cleared practice gate'));
   assert.ok(sim.hotspots.length);
-  const big=engine.create([{...engine.defaults('blue',1),width:38,bumper:0}]);
+  const big=engine.createProbe([{...engine.defaults('blue',1),width:38,bumper:0}]);
   big.paused=false;engine.advance(big,15);
   assert.equal(big.robots[0].visits,0);
   assert.match(big.robots[0].blocked,/No footprint-clear path/);
@@ -71,7 +71,7 @@ test('independent named resources permit concurrent reservations',()=>{
   validateProfile(p);
   const run=createFieldRehearsal(p),b=run.defaults('blue',1),r=run.defaults('red',1);
   b.plans.Opening='left';r.plans.Opening='right';
-  const sim=run.create([b,r]);sim.paused=false;run.advance(sim,.05);
+  const sim=run.createProbe([b,r]);sim.paused=false;run.advance(sim,.05);
   assert.equal(sim.resources['Left gate'].owner,b.id);
   assert.equal(sim.resources['Right gate'].owner,r.id);
   run.advance(sim,1);assert.equal(sim.resources['Right gate'].owner,null);
@@ -79,7 +79,7 @@ test('independent named resources permit concurrent reservations',()=>{
 });
 
 test('clock freezes on each active deadline and retained footprint positions replay deterministically',()=>{
-  const start=()=>{const s=engine.create(both());s.paused=false;return s;};
+  const start=()=>{const s=engine.createProbe(both());s.paused=false;return s;};
   const sim=start();engine.advance(sim,18);
   assert.equal(sim.ticks,200);assert.ok(sim.ended && sim.paused);
   const frozen=JSON.stringify(sim.robots);engine.advance(sim,3);assert.equal(JSON.stringify(sim.robots),frozen);

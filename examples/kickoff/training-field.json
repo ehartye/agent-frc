@@ -142,14 +142,55 @@
     "endgame": {
       "period": "Main play",
       "basis": "Synthetic docking exercise; support and latch state are prescribed at assessment.",
-      "assessment": {"maxDelayS": 2, "atRestAfterS": 1},
+      "assessment": {
+        "maxDelayS": 2,
+        "atRestAfterS": 1
+      },
       "targets": [
-        {"id":"blue-west","label":"Blue docking station","side":"blue","at":[90,48],"radiusIn":10,"resource":"west","capacity":1},
-        {"id":"red-east","label":"Red docking station","side":"red","at":[390,216],"radiusIn":10,"resource":"east","capacity":1}
+        {
+          "id": "blue-west",
+          "label": "Blue docking station",
+          "side": "blue",
+          "at": [
+            90,
+            48
+          ],
+          "radiusIn": 10,
+          "resource": "west",
+          "capacity": 1
+        },
+        {
+          "id": "red-east",
+          "label": "Red docking station",
+          "side": "red",
+          "at": [
+            390,
+            216
+          ],
+          "radiusIn": 10,
+          "resource": "east",
+          "capacity": 1
+        }
       ],
       "actions": [
-        {"id":"dock","label":"Latch to station","points":5,"serviceS":2,"requires":["latch-held"]},
-        {"id":"stand","label":"Finish on the pad","points":1,"serviceS":0.5,"requires":["supported-on-pad"]}
+        {
+          "id": "dock",
+          "label": "Latch to station",
+          "points": 5,
+          "serviceS": 2,
+          "requires": [
+            "latch-held"
+          ]
+        },
+        {
+          "id": "stand",
+          "label": "Finish on the pad",
+          "points": 1,
+          "serviceS": 0.5,
+          "requires": [
+            "supported-on-pad"
+          ]
+        }
       ]
     },
     "stations": [
@@ -206,6 +247,128 @@
         "radiusIn": 16,
         "points": 1,
         "criterion": "A carried tile reaches the release area after the authored service dwell."
+      },
+      {
+        "id": "blue-desk",
+        "label": "Blue staffed outlet",
+        "kind": "retrieval",
+        "side": "blue",
+        "piece": "marker",
+        "at": [
+          32,
+          132
+        ],
+        "radiusIn": 20,
+        "stock": 3,
+        "service": {
+          "operator": "blue steward",
+          "secondsPerPiece": 2,
+          "phases": [
+            "Opening",
+            "Main play"
+          ],
+          "outlet": [
+            30,
+            114
+          ],
+          "radiusIn": 2,
+          "heightIn": 1,
+          "capacity": 1,
+          "captureReachIn": 3
+        }
+      },
+      {
+        "id": "blue-layout",
+        "label": "Blue loose pieces",
+        "kind": "retrieval",
+        "side": "blue",
+        "piece": "marker",
+        "at": [
+          72,
+          227
+        ],
+        "radiusIn": 20,
+        "stock": 3,
+        "floor": {
+          "positions": [
+            [
+              72,
+              247
+            ],
+            [
+              66,
+              247
+            ],
+            [
+              60,
+              247
+            ]
+          ],
+          "radiusIn": 2,
+          "heightIn": 1,
+          "captureReachIn": 4
+        }
+      },
+      {
+        "id": "red-desk",
+        "label": "Red staffed outlet",
+        "kind": "retrieval",
+        "side": "red",
+        "piece": "marker",
+        "at": [
+          448,
+          132
+        ],
+        "radiusIn": 20,
+        "stock": 3,
+        "service": {
+          "operator": "red steward",
+          "secondsPerPiece": 2,
+          "phases": [
+            "Opening",
+            "Main play"
+          ],
+          "outlet": [
+            450,
+            150
+          ],
+          "radiusIn": 2,
+          "heightIn": 1,
+          "capacity": 1,
+          "captureReachIn": 3
+        }
+      },
+      {
+        "id": "red-layout",
+        "label": "Red loose pieces",
+        "kind": "retrieval",
+        "side": "red",
+        "piece": "marker",
+        "at": [
+          408,
+          37
+        ],
+        "radiusIn": 20,
+        "stock": 3,
+        "floor": {
+          "positions": [
+            [
+              408,
+              17
+            ],
+            [
+              414,
+              17
+            ],
+            [
+              420,
+              17
+            ]
+          ],
+          "radiusIn": 2,
+          "heightIn": 1,
+          "captureReachIn": 4
+        }
       }
     ],
     "series": {
@@ -230,6 +393,38 @@
                 "Opening": "shuttle",
                 "Main play": "shuttle"
               }
+            },
+            {
+              "side": "blue",
+              "slot": 2,
+              "plans": {
+                "Opening": "receive",
+                "Main play": "receive"
+              }
+            },
+            {
+              "side": "blue",
+              "slot": 3,
+              "plans": {
+                "Opening": "patrol",
+                "Main play": "patrol"
+              }
+            },
+            {
+              "side": "red",
+              "slot": 2,
+              "plans": {
+                "Opening": "receive",
+                "Main play": "receive"
+              }
+            },
+            {
+              "side": "red",
+              "slot": 3,
+              "plans": {
+                "Opening": "patrol",
+                "Main play": "patrol"
+              }
             }
           ]
         },
@@ -253,6 +448,38 @@
                 "Opening": "cross",
                 "Main play": "shuttle"
               }
+            },
+            {
+              "side": "blue",
+              "slot": 2,
+              "plans": {
+                "Opening": "receive",
+                "Main play": "receive"
+              }
+            },
+            {
+              "side": "blue",
+              "slot": 3,
+              "plans": {
+                "Opening": "patrol",
+                "Main play": "patrol"
+              }
+            },
+            {
+              "side": "red",
+              "slot": 2,
+              "plans": {
+                "Opening": "receive",
+                "Main play": "receive"
+              }
+            },
+            {
+              "side": "red",
+              "slot": 3,
+              "plans": {
+                "Opening": "patrol",
+                "Main play": "patrol"
+              }
             }
           ]
         },
@@ -264,7 +491,14 @@
             {
               "side": "blue",
               "slot": 1,
-                "endgame": {"action":"dock","target":"blue-west","startS":37,"witnesses":{"latch-held":"met"}},
+              "endgame": {
+                "action": "dock",
+                "target": "blue-west",
+                "startS": 37,
+                "witnesses": {
+                  "latch-held": "met"
+                }
+              },
               "plans": {
                 "Opening": "hold",
                 "Main play": "shuttle"
@@ -276,6 +510,38 @@
               "plans": {
                 "Opening": "hold",
                 "Main play": "shuttle"
+              }
+            },
+            {
+              "side": "blue",
+              "slot": 2,
+              "plans": {
+                "Opening": "receive",
+                "Main play": "receive"
+              }
+            },
+            {
+              "side": "blue",
+              "slot": 3,
+              "plans": {
+                "Opening": "patrol",
+                "Main play": "patrol"
+              }
+            },
+            {
+              "side": "red",
+              "slot": 2,
+              "plans": {
+                "Opening": "receive",
+                "Main play": "receive"
+              }
+            },
+            {
+              "side": "red",
+              "slot": 3,
+              "plans": {
+                "Opening": "patrol",
+                "Main play": "patrol"
               }
             }
           ]
@@ -425,8 +691,8 @@
       "speed": 78,
       "orders": [
         "cross",
-        "shuttle",
-        "hold"
+        "receive",
+        "patrol"
       ]
     },
     "programs": {
@@ -485,7 +751,8 @@
           {
             "at": {
               "blue": [
-                295, 76
+                295,
+                76
               ],
               "red": [
                 178,
@@ -508,7 +775,12 @@
               60,
               48
             ],
-            "label": "Pick up tile", "operation": "acquire", "station": {"blue": "blue-supply", "red": "red-supply"},
+            "label": "Pick up tile",
+            "operation": "acquire",
+            "station": {
+              "blue": "blue-supply",
+              "red": "red-supply"
+            },
             "dwell": 0.4
           },
           {
@@ -516,8 +788,64 @@
               175,
               194
             ],
-            "label": "Deliver to bay", "operation": "attempt", "station": {"blue": "blue-bay", "red": "red-bay"}, "outcome": "credited",
+            "label": "Deliver to bay",
+            "operation": "attempt",
+            "station": {
+              "blue": "blue-bay",
+              "red": "red-bay"
+            },
+            "outcome": "credited",
             "dwell": 0.6
+          }
+        ]
+      },
+      "receive": {
+        "label": "Cover the return lane",
+        "loop": true,
+        "steps": [
+          {
+            "at": [
+              32,
+              132
+            ],
+            "label": "Cover the near handoff",
+            "operation": "acquire",
+            "station": {
+              "blue": "blue-desk",
+              "red": "red-desk"
+            }
+          },
+          {
+            "at": [
+              32,
+              151
+            ],
+            "label": "Reset to the far handoff"
+          }
+        ]
+      },
+      "patrol": {
+        "label": "Cover the outside lane",
+        "loop": true,
+        "steps": [
+          {
+            "at": [
+              72,
+              227
+            ],
+            "label": "Cover the outside approach",
+            "operation": "acquire",
+            "station": {
+              "blue": "blue-layout",
+              "red": "red-layout"
+            }
+          },
+          {
+            "at": [
+              70,
+              239
+            ],
+            "label": "Return to the boundary lane"
           }
         ]
       }
