@@ -172,7 +172,7 @@ export async function buildLab(input, destination, comparison) {
   const json = JSON.stringify(profile).replaceAll('<', '\\u003c');
   const replacements={
     'ROLE COMPARISON':JSON.stringify(comparison ? {
-      roles:comparison.roles,contexts:comparison.contexts.map(({id,basis})=>({id,basis})),side:comparison.side,
+      files:comparison.files,roles:comparison.roles,contexts:comparison.contexts.map(({id,basis})=>({id,basis})),side:comparison.side,
       cells:comparison.cells.map(({role,context,match,roster,focal,ordinary,terminal,margin,regret,byRobot})=>
         ({role,context,match,roster,focalId:(focal.side==='blue'?'B':'R')+focal.slot,ordinary,terminal,margin,regret,byRobot}))
     } : null).replaceAll('<','\\u003c'),

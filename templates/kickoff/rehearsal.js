@@ -344,6 +344,19 @@
       byId('replaySetup').value=setup;notice.textContent='';listRoster();seriesResults();render();
       lastTime=performance.now();frame=requestAnimationFrame(playSeries);
     };
+    if(roleComparison.files){
+      for(const period of config.periods)byId('rolePhase').add(new Option(period.name,period.name));
+      for(const station of stations.filter(s=>[roleComparison.side,'both'].includes(s.side)))
+        byId('roleStation').add(new Option(station.label,station.id));
+      byId('roleExport').hidden=!byId('roleStation').options.length;
+      byId('roleSave').onclick=()=>{
+        const c=selected(),selection={schema:'agent-frc/role-selection@1',...roleComparison.files,role:c.role,context:c.context,
+          phase:byId('rolePhase').value,station:byId('roleStation').value};
+        const url=URL.createObjectURL(new Blob([JSON.stringify(selection,null,2)+'\n'],{type:'application/json'}));
+        const link=document.createElement('a');link.href=url;link.download='role-selection.json';link.click();
+        setTimeout(()=>URL.revokeObjectURL(url),1000);
+      };
+    }
     byId('roleLab').hidden=false;showResult();
   }
   function animate(now){

@@ -1,6 +1,8 @@
 import {analyzeWindow} from '../../scripts/kickoff-window.mjs';
 import {reviewElevation} from '../../scripts/hardening.mjs';
 import {evidenceReader} from '../../scripts/study-evidence.mjs';
+import {reviewConcepts} from '../../scripts/design-review.mjs';
+import {buildRoleReport} from '../../scripts/role-design-report.mjs';
 import {compareRoles} from '../../scripts/strategy-lab.mjs';
 import {journeyMap} from './journey.mjs';
 import {buildHighlights} from '../../scripts/robot-highlights.mjs';
@@ -78,7 +80,7 @@ const chapters=stages.map((s,i)=>`<details id="${s.id}" class="chapter"${i===0?'
 <div class="chapter-body"><h3>${escape(s.question)}</h3><p>${escape(s.objective)}</p><p>${escape(s.activity)}</p>
 <div class="handoff"><h4>Carry forward</h4><p>${escape(s.handoff)}</p></div>${s.docs.some(([,p])=>p==='docs/camera-reference.md')?cameraComparison:''}${s.id==='contract'?serviceComparison:''}${s.id==='verify'?suspensionStudy:''}
 <h4>Supporting skills</h4><div class="chips">${s.skills.map(k=>link(k,'skills/'+k+'/SKILL.md')).join('')}</div>
-<div class="reading">${s.id==='verify'?highlightsLink:''}${s.id==='story'?'<a href="field-lab.html#roleLab">Compare alliance roles and replay the field ↗</a> · ':''}${s.id==='rules'?'<a href="rules.json" download>Download the training rules model ↓</a> · ':''}${s.docs.some(([,p])=>p===powerGuide)?'<a href="#power">Try the shared-power comparison ↓</a> · ':''}${s.docs.map(([label,p])=>link(label+' ↗',p)).join(' · ')}</div></div></details>`).join('\n');
+<div class="reading">${s.id==='design'?'<a href="role-design.html">Compare robot designs against a selected match role ↗</a> · ':''}${s.id==='verify'?highlightsLink:''}${s.id==='story'?'<a href="field-lab.html#roleLab">Compare alliance roles and replay the field ↗</a> · ':''}${s.id==='rules'?'<a href="rules.json" download>Download the training rules model ↓</a> · ':''}${s.docs.some(([,p])=>p===powerGuide)?'<a href="#power">Try the shared-power comparison ↓</a> · ':''}${s.docs.map(([label,p])=>link(label+' ↗',p)).join(' · ')}</div></div></details>`).join('\n');
 const directory=Object.keys(purpose).map(k=>{
   const uses=stages.filter(s=>s.skills.includes(k));
   if(!uses.length) throw Error('Skill lacks a workflow stage: '+k);
@@ -103,5 +105,8 @@ await writeFile(path.join(output,'rules.json'),JSON.stringify(model,null,2)+'\n'
 await buildHighlights(path.join(root,'examples/highlights/project.json'),path.join(output,'robot'));
 await buildHighlights(path.join(root,'examples/highlights/stroke-chapter-page.json'),path.join(output,'stroke'));
 const roleStudy=JSON.parse(await readFile(path.join(root,'examples/design-methods/alliance.json'),'utf8'));
-await buildLab(profile,path.join(output,'field-lab.html'),compareRoles(profile,roleStudy));
+const selection=JSON.parse(await readFile(path.join(studyFolder,'role-selection.json'),'utf8'));
+const architectureStudy=JSON.parse(await readFile(path.join(studyFolder,'role-architectures.json'),'utf8'));
+buildRoleReport(reviewConcepts(architectureStudy,evidenceReader(root)),path.join(output,'role-design.html'));
+await buildLab(profile,path.join(output,'field-lab.html'),{...compareRoles(profile,roleStudy),files:{profile:selection.profile,study:selection.study}});
 console.log('Built '+stages.length+' workflow stages, '+ownedSkills.length+' skills and the current kickoff lab.');

@@ -56,7 +56,9 @@ header{max-width:none;padding:23px max(clamp(14px,3vw,48px),calc((100vw - 1344px
 <label>Focal robot role<select id="roleChoice"></select></label>
 <label>Partner and opponent setup<select id="roleContext"></select></label>
 <p id="roleBasis"></p><p id="roleOutcome" aria-live="polite"></p>
-<ul id="rolePhases"></ul><button id="rolePlay" type="button">Replay this role and setup at 10×</button>
+<ul id="rolePhases"></ul><div id="roleExport" hidden>
+<label>Design period<select id="rolePhase"></select></label><label>Design station<select id="roleStation"></select></label>
+<button id="roleSave" type="button">Save selected role for design</button></div><button id="rolePlay" type="button">Replay this role and setup at 10×</button>
 </fieldset>
 <p>Assign up to three robots per alliance. Each robot follows its prescribed route with its full bumper footprint. Use the timer to see who waits and which trips finish.</p>
 <figure class="rehearsal-board"><canvas id="replayField" aria-label="Timed overhead field showing labeled blue and red robots, structures and blocked positions. The roster below describes each robot."></canvas>

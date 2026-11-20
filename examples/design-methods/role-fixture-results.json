@@ -1,0 +1,601 @@
+{
+  "basis": "Original teaching model. One drive, one receiver, finite identified stock, serial or independent reset.",
+  "runs": {
+    "shared": {
+      "nominal": {
+        "concept": "shared",
+        "case": "nominal",
+        "runId": "shared/nominal",
+        "lastAcceptedS": 32,
+        "roleEpisode": "/runs/shared/nominal/episode",
+        "episode": {
+          "concept": "shared",
+          "case": "nominal",
+          "runId": "shared/nominal",
+          "contractKey": "d676464150f3e677ab10298eff5d70c559cd61baa8a0e047969ba87086d850ea",
+          "phase": "Main play",
+          "station": "blue-bay",
+          "criterion": "A carried tile reaches the release area after the authored service dwell.",
+          "focalRobot": "B1",
+          "revision": "shared-fixture-r1",
+          "evidence": "timing-model",
+          "windowS": [
+            0,
+            45
+          ],
+          "fieldConditions": {
+            "setup": "lowered",
+            "peers": [
+              {
+                "side": "red",
+                "slot": 1,
+                "plans": {
+                  "Opening": "shuttle",
+                  "Main play": "shuttle"
+                }
+              }
+            ],
+            "robotsAtStart": [
+              {
+                "id": "B1",
+                "xyIn": [
+                  175,
+                  194
+                ],
+                "heading": 0,
+                "cargo": [
+                  "blue-supply/2"
+                ]
+              },
+              {
+                "id": "R1",
+                "xyIn": [
+                  305,
+                  70
+                ],
+                "heading": -180,
+                "cargo": [
+                  "red-supply/2"
+                ]
+              }
+            ],
+            "occupancyAtStart": {
+              "blue-bay": 1,
+              "red-bay": 1
+            },
+            "queuesAtStart": {
+              "practice gate": {
+                "owner": null,
+                "queue": []
+              }
+            }
+          },
+          "clockWitnesses": [
+            {
+              "timeS": 0,
+              "witness": "Simulator initialized."
+            },
+            {
+              "timeS": 45,
+              "witness": "Complete window evaluated, including idle tail."
+            }
+          ],
+          "variation": {
+            "receiverAvailableS": 0
+          },
+          "initialPieces": [
+            "blue-supply/3",
+            "blue-supply/4",
+            "blue-supply/5",
+            "blue-supply/6"
+          ],
+          "preloadedPieces": [
+            "blue-supply/2"
+          ],
+          "events": [
+            {
+              "timeS": 6,
+              "piece": "blue-supply/2",
+              "kind": "accept",
+              "station": "blue-bay",
+              "focalRobot": "B1",
+              "witness": "Receiver dwell completed."
+            },
+            {
+              "timeS": 13,
+              "piece": "blue-supply/3",
+              "kind": "acquire",
+              "station": "blue-supply",
+              "focalRobot": "B1",
+              "witness": "Pickup dwell completed."
+            },
+            {
+              "timeS": 19,
+              "piece": "blue-supply/3",
+              "kind": "accept",
+              "station": "blue-bay",
+              "focalRobot": "B1",
+              "witness": "Receiver dwell completed."
+            },
+            {
+              "timeS": 26,
+              "piece": "blue-supply/4",
+              "kind": "acquire",
+              "station": "blue-supply",
+              "focalRobot": "B1",
+              "witness": "Pickup dwell completed."
+            },
+            {
+              "timeS": 32,
+              "piece": "blue-supply/4",
+              "kind": "accept",
+              "station": "blue-bay",
+              "focalRobot": "B1",
+              "witness": "Receiver dwell completed."
+            },
+            {
+              "timeS": 39,
+              "piece": "blue-supply/5",
+              "kind": "acquire",
+              "station": "blue-supply",
+              "focalRobot": "B1",
+              "witness": "Pickup dwell completed."
+            }
+          ]
+        }
+      },
+      "receiver-busy": {
+        "concept": "shared",
+        "case": "receiver-busy",
+        "runId": "shared/receiver-busy",
+        "lastAcceptedS": 41,
+        "roleEpisode": "/runs/shared/receiver-busy/episode",
+        "episode": {
+          "concept": "shared",
+          "case": "receiver-busy",
+          "runId": "shared/receiver-busy",
+          "contractKey": "d676464150f3e677ab10298eff5d70c559cd61baa8a0e047969ba87086d850ea",
+          "phase": "Main play",
+          "station": "blue-bay",
+          "criterion": "A carried tile reaches the release area after the authored service dwell.",
+          "focalRobot": "B1",
+          "revision": "shared-fixture-r1",
+          "evidence": "timing-model",
+          "windowS": [
+            0,
+            45
+          ],
+          "fieldConditions": {
+            "setup": "lowered",
+            "peers": [
+              {
+                "side": "red",
+                "slot": 1,
+                "plans": {
+                  "Opening": "shuttle",
+                  "Main play": "shuttle"
+                }
+              }
+            ],
+            "robotsAtStart": [
+              {
+                "id": "B1",
+                "xyIn": [
+                  175,
+                  194
+                ],
+                "heading": 0,
+                "cargo": [
+                  "blue-supply/2"
+                ]
+              },
+              {
+                "id": "R1",
+                "xyIn": [
+                  305,
+                  70
+                ],
+                "heading": -180,
+                "cargo": [
+                  "red-supply/2"
+                ]
+              }
+            ],
+            "occupancyAtStart": {
+              "blue-bay": 1,
+              "red-bay": 1
+            },
+            "queuesAtStart": {
+              "practice gate": {
+                "owner": null,
+                "queue": []
+              }
+            }
+          },
+          "clockWitnesses": [
+            {
+              "timeS": 0,
+              "witness": "Simulator initialized."
+            },
+            {
+              "timeS": 45,
+              "witness": "Complete window evaluated, including idle tail."
+            }
+          ],
+          "variation": {
+            "receiverAvailableS": 12
+          },
+          "initialPieces": [
+            "blue-supply/3",
+            "blue-supply/4",
+            "blue-supply/5",
+            "blue-supply/6"
+          ],
+          "preloadedPieces": [
+            "blue-supply/2"
+          ],
+          "events": [
+            {
+              "timeS": 15,
+              "piece": "blue-supply/2",
+              "kind": "accept",
+              "station": "blue-bay",
+              "focalRobot": "B1",
+              "witness": "Receiver dwell completed."
+            },
+            {
+              "timeS": 22,
+              "piece": "blue-supply/3",
+              "kind": "acquire",
+              "station": "blue-supply",
+              "focalRobot": "B1",
+              "witness": "Pickup dwell completed."
+            },
+            {
+              "timeS": 28,
+              "piece": "blue-supply/3",
+              "kind": "accept",
+              "station": "blue-bay",
+              "focalRobot": "B1",
+              "witness": "Receiver dwell completed."
+            },
+            {
+              "timeS": 35,
+              "piece": "blue-supply/4",
+              "kind": "acquire",
+              "station": "blue-supply",
+              "focalRobot": "B1",
+              "witness": "Pickup dwell completed."
+            },
+            {
+              "timeS": 41,
+              "piece": "blue-supply/4",
+              "kind": "accept",
+              "station": "blue-bay",
+              "focalRobot": "B1",
+              "witness": "Receiver dwell completed."
+            }
+          ]
+        }
+      }
+    },
+    "independent": {
+      "nominal": {
+        "concept": "independent",
+        "case": "nominal",
+        "runId": "independent/nominal",
+        "lastAcceptedS": 42,
+        "roleEpisode": "/runs/independent/nominal/episode",
+        "episode": {
+          "concept": "independent",
+          "case": "nominal",
+          "runId": "independent/nominal",
+          "contractKey": "d676464150f3e677ab10298eff5d70c559cd61baa8a0e047969ba87086d850ea",
+          "phase": "Main play",
+          "station": "blue-bay",
+          "criterion": "A carried tile reaches the release area after the authored service dwell.",
+          "focalRobot": "B1",
+          "revision": "independent-fixture-r1",
+          "evidence": "timing-model",
+          "windowS": [
+            0,
+            45
+          ],
+          "fieldConditions": {
+            "setup": "lowered",
+            "peers": [
+              {
+                "side": "red",
+                "slot": 1,
+                "plans": {
+                  "Opening": "shuttle",
+                  "Main play": "shuttle"
+                }
+              }
+            ],
+            "robotsAtStart": [
+              {
+                "id": "B1",
+                "xyIn": [
+                  175,
+                  194
+                ],
+                "heading": 0,
+                "cargo": [
+                  "blue-supply/2"
+                ]
+              },
+              {
+                "id": "R1",
+                "xyIn": [
+                  305,
+                  70
+                ],
+                "heading": -180,
+                "cargo": [
+                  "red-supply/2"
+                ]
+              }
+            ],
+            "occupancyAtStart": {
+              "blue-bay": 1,
+              "red-bay": 1
+            },
+            "queuesAtStart": {
+              "practice gate": {
+                "owner": null,
+                "queue": []
+              }
+            }
+          },
+          "clockWitnesses": [
+            {
+              "timeS": 0,
+              "witness": "Simulator initialized."
+            },
+            {
+              "timeS": 45,
+              "witness": "Complete window evaluated, including idle tail."
+            }
+          ],
+          "variation": {
+            "receiverAvailableS": 0
+          },
+          "initialPieces": [
+            "blue-supply/3",
+            "blue-supply/4",
+            "blue-supply/5",
+            "blue-supply/6"
+          ],
+          "preloadedPieces": [
+            "blue-supply/2"
+          ],
+          "events": [
+            {
+              "timeS": 6,
+              "piece": "blue-supply/2",
+              "kind": "accept",
+              "station": "blue-bay",
+              "focalRobot": "B1",
+              "witness": "Receiver dwell completed."
+            },
+            {
+              "timeS": 9,
+              "piece": "blue-supply/3",
+              "kind": "acquire",
+              "station": "blue-supply",
+              "focalRobot": "B1",
+              "witness": "Pickup dwell completed."
+            },
+            {
+              "timeS": 15,
+              "piece": "blue-supply/3",
+              "kind": "accept",
+              "station": "blue-bay",
+              "focalRobot": "B1",
+              "witness": "Receiver dwell completed."
+            },
+            {
+              "timeS": 18,
+              "piece": "blue-supply/4",
+              "kind": "acquire",
+              "station": "blue-supply",
+              "focalRobot": "B1",
+              "witness": "Pickup dwell completed."
+            },
+            {
+              "timeS": 24,
+              "piece": "blue-supply/4",
+              "kind": "accept",
+              "station": "blue-bay",
+              "focalRobot": "B1",
+              "witness": "Receiver dwell completed."
+            },
+            {
+              "timeS": 27,
+              "piece": "blue-supply/5",
+              "kind": "acquire",
+              "station": "blue-supply",
+              "focalRobot": "B1",
+              "witness": "Pickup dwell completed."
+            },
+            {
+              "timeS": 33,
+              "piece": "blue-supply/5",
+              "kind": "accept",
+              "station": "blue-bay",
+              "focalRobot": "B1",
+              "witness": "Receiver dwell completed."
+            },
+            {
+              "timeS": 36,
+              "piece": "blue-supply/6",
+              "kind": "acquire",
+              "station": "blue-supply",
+              "focalRobot": "B1",
+              "witness": "Pickup dwell completed."
+            },
+            {
+              "timeS": 42,
+              "piece": "blue-supply/6",
+              "kind": "accept",
+              "station": "blue-bay",
+              "focalRobot": "B1",
+              "witness": "Receiver dwell completed."
+            }
+          ]
+        }
+      },
+      "receiver-busy": {
+        "concept": "independent",
+        "case": "receiver-busy",
+        "runId": "independent/receiver-busy",
+        "lastAcceptedS": 42,
+        "roleEpisode": "/runs/independent/receiver-busy/episode",
+        "episode": {
+          "concept": "independent",
+          "case": "receiver-busy",
+          "runId": "independent/receiver-busy",
+          "contractKey": "d676464150f3e677ab10298eff5d70c559cd61baa8a0e047969ba87086d850ea",
+          "phase": "Main play",
+          "station": "blue-bay",
+          "criterion": "A carried tile reaches the release area after the authored service dwell.",
+          "focalRobot": "B1",
+          "revision": "independent-fixture-r1",
+          "evidence": "timing-model",
+          "windowS": [
+            0,
+            45
+          ],
+          "fieldConditions": {
+            "setup": "lowered",
+            "peers": [
+              {
+                "side": "red",
+                "slot": 1,
+                "plans": {
+                  "Opening": "shuttle",
+                  "Main play": "shuttle"
+                }
+              }
+            ],
+            "robotsAtStart": [
+              {
+                "id": "B1",
+                "xyIn": [
+                  175,
+                  194
+                ],
+                "heading": 0,
+                "cargo": [
+                  "blue-supply/2"
+                ]
+              },
+              {
+                "id": "R1",
+                "xyIn": [
+                  305,
+                  70
+                ],
+                "heading": -180,
+                "cargo": [
+                  "red-supply/2"
+                ]
+              }
+            ],
+            "occupancyAtStart": {
+              "blue-bay": 1,
+              "red-bay": 1
+            },
+            "queuesAtStart": {
+              "practice gate": {
+                "owner": null,
+                "queue": []
+              }
+            }
+          },
+          "clockWitnesses": [
+            {
+              "timeS": 0,
+              "witness": "Simulator initialized."
+            },
+            {
+              "timeS": 45,
+              "witness": "Complete window evaluated, including idle tail."
+            }
+          ],
+          "variation": {
+            "receiverAvailableS": 12
+          },
+          "initialPieces": [
+            "blue-supply/3",
+            "blue-supply/4",
+            "blue-supply/5",
+            "blue-supply/6"
+          ],
+          "preloadedPieces": [
+            "blue-supply/2"
+          ],
+          "events": [
+            {
+              "timeS": 15,
+              "piece": "blue-supply/2",
+              "kind": "accept",
+              "station": "blue-bay",
+              "focalRobot": "B1",
+              "witness": "Receiver dwell completed."
+            },
+            {
+              "timeS": 18,
+              "piece": "blue-supply/3",
+              "kind": "acquire",
+              "station": "blue-supply",
+              "focalRobot": "B1",
+              "witness": "Pickup dwell completed."
+            },
+            {
+              "timeS": 24,
+              "piece": "blue-supply/3",
+              "kind": "accept",
+              "station": "blue-bay",
+              "focalRobot": "B1",
+              "witness": "Receiver dwell completed."
+            },
+            {
+              "timeS": 27,
+              "piece": "blue-supply/4",
+              "kind": "acquire",
+              "station": "blue-supply",
+              "focalRobot": "B1",
+              "witness": "Pickup dwell completed."
+            },
+            {
+              "timeS": 33,
+              "piece": "blue-supply/4",
+              "kind": "accept",
+              "station": "blue-bay",
+              "focalRobot": "B1",
+              "witness": "Receiver dwell completed."
+            },
+            {
+              "timeS": 36,
+              "piece": "blue-supply/5",
+              "kind": "acquire",
+              "station": "blue-supply",
+              "focalRobot": "B1",
+              "witness": "Pickup dwell completed."
+            },
+            {
+              "timeS": 42,
+              "piece": "blue-supply/5",
+              "kind": "accept",
+              "station": "blue-bay",
+              "focalRobot": "B1",
+              "witness": "Receiver dwell completed."
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -132,6 +132,29 @@ export function reviewElevation(input,read) {
     scope:(results.some(r=>r.geometry==='spatial-vertical-supports')?'Each spatial case checks vertical force and both horizontal moments at its stated pose. Other mechanisms retain their declared scope. ':'Vertical-plane one- or two-support rigid body with specified load paths. ')+'Coverage depends on the project inventory and supplied inputs. Buckling, impact, fatigue, electrical holding and brake engagement need supporting model or rated evidence.'};
 }
 
+export function auditPieceWindow(r) {
+  requireInput(Array.isArray(r.initialPieces)&&Array.isArray(r.events)&&r.initialPieces.every(label)&&
+    new Set(r.initialPieces).size===r.initialPieces.length,'Initial stock needs unique piece IDs.');
+  const preload=r.preloadedPieces??[];
+  requireInput(Array.isArray(preload)&&preload.every(label)&&new Set([...r.initialPieces,...preload]).size===r.initialPieces.length+preload.length,'Preload must be disjoint from station stock.');
+  const seen=new Set([...r.initialPieces,...preload]),available=new Set(r.initialPieces),credited=new Set(),held=new Set(preload);
+  const acceptedAt=[];let attempts=0,failed=0,previous=r.windowS[0];
+  for(const ev of r.events){
+    requireInput(Number.isFinite(ev.timeS)&&ev.timeS>=previous&&ev.timeS<r.windowS[1]&&label(ev.piece),
+      'Events must be ordered inside the half-open window.');previous=ev.timeS;
+    switch(ev.kind){
+      case 'arrive':requireInput(!seen.has(ev.piece),'Duplicate supplied piece.');seen.add(ev.piece);available.add(ev.piece);break;
+      case 'acquire':requireInput(available.delete(ev.piece),'Acquisition exceeded available stock.');held.add(ev.piece);break;
+      case 'miss':requireInput(held.has(ev.piece),'Miss lacks possession.');attempts++;failed++;if(ev.release===true)held.delete(ev.piece);break;
+      case 'return':requireInput(credited.delete(ev.piece)&&label(ev.witness),'Return requires a credited piece and a legal return witness.');available.add(ev.piece);break;
+      case 'accept':requireInput(held.delete(ev.piece)&&!credited.has(ev.piece)&&label(ev.witness),'Accepted piece needs possession, unique identity and a scoring witness.');
+        credited.add(ev.piece);attempts++;acceptedAt.push(ev.timeS);break;
+      default:throw Error('Unknown stock or transfer event.');
+    }
+  }
+  return {supplied:seen.size,attempts,failed,acceptedAt};
+}
+
 export function reviewThroughput(input,read) {
   requireInput(input?.schema==='agent-frc/throughput-study@1','Expected throughput-study@1.');
   const demand=observed(input.demand,read);
@@ -155,28 +178,10 @@ export function reviewThroughput(input,read) {
     variations.add(JSON.stringify(Object.entries(r.variation).sort(([a],[b])=>a.localeCompare(b))));
     requireInput(Array.isArray(r.windowS)&&r.windowS.length===2&&r.windowS.every(Number.isFinite)&&r.windowS[1]>r.windowS[0]&&
       Math.abs(r.windowS[1]-r.windowS[0]-demand.windowS)<1e-8,'Each execution must cover the complete demand window.');
-    requireInput(Array.isArray(r.initialPieces)&&Array.isArray(r.events)&&r.initialPieces.every(label)&&
-      new Set(r.initialPieces).size===r.initialPieces.length,'Initial stock needs unique piece IDs.');
-    const preload=r.preloadedPieces??[];
-    requireInput(Array.isArray(preload)&&preload.every(label)&&new Set([...r.initialPieces,...preload]).size===r.initialPieces.length+preload.length,'Preload must be disjoint from station stock.');
-    const seen=new Set([...r.initialPieces,...preload]),available=new Set(r.initialPieces),credited=new Set(),held=new Set(preload);
-    const acceptedAt=[];let attempts=0,failed=0,previous=r.windowS[0];
-    for(const ev of r.events){
-      requireInput(Number.isFinite(ev.timeS)&&ev.timeS>=previous&&ev.timeS<r.windowS[1]&&label(ev.piece),
-        'Events must be ordered inside the half-open window.');previous=ev.timeS;
-      switch(ev.kind){
-        case 'arrive':requireInput(!seen.has(ev.piece),'Duplicate supplied piece.');seen.add(ev.piece);available.add(ev.piece);break;
-        case 'acquire':requireInput(available.delete(ev.piece),'Acquisition exceeded available stock.');held.add(ev.piece);break;
-        case 'miss':requireInput(held.has(ev.piece),'Miss lacks possession.');attempts++;failed++;if(ev.release===true)held.delete(ev.piece);break;
-        case 'return':requireInput(credited.delete(ev.piece)&&label(ev.witness),'Return requires a credited piece and a legal return witness.');available.add(ev.piece);break;
-        case 'accept':requireInput(held.delete(ev.piece)&&!credited.has(ev.piece)&&label(ev.witness),'Accepted piece needs possession, unique identity and a scoring witness.');
-          credited.add(ev.piece);attempts++;acceptedAt.push(ev.timeS);break;
-        default:throw Error('Unknown stock or transfer event.');
-      }
-    }
+    const {supplied,attempts,failed,acceptedAt}=auditPieceWindow(r);
     const cycles=acceptedAt.map((t,i)=>t-(i?acceptedAt[i-1]:r.windowS[0]));
     return {id:e.id,source:e.source,runId:r.runId,revision:r.revision,condition:r.condition,criterion:r.criterion,evidence:r.evidence,
-      supplied:seen.size,attempts,failed,accepted:acceptedAt.length,acceptedPerSecond:acceptedAt.length/demand.windowS,
+      supplied,attempts,failed,accepted:acceptedAt.length,acceptedPerSecond:acceptedAt.length/demand.windowS,
       secondsBetweenAccepted:cycles,tailWithoutAcceptanceS:r.windowS[1]-(acceptedAt.at(-1)??r.windowS[0]),
       status:acceptedAt.length>=demand.requiredPieces?'pass':'fail'};
   });

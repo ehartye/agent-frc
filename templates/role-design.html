@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Match role to robot design</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f3f7fa;color:#16354a;font:1rem/1.55 system-ui,sans-serif}header{background:#123752;color:white;border-bottom:5px solid #e3ba5c}header>div,main{max-width:58rem;margin:auto;padding:1.5rem}h1,h2,h3{line-height:1.2;margin:.45em 0}h1{font-size:clamp(1.9rem,5vw,3.3rem)}header details{color:#e7f0f6}details,select{overflow-wrap:anywhere}summary{cursor:pointer;font-weight:600}select{padding:.6rem;font:inherit;color:inherit;background:white;border:1px solid #6b8291;border-radius:4px}article{margin-top:1.5rem}.compare{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.compare section{background:white;padding:1rem;border-top:3px solid #527a94}.result{padding:.8rem 1rem;border-left:4px solid #b88c34;background:#fff9e8;font-weight:600}li{margin:.25rem 0}label{display:grid;gap:.3rem;max-width:25rem}details{margin-top:.8rem}p{margin:.6rem 0}@media(max-width:540px){.compare{grid-template-columns:1fr}}
+</style></head><body><header><div><h1>Match role to robot design</h1><!-- scope --></div></header>
+<main><label>Refinement case<select id="refinement"><!-- options --></select></label><!-- panels --></main>
+<script>document.getElementById('refinement').onchange=e=>{for(const row of document.querySelectorAll('[data-pair]'))row.hidden=row.dataset.pair!==e.target.value;};</script>
+</body></html>
