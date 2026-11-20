@@ -26,6 +26,85 @@ class InstalledKinematics(unittest.TestCase):
             study["connections"][0].pop("jointGroup")
             with self.assertRaisesRegex(ValueError,"Rigid attachment"):native_model(root,study)
 
+    def test_source_roster_precedes_fixed_worksheet(self):
+        import copy, json
+        from assembly_kinematics import native_model
+        with TemporaryDirectory() as tmp:
+            root=Path(tmp); study=fixture(root)
+            raw=json.loads((root/study["jointAuthority"]["file"]).read_bytes())
+            expected=json.loads((root/study["operatingRequirements"]["file"]).read_bytes())
+            reopen=json.loads((root/study["reopen"]["file"]).read_bytes())
+            fixed=copy.deepcopy(study);fixed["nativePoses"]=[]
+            fixed["reopen"]=write(root,"fixed.json",dict(reopen,movingGroups=[],motionRanges={}))
+            with self.assertRaisesRegex(ValueError,"Intended operating"):native_model(root,fixed)
+            plan=copy.deepcopy(expected)
+            plan["operatingIntent"].update(mode="fixed",nativeCoordinates={},motionRanges={})
+            fixed["operatingRequirements"]={**write(root,"fixed-plan.json",plan),"pointer":"/operatingIntent"}
+            with self.assertRaisesRegex(ValueError,"active native degrees"):native_model(root,fixed)
+            omitted=copy.deepcopy(raw);omitted["joints"]=[]
+            fixed["jointAuthority"]=write(root,"omitted.json",omitted)
+            with self.assertRaisesRegex(ValueError,"component constraints"):native_model(root,fixed)
+            omitted["localCounts"]["@root"]["joint"]=0
+            fixed["jointAuthority"]=write(root,"loose.json",omitted)
+            with self.assertRaisesRegex(ValueError,"lack a native constraint path"):native_model(root,fixed)
+            rigid=copy.deepcopy(raw)
+            rigid["joints"][0].update(motionType="RigidJointMotion",coordinates={})
+            fixed["jointAuthority"]=write(root,"rigid.json",rigid)
+            self.assertEqual(native_model(root,fixed)["groups"],{})
+            study["jointAuthority"]=fixed["jointAuthority"]
+            with self.assertRaisesRegex(ValueError,"active native degrees"):native_model(root,study)
+            for state in ("locked","suppressed"):
+                frozen=copy.deepcopy(raw);frozen["joints"][0][state]=True
+                study["jointAuthority"]=write(root,"freeze.json",frozen)
+                with self.subTest(state=state),self.assertRaises(ValueError):native_model(root,study)
+            warning=copy.deepcopy(raw);warning["joints"][0]["health"]="warning"
+            study["jointAuthority"]=write(root,"warning.json",warning)
+            with self.assertRaisesRegex(ValueError,"solver health"):native_model(root,study)
+            second=copy.deepcopy(raw)
+            second["joints"].append(dict(second["joints"][0],name="Concealed axis"))
+            second["localCounts"]["@root"]["joint"]+=1
+            study["jointAuthority"]=write(root,"second.json",second)
+            with self.assertRaisesRegex(ValueError,"active native degrees"):native_model(root,study)
+            study.pop("jointAuthority")
+            with self.assertRaises((KeyError,TypeError,ValueError)):native_model(root,study)
+
+    def test_external_operating_plan_and_profile_are_frozen(self):
+        import json,os
+        from unittest.mock import patch
+        from source_joint_roster import intended
+        with TemporaryDirectory() as t, TemporaryDirectory() as external:
+            root=Path(t);study=fixture(root);ref=study["operatingRequirements"]
+            reopen=json.loads((root/study["reopen"]["file"]).read_bytes())
+            held=Path(external)/"commissioning.json";held.write_bytes((root/ref["file"]).read_bytes())
+            with patch.dict(os.environ,{"FRC_OPERATING_REQUIREMENTS":str(held),"FRC_OPERATING_PROFILE":"/operatingIntent"}):
+                intended(root,study,reopen,trusted=True)
+                study["operatingRequirements"]=dict(ref,pointer="/anotherDuty")
+                with self.assertRaisesRegex(ValueError,"approved plan"):intended(root,study,reopen,trusted=True)
+                study["operatingRequirements"]=ref
+                with self.assertRaisesRegex(ValueError,"commissioning scope"):
+                    intended(root,study,dict(reopen,transferMissions=["transfer"]),trusted=True)
+                held.write_text("{}")
+                with self.assertRaisesRegex(ValueError,"approved plan"):intended(root,study,reopen,trusted=True)
+
+    def test_subassembly_filter_preserves_unresolved_and_crossing_pairs(self):
+        from native_pair_scope import summarize
+        with TemporaryDirectory() as t:
+            root=Path(t)
+            members=[dict(path=p,name="pad") for p in ("base","guide","carriage","cap")]
+            raw=dict(schema="agent-frc/fusion-body-census@1",archiveSha256="a"*64,pose={"id":"saved"},bodies=members,
+                contacts=dict(complete=True,candidatePairs=3,pairs=[
+                    dict(pair=[0,1],interferenceMm3=None,temporaryCommonMm3=.02),
+                    dict(pair=[1,2],interferenceMm3=0,temporaryCommonMm3=0),
+                    dict(pair=[2,3],interferenceMm3=.1,temporaryCommonMm3=.1)]))
+            scope=dict(census=write(root,"census.json",raw),members=[["base","pad"],["guide","pad"]],thresholdMm3=.01)
+            groups=summarize(root,scope)["groups"]
+            self.assertEqual([groups[k]["tested"] for k in ("inside","crossing","outside")],[1,1,1])
+            self.assertEqual(len(groups["inside"]["unresolved"]),1)
+            self.assertEqual(len(groups["inside"]["aboveThreshold"]),1)
+            self.assertEqual(len(groups["outside"]["aboveThreshold"]),1)
+            with self.assertRaisesRegex(ValueError,"Unknown or ambiguous"):
+                summarize(root,dict(scope,members=[["base","other"]]))
+
     def test_mixed_supplier_bodies_and_mass(self):
         from fusion_body_materials import verify_expected,stock_results,compare_reissue
         occ=dict(path="collar",nativeBodyNames={"one":"shell","two":"liner"},sourceSolids={"one":"solid-A","two":"solid-B"})

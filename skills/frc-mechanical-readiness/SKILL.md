@@ -5,7 +5,7 @@ description: "Review a selected robot or subsystem before shop release or showca
 
 # Review the selected robot for fabrication and publication
 
-Start with the exact archive and pose the student would receive. Name the scope, planned operations and candidate revision. Identify every installed article and which mechanisms can move. A usable engineering model can stay in the project while any required check remains open.
+Start with the exact archive and pose the student would receive. Name the scope, planned operations and candidate revision. Freeze the required operating travel, handoffs and known defects from the commissioning plan. On cold reopen, compare them with the signed rooted Fusion joint inventory, including fixed and hidden assemblies. A usable engineering model can stay in the project while any required check remains open.
 
 1. Cold-reopen the Fusion archive. Reconcile occurrence hierarchy, installed transforms, native body bounds and exact placed STEP solids against the expected build. Bind a purchased article to the official part, configuration, model bytes and item-level rights. Bind a shop-made article to its editable native design, drawing, stock grade and revision. Identify the repeat count and installed position of each identical fastener.
 2. Measure the complete placed assembly. Inspect every separate group and every pair with common material. Follow an explicitly retained connection to the chassis from every part. For an intentional press fit, threaded engagement or moving clearance, identify both bodies, the retaining feature, permissible gap/intersection, tolerance and inspection. Retest the whole travel or prove a conservative bound between poses.

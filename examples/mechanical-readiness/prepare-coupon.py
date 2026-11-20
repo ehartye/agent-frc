@@ -28,7 +28,8 @@ def get(name):
 
 lineage=get("issue/lineage.json");census=get("issue/native.json")
 configuration=lineage["configuration"]
-moving=(root/"issue/joints.json").is_file()
+source_joints=get("issue/joints.json")
+moving=any(j["coordinates"] and not j["locked"] and not j["suppressed"] for j in source_joints["joints"])
 binding={"configuration":configuration,"archiveSha256":lineage["archive"]["sha256"],"stepSha256":lineage["step"]["sha256"]}
 step=lineage["step"];assembly=load_solids(root/step["file"])[0]
 from mechanical_motion import bounds,bearing_area
@@ -112,8 +113,13 @@ study=dict(schema="agent-frc/mechanical-readiness@1",configuration=configuration
     authority=ref("cad/fusion-authority.json"),lineage=ref("issue/lineage.json"),nativeCensus=ref("issue/native.json"),
     reopen=reopen,reopenBoundsToleranceMm=.001,contactToleranceMm=.02,chassisAnchor=anchor,articles=articles,installed=installed,
     connections=[dict(pair=labels,evidence=dict(obsref,id="seat"))],mating=[],transferClaims={},duties=duties,externalIssues=[],nativePoses=[ref(f) for f in pose_files])
+study["jointAuthority"]=ref("issue/joints.json")
+plan=save("commissioning.json",dict(operatingIntent=dict(authorityId="datum-coupon",configuration=configuration,
+    mode="articulated" if moving else "fixed",basis="Original teaching coupon inspected for its registered operating duty",
+    motionRanges={"carriage":[0,3]} if moving else {},transferMissions=[],externalIssues=[],
+    nativeCoordinates={"carriage":dict(type="asBuilt",occurrence="@root",name="Travel along pocket",coordinate="slideValue")} if moving else {})))
+study["operatingRequirements"]=dict(plan,pointer="/operatingIntent")
 if moving:
-    study["jointAuthority"]=ref("issue/joints.json")
     study["connections"][0]["jointGroup"]="carriage"
 study["materialCensus"]=ref("issue/materials.json")
 study["geometry"]=save("issue/geometry.json",scan(root,study))

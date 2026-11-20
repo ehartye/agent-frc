@@ -7,7 +7,7 @@ import adsk.core
 import adsk.fusion
 
 
-def capture(app, project, installed_scripts, key, station_folder, *, moving=False):
+def capture(app, project, installed_scripts, key, station_folder, *, moving=False, rigid=False):
     project=Path(project).resolve()
     project.mkdir(parents=True,exist_ok=False)
     cad=project/"cad";cad.mkdir();archive=cad/"reference.f3d"
@@ -15,7 +15,7 @@ def capture(app, project, installed_scripts, key, station_folder, *, moving=Fals
     doc=app.documents.add(adsk.core.DocumentTypes.FusionDesignDocumentType)
     try:
         product=adsk.fusion.Design.cast(doc.products.itemByProductType("DesignProductType"))
-        product.designType=(adsk.fusion.DesignTypes.ParametricDesignType if moving else adsk.fusion.DesignTypes.DirectDesignType)
+        product.designType=(adsk.fusion.DesignTypes.ParametricDesignType if moving or rigid else adsk.fusion.DesignTypes.DirectDesignType)
         manager=adsk.fusion.TemporaryBRepManager.get()
         def block(center,dimensions):
             box=adsk.core.OrientedBoundingBox3D.create(adsk.core.Point3D.create(*center),
@@ -31,7 +31,7 @@ def capture(app, project, installed_scripts, key, station_folder, *, moving=Fals
             occ=product.rootComponent.occurrences.addNewComponent(adsk.core.Matrix3D.create())
             occurrences.append(occ)
             occ.component.name=name
-            if moving:
+            if moving or rigid:
                 feature=occ.component.features.baseFeatures.add()
                 feature.startEdit()
                 body=occ.component.bRepBodies.add(shape,feature)
@@ -42,17 +42,21 @@ def capture(app, project, installed_scripts, key, station_folder, *, moving=Fals
             if not e.execute(e.createFusionArchiveExportOptions(str(cad/(name+".f3d")),occ.component)) or not e.execute(
                     e.createSTEPExportOptions(str(cad/(name+".step")),occ.component)):
                 raise ValueError("Could not export the original made part")
-        if moving:
+        if moving or rigid:
             base,carriage=occurrences
             base.isGroundToParent=True
             root=product.rootComponent
             origin=adsk.fusion.JointGeometry.createByPoint(root.originConstructionPoint)
             joint_input=root.asBuiltJoints.createInput(carriage,base,origin)
-            joint_input.setAsSliderJointMotion(adsk.fusion.JointDirections.XAxisJointDirection)
-            joint=root.asBuiltJoints.add(joint_input);joint.name="Travel along pocket"
-            limits=joint.jointMotion.slideLimits
-            limits.minimumValue=0;limits.isMinimumValueEnabled=True
-            limits.maximumValue=.3;limits.isMaximumValueEnabled=True
+            if moving:
+                joint_input.setAsSliderJointMotion(adsk.fusion.JointDirections.XAxisJointDirection)
+            else:joint_input.setAsRigidJointMotion()
+            joint=root.asBuiltJoints.add(joint_input)
+            joint.name="Travel along pocket" if moving else "Fixed gauge"
+            if moving:
+                limits=joint.jointMotion.slideLimits
+                limits.minimumValue=0;limits.isMinimumValueEnabled=True
+                limits.maximumValue=.3;limits.isMaximumValueEnabled=True
         if not e.execute(e.createFusionArchiveExportOptions(str(archive))):
             raise ValueError("Could not save the original teaching coupon")
     finally:
@@ -68,8 +72,7 @@ def capture(app, project, installed_scripts, key, station_folder, *, moving=Fals
     lineage=station.export_current(app,project,project/"issue",key)
     observed=station.measure_pose(app,project,project/"issue/lineage.json",project/"issue/native.json",key,station_folder)
     station.module("fusion_body_materials").capture(app,project,project/"issue/lineage.json",project/"issue/materials.json",key)
-    if moving:
-        station.module("fusion_joint_authority").capture(app,project,project/"issue/lineage.json",project/"issue/joints.json",key)
+    station.module("fusion_joint_authority").capture(app,project,project/"issue/lineage.json",project/"issue/joints.json",key)
     if moving:
         for name,coordinate in (("home",0),("extended",.3)):
             pose={"id":name,"joints":[{"group":"carriage","type":"asBuilt","name":"Travel along pocket",

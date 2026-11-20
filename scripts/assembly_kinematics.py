@@ -28,21 +28,26 @@ def native_model(root,study):
         return result
     cold=matrices(read(pinned(root,study["nativeCensus"])))
     groups=set(reopen["movingGroups"])
+    raw=read(pinned(root,study.get("jointAuthority")))
+    require(raw.get("schema")=="agent-frc/fusion-joint-authority@2" and raw.get("archiveSha256")==study["archive"]["sha256"]
+            and raw.get("stepSha256")==study["step"]["sha256"],"Joint ownership and limits must come from this exact Fusion source")
+    # Native hosts can append their platform newline to a source file already ending in LF.
+    source=Path(__file__).with_name("fusion_joint_authority.py").read_bytes().rstrip(b"\r\n")
+    variants=(tail for tail in (b"",b"\n",b"\r\n",b"\n\n",b"\n\r\n",b"\r\n\r\n"))
+    require(raw["collectorSha256"] in {hashlib.sha256(source+s).hexdigest() for s in variants},"Unrecognized joint collector")
+    from source_joint_roster import active_coordinates, intended
+    joints=active_coordinates(raw,owners,study["chassisAnchor"])
+    intent=intended(root,study,reopen)
+    require(set(intent["nativeCoordinates"])==groups and
+            {(joint_key(row),row["coordinate"]) for row in intent["nativeCoordinates"].values()}==
+            {(key,coordinate) for key,j in joints.items() for coordinate in j["coordinates"]},
+            "Commissioning coordinates must exactly cover all active native degrees of freedom")
     if not groups:
         for ref in study.get("nativePoses",[]):
             pose=matrices(read(pinned(root,ref)))
             require(all(np.allclose(pose[s],cold[s],rtol=0,atol=1e-6) for s in cold),
                     "A declared fixed assembly changes measured native pose")
         return dict(cold=cold,groups={},poses={"saved":cold},sliders={})
-    raw=read(pinned(root,study.get("jointAuthority")))
-    require(raw.get("schema")=="agent-frc/fusion-joint-authority@1" and raw.get("archiveSha256")==study["archive"]["sha256"]
-            and raw.get("stepSha256")==study["step"]["sha256"],"Joint ownership and limits must come from this exact Fusion source")
-    # Native hosts can append their platform newline to a source file already ending in LF.
-    source=Path(__file__).with_name("fusion_joint_authority.py").read_bytes().rstrip(b"\r\n")
-    variants=(tail for tail in (b"",b"\n",b"\r\n",b"\n\n",b"\n\r\n",b"\r\n\r\n"))
-    require(raw["collectorSha256"] in {hashlib.sha256(source+s).hexdigest() for s in variants},"Unrecognized joint collector")
-    joints={joint_key(j):j for j in raw["joints"]}
-    require(len(joints)==len(raw["joints"]),"Ambiguous native joint identity")
     real={};poses={"saved":cold};calibrations={}
     for ref in study["nativePoses"]:
         row=read(pinned(root,ref));pid=row["pose"]["id"];pose=matrices(row);poses[pid]=pose
@@ -50,7 +55,11 @@ def native_model(root,study):
         for reg in coords:
             key=joint_key(reg);joint=joints.get(key)
             require(joint is not None and reg["coordinate"] in joint["coordinates"],"Unrecognized inspected native joint")
-            group=reg["group"];axis=joint["coordinates"][reg["coordinate"]];value=reg["nativeValue"]
+            group=reg["group"]
+            declared=intent["nativeCoordinates"].get(group)
+            require(declared and joint_key(declared)==key and declared["coordinate"]==reg["coordinate"],
+                    "Native pose drives a different operating duty coordinate")
+            axis=joint["coordinates"][reg["coordinate"]];value=reg["nativeValue"]
             require(group in groups and (group not in real or real[group][:2]==(key,reg["coordinate"])) and number(value),
                     "A joint group must identify a unique actual native degree of freedom")
             for bound,sign in (("minimum",1),("maximum",-1)):
@@ -62,6 +71,16 @@ def native_model(root,study):
     require(len(set((r[0],r[1]) for r in real.values()))==len(real),"Two groups register the same joint coordinate")
     require({(key,c) for key,j in joints.items() for c in j["coordinates"]}=={(r[0],r[1]) for r in real.values()},
             "Native joint coordinates disappeared from the engineering register")
+    for group,(_,coord,axis,_) in real.items():
+        observed=[axis["saved"],*(value for value,_ in calibrations.get(group,[]))]
+        # Fusion stores slider travel in cm and angular travel in radians. The operating
+        # plan uses mm and degrees. Only the measured interval can qualify the duty.
+        scale=10 if coord=="slideValue" else 180/np.pi if coord=="rotationValue" else None
+        require(scale is not None,"Independent operating calibration is needed for this coordinate kind")
+        lower,upper=intent["motionRanges"][group]
+        require(number(lower) and number(upper) and lower<upper and
+                min(observed)*scale<=lower+1e-6 and max(observed)*scale>=upper-1e-6,
+                "Intended operating range exceeds the measured native poses")
     sliders={}
     for group,(_,coord,axis,_) in real.items():
         require(group in calibrations,"Qualify each native coordinate with an isolated nonzero measured pose")

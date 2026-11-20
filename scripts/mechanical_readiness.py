@@ -566,7 +566,7 @@ def evaluate_inputs(root,study, geometry=None):
         if observed.get("criteriaSha256")!=scope_digest(study) or observed.get("kind")!="scope-review" or observed.get("scope")!=disposition or observed.get("complete") is not True or not named(observed.get("reviewer")) or not named(observed.get("basis")) or sorted(observed.get("bodies",[]))!=sorted(bodies) or sorted(observed.get("duties",[]))!=expected:
             missing(disposition,"coverage","Independent coverage did not reconcile all installed solids and registered duties.")
     motion_model=None
-    if motion_ids or mission_ids or study.get("nativePoses"):
+    if native:
         from assembly_kinematics import native_model
         try:
             motion_model=native_model(root,study)

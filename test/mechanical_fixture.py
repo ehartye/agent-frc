@@ -129,14 +129,19 @@ def fixture(root,source="fixture.step",assets=(),archive_name="test.f3d", measur
     alternate["contacts"]["pairs"]=[dict(pair=[0,1],interferenceMm3=0,temporaryCommonMm3=0)] if nearby else []
     study["nativePoses"]=[write(root,"test-extended.json",alternate)]
     study["connections"][0]["jointGroup"]="slide"
-    study["jointAuthority"]=write(root,"test-native-joints.json",dict(schema="agent-frc/fusion-joint-authority@1",
+    study["jointAuthority"]=write(root,"test-native-joints.json",dict(schema="agent-frc/fusion-joint-authority@2",
         archiveSha256=native["sha256"],stepSha256=step["sha256"],collectorSha256=digest(SCRIPTS/"fusion_joint_authority.py"),
-        joints=[dict(type="joint",name="slide",occurrence="@root",members=labels,coordinates={"slideValue":dict(saved=0,minimum=0,maximum=1)})]))
+        occurrences=[dict(path=b,parent="@root",groundedToParent=i==0) for i,b in enumerate(labels)],
+        localCounts={p:dict(joint=int(p=="@root"),asBuilt=0,rigidGroups=0,motionLinks=0) for p in ["@root",*labels]},
+        rigidGroups=[],motionLinks=[],joints=[dict(motionType="SliderJointMotion",health="healthy",suppressed=False,locked=False,recognized=True,type="joint",name="slide",occurrence="@root",members=labels,coordinates={"slideValue":dict(saved=0,minimum=0,maximum=1)})]))
     authority=write(root,"cad/fusion-authority.json",dict(schema="agent-frc/fusion-authority@1",id="bench",revision="r1",basis="Teaching fixture",
         configuration=bind["configuration"],nativeConfiguration="unconfigured",source=dict(kind="offline",archive=native)))
     study.update(authority=authority,lineage=write(root,"test-lineage.json",dict(schema="agent-frc/fusion-export-lineage@1",archive=native,step=step,
         authority=authority,id="bench",revision="r1",configuration=bind["configuration"],nativeConfiguration="unconfigured",exporterSha256=digest(SCRIPTS/"fusion_authority.py"),
         inspectedAt="captured test",dirty=False,externalReferences=[],policy="registered-offline-archive")))
+    study["operatingRequirements"]={**write(root,"fixture-commissioning.json",dict(operatingIntent=dict(authorityId="bench",configuration=bind["configuration"],
+        mode="articulated",basis="Independent fixture travel requirement",motionRanges={"slide":[0,10]},
+        nativeCoordinates={"slide":dict(type="joint",occurrence="@root",name="slide",coordinate="slideValue")},transferMissions=[],externalIssues=[]))),"pointer":"/operatingIntent"}
     study["transferClaims"]={}
     study["externalIssues"]=[]
     if measured:

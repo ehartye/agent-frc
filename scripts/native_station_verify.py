@@ -27,8 +27,9 @@ def verify(root,study):
     inspect_archive(pinned(root,study["archive"]))
     register=pinned(root,study["authority"])
     observations=[("canonical-export",study["lineage"]),("native-contacts",study["nativeCensus"])]
-    if study.get("materialCensus"):observations.append(("native-body-materials",study["materialCensus"]))
-    if study.get("jointAuthority"):observations.append(("native-joint-authority",study["jointAuthority"]))
+    observations.extend([("native-body-materials",study["materialCensus"]),("native-joint-authority",study["jointAuthority"])])
+    from source_joint_roster import intended
+    intended(root,study,read(pinned(root,study["reopen"])),trusted=True)
     observations.extend(("native-contacts",r) for r in study.get("nativePoses",[]))
     script="const fs=require('node:fs'),c=require('node:crypto');const args=JSON.parse(fs.readFileSync(0));const k=c.createPublicKey(fs.readFileSync(process.argv[1]));if(k.asymmetricKeyType!=='ed25519'||!args.every(x=>c.verify(null,Buffer.from(x.raw),k,Buffer.from(x.signature,'base64'))))process.exit(1)"
     signatures=[]
