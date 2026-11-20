@@ -44,7 +44,7 @@ export function createFieldRehearsal(profile) {
     }
     return Object.fromEntries([...names].map(key=>[key,{owner:null,queue:[]}]));
   }
-  function create(roster,setup,tieWinner,atRestAfterS) {
+  function create(roster,setup,tieWinner=model?.defaultTieWinner,atRestAfterS) {
     if(roster?.length!==6)throw Error('A match needs exactly six unique alliance slots, three per side.');
     return createProbe(roster,setup,tieWinner,atRestAfterS);
   }
@@ -159,6 +159,17 @@ export function createFieldRehearsal(profile) {
       return r.p;
     }
     if(r.target>=r.waypoints.length) {
+      if(leg.deliveryRatePerS){
+        const time=(sim.ticks+1)*dt;
+        if(!game.mayDeliver(sim,r,leg,sim.ticks*dt) || !game.mayDeliver(sim,r,leg,time))return finishLeg();
+        r.dwell+=dt*leg.deliveryRatePerS;
+        if(r.dwell+1e-9>=1){
+          game.apply(sim,r,{...leg,quantity:1},time);
+          r.dwell=Math.max(0,r.dwell-1);
+          if(!game.mayDeliver(sim,r,leg,time))return finishLeg();
+        }
+        return r.p;
+      }
       if(++r.dwell>=(leg.dwell || 0)) {
         game.apply(sim,r,leg,(sim.ticks+1)*dt);
         return finishLeg();
