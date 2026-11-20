@@ -1,6 +1,7 @@
+import {starterFrameProfile} from './frame-profile.mjs';
 import {publicFusionHandoff} from './public-fusion-handoff.mjs';
 import {execFileSync} from 'node:child_process';
-import {existsSync, mkdirSync, readFileSync, statSync, writeFileSync, realpathSync} from 'node:fs';
+import {existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync, realpathSync} from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 
@@ -94,6 +95,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
   if (path.relative(root,checkout) || !statSync(root).isDirectory()) throw Error('Select the project checkout root');
   if (mode === 'init') {
     for (const name of folders) mkdirSync(path.join(root,name),{recursive:true});
+    // Existing design and kickoff evidence keeps its explicitly chosen or historical outline.
+    const newRobot=['cad','kickoff'].every(folder=>readdirSync(path.join(root,folder)).every(n=>n==='.gitkeep'));
+    if(newRobot)writeFileSync(path.join(root,'cad','frame-profile.json'),JSON.stringify(starterFrameProfile(),null,2)+'\n',{flag:'wx'});
     if (!existsSync(path.join(root,indexPath))) writeFileSync(path.join(root,indexPath),indexTemplate,{flag:'wx'});
   }
   const issues = inspect(root).filter(issue => mode !== 'init' || issue !== 'Track the project workflow index at '+indexPath);

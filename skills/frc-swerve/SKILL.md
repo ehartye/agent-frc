@@ -18,3 +18,5 @@ For programming or commissioning evidence, open the [controls and localization r
 For a coupled simulation, [check signed shaft power and follow the free piece](references/loaded-simulation.md). Challenge an inconsistent torque map, a motor that creates work and a weak grip during the same commanded maneuver.
 
 For a design handoff, record the role and measurable capability, module drawing revision, frame and wheel datum, reductions and units, owner of each offset/inversion, evidence for the selected test and the first unresolved failure mode. Compare alternative architectures against the same task.
+
+Check the rear module, wheel sweep, fasteners and service path against both [rear frame chamfers](../../docs/frame-profile.md) before fixing module positions. Keep purchased module geometry independent of the chosen frame outline.

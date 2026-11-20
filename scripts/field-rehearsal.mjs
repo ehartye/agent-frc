@@ -18,6 +18,7 @@ export function createFieldRehearsal(profile) {
     {status:'unknown',obstacle:null,segment:null};
   function defaults(side,slot) {
     const {orders,...body}=model.defaults,order=orders[slot-1];
+    if(body.frameProfile===undefined&&profile.frameProfile!==undefined)body.frameProfile=profile.frameProfile;
     const heading=side==='red'?Math.atan2((model.mirror.redY?-1:1)*Math.sin(body.heading*Math.PI/180),
       (model.mirror.redX?-1:1)*Math.cos(body.heading*Math.PI/180))*180/Math.PI:body.heading;
     const plans=Object.fromEntries(phases.map(p=>[p.name,order]));

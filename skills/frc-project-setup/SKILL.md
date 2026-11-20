@@ -32,3 +32,5 @@ Keep each completed analysis, strategic narrative, constraint register, design r
 Initialization creates `docs/workflow.md`. Its table uses the columns **Agent FRC skill**, **Project output** and **Supporting evidence**. Use the invoked skill name, relative Markdown links to committed outputs, and relevant evidence or an em dash. Existing kickoff and design documents stay in their canonical directories. The layout check verifies index references when the index exists. For the standard showcase, add the pinned [workflow link configuration](../../docs/showcase-evidence.md).
 
 For a publicly downloadable whole robot, bind the student archive to its own reopened component, feature and joint evidence. [Verify the public Fusion handoff](../../docs/public-fusion-handoff.md).
+
+Keep the project’s [frame and bumper outline](../../docs/frame-profile.md) with CAD settings. Fresh project setup creates the rear-chamfer convention. Preserve any explicit robot outline during adoption.

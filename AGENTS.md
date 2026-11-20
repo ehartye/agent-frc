@@ -10,6 +10,8 @@ Use Autodesk Fusion as the standard for student CAD authoring and handoff. Prefe
 
 Maintain a CAD-rendered still immediately below the title of each project-owned README. Bind it to the selected assembly and the same geometry used by the interactive showcase. Identify the pose, revision and scope so students can distinguish a current robot, historical assembly or subsystem fixture. Regenerate and verify both views when the selected CAD changes.
 
+Start new robot frame and bumper designs with two rear plan-view chamfers. Preserve explicit project outlines. Size each mitered backing, padding and cover segment from the actual frame, retain the vertical bumper section and verify the applicable edition and cutoff in the owning project. [Frame profile convention](docs/frame-profile.md)
+
 ## Maintain the public workflow guide
 
 Update the GitHub Pages guide in the same change whenever a workflow, skill, student objective, artifact contract or user-facing behavior changes. Check the guide against the installed skill inventory, build it, exercise the changed interaction and verify the published result after merge.

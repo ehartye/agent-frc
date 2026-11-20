@@ -34,3 +34,5 @@ npm run kickoff -- --profile ../robot-project/reviewed-rules.json --output ../ro
 ```
 
 Fill the register and field profile from the team's sources before compiling. Open the generated HTML locally. For a quick trial, run the last command with [the invented training field](examples/kickoff/training-field.json) as the profile. Outputs use new filenames to preserve prior revisions.
+
+New robot blockouts default to two rear plan-view chamfers. Download the editable frame plan from the workflow guide or generate a Fusion sketch from the [project frame and bumper profile](docs/frame-profile.md).
