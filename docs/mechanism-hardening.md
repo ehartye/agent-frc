@@ -18,6 +18,24 @@ Trace each supported reaction through the transmission, member, anchor and actua
 
 Include worst extension, acceleration, off-center mass, hold and loss of power. Inspect all missing stages, negative force or torque margins and unbalanced moments. A result only covers its declared plane, poses and load paths. Lateral instability, impact, fatigue, section buckling, friction variability and brake-engagement transients require separate applicable evidence. See the [invented inventory and receipts](../examples/design-methods/fixture-results.json).
 
+## Does the suspended pose resist pitch and roll?
+
+A pair of vertical hooks can divide the weight and still leave the robot free to rotate about the line joining them. Use the project frame with +Z up. Draw the support stations and loaded CG in XY at the **same pose**. Start and settled hanging positions may have different world coordinates. A balanced final pose also needs a verified transition, clearance and continued retention.
+
+```sh
+npm run mechanism:review -- elevation examples/design-methods/spatial-elevation.json
+```
+
+The [diagonal support fixture](../examples/design-methods/spatial-fixture.json) has two supports a metre apart. With the CG halfway along their line they carry equal vertical force. Shifting a 20 kg load 100 mm perpendicular to the line keeps those forces equal while producing 19.61 N·m about the free axis. Its component capacities are left open so students can see the difference between balancing a pose and sustaining its load.
+
+Set the model geometry to `spatial-vertical-supports` with one or two supports. Use `xyM: [x,y]` per station, `cgXYM` and `appliedMomentXYNm: [Mx,My]` per case. All coordinates use metres in the same right-handed frame. External couples use the right-hand rule in N·m. State `appliedMomentBasis` for a nonzero supplied couple. If claiming a brace or opposed contact pair produces that couple, independently verify the contact, direction, reaction force, strength and complete force balance at the same pose. A required reaction is a design demand, and crediting that demand as an input would make the equilibrium check circular. Missing coordinates or moments leave the calculation open.
+
+At the first active station, the downward load gives the moment vector `[-WΔy, WΔx]`, where `W = m(g + az)`. Add the externally applied couple. For two stations, let `t` be the unit direction from first to second, `n = [-ty, tx]`, and `L` the separation. The second station carries `dot(moment,n)/L`; the first carries the remainder. Subtract `n × L × secondReaction` from the moment vector. The remainder is parallel to the support line. With one station, its vertical reaction carries the full load and both horizontal moments remain. Removing a support reruns that balance about the remaining contact. A negative unilateral reaction fails the pose.
+
+Read `residualAfterVerticalForcesXYNm` as applied load still requiring restraint. `requiredRestraintReactionXYNm` gives the equal and opposite reaction. For a physical, rated moment restraint, supply the support’s `momentRestraint.axisXY`, its installation `basis` and its member/anchor rating path. Rating directions refer to the signed **applied demand** along that axis. With two stations a single rated restraint parallel to their line preserves the solved force split. A transverse restraint or multiple restraints can change that split and requires a project-specific stiffness model. Any remaining off-axis moment fails the stated pose.
+
+The spatial check covers vertical reactions, acceleration along Z, and two horizontal moment equations. Horizontal forces, yaw, lateral slip, compliance, impacts and transient rotation require separate evidence. A moment-balanced pose can still fail a working load rating or retain an unknown capacity. Existing one-plane studies keep their original output and scope.
+
 ## Can the robot repeatedly score at the required rate?
 
 ```sh

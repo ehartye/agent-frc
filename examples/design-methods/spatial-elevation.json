@@ -1,0 +1,18 @@
+{
+  "schema": "agent-frc/elevation-study@1",
+  "inventory": {
+    "path": "spatial-fixture.json",
+    "sha256": "2d6be03e152d2a4ca780b3656a3e6cb499ac9b9cb3ca01108f1f2eb221f56f13",
+    "pointer": "/inventory"
+  },
+  "mechanisms": [
+    {
+      "id": "training-carriage",
+      "source": {
+        "path": "spatial-fixture.json",
+        "sha256": "2d6be03e152d2a4ca780b3656a3e6cb499ac9b9cb3ca01108f1f2eb221f56f13",
+        "pointer": "/model"
+      }
+    }
+  ]
+}

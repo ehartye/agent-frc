@@ -3,6 +3,8 @@ import {pathToFileURL} from 'node:url';
 import {studyRows} from './strategy-lab.mjs';
 import {readStudy,atPointer,evidenceReader,label} from './study-evidence.mjs';
 
+import {finitePair,spatialReactions} from './spatial-elevation.mjs';
+
 const gravity=9.80665;
 const positive=v=>Number.isFinite(v)&&v>0;
 function requireInput(condition,message){if(!condition)throw Error(message);}
@@ -50,6 +52,20 @@ function evaluateRestraint(support,momentNm,factor,mode) {
   });
   return {momentNm,demandNm,missing,checks,status:status([...checks.map(a=>a.status),...(missing.length?['open']:[])])};
 }
+function evaluateForcePaths(model,p,total,forces) {
+  return model.supports.map((s,i)=>{
+    const loadN=forces[i];
+    if(s.id===p.unavailableSupport)return {id:s.id,loadN:0,status:'pass',availability:'removed'};
+    if(total<=0 || loadN<0) return {id:s.id,loadN,status:'fail',reason:'Unilateral support lost contact.'};
+    const members=studyRows(s.path??[],'load-path component',0).filter(a=>!a.modes||a.modes.includes(p.mode));
+    const kinds=new Set(members.map(a=>a.kind));
+    const missing=['transmission','member','anchor'].filter(k=>!kinds.has(k));
+    if(!kinds.has('actuator')&&!kinds.has('lock'))missing.push('actuator or lock');
+    const checks=members.map(a=>pathCheck(a,loadN,model.factor,p.mode));
+    return {id:s.id,loadN,missing,checks,status:status([...checks.map(c=>c.status),...(missing.length?['open']:[])])};
+  });
+}
+
 export function reviewElevation(input,read) {
   requireInput(input?.schema==='agent-frc/elevation-study@1','Expected elevation-study@1.');
   const inventory=observed(input.inventory,read);
@@ -62,52 +78,58 @@ export function reviewElevation(input,read) {
     const mech=mechanisms.find(m=>m.id===id);
     if(!mech || !mech.source)return {id,status:'open',reason:'No revision-bound load model.'};
     const model=observed(mech.source,read);
+    const spatial=model.geometry==='spatial-vertical-supports';
     const single=model.geometry==='single-support';
-    if(!single&&model.geometry!=='two-simple-supports')return {id,status:'open',reason:'Supply an independent load model for this geometry.'};
-    requireInput(Array.isArray(model.supports)&&model.supports.length===(single?1:2),'Support count disagrees with geometry.');
-    const [left,right]=model.supports;
-    requireInput(model.supports.every(s=>label(s.id)&&Number.isFinite(s.xM))&&
-      (single||(right.xM>left.xM&&left.id!==right.id)),'Supply distinct, ordered support stations.');
-    const center=single?left.xM:(left.xM+right.xM)/2;
+    if(!spatial&&!single&&model.geometry!=='two-simple-supports')return {id,status:'open',reason:'Supply an independent load model for this geometry.'};
+    const stations=studyRows(model.supports,'support station',1,2);
+    const [left,right]=stations;
+    if(!spatial)requireInput(stations.length===(single?1:2)&&stations.every(s=>Number.isFinite(s.xM))&&
+      (single||right.xM>left.xM),'Supply distinct, ordered support stations.');
     requireInput(positive(model.factor)&&model.factor>=1&&label(model.factorBasis),'Declare design load factor and its selection basis.');
     const qualifiedMass=['weighed','conservative-upper-bound'].includes(model.massEvidence) && label(model.massBasis);
     const poses=studyRows(model.cases??[],'load case',0);
     const cases=poses.map(p=>{
       if(p.massKg==null) return {id:p.id,mode:p.mode,status:'open',reason:'Missing loaded mass for this pose.'};
-      requireInput(['raise','hold','power-loss'].includes(p.mode)&&positive(p.massKg)&&Number.isFinite(p.cgXM)&&
-        Number.isFinite(p.accelZMps2)&&Number.isFinite(p.pitchMomentNm)&&label(p.basis),'Incomplete mass, CG, acceleration or applied moment.');
+      if(spatial&&p.accelZMps2==null)return {id:p.id,mode:p.mode,status:'open',reason:'Missing vertical acceleration for this pose.'};
+      requireInput(['raise','hold','power-loss'].includes(p.mode)&&positive(p.massKg)&&Number.isFinite(p.accelZMps2)&&
+        (spatial||(Number.isFinite(p.cgXM)&&Number.isFinite(p.pitchMomentNm)))&&label(p.basis),'Incomplete mass, CG, acceleration or applied moment.');
       const total=p.massKg*(gravity+p.accelZMps2);
       const active=model.supports.filter(s=>s.id!==p.unavailableSupport);
       requireInput(p.unavailableSupport===undefined || active.length===model.supports.length-1,'Unrecognized unavailable support.');
       if(!active.length)return {id:p.id,mode:p.mode,status:'fail',reason:'All supports unavailable.'};
+      if(spatial){
+        const balance=spatialReactions(stations,p,total);
+        const details={id:p.id,mode:p.mode,massKg:p.massKg,weightN:p.massKg*gravity,totalVerticalN:total,balance};
+        if(!balance.loads)return {...details,status:balance.status};
+        const supports=evaluateForcePaths(model,p,total,balance.loads);
+        const fixed=stations.find(s=>s.id===balance.restraintSupport);
+        const restraint=fixed?evaluateRestraint(fixed,balance.appliedRestraintDemandNm,model.factor,p.mode):null;
+        return {...details,supports,restraint,status:status([balance.status,...supports.map(s=>s.status),...(restraint?[restraint.status]:[])])};
+      }
       const singleActive=active.length===1;
       const rightLoad=singleActive?0:(total*(p.cgXM-left.xM)+p.pitchMomentNm)/(right.xM-left.xM);
       const forces=singleActive?model.supports.map(s=>s===active[0]?total:0):[total-rightLoad,rightLoad];
       const restraint=singleActive?evaluateRestraint(active[0],total*(p.cgXM-active[0].xM)+p.pitchMomentNm,model.factor,p.mode):null;
       const unsupportedMomentNm=singleActive&&!active[0].momentRestraint?restraint.momentNm:0;
-      const supports=model.supports.map((s,i)=>{
-        const loadN=forces[i];
-        if(s.id===p.unavailableSupport)return {id:s.id,loadN:0,status:'pass',availability:'removed'};
-        if(total<=0 || loadN<0) return {id:s.id,loadN,status:'fail',reason:'Unilateral support lost contact.'};
-        const members=studyRows(s.path??[],'load-path component',0).filter(a=>!a.modes||a.modes.includes(p.mode));
-        const kinds=new Set(members.map(a=>a.kind));
-        const missing=['transmission','member','anchor'].filter(k=>!kinds.has(k));
-        if(!kinds.has('actuator')&&!kinds.has('lock'))missing.push('actuator or lock');
-        const checks=members.map(a=>pathCheck(a,loadN,model.factor,p.mode));
-        return {id:s.id,loadN,missing,checks,status:status([...checks.map(c=>c.status),...(missing.length?['open']:[])])};
-      });
+      const supports=evaluateForcePaths(model,p,total,forces);
       return {id:p.id,mode:p.mode,massKg:p.massKg,weightN:p.massKg*gravity,totalVerticalN:total,unsupportedMomentNm,restraint,supports,status:status([...supports.map(s=>s.status),
         ...(restraint?[restraint.status]:[])])};
     });
     const missing=['raise','hold','power-loss'].filter(mode=>!poses.some(p=>p.mode===mode));
     if(!qualifiedMass)missing.push('measured or conservative upper bound for complete supported mass');
     if(!poses.some(p=>p.mode==='raise'&&p.accelZMps2>0))missing.push('upward acceleration');
-    if(!poses.some(p=>p.asymmetric===true&&Math.abs(center-p.cgXM)>1e-9))missing.push('off-center CG');
+    const offCenter=pose=>{
+      if(!spatial)return Math.abs((single?left.xM:(left.xM+right.xM)/2)-pose.cgXM)>1e-9;
+      if(!finitePair(pose.cgXYM)||stations.some(s=>!finitePair(s.xyM)))return false;
+      const mid=left.xyM.map((value,i)=>right?(value+right.xyM[i])/2:value);
+      return Math.hypot(pose.cgXYM[0]-mid[0],pose.cgXYM[1]-mid[1])>1e-9;
+    };
+    if(!poses.some(p=>p.asymmetric===true&&offCenter(p)))missing.push('off-center CG');
     if(!poses.some(p=>p.worstExtension===true&&label(p.basis)))missing.push('worst extension');
-    return {id,source:mech.source,massEvidence:model.massEvidence??'unknown',cases,missing,status:status([...cases.map(c=>c.status),...(missing.length?['open']:[])])};
+    return {id,source:mech.source,...(spatial?{geometry:model.geometry}:{}),massEvidence:model.massEvidence??'unknown',cases,missing,status:status([...cases.map(c=>c.status),...(missing.length?['open']:[])])};
   });
   return {schema:'agent-frc/elevation-result@1',inventory:input.inventory,mechanisms:results,status:status(results.map(r=>r.status)),
-    scope:'Vertical-plane one- or two-support rigid body with specified load paths. Coverage depends on the project inventory and supplied inputs. Buckling, impact, fatigue, electrical holding and brake engagement need supporting model or rated evidence.'};
+    scope:(results.some(r=>r.geometry==='spatial-vertical-supports')?'Each spatial case checks vertical force and both horizontal moments at its stated pose. Other mechanisms retain their declared scope. ':'Vertical-plane one- or two-support rigid body with specified load paths. ')+'Coverage depends on the project inventory and supplied inputs. Buckling, impact, fatigue, electrical holding and brake engagement need supporting model or rated evidence.'};
 }
 
 export function reviewThroughput(input,read) {
