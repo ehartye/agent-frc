@@ -235,7 +235,10 @@ export async function reviewAssembly(file) {
     const actual=Array.isArray(value)?value:[value,value];
     requireValue(actual.length===2&&actual.every((n,i)=>Number.isFinite(n)&&n===row.rangeKg[i]),'Mass interval differs from pinned source.');
   }
-  if (request.nativeMass !== undefined) result.nativeMass = reconcileNativeMass(request, result, pins, locate);
+  if (request.nativeMass !== undefined) {
+    result.nativeMass = reconcileNativeMass(request, result, pins, locate);
+    result.mass.configurationMarginKg = result.nativeMass.inspectionMarginKg;
+  }
   return result;
 }
 

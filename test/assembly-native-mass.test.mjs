@@ -67,7 +67,7 @@ test('normal assembly CLI reconciles manufactured stock, one sealed article, two
 test('rejects wrong physical stock, a replaced same-name body, missing geometry and double charging',async t=>{
   const cases=[
     [d=>{d.actual.bodies[0].materialId='metal-default'},/physical material mismatch/],
-    [d=>{d.actual.bodies[0].stock='same-density-wrong-grade'},/stock or physical material mismatch/],
+    [d=>{d.actual.bodies[0].stock='same-density-wrong-grade'},/stock binding mismatch/],
     [d=>{d.actual.bodies[0].massKg=0.785;d.actual.rawBodyTotalKg=2.785},/density outside/],
     [d=>{d.actual.bodies[0].identity='badge-D'},/engineering identity mismatch/],
     [d=>{d.actual.bodies.pop()},/missing body/],
@@ -94,6 +94,7 @@ test('withholds final ranges for missing evidence and explicitly compares like-f
   }));
   assert.deepEqual(proxy.nativeMass.provisionalInstances,['pad']);
   assert.equal(proxy.nativeMass.inspectionRangeKg,null);
+  assert.equal(proxy.mass.configurationMarginKg,null);
   const scoped=await reviewAssembly(await emit(t,d=>{
     d.plan.bodies[3].role='unresolved';delete d.actual.bodies[3].identity;
   }));

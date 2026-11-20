@@ -109,7 +109,9 @@ export function reconcileNativeMass(request, result, pins, locate) {
     }
     if (owner.basis !== 'stock') fail('stock body assigned to a non-stock instance at ' + id);
     const spec = specifications.get(expected.stock);
-    if (!spec || !actual.volumeCm3 || actual.stock !== expected.stock || !spec.materialIds.includes(actual.materialId)) fail('stock or physical material mismatch at ' + id);
+    if (!spec) fail('unregistered stock ' + expected.stock + ' at ' + id);
+    if (!spec.materialIds.includes(actual.materialId)) fail('physical material mismatch at ' + id + ': observed ' + actual.materialId + ', expected ' + spec.materialIds.join(' or ') + ' for ' + spec.grade);
+    if (!actual.volumeCm3 || actual.stock !== expected.stock) fail('stock binding mismatch at ' + id);
     if (!within(actual.massKg * 1e6 / actual.volumeCm3, spec.densityKgM3)) fail('native density outside stock specification at ' + id);
     subtotal.stock++;
     subtotal.actual += actual.massKg;
