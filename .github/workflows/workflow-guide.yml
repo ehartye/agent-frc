@@ -20,6 +20,7 @@ on:
       - 'scripts/spatial-elevation.mjs'
       - 'scripts/coupled-support.mjs'
       - 'scripts/actuator-duties.mjs'
+      - 'scripts/lift-path-faults.mjs'
       - 'scripts/support-ranges.mjs'
       - 'scripts/hardening.mjs'
       - 'scripts/throughput-cohort.mjs'
