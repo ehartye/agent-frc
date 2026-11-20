@@ -92,4 +92,3 @@ test('rate uses the entire common scoring window, distinctly varied runs, finite
   assert.equal(review().status,'pass');
   second.events[0].piece='unknown';assert.throws(review,/Accepted piece/);
 });
-
