@@ -4,6 +4,8 @@ import {evidenceReader} from '../../scripts/study-evidence.mjs';
 import {reviewConcepts} from '../../scripts/design-review.mjs';
 import {buildRoleReport} from '../../scripts/role-design-report.mjs';
 import {compareRoles} from '../../scripts/strategy-lab.mjs';
+import {createDesign,deriveGeometry} from '../../scripts/design-artifact.mjs';
+import {frameDxf} from '../../scripts/frame-dxf.mjs';
 import {journeyMap} from './journey.mjs';
 import {buildHighlights} from '../../scripts/robot-highlights.mjs';
 import { mkdir, readFile, writeFile, copyFile, access, readdir } from 'node:fs/promises';
@@ -67,6 +69,21 @@ ${suspension.cases.map((c,i)=>{
   const b=c.balance,fmt=values=>values.map(n=>n.toFixed(2)).join(', ');
   return '<div data-suspension-pose="'+i+'"'+(i?' hidden':'')+'><p>Vertical reactions: '+fmt(b.loads)+' N.</p><p>Unbalanced moments about X and Y: <strong>'+fmt(b.unbalancedMomentXYNm)+' N·m</strong>. '+(b.momentEquilibrium==='balanced'?'The pose balances. Component capacity is open.':'The carriage can rotate from this pose.')+'</p></div>';
 }).join('')}</details>`;
+const rearPlan=deriveGeometry(createDesign()).framePlan;
+const squarePlan=deriveGeometry(createDesign({frameProfile:{kind:'square'}})).framePlan;
+const frameOptions=[rearPlan,squarePlan].map((plan,i)=>{
+  const loops=Object.entries(plan.layerLoops).reverse();
+  const fill={cover:'#183650',padding:'#e7ba5c',backing:'#9cb8cb',frame:'#f3f7fa'};
+  const shapes=loops.map(([name,points])=>'<polygon fill="'+fill[name]+'" stroke="#2a4757" stroke-width="1" points="'+
+    points.map(([x,y])=>[130+250*x,110-250*y].join(',')).join(' ')+'"/>').join('');
+  return '<div data-frame-option="'+i+'"'+(i?' hidden':'')+'><svg width="290" height="220" viewBox="0 0 290 220" role="img" aria-label="'+
+    (i?'Square frame':'Two diagonal rear corners')+' with backing, padding and cover"><title>Frame and bumper in plan view</title>'+shapes+
+    '<text x="245" y="115" fill="#15354a" font-size="12">+X →</text></svg><p>Frame perimeter '+(plan.perimeter*1000).toFixed(1)+' mm · '+
+    (i?'Four square corners.':'64 mm rear cutbacks along each axis.')+'</p></div>';
+}).join('');
+const frameStudy='<details class="reading"><summary>Explore the rear frame corners</summary><p>Look down on a 700 × 640 mm frame. The gold padding follows the backing and cover around both rear corners.</p>'+
+  '<label>Frame profile <select id="frameChoice"><option value="0">Rear chamfers</option><option value="1">Square</option></select></label>'+frameOptions+
+  '<a href="starter-frame.dxf" download>Download the rear-chamfer Fusion plan (DXF)</a></details>';
 const chapter=n=>String(n+1).padStart(2,'0');
 const ownedSkills=(await readdir(path.join(root,'skills'),{withFileTypes:true})).filter(v=>v.isDirectory()).map(v=>v.name).sort();
 if(ownedSkills.join()!==Object.keys(purpose).sort().join()) throw Error('Update the guide when the skill inventory changes.');
@@ -78,7 +95,7 @@ const highlightsLink='<a href="robot/index.html">Explore the example robot evide
 const chapters=stages.map((s,i)=>`<details id="${s.id}" class="chapter"${i===0?' open':''}>
 <summary><span class="ordinal">${chapter(i)}</span><span>${escape(s.name)}</span><span class="toggle" aria-hidden="true"></span></summary>
 <div class="chapter-body"><h3>${escape(s.question)}</h3><p>${escape(s.objective)}</p><p>${escape(s.activity)}</p>
-<div class="handoff"><h4>Carry forward</h4><p>${escape(s.handoff)}</p></div>${s.docs.some(([,p])=>p==='docs/camera-reference.md')?cameraComparison:''}${s.id==='contract'?serviceComparison:''}${s.id==='verify'?suspensionStudy:''}
+<div class="handoff"><h4>Carry forward</h4><p>${escape(s.handoff)}</p></div>${s.docs.some(([,p])=>p==='docs/camera-reference.md')?cameraComparison:''}${s.id==='contract'?serviceComparison:''}${s.id==='design'?frameStudy:''}${s.id==='verify'?suspensionStudy:''}
 <h4>Supporting skills</h4><div class="chips">${s.skills.map(k=>link(k,'skills/'+k+'/SKILL.md')).join('')}</div>
 <div class="reading">${s.id==='design'?'<a href="role-design.html">Compare robot designs against a selected match role ↗</a> · ':''}${s.id==='verify'?highlightsLink:''}${s.id==='story'?'<a href="field-lab.html#roleLab">Compare alliance roles and replay the field ↗</a> · ':''}${s.id==='rules'?'<a href="rules.json" download>Download the training rules model ↓</a> · ':''}${s.docs.some(([,p])=>p===powerGuide)?'<a href="#power">Try the shared-power comparison ↓</a> · ':''}${s.docs.map(([label,p])=>link(label+' ↗',p)).join(' · ')}</div></div></details>`).join('\n');
 const directory=Object.keys(purpose).map(k=>{
@@ -100,6 +117,7 @@ const page=style.replace('<!-- journey map -->',()=>journeyMap(stages,false,esca
 await mkdir(output,{recursive:true});
 if((await readdir(output)).length) throw Error('Choose an empty output folder for the workflow guide.');
 await writeFile(path.join(output,'index.html'),page);
+await writeFile(path.join(output,'starter-frame.dxf'),frameDxf(rearPlan));
 for(const file of ['guide.css','interact.js']) await copyFile(path.join(source,file),path.join(output,file));
 await writeFile(path.join(output,'rules.json'),JSON.stringify(model,null,2)+'\n');
 await buildHighlights(path.join(root,'examples/highlights/project.json'),path.join(output,'robot'));

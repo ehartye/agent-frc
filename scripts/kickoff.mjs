@@ -6,6 +6,7 @@ import { readFile, realpath, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { analyzeWindow } from './kickoff-window.mjs';
 import { routeStudy } from './kickoff-routes.mjs';
+import {framePlan,starterFrameProfile} from './frame-profile.mjs';
 import { fieldGeometry } from './field-rehearsal-geometry.mjs';
 import { createFieldRehearsal } from './field-rehearsal.mjs';
 import { fileURLToPath } from 'node:url';
@@ -47,7 +48,8 @@ function sourceLocator(s) {
 export function initialTrial(p) {
   const seed=p.trial || p.rehearsal?.defaults;
   const relative=Math.min(p.field.length,p.field.width)/12;
-  return {length:seed?.length ?? relative,width:seed?.width ?? relative,height:seed?.height ?? relative,
+  const shape=seed?.frameProfile??p.frameProfile??(seed?undefined:starterFrameProfile());
+  return {...(shape?{frameProfile:shape}:{}),length:seed?.length ?? relative,width:seed?.width ?? relative,height:seed?.height ?? relative,
     heading:seed?.heading ?? 0,x:p.trial?.x ?? p.field.length/4,y:p.trial?.y ?? p.field.width/3};
 }
 
@@ -65,6 +67,12 @@ export function validateProfile(p) {
      p.trial.heading!==undefined && (!Number.isFinite(p.trial.heading) || Math.abs(p.trial.heading)>180) ||
      ['x','y'].some((axis,i)=>p.trial[axis]!==undefined && (!Number.isFinite(p.trial[axis]) ||
        p.trial[axis]<0 || p.trial[axis]>[p.field.length,p.field.width][i])))) throw Error('Invalid trial box or starting pose.');
+  const trial=initialTrial(p);
+  framePlan(trial.length,trial.width,trial.frameProfile,0,25.4);
+  if(p.rehearsal?.defaults){
+    const body=p.rehearsal.defaults;
+    framePlan(body.length,body.width,body.frameProfile??p.frameProfile,body.bumper,25.4);
+  }
   if (!p.limits || ![p.limits.height, p.limits.perimeter].every(n => n === null || positive(n)) ||
       !label(p.limits.source)) throw Error('Provide sourced limits or use null for an unknown.');
   if (!label(p.geometrySource) || !label(p.omissions) || !Array.isArray(p.landmarks) || !Array.isArray(p.levels)) {
@@ -177,7 +185,7 @@ export async function buildLab(input, destination, comparison) {
         ({role,context,match,roster,focalId:(focal.side==='blue'?'B':'R')+focal.slot,ordinary,terminal,margin,regret,byRobot}))
     } : null).replaceAll('<','\\u003c'),
     PROFILE:json, SCENE:renderer, LAB:controls, 'ROUTE MODEL':routeStudy.toString(), 'WINDOW MODEL':analyzeWindow.toString(),
-    'REHEARSAL MODEL':[initialTrial.toString(),fieldGeometry.toString(),createRehearsalGame.toString(),rehearsalFindings.toString(),createTerminalRehearsal.toString(),createFieldRehearsal.toString(),createMatchSeries.toString(),createRehearsalSetup.toString(),
+    'REHEARSAL MODEL':[framePlan.toString(),starterFrameProfile.toString(),initialTrial.toString(),fieldGeometry.toString(),createRehearsalGame.toString(),rehearsalFindings.toString(),createTerminalRehearsal.toString(),createFieldRehearsal.toString(),createMatchSeries.toString(),createRehearsalSetup.toString(),
       'const rehearsal=createFieldRehearsal(profile); const rehearsalNotes=[];'].join('\n'),
     OPPORTUNITIES:opportunities, 'REHEARSAL UI':rehearsalUI
   };

@@ -115,3 +115,7 @@ document.getElementById('suspensionChoice').addEventListener('change',event=>{
   for(const row of document.querySelectorAll('[data-suspension-pose]'))
     row.hidden=row.dataset.suspensionPose!==event.target.value;
 });
+
+document.getElementById('frameChoice').addEventListener('change',event=>{
+  for(const row of document.querySelectorAll('[data-frame-option]'))row.hidden=row.dataset.frameOption!==event.target.value;
+});

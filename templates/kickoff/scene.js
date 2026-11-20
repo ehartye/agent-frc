@@ -79,10 +79,8 @@ function fieldScene(canvas, profile, state, place) {
     });
     const heading=state.heading*Math.PI/180;
     const rotate=(x,y)=>[state.x+x*Math.cos(heading)-y*Math.sin(heading),state.y+x*Math.sin(heading)+y*Math.cos(heading)];
-    const halfL=state.length/2, halfW=state.width/2;
-    objects.push({...state, name:'Robot', robot:true, points:[
-      rotate(-halfL,-halfW),rotate(halfL,-halfW),rotate(halfL,halfW),rotate(-halfL,halfW)
-    ]});
+    const halfL=state.length/2;
+    objects.push({...state,name:'Robot',robot:true,points:framePlan(state.length,state.width,state.frameProfile,0,25.4).points.map(([x,y])=>rotate(x,y))});
     for(const obj of objects.sort((a,b)=>depth(b.x,b.y)-depth(a.x,a.y))) {
       const roof=obj.points.map(([x,y])=>[x,y,obj.height]);
       const edge=obj.robot?'#fff0cc':'#b5cede';

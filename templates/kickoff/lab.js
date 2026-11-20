@@ -24,6 +24,7 @@ paragraph(sources, profile.limits.source);
 paragraph(sources, profile.geometrySource);
 if (profile.levels.length) paragraph(sources, profile.levels.map(v=>v.name+' '+v.height+' in').join(' · '));
 paragraph(sources, profile.omissions);
+if(state.frameProfile)paragraph(sources,'Frame outline: '+state.frameProfile.kind+'. Rear is local −X. The sizing trial shows the bare frame and its perimeter. The rehearsal adds the bumper depth to each face.');
 paragraph(sources,'Editable starting box: '+[state.length,state.width,state.height].map(fmt).join(' × ')+' in. '+(profile.trial?'The project supplies this trial.':profile.rehearsal?'Dimensions come from the project rehearsal defaults.':'The initial cube uses one twelfth of the shorter field side as a visual scale reference.')+' X runs downfield from the first end wall. Y runs across the field from the near side.');
 
 function slider(group, key, title, min, max, unit) {
@@ -41,7 +42,12 @@ function slider(group, key, title, min, max, unit) {
   item.append(label,input);
   byId(group).append(item);
   sliders.set(key,{input,out,unit});
-  input.oninput = () => {state[key]=Number(input.value);refresh();};
+  input.oninput = () => {
+    const next={...state,[key]:Number(input.value)};
+    try{framePlan(next.length,next.width,next.frameProfile,0,25.4);}
+    catch(error){input.value=state[key];out.textContent=error.message;return;}
+    state[key]=next[key];refresh();
+  };
 }
 for(const key of ['length','width','height']) slider('sizes',key,key[0].toUpperCase()+key.slice(1),Math.min(1,state[key]),
   Math.max(2*state[key],profile.limits.height || 0,(profile.limits.perimeter || 0)/2), ' in');
@@ -54,7 +60,7 @@ function margin(value, limit) {
   return fmt(Math.abs(remaining))+' in '+(remaining<0?'over limit':'remaining');
 }
 function checks(box) {
-  const perimeter = 2*(box.length+box.width);
+  const perimeter=framePlan(box.length,box.width,box.frameProfile,0,25.4).perimeter;
   return ['Perimeter '+fmt(perimeter)+' in · '+margin(perimeter,profile.limits.perimeter),
     'Starting height '+fmt(box.height)+' in · '+margin(box.height,profile.limits.height)];
 }

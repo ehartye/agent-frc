@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
 import { newRegister, reviewRegister, governingManual } from './rule-register.mjs';
+import {projectFrameProfile} from './project-frame-profile.mjs';
 import { rulesModel } from './kickoff.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -34,7 +35,10 @@ if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === imp
       console.log(JSON.stringify({edition:register.edition,facts:register.facts.length,openQuestions:register.openQuestions}));
     } else if (command === 'compile' && files.length === 3) {
       const raw = await readFile(files[0]);
-      const model = compileRules(JSON.parse(raw.toString('utf8').replace(/^\uFEFF/,'')),await readJson(files[1]));
+      const profile=await readJson(files[1]);
+      const convention=projectFrameProfile(files[1]);
+      if(profile.frameProfile===undefined&&convention!==undefined)profile.frameProfile=convention;
+      const model=compileRules(JSON.parse(raw.toString('utf8').replace(/^\uFEFF/,'')),profile);
       model.ruleRegisterSha256 = createHash('sha256').update(raw).digest('hex');
       await writeProjectFile(files[2],model);
     } else throw Error('Usage: rules init REGISTER | review REGISTER | compile REGISTER PROFILE NEW_MODEL');

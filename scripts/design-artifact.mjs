@@ -1,3 +1,5 @@
+import {framePlan,starterFrameProfile} from './frame-profile.mjs';
+
 // Browser-compatible editable geometry and planning evidence.
 export const SCHEMA = 'agent-frc/design-artifact@2';
 export const LIMITATIONS = [
@@ -5,14 +7,18 @@ export const LIMITATIONS = [
   'A route budget uses declared motion and action times. Measure a complete cycle to validate it.',
   'Confirm the datum and orientation of each reference against its project drawing.',
 ];
+const labelText=v=>typeof v==='string'&&Boolean(v.trim());
+const defaultBumperConstruction=()=>({backing:{fraction:.25,material:'Unselected backing'},padding:{fraction:.73,material:'Unselected padding'},cover:{fraction:.02,material:'Unselected cover'}});
+const frameRuleTopics=['frame-perimeter','corner-coverage','backing-and-padding','attachment'];
 const pose = (x, y, z, headingDeg, basis) => ({ x, y, z, headingDeg, basis });
 const ruleIds = ['frame-perimeter', 'bumper-zone', 'height', 'stow'];
 
 export function createDesign(project = {}) {
-  if (!record(project) || Object.keys(project).some(k => !['id','workspace','rules','sources'].includes(k))) {
-    throw Error('Project may define id, workspace, rules and sources');
+  if (!record(project) || Object.keys(project).some(k => !['id','workspace','rules','sources','frameProfile','frameRuleReview','bumperConstruction'].includes(k))) {
+    throw Error('Project may define id, workspace, rules, sources and frameProfile');
   }
   const requirement = (id, outcome, screen) => ({ id, narrativeIds: ['transfer'], outcome, screen, status: 'unknown' });
+  const {frameProfile=starterFrameProfile(),frameRuleReview,bumperConstruction=defaultBumperConstruction(),...metadata}=project;
   const artifact = {
     schema: SCHEMA, id: 'editable-blockout', revision: 1, parentRevision: null, units: 'm',
     workspace: {
@@ -38,6 +44,7 @@ export function createDesign(project = {}) {
       decisions: [{id:'architecture-options',narrativeIds:['transfer'],text:'Compare shared and dedicated transport paths.',basis:'Track occupied spaces, throughput and recovery access for each option.'}],
     },
     design: {
+      frameProfile:structuredClone(frameProfile),bumperConstruction:structuredClone(bumperConstruction),...(frameRuleReview?{frameRuleReview:structuredClone(frameRuleReview)}:{}),
       parameters:{frameLengthM:.70,frameWidthM:.64,trackM:.52,bumperBottomM:.06,bumperHeightM:.12,bumperDepthM:.06,height:.65,reach:0,toolHeight:.5,opening:.32,phase:'start'},
       requirementLinks:{tool:['acquire','deliver','piece-variation'],'frame-plate':['acquire','reliability-pit'],'body-envelope':['acquire']},
     },
@@ -52,7 +59,7 @@ export function createDesign(project = {}) {
       fabrication:{materials:[],processes:[],toolCapabilities:[],openQuestions:['Measure new and worn objects, assembly clearance and tool access.','Record replacement history and retest each repaired interface.']},
     },
     constraints:[],checks:[],provenance:{basis:'Original illustrative blockout with editable project inputs',limitations:[...LIMITATIONS]},
-    ...structuredClone(project),
+    ...structuredClone(metadata),
   };
   return assertDesign(artifact);
 }
@@ -84,11 +91,37 @@ export function validateDesign(a){const e=[];
  enumv(a.units,['m'],'units',e);validateWorkspace(a.workspace,e);
  if(keys(a.frames,['world','robot','target'],'frames',e)){if(keys(a.frames.world,['axes','basis'],'world',e)){enumv(a.frames.world.axes,['x downfield, y across field, z up'],'world.axes',e);string(a.frames.world.basis,'world.basis',e)}for(const f of ['robot','target'])if(keys(a.frames[f],['x','y','z','headingDeg','basis'],f,e)){for(const k of ['x','y','z'])num(a.frames[f][k],-30,30,f+'.'+k,e);num(a.frames[f].headingDeg,-180,180,f+'.headingDeg',e);string(a.frames[f].basis,f+'.basis',e)}}
  let ns=new Set(),rs=new Set();if(keys(a.strategy,['activeNarrativeId','narratives','requirements','decisions'],'strategy',e)){const n=list(a.strategy.narratives,'narratives',e),r=list(a.strategy.requirements,'requirements',e);ns=ids(n,'narrative',e);rs=ids(r,'requirement',e);for(const x of n)if(keys(x,['id','title','status','narrative'],'narrative',e)){string(x.title,'title',e);string(x.narrative,'narrative',e);enumv(x.status,['alternative','exploring','selected-for-cad','rejected'],'status',e)}if(!ns.has(a.strategy.activeNarrativeId))e.push('unknown activeNarrativeId');for(const x of r)if(keys(x,['id','narrativeIds','outcome','screen','status'],'requirement',e)){links(x.narrativeIds,ns,'narrativeIds',e);string(x.outcome,'outcome',e);string(x.screen,'screen',e);enumv(x.status,['unknown','candidate','verified','rejected'],'requirement.status',e)}const ds=list(a.strategy.decisions,'decisions',e);ids(ds,'decision',e);for(const x of ds)if(keys(x,['id','narrativeIds','text','basis'],'decision',e)){links(x.narrativeIds,ns,'decision.narrativeIds',e);string(x.text,'decision.text',e);string(x.basis,'decision.basis',e)}}
+ if(a.design?.frameProfile!==undefined){
+   try{framePlan(a.design.parameters?.frameLengthM,a.design.parameters?.frameWidthM,a.design.frameProfile,0,1000);}
+   catch(err){e.push(err.message);}
+ }
  const vs=new Set(['frame-plate','body-envelope','front-bumper','rear-bumper','left-bumper','right-bumper','tool','reach']);
- if(keys(a.design,['parameters','requirementLinks'],'design',e)){const p=a.design.parameters;if(keys(p,['frameLengthM','frameWidthM','trackM','bumperBottomM','bumperHeightM','bumperDepthM','height','reach','toolHeight','opening','phase'],'parameters',e)){for(const k of ['frameLengthM','frameWidthM','trackM'])num(p[k],.3,2,k,e);num(p.bumperBottomM,0,.5,'bumperBottomM',e);num(p.bumperHeightM,.01,.5,'bumperHeightM',e);num(p.bumperDepthM,.01,.3,'bumperDepthM',e);if(p.trackM>p.frameWidthM)e.push('track exceeds frame width');if(p.opening>=p.frameWidthM)e.push('opening must be narrower than frame');num(p.height,.22,2,'height',e);num(p.reach,0,1,'reach',e);num(p.toolHeight,0,2,'toolHeight',e);num(p.opening,.01,2,'opening',e);enumv(p.phase,['start','deployed'],'phase',e)}if(!record(a.design.requirementLinks))e.push('requirementLinks must be object');else for(const [k,v]of Object.entries(a.design.requirementLinks)){if(!vs.has(k))e.push('unknown volume link '+k);links(v,rs,'volume requirementIds',e)}}
+ if(keys(a.design,['parameters','requirementLinks',...(Object.hasOwn(a.design??{},'frameProfile')?['frameProfile']:[]),...(Object.hasOwn(a.design??{},'frameRuleReview')?['frameRuleReview']:[]),...(Object.hasOwn(a.design??{},'bumperConstruction')?['bumperConstruction']:[])],'design',e)){const p=a.design.parameters;if(keys(p,['frameLengthM','frameWidthM','trackM','bumperBottomM','bumperHeightM','bumperDepthM','height','reach','toolHeight','opening','phase'],'parameters',e)){for(const k of ['frameLengthM','frameWidthM','trackM'])num(p[k],.3,2,k,e);num(p.bumperBottomM,0,.5,'bumperBottomM',e);num(p.bumperHeightM,.01,.5,'bumperHeightM',e);num(p.bumperDepthM,.01,.3,'bumperDepthM',e);if(p.trackM>p.frameWidthM)e.push('track exceeds frame width');if(p.opening>=p.frameWidthM)e.push('opening must be narrower than frame');num(p.height,.22,2,'height',e);num(p.reach,0,1,'reach',e);num(p.toolHeight,0,2,'toolHeight',e);num(p.opening,.01,2,'opening',e);enumv(p.phase,['start','deployed'],'phase',e)}if(!record(a.design.requirementLinks))e.push('requirementLinks must be object');else for(const [k,v]of Object.entries(a.design.requirementLinks)){if(!vs.has(k))e.push('unknown volume link '+k);links(v,rs,'volume requirementIds',e)}}
  const os=list(a.operations,'operations',e,1);ids(os,'operation',e);if(os.length!==1)e.push('artifact requires one reversible opening operation');for(const x of os)if(keys(x,['id','type','enabled','targetIds','requirementIds','unresolvedChecks'],'operation',e)){enumv(x.type,['intake-opening'],'operation.type',e);bool(x.enabled,'operation.enabled',e);if(JSON.stringify(x.targetIds)!==JSON.stringify(['frame-plate','body-envelope']))e.push('opening target set unsupported');links(x.requirementIds,rs,'operation.requirementIds',e);for(const t of list(x.unresolvedChecks,'unresolvedChecks',e))string(t,'unresolvedCheck',e);if(!x.unresolvedChecks?.length)e.push('opening unresolved checks required')}
  if(keys(a.rehearsal,['route','driveSpeedMps','turnSpeedDegps','actionDurations','opponent','basis'],'rehearsal',e)){const r=a.rehearsal;enumv(r.basis,['assumed','estimated','measured'],'rehearsal.basis',e);num(r.driveSpeedMps,.01,10,'driveSpeedMps',e);num(r.turnSpeedDegps,1,720,'turnSpeedDegps',e);if(keys(r.actionDurations,['pickup','deliver'],'actionDurations',e)){num(r.actionDurations.pickup,0,120,'pickup',e);num(r.actionDurations.deliver,0,120,'deliver',e)}const poses=list(r.route,'route',e,200);if(!poses.length)e.push('route needs at least one pose');ids(poses,'pose',e);for(const q of poses)if(keys(q,['id','x','y','headingDeg','action'],'pose',e)){num(q.x,-30,30,'pose.x',e);num(q.y,-30,30,'pose.y',e);num(q.headingDeg,-180,180,'pose.headingDeg',e);enumv(q.action,['none','pickup','deliver'],'pose.action',e)}const o=r.opponent;if(keys(o,['enabled','footprintM','periodS','x','yMin','yMax'],'opponent',e)){bool(o.enabled,'opponent.enabled',e);num(o.footprintM,.1,3,'footprintM',e);num(o.periodS,.1,300,'periodS',e);num(o.x,-30,30,'opponent.x',e);num(o.yMin,-30,30,'yMin',e);num(o.yMax,-30,30,'yMax',e);if(o.yMax<=o.yMin)e.push('opponent yMax must exceed yMin')}}
  const ss=list(a.sources,'sources',e);const si=ids(ss,'source',e);for(const s of ss)if(keys(s,['id','url','locator','sha256','scope'],'source',e)){string(s.locator,'source.locator',e);string(s.scope,'source.scope',e);if(typeof s.url!=='string'||!/^https:\/\/[^\s]+$/.test(s.url))e.push('source url must be HTTPS');if(s.sha256!==null&&!/^[a-f0-9]{64}$/.test(s.sha256))e.push('invalid source sha256')}
+ const construction=a.design?.bumperConstruction;
+ if(construction!==undefined){
+   const layers=['backing','padding','cover'];
+   if(!record(construction)||Object.keys(construction).length!==3||
+     !layers.every(k=>record(construction[k])&&Number.isFinite(construction[k].fraction)&&construction[k].fraction>0&&labelText(construction[k].material))||
+     Math.abs(layers.reduce((sum,k)=>sum+construction[k].fraction,0)-1)>1e-9)e.push('Bumper layers need identified materials and three positive fractions totaling one.');
+ }
+ const review=a.design?.frameRuleReview;
+ if(review!==undefined){
+   if(!record(review)||!labelText(review.edition)||!/^\d{4}-\d{2}-\d{2}$/.test(review.cutoff??'')||
+      !Number.isFinite(Date.parse(review.cutoff))||new Date(review.cutoff).toISOString().slice(0,10)!==review.cutoff||
+      !si.has(review.sourceId)||!Array.isArray(review.checks)||
+      (review.assemblySourceIds!==undefined&&(!Array.isArray(review.assemblySourceIds)||review.assemblySourceIds.some(id=>!si.has(id)))))e.push('Frame review needs manual edition, effective cutoff, registered source and checks.');
+   else {
+     const topics=new Set();
+     for(const c of review.checks){
+       if(!c||!frameRuleTopics.includes(c.topic)||topics.has(c.topic)||!labelText(c.locator)||!labelText(c.basis)||
+         !['supported','conflict','unknown'].includes(c.finding))e.push('Invalid sourced frame review finding.');
+       topics.add(c?.topic);
+     }
+   }
+ }
  const rules = list(a.rules,'rules',e,ruleIds.length);
  ids(rules,'rule',e);
  for (const rule of rules) {
@@ -123,12 +156,35 @@ export function deriveGeometry(a) {
     box('right-bumper',[L+2*D,D,H],[0,-W/2-D/2,midZ]),
     box('tool',[.2,.35,.15],[toolX,0,p.toolHeight]),
   ];
+  let outline;
+  if(a.design.frameProfile){
+    const plan=distance=>framePlan(L,W,a.design.frameProfile,distance,1000);
+    outline=plan(D);
+    function prism(id,poly,bottom,height){
+      const min=axis=>Math.min(...poly.map(v=>v[axis])),max=axis=>Math.max(...poly.map(v=>v[axis]));
+      return {...box(id,[max(0)-min(0),max(1)-min(1),height],[(max(0)+min(0))/2,(max(1)+min(1))/2,bottom+height/2]),
+        kind:'polygon-prism',polygon:poly};
+    }
+    for(const index of [0,1])volumes[index]={...volumes[index],kind:'polygon-prism',polygon:outline.points};
+    const construction=a.design.bumperConstruction??defaultBumperConstruction();
+    const backing=construction.backing.fraction*D,padding=construction.padding.fraction*D;
+    const boundaries=[outline.points,plan(backing).outer,plan(backing+padding).outer,outline.outer];
+    const band=(inner,outer,i,j)=>[inner[i],outer[i],outer[j],inner[j]];
+    const sides=outline.edgeNames.map((name,i)=>{
+      const next=(i+1)%outline.points.length;
+      const segment=prism(name+'-bumper',band(outline.points,outline.outer,i,next),p.bumperBottomM,H);
+      segment.layers=['backing','padding','cover'].map((role,k)=>({role,material:construction[role].material,polygon:band(boundaries[k],boundaries[k+1],i,next)}));
+      return segment;
+    });
+    volumes.splice(2,4,...sides);
+    outline.layerLoops=Object.fromEntries(['frame','backing','padding','cover'].map((name,i)=>[name,boundaries[i]]));
+  }
   if (p.reach>0) volumes.push(box('reach',[p.reach,.35,.15],[L/2+p.reach/2,0,p.toolHeight]));
   const cutLength = L/2-.05;
   const operation = a.operations[0];
   const cut = {enabled:operation.enabled,id:operation.id,targetIds:operation.targetIds,center:[cutLength/2,0,.11],size:[cutLength,p.opening,.22],frame:'robot',kind:'box'};
   return {
-    volumes, openings:[cut],field:{length:a.workspace.lengthM,width:a.workspace.widthM,frame:'world'},
+    volumes,...(outline?{framePlan:outline}:{}), openings:[cut],field:{length:a.workspace.lengthM,width:a.workspace.widthM,frame:'world'},
     target:{kind:'box',size:[...a.workspace.targetSizeM],center:[0,0,0],frame:'target'},
     piece:{kind:'box',size:[...a.workspace.pieceSizeM],center:[...a.workspace.pieceCenterM],frame:'world'},
   };
@@ -146,9 +202,12 @@ export function exportCad(a) {
   ];
   const cut = geometry.openings[0];
   for (const volume of geometry.volumes) {
+    const extrude=poly=>'translate([0,0,'+(volume.center[2]-volume.size[2]/2)+']) linear_extrude(height='+volume.size[2]+') polygon(points='+vector(poly)+');';
+    const solid=volume.layers?'union(){ '+volume.layers.map(layer=>'/* '+layer.role+' */ '+extrude(layer.polygon)).join(' ')+' }':
+      volume.polygon?extrude(volume.polygon):box(volume);
     const shape = cut.enabled && cut.targetIds.includes(volume.id)
-      ? 'difference(){ '+box(volume)+' '+box(cut)+' }'
-      : box(volume);
+      ? 'difference(){ '+solid+' '+box(cut)+' }'
+      : solid;
     lines.push('// '+volume.id,transform(a.frames.robot)+' '+shape);
   }
   lines.push('// target reference',transform(a.frames.target)+' '+box(geometry.target),
@@ -159,9 +218,25 @@ export function exportCad(a) {
 export const validateArtifact=validateDesign;
 export const editArtifact=reviseDesign;
 
+// Snapshot the reviewed design inputs. Editing an artifact never refreshes this attestation.
+export function frameReviewBasis(a) {
+  assertDesign(a);
+  const review=a.design.frameRuleReview;
+  const p=a.design.parameters;
+  const sourceIds=[review?.sourceId,...(review?.assemblySourceIds??[])];
+  return structuredClone({frameProfile:a.design.frameProfile??{kind:'square'},frameLengthM:p.frameLengthM,frameWidthM:p.frameWidthM,
+    trackM:p.trackM,bumperBottomM:p.bumperBottomM,bumperHeightM:p.bumperHeightM,bumperDepthM:p.bumperDepthM,
+    bumperConstruction:a.design.bumperConstruction??defaultBumperConstruction(),openingM:p.opening,operations:structuredClone(a.operations),
+    edition:review?.edition??null,cutoff:review?.cutoff??null,sourceId:review?.sourceId??null,
+    sources:a.sources.filter(s=>sourceIds.includes(s.id)).map(s=>({...s})),
+    rules:a.rules.filter(r=>r.id==='frame-perimeter'||r.id==='bumper-zone').map(r=>({...r}))});
+}
+
 export function spatialChecks(a) {
-  const {volumes} = deriveGeometry(a);
+  const {volumes,framePlan:outline} = deriveGeometry(a);
   const p = a.design.parameters;
+  const reviewed=a.design.frameRuleReview;
+  const bound=reviewed&&JSON.stringify(sort(reviewed.reviewedBasis??null))===JSON.stringify(sort(frameReviewBasis(a)));
   const limits = new Map(a.rules.map(rule => [rule.id,rule]));
   function screen(id, value, scope, applicable=true) {
     const rule = limits.get(id);
@@ -170,7 +245,17 @@ export function spatialChecks(a) {
     return {id,inputRevision:a.revision,status,scope:scope+' Modeled value '+Number(value.toFixed(6))+' m.'+evidence,requirementIds:[]};
   }
   return [
-    screen('frame-perimeter',2*(p.frameLengthM+p.frameWidthM),'Rectangular frame perimeter.'),
+    ...(a.design.frameProfile?frameRuleTopics.map(topic=>{
+      const review=a.design.frameRuleReview, finding=review?.checks.find(c=>c.topic===topic);
+      const registered=a.sources.find(s=>s.id===review?.sourceId);
+      const needsAssembly=['backing-and-padding','attachment'].includes(topic);
+      const assemblyBound=!needsAssembly||(review?.assemblySourceIds?.length>0&&review.assemblySourceIds.every(id=>a.sources.find(s=>s.id===id)?.sha256));
+      const current=Boolean(bound&&registered?.sha256&&assemblyBound);
+      return {id:'frame-rules-'+topic,inputRevision:a.revision,status:!current||!finding||finding.finding==='unknown'?'unknown':finding.finding==='conflict'?'fail':'pass',
+        scope:finding&&!current?'Review geometry, construction, edition and pinned sources for this revision before reusing the finding.':finding?'Project review '+review.edition+' through '+review.cutoff+' · '+review.sourceId+' '+finding.locator+' · '+finding.basis:
+          'Supply the project manual edition, cutoff, source locator and finding for '+topic+'.',requirementIds:[]};
+    }):[]),
+    screen('frame-perimeter',outline?.perimeter??2*(p.frameLengthM+p.frameWidthM),outline?'Closed frame-face perimeter.':'Rectangular frame perimeter.'),
     screen('bumper-zone',p.bumperBottomM+p.bumperHeightM,'Modeled bumper upper edge.'),
     screen('height',Math.max(...volumes.map(b=>b.center[2]+b.size[2]/2)),'Highest reserved robot volume above its local datum.'),
     screen('stow',p.reach,'Starting extension beyond the front of the frame.',p.phase==='start'),

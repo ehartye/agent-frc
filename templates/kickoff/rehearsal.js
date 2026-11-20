@@ -233,7 +233,7 @@
       };
       addNumber('Speed (in/s)',r.speed,1,500,1,'speed');
       addNumber('Bumper per side (in)',r.bumper,0,12,.25,'bumper');
-      const apply=button('Use trial box',()=>edit(r.id,{length:state.length,width:state.width,height:state.height,heading:state.heading}));
+      const apply=button('Use trial box',()=>edit(r.id,{length:state.length,width:state.width,height:state.height,heading:state.heading,frameProfile:state.frameProfile??{kind:'square'}}));
       apply.setAttribute('aria-label','Use trial box for '+r.id);
       const remove=button('Remove',()=>setRoster(roster.filter(other=>other.id!==r.id)));
       remove.setAttribute('aria-label','Remove '+r.id);configLine.append(apply,remove);card.append(configLine);terminalEditor(r,card);group.append(card);

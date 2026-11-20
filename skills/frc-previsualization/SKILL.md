@@ -19,3 +19,5 @@ Use [complete match rehearsals](../../docs/match-series.md) to test likely per-p
 In each scoring opportunity state where the supply is, which pieces are already aboard and when loaded travel can begin. Use the loaded-batch screen for a single later transfer and preserve the assumption in the student narrative.
 
 Use the editable blockouts for a [whole-robot architecture comparison](../../docs/whole-robot-comparison.md) before detailing a subsystem.
+
+Use the project’s [frame profile](../../docs/frame-profile.md) to compare rear-corner clearance at actual headings. The occupied Field Lab rehearsal uses the offset polygon. Confirm close corridor estimates in that rehearsal or in CAD.

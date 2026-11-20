@@ -1,3 +1,5 @@
+import {framePlan} from './frame-profile.mjs';
+
 // Embedded in the offline lab as well as used directly by the Node tests.
 export function fieldGeometry(profile) {
   const EPS = 1e-8;
@@ -8,8 +10,10 @@ export function fieldGeometry(profile) {
   const add = (p,q) => [p[0]+q[0],p[1]+q[1]];
   const minus = (p,q) => [p[0]-q[0],p[1]-q[1]];
   const validPoint = p => Array.isArray(p) && p.length===2 && p.every(Number.isFinite);
+  const profileOf=b=>b.frameProfile??profile.frameProfile;
+  const validShape=b=>{try{framePlan(b.length,b.width,profileOf(b),b.bumper,25.4);return true;}catch{return false;}};
   const validBody = b => b && [b.length,b.width,b.height].every(n=>Number.isFinite(n) && n>0) &&
-    Number.isFinite(b.heading) && Number.isFinite(b.bumper) && b.bumper>=0;
+    Number.isFinite(b.heading) && Number.isFinite(b.bumper) && b.bumper>=0 && validShape(b);
   const planes = [
     {name:'Blue end wall',normal:[1,0],origin:[0,0]}, {name:'Red end wall',normal:[-1,0],origin:[L,0]},
     {name:'South guardrail',normal:[0,1],origin:[0,0]}, {name:'North guardrail',normal:[0,-1],origin:[0,W]}
@@ -31,7 +35,7 @@ export function fieldGeometry(profile) {
   const boundary=planes.reduce(clip,rect(L/2,W/2,L,W));
   function offsets(body) {
     const a=body.heading*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
-    return rect(0,0,body.length+2*body.bumper,body.width+2*body.bumper)
+    return framePlan(body.length,body.width,profileOf(body),body.bumper,25.4).outer
       .map(([x,y])=>[x*c-y*s,x*s+y*c]);
   }
   const footprint=(p,body)=>offsets(body).map(q=>add(p,q));
@@ -89,7 +93,7 @@ export function fieldGeometry(profile) {
   }
   const cache=new Map();
   function space(body,setup) {
-    const key=[body.length,body.width,body.height,body.heading,body.bumper,setup].join('/');
+    const key=[body.length,body.width,body.height,body.heading,body.bumper,JSON.stringify(profileOf(body)),setup].join('/');
     if(cache.has(key))return cache.get(key);
     const shape=offsets(body);
     const walls=planes.map(p=>({...p,offset:dot(p.normal,p.origin)-Math.min(...shape.map(q=>dot(q,p.normal)))}));
@@ -134,7 +138,7 @@ export function fieldGeometry(profile) {
   }
   function robotContact(a,b,body,c,d,peer) {
     const relativeA=minus(a,c),relativeB=minus(b,d);
-    const key='relative/'+[body.length,body.width,body.bumper,body.heading,peer.length,peer.width,peer.bumper,peer.heading].join('/');
+    const key='relative/'+[body.length,body.width,body.bumper,body.heading,JSON.stringify(profileOf(body)),peer.length,peer.width,peer.bumper,peer.heading,JSON.stringify(profileOf(peer))].join('/');
     if(!cache.has(key))cache.set(key,prepare(expand(offsets(peer),offsets(body))));
     return enter(relativeA,relativeB,cache.get(key));
   }

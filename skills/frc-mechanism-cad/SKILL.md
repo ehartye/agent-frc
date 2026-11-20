@@ -103,3 +103,5 @@ Trace the same camera rays with the piece removed at pickup and during travel. I
 For a publicly downloadable whole robot, bind the student archive to its own reopened component, feature and joint evidence. [Verify the public Fusion handoff](../../docs/public-fusion-handoff.md).
 
 Begin detailed CAD from the selected [whole-robot architecture](../../docs/whole-robot-comparison.md). Check the installed revision against its [elevation loads, cycle rate and recovery](../../docs/mechanism-hardening.md).
+
+Start a new chassis with [rear plan chamfers](../../docs/frame-profile.md). Use the generated Fusion-importable sketch for the frame and continuous backing, padding and cover. Preserve the ordinary side elevation and verify the actual joint, attachments and wheel clearances.
