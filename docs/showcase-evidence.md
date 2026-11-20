@@ -61,3 +61,5 @@ Keep the documents in the robot repository. Use the [project setup convention](.
 ## Publish the actual interactive field lab
 
 Add `fieldLab:{"file":"kickoff/field-lab.html","sha256":"…","shareable":true}` to the project manifest. Keep a Markdown link to that source or its hosted `/field-lab.html` in the project README. The standard page builder copies the verified, self-contained HTML into its output as `field-lab.html` and adds **Open the field lab** to the showcase navigation. Publish that entire directory. In the hosted lab, open the rehearsal and check the project-specific station names and piece stocks. When updating the lab, regenerate its digest with the new source.
+
+Before issuing a still, [verify the saved viewport or registered render](cad-capture-review.md). Reopen and activate the selected assembly, restore only the intended display state and compare the resulting pixels with an independent view. Check the whole outline, visible mechanism, cover finish and readable markings promised in this pose. Keep failed captures and distinguish a verified renderer from a native viewport.

@@ -13,6 +13,8 @@ Lead the showcase with an orbitable, zoomable view of the selected robot assembl
 
 Use the same assembly for the still at the top of each project README. Link the image to the explorable model and identify whether it shows a current candidate, historical revision or fixture. For a shareable Fusion STEP export, set `source`, `title` and `scope` in the project's `cad-showcase.json`. Run `python <plugin>/scripts/export-showcase-cad.py <project>` with OCP and VTK, followed by `python <plugin>/scripts/cad-readmes.py <project> --update`. Run the second command without `--update` in CI. For the highlights builder add a `cad` object with `receipt` (the project-relative export receipt), `title`, `scope` and `shareable: true` to a project-root manifest. The receipt binds the source STEP, tessellated mesh and rendered PNG.
 
+Before issuing a still, [verify the saved viewport or registered render](../../docs/cad-capture-review.md). Reopen and activate the selected assembly, restore only the intended display state and compare the resulting pixels with an independent view. Check the whole outline, visible mechanism, cover finish and readable markings promised in this pose. Keep failed captures and distinguish a verified renderer from a native viewport.
+
 ## Show how the mechanism moves
 
 For each mechanism central to the match role, show a student one complete operating cycle. For example, show the intake stowed, acquiring, transferring a piece and returning to stow. Name the moving part, state and relevant joint angle or extension. Pick a camera angle where both the moving part and its fixed reference are visible. Use a cutaway or isolated subsystem view when the frame hides the motion.

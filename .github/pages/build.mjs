@@ -83,6 +83,12 @@ const throughputStudy=`<details class="reading"><summary>Can the carrier repeat 
 <label>Frozen trial <select id="throughputChoice">${throughput.episodes.map((r,i)=>'<option value="'+i+'">'+escape(r.id)+' · '+r.parameters.queueS+' s queue</option>').join('')}</select></label>
 ${throughput.episodes.map((r,i)=>'<div data-throughput-trial="'+i+'"'+(i?' hidden':'')+'><p>'+escape(r.partition)+' · '+r.windowS.join('–')+' s on the match clock</p><p><strong>'+r.accepted+' of '+throughput.demand.requiredPieces+' required</strong> · '+r.acceptedPerSecond.toFixed(2)+' blocks/s · '+escape(r.status)+'</p></div>').join('')}
 <p>The frozen cohort includes all three starts. Each rate uses the entire ten seconds.</p>${link('Run the rate study','docs/mechanism-hardening.md')}</details>`;
+const captureLab=`<details class="reading"><summary>Inspect the saved CAD still</summary>
+<p>Compare the visible outline of this teaching module with the preview inside its saved Fusion archive. The lower wheel and fork must also appear in their registered region.</p>
+<label>Inspect <select id="captureChoice"><option value="0">Entire module</option><option value="1">Wheel and fork</option></select></label>
+<svg width="300" height="300" viewBox="0 0 1024 1024" role="img" aria-label="Saved Fusion preview with inspection rectangle">
+<image width="1024" height="1024" href="module-preview.png"/><rect id="captureRegion" x="2" y="2" width="1020" height="1020" fill="none" stroke="#bd7900" stroke-width="8"/></svg>
+<p id="captureNote">Check the assembly silhouette against its saved projection.</p>${link('Check a project capture','docs/cad-capture-review.md')}</details>`;
 const rearPlan=deriveGeometry(createDesign()).framePlan;
 const squarePlan=deriveGeometry(createDesign({frameProfile:{kind:'square'}})).framePlan;
 const frameOptions=[rearPlan,squarePlan].map((plan,i)=>{
@@ -109,7 +115,7 @@ const highlightsLink='<a href="robot/index.html">Explore the example robot evide
 const chapters=stages.map((s,i)=>`<details id="${s.id}" class="chapter"${i===0?' open':''}>
 <summary><span class="ordinal">${chapter(i)}</span><span>${escape(s.name)}</span><span class="toggle" aria-hidden="true"></span></summary>
 <div class="chapter-body"><h3>${escape(s.question)}</h3><p>${escape(s.objective)}</p><p>${escape(s.activity)}</p>
-<div class="handoff"><h4>Carry forward</h4><p>${escape(s.handoff)}</p></div>${s.docs.some(([,p])=>p==='docs/camera-reference.md')?cameraComparison:''}${s.id==='contract'?serviceComparison:''}${s.id==='design'?frameStudy:''}${s.id==='verify'?suspensionStudy+throughputStudy:''}
+<div class="handoff"><h4>Carry forward</h4><p>${escape(s.handoff)}</p></div>${s.docs.some(([,p])=>p==='docs/camera-reference.md')?cameraComparison:''}${s.id==='contract'?serviceComparison:''}${s.id==='design'?frameStudy:''}${s.id==='verify'?suspensionStudy+throughputStudy+captureLab:''}
 <h4>Supporting skills</h4><div class="chips">${s.skills.map(k=>link(k,'skills/'+k+'/SKILL.md')).join('')}</div>
 <div class="reading">${s.id==='design'?'<a href="role-design.html">Compare robot designs against a selected match role ↗</a> · ':''}${s.id==='verify'?highlightsLink:''}${s.id==='story'?'<a href="field-lab.html#roleLab">Compare alliance roles and replay the field ↗</a> · ':''}${s.id==='rules'?'<a href="rules.json" download>Download the training rules model ↓</a> · ':''}${s.docs.some(([,p])=>p===powerGuide)?'<a href="#power">Try the shared-power comparison ↓</a> · ':''}${s.docs.map(([label,p])=>link(label+' ↗',p)).join(' · ')}</div></div></details>`).join('\n');
 const directory=Object.keys(purpose).map(k=>{
@@ -132,6 +138,7 @@ await mkdir(output,{recursive:true});
 if((await readdir(output)).length) throw Error('Choose an empty output folder for the workflow guide.');
 await writeFile(path.join(output,'index.html'),page);
 await writeFile(path.join(output,'starter-frame.dxf'),frameDxf(rearPlan));
+await copyFile(path.join(root,'examples/swerve/assembly.png'),path.join(output,'module-preview.png'));
 for(const file of ['guide.css','interact.js']) await copyFile(path.join(source,file),path.join(output,file));
 await writeFile(path.join(output,'rules.json'),JSON.stringify(model,null,2)+'\n');
 await buildHighlights(path.join(root,'examples/highlights/project.json'),path.join(output,'robot'));

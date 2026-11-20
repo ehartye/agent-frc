@@ -38,6 +38,13 @@ def run(root, update, template):
         raise ValueError("Selected CAD differs from export. Regenerate the still and mesh.")
     checked(root / config["source"], receipt["sourceSha256"])
     checked(folder / "assembly.png", receipt["imageSha256"])
+    if "captureReview" in config:
+        from cad_capture import evaluate, project_file
+        review_file = project_file(root, config["captureReview"])
+        review = json.loads(review_file.read_text(encoding="utf-8-sig"))
+        result = evaluate(root, review, receipt["sourceSha256"], receipt["imageSha256"])
+        if result["status"] != "pass":
+            raise ValueError("CAD capture review " + result["status"] + ": " + str(result["features"]))
     mesh = checked(folder / "assembly.stl.gz", receipt["meshSha256"])
     layout = receipt["nativeBounds"]
     if "appearances" in config or receipt.get("schema") == "agent-frc/cad-still@2":

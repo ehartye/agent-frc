@@ -56,6 +56,8 @@ Use [project tidying](project-tidying.md) to isolate documents safely: preserve 
 
 Retain minimal native/nested/imported controls, failed appearance attempts, material/volume invariants and final save/reopen captures with any reported graphics recovery. No automated scene-repair tool is installed by this reference.
 
+Before issuing a still, [verify the saved viewport or registered render](cad-capture-review.md). Reopen and activate the selected assembly, restore only the intended display state and compare the resulting pixels with an independent view. Check the whole outline, visible mechanism, cover finish and readable markings promised in this pose. Keep failed captures and distinguish a verified renderer from a native viewport.
+
 ## Inspect hidden support interfaces
 
 Register hidden and visible physical occurrences, including both the proposed support and any older support still installed. A matching plane coordinate cannot establish the size of the contact patch. [Measure trimmed bearing area and check a replacement against hidden backing](hidden-backing-fit.md).

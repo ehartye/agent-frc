@@ -1,0 +1,77 @@
+{
+  "schema": "agent-frc/cad-capture@1",
+  "source": {
+    "file": "examples/swerve/independent-swerve.f3d",
+    "sha256": "3091b84a1078c0b69198f027aaa4385cb8eb095c7200403175d447d87ed9e12a"
+  },
+  "image": {
+    "file": "examples/swerve/assembly.png",
+    "sha256": "6e0512d8f0fe23b368f2221b92f303d64b48862de3edc9aa961dff413c3b68d9"
+  },
+  "reference": {
+    "kind": "archive-preview"
+  },
+  "requireExactCopy": true,
+  "pose": "Saved three-quarter overview of the synthetic module at rest",
+  "registrationBasis": "The published PNG is the native active-design preview at the same crop. Register both full image rectangles.",
+  "features": [
+    {
+      "id": "whole-module",
+      "kind": "silhouette",
+      "referenceRegion": [
+        0,
+        0,
+        1,
+        1
+      ],
+      "selector": {
+        "minRGBA": [
+          0,
+          0,
+          0,
+          160
+        ],
+        "maxRGBA": [
+          255,
+          255,
+          255,
+          255
+        ]
+      },
+      "referenceCoverage": [
+        0.16,
+        0.42
+      ],
+      "minIoU": 0.98
+    },
+    {
+      "id": "lower-wheel-and-fork",
+      "kind": "component",
+      "referenceRegion": [
+        0.27,
+        0.58,
+        0.76,
+        0.86
+      ],
+      "selector": {
+        "minRGBA": [
+          0,
+          0,
+          0,
+          160
+        ],
+        "maxRGBA": [
+          255,
+          255,
+          255,
+          255
+        ]
+      },
+      "referenceCoverage": [
+        0.25,
+        0.86
+      ],
+      "minIoU": 0.97
+    }
+  ]
+}
