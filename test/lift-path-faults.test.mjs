@@ -52,3 +52,10 @@ test('resolution and coverage need distinct intact native pairs for the same ope
   study.runs=study.runs.filter(r=>r.case!=='both-holders-out');
   assert.equal(run().coverage[1].controls.find(c=>c.cut.length===2).motionObserved,false);
 });
+test('a project can inspect its graph before it has qualified motion criteria',t=>{
+  const {plan,study,run}=fixture(t);
+  plan.mode='topology-only';delete plan.durationS;delete plan.maxRackMm;delete plan.resolutionChecks;
+  assert.throws(run,/complete travel plan/);study.runs=[];
+  const right=run().rows.find(r=>r.layout==='shaft-link'&&r.case==='right-belt-out');
+  assert.equal(right.topology,'disconnected');assert.equal(right.motion.status,'open');
+});

@@ -112,8 +112,10 @@ export function reviewLiftPaths(study,read,freeze){
   assert(study?.schema==='agent-frc/lift-fault-study@1'&&study.plan?.pointer==='','Pin the complete lift fault plan.');
   assert(!freeze||freeze===study.plan.sha256,'The saved lift fault plan digest differs.');
   const p={...get(study.plan,read),sha256:study.plan.sha256};
+  const topologyOnly=p.mode==='topology-only';
   assert(p.schema==='agent-frc/lift-fault-plan@1'&&['integrated-simulation','physical'].includes(p.evidence)&&
-    [p.durationS,p.maxRackMm,p.maxCommonDropMm].every(positive)&&Array.isArray(p.maxSideDropMm)&&p.maxSideDropMm.length===2&&
+    (p.mode===undefined||['topology-only','topology-and-motion'].includes(p.mode)),'Identify the graph or graph-and-motion review scope.');
+  if(!topologyOnly)assert([p.durationS,p.maxRackMm,p.maxCommonDropMm].every(positive)&&Array.isArray(p.maxSideDropMm)&&p.maxSideDropMm.length===2&&
     p.maxSideDropMm.every(positive)&&label(p.thresholdBasis),'Freeze the post-cut duration and separate first-unacceptable rack, mean and individual travel limits.');
   const layouts=studyRows(p.layouts,'installed topology',1,16).map(l=>({...l,graph:validateGraph(get(l.source,read))}));
   assert(p.referenceConditions&&Object.keys(p.referenceConditions).length,'Freeze the common starting conditions for the fault controls.');
@@ -121,13 +123,14 @@ export function reviewLiftPaths(study,read,freeze){
   assert(cases.every(c=>ids(c.unavailable)&&label(c.basis)&&c.conditions&&Object.keys(c.conditions).length&&
     Object.values(c.conditions).every(v=>finite(v)||typeof v==='boolean'||label(v))),'Register the failed components and typed load, friction or clearance conditions.');
   const entries=studyRows(study.runs,'fault execution',0,1536),index=new Map(),key=(a,c)=>JSON.stringify([a,c]);
+  assert(!topologyOnly||!entries.length&&!p.resolutionChecks?.length,'Paired numerical records need a complete travel plan.');
   for(const r of entries){const k=key(r.layout,r.case);assert(!index.has(k)&&layouts.some(l=>l.id===r.layout)&&cases.some(c=>c.id===r.case),'Unknown or duplicate layout/fault receipt.');index.set(k,r);}
   const rows=[],used=new Map();
   for(const l of layouts)for(const c of cases){
     const g=l.graph,k=key(l.id,c.id),entry=index.get(k);
     const known=c.unavailable.every(id=>g.components.some(comp=>comp.id===id));
     const paths=known?connectivity(g,c.unavailable):[];
-    let motion=open('Missing paired post-cut replay.');
+    let motion=open(topologyOnly?'Topology-only study; paired limits and motion are unverified.':'Missing paired post-cut replay.');
     if(g.loads.length===1)motion={status:'not-applicable',reason:'Only one load station in this project inventory.'};
     else if(known&&entry)try{motion=replay(get(entry.source,read),p,l,c,entry.source,read);}catch(err){motion=open(err.message);}
     if(motion.runId){const matches=used.get(motion.runId)??[];matches.push(motion);used.set(motion.runId,matches);}
