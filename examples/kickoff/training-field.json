@@ -139,6 +139,19 @@
   },
   "rehearsal": {
     "schema": "field-rehearsal/v1",
+    "endgame": {
+      "period": "Main play",
+      "basis": "Synthetic docking exercise; support and latch state are prescribed at assessment.",
+      "assessment": {"maxDelayS": 2, "atRestAfterS": 1},
+      "targets": [
+        {"id":"blue-west","label":"Blue docking station","side":"blue","at":[90,48],"radiusIn":10,"resource":"west","capacity":1},
+        {"id":"red-east","label":"Red docking station","side":"red","at":[390,216],"radiusIn":10,"resource":"east","capacity":1}
+      ],
+      "actions": [
+        {"id":"dock","label":"Latch to station","points":5,"serviceS":2,"requires":["latch-held"]},
+        {"id":"stand","label":"Finish on the pad","points":1,"serviceS":0.5,"requires":["supported-on-pad"]}
+      ]
+    },
     "stations": [
       {
         "id": "blue-supply",
@@ -245,12 +258,13 @@
         },
         {
           "id": "trial-3",
-          "basis": "Delayed first acquisition",
+          "basis": "Delayed first acquisition; Blue switches to docking before cutoff",
           "setup": "lowered",
           "roster": [
             {
               "side": "blue",
               "slot": 1,
+                "endgame": {"action":"dock","target":"blue-west","startS":37,"witnesses":{"latch-held":"met"}},
               "plans": {
                 "Opening": "hold",
                 "Main play": "shuttle"

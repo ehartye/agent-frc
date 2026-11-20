@@ -1,5 +1,6 @@
 import { createRehearsalGame,rehearsalFindings } from './rehearsal-game.mjs';
 import { createMatchSeries, createRehearsalSetup } from './rehearsal-series-core.mjs';
+import { createTerminalRehearsal } from './rehearsal-terminal.mjs';
 import {verifyRuleValues} from './rule-register.mjs';
 import { readFile, realpath, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -137,6 +138,11 @@ export function validateProfile(p) {
       (w.dwell===undefined || nonnegative(w.dwell)) && (pt(w.at) || (w.at && (pt(w.at.blue) && pt(w.at.red) ||
         pt(w.at.default) && Object.values(w.at.slots || {}).every(pt))));
     createRehearsalGame(p);
+    const terminal=createTerminalRehearsal(p);
+    if(terminal)for(const match of r.series?.matches ?? []){
+      const robots=match.roster.map(row=>({...row,id:(row.side==='blue'?'B':'R')+row.slot}));
+      terminal.start(robots,match.endgameAtRestAfterS,match.setup ?? r.setups[0]);
+    }
     for(const program of Object.values(r.programs)){
       if(!label(program.label) || !Array.isArray(program.steps) || !program.steps.every(waypoint) ||
          Object.entries(program.byPeriod || {}).some(([name,steps])=>!r.periods.some(p=>p.name===name) ||
@@ -166,7 +172,7 @@ export async function buildLab(input, destination) {
   const json = JSON.stringify(profile).replaceAll('<', '\\u003c');
   const replacements={
     PROFILE:json, SCENE:renderer, LAB:controls, 'ROUTE MODEL':routeStudy.toString(), 'WINDOW MODEL':analyzeWindow.toString(),
-    'REHEARSAL MODEL':[initialTrial.toString(),fieldGeometry.toString(),createRehearsalGame.toString(),rehearsalFindings.toString(),createFieldRehearsal.toString(),createMatchSeries.toString(),createRehearsalSetup.toString(),
+    'REHEARSAL MODEL':[initialTrial.toString(),fieldGeometry.toString(),createRehearsalGame.toString(),rehearsalFindings.toString(),createTerminalRehearsal.toString(),createFieldRehearsal.toString(),createMatchSeries.toString(),createRehearsalSetup.toString(),
       'const rehearsal=createFieldRehearsal(profile); const rehearsalNotes=[];'].join('\n'),
     OPPORTUNITIES:opportunities, 'REHEARSAL UI':rehearsalUI
   };

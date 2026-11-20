@@ -148,9 +148,21 @@ export function createRehearsalGame(profile) {
 
 
 export function rehearsalFindings(id,basis,game,stations) {
-  if (!stations?.length) return [id+' · '+basis+'. The profile has no registered stock or scoring criterion.'];
+  if (!stations?.length && !game.endgame) return [id+' · '+basis+'. The profile has no registered stock or scoring criterion.'];
   const lines=[id+' · '+basis+'. Modeled rehearsal score: Blue '+game.score.blue+', Red '+game.score.red+'.'];
-  for (const station of stations) {
+  const terminal=game.endgame;
+  if(terminal){
+    lines.push(terminal.basis+'. Sources: '+terminal.sources.join(', ')+'. Powered cutoff '+terminal.activeCutoffS+' s; terminal assessment '+terminal.assessmentTimeS+' s. Terminal criteria represent project scenario assumptions, including continued support through assessment.');
+    for(const a of terminal.attempts){
+      lines.push(a.robot+' switched from '+(a.interruptedBehavior ?? 'ordinary work')+' at '+(a.interruptedAtS ?? 'pending')+' s in '+terminal.period+
+        ' for '+a.action+' at '+a.target+'. Primary result '+a.outcome+'. Terminal assumptions '+JSON.stringify(a.witnesses)+
+        '. Award '+(a.awardedAction ?? 'none')+' (+'+a.points+').');
+    }
+    for(const b of terminal.bonusAwards)lines.push(b.id+' · '+b.side+' '+b.group+' · '+b.robots.join(', ')+' · +'+b.points+' bonus points.');
+    if(terminal.assessed)lines.push('Ordinary points Blue '+terminal.ordinaryScore.blue+' / Red '+terminal.ordinaryScore.red+
+      '. Terminal points Blue '+terminal.terminalScore.blue+' / Red '+terminal.terminalScore.red+'.');
+  }
+  for (const station of stations ?? []) {
     if(station.kind==='retrieval') lines.push(station.label+' · '+station.piece+' stock '+game.initial[station.id]+' initially, '+game.stock[station.id].length+' available at snapshot.');
     else lines.push(station.label+' · '+game.attempts[station.id]+' pieces attempted. Criterion: '+station.criterion);
   }

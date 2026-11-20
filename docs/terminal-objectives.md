@@ -1,0 +1,29 @@
+# Compare the last scoring trip with a terminal objective
+
+In **Rehearse a match**, open a robot’s **Final objective** selector. Choose a target, set the elapsed time in the final period when ordinary scoring stops, and choose which support or contact conditions you assume at assessment. Leave an uncertain condition as **Unknown**. Add an ordered fallback when the rules allow another result in the same final pose. Compare two complete matches with the same starting lineup and stock. The total includes ordinary points already earned plus awarded terminal points. A saved narrative retains the assumptions and result.
+
+The synthetic training profile sends one robot to its docking station in the third published scenario. Try a late switch or a latch that slips before assessment. In the latter case select **Failed at assessment** for the latch. A lower base outcome requires independent evidence for that outcome's support condition. Use project-supplied CAD and a loaded mechanism test to establish contact, retention, force and legality before claiming actual performance. [Training profile](../examples/kickoff/training-field.json) · [Route and observation evidence](field-route-evidence.md)
+
+## Project model
+
+Declare an optional `rehearsal.endgame` object in the external rules profile. Its `period` must name the final powered rehearsal period. `basis` and `sources` default to the rehearsal's evidence description and references. Define the match assessment interval from the applicable rule edition. Without this section, existing profiles and their ordinary series receipts retain their original behavior.
+
+| Property | Project contract |
+| --- | --- |
+| `targets[]` | Each has unique `id`, student `label`, `side` (blue or red), absolute field `at:[x,y]` in inches and positive `radiusIn` for the chassis center. Optional `displayAt` locates the physical fixture separately. Define individual accessible approaches where a resource can serve multiple robots. |
+| Resource sharing | Supply a `resource` name and positive integer `capacity` on each target. Approaches with the same side and resource share capacity across action types. The opposite alliance has its own allocation. Arrival order breaks contention, then robot ID for same-tick arrivals. A robot occupying a slot holds it through assessment, including a failed attempt. |
+| Eligibility | A target may limit `actions` to specific IDs and `setups` to compatible obstacle configurations. An action may limit `eligibleRobots` to named slots, such as `["B1","R2"]`. A setup change that invalidates a selected action or fallback is rejected and the original setup restored. |
+| `actions[]` | Declare `id`, `label`, nonnegative integer match `points`, powered `serviceS` and one or more distinct `requires` criteria. Use a 0.05 s clock increment for powered times. |
+| `assessment` | `maxDelayS` bounds passive time after the powered cutoff. Optional `atRestAfterS` supplies an assumed time to rest, which a planned match can override using `endgameAtRestAfterS`. Assess at the earlier of rest and the maximum delay, or at the maximum if rest is unknown. A zero delay assesses at cutoff. The rehearsal adds no powered travel, service, intake or ordinary points during passive observation. |
+| `bonuses[]` | Optional additional match points. Each has `id`, `label`, eligible base `actions`, `minRobots`, `points`, `scope` of `resource` or `alliance`, and `per` of `robot`, `additionalRobot`, `group` or `alliance`. At the minimum qualifying count, additionalRobot pays for each participant after the first. A two-point additional-partner bonus therefore pays two for two eligible robots and four for three. A per-alliance award pays once across qualifying groups. |
+| Bonus observations | `requires` lists extra per-robot conditions. `targetRequires` lists conditions supplied in the target’s `witnesses` map. For a resource-scoped bonus the resource’s approaches must agree on those shared conditions. Evaluate ranking thresholds separately using the project’s rules and eligible subtotals. |
+
+## Match behavior and results
+
+On an optional roster entry `endgame:{action,target,startS,witnesses,fallbacks}`, use elapsed final-period seconds for `startS`. Omit this object to continue the ordinary behavior until the whistle. At the first active tick starting at or after the switch, the robot cancels its unfinished ordinary leg, releases its route reservations and approaches using the same swept-footprint traffic checks. Finished transfers, cargo and alliance score remain on the same clock.
+
+The project may prescribe `"met"`, `"failed"` or `"unknown"` for each named observation. These are the assumed states **at assessment**, including any slip after powered motion stops. Service completes only after reaching the region and receiving a capacity slot during the powered clock. Actual scoring logic never infers a robot's support, height or actuator state from arrival alone.
+
+The primary action and ordered `fallbacks:[{action,target}]` share one exclusive base award. Each fallback needs an eligible target containing the final pose, sufficient uninterrupted stationary time, a resource slot and its own terminal witnesses. Additional bonuses consume the awarded base action, so a failed primary cannot earn its special modifier through a lower fallback.
+
+Read `matches[].game.endgame` in the ordinary series CLI output for the interruption time, arrived and completed times, held fallback intervals, assumed observations, final pose, primary/fallback outcomes, awarded action and bonus breakdown. Times on attempts are final-period elapsed seconds; `activeCutoffS` and `assessmentTimeS` use the full match clock. Compare `ordinaryScore`, `terminalScore` and `game.score`. Keep the assumed action separate from the mechanism test and the field observation that would establish it.

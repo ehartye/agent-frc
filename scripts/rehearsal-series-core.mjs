@@ -18,7 +18,7 @@ export function createMatchSeries(engine, matches, {allowEmptyRoster = false} = 
   const results=[];
   function begin() {
     const match=configs[index];
-    sim=engine.create(match.roster,match.setup,match.tieWinner);
+    sim=engine.create(match.roster,match.setup,match.tieWinner,match.endgameAtRestAfterS);
     sim.paused=false;
   }
   begin();
