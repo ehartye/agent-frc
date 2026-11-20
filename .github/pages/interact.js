@@ -119,3 +119,7 @@ document.getElementById('suspensionChoice').addEventListener('change',event=>{
 document.getElementById('frameChoice').addEventListener('change',event=>{
   for(const row of document.querySelectorAll('[data-frame-option]'))row.hidden=row.dataset.frameOption!==event.target.value;
 });
+
+document.getElementById('throughputChoice').addEventListener('change',event=>{
+  for(const row of document.querySelectorAll('[data-throughput-trial]'))row.hidden=row.dataset.throughputTrial!==event.target.value;
+});

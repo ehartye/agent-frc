@@ -18,6 +18,8 @@ on:
       - 'scripts/study-evidence.mjs'
       - 'scripts/spatial-elevation.mjs'
       - 'scripts/hardening.mjs'
+      - 'scripts/throughput-cohort.mjs'
+      - 'scripts/piece-window.mjs'
       - 'examples/design-methods/**'
       - 'scripts/field-rehearsal*.mjs'
       - 'scripts/rehearsal-*.mjs'
