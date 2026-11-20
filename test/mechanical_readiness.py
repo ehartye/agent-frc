@@ -9,6 +9,7 @@ from mechanical_readiness import evaluate_inputs as review, verify_delivery, dig
 from showcase_contacts import measure
 from mesh_controls import MeshComparisons
 from observed_transfer import ObservedTransfer
+from installed_kinematics import InstalledKinematics
 
 
 class Readiness(unittest.TestCase):

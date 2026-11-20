@@ -120,7 +120,18 @@ def fixture(root,source="fixture.step",assets=(),archive_name="test.f3d", measur
         contacts={"method":"native paired test","units":"mm3","candidatePairs":1,"complete":True,"programSha256":digest(SCRIPTS/"fusion_issue_contacts.py"),
                   "pairs":[dict(pair=[0,1],interferenceMm3=geom["pairs"][0][3],temporaryCommonMm3=geom["pairs"][0][3])]})
     study["nativeCensus"]=write(root,"test-census.json",census)
-    study["nativePoses"]=[write(root,"test-extended.json",dict(census,pose=poses_to_check[1]))]
+    alternate=json.loads(json.dumps(census));alternate["pose"]=poses_to_check[1]
+    moving=alternate["bodies"][1];moving["worldTransform"][3]+=10
+    for index in (0,3):moving["boundsMm"][index]+=10
+    a,b=(r["boundsMm"] for r in alternate["bodies"])
+    nearby=all(min(a[k+3],b[k+3])-max(a[k],b[k])>=-1e-6 for k in range(3))
+    alternate["contacts"]["candidatePairs"]=int(nearby)
+    alternate["contacts"]["pairs"]=[dict(pair=[0,1],interferenceMm3=0,temporaryCommonMm3=0)] if nearby else []
+    study["nativePoses"]=[write(root,"test-extended.json",alternate)]
+    study["connections"][0]["jointGroup"]="slide"
+    study["jointAuthority"]=write(root,"test-native-joints.json",dict(schema="agent-frc/fusion-joint-authority@1",
+        archiveSha256=native["sha256"],stepSha256=step["sha256"],collectorSha256=digest(SCRIPTS/"fusion_joint_authority.py"),
+        joints=[dict(type="joint",name="slide",occurrence="@root",members=labels,coordinates={"slideValue":dict(saved=0,minimum=0,maximum=1)})]))
     authority=write(root,"cad/fusion-authority.json",dict(schema="agent-frc/fusion-authority@1",id="bench",revision="r1",basis="Teaching fixture",
         configuration=bind["configuration"],nativeConfiguration="unconfigured",source=dict(kind="offline",archive=native)))
     study.update(authority=authority,lineage=write(root,"test-lineage.json",dict(schema="agent-frc/fusion-export-lineage@1",archive=native,step=step,
@@ -131,6 +142,13 @@ def fixture(root,source="fixture.step",assets=(),archive_name="test.f3d", measur
     if measured:
         geom=scan(root,study)
         study["geometry"]=write(root,"test-geometry.json",geom)
+    grade=dict(grade="Synthetic grade",basis="Original test drawing",fusionMaterial="Stock A",materialIds=["stock-a"],densityKgM3=[900,1100])
+    bought_bom=articles["block"]["procurementBom"]["file"]
+    purchase=json.loads((root/bought_bom).read_bytes());purchase["bodyMaterials"]={source_label:grade}
+    articles["block"]["procurementBom"]=write(root,bought_bom,purchase)
+    articles["frame"]["materialSpecification"]=write(root,"stock.json",dict(drawing=drawing,bodyMaterials={source_label:grade}))
+    study["materialCensus"]=write(root,"materials.json",dict(schema="agent-frc/fusion-body-materials@1",archiveSha256=native["sha256"],
+        stepSha256=step["sha256"],bodies=[dict(path=b,name=b,materialName="Stock A",materialId="stock-a",volumeCm3=1,massKg=.001) for b in labels]))
     fingerprint=scope_digest(study)
     for v in scopes.values():
         v["criteriaSha256"]=fingerprint

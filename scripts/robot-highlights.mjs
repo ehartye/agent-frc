@@ -289,7 +289,17 @@ export async function buildHighlights(manifest, directory) {
     modelFiles = {dest, still, receiptFile, rendered};
     release={study_path:readiness??null,source:record.source,receipt:record,
       derivatives:[path.join(folder,'assembly.png'),path.join(folder,'assembly.stl.gz'),config.receipt]};
-    model = '<section><h2>Explore the CAD</h2><iframe title="'+values.title+'" loading="lazy" style="width:100%;height: min(48rem,85vh);border:0" src="'+dest+'/index.html"></iframe><p><a href="'+dest+'/index.html">Open the model full screen</a></p></section>';
+    let motionLink='';
+    if(config.playableGlb!==undefined){
+      const relative=string(config.playableGlb,'playable CAD model');
+      requireValue(path.extname(relative).toLowerCase()==='.glb','Expected an issued self-contained GLB');
+      const glb=await projectFile(relative);
+      const asset=await digest(glb)+'.glb';
+      assets.set(asset,glb);
+      release.derivatives.push(relative);
+      motionLink=' · <a href="evidence/'+asset+'" download>Download the animated model</a>';
+    }
+    model = '<section><h2>Explore the CAD</h2><iframe title="'+values.title+'" loading="lazy" style="width:100%;height: min(48rem,85vh);border:0" src="'+dest+'/index.html"></iframe><p><a href="'+dest+'/index.html">Open the model full screen</a>'+motionLink+'</p></section>';
   }
   let coverage = '';
   if (data.inventory) {

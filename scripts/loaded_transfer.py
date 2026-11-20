@@ -9,7 +9,7 @@ from mechanical_motion import bounds,distance,evaluate,transform
 from showcase_contacts import load_solids
 
 
-def replay(root,study):
+def replay(root,study,*,motion_model=None):
     require(study.get("schema")=="agent-frc/loaded-transfer@1" and named(study.get("id")),"Missing loaded duty")
     step=pinned(root,study["step"]);piece=study["piece"];shape=pinned(root,piece["file"])
     shapes,_=load_solids(shape)
@@ -43,6 +43,11 @@ def replay(root,study):
         for frame in frames:
             require(set(frame["offsetsMm"])==all_keys and all(isinstance(v,list) and len(v)==3 and all(number(n) for n in v)
                   for v in frame["offsetsMm"].values()) and number(frame["timeS"]),"Bind all moving bodies continuously at each source time")
+        motion_error=None
+        if motion_model is not None:
+            from assembly_kinematics import check_trace
+            try:check_trace(motion_model,frames)
+            except (ValueError,TypeError,KeyError) as e:motion_error=str(e)
         require(set(trace.get("stockIds",[]))==stock_ids,"Remaining physical stock differs from the source trajectory")
         first=frames[0]["offsetsMm"]
         def placed(shape,offset):return transform(shape,[{"kind":"translation","travelMm":offset}],1)
@@ -74,7 +79,7 @@ def replay(root,study):
             if source_id not in motion:motion[source_id]=[dict(kind="translation",travelMm=[0,0,0])]
             free=a["custody"]=="free"
             stages.append(dict(id=case+"-"+str(i),basis=study["basis"],fixtures=[dict(piece,id=source_id,basis="Finite admitted piece from the trace"),*stock],
-                initialPose=initial,moves=motion,minGapMm=test.get("minGapMm",0),maxDepth=test.get("maxDepth",9),
+                initialPose=initial,moves=motion,checkLinearEnvelope=True,minGapMm=test.get("minGapMm",0),maxDepth=test.get("maxDepth",9),
                 intendedInterfaces=test.get("interfaces",{}).get(str(i),[])))
         actual_cases=evaluate(root,dict(schema="agent-frc/mechanical-motion@1",step=study["step"],cases=stages))["cases"]
         custody=[f["custody"] for f in frames];terminal=frames[-1];region=test["terminalBoundsMm"]
@@ -96,13 +101,14 @@ def replay(root,study):
             execution,reason=inspect(root,study,test,trace,actual,shapes[piece["solid"]],stock_shapes)
         except (ValueError,KeyError,OSError,TypeError) as e:
             execution,reason="fail",str(e)
+        if motion_error:execution,reason="fail",motion_error
         if execution=="fail" or status=="fail":status="fail"
         elif execution!="pass":status="open"
         rows.append(dict(corridorStatus=corridor,executionStatus=execution,executionReason=reason,id=case,duty=duty,piece=source_id,admittedGapMm=admitted,windowS=window,releaseTimesS=[f["timeS"] for j,f in enumerate(frames)
             if f["custody"]=="free" and (not j or frames[j-1]["custody"]!="free")],terminalInside=inside,endBoundsMm=end,status=status,stages=actual_cases))
     require(len({x["id"] for x in rows})==len(rows),"Duplicate loaded case")
     status="fail" if any(r["status"]=="fail" for r in rows) else "open" if types!={"delivery","jam-reset"} or any(r["status"]=="open" for r in rows) else "pass"
-    return {"schema":"agent-frc/loaded-transfer-result@1","id":study["id"],"stepSha256":digest(step),"pieceSha256":digest(shape),"status":status,"cases":rows}
+    return {"schema":"agent-frc/loaded-transfer-result@1","id":study["id"],"installedMotionScope":"native-registered" if motion_model is not None else "standalone fixture","stepSha256":digest(step),"pieceSha256":digest(shape),"status":status,"cases":rows}
 
 
 if __name__=="__main__":

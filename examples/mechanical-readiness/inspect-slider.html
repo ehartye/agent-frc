@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Inspect the carriage stroke</title>
+<style>body{max-width:62rem;margin:2rem auto;padding:0 1rem;font:1rem/1.5 system-ui;color:#172e45}canvas{width:100%;height:auto;background:#13304c}label,output{margin-right:1rem}button,input{vertical-align:middle}button{padding:.4rem .8rem}a{color:#134f7a}</style>
+<h1>Inspect the carriage stroke</h1>
+<canvas width="960" height="430" aria-label="Oblique view of the fixed steel base and its sliding gauge"></canvas>
+<p><button id="play">Play stroke</button> <label>Travel <input id="travel" type="range" min="0" max="1" step=".01" value="0"></label><output id="reading"></output></p>
+<p>The gold gauge moves along the measured joint. The blue pocket remains fixed. <a href="carriage.glb" download>Download the reviewed GLB</a>.</p>
+<script type="module">
+const canvas=document.querySelector('canvas'),ctx=canvas.getContext('2d');
+const response=await fetch('carriage.glb');if(!response.ok)throw Error('Missing issued GLB');
+const buf=await response.arrayBuffer(),v=new DataView(buf);
+const length=v.getUint32(12,true),doc=JSON.parse(new TextDecoder().decode(new Uint8Array(buf,20,length))),start=28+length;
+function floats(i){const a=doc.accessors[i],b=doc.bufferViews[a.bufferView];return new Float32Array(buf,start+b.byteOffset+(a.byteOffset||0),a.count*({VEC3:3,SCALAR:1}[a.type]));}
+const clip=doc.animations[0],channel=clip.channels[0],sampler=clip.samplers[channel.sampler],times=floats(sampler.input),keys=floats(sampler.output);
+const meshes=doc.nodes.map(n=>floats(doc.meshes[n.mesh].primitives[0].attributes.POSITION));
+const t=document.querySelector('#travel'),read=document.querySelector('#reading');let frame;
+function draw(){
+  const f=(+t.value-times[0])/(times[1]-times[0]),delta=[0,1,2].map(i=>1000*(keys[i]+f*(keys[i+3]-keys[i]))),tris=[];
+  for(const [node,vertices] of meshes.entries()){
+    const moving=node===channel.target.node;
+    for(let k=0;k<vertices.length;k+=9){
+      const pts=[];let depth=0;
+      for(let j=0;j<9;j+=3){
+        const [x,y,z]=[0,1,2].map(i=>1000*vertices[k+j+i]+(moving?delta[i]:0));
+        pts.push([140+28*x+13*y,340-3*x-12*y-26*z]);depth+=-x+2*y-z;
+      }
+      tris.push({depth,pts,moving});
+    }
+  }
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  for(const {pts,moving} of tris.sort((a,b)=>b.depth-a.depth)){
+    ctx.beginPath();pts.forEach(([x,y],k)=>k?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();
+    ctx.fillStyle=moving?'#eab349':'#95b5d2';ctx.fill();ctx.strokeStyle=moving?'#966d27':'#577995';ctx.stroke();
+  }
+  read.value=Math.hypot(...delta).toFixed(2)+' mm';
+}
+t.oninput=()=>{cancelAnimationFrame(frame);draw();};
+document.querySelector('#play').onclick=()=>{cancelAnimationFrame(frame);const begin=performance.now();function step(now){
+  t.value=Math.min(times[1],(now-begin)/1000);draw();if(+t.value<times[1])frame=requestAnimationFrame(step);
+}frame=requestAnimationFrame(step);};draw();
+</script></html>

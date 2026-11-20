@@ -115,6 +115,20 @@ def common(a,b,area=False):
     return v
 
 
+def linear_envelope_clear(moving_box,fixed,moving_ops,fixed_ops,clearance):
+    from OCP.gp import gp_Pnt
+    from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox
+    if any(op["kind"]!="translation" for op in [*moving_ops,*fixed_ops]):return False
+    travel=[sum(op["travelMm"][i] for op in moving_ops)-sum(op["travelMm"][i] for op in fixed_ops) for i in range(3)]
+    lo=[moving_box[i]+min(0,v) for i,v in enumerate(travel)]
+    hi=[moving_box[i+3]+max(0,v) for i,v in enumerate(travel)]
+    # This solid encloses every position in the exact relative linear stroke.
+    # A zero-volume common allows sliding face contact at a registered zero gap.
+    envelope=BRepPrimAPI_MakeBox(gp_Pnt(*lo),gp_Pnt(*hi)).Shape()
+    gap=distance(envelope,fixed)
+    return gap>=clearance and (gap>1e-7 or common(envelope,fixed)==0)
+
+
 def bearing_area(a,b):
     from OCP.TopAbs import TopAbs_FACE
     from OCP.TopExp import TopExp_Explorer
@@ -188,6 +202,11 @@ def evaluate(root,study):
             speed=rates.get(a,0)+rates.get(b,0)
             if box_gap(boxes[a],boxes[b])-speed>cut or separate_translations(boxes[a],boxes[b],moves.get(a,[]),moves.get(b,[]),cut):
                 counts["broadPhase"]+=1;continue
+            if case.get("checkLinearEnvelope") and (linear_envelope_clear(boxes[a],scene[b],moves.get(a,[]),moves.get(b,[]),cut)
+                    or linear_envelope_clear(boxes[b],scene[a],moves.get(b,[]),moves.get(a,[]),cut)):
+                counts["bounded"]+=1
+                rows.append(dict(pair=[a,b],status="pass",method="enclosed relative linear stroke"))
+                continue
             poses={}
             def sample(t):
                 if t not in poses:

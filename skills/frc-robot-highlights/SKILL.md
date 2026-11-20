@@ -63,3 +63,5 @@ For a publicly downloadable whole robot, bind the student archive to its own reo
 Use the [Fusion authority and revision handoff](../../docs/fusion-authority.md) to establish the one current saved native design, the STEP exported from that design and the identity of the engineering evidence. Recheck the register when resuming in another checkout or before replacing a published view.
 
 Before replacing a CAD view, reproduce the actual still and reconcile every playable physical clip with the qualified native motion and full swept geometry. Verify the signed assets in the final site directory after the last custom copy, for both branch Pages and workflow deployments. [Published geometry and motion](../../docs/mesh-correspondence.md)
+
+Register an authorized animated GLB with `cad.playableGlb` to include the actual reviewed clip file alongside the orbit viewer. Exercise the real issued model in the final student view.

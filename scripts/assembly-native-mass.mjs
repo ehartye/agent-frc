@@ -1,6 +1,14 @@
 const text = value => typeof value === 'string' && value.trim().length > 0;
 const fail = message => { throw Error('Native mass: ' + message); };
 
+export function checkStockMaterial(id, actual, spec) {
+  if (!text(spec.grade) || !Array.isArray(spec.materialIds) || !spec.materialIds.length || !spec.materialIds.every(text) ||
+      !interval(spec.densityKgM3, true)) fail('invalid physical material specification for ' + id);
+  if (!spec.materialIds.includes(actual.materialId)) fail('physical material mismatch at ' + id + ': observed ' + actual.materialId + ', expected ' + spec.materialIds.join(' or ') + ' for ' + spec.grade);
+  if (!Number.isFinite(actual.volumeCm3) || actual.volumeCm3 <= 0 || !Number.isFinite(actual.massKg) ||
+      !within(actual.massKg * 1e6 / actual.volumeCm3, spec.densityKgM3)) fail('native density outside stock specification at ' + id);
+}
+
 function unique(rows, key, label) {
   if (!Array.isArray(rows)) fail(label + ' must be a list');
   const result = new Map();
@@ -110,9 +118,8 @@ export function reconcileNativeMass(request, result, pins, locate) {
     if (owner.basis !== 'stock') fail('stock body assigned to a non-stock instance at ' + id);
     const spec = specifications.get(expected.stock);
     if (!spec) fail('unregistered stock ' + expected.stock + ' at ' + id);
-    if (!spec.materialIds.includes(actual.materialId)) fail('physical material mismatch at ' + id + ': observed ' + actual.materialId + ', expected ' + spec.materialIds.join(' or ') + ' for ' + spec.grade);
-    if (!actual.volumeCm3 || actual.stock !== expected.stock) fail('stock binding mismatch at ' + id);
-    if (!within(actual.massKg * 1e6 / actual.volumeCm3, spec.densityKgM3)) fail('native density outside stock specification at ' + id);
+    checkStockMaterial(id, actual, spec);
+    if (actual.stock !== expected.stock) fail('stock binding mismatch at ' + id);
     subtotal.stock++;
     subtotal.actual += actual.massKg;
   }

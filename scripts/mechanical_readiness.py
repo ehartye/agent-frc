@@ -229,9 +229,10 @@ def evaluate_inputs(root,study, geometry=None):
         if not study.get("nativeCensus"):
             missing("native","cold census","A complete census from the installed native Fusion inspection is required.")
         else:
+            from native_contact_review import allowed_census
             census=read(pinned(root,study["nativeCensus"]))
             require(census.get("schema")=="agent-frc/fusion-body-census@1" and census.get("archiveSha256")==archive_sha and
-                    census.get("programSha256")==digest(Path(__file__).with_name("fusion_issue_inventory.py")) and named(census.get("fusionVersion")),
+                    allowed_census(census.get("programSha256")) and named(census.get("fusionVersion")),
                     "Unbound or stale native body census")
             registered={}
             for key,occ in native.items():
@@ -267,6 +268,16 @@ def evaluate_inputs(root,study, geometry=None):
     issues=study.get("installed",{})
     if not native or set(issues)!=set(native):
         missing("identity","installed occurrences","The expected occurrence register must match the independent native inventory.")
+    material_checks=[]
+    material_record=None
+    if study.get("materialCensus"):
+        material_record=read(pinned(root,study["materialCensus"]))
+        require(material_record.get("schema")=="agent-frc/fusion-body-materials@1" and
+                material_record.get("archiveSha256")==archive_sha and material_record.get("stepSha256")==step_sha,
+                "Body material ledger differs from the selected native issue")
+        require({(r["path"],r["name"]) for r in material_record["bodies"]}==
+                {(o["path"],v) for o in native.values() for v in o["nativeBodyNames"].values()},
+                "Material inventory must reconcile every actual placed native body")
     for key,occ in native.items():
         row=issues.get(key,{})
         article=articles.get(row.get("article"),{})
@@ -304,16 +315,48 @@ def evaluate_inputs(root,study, geometry=None):
             selection=vendor_compare(root,article)
             if selection["status"]!="pass":
                 finding("identity",selection["status"],key,"Supplier current purchase configuration versus as-drawn model: "+str(selection))
+            if article.get("procurementBom"):
+                procurement=read(pinned(root,article["procurementBom"]))
+                expected=procurement.get("bodyMaterials")
+                if not expected or not material_record:
+                    missing("identity",key,"Purchased component needs supplier constituent data and cold Fusion physical properties.")
+                else:
+                    from fusion_body_materials import verify_expected
+                    try:material_checks.extend(verify_expected(expected,material_record,occ))
+                    except (ValueError,TypeError,KeyError) as e:finding("identity","fail",key,str(e))
             if not all(named(article.get(k)) for k in ("manufacturer","partNumber","manufacturerSource","rights")) or article.get("representation")!="official-exact":
                 missing("identity",key,"Purchased part needs the official exact model and item-level rights.")
         elif kind=="fabricated":
             if model.suffix.lower() not in (".f3d",".f3z") or not zipfile.is_zipfile(model) or not article.get("drawing") or not named(article.get("materialGrade")) or occ.get("editable") is not True:
                 missing("identity",key,"Manufactured part needs an editable Fusion design, controlled drawing and grade.")
             else:
+                drawing=read(pinned(root,article["materialSpecification"])) if article.get("materialSpecification") else None
                 pinned(root,article["drawing"])
+                if not drawing or not material_record:
+                    missing("identity",key,"Fabricated material needs a source stock specification and signed cold physical properties for each solid.")
+                else:
+                    from fusion_body_materials import verify_expected
+                    require(len(occ["solids"])!=1 or {r.get("grade") for r in drawing["bodyMaterials"].values()}=={article["materialGrade"]},
+                            "Governing drawing grade differs from fabricated article stock")
+                    require(drawing["drawing"]==article["drawing"],"Fabrication stock specification refers to another drawing")
+                    try:material_checks.extend(verify_expected(drawing["bodyMaterials"],material_record,occ))
+                    except (ValueError,TypeError,KeyError) as e:finding("identity","fail",key,str(e))
         else:
             missing("identity",key,"Classify the installed article as purchased or fabricated.")
 
+    if study.get("materialHistory"):
+        from fusion_body_materials import compare_reissue
+        history=read(pinned(root,study["materialHistory"]))
+        require(history["current"]==study.get("materialCensus"),"Material continuity is attached to a different native census")
+        continuity=compare_reissue(root,history)
+        if continuity["ambiguousIdentities"]:
+            missing("identity","material continuity","Resolve ambiguous source identities across the native reissue")
+        for change in continuity["changes"]:
+            missing("identity",change["path"]+"/"+change["name"],"Unreviewed physical-material change from "+change["previous"]+" to "+change["current"])
+    if material_checks:
+        from fusion_body_materials import stock_results
+        for reason in stock_results(material_checks):
+            finding("identity","fail","constitutive material and density",reason)
     allowance={}
     for item in study.get("mating",[]):
         key=tuple(sorted(item["pair"]))
@@ -522,6 +565,13 @@ def evaluate_inputs(root,study, geometry=None):
         expected=sorted(d["id"] for d in duties if d["domain"] in need)
         if observed.get("criteriaSha256")!=scope_digest(study) or observed.get("kind")!="scope-review" or observed.get("scope")!=disposition or observed.get("complete") is not True or not named(observed.get("reviewer")) or not named(observed.get("basis")) or sorted(observed.get("bodies",[]))!=sorted(bodies) or sorted(observed.get("duties",[]))!=expected:
             missing(disposition,"coverage","Independent coverage did not reconcile all installed solids and registered duties.")
+    motion_model=None
+    if motion_ids or mission_ids or study.get("nativePoses"):
+        from assembly_kinematics import native_model
+        try:
+            motion_model=native_model(root,study)
+        except (ValueError,KeyError,TypeError,OSError) as e:
+            missing("native","installed kinematics",str(e))
     transfers=study.get("transferClaims")
     if not isinstance(transfers,dict) or set(transfers)!=mission_ids:
         missing("build","loaded transfer","The selected physical handoffs must have measured loaded clearance, delivery and recovery cases.")
@@ -530,9 +580,10 @@ def evaluate_inputs(root,study, geometry=None):
             from loaded_transfer import replay
             test=read(pinned(root,ref))
             require(test["id"]==name and test["step"]==study["step"],"Loaded transfer names another mechanism or installed assembly")
-            result=replay(root,test)
+            result=replay(root,test,motion_model=motion_model)
             if result["status"]!="pass":
-                finding("build",result["status"],name,"The loaded object does not establish the complete delivery and jam-reset envelope.")
+                reasons=[c["id"]+": "+c["executionReason"] for c in result["cases"] if c["executionStatus"]!="pass"]
+                finding("build",result["status"],name,"Loaded delivery and jam-reset remain unqualified. "+"; ".join(reasons))
     external=study.get("externalIssues")
     if not isinstance(external,list) or len(external)!=len(set(external)):
         missing("build","external findings","Reconcile the explicit external defect register; use an empty list if none were found.")

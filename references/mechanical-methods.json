@@ -183,6 +183,28 @@
       ],
       "detects": "Real admitted object hits a fixed or moving member after the holder releases it",
       "regression": "test/mesh_controls.py"
+    },
+    {
+      "id": "installed-rigid-mount",
+      "runtime": "python",
+      "entry": "scripts/assembly_kinematics.py",
+      "args": [
+        "$root",
+        "$study"
+      ],
+      "detects": "Mounted hardware changes position or orientation relative to its actual installed member",
+      "regression": "test/installed_kinematics.py"
+    },
+    {
+      "id": "physical-material-reissue",
+      "runtime": "python",
+      "entry": "scripts/fusion_body_materials.py",
+      "args": [
+        "$root",
+        "$study"
+      ],
+      "detects": "A constituent changes physical material between comparable native bodies without engineering review",
+      "regression": "test/installed_kinematics.py"
     }
   ]
 }

@@ -12,7 +12,54 @@ def sha(path):
         return h.hexdigest()
 
 
-def capture(app, archive, output, *, batch=256, pose=None):
+def placement_witness(body,occ,point2d):
+    import math
+    samples=[];errors=[]
+    def add(before,observed):
+        coords=list(before.asArray())
+        predicted=before.copy()
+        if occ:predicted.transformBy(occ.transform2)
+        err=10*predicted.distanceTo(observed)
+        if not math.isfinite(err):raise ValueError("Invalid world point")
+        if err>.001:raise ValueError("Native versus occurrence-context placement differs by "+str(err)+" mm")
+        errors.append(err)
+        if not samples:
+            samples.append(coords)
+        elif len(samples)==1:
+            if math.dist(samples[0],coords)>1e-6:samples.append(coords)
+        elif len(samples)==2:
+            a=[q-p for p,q in zip(samples[0],samples[1])];b=[q-p for p,q in zip(samples[0],coords)]
+            cross=[a[(j+1)%3]*b[(j+2)%3]-a[(j+2)%3]*b[(j+1)%3] for j in range(3)]
+            if math.hypot(*cross)/math.hypot(*a)>1e-6:samples.append(coords)
+    n=body.vertices.count
+    for ix in dict.fromkeys([i for i in (0,n//2,n-1) if 0<=i<n]):
+        v=body.vertices.item(ix);other=v.createForAssemblyContext(occ) if occ else v
+        add(v.geometry,other.geometry)
+    if len(samples)<3:
+        for f in body.faces:
+            proxy=f.createForAssemblyContext(occ) if occ else f
+            evaluator=f.evaluator;region=evaluator.parametricRange
+            if callable(region):region=region()
+            if isinstance(region,tuple):
+                if not region[0]:continue
+                region=region[-1]
+            ok,center=evaluator.getParameterAtPoint(f.pointOnFace)
+            if not ok:continue
+            lo,hi=region.minPoint,region.maxPoint
+            uv=[center]
+            uv.extend(point2d.create(lo.x+fx*(hi.x-lo.x),lo.y+fy*(hi.y-lo.y))
+                for fx in (.25,.5,.75,.125,.875) for fy in (.25,.5,.75,.125,.875))
+            for p in uv:
+                if not evaluator.isParameterOnFace(p):continue
+                ok,local=evaluator.getPointAtParameter(p);world_ok,actual=proxy.evaluator.getPointAtParameter(p)
+                if ok and world_ok:add(local,actual)
+                if len(samples)==3:break
+            if len(samples)==3:break
+    if len(samples)!=3:raise ValueError("Three noncollinear placed points could not be established")
+    return max(errors),samples
+
+
+def capture(app, archive, output, *, batch=256, pose=None, retry_pairs=(), checkpoint=None):
     import adsk.fusion
     import adsk.core
     import importlib.util
@@ -70,29 +117,18 @@ def capture(app, archive, output, *, batch=256, pose=None):
                     raise ValueError("Failed native placement: " + repr(key))
                 box = placed.preciseBoundingBox
                 proxy=body.createForAssemblyContext(occ) if occ else body
-                errors=[]
-                for index in sorted({0,body.vertices.count//2,body.vertices.count-1}):
-                    if index<0 or not body.vertices.count:
-                        continue
-                    vertex=body.vertices.item(index)
-                    point=vertex.geometry
-                    if occ:
-                        point.transformBy(occ.transform2)
-                    measured=vertex.createForAssemblyContext(occ) if occ else vertex
-                    errors.append(10*point.distanceTo(measured.geometry))
-                if not errors or not all(math.isfinite(e) for e in errors):
-                    raise ValueError("No usable native world placement witness")
+                error,local_sites=placement_witness(body,occ,adsk.core.Point2D)
                 proxies.append(proxy)
                 operands.append((body,occ.transform2 if occ else None))
-                rows.append({"visible":proxy.isVisible,"worldVertexErrorMm":max(errors),"path": path, "name": body.name, "revision": body.revisionId,
+                rows.append({"visible":proxy.isVisible,"worldVertexErrorMm":error,"placementPointsCm":local_sites,"topologicalVertices":body.vertices.count,"path": path, "name": body.name, "revision": body.revisionId,
                     "bodyLight": body.isLightBulbOn, "occurrenceVisible": occ.isVisible if occ else True,
                     "worldTransform": transform, "boundsMm": [10*v for v in (*box.minPoint.asArray(), *box.maxPoint.asArray())]})
         if not rows or sha(archive) != native_hash:
             raise ValueError("No complete stable archive readback")
         loader=importlib.util.spec_from_file_location("frc_native_contacts",Path(__file__).with_name("fusion_issue_contacts.py"))
         contact=importlib.util.module_from_spec(loader);loader.loader.exec_module(contact)
-        native=contact.measure(design,rows,proxies,operands,output.with_suffix(".progress.json"),
-            [native_hash,pose,app.version,sha(Path(__file__)),sha(Path(contact.__file__))],batch)
+        native=contact.measure(design,rows,proxies,operands,Path(checkpoint) if checkpoint else output.with_suffix(".progress.json"),
+            [native_hash,pose,app.version,sha(Path(__file__)),sha(Path(contact.__file__))],batch,retry_pairs)
         if not native["complete"]:
             return {"complete":False,"completedPairs":len(native["pairs"]),"candidatePairs":native["candidatePairs"]}
         receipt = {"contacts":native,"pose":pose,"documentId":opened.creationId,"rootComponentId":root.id,
@@ -102,7 +138,7 @@ def capture(app, archive, output, *, batch=256, pose=None):
             "bodies": rows, "otherGeometry": extra}
         with output.open("x", encoding="utf-8") as stream:
             json.dump(receipt, stream, indent=2, allow_nan=False)
-        return {"complete":True,"completedPairs":len(native["pairs"]),"file":output.name}
+        return {"complete":True,"completedPairs":len(native["pairs"]),"file":output.name,"unresolvedPairs":native["unresolvedPairs"]}
     finally:
         opened.close(False)
         if previous and previous.isValid:

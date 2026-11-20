@@ -170,7 +170,7 @@ def verify(root, study, spec, path):
                             originMm=(convert@wa[i][:,3])[:3].tolist()))
                 if ops:moves[solid]=ops
             if moves:cases.append(dict(id=f"{name}/{j}",basis="Continuous glTF rigid interpolation between measured Fusion poses",
-                initialPose=initial,moves=moves,minGapMm=0,maxDepth=9))
+                initialPose=initial,moves=moves,minGapMm=0,maxDepth=9,checkLinearEnvelope=True))
     if cases:
         from mechanical_motion import evaluate
         result=evaluate(root,dict(schema="agent-frc/mechanical-motion@1",step=study["step"],cases=cases))

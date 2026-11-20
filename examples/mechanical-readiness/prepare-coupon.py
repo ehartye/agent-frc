@@ -28,6 +28,7 @@ def get(name):
 
 lineage=get("issue/lineage.json");census=get("issue/native.json")
 configuration=lineage["configuration"]
+moving=(root/"issue/joints.json").is_file()
 binding={"configuration":configuration,"archiveSha256":lineage["archive"]["sha256"],"stepSha256":lineage["step"]["sha256"]}
 step=lineage["step"];assembly=load_solids(root/step["file"])[0]
 from mechanical_motion import bounds,bearing_area
@@ -42,11 +43,15 @@ for physical in census["bodies"]:
     source=load_solids(root/neutral["file"])[0]
     if len(source)!=1:raise ValueError("The original coupon part must have one solid")
     drawing=save("issue/"+name+"-drawing.json",{"part":name,"datum":"Lower left of 20 × 10 mm base, Z normal to table",
-        "drawing":"20 × 10 × 4 mm base with centered 8.2 × 6.2 × 2 mm locating pocket" if name=="Pocketed base" else "8 × 6 × 4 mm removable gauge",
+        "drawing":"20 × 10 × 4 mm base with centered " + ("16" if moving else "8.2") + " × 6.2 × 2 mm locating pocket" if name=="Pocketed base" else "8 × 6 × 4 mm removable gauge",
         "grade":"Teaching Stock T; simulated process and acceptance limits","finish":"Square seat, clean face; relieve internal corners to the controlled process"})
     articles[name]=dict(id=name,kind="fabricated",model=part,neutral=neutral,revision="r1",configuration="original",
         materialGrade="Teaching Stock T (synthetic duty exercise)",drawing=drawing,rights="exact-redistribution",
         rightsBasis="Original classroom coupon and native component",shapeResolutionMm3=.000001)
+    grade=dict(grade="Generic steel, modeled",basis="Original stock selection for the teaching fixture only",
+        fusionMaterial="Steel",materialIds=["PrismMaterial-018"],densityKgM3=[7800,7900])
+    material=save("issue/"+name+"-material.json",dict(drawing=drawing,bodyMaterials={next(iter(source)):grade}))
+    articles[name].update(materialSpecification=material,materialGrade=grade["grade"])
     installed[physical["path"]]={"article":name,"transform":physical["worldTransform"]}
     native.append(dict(path=physical["path"],solids=[label],article=name,revision="r1",configuration="original",
         neutralSha256=neutral["sha256"],modelSha256=part["sha256"],editable=True,worldTransform=physical["worldTransform"],
@@ -55,7 +60,10 @@ if set(members)!={"Pocketed base","Seated gauge"}:raise ValueError("Expected the
 labels=sorted(members.values());anchor=members["Pocketed base"]
 area=bearing_area(*(assembly[k] for k in labels))
 if abs(area-48)>.001:raise ValueError("Reopened seat area is not 48 square mm")
-reopen=save("issue/mapped.json",dict(binding,opened=True,transferMissions=[],installedOccurrences=native,movingGroups=[],motionRanges={},inspectionPoses=[dict(id="saved",joints=[])]))
+pose_files=["issue/home.json","issue/extended.json"] if moving else []
+poses=[dict(id="saved",joints=[])]+[get(f)["pose"] for f in pose_files]
+reopen=save("issue/mapped.json",dict(binding,opened=True,transferMissions=[],installedOccurrences=native,
+    movingGroups=["carriage"] if moving else [],motionRanges={"carriage":[0,3]} if moving else {},inspectionPoses=poses))
 basis=save("issue/teaching-duty.json",{"scope":"Original static desk fixture. The removed gauge is a separately serviced article. Keep base horizontal.",
     "qualification":"Synthetic numerical duties for exercising the release path. No robot, human-rated support or measured material property.",
     "seatAreaMm2":area,"testLoadsN":{"static":1,"shortDownwardPulse":10},"assumedCompressionModulusMPa":1000,
@@ -79,7 +87,18 @@ for domain,(value,unit,lo,hi,inputs) in definitions.items():
     duties.append(d)
     obs[domain]=dict(kind=domain,duty=domain,case=d["case"],subjects=labels,unit=unit,value=value,
         method="Original fixed fixture geometry or explicitly synthetic load estimate",inputs={k:"Registered desk fixture and teaching-duty assumptions" for k in inputs})
-obs["sweep"].update(coverage="fixed-assembly",movingGroups=[])
+if moving:
+    from mechanical_motion import evaluate
+    motion=dict(schema="agent-frc/mechanical-motion@1",step=step,cases=[dict(id="slide",basis="Measured native travel",
+        minGapMm=0,checkLinearEnvelope=True,moves={members["Seated gauge"]:[dict(kind="translation",travelMm=[3,0,0])]})])
+    full=evaluate(root,motion)
+    if full["cases"][0]["status"]!="pass":raise ValueError("Slider travel did not clear the fixed base")
+    save("issue/slide-sweep.json",full)
+    duties[0].update(min=3,max=3)
+    obs["sweep"].update(coverage="conservatively-bounded",movingGroups=["carriage"],value=3)
+    raw["sweep"].update(value=3,coverage="conservatively-bounded",motionRanges={"carriage":[0,3]},samples=[{"carriage":0},{"carriage":3}])
+else:
+    obs["sweep"].update(coverage="fixed-assembly",movingGroups=[])
 rawref=save("issue/values.json",dict(binding,schema="agent-frc/mechanical-measurements@1",measurements=raw))
 for domain in definitions:
     m=dict(rawref,pointer="/measurements/"+domain+"/value")
@@ -92,7 +111,11 @@ for d in duties:d["observation"]=dict(obsref,id=d["id"])
 study=dict(schema="agent-frc/mechanical-readiness@1",configuration=configuration,archive=lineage["archive"],step=step,
     authority=ref("cad/fusion-authority.json"),lineage=ref("issue/lineage.json"),nativeCensus=ref("issue/native.json"),
     reopen=reopen,reopenBoundsToleranceMm=.001,contactToleranceMm=.02,chassisAnchor=anchor,articles=articles,installed=installed,
-    connections=[dict(pair=labels,evidence=dict(obsref,id="seat"))],mating=[],transferClaims={},duties=duties,externalIssues=[],nativePoses=[])
+    connections=[dict(pair=labels,evidence=dict(obsref,id="seat"))],mating=[],transferClaims={},duties=duties,externalIssues=[],nativePoses=[ref(f) for f in pose_files])
+if moving:
+    study["jointAuthority"]=ref("issue/joints.json")
+    study["connections"][0]["jointGroup"]="carriage"
+study["materialCensus"]=ref("issue/materials.json")
 study["geometry"]=save("issue/geometry.json",scan(root,study))
 study["coverage"]={}
 for scope in ("engineering","build"):
@@ -105,6 +128,16 @@ save("cad-showcase.json",dict(source=step["file"],title="Pocket and removable ga
 subprocess.run([sys.executable,str(PLUGIN/"scripts/export-showcase-cad.py"),str(root)],check=True)
 files=[step["file"],lineage["archive"]["file"],cad_dir+"/assembly.png",cad_dir+"/assembly.stl.gz",cad_dir+"/receipt.json"]
 study["distribution"]=dict(binding,approvedBy="Digital teaching fixture",files=[dict(ref(f),scope=scope,rightsBasis="Original student-facing exercise") for f,scope in zip(files,["neutral","native","render","mesh","render"])])
+if moving:
+    from slider_view import write_view
+    filename=cad_dir+"/carriage.glb"
+    spec=write_view(root,assembly,members["Seated gauge"],3,filename);spec["step"]=step
+    proof=save("issue/published-motion.json",spec)
+    files.append(filename)
+    study["distribution"]["files"].append(dict(ref(filename),scope="mesh",rightsBasis="Original native fixture",meshStudy=proof))
+    (root/"private").mkdir(exist_ok=True)
+    adverse=write_view(root,assembly,members["Seated gauge"],5,"private/overtravel.glb");adverse["step"]=step
+    save("private/overtravel.json",adverse)
 save("issue/readiness.json",study)
 save("delivery.json",dict(project="mechanical-coupon",scope="Original native teaching coupon and synthetic desk duties",files=[{"path":f} for f in files]))
 print("Prepared the real two-part native issue. Use the private issuer with the operator's native station public key.")

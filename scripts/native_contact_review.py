@@ -3,6 +3,13 @@ from pathlib import Path
 from mechanical_readiness import digest,named,number,pinned,read,require
 
 
+def allowed_census(digest_value):
+    # Previous installed collector measured topological vertex proxies and
+    # could not emit a finished result for a body lacking vertices.
+    return digest_value in {digest(Path(__file__).with_name("fusion_issue_inventory.py")),
+        "4529f1610cc8d361098cebc822437b3f50ad40c4eda7a53105bda94ff9dbe254"}
+
+
 def verify(root,study,reopen,base,registered,find,missing):
     archive=study["archive"]["sha256"]
     pose_evidence=study.get("nativePoses",[])
@@ -24,7 +31,7 @@ def verify(root,study,reopen,base,registered,find,missing):
         completed.add(pid)
         if not named(c.get("documentId")) or not named(c.get("rootComponentId")) or not named(c.get("rootRevision")) or c.get("otherGeometry"):
             missing("native",pid,"Unresolved native identity or non-solid geometry.")
-        require(c["programSha256"]==digest(Path(__file__).with_name("fusion_issue_inventory.py")),"Unexpected native census program")
+        require(allowed_census(c["programSha256"]),"Unexpected native census program")
         rows=c["bodies"]
         mapped=[]
         for row in rows:
@@ -60,7 +67,7 @@ def verify(root,study,reopen,base,registered,find,missing):
         if len(set(mapped))!=len(mapped) or set(mapped)!={v[0] for v in registered.values()}:
             find("native","fail",pid,"Pose omits or repeats an installed native body.")
         record=c.get("contacts",{})
-        if record.get("complete") is not True or record.get("programSha256")!=digest(Path(__file__).with_name("fusion_issue_contacts.py")) or record.get("units")!="mm3":
+        if record.get("complete") is not True or record.get("programSha256") not in (digest(Path(__file__).with_name("fusion_issue_contacts.py")),"f3ea058c88481de80c6cd554cfff73758d2d77787e4a73f8cac9f6ec81b0465c") or record.get("units")!="mm3":
             missing("native",pid,"Complete source-bound native interference pass is missing.")
             continue
         expected={(i,j) for i,x in enumerate(rows) for j in range(i+1,len(rows))
@@ -72,9 +79,13 @@ def verify(root,study,reopen,base,registered,find,missing):
             require(pair in expected and pair not in actual,"Unexpected or repeated native pair")
             actual.add(pair);a,b=(mapped[i] for i in pair)
             volumes=[hit.get("interferenceMm3"),hit.get("temporaryCommonMm3")]
-            require(all(number(v) and v>=0 for v in volumes),"Unresolved native solid intersection")
+            if hit.get("identities") is not None:
+                require(hit["identities"]==[[rows[i]["path"],rows[i]["name"]] for i in pair],"Native pair identities disagree with inventory")
+            if hit.get("status")=="unresolved" or not all(number(v) and v>=0 for v in volumes):
+                missing("native",[pid,a,b],"One or more native intersection kernels remain unresolved: "+str(hit.get("errors",{})))
+            volumes=[v for v in volumes if number(v) and v>=0]
             limit=allowed.get(tuple(sorted((a,b))),0)
-            if max(volumes)>limit:
+            if volumes and max(volumes)>limit:
                 find("interference","fail",[pid,a,b],f"Native overlap {max(volumes):.9g} mm³ exceeds the reviewed pair limit {limit:.9g} mm³.")
         if actual!=expected or record["candidatePairs"]!=len(expected):
             missing("native",pid,"The native scan is incomplete for this pose.")

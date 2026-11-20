@@ -22,3 +22,5 @@ Use the [Fusion authority and revision handoff](../../docs/fusion-authority.md) 
 For a mechanism that transfers a game piece, [sweep the actual released object through the installed frame](../../docs/loaded-transfer.md), including its arrival and a jam/reset case. Compare the current vendor purchase BOM to the model’s as-drawn revision for every supplied assembly.
 
 Follow the underlying observations for each qualified joint through to their governing case and numerical acceptance limit. For a replacement showcase verify the rendered pixels and each playable native joint trajectory, including compound motion. [Publishing the checked geometry](../../docs/mesh-correspondence.md)
+
+Verify mounted hardware at alternate native poses and match each installed constituent's physical material and density to its drawing or supplier requirement. Compare unchanged bodies to their previous native issue. Record motion limits and source-backed material substitutions before issuing a replacement. [Installed hardware and stock](../../docs/mechanical-methods.md)
