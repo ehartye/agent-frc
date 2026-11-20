@@ -1,0 +1,84 @@
+{
+  "inventory": [
+    "training-carriage"
+  ],
+  "model": {
+    "geometry": "spatial-vertical-supports",
+    "massEvidence": "conservative-upper-bound",
+    "massBasis": "Synthetic fixture mass including all carried parts.",
+    "factor": 1.25,
+    "factorBasis": "Invented classroom fixture factor.",
+    "supports": [
+      {
+        "id": "near",
+        "xyM": [
+          0,
+          0
+        ],
+        "path": []
+      },
+      {
+        "id": "far",
+        "xyM": [
+          0.6,
+          0.8
+        ],
+        "path": []
+      }
+    ],
+    "cases": [
+      {
+        "id": "Center on the rail",
+        "mode": "raise",
+        "massKg": 20,
+        "cgXYM": [
+          0.3,
+          0.4
+        ],
+        "accelZMps2": 1,
+        "appliedMomentXYNm": [
+          0,
+          0
+        ],
+        "worstExtension": false,
+        "asymmetric": false,
+        "basis": "Center of mass lies halfway between two diagonal support stations."
+      },
+      {
+        "id": "Shift the load sideways",
+        "mode": "hold",
+        "massKg": 20,
+        "cgXYM": [
+          0.22,
+          0.46
+        ],
+        "accelZMps2": 0,
+        "appliedMomentXYNm": [
+          0,
+          0
+        ],
+        "worstExtension": true,
+        "asymmetric": true,
+        "basis": "Shift the center of mass 0.10 m perpendicular to the support line."
+      },
+      {
+        "id": "Lose the far support",
+        "mode": "power-loss",
+        "massKg": 20,
+        "cgXYM": [
+          0.3,
+          0.4
+        ],
+        "accelZMps2": 0,
+        "appliedMomentXYNm": [
+          0,
+          0
+        ],
+        "worstExtension": false,
+        "asymmetric": false,
+        "basis": "The same center of mass hangs from one remaining simple point.",
+        "unavailableSupport": "far"
+      }
+    ]
+  }
+}

@@ -1,4 +1,6 @@
 import {analyzeWindow} from '../../scripts/kickoff-window.mjs';
+import {reviewElevation} from '../../scripts/hardening.mjs';
+import {evidenceReader} from '../../scripts/study-evidence.mjs';
 import {compareRoles} from '../../scripts/strategy-lab.mjs';
 import {journeyMap} from './journey.mjs';
 import {buildHighlights} from '../../scripts/robot-highlights.mjs';
@@ -53,6 +55,16 @@ const regulatorResults = regulator.trials.map(trial => {
   return '<li><strong>' + escape(trial.condition) + '</strong> gives a ' + inlet.evidence.valueV.toFixed(2) +
     ' V upper bound. ' + escape(inlet.reason) + '.</li>';
 }).join('');
+const studyFolder=path.join(root,'examples/design-methods');
+const suspensionInput=JSON.parse(await readFile(path.join(studyFolder,'spatial-elevation.json'),'utf8'));
+const suspension=reviewElevation(suspensionInput,evidenceReader(studyFolder)).mechanisms[0];
+const suspensionStudy=`<details class="reading"><summary>Can this two-point suspension tip?</summary>
+<p>A 20 kg carriage hangs from a diagonal rail. Its supports are one metre apart. Change the load position or remove one support.</p>
+<label>Suspended pose <select id="suspensionChoice">${suspension.cases.map((c,i)=>'<option value="'+i+'">'+escape(c.id)+'</option>').join('')}</select></label>
+${suspension.cases.map((c,i)=>{
+  const b=c.balance,fmt=values=>values.map(n=>n.toFixed(2)).join(', ');
+  return '<div data-suspension-pose="'+i+'"'+(i?' hidden':'')+'><p>Vertical reactions: '+fmt(b.loads)+' N.</p><p>Unbalanced moments about X and Y: <strong>'+fmt(b.unbalancedMomentXYNm)+' N·m</strong>. '+(b.momentEquilibrium==='balanced'?'The pose balances. Component capacity is open.':'The carriage can rotate from this pose.')+'</p></div>';
+}).join('')}</details>`;
 const chapter=n=>String(n+1).padStart(2,'0');
 const ownedSkills=(await readdir(path.join(root,'skills'),{withFileTypes:true})).filter(v=>v.isDirectory()).map(v=>v.name).sort();
 if(ownedSkills.join()!==Object.keys(purpose).sort().join()) throw Error('Update the guide when the skill inventory changes.');
@@ -64,7 +76,7 @@ const highlightsLink='<a href="robot/index.html">Explore the example robot evide
 const chapters=stages.map((s,i)=>`<details id="${s.id}" class="chapter"${i===0?' open':''}>
 <summary><span class="ordinal">${chapter(i)}</span><span>${escape(s.name)}</span><span class="toggle" aria-hidden="true"></span></summary>
 <div class="chapter-body"><h3>${escape(s.question)}</h3><p>${escape(s.objective)}</p><p>${escape(s.activity)}</p>
-<div class="handoff"><h4>Carry forward</h4><p>${escape(s.handoff)}</p></div>${s.docs.some(([,p])=>p==='docs/camera-reference.md')?cameraComparison:''}${s.id==='contract'?serviceComparison:''}
+<div class="handoff"><h4>Carry forward</h4><p>${escape(s.handoff)}</p></div>${s.docs.some(([,p])=>p==='docs/camera-reference.md')?cameraComparison:''}${s.id==='contract'?serviceComparison:''}${s.id==='verify'?suspensionStudy:''}
 <h4>Supporting skills</h4><div class="chips">${s.skills.map(k=>link(k,'skills/'+k+'/SKILL.md')).join('')}</div>
 <div class="reading">${s.id==='verify'?highlightsLink:''}${s.id==='story'?'<a href="field-lab.html#roleLab">Compare alliance roles and replay the field ↗</a> · ':''}${s.id==='rules'?'<a href="rules.json" download>Download the training rules model ↓</a> · ':''}${s.docs.some(([,p])=>p===powerGuide)?'<a href="#power">Try the shared-power comparison ↓</a> · ':''}${s.docs.map(([label,p])=>link(label+' ↗',p)).join(' · ')}</div></div></details>`).join('\n');
 const directory=Object.keys(purpose).map(k=>{

@@ -110,3 +110,8 @@ form.addEventListener('input',updateRate);form.addEventListener('submit',e=>e.pr
 document.querySelectorAll('.journey-map [data-chapter]').forEach(link=>{
   link.addEventListener('click',()=>{ document.getElementById(link.dataset.chapter).open=true; });
 });
+
+document.getElementById('suspensionChoice').addEventListener('change',event=>{
+  for(const row of document.querySelectorAll('[data-suspension-pose]'))
+    row.hidden=row.dataset.suspensionPose!==event.target.value;
+});
