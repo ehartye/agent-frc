@@ -1,0 +1,522 @@
+{
+  "revision": "Fixture R1",
+  "inventory": [
+    "transfer-stand"
+  ],
+  "elevation": {
+    "geometry": "two-simple-supports",
+    "factor": 1.25,
+    "factorBasis": "Synthetic design requirement for this slow-motion teaching fixture.",
+    "supports": [
+      {
+        "id": "left",
+        "xM": 0,
+        "path": [
+          {
+            "id": "actuator",
+            "kind": "actuator",
+            "advantage": 1,
+            "efficiency": 1,
+            "ratings": {
+              "raise": {
+                "value": 520,
+                "unit": "N",
+                "basis": "Invented fixture working rating in this mode; holding brake acts at the drive.",
+                "kind": "working-load",
+                "loading": "tension",
+                "powerState": "powered"
+              },
+              "hold": {
+                "value": 520,
+                "unit": "N",
+                "basis": "Invented fixture working rating in this mode; holding brake acts at the drive.",
+                "kind": "working-load",
+                "loading": "tension",
+                "powerState": "powered"
+              },
+              "power-loss": {
+                "value": 280,
+                "unit": "N",
+                "basis": "Invented fixture working rating in this mode; holding brake acts at the drive.",
+                "kind": "working-load",
+                "loading": "tension",
+                "powerState": "unpowered"
+              }
+            },
+            "loading": "tension"
+          },
+          {
+            "id": "transmission",
+            "kind": "transmission",
+            "advantage": 1,
+            "efficiency": 1,
+            "ratings": {
+              "raise": {
+                "value": 520,
+                "unit": "N",
+                "basis": "Invented fixture working rating in this mode; holding brake acts at the drive.",
+                "kind": "working-load",
+                "loading": "tension",
+                "powerState": "powered"
+              },
+              "hold": {
+                "value": 520,
+                "unit": "N",
+                "basis": "Invented fixture working rating in this mode; holding brake acts at the drive.",
+                "kind": "working-load",
+                "loading": "tension",
+                "powerState": "powered"
+              },
+              "power-loss": {
+                "value": 520,
+                "unit": "N",
+                "basis": "Invented fixture working rating in this mode; holding brake acts at the drive.",
+                "kind": "working-load",
+                "loading": "tension",
+                "powerState": "unpowered"
+              }
+            },
+            "loading": "tension"
+          },
+          {
+            "id": "member",
+            "kind": "member",
+            "advantage": 1,
+            "efficiency": 1,
+            "ratings": {
+              "raise": {
+                "value": 520,
+                "unit": "N",
+                "basis": "Invented fixture working rating in this mode; holding brake acts at the drive.",
+                "kind": "working-load",
+                "loading": "compression",
+                "powerState": "powered"
+              },
+              "hold": {
+                "value": 520,
+                "unit": "N",
+                "basis": "Invented fixture working rating in this mode; holding brake acts at the drive.",
+                "kind": "working-load",
+                "loading": "compression",
+                "powerState": "powered"
+              },
+              "power-loss": {
+                "value": 520,
+                "unit": "N",
+                "basis": "Invented fixture working rating in this mode; holding brake acts at the drive.",
+                "kind": "working-load",
+                "loading": "compression",
+                "powerState": "unpowered"
+              }
+            },
+            "loading": "compression"
+          },
+          {
+            "id": "anchor",
+            "kind": "anchor",
+            "advantage": 1,
+            "efficiency": 1,
+            "ratings": {
+              "raise": {
+                "value": 520,
+                "unit": "N",
+                "basis": "Invented fixture working rating in this mode; holding brake acts at the drive.",
+                "kind": "working-load",
+                "loading": "compression",
+                "powerState": "powered"
+              },
+              "hold": {
+                "value": 520,
+                "unit": "N",
+                "basis": "Invented fixture working rating in this mode; holding brake acts at the drive.",
+                "kind": "working-load",
+                "loading": "compression",
+                "powerState": "powered"
+              },
+              "power-loss": {
+                "value": 520,
+                "unit": "N",
+                "basis": "Invented fixture working rating in this mode; holding brake acts at the drive.",
+                "kind": "working-load",
+                "loading": "compression",
+                "powerState": "unpowered"
+              }
+            },
+            "loading": "compression"
+          }
+        ]
+      },
+      {
+        "id": "right",
+        "xM": 0.6,
+        "path": [
+          {
+            "id": "actuator",
+            "kind": "actuator",
+            "advantage": 1,
+            "efficiency": 1,
+            "ratings": {
+              "raise": {
+                "value": 520,
+                "unit": "N",
+                "basis": "Invented fixture working rating in this mode; holding brake acts at the drive.",
+                "kind": "working-load",
+                "loading": "tension",
+                "powerState": "powered"
+              },
+              "hold": {
+                "value": 520,
+                "unit": "N",
+                "basis": "Invented fixture working rating in this mode; holding brake acts at the drive.",
+                "kind": "working-load",
+                "loading": "tension",
+                "powerState": "powered"
+              },
+              "power-loss": {
+                "value": 280,
+                "unit": "N",
+                "basis": "Invented fixture working rating in this mode; holding brake acts at the drive.",
+                "kind": "working-load",
+                "loading": "tension",
+                "powerState": "unpowered"
+              }
+            },
+            "loading": "tension"
+          },
+          {
+            "id": "transmission",
+            "kind": "transmission",
+            "advantage": 1,
+            "efficiency": 1,
+            "ratings": {
+              "raise": {
+                "value": 520,
+                "unit": "N",
+                "basis": "Invented fixture working rating in this mode; holding brake acts at the drive.",
+                "kind": "working-load",
+                "loading": "tension",
+                "powerState": "powered"
+              },
+              "hold": {
+                "value": 520,
+                "unit": "N",
+                "basis": "Invented fixture working rating in this mode; holding brake acts at the drive.",
+                "kind": "working-load",
+                "loading": "tension",
+                "powerState": "powered"
+              },
+              "power-loss": {
+                "value": 520,
+                "unit": "N",
+                "basis": "Invented fixture working rating in this mode; holding brake acts at the drive.",
+                "kind": "working-load",
+                "loading": "tension",
+                "powerState": "unpowered"
+              }
+            },
+            "loading": "tension"
+          },
+          {
+            "id": "member",
+            "kind": "member",
+            "advantage": 1,
+            "efficiency": 1,
+            "ratings": {
+              "raise": {
+                "value": 520,
+                "unit": "N",
+                "basis": "Invented fixture working rating in this mode; holding brake acts at the drive.",
+                "kind": "working-load",
+                "loading": "compression",
+                "powerState": "powered"
+              },
+              "hold": {
+                "value": 520,
+                "unit": "N",
+                "basis": "Invented fixture working rating in this mode; holding brake acts at the drive.",
+                "kind": "working-load",
+                "loading": "compression",
+                "powerState": "powered"
+              },
+              "power-loss": {
+                "value": 520,
+                "unit": "N",
+                "basis": "Invented fixture working rating in this mode; holding brake acts at the drive.",
+                "kind": "working-load",
+                "loading": "compression",
+                "powerState": "unpowered"
+              }
+            },
+            "loading": "compression"
+          },
+          {
+            "id": "anchor",
+            "kind": "anchor",
+            "advantage": 1,
+            "efficiency": 1,
+            "ratings": {
+              "raise": {
+                "value": 520,
+                "unit": "N",
+                "basis": "Invented fixture working rating in this mode; holding brake acts at the drive.",
+                "kind": "working-load",
+                "loading": "compression",
+                "powerState": "powered"
+              },
+              "hold": {
+                "value": 520,
+                "unit": "N",
+                "basis": "Invented fixture working rating in this mode; holding brake acts at the drive.",
+                "kind": "working-load",
+                "loading": "compression",
+                "powerState": "powered"
+              },
+              "power-loss": {
+                "value": 520,
+                "unit": "N",
+                "basis": "Invented fixture working rating in this mode; holding brake acts at the drive.",
+                "kind": "working-load",
+                "loading": "compression",
+                "powerState": "unpowered"
+              }
+            },
+            "loading": "compression"
+          }
+        ]
+      }
+    ],
+    "cases": [
+      {
+        "id": "acceleration",
+        "mode": "raise",
+        "massKg": 40,
+        "cgXM": 0.3,
+        "accelZMps2": 1,
+        "pitchMomentNm": 0,
+        "basis": "Loaded teaching stand during upward acceleration."
+      },
+      {
+        "id": "extended",
+        "mode": "hold",
+        "massKg": 40,
+        "cgXM": 0.42,
+        "accelZMps2": 0,
+        "pitchMomentNm": 0,
+        "asymmetric": true,
+        "worstExtension": true,
+        "basis": "Payload center shifts toward the right support at full extension."
+      },
+      {
+        "id": "unpowered",
+        "mode": "power-loss",
+        "massKg": 40,
+        "cgXM": 0.42,
+        "accelZMps2": 0,
+        "pitchMomentNm": 0,
+        "asymmetric": true,
+        "worstExtension": true,
+        "basis": "Right-shifted load after drive supply loss and assumed brake engagement."
+      }
+    ],
+    "massEvidence": "conservative-upper-bound",
+    "massBasis": "Invented supported mass upper bound including payload in this fixture."
+  },
+  "demand": {
+    "requiredPieces": 2,
+    "windowS": 10,
+    "basis": "Two accepted fixture placements in the reserved ten-second window.",
+    "criterionId": "fixture-transfer",
+    "criterion": "Fixture switch changes after transfer.",
+    "focalRobot": "carrier",
+    "windowScope": "whole placement window"
+  },
+  "episodes": [
+    {
+      "runId": "normal-A",
+      "revision": "fixture-1",
+      "condition": "Clear lane",
+      "evidence": "integrated-simulation",
+      "criterion": "Fixture switch changes after transfer.",
+      "windowS": [
+        0,
+        10
+      ],
+      "initialPieces": [
+        "a",
+        "b"
+      ],
+      "events": [
+        {
+          "kind": "acquire",
+          "piece": "a",
+          "timeS": 1
+        },
+        {
+          "kind": "accept",
+          "piece": "a",
+          "timeS": 3,
+          "witness": "switch transition at 3 s"
+        },
+        {
+          "kind": "acquire",
+          "piece": "b",
+          "timeS": 4
+        },
+        {
+          "kind": "accept",
+          "piece": "b",
+          "timeS": 7,
+          "witness": "switch transition at 7 s"
+        }
+      ],
+      "criterionId": "fixture-transfer",
+      "focalRobot": "carrier",
+      "windowScope": "whole placement window",
+      "variation": {
+        "queueS": 0
+      }
+    },
+    {
+      "runId": "queue-B",
+      "revision": "fixture-1",
+      "condition": "Lane occupied for four seconds",
+      "evidence": "integrated-simulation",
+      "criterion": "Fixture switch changes after transfer.",
+      "windowS": [
+        0,
+        10
+      ],
+      "initialPieces": [
+        "a",
+        "b"
+      ],
+      "events": [
+        {
+          "kind": "acquire",
+          "piece": "a",
+          "timeS": 2
+        },
+        {
+          "kind": "miss",
+          "piece": "a",
+          "timeS": 5
+        },
+        {
+          "kind": "accept",
+          "piece": "a",
+          "timeS": 8,
+          "witness": "switch transition at 8 s"
+        },
+        {
+          "kind": "acquire",
+          "piece": "b",
+          "timeS": 9
+        }
+      ],
+      "criterionId": "fixture-transfer",
+      "focalRobot": "carrier",
+      "windowScope": "whole placement window",
+      "variation": {
+        "queueS": 4
+      }
+    }
+  ],
+  "architectures": {
+    "shared": {
+      "nominal": {
+        "placed": 4,
+        "serviceS": 20,
+        "concept": "shared",
+        "case": "nominal",
+        "runId": "shared/nominal",
+        "resourceUses": [
+          {
+            "resource": "bus",
+            "activity": "drive",
+            "amount": 16,
+            "startS": 0,
+            "endS": 4
+          },
+          {
+            "resource": "bus",
+            "activity": "transfer",
+            "amount": 12,
+            "startS": 4,
+            "endS": 7
+          }
+        ]
+      },
+      "blocked": {
+        "placed": 0,
+        "serviceS": 40,
+        "concept": "shared",
+        "case": "blocked",
+        "runId": "shared/blocked",
+        "resourceUses": [
+          {
+            "resource": "bus",
+            "activity": "drive",
+            "amount": 16,
+            "startS": 0,
+            "endS": 4
+          },
+          {
+            "resource": "bus",
+            "activity": "transfer",
+            "amount": 12,
+            "startS": 2,
+            "endS": 7
+          }
+        ]
+      }
+    },
+    "separate": {
+      "nominal": {
+        "placed": 3,
+        "serviceS": 28,
+        "concept": "separate",
+        "case": "nominal",
+        "runId": "separate/nominal",
+        "resourceUses": [
+          {
+            "resource": "bus",
+            "activity": "drive",
+            "amount": 16,
+            "startS": 0,
+            "endS": 4
+          },
+          {
+            "resource": "bus",
+            "activity": "transfer",
+            "amount": 12,
+            "startS": 4,
+            "endS": 7
+          }
+        ]
+      },
+      "blocked": {
+        "placed": 2,
+        "serviceS": 29,
+        "concept": "separate",
+        "case": "blocked",
+        "runId": "separate/blocked",
+        "resourceUses": [
+          {
+            "resource": "bus",
+            "activity": "drive",
+            "amount": 16,
+            "startS": 0,
+            "endS": 4
+          },
+          {
+            "resource": "bus",
+            "activity": "transfer",
+            "amount": 12,
+            "startS": 4,
+            "endS": 7
+          }
+        ]
+      }
+    }
+  }
+}

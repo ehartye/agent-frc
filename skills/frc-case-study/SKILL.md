@@ -18,3 +18,5 @@ Before rejecting a route, match the collision to the installed object at the con
 3. Draft two viable match stories and state what evidence would favor each. Record the owner's selection or leave it open. Use the [strategy brief](../../docs/game-to-robot-strategy.md) to translate the chosen story into measurable requirements.
 4. Allocate interfaces across hardware, controls and fabrication. Preserve pose, timing, expected loads, sensing, actuator ownership and fault behavior in [subsystem contracts](../../docs/subsystem-contracts.md).
 5. Implement the smallest experiment that could change the choice. Save the input revisions, test conditions, observations and unresolved questions in the project. Link the result to the decision it supports.
+
+Use the [matched alliance lab](../../docs/season-meta-lab.md) to challenge the proposed role with alternate partners before adopting a robot concept.

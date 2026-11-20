@@ -317,6 +317,35 @@
     }
     lastTime=performance.now();if(!seriesPaused)frame=requestAnimationFrame(playSeries);render();
   };
+  if(roleComparison){
+    const roleChoice=byId('roleChoice'),contextChoice=byId('roleContext');
+    for(const r of roleComparison.roles)roleChoice.add(new Option(r.id,r.id));
+    for(const c of roleComparison.contexts)contextChoice.add(new Option(c.id,c.id));
+    function selected(){return roleComparison.cells.find(c=>c.role===roleChoice.value&&c.context===contextChoice.value);}
+    function showResult(){
+      const c=selected();
+      byId('roleBasis').textContent=roleComparison.roles.find(r=>r.id===c.role).basis+' '+roleComparison.contexts.find(r=>r.id===c.context).basis;
+      byId('roleOutcome').textContent='Ordinary points · Blue '+c.ordinary.blue+' / Red '+c.ordinary.red+
+        ' · Terminal points · Blue '+c.terminal.blue+' / Red '+c.terminal.red+
+        ' · '+roleComparison.side+' margin '+c.margin+' · Opportunity cost '+c.regret+' points';
+      byId('rolePhases').replaceChildren(...c.byRobot.filter(r=>r.id===c.focalId).map(r=>{
+        const li=document.createElement('li');
+        li.textContent=r.id+' · '+r.phase+' · waited '+r.waitS.toFixed(2)+' s · traveled '+r.travelIn.toFixed(1)+
+          ' in · '+(r.tally['attempt/credited']?.pieces??0)+' accepted · '+r.acceptedPerSecond.toFixed(3)+' pieces/s';
+        return li;
+      }));
+    }
+    roleChoice.onchange=contextChoice.onchange=showResult;
+    byId('rolePlay').onclick=()=>{
+      const c=selected(),source=config.series.matches.find(m=>m.id===c.match);
+      stopFrame();
+      series=createMatchSeries(rehearsal,[{...source,roster:c.roster}]);
+      activeSource=c.role+' / '+c.context;seriesPaused=false;sim=series.sim;setup=sim.setup;roster=series.match.roster;
+      byId('replaySetup').value=setup;notice.textContent='';listRoster();seriesResults();render();
+      lastTime=performance.now();frame=requestAnimationFrame(playSeries);
+    };
+    byId('roleLab').hidden=false;showResult();
+  }
   function animate(now){
     frame=null;
     if(sim.paused)return;

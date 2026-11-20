@@ -1,0 +1,54 @@
+{
+  "schema": "agent-frc/alliance-study@1",
+  "side": "blue",
+  "roles": [
+    {
+      "id": "shuttle",
+      "basis": "Use the same delivery cycle in both periods.",
+      "plans": {
+        "Opening": "shuttle",
+        "Main play": "shuttle"
+      },
+      "endgame": null
+    },
+    {
+      "id": "pad",
+      "basis": "Reserve main play for a reliably accessible finish on the pad.",
+      "plans": {
+        "Main play": "shuttle"
+      },
+      "endgame": {
+        "action": "stand",
+        "target": "blue-west",
+        "startS": 0,
+        "witnesses": {
+          "supported-on-pad": "met"
+        }
+      }
+    }
+  ],
+  "contexts": [
+    {
+      "id": "local",
+      "match": "trial-1",
+      "slot": 1,
+      "basis": "The published roster leaves the delivery lane available."
+    },
+    {
+      "id": "crossing",
+      "match": "trial-1",
+      "slot": 1,
+      "basis": "A cycling partner shares the delivery lane under the same opponent program.",
+      "peers": [
+        {
+          "side": "blue",
+          "slot": 2,
+          "plans": {
+            "Opening": "shuttle",
+            "Main play": "shuttle"
+          }
+        }
+      ]
+    }
+  ]
+}

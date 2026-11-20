@@ -16,3 +16,5 @@ Infer competing corridors from starts, piece supply and scoring zones. Use space
 Write the [strategy brief](../../docs/game-to-robot-strategy.md) in the student's words. State the fallback, the measurable requirement, its source and the next experiment. Record who selected the strategy before treating it as a design commitment.
 
 When a design repeatedly loses an observation or pays a large cycle-time penalty to keep it, ask **could the premise be wrong?** Write the physical outcome the strategy requires and the assumption tying it to the current solution. Compare improving the existing solution, observing a different quantity and changing the mechanism or match action. Replay the same difficult case and a plausible failure for each alternative. Record what would change the selection. [Worked camera and retention comparison](../../docs/camera-reference.md#could-the-premise-be-wrong).
+
+Carry the focal role, scored criterion, fallback and required window rate forward from the [matched alliance study](../../docs/season-meta-lab.md).

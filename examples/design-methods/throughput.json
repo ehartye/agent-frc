@@ -1,0 +1,26 @@
+{
+  "schema": "agent-frc/throughput-study@1",
+  "demand": {
+    "path": "fixture-results.json",
+    "sha256": "8b8866857397bfe4d356da10e6d31afbd2894d73fdc10ca6210511f20efe808a",
+    "pointer": "/demand"
+  },
+  "episodes": [
+    {
+      "id": "normal-A",
+      "source": {
+        "path": "fixture-results.json",
+        "sha256": "8b8866857397bfe4d356da10e6d31afbd2894d73fdc10ca6210511f20efe808a",
+        "pointer": "/episodes/0"
+      }
+    },
+    {
+      "id": "queue-B",
+      "source": {
+        "path": "fixture-results.json",
+        "sha256": "8b8866857397bfe4d356da10e6d31afbd2894d73fdc10ca6210511f20efe808a",
+        "pointer": "/episodes/1"
+      }
+    }
+  ]
+}
