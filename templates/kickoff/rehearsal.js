@@ -3,8 +3,8 @@
   const panel=byId('rehearsal'),canvas=byId('replayField'),context=canvas.getContext('2d');
   const rosterBox=byId('replayRoster'), clock=byId('replayClock'),notice=byId('replayNotice');
   panel.hidden=false;
-  let roster=[rehearsal.defaults('blue',1),rehearsal.defaults('red',1)];
-  let setup=profile.rehearsal.setups[0],frame=null,lastTime=0;
+  let roster=rehearsal.startingRoster();
+  let setup=profile.rehearsal.defaults.roster?profile.rehearsal.setups[0]:(profile.rehearsal.series?.matches?.[0]?.setup ?? profile.rehearsal.setups[0]),frame=null,lastTime=0;
   let series=null,seriesPaused=false;
   const config=profile.rehearsal, L=profile.field.length,W=profile.field.width;
   const student=createRehearsalSetup(rehearsal,roster,setup,config.series?.matches);
@@ -16,7 +16,7 @@
   byId('replayBasis').textContent=config.basis+' '+config.boundsNote+
     ' The default bumper adds '+config.defaults.bumper+' in per side. Priorities follow request time, then robot ID for same-tick requests. Completed trips count arrivals and service, with scoring evaluated separately by the project station model.';
   const stations=config.stations ?? [], legend=byId('replayStations'), counters=new Map();
-  let highlighted=null;
+  let highlighted=null,expandedRobot=null;
   for(const [i,s] of stations.entries()){
     const row=document.createElement('li'), select=document.createElement('button'), counts=document.createElement('span');
     select.type='button';select.textContent=(i+1)+' · '+s.label;
@@ -73,18 +73,33 @@
     for(const station of config.stations ?? []){
       const [x,y]=at(station.displayAt ?? station.at), [ax,ay]=at(station.at);
       context.strokeStyle='#f1ce80';context.lineWidth=1;context.beginPath();
+      if(station.id!==highlighted)context.globalAlpha=.3;
       if(station.areaIn){
         const [[left,bottom],[right,top]]=station.areaIn,xy=at([left,top]);
         context.rect(...xy,(right-left)*scale,(top-bottom)*scale);
       }else context.arc(ax,ay,station.radiusIn*scale,0,Math.PI*2);
       context.stroke();
+      context.globalAlpha=1;
       const retrieval=station.kind==='retrieval';
       context.fillStyle=retrieval?'#ffd373':'#d9f7df';
       if(retrieval){
         const stock=sim.game.stock[station.id].length;
         context.fillRect(x-4,y-4,8,8);
-        for(let i=0;i<Math.min(6,stock);i++){context.beginPath();context.arc(x+(i%3-1)*4,y-6-Math.floor(i/3)*4,1.7,0,Math.PI*2);context.fill();}
+        for(let i=0;i<Math.min(station.floor||station.service?0:6,stock);i++){context.beginPath();context.arc(x+(i%3-1)*4,y-6-Math.floor(i/3)*4,1.7,0,Math.PI*2);context.fill();}
       }else{context.beginPath();context.arc(x,y,5,0,Math.PI*2);context.stroke();}
+    }
+    for(const piece of sim.game.motion.pieces){
+      const [x,y]=at(piece.p);
+      context.fillStyle=piece.station===highlighted?'#fff':'#ffcc62';context.strokeStyle='#54421e';context.lineWidth=.7;
+      context.beginPath();context.arc(x,y,Math.max(1.25,piece.radiusIn*scale),0,2*Math.PI);context.fill();context.stroke();
+    }
+    for(const s of stations.filter(s=>s.kind==='scoring')){
+      const last=sim.game.events.findLast(e=>e.station===s.id && e.operation==='attempt' && e.pieces.length);
+      if(!last || last.phase!==sim.phase || sim.ticks*rehearsal.dt-last.timeS>1.5)continue;
+      const [x,y]=at(s.displayAt??s.at);
+      context.font='bold 13px system-ui';context.textAlign='center';
+      context.fillStyle=last.points?'#c3ffd5':'#ffd5af';
+      context.fillText(last.points?'+'+last.points:'×',x,y-9);
     }
     for(const h of sim.hotspots){
       const xy=at(h.point);context.fillStyle='#ffbd6e91';context.beginPath();
@@ -120,7 +135,7 @@
     // exact and lead to a readable badge when several objectives share a face.
     const placed=[];
     for(const [i,s] of stations.entries()){
-      if(highlighted && highlighted!==s.id)continue;
+      if(highlighted!==s.id)continue;
       const [x,y]=at(s.displayAt ?? s.at);
       const count=s.kind==='retrieval'?sim.game.stock[s.id].length:sim.game.attempts[s.id];
       const label=(i+1)+'·'+count;
@@ -212,8 +227,15 @@
       const heading=document.createElement('h3');heading.textContent=(side==='blue'?'Blue':'Red')+' alliance';group.append(heading);
       rosterBox.append(group);
       for(const r of roster.filter(r=>r.side===side).sort((a,b)=>a.slot-b.slot)){
-      const card=document.createElement('section');card.className='replay-robot '+r.side;
-      const title=document.createElement('strong');title.textContent=(r.side==='blue'?'Blue ':'Red ')+r.slot+' · '+r.id;
+      const card=document.createElement('details');card.className='replay-robot '+r.side;
+      card.name='robot-editor';card.open=expandedRobot===r.id;card.ontoggle=()=>{if(card.open)expandedRobot=r.id;else if(expandedRobot===r.id)expandedRobot=null;};
+      const title=document.createElement('summary');
+      const assignment=sim.game.opening[r.id],role=document.createElement('small');
+      title.textContent=r.id+' · '+rehearsal.behaviors[r.plans[config.periods[0].name]];
+      const preload=sim.game.cargo[r.id].map(p=>p.id);
+      const task=assignment.piece ?? (assignment.yieldPickup?'yield pickup':assignment.fallback==='preload' && preload.length?
+        preload[0]+(preload.length>1?' + '+(preload.length-1)+' more':''):assignment.fallback);
+      role.textContent='Opening · '+task;role.title=preload.join(', ');title.append(role);
       card.append(title);
       for(const period of config.periods){
         const key=period.name,name=key+' behavior';
@@ -235,8 +257,7 @@
       addNumber('Bumper per side (in)',r.bumper,0,12,.25,'bumper');
       const apply=button('Use trial box',()=>edit(r.id,{length:state.length,width:state.width,height:state.height,heading:state.heading,frameProfile:state.frameProfile??{kind:'square'}}));
       apply.setAttribute('aria-label','Use trial box for '+r.id);
-      const remove=button('Remove',()=>setRoster(roster.filter(other=>other.id!==r.id)));
-      remove.setAttribute('aria-label','Remove '+r.id);configLine.append(apply,remove);card.append(configLine);terminalEditor(r,card);group.append(card);
+      configLine.append(apply);card.append(configLine);terminalEditor(r,card);group.append(card);
       }
     }
   }
@@ -250,15 +271,13 @@
     const began=Boolean(series) || sim.ticks>0 || sim.phaseIndex>0 || !sim.paused;
     for(const control of rosterBox.querySelectorAll('select,input,button'))control.disabled=began;
     byId('replaySetup').disabled=began;
-    for(const side of ['blue','red'])byId(side==='blue'?'addBlue':'addRed').disabled=began || roster.filter(r=>r.side===side).length>=3;
+    byId('scoreBlue').textContent=sim.game.score.blue;byId('scoreRed').textContent=sim.game.score.red;
     const end=sim.ended;
     byId('replayRun').disabled=!roster.length || (end && sim.phaseIndex===config.periods.length-1);
     if(series)byId('replayRun').disabled=true;
     seriesSource.disabled=Boolean(series && !series.done);
     byId('replaySeries').textContent=series && !series.done ? (seriesPaused?'Resume series at 10×':'Pause series') : 'Play match series at 10×';
-    byId('replayScore').textContent=(config.stations?.length?'Modeled rehearsal score · Blue '+sim.game.score.blue+' · Red '+sim.game.score.red+
-      '. '+config.stations.filter(s=>s.kind==='retrieval').map(s=>s.label+' '+sim.game.stock[s.id].length+' '+s.piece+' available').join(' · '):
-      (sim.game.endgame?'Modeled rehearsal score · Blue '+sim.game.score.blue+' · Red '+sim.game.score.red:'This profile has no registered piece or scoring stations.'))+(series?' · '+activeSource+' · Match '+series.match.id+' · '+series.match.basis:'');
+    byId('replayScore').textContent=series?activeSource+' · '+series.match.id:sim.game.motion.pieces.length+' loose · '+Object.values(sim.game.cargo).flat().length+' carried';
     const terminal=sim.game.endgame, report=byId('replayTerminal');
     report.hidden=!terminal;
     if(terminal){
@@ -271,13 +290,13 @@
       report.textContent=rows.join(' · ') || 'Choose a terminal objective in a robot’s roster to interrupt its ordinary scoring cycle.';
     }
     for(const s of stations){
-      const count=s.kind==='retrieval'?sim.game.stock[s.id].length+' available':
+      const count=s.kind==='retrieval'?sim.game.stock[s.id].length+' available'+(s.service?' · '+sim.game.reserve[s.id].length+' in reserve · '+s.service.operator+(sim.game.operators[s.service.operator]?.job?.station===s.id?' serving':''):''):
         sim.game.attempts[s.id]+' attempted'+(s.capacity===undefined?'':' · '+sim.game.occupied[s.id]+'/'+s.capacity+' occupied');
       const output=counters.get(s.id).counts,next=' '+s.piece+' · '+count;
       if(output.textContent!==next)output.textContent=next;
     }
     const following=config.periods[sim.phaseIndex+1];
-    byId('replayRun').textContent=end?(following?'Start '+following.name:'Match complete'):(!sim.paused?'Pause':used?'Resume':'Start '+sim.phase);
+    byId('replayRun').textContent=end?(following?'Play '+following.name:'Match complete'):(!sim.paused?'Pause match':used?'Resume match':'Play match');
     for(const id of ['replayStep','replayFast'])byId(id).disabled=Boolean(series) || !sim.paused || end || !roster.length;
     for(const r of sim.robots){
       const o=byId('replay-state-'+r.id);
@@ -363,6 +382,7 @@
     frame=null;
     if(sim.paused)return;
     rehearsal.advance(sim,Math.max(0,(now-lastTime)/1000));lastTime=now;
+    if(sim.ended && config.periods[sim.phaseIndex+1]){rehearsal.nextPhase(sim);sim.paused=false;}
     render();
     if(!sim.paused)frame=requestAnimationFrame(animate);
   }
@@ -405,10 +425,5 @@
     notice.textContent='Saved '+id+' for the narrative download.';
   };
   byId('replaySetup').onchange=e=>setRoster(roster,e.target.value);
-  function addRobot(side){
-    const slot=[1,2,3].find(n=>!roster.some(r=>r.side===side && r.slot===n));
-    if(slot)setRoster([...roster,rehearsal.defaults(side,slot)]);
-  }
-  byId('addBlue').onclick=()=>addRobot('blue');byId('addRed').onclick=()=>addRobot('red');
   new ResizeObserver(draw).observe(canvas);listRoster();render();
 })();

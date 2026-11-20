@@ -1,3 +1,4 @@
+import {createFieldPieceMotion} from './field-piece-motion.mjs';
 import { createRehearsalGame } from './rehearsal-game.mjs';
 import { createTerminalRehearsal } from './rehearsal-terminal.mjs';
 import { fieldGeometry } from './field-rehearsal-geometry.mjs';
@@ -7,7 +8,7 @@ export function createFieldRehearsal(profile) {
   const geom=fieldGeometry(profile);
   const model=profile.rehearsal, supported=Boolean(model?.schema==='field-rehearsal/v1');
   const L=profile.field.length,W=profile.field.width,dt=0.05;
-  const game=supported ? createRehearsalGame(profile) : null;
+  const game=supported ? createRehearsalGame(profile,geom,createFieldPieceMotion(profile,geom)) : null;
   const terminal=supported ? createTerminalRehearsal(profile) : null;
   const behaviors=Object.fromEntries(Object.entries(model?.programs || {}).map(([key,p])=>[key,p.label]));
   const phases=model?.periods || [];
@@ -17,12 +18,22 @@ export function createFieldRehearsal(profile) {
   const assessRoute=(line,body,setup=model?.setups[0])=>supported?geom.assessRoute(line,body,setup):
     {status:'unknown',obstacle:null,segment:null};
   function defaults(side,slot) {
-    const {orders,...body}=model.defaults,order=orders[slot-1];
+    const {orders,roster:projectRoster,...body}=model.defaults,order=orders[slot-1];
     if(body.frameProfile===undefined&&profile.frameProfile!==undefined)body.frameProfile=profile.frameProfile;
     const heading=side==='red'?Math.atan2((model.mirror.redY?-1:1)*Math.sin(body.heading*Math.PI/180),
       (model.mirror.redX?-1:1)*Math.cos(body.heading*Math.PI/180))*180/Math.PI:body.heading;
     const plans=Object.fromEntries(phases.map(p=>[p.name,order]));
     return {id:(side==='blue'?'B':'R')+slot,side,slot,plans,...body,heading};
+  }
+  function completeRoster(rows=[]) {
+    if(!Array.isArray(rows) || rows.some(r=>!sides.includes(r.side) || ![1,2,3].includes(r.slot)) ||
+       new Set(rows.map(r=>r.side+'/'+r.slot)).size!==rows.length)throw Error('Use unique alliance slots 1 through 3.');
+    return sides.flatMap(side=>[1,2,3].map(slot=>({...defaults(side,slot),...rows.find(r=>r.side===side&&r.slot===slot)})));
+  }
+  const sides=['blue','red'];
+  function startingRoster(){
+    const rows=model.defaults.roster ?? model.series?.matches?.[0]?.roster ?? [];
+    return completeRoster(rows);
   }
   function reservations(){
     const names=new Set([model.resourceLabel]);
@@ -33,7 +44,11 @@ export function createFieldRehearsal(profile) {
     }
     return Object.fromEntries([...names].map(key=>[key,{owner:null,queue:[]}]));
   }
-  function create(roster,setup=model?.setups[0],tieWinner,atRestAfterS) {
+  function create(roster,setup,tieWinner,atRestAfterS) {
+    if(roster?.length!==6)throw Error('A match needs exactly six unique alliance slots, three per side.');
+    return createProbe(roster,setup,tieWinner,atRestAfterS);
+  }
+  function createProbe(roster,setup=model?.setups[0],tieWinner,atRestAfterS) {
     if(!supported)throw Error('Supply an external rehearsal geometry and behavior model.');
     if(!model.setups.includes(setup))throw Error('Unknown obstacle setup.');
     if(!Array.isArray(roster) || roster.length>6)throw Error('Use up to three robots per alliance.');
@@ -53,16 +68,23 @@ export function createFieldRehearsal(profile) {
       robots.push({...b,p,leg:0,waypoints:null,target:0,dwell:0,wait:0,travelIn:0,visits:0,blocked:'',action:''});
     }
     robots.sort((a,b)=>a.id.localeCompare(b.id));
-    const ledger=game.start(robots,tieWinner);
+    const ledger=game.start(robots,tieWinner,setup);
     if(terminal)ledger.endgame=terminal.start(robots,atRestAfterS,setup);
     else if(robots.some(r=>r.endgame!==undefined) || atRestAfterS!==undefined)throw Error('Supply an endgame model before scheduling a terminal action.');
-    return {robots,setup,game:ledger,phase:phases[0].name,phaseIndex:0,ticks:0,paused:true,ended:false,resources:reservations(),hotspots:[],
+    const sim={robots,setup,game:ledger,phase:phases[0].name,phaseIndex:0,ticks:0,paused:true,ended:false,resources:reservations(),hotspots:[],
       log:[], carry:0,phaseHistory:[]};
+    game.replenish(sim,0);
+    return sim;
   }
   function program(r,sim){return model.programs[r.plans[sim.phase]];}
   function itinerary(r,sim) {
     const chosen=program(r,sim);
-    return (chosen.byPeriod?.[sim.phase] || chosen.steps).map(step=>{
+    const steps=chosen.byPeriod?.[sim.phase] || chosen.steps;
+    const opening=sim.phaseIndex===0 && r.visits===0?sim.game.opening[r.id]:null;
+    const first=opening?steps.findIndex(s=>s.operation==='acquire'):-1;
+    return steps.map((step,index)=>{
+      if(index===first && opening?.approach)return {...step,station:opening.station,action:step.label,point:opening.approach,dwell:Math.round((step.dwell??0)/dt)};
+      if(index===first && opening?.yieldPickup)return {action:'Yield opening pickup',point:r.p,dwell:0};
       const spec=step.at;
       const q=Array.isArray(spec)?spec:spec[r.side] || spec.slots?.[r.slot] || spec.default;
       return {...step,action:step.label,point:step.frame==='field'?[...q]:sidePoint(q,r.side),
@@ -154,6 +176,7 @@ export function createFieldRehearsal(profile) {
       if(r.waypoints?.[r.target] && norm(b,r.waypoints[r.target])<1e-8)r.target++;
     }
     sim.robots.forEach((r,i)=>{r.travelIn+=norm(begins[i],ends[i]);r.p=ends[i];});
+    game.move(sim,dt,begins);
     terminal?.observe(sim,begins,sim.ticks*dt,(sim.ticks+1)*dt);
     sim.ticks++;
     if(sim.ticks>=duration(sim.phase)){
@@ -175,8 +198,9 @@ export function createFieldRehearsal(profile) {
   function nextPhase(sim) {
     if(!sim.ended || sim.phaseIndex===phases.length-1)throw Error('Finish the active period before advancing to a configured next period.');
     sim.phase=phases[++sim.phaseIndex].name;sim.ticks=0;sim.carry=0;sim.ended=false;sim.paused=true;sim.resources=reservations();
+    game.replenish(sim,0);
     for(const r of sim.robots)Object.assign(r,{leg:0,waypoints:null,target:0,dwell:0,wait:0,travelIn:0,visits:0,blocked:'',action:''});
   }
-  return {supported,behaviors,defaults,create,advance,nextPhase,assessRoute,geom,dt,periods:phases,terminal,
+  return {supported,behaviors,defaults,startingRoster,completeRoster,create,createProbe,advance,nextPhase,assessRoute,geom,dt,periods:phases,terminal,
     phaseSeconds:name=>duration(name)*dt};
 }

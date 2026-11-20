@@ -12,7 +12,7 @@
           "concept": "shared",
           "case": "nominal",
           "runId": "shared/nominal",
-          "contractKey": "d676464150f3e677ab10298eff5d70c559cd61baa8a0e047969ba87086d850ea",
+          "contractKey": "42a838b350ddc028d7448c53bc46107047b678acf1bdef67fb6999ef8b786294",
           "phase": "Main play",
           "station": "blue-bay",
           "criterion": "A carried tile reaches the release area after the authored service dwell.",
@@ -27,12 +27,79 @@
             "setup": "lowered",
             "peers": [
               {
+                "id": "B2",
+                "side": "blue",
+                "slot": 2,
+                "plans": {
+                  "Opening": "receive",
+                  "Main play": "receive"
+                },
+                "length": 24,
+                "width": 24,
+                "height": 26,
+                "bumper": 3,
+                "heading": 0,
+                "speed": 78
+              },
+              {
+                "id": "B3",
+                "side": "blue",
+                "slot": 3,
+                "plans": {
+                  "Opening": "patrol",
+                  "Main play": "patrol"
+                },
+                "length": 24,
+                "width": 24,
+                "height": 26,
+                "bumper": 3,
+                "heading": 0,
+                "speed": 78
+              },
+              {
+                "id": "R1",
                 "side": "red",
                 "slot": 1,
                 "plans": {
                   "Opening": "shuttle",
                   "Main play": "shuttle"
-                }
+                },
+                "length": 24,
+                "width": 24,
+                "height": 26,
+                "bumper": 3,
+                "heading": -180,
+                "speed": 78
+              },
+              {
+                "id": "R2",
+                "side": "red",
+                "slot": 2,
+                "plans": {
+                  "Opening": "receive",
+                  "Main play": "receive"
+                },
+                "length": 24,
+                "width": 24,
+                "height": 26,
+                "bumper": 3,
+                "heading": -180,
+                "speed": 78
+              },
+              {
+                "id": "R3",
+                "side": "red",
+                "slot": 3,
+                "plans": {
+                  "Opening": "patrol",
+                  "Main play": "patrol"
+                },
+                "length": 24,
+                "width": 24,
+                "height": 26,
+                "bumper": 3,
+                "heading": -180,
+                "speed": 78
               }
             ],
             "robotsAtStart": [
@@ -48,6 +115,28 @@
                 ]
               },
               {
+                "id": "B2",
+                "xyIn": [
+                  32,
+                  147.60000000000002
+                ],
+                "heading": 0,
+                "cargo": [
+                  "blue-desk/1"
+                ]
+              },
+              {
+                "id": "B3",
+                "xyIn": [
+                  70,
+                  239
+                ],
+                "heading": 0,
+                "cargo": [
+                  "blue-layout/1"
+                ]
+              },
+              {
                 "id": "R1",
                 "xyIn": [
                   305,
@@ -56,6 +145,28 @@
                 "heading": -180,
                 "cargo": [
                   "red-supply/2"
+                ]
+              },
+              {
+                "id": "R2",
+                "xyIn": [
+                  448,
+                  116.39999999999998
+                ],
+                "heading": -180,
+                "cargo": [
+                  "red-desk/1"
+                ]
+              },
+              {
+                "id": "R3",
+                "xyIn": [
+                  410,
+                  25
+                ],
+                "heading": -180,
+                "cargo": [
+                  "red-layout/1"
                 ]
               }
             ],
@@ -154,7 +265,7 @@
           "concept": "shared",
           "case": "receiver-busy",
           "runId": "shared/receiver-busy",
-          "contractKey": "d676464150f3e677ab10298eff5d70c559cd61baa8a0e047969ba87086d850ea",
+          "contractKey": "42a838b350ddc028d7448c53bc46107047b678acf1bdef67fb6999ef8b786294",
           "phase": "Main play",
           "station": "blue-bay",
           "criterion": "A carried tile reaches the release area after the authored service dwell.",
@@ -169,12 +280,79 @@
             "setup": "lowered",
             "peers": [
               {
+                "id": "B2",
+                "side": "blue",
+                "slot": 2,
+                "plans": {
+                  "Opening": "receive",
+                  "Main play": "receive"
+                },
+                "length": 24,
+                "width": 24,
+                "height": 26,
+                "bumper": 3,
+                "heading": 0,
+                "speed": 78
+              },
+              {
+                "id": "B3",
+                "side": "blue",
+                "slot": 3,
+                "plans": {
+                  "Opening": "patrol",
+                  "Main play": "patrol"
+                },
+                "length": 24,
+                "width": 24,
+                "height": 26,
+                "bumper": 3,
+                "heading": 0,
+                "speed": 78
+              },
+              {
+                "id": "R1",
                 "side": "red",
                 "slot": 1,
                 "plans": {
                   "Opening": "shuttle",
                   "Main play": "shuttle"
-                }
+                },
+                "length": 24,
+                "width": 24,
+                "height": 26,
+                "bumper": 3,
+                "heading": -180,
+                "speed": 78
+              },
+              {
+                "id": "R2",
+                "side": "red",
+                "slot": 2,
+                "plans": {
+                  "Opening": "receive",
+                  "Main play": "receive"
+                },
+                "length": 24,
+                "width": 24,
+                "height": 26,
+                "bumper": 3,
+                "heading": -180,
+                "speed": 78
+              },
+              {
+                "id": "R3",
+                "side": "red",
+                "slot": 3,
+                "plans": {
+                  "Opening": "patrol",
+                  "Main play": "patrol"
+                },
+                "length": 24,
+                "width": 24,
+                "height": 26,
+                "bumper": 3,
+                "heading": -180,
+                "speed": 78
               }
             ],
             "robotsAtStart": [
@@ -190,6 +368,28 @@
                 ]
               },
               {
+                "id": "B2",
+                "xyIn": [
+                  32,
+                  147.60000000000002
+                ],
+                "heading": 0,
+                "cargo": [
+                  "blue-desk/1"
+                ]
+              },
+              {
+                "id": "B3",
+                "xyIn": [
+                  70,
+                  239
+                ],
+                "heading": 0,
+                "cargo": [
+                  "blue-layout/1"
+                ]
+              },
+              {
                 "id": "R1",
                 "xyIn": [
                   305,
@@ -198,6 +398,28 @@
                 "heading": -180,
                 "cargo": [
                   "red-supply/2"
+                ]
+              },
+              {
+                "id": "R2",
+                "xyIn": [
+                  448,
+                  116.39999999999998
+                ],
+                "heading": -180,
+                "cargo": [
+                  "red-desk/1"
+                ]
+              },
+              {
+                "id": "R3",
+                "xyIn": [
+                  410,
+                  25
+                ],
+                "heading": -180,
+                "cargo": [
+                  "red-layout/1"
                 ]
               }
             ],
@@ -290,7 +512,7 @@
           "concept": "independent",
           "case": "nominal",
           "runId": "independent/nominal",
-          "contractKey": "d676464150f3e677ab10298eff5d70c559cd61baa8a0e047969ba87086d850ea",
+          "contractKey": "42a838b350ddc028d7448c53bc46107047b678acf1bdef67fb6999ef8b786294",
           "phase": "Main play",
           "station": "blue-bay",
           "criterion": "A carried tile reaches the release area after the authored service dwell.",
@@ -305,12 +527,79 @@
             "setup": "lowered",
             "peers": [
               {
+                "id": "B2",
+                "side": "blue",
+                "slot": 2,
+                "plans": {
+                  "Opening": "receive",
+                  "Main play": "receive"
+                },
+                "length": 24,
+                "width": 24,
+                "height": 26,
+                "bumper": 3,
+                "heading": 0,
+                "speed": 78
+              },
+              {
+                "id": "B3",
+                "side": "blue",
+                "slot": 3,
+                "plans": {
+                  "Opening": "patrol",
+                  "Main play": "patrol"
+                },
+                "length": 24,
+                "width": 24,
+                "height": 26,
+                "bumper": 3,
+                "heading": 0,
+                "speed": 78
+              },
+              {
+                "id": "R1",
                 "side": "red",
                 "slot": 1,
                 "plans": {
                   "Opening": "shuttle",
                   "Main play": "shuttle"
-                }
+                },
+                "length": 24,
+                "width": 24,
+                "height": 26,
+                "bumper": 3,
+                "heading": -180,
+                "speed": 78
+              },
+              {
+                "id": "R2",
+                "side": "red",
+                "slot": 2,
+                "plans": {
+                  "Opening": "receive",
+                  "Main play": "receive"
+                },
+                "length": 24,
+                "width": 24,
+                "height": 26,
+                "bumper": 3,
+                "heading": -180,
+                "speed": 78
+              },
+              {
+                "id": "R3",
+                "side": "red",
+                "slot": 3,
+                "plans": {
+                  "Opening": "patrol",
+                  "Main play": "patrol"
+                },
+                "length": 24,
+                "width": 24,
+                "height": 26,
+                "bumper": 3,
+                "heading": -180,
+                "speed": 78
               }
             ],
             "robotsAtStart": [
@@ -326,6 +615,28 @@
                 ]
               },
               {
+                "id": "B2",
+                "xyIn": [
+                  32,
+                  147.60000000000002
+                ],
+                "heading": 0,
+                "cargo": [
+                  "blue-desk/1"
+                ]
+              },
+              {
+                "id": "B3",
+                "xyIn": [
+                  70,
+                  239
+                ],
+                "heading": 0,
+                "cargo": [
+                  "blue-layout/1"
+                ]
+              },
+              {
                 "id": "R1",
                 "xyIn": [
                   305,
@@ -334,6 +645,28 @@
                 "heading": -180,
                 "cargo": [
                   "red-supply/2"
+                ]
+              },
+              {
+                "id": "R2",
+                "xyIn": [
+                  448,
+                  116.39999999999998
+                ],
+                "heading": -180,
+                "cargo": [
+                  "red-desk/1"
+                ]
+              },
+              {
+                "id": "R3",
+                "xyIn": [
+                  410,
+                  25
+                ],
+                "heading": -180,
+                "cargo": [
+                  "red-layout/1"
                 ]
               }
             ],
@@ -456,7 +789,7 @@
           "concept": "independent",
           "case": "receiver-busy",
           "runId": "independent/receiver-busy",
-          "contractKey": "d676464150f3e677ab10298eff5d70c559cd61baa8a0e047969ba87086d850ea",
+          "contractKey": "42a838b350ddc028d7448c53bc46107047b678acf1bdef67fb6999ef8b786294",
           "phase": "Main play",
           "station": "blue-bay",
           "criterion": "A carried tile reaches the release area after the authored service dwell.",
@@ -471,12 +804,79 @@
             "setup": "lowered",
             "peers": [
               {
+                "id": "B2",
+                "side": "blue",
+                "slot": 2,
+                "plans": {
+                  "Opening": "receive",
+                  "Main play": "receive"
+                },
+                "length": 24,
+                "width": 24,
+                "height": 26,
+                "bumper": 3,
+                "heading": 0,
+                "speed": 78
+              },
+              {
+                "id": "B3",
+                "side": "blue",
+                "slot": 3,
+                "plans": {
+                  "Opening": "patrol",
+                  "Main play": "patrol"
+                },
+                "length": 24,
+                "width": 24,
+                "height": 26,
+                "bumper": 3,
+                "heading": 0,
+                "speed": 78
+              },
+              {
+                "id": "R1",
                 "side": "red",
                 "slot": 1,
                 "plans": {
                   "Opening": "shuttle",
                   "Main play": "shuttle"
-                }
+                },
+                "length": 24,
+                "width": 24,
+                "height": 26,
+                "bumper": 3,
+                "heading": -180,
+                "speed": 78
+              },
+              {
+                "id": "R2",
+                "side": "red",
+                "slot": 2,
+                "plans": {
+                  "Opening": "receive",
+                  "Main play": "receive"
+                },
+                "length": 24,
+                "width": 24,
+                "height": 26,
+                "bumper": 3,
+                "heading": -180,
+                "speed": 78
+              },
+              {
+                "id": "R3",
+                "side": "red",
+                "slot": 3,
+                "plans": {
+                  "Opening": "patrol",
+                  "Main play": "patrol"
+                },
+                "length": 24,
+                "width": 24,
+                "height": 26,
+                "bumper": 3,
+                "heading": -180,
+                "speed": 78
               }
             ],
             "robotsAtStart": [
@@ -492,6 +892,28 @@
                 ]
               },
               {
+                "id": "B2",
+                "xyIn": [
+                  32,
+                  147.60000000000002
+                ],
+                "heading": 0,
+                "cargo": [
+                  "blue-desk/1"
+                ]
+              },
+              {
+                "id": "B3",
+                "xyIn": [
+                  70,
+                  239
+                ],
+                "heading": 0,
+                "cargo": [
+                  "blue-layout/1"
+                ]
+              },
+              {
                 "id": "R1",
                 "xyIn": [
                   305,
@@ -500,6 +922,28 @@
                 "heading": -180,
                 "cargo": [
                   "red-supply/2"
+                ]
+              },
+              {
+                "id": "R2",
+                "xyIn": [
+                  448,
+                  116.39999999999998
+                ],
+                "heading": -180,
+                "cargo": [
+                  "red-desk/1"
+                ]
+              },
+              {
+                "id": "R3",
+                "xyIn": [
+                  410,
+                  25
+                ],
+                "heading": -180,
+                "cargo": [
+                  "red-layout/1"
                 ]
               }
             ],

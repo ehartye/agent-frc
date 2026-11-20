@@ -7,7 +7,7 @@ import {createRehearsalGame,rehearsalFindings} from '../scripts/rehearsal-game.m
 
 const profile=JSON.parse(await readFile(new URL('../examples/kickoff/training-field.json',import.meta.url)));
 function conserved(game) {
-  const ids=[...Object.values(game.stock).flat(),...Object.values(game.cargo).flat(),...game.terminal,...game.returning.map(r=>r.piece)].map(p=>p.id);
+  const ids=[...Object.values(game.stock).flat(),...Object.values(game.reserve).flat(),...Object.values(game.cargo).flat(),...game.terminal,...game.returning.map(r=>r.piece)].map(p=>p.id);
   assert.equal(new Set(ids).size,ids.length);
   assert.equal(ids.length,Object.values(game.initial).reduce((a,b)=>a+b,0));
 }
@@ -31,36 +31,28 @@ test('series keeps fixed-step clocks, fresh stock and independent period behavio
 });
 test('published scenarios and repeated student matches reset to the same edited configuration',()=>{
   const model=profile.rehearsal, engine=createFieldRehearsal(profile), published=model.series.matches;
-  const workspace=createRehearsalSetup(engine,[],model.setups[0],published);
+  const workspace=createRehearsalSetup(engine,engine.startingRoster(),model.setups[0],published);
   const robot={...engine.defaults('red',2),speed:17,plans:{...published[0].roster[0].plans}};
   const setup=model.setups.at(-1);
-  workspace.edit([robot],setup);
+  const lineup=engine.completeRoster([robot]);workspace.edit(lineup,setup);
   assert.throws(()=>workspace.edit([],'unknown'));
   const presets=workspace.series('published');
   presets.advance(1);
-  assert.equal(workspace.reset().robots[0].speed,17);
+  assert.equal(workspace.reset().robots.find(r=>r.id===robot.id).speed,17);
   presets.advance(1000);
   assert.deepEqual(presets.results.map(m=>m.id),published.map(m=>m.id));
   const custom=workspace.series('student');
   custom.advance(1000);
   for(const trial of custom.results){
-    assert.deepEqual(trial.roster,[robot]);assert.equal(trial.setup,setup);
+    assert.deepEqual(trial.roster,lineup);assert.equal(trial.setup,setup);
     assert.deepEqual(trial.periods.map(p=>p.phase),model.periods.map(p=>p.name));
   }
   assert.equal(custom.results.length,3);
   assert.notEqual(custom.results[0].roster[0].plans,custom.results[1].roster[0].plans);
-  assert.deepEqual(workspace.roster,[robot]);
+  assert.deepEqual(workspace.roster,lineup);
   assert.equal(workspace.reset().ticks,0);
-  workspace.edit([],setup);
-  const empty=workspace.series('student');
-  empty.advance(1000);
-  assert.equal(empty.results.length,3);
-  for(const trial of empty.results){
-    assert.deepEqual(trial.roster,[]);assert.deepEqual(trial.game.score,{blue:0,red:0});
-    conserved(trial.game);
-  }
-  assert.ok(workspace.series('published').match.roster.length>0);
-  assert.equal(workspace.reset().robots.length,0);
+  assert.throws(()=>workspace.edit([],setup),/exactly six/);
+  assert.equal(workspace.reset().robots.length,6);
   assert.throws(()=>createMatchSeries(engine,[{...published[0],roster:[]}]),/roster/);
 });
 test('finite stock, typed cargo, inactive/tied targets and delayed return preserve each identity',()=>{

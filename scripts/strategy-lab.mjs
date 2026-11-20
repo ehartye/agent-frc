@@ -71,7 +71,7 @@ export function compareRoles(profile, study) {
         return {id:robot.id,phase:period.phase,seconds:period.seconds,waitS:robot.waitSeconds,
           travelIn:robot.travelIn,tally,acceptedPerSecond:(tally['attempt/credited']?.pieces??0)/period.seconds};
       }));
-      cells.push({context:context.id, match:match.id, role:role.id, setup, focal, roster, periods, byRobot,
+      cells.push({context:context.id, match:match.id, role:role.id, setup, focal, roster:run.match.roster, periods, byRobot,
         score:game.score, ordinary:game.endgame?.ordinaryScore ?? game.score,
         terminal:game.endgame?.terminalScore ?? {blue:0,red:0},
         occupied:game.occupied, attempts:game.attempts, events:game.events, endgame:game.endgame ?? null,

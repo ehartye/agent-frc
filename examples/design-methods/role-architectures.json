@@ -33,7 +33,7 @@
           "case": "nominal",
           "source": {
             "path": "examples/design-methods/role-fixture-results.json",
-            "sha256": "f3cb64496b5f59a2ca471f7fe6d743e7060bc1f6893dae9eb6e9d910bf13b760"
+            "sha256": "6c5cb743aef862eb5ce26402cb033bbfd7ee3c051e72e504043f7ec0045b5911"
           },
           "execution": "/runs/shared/nominal",
           "values": {
@@ -44,7 +44,7 @@
           "case": "receiver-busy",
           "source": {
             "path": "examples/design-methods/role-fixture-results.json",
-            "sha256": "f3cb64496b5f59a2ca471f7fe6d743e7060bc1f6893dae9eb6e9d910bf13b760"
+            "sha256": "6c5cb743aef862eb5ce26402cb033bbfd7ee3c051e72e504043f7ec0045b5911"
           },
           "execution": "/runs/shared/receiver-busy",
           "values": {
@@ -68,7 +68,7 @@
           "case": "nominal",
           "source": {
             "path": "examples/design-methods/role-fixture-results.json",
-            "sha256": "f3cb64496b5f59a2ca471f7fe6d743e7060bc1f6893dae9eb6e9d910bf13b760"
+            "sha256": "6c5cb743aef862eb5ce26402cb033bbfd7ee3c051e72e504043f7ec0045b5911"
           },
           "execution": "/runs/independent/nominal",
           "values": {
@@ -79,7 +79,7 @@
           "case": "receiver-busy",
           "source": {
             "path": "examples/design-methods/role-fixture-results.json",
-            "sha256": "f3cb64496b5f59a2ca471f7fe6d743e7060bc1f6893dae9eb6e9d910bf13b760"
+            "sha256": "6c5cb743aef862eb5ce26402cb033bbfd7ee3c051e72e504043f7ec0045b5911"
           },
           "execution": "/runs/independent/receiver-busy",
           "values": {
@@ -92,7 +92,7 @@
   "roleHandoff": {
     "selection": {
       "path": "examples/design-methods/role-selection.json",
-      "sha256": "3840c28f75b252582dd15f4f232d192c62fb4ae3be4c06e34df25f802a0ebbcc"
+      "sha256": "49607308e0d9dd098c4f872d2f5a26f0616d3d6dc6db7341e566bf4f20a87faf"
     },
     "pairs": [
       {

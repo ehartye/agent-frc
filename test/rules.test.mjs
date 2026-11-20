@@ -23,7 +23,8 @@ test('compiled rules and the lab share the ordered scoring clock', () => {
     pointer:'/scoring/phases',value:profile.scoring.phases});
   function withPeriods(periods) {
     const {endgame,series,...clockFixture}=profile.rehearsal;
-    return {...profile,rehearsal:{...clockFixture,periods}};
+    const stations=clockFixture.stations.map(s=>s.service?{...s,service:{...s.service,phases:periods.map(p=>p.name)}}:s);
+    return {...profile,rehearsal:{...clockFixture,periods,stations}};
   }
   const [opening,main] = profile.scoring.phases;
   const split = [

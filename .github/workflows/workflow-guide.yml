@@ -27,6 +27,8 @@ on:
       - 'scripts/piece-window.mjs'
       - 'examples/design-methods/**'
       - 'scripts/field-rehearsal*.mjs'
+      - 'scripts/field-piece-motion.mjs'
+      - 'scripts/auto-allocation.mjs'
       - 'scripts/rehearsal-*.mjs'
       - 'scripts/project-layout.mjs'
       - 'scripts/frame-*.mjs'
