@@ -355,11 +355,26 @@ export async function buildHighlights(manifest, directory) {
     revisionLabel:stage === 'analysis' ? 'Analysis revision' : 'Candidate', model:model+coverage, media:media ? '<section id="media"><h2>Evidence gallery</h2>' + media + '</section>' : '',
     campaign, campaignLink:campaign ? '<a href="#campaign">Repeatability</a>' : '', mediaLink:media ? '<a href="#media">Gallery</a>' : ''};
   const html = applyStyle(template.replace(/\{\{(\w+)\}\}/g, (_, key) => fields[key]));
+  const visuals=[...assets.values()].filter(asset=>/\.(?:png|jpe?g|webp|mp4|webm|pdf)$/i.test(asset));
+  if(!release&&!student&&visuals.length){
+    const known=JSON.parse(await readFile(new URL('../references/retained-teaching-display.json',import.meta.url),'utf8'));
+    const pending=[];
+    for(const visual of visuals){
+      if(await digest(visual)===known.illustratedStroke)continue;
+      let independent=false;
+      if(process.env.FRC_VERIFIED_FIELD_ROOT){
+        const approved=await realpath(process.env.FRC_VERIFIED_FIELD_ROOT);
+        requireValue(approved!==root&&!within(root,approved),'Keep independently generated field media outside the candidate');
+        const file=path.join(approved,path.relative(root,visual));
+        try{independent=within(approved,await realpath(file))&&await digest(file)===await digest(visual);}catch(e){if(e.code!=='ENOENT')throw e;}
+      }
+      if(!independent)pending.push(path.relative(root,visual));
+    }
+    if(pending.length)release={study_path:data.mechanicalReadiness??null,source:null,derivatives:pending};
+  }
   if(student || release){
     release??={study_path:data.mechanicalReadiness??null,source:null,derivatives:[]};
-    for(const asset of assets.values()){
-      if(/\.(?:png|jpe?g|webp|mp4|webm|pdf)$/i.test(asset))release.derivatives.push(path.relative(root,asset));
-    }
+    if(release.source||student)for(const asset of visuals)release.derivatives.push(path.relative(root,asset));
     if(student)release.native=path.relative(root,student.file);
     await authorizeModel(python,root,release);
   }

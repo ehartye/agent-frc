@@ -5,8 +5,9 @@ from tempfile import TemporaryDirectory
 import unittest
 
 from mechanical_fixture import fixture, write, SCRIPTS
-from mechanical_readiness import review, verify_delivery, digest,scan
+from mechanical_readiness import evaluate_inputs as review, verify_delivery, digest,scan
 from showcase_contacts import measure
+from mesh_controls import MeshComparisons
 
 
 class Readiness(unittest.TestCase):
@@ -52,7 +53,7 @@ class Readiness(unittest.TestCase):
         spec=json.loads(authority.read_bytes());issued=json.loads(lineage.read_bytes())
         self.assertEqual(verify(self.root,authority,lineage)["policy"],"registered-offline-archive")
         spec["source"]={"kind":"cloud","dataFileId":"unique-cloud-file"}
-        issued.update(authority=write(self.root,authority.name,spec),policy="observed-cloud-latest",
+        issued.update(authority=write(self.root,self.s["authority"]["file"],spec),policy="observed-cloud-latest",
             dataFileId="other-cloud-file",savedVersion=8,latestVersion=8,versionId="exact-8",children=[],hasOutofDateChildReferences=False)
         def check():
             write(self.root,lineage.name,issued)
@@ -66,7 +67,7 @@ class Readiness(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"stale"):
             check()
         spec["pinnedChildren"]=[dict(id="link",versionId="v2",basis="version-qualified option")]
-        issued["authority"]=write(self.root,authority.name,spec)
+        issued["authority"]=write(self.root,self.s["authority"]["file"],spec)
         self.assertEqual(check()["status"],"pass")
         (self.root/issued["step"]["file"]).write_text("stale export")
         with self.assertRaisesRegex(ValueError,"evidence"):
@@ -144,6 +145,16 @@ class Readiness(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"Changed evidence"):
             self.status()
 
+    def test_same_vendor_sku_and_good_source_geometry_do_not_cover_a_new_configuration(self):
+        from vendor_configuration import compare
+        article=self.s["articles"]["block"]
+        self.assertEqual(compare(self.root,article)["status"],"pass")
+        purchase=json.loads((self.root/"ordered.json").read_bytes())
+        purchase["items"].append(dict(position="spacer",partNumber="slim spacer",revision="b",quantity=2))
+        article["procurementBom"]=write(self.root,"ordered.json",purchase)
+        self.assertEqual(compare(self.root,article)["differentPositions"],["spacer"])
+        self.assertEqual(self.status()["showcaseEligibility"],"fail")
+
     def test_rights_for_native_and_derivatives_are_separate(self):
         p=self.root/"view.png";p.write_bytes(b"test view")
         self.s=fixture(self.root,assets=["view.png"])
@@ -176,7 +187,8 @@ class Readiness(unittest.TestCase):
             s=fixture(self.root,"actual.step",measured=data)
             self.assertEqual(review(self.root,s)["showcaseEligibility"],expected)
             if expected=="pass":
-                verify_candidate(self.root,"test-readiness.json","actual.step",[])
+                with self.assertRaisesRegex(ValueError,"native station|native Fusion"):
+                    verify_candidate(self.root,"test-readiness.json","actual.step",[])
             else:
                 with self.assertRaisesRegex(ValueError,"readiness fail"):
                     verify_candidate(self.root,"test-readiness.json","actual.step",[])

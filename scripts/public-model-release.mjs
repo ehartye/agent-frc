@@ -43,9 +43,16 @@ export async function issue(root,studyName,delivery,keyFile){
       ...delivery.files.flatMap(r=>['--deliver',r.local??r.path])],{encoding:'utf8',maxBuffer:64*1024*1024}));
   check(result.showcaseEligibility==='pass','Candidate did not pass the private issue review');
   const files=[];
+  for(const item of inputs){
+    if(path.extname(item).toLowerCase()!=='.json')continue;
+    const data=JSON.parse(readFileSync(item,'utf8').replace(/^\uFEFF/,''));
+    if(['agent-frc/cad-still@1','agent-frc/cad-still@2'].includes(data?.schema)){
+      check(data.solids===result.solids && data.sourceSha256===result.stepSha256,'Registered display receipt differs from reviewed geometry and census');
+    }
+  }
   for(const [i,r] of delivery.files.entries())files.push({path:relative(r.path),sha256:await hash(inputs[i])});
   const body={schema,project:delivery.project,scope:delivery.scope,configuration:result.configuration,studySha256:await hash(studyFile),
-    stepSha256:study.step.sha256,archiveSha256:study.archive.sha256,files:files.sort((a,b)=>a.path.localeCompare(b.path))};
+    stepSha256:study.step.sha256,archiveSha256:study.archive.sha256,solids:result.solids,files:files.sort((a,b)=>a.path.localeCompare(b.path))};
   opened(body);
   return {body,signature:sign(null,bytes(body),key).toString('base64')};
 }

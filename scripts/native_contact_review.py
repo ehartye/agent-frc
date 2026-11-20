@@ -13,6 +13,8 @@ def verify(root,study,reopen,base,registered,find,missing):
         return
     by_id={p["id"]:p for p in planned}
     require(len(by_id)==len(planned) and "saved" in by_id and by_id["saved"].get("joints")==[],"Invalid native pose registration")
+    nominal={(b["path"],b["name"]):b for b in base["bodies"]}
+    cold_shapes=None
     completed=set()
     for c in poses:
         pid=c.get("pose",{}).get("id")
@@ -30,8 +32,29 @@ def verify(root,study,reopen,base,registered,find,missing):
             if key not in registered:
                 find("native","fail",str(key),"Measured native body absent from the selected assembly.")
                 return
-            mapped.append(registered[key][0])
+            solid=registered[key][0]
+            mapped.append(solid)
             eps=study["reopenBoundsToleranceMm"]
+            if pid!="saved" and key in nominal:
+                before=nominal[key]
+                m0=before["worldTransform"];m1=row["worldTransform"]
+                require(len(m1)==16 and all(number(x) for x in m1),"Invalid measured pose transform")
+                if all(abs(m0[i]-m1[i])<1e-12 for i in (0,1,2,4,5,6,8,9,10)):
+                    delta=[m1[i]-m0[i] for i in (3,7,11)]
+                    expected_box=[value+delta[i%3] for i,value in enumerate(before["boundsMm"])]
+                else:
+                    from OCP.gp import gp_Trsf
+                    from OCP.BRepBuilderAPI import BRepBuilderAPI_Transform
+                    from mechanical_motion import bounds
+                    from showcase_contacts import load_solids
+                    if cold_shapes is None:
+                        cold_shapes=load_solids(pinned(root,study["step"]))[0]
+                    a=gp_Trsf();b=gp_Trsf();a.SetValues(*m0[:12]);b.SetValues(*m1[:12])
+                    relative=b.Multiplied(a.Inverted())
+                    expected_box=bounds(BRepBuilderAPI_Transform(cold_shapes[solid],relative,False).Shape())
+                if len(row.get("boundsMm",[]))!=6 or not all(number(v) for v in row["boundsMm"]) or any(
+                    abs(a-b)>eps for a,b in zip(row["boundsMm"],expected_box)):
+                    find("native","fail",[pid,solid],"Recorded pose bounds disagree with the placed source at the native transform.")
             if not number(row.get("worldVertexErrorMm")) or not 0<=row["worldVertexErrorMm"]<=eps or type(row.get("visible")) is not bool:
                 missing("native",str(key),"World-coordinate vertex validation or effective visibility failed.")
         if len(set(mapped))!=len(mapped) or set(mapped)!={v[0] for v in registered.values()}:

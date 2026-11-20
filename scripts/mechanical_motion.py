@@ -34,7 +34,11 @@ def transform(shape,moves,t):
     from OCP.BRepBuilderAPI import BRepBuilderAPI_Transform
     for move in moves:
         tr=gp_Trsf()
-        if move["kind"]=="translation":
+        if move["kind"]=="gravity-drop":
+            h=move["fallMm"];w=move["quadraticFraction"]
+            require(number(h) and h>=0 and number(w) and 0<=w<=1,"Invalid downward gravity stroke")
+            tr.SetTranslation(gp_Vec(0,0,-h*((1-w)*t+w*t*t)))
+        elif move["kind"]=="translation":
             tr.SetTranslation(gp_Vec(*[v*t for v in vec(move["travelMm"])]))
         else:
             require(move["kind"]=="rotation" and number(move["travelDeg"]),"Unknown prescribed motion")
@@ -49,7 +53,11 @@ def travel_bound(box,moves):
     corners=list(product(*[(box[i],box[i+3]) for i in range(3)]))
     bound=0
     for move in moves:
-        if move["kind"]=="translation":
+        if move["kind"]=="gravity-drop":
+            h=move["fallMm"];w=move["quadraticFraction"]
+            require(number(h) and h>=0 and number(w) and 0<=w<=1,"Invalid downward gravity bound")
+            bound+=h*(1+w)
+        elif move["kind"]=="translation":
             bound+=math.dist(vec(move["travelMm"]),[0,0,0])
         else:
             require(move["kind"]=="rotation" and number(move["travelDeg"]),"Unknown motion law")

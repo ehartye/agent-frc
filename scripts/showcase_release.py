@@ -19,6 +19,8 @@ def verify_candidate(root, study_path, source, derivatives, native=None, receipt
         require(result.returncode==0,"Signed release did not verify: "+result.stderr.strip())
         body=read(packet_file)["body"]
         require(not source or body["stepSha256"]==digest(project_path(root,source)),"Displayed STEP differs from signed issue")
+        if receipt:
+            require(isinstance(body.get("solids"),int) and body["solids"]==receipt.get("solids"),"Signed native census differs from the actual display receipt")
         require(not native or body["archiveSha256"]==digest(project_path(root,native)),"Published native archive differs from signed issue")
         approved={r["path"] for r in body["files"]}
         files=[*derivatives,*([native] if native else []),*([source] if source and distribute_source else [])]

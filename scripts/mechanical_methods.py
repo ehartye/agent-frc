@@ -40,12 +40,12 @@ def run(root,study):
                     args.append(value)
                 elif token.startswith("$"):
                     ref=case["inputs"][token[1:]]
-                    file=pinned(root,ref);pins.append(ref);args.append(str(file))
+                    file=pinned(root,ref);pins.append(ref);args.append(str(file.relative_to(root)) if method["runtime"]=="python" and "$root" in method["args"] else str(file))
                 else:
                     args.append(token)
             result=subprocess.run([sys.executable if method["runtime"]=="python" else "node",str(entry),*args],
                     cwd=root,capture_output=True,text=True)
-            require(result.returncode in (0,2) and result.stdout.strip(),"Method could not produce a usable result: "+result.stderr[-800:])
+            require(result.returncode in (0,1,2) and result.stdout.strip(),"Method could not produce a usable result: "+result.stderr[-800:])
             output=json.loads(result.stdout)
             # The same predicate and unit applies at both ends. A negative control
             # passing the project criterion cannot demonstrate defect detection.

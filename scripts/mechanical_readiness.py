@@ -123,7 +123,7 @@ def scan(root, study):
     return result
 
 
-def review(root,study, geometry=None):
+def evaluate_inputs(root,study, geometry=None):
     root=root.resolve()
     require(study.get("schema")=="agent-frc/mechanical-readiness@1","Unknown assembly review schema")
     findings=[]
@@ -189,16 +189,21 @@ def review(root,study, geometry=None):
         missing("native","source of truth","Identify the authoritative latest Fusion design and its one-way STEP issue.")
     else:
         from fusion_authority import verify
-        lineage=verify(root,pinned(root,study["authority"]),pinned(root,study["lineage"]))
+        authority=pinned(root,study["authority"])
+        require(authority==(root/"cad/fusion-authority.json").resolve(),"A mechanical release must use the project's designated cad/fusion-authority.json")
+        lineage=verify(root,authority,pinned(root,study["lineage"]))
         require(lineage["archiveSha256"]==archive_sha and lineage["stepSha256"]==step_sha and
                 lineage["configuration"]==configuration,"Quality evidence must derive from the designated current Fusion source")
     native={}
     motion_ids=set()
     motion_ranges={}
+    mission_ids=set()
     if study.get("reopen") and archive_sha:
         record=read(pinned(root,study["reopen"]))
         require(record.get("opened") is True and record.get("archiveSha256")==archive_sha and record.get("stepSha256")==step_sha and
                 record.get("configuration")==configuration,"Reopen does not identify this native/STEP configuration")
+        require(isinstance(record.get("transferMissions"),list) and all(named(i) for i in record["transferMissions"]),"Identify any scoped loaded transfer missions in the native duty register")
+        mission_ids=set(record["transferMissions"])
         motion_ids=set(record["movingGroups"])
         motion_ranges=record.get("motionRanges",{})
         if set(motion_ranges)!=motion_ids:
@@ -295,6 +300,10 @@ def review(root,study, geometry=None):
         if not all(occ.get(k)==article[k] for k in ("revision","configuration")) or occ.get("modelSha256")!=digest(model):
             finding("identity","fail",key,"Reopened occurrence references different component bytes, revision or option.")
         if kind=="purchased":
+            from vendor_configuration import compare as vendor_compare
+            selection=vendor_compare(root,article)
+            if selection["status"]!="pass":
+                finding("identity",selection["status"],key,"Supplier current purchase configuration versus as-drawn model: "+str(selection))
             if not all(named(article.get(k)) for k in ("manufacturer","partNumber","manufacturerSource","rights")) or article.get("representation")!="official-exact":
                 missing("identity",key,"Purchased part needs the official exact model and item-level rights.")
         elif kind=="fabricated":
@@ -358,8 +367,13 @@ def review(root,study, geometry=None):
             continue
         for source in proof["sources"]:
             reviewed=pinned(root,source)
-            if reviewed.suffix.lower()==".json" and read(reviewed).get("status") in ("fail","open"):
-                finding("retention","fail",[a,b],"Underlying joint inspection did not pass.")
+            if reviewed.suffix.lower()==".json":
+                original=read(reviewed)
+                bad=original.get("status") in ("fail","open")
+                if original.get("schema")=="agent-frc/mechanical-motion-result@1":
+                    bad=bad or original.get("stepSha256")!=step_sha or any(case.get("status")!="pass" for case in original["cases"])
+                if bad:
+                    finding("retention","fail",[a,b],"Underlying joint inspection did not pass.")
         if proof.get("verified") is True:
             structural.append((a,b))
         else:
@@ -407,6 +421,11 @@ def review(root,study, geometry=None):
             underlying=pinned(root,source)
             if underlying.suffix.lower()==".json":
                 measured=read(underlying)
+                if isinstance(measured,dict) and measured.get("schema")=="agent-frc/mechanical-measurements@1":
+                    require(measured.get("configuration")==configuration and measured.get("archiveSha256")==archive_sha and
+                        measured.get("stepSha256")==step_sha and isinstance(measured.get("measurements"),dict),
+                        "A cited trial register identifies a different source or configuration")
+                    run_files[source["sha256"]]=measured
                 if isinstance(measured,dict) and (measured.get("status") in ("fail","open") or
                         measured.get("schema")=="agent-frc/mechanical-motion-result@1" and
                         (measured.get("stepSha256")!=step_sha or any(r.get("status")!="pass" for r in measured["cases"]))):
@@ -474,6 +493,8 @@ def review(root,study, geometry=None):
     covered={(d["id"],d["case"],tuple(sorted(d["subjects"])),d.get("unit")):d for d in duties if d.get("observation")}
     for original in run_files.values():
         for raw in original["measurements"].values():
+            require(all(raw.get(k,v)==v for k,v in (("stepSha256",step_sha),("archiveSha256",archive_sha),("configuration",configuration))),
+                "A cited trial contradicts its source revision")
             identity=(raw.get("duty"),raw.get("case"),tuple(sorted(raw.get("subjects",[]))),raw.get("unit"))
             if identity not in covered:
                 missing("build",raw.get("case"),"An original issued adverse case is absent from the evaluated duty roster.")
@@ -501,6 +522,17 @@ def review(root,study, geometry=None):
         expected=sorted(d["id"] for d in duties if d["domain"] in need)
         if observed.get("criteriaSha256")!=scope_digest(study) or observed.get("kind")!="scope-review" or observed.get("scope")!=disposition or observed.get("complete") is not True or not named(observed.get("reviewer")) or not named(observed.get("basis")) or sorted(observed.get("bodies",[]))!=sorted(bodies) or sorted(observed.get("duties",[]))!=expected:
             missing(disposition,"coverage","Independent coverage did not reconcile all installed solids and registered duties.")
+    transfers=study.get("transferClaims")
+    if not isinstance(transfers,dict) or set(transfers)!=mission_ids:
+        missing("build","loaded transfer","The selected physical handoffs must have measured loaded clearance, delivery and recovery cases.")
+    else:
+        for name,ref in transfers.items():
+            from loaded_transfer import replay
+            test=read(pinned(root,ref))
+            require(test["id"]==name and test["step"]==study["step"],"Loaded transfer names another mechanism or installed assembly")
+            result=replay(root,test)
+            if result["status"]!="pass":
+                finding("build",result["status"],name,"The loaded object does not establish the complete delivery and jam-reset envelope.")
     external=study.get("externalIssues")
     if not isinstance(external,list) or len(external)!=len(set(external)):
         missing("build","external findings","Reconcile the explicit external defect register; use an empty list if none were found.")
@@ -530,6 +562,26 @@ def review(root,study, geometry=None):
             "engineeringGeometry":publication,"showcaseEligibility":build,"buildReadiness":build,"findings":findings}
 
 
+def review(root,study,geometry=None):
+    result=evaluate_inputs(root,study,geometry)
+    if result["showcaseEligibility"]=="pass":
+        from native_station_verify import verify as verify_station
+        try:
+            verify_station(root.resolve(),study)
+        except (ValueError,KeyError,TypeError,OSError) as e:
+            result["buildReadiness"]="open";result["showcaseEligibility"]="open"
+            result["findings"].append({"domain":"native","status":"open","subject":"trusted native witness","reason":str(e)})
+    return result
+
+
+def verify_render_mesh(root,study,receipt,mesh):
+    from mesh_correspondence import compare
+    result=compare(pinned(root,study["step"]),mesh,receipt.get("chordMm"),receipt.get("angleRad",.5))
+    require(result["status"]=="pass" and result["solids"]==receipt.get("solids") and result["triangles"]==receipt.get("triangles"),
+        "Displayed mesh differs from the fresh complete placed source: "+str((result["missingFacets"],result["extraFacets"],result["solids"])))
+    return result
+
+
 def verify_delivery(root,study,files):
     release=study.get("distribution",{})
     require(release.get("configuration")==study["configuration"] and
@@ -541,9 +593,35 @@ def verify_delivery(root,study,files):
         require(file not in allowed and named(ref.get("rightsBasis")) and ref.get("scope") in ("native","neutral","render","mesh"),
                 "Each derivative needs an exact reviewed identity and redistribution basis")
         allowed[file]=ref
+    checked_meshes=set()
+    delivered={project_path(root,f) for f in files}
+    for path,entry in allowed.items():
+        if path.suffix.lower()==".json":
+            data=read(path)
+            if isinstance(data,dict) and data.get("schema") in ("agent-frc/cad-still@1","agent-frc/cad-still@2"):
+                require(data.get("sourceSha256")==study["step"]["sha256"],"Displayed metadata uses a different STEP")
+                meshes=[f for f in allowed if allowed[f]["sha256"]==data.get("meshSha256")]
+                require(meshes,"The displayed mesh is absent from the registered releases")
+                m=meshes[0]
+                if m not in checked_meshes:
+                    verify_render_mesh(root,study,data,m);checked_meshes.add(m)
     for name in files:
         path=project_path(root,name)
         require(path in allowed,"Unreviewed distributed asset: "+name)
+        if path.name.lower().endswith((".glb",".gltf",".stl",".stl.gz",".obj",".3mf")) and path not in checked_meshes:
+            from mesh_correspondence import compare
+            proof=allowed[path].get("meshStudy")
+            require(proof,"Supply a source-to-geometry comparison for every published mesh")
+            spec=read(pinned(root,proof))
+            require(spec["step"]==study["step"] and pinned(root,spec["mesh"])==path,"Mesh correspondence points to another issue")
+            result=compare(pinned(root,study["step"]),path,spec["chordMm"],spec["angleRad"],resolution=spec.get("coordinateResolutionMm",.0001),
+                pose=spec["pose"],registration=spec.get("glbToCad"),surfaces=spec.get("surfaces"))
+            require(result["status"]=="pass","Published mesh does not include the actual placed geometry in its declared reference pose")
+            if path.suffix.lower()==".gltf":
+                from showcase_geometry import Glb
+                model=Glb.from_project(path)
+                require(set(model.dependencies)<=delivered,"External glTF buffers must be signed with the displayed geometry")
+            checked_meshes.add(path)
         restricted=any(row.get("rights")!="exact-redistribution" for row in study["articles"].values())
         if allowed[path]["scope"] in ("native","neutral") or path.suffix.lower() in (".f3d",".f3z",".step",".stp"):
             require(not restricted,"Full CAD download includes a component without exact redistribution rights")

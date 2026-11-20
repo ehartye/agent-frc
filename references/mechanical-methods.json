@@ -161,6 +161,28 @@
       ],
       "detects": "Elastic section overload, excess deflection, or fatigue damage under an issued supported load spectrum",
       "regression": "test/mechanical_readiness.py"
+    },
+    {
+      "id": "published-mesh",
+      "runtime": "python",
+      "entry": "scripts/mesh_correspondence.py",
+      "args": [
+        "$root",
+        "$study"
+      ],
+      "detects": "Omitted, duplicated or wrongly placed visual geometry in a registered student pose",
+      "regression": "test/mesh_controls.py"
+    },
+    {
+      "id": "loaded-transfer",
+      "runtime": "python",
+      "entry": "scripts/loaded_transfer.py",
+      "args": [
+        "$root",
+        "$study"
+      ],
+      "detects": "Real admitted object hits a fixed or moving member after the holder releases it",
+      "regression": "test/mesh_controls.py"
     }
   ]
 }
