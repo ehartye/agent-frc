@@ -1,4 +1,6 @@
 import {analyzeWindow} from '../../scripts/kickoff-window.mjs';
+import {makeLiftFaultFixture} from '../../examples/design-methods/make-lift-fault-fixture.mjs';
+import {reviewLiftPaths} from '../../scripts/lift-path-faults.mjs';
 import {makeActuatorDutyFixture} from '../../examples/design-methods/make-actuator-duty-fixture.mjs';
 import {reviewActuatorDuties} from '../../scripts/actuator-duties.mjs';
 import {makeSupportFixture} from '../../examples/design-methods/make-support-fixture.mjs';
@@ -79,7 +81,7 @@ ${suspension.cases.map((c,i)=>{
   return '<div data-suspension-pose="'+i+'"'+(i?' hidden':'')+'><p>Vertical reactions: '+fmt(b.loads)+' N.</p><p>Unbalanced moments about X and Y: <strong>'+fmt(b.unbalancedMomentXYNm)+' N·m</strong>. '+(b.momentEquilibrium==='balanced'?'The pose balances. Component capacity is open.':'The carriage can rotate from this pose.')+'</p></div>';
 }).join('')}</details>`;
 const throughputDir=await mkdtemp(path.join(tmpdir(),'agent-frc-guide-cohort-'));
-let throughput,coupled,duties,completion;
+let throughput,coupled,duties,completion,liftFaults;
 try{
   const study=makeThroughputCohort(throughputDir),read=evidenceReader(throughputDir);
   throughput=reviewThroughput(read(study),read);
@@ -89,12 +91,27 @@ try{
   coupled=reviewCoupled(readSpring(file),readSpring);
   const dutyFolder=path.join(throughputDir,'carriage'),dutyFile=makeActuatorDutyFixture(dutyFolder),readDuty=evidenceReader(dutyFolder);
   duties=reviewActuatorDuties(readDuty(dutyFile),readDuty);
+  const liftDir=path.join(throughputDir,'lift-fault'),liftFile=makeLiftFaultFixture(liftDir),readLift=evidenceReader(liftDir);
+  liftFaults=reviewLiftPaths(readLift(liftFile),readLift);
 }finally{await rm(throughputDir,{recursive:true,force:true});}
 const throughputStudy=`<details class="reading"><summary>Can the carrier repeat its delivery rate?</summary>
 <p>The tabletop timing model needs two accepted blocks in the first ten seconds of the work phase. The phase begins at match time 20 s. Check how much time an occupied aisle leaves.</p>
 <label>Frozen trial <select id="throughputChoice">${throughput.episodes.map((r,i)=>'<option value="'+i+'">'+escape(r.id)+' · '+r.parameters.queueS+' s queue</option>').join('')}</select></label>
 ${throughput.episodes.map((r,i)=>'<div data-throughput-trial="'+i+'"'+(i?' hidden':'')+'><p>'+escape(r.partition)+' · '+r.windowS.join('–')+' s on the match clock</p><p><strong>'+r.accepted+' of '+throughput.demand.requiredPieces+' required</strong> · '+r.acceptedPerSecond.toFixed(2)+' blocks/s · '+escape(r.status)+'</p></div>').join('')}
 <p>The frozen cohort includes all three starts. Each rate uses the entire ten seconds.</p>${link('Run the rate study','docs/mechanism-hardening.md')}</details>`;
+const faultExamples=liftFaults.rows.filter(r=>['right-belt-out','both-holders-out','loose-link-and-right-holder-out'].includes(r.case));
+const faultLab=`<details class="reading"><summary>Can the other holder catch both sides?</summary>
+<p>Trace a broken connection in the two-tier teaching lift. Its shafts sit on the far side of the local belts. Compare attaching the cross-link to the tiers themselves.</p>
+<label>Connection and fault <select id="liftFaultChoice">${faultExamples.map((r,i)=>'<option value="'+i+'">'+escape(r.layout+' · '+r.case)+'</option>').join('')}</select></label>
+${faultExamples.map((r,i)=>{
+  const m=r.motion,[left,right]=m.lastDisplacementMm.map(x=>20+5*x),routes=r.paths.map(s=>s.load+' · '+(s.steps?s.steps.join(' → '):s.status));
+  return '<div data-lift-fault="'+i+'"'+(i?' hidden':'')+'><svg role="img" aria-label="Two tier positions at the last paired sample" viewBox="0 0 245 92" width="245" height="92">'+
+    '<path d="M18 20H217" stroke="#859baa" stroke-dasharray="4 3"/><path d="M36 '+left+'L195 '+right+'" stroke="#bd8b31" stroke-width="4"/>'+
+    '<circle cx="36" cy="'+left+'" r="7" fill="#173d5b"/><circle cx="195" cy="'+right+'" r="7" fill="#173d5b"/></svg>'+
+    '<p>Peak racking <strong>'+m.peaks.rackMm.toFixed(2)+' mm</strong> · peak common descent <strong>'+m.peaks.commonDropMm.toFixed(2)+' mm</strong></p>'+
+    '<p>'+escape(r.topology)+' · '+escape(m.status)+' over '+m.throughS+' s</p><details><summary>Trace each support to its anchor</summary><ul>'+routes.map(x=>'<li>'+escape(x)+'</li>').join('')+'</ul></details></div>';
+}).join('')}
+${link('Run the failure comparison','docs/lift-path-faults.md')}</details>`;
 const dutyLab=`<details class="reading"><summary>What happens when the lift jams or loses power?</summary>
 <p>This teaching carriage must lift a load, withstand a stop and stay raised for four seconds without power. Try the force switch and latch with a delayed response.</p>
 <label>Carriage and condition <select id="dutyChoice">${duties.rows.map((r,i)=>'<option value="'+i+'">'+escape(r.architecture+' · '+r.caseId)+'</option>').join('')}</select></label>
@@ -142,7 +159,7 @@ const highlightsLink='<a href="robot/index.html">Explore the example robot evide
 const chapters=stages.map((s,i)=>`<details id="${s.id}" class="chapter"${i===0?' open':''}>
 <summary><span class="ordinal">${chapter(i)}</span><span>${escape(s.name)}</span><span class="toggle" aria-hidden="true"></span></summary>
 <div class="chapter-body"><h3>${escape(s.question)}</h3><p>${escape(s.objective)}</p><p>${escape(s.activity)}</p>
-<div class="handoff"><h4>Carry forward</h4><p>${escape(s.handoff)}</p></div>${s.docs.some(([,p])=>p==='docs/camera-reference.md')?cameraComparison:''}${s.id==='contract'?serviceComparison:''}${s.id==='design'?frameStudy:''}${s.id==='verify'?suspensionStudy+supportLab+dutyLab+throughputStudy+captureLab:''}
+<div class="handoff"><h4>Carry forward</h4><p>${escape(s.handoff)}</p></div>${s.docs.some(([,p])=>p==='docs/camera-reference.md')?cameraComparison:''}${s.id==='contract'?serviceComparison:''}${s.id==='design'?frameStudy:''}${s.id==='verify'?suspensionStudy+supportLab+faultLab+dutyLab+throughputStudy+captureLab:''}
 <h4>Supporting skills</h4><div class="chips">${s.skills.map(k=>link(k,'skills/'+k+'/SKILL.md')).join('')}</div>
 <div class="reading">${s.id==='design'?'<a href="role-design.html">Compare robot designs against a selected match role ↗</a> · <a href="alliance-completion.html">Which robot design wins when the partner is busy? ↗</a> · ':''}${s.id==='verify'?highlightsLink:''}${s.id==='story'?'<a href="field-lab.html#roleLab">Compare alliance roles and replay the field ↗</a> · ':''}${s.id==='rules'?'<a href="rules.json" download>Download the training rules model ↓</a> · ':''}${s.docs.some(([,p])=>p===powerGuide)?'<a href="#power">Try the shared-power comparison ↓</a> · ':''}${s.docs.map(([label,p])=>link(label+' ↗',p)).join(' · ')}</div></div></details>`).join('\n');
 const directory=Object.keys(purpose).map(k=>{

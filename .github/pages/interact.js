@@ -131,6 +131,9 @@ document.getElementById('captureChoice').addEventListener('change',event=>{
   document.getElementById('captureNote').textContent=whole?'Check the assembly silhouette against its saved projection.':'Inspect the exposed wheel and fork. A missing lower assembly changes the occupied shape inside this rectangle.';
 });
 
+document.getElementById('liftFaultChoice').addEventListener('change',event=>{
+  for(const row of document.querySelectorAll('[data-lift-fault]'))row.hidden=row.dataset.liftFault!==event.target.value;
+});
 document.getElementById('dutyChoice').addEventListener('change',event=>{
   for(const row of document.querySelectorAll('[data-duty-case]'))row.hidden=row.dataset.dutyCase!==event.target.value;
 });
