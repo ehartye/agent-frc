@@ -81,14 +81,16 @@ test('single hanger distinguishes settled pose, unbalanced pose and separately r
 test('rate uses the entire common scoring window, distinctly varied runs, finite arrivals and robot possession',()=>{
   const input=read('throughput'),d=structuredClone(pinned(input.demand)),review=()=>reviewThroughput(input,()=>d);
   const [first,second]=d.episodes;
-  assert.equal(review().status,'fail');
+  assert.equal(review().status,'open');
+  assert.equal(review().observedStatus,'fail');
   assert.deepEqual(review().episodes.map(r=>r.acceptedPerSecond),[.2,.1]);
   Object.assign(second,structuredClone(first),{runId:'new-label'});
   assert.equal(review().status,'open');
-  second.variation={queueS:1}; assert.equal(review().status,'pass');
+  second.variation={queueS:'0'}; assert.equal(review().distinctVariations,0);
+  second.variation={queueS:1}; assert.equal(review().status,'open');
   second.criterion='Partner received piece';assert.throws(review,/criterion/);second.criterion=first.criterion;
   second.preloadedPieces=['a'];assert.throws(review,/disjoint/);
   second.initialPieces=['b'];second.events.shift();
-  assert.equal(review().status,'pass');
+  assert.equal(review().observedStatus,'pass');
   second.events[0].piece='unknown';assert.throws(review,/Accepted piece/);
 });

@@ -3,7 +3,7 @@ import {pathToFileURL} from 'node:url';
 import {compareRoles,studyRows} from './strategy-lab.mjs';
 import {createFieldRehearsal} from './field-rehearsal.mjs';
 import {createMatchSeries} from './rehearsal-series-core.mjs';
-import {auditPieceWindow} from './hardening.mjs';
+import {auditPieceWindow} from './piece-window.mjs';
 import {readStudy,evidenceReader,digest,label,atPointer} from './study-evidence.mjs';
 
 const assert=(ok,message)=>{if(!ok)throw Error(message);};
@@ -73,30 +73,10 @@ export function deriveRoleDemand(selection,read,compiled) {
     scope:'Reproduce the selected focal role’s observed opportunity in this field setup and half-open period window. A zero count provides no positive hardware target.'};
 }
 
-function measuredCandidate(concept,caseId,demand,read) {
-  if(!concept)return open('Unknown architecture.');
-  const run=concept.cases.find(c=>c.id===caseId);
-  const execution=run?.source&&run.execution!==undefined?atPointer(read(run.source),run.execution):null;
-  if(!execution?.roleEpisode)return open('No source-bound full-window episode for this architecture and case.');
-  const local=typeof execution.roleEpisode==='string';
-  if(local&&!execution.roleEpisode.startsWith(run.execution+'/'))return open('The episode pointer leaves the native execution.');
-  const ref=local?{...run.source,pointer:execution.roleEpisode}:execution.roleEpisode;
-  const episode=atPointer(read(ref),ref.pointer);
+export function checkRoleInventory(episode,demand,clockOffsetS=0){
   const d=demand.identity;
-  if(episode.runId!==run.runId||episode.concept!==concept.id||episode.case!==caseId)
-    return open('Episode identity differs from the architecture execution.');
-  if(episode.contractKey!==demand.contractKey||episode.focalRobot!==d.focalRobot||episode.criterion!==d.criterion||
-    episode.phase!==d.phase||episode.station!==d.station||!same(episode.windowS,d.windowS))
-    return open('Role, focal robot, outcome, source, phase or window differs from the field selection.');
-  if(!label(episode.revision)||!['timing-model','field-rehearsal','integrated-simulation','physical'].includes(episode.evidence)||
-    !episode.variation||typeof episode.variation!=='object'||Array.isArray(episode.variation)||
-    !Object.keys(episode.variation).length||!Object.values(episode.variation).every(v=>label(v)||Number.isFinite(v)||typeof v==='boolean'))
-    return open('Missing design revision, evidence class or executed starting condition.');
   if(!episode.fieldConditions||!same(canonical(episode.fieldConditions),canonical(demand.fieldConditions)))
     return open('Episode does not identify the same peer plans, starting poses, cargo and field availability.');
-  if(!Array.isArray(episode.clockWitnesses)||episode.clockWitnesses.length!==2||episode.clockWitnesses.some((v,i)=>
-    !v||v.timeS!==d.windowS[i]||!label(v.witness)))
-    return open('Independent start and cutoff observations must span the complete role window.');
   const opening=Object.values(demand.openingStock).flat();
   if(!Array.isArray(episode.initialPieces)||!Array.isArray(episode.preloadedPieces)||
     !same(sorted(episode.initialPieces),sorted(opening))||!same(sorted(episode.preloadedPieces),sorted(demand.preloadedPieces)))
@@ -116,8 +96,35 @@ function measuredCandidate(concept,caseId,demand,read) {
     }
   }
   if(episode.events.some(e=>['arrive','return'].includes(e.kind)&&!demand.replenishments.some(r=>
-    r.station===e.station&&r.piece===e.piece&&Math.abs(r.timeS-e.timeS)<1e-8)))
+    r.station===e.station&&r.piece===e.piece&&Math.abs(r.timeS+clockOffsetS-e.timeS)<1e-8)))
     return open('A new supply or return lacks a matching field source and arrival time.');
+  return null;
+}
+
+function measuredCandidate(concept,caseId,demand,read) {
+  if(!concept)return open('Unknown architecture.');
+  const run=concept.cases.find(c=>c.id===caseId);
+  const execution=run?.source&&run.execution!==undefined?atPointer(read(run.source),run.execution):null;
+  if(!execution?.roleEpisode)return open('No source-bound full-window episode for this architecture and case.');
+  const local=typeof execution.roleEpisode==='string';
+  if(local&&!execution.roleEpisode.startsWith(run.execution+'/'))return open('The episode pointer leaves the native execution.');
+  const ref=local?{...run.source,pointer:execution.roleEpisode}:execution.roleEpisode;
+  const episode=atPointer(read(ref),ref.pointer);
+  const d=demand.identity;
+  if(episode.runId!==run.runId||episode.concept!==concept.id||episode.case!==caseId)
+    return open('Episode identity differs from the architecture execution.');
+  if(episode.contractKey!==demand.contractKey||episode.focalRobot!==d.focalRobot||episode.criterion!==d.criterion||
+    episode.phase!==d.phase||episode.station!==d.station||!same(episode.windowS,d.windowS))
+    return open('Role, focal robot, outcome, source, phase or window differs from the field selection.');
+  if(!label(episode.revision)||!['timing-model','field-rehearsal','integrated-simulation','physical'].includes(episode.evidence)||
+    !episode.variation||typeof episode.variation!=='object'||Array.isArray(episode.variation)||
+    !Object.keys(episode.variation).length||!Object.values(episode.variation).every(v=>label(v)||Number.isFinite(v)||typeof v==='boolean'))
+    return open('Missing design revision, evidence class or executed starting condition.');
+  if(!Array.isArray(episode.clockWitnesses)||episode.clockWitnesses.length!==2||episode.clockWitnesses.some((v,i)=>
+    !v||v.timeS!==d.windowS[i]||!label(v.witness)))
+    return open('Independent start and cutoff observations must span the complete role window.');
+  const inventoryIssue=checkRoleInventory(episode,demand);
+  if(inventoryIssue)return inventoryIssue;
   const kind=d.outcome==='acquired'?'acquire':'accept';
   const observed=episode.events.filter(e=>e.kind===kind);
   if(observed.some(e=>!label(e.witness)||!label(e.focalRobot)||!label(e.station)))

@@ -1,3 +1,6 @@
+import {auditPieceWindow} from './piece-window.mjs';
+import {reviewCohort} from './throughput-cohort.mjs';
+export {auditPieceWindow} from './piece-window.mjs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {studyRows} from './strategy-lab.mjs';
@@ -132,30 +135,9 @@ export function reviewElevation(input,read) {
     scope:(results.some(r=>r.geometry==='spatial-vertical-supports')?'Each spatial case checks vertical force and both horizontal moments at its stated pose. Other mechanisms retain their declared scope. ':'Vertical-plane one- or two-support rigid body with specified load paths. ')+'Coverage depends on the project inventory and supplied inputs. Buckling, impact, fatigue, electrical holding and brake engagement need supporting model or rated evidence.'};
 }
 
-export function auditPieceWindow(r) {
-  requireInput(Array.isArray(r.initialPieces)&&Array.isArray(r.events)&&r.initialPieces.every(label)&&
-    new Set(r.initialPieces).size===r.initialPieces.length,'Initial stock needs unique piece IDs.');
-  const preload=r.preloadedPieces??[];
-  requireInput(Array.isArray(preload)&&preload.every(label)&&new Set([...r.initialPieces,...preload]).size===r.initialPieces.length+preload.length,'Preload must be disjoint from station stock.');
-  const seen=new Set([...r.initialPieces,...preload]),available=new Set(r.initialPieces),credited=new Set(),held=new Set(preload);
-  const acceptedAt=[];let attempts=0,failed=0,previous=r.windowS[0];
-  for(const ev of r.events){
-    requireInput(Number.isFinite(ev.timeS)&&ev.timeS>=previous&&ev.timeS<r.windowS[1]&&label(ev.piece),
-      'Events must be ordered inside the half-open window.');previous=ev.timeS;
-    switch(ev.kind){
-      case 'arrive':requireInput(!seen.has(ev.piece),'Duplicate supplied piece.');seen.add(ev.piece);available.add(ev.piece);break;
-      case 'acquire':requireInput(available.delete(ev.piece),'Acquisition exceeded available stock.');held.add(ev.piece);break;
-      case 'miss':requireInput(held.has(ev.piece),'Miss lacks possession.');attempts++;failed++;if(ev.release===true)held.delete(ev.piece);break;
-      case 'return':requireInput(credited.delete(ev.piece)&&label(ev.witness),'Return requires a credited piece and a legal return witness.');available.add(ev.piece);break;
-      case 'accept':requireInput(held.delete(ev.piece)&&!credited.has(ev.piece)&&label(ev.witness),'Accepted piece needs possession, unique identity and a scoring witness.');
-        credited.add(ev.piece);attempts++;acceptedAt.push(ev.timeS);break;
-      default:throw Error('Unknown stock or transfer event.');
-    }
-  }
-  return {supplied:seen.size,attempts,failed,acceptedAt};
-}
-
-export function reviewThroughput(input,read) {
+export function reviewThroughput(input,read,freezeSha256) {
+  if(input?.schema==='agent-frc/throughput-study@2')return reviewCohort(input,read,freezeSha256);
+  requireInput(!freezeSha256,'A freeze digest needs throughput-study@2.');
   requireInput(input?.schema==='agent-frc/throughput-study@1','Expected throughput-study@1.');
   const demand=observed(input.demand,read);
   requireInput(positive(demand.requiredPieces)&&Number.isSafeInteger(demand.requiredPieces)&&positive(demand.windowS)&&label(demand.basis),
@@ -189,19 +171,27 @@ export function reviewThroughput(input,read) {
   const revisions=new Set(rows.filter(r=>r.revision).map(r=>r.revision));
   const evidenceTypes=new Set(rows.filter(r=>r.evidence).map(r=>r.evidence));
   requireInput(revisions.size<=1 && evidenceTypes.size<=1,'Compare repeatability on one revision and evidence type at a time.');
-  const lowest=rates[0]??null,complete=rates.length===rows.length;
+  const lowest=rates[0]??null;
   return {schema:'agent-frc/throughput-result@1',demand,requiredPerSecond:demand.requiredPieces/demand.windowS,
-    episodes:rows,distinctVariations:variations.size,observedRuns:rates.length,passingRuns:rows.filter(r=>r.status==='pass').length,worstRate:lowest,
+    episodes:rows,distinctVariations:0,reportedVariations:variations.size,qualifiedRuns:0,observedRuns:rates.length,passingRuns:rows.filter(r=>r.status==='pass').length,worstRate:lowest,
     p10NearestRank:rates.length?rates[Math.ceil(.10*rates.length)-1]:null,
-    status:status([...rows.map(r=>r.status),...(variations.size<2||!complete?['open']:[])]),
-    scope:'Observed accepted events divided by the whole declared clock, including travel, queues, misses and recovery. The lower percentile describes these runs; physical reliability requires physical evidence.'};
+    observedStatus:status(rows.map(r=>r.status)),status:'open',
+    scope:'Legacy window, variation and actor attribution are unverified. Repeatability remains open. Observed accepted events divided by the whole declared clock, including travel, queues, misses and recovery. The lower percentile describes these runs; physical reliability requires physical evidence.'};
 }
 if(process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href){
   try {
-    const [mode,file,root,...extra]=process.argv.slice(2);
-    requireInput(file&&!extra.length&&['elevation','throughput'].includes(mode),'Usage: hardening.mjs elevation|throughput STUDY.json [PROJECT_ROOT]');
+    const args=process.argv.slice(2);
+    const freezeFlag=args.indexOf('--freeze-sha256');
+    let freeze;
+    if(freezeFlag>=0){
+      freeze=args[freezeFlag+1];
+      requireInput(args[0]==='throughput'&&/^[0-9a-f]{64}$/.test(freeze),'Supply the saved throughput cohort SHA-256.');
+      args.splice(freezeFlag,2);
+    }
+    const [mode,file,root,...extra]=args;
+    requireInput(file&&!extra.length&&['elevation','throughput'].includes(mode),'Usage: hardening.mjs elevation|throughput STUDY.json [PROJECT_ROOT] [--freeze-sha256 DIGEST]');
     const input=readStudy(file),read=evidenceReader(root??path.dirname(file));
-    const result=mode==='elevation'?reviewElevation(input.value,read):reviewThroughput(input.value,read);
+    const result=mode==='elevation'?reviewElevation(input.value,read):reviewThroughput(input.value,read,freeze);
     console.log(JSON.stringify({...result,studySha256:input.sha256},null,2));
   } catch(e){console.error(e.message);process.exitCode=1;}
 }
