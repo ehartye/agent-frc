@@ -22,7 +22,8 @@ test('compiled rules and the lab share the ordered scoring clock', () => {
     statement:'Ordered scoring phases and active durations',status:'modeled',
     pointer:'/scoring/phases',value:profile.scoring.phases});
   function withPeriods(periods) {
-    return {...profile,rehearsal:{...profile.rehearsal,periods}};
+    const {endgame,series,...clockFixture}=profile.rehearsal;
+    return {...profile,rehearsal:{...clockFixture,periods}};
   }
   const [opening,main] = profile.scoring.phases;
   const split = [

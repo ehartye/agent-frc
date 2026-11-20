@@ -10,7 +10,7 @@
   const student=createRehearsalSetup(rehearsal,roster,setup,config.series?.matches);
   let sim=student.reset(),activeSource='';
   const seriesSource=byId('replaySeriesSource');
-  if(config.series?.matches?.length)seriesSource.add(new Option('Published scenarios','published'));
+  if(config.series?.matches?.length)seriesSource.add(new Option('Published scenarios · '+config.series.matches.length+' matches','published'));
   seriesSource.add(new Option('My roster · 3 matches','student'));
   for(const setup of config.setups)byId('replaySetup').add(new Option(setup,setup));
   byId('replayBasis').textContent=config.basis+' '+config.boundsNote+
@@ -28,7 +28,13 @@
     };
     row.append(select,counts);legend.append(row);counters.set(s.id,{button:select,counts});
   }
-  legend.parentElement.hidden=!stations.length;
+  for(const [i,t] of (config.endgame?.targets ?? []).entries()){
+    const row=document.createElement('li');
+    row.textContent='T'+(i+1)+' · '+t.label+' · '+t.side+' · '+t.resource+' · '+t.capacity+' slot(s) shared'+
+      (t.setups?' · '+t.setups.join(', '):'');
+    legend.append(row);
+  }
+  legend.parentElement.hidden=!stations.length && !config.endgame;
   function draw() {
     const box=canvas.getBoundingClientRect();if(!box.width || !box.height)return;
     const dpr=window.devicePixelRatio || 1;
@@ -83,6 +89,17 @@
     for(const h of sim.hotspots){
       const xy=at(h.point);context.fillStyle='#ffbd6e91';context.beginPath();
       context.arc(...xy,Math.max(3,Math.min(13,Math.sqrt(h.ticks)*.8))*Math.max(scale,.55),0,Math.PI*2);context.fill();
+    }
+    for(const [i,t] of (config.endgame?.targets ?? []).entries()){
+      if(t.setups && !t.setups.includes(setup))continue;
+      const [x,y]=at(t.at);
+      context.save();context.strokeStyle=t.side==='blue'?'#b6daff':'#ffbec8';
+      context.setLineDash([2,3]);context.beginPath();context.arc(x,y,t.radiusIn*scale,0,Math.PI*2);context.stroke();
+      context.setLineDash([]);const [mx,my]=at(t.displayAt ?? t.at);
+      line([t.at,t.displayAt ?? t.at],context.strokeStyle);
+      context.font='bold 11px system-ui';context.fillStyle='#fff';context.textAlign='center';
+      context.fillText('T'+(i+1),Math.max(x0+10,Math.min(x0+L*scale-10,mx)),Math.max(y0-W*scale+12,Math.min(y0-3,my)));
+      context.restore();
     }
     for(const r of sim.robots) {
       if(r.waypoints?.length && r.target<r.waypoints.length) {
@@ -141,6 +158,53 @@
     listRoster();render();
   }
   function edit(id,patch){setRoster(roster.map(r=>r.id===id?{...r,...patch}:r));}
+  function terminalEditor(r,card){
+    const spec=config.endgame;if(!spec)return;
+    const choices=[];
+    for(const t of spec.targets)for(const a of spec.actions)if(rehearsal.terminal.eligible(r,a,t,setup))
+      choices.push({action:a.id,target:t.id,label:a.label+' · '+t.label});
+    const section=document.createElement('fieldset'),heading=document.createElement('legend');
+    heading.textContent='Terminal objective';section.append(heading);card.append(section);
+    function select(label,options,value,change){
+      const wrap=document.createElement('label'),control=document.createElement('select');
+      wrap.append(label);control.setAttribute('aria-label',r.id+' '+label);
+      options.forEach(o=>control.add(new Option(o.label,o.value)));
+      control.value=value;control.onchange=()=>change(control.value);
+      wrap.append(control);section.append(wrap);
+    }
+    const key=c=>JSON.stringify([c.action,c.target]), options=choices.map(c=>({label:c.label,value:key(c)}));
+    const lookup=value=>{const [action,target]=JSON.parse(value);return {action,target};};
+    const plan=r.endgame;
+    select('Final objective',[{label:'Continue ordinary scoring',value:''},...options],plan?key(plan):'',value=>
+      edit(r.id,{endgame:value?{...lookup(value),startS:plan?.startS ?? 0,witnesses:{}}:undefined}));
+    if(!plan)return;
+    const time=document.createElement('input'),wrap=document.createElement('label');
+    wrap.append('Switch at elapsed '+spec.period+' seconds');time.type='number';time.min=0;
+    time.max=config.periods.at(-1).seconds;time.step='.05';time.value=plan.startS;
+    time.setAttribute('aria-label',r.id+' terminal switch seconds');
+    time.onchange=()=>{if(time.value!=='' && time.reportValidity())edit(r.id,{endgame:{...plan,startS:time.valueAsNumber}});};
+    wrap.append(time);section.append(wrap);
+    const fallback=plan.fallbacks ?? [], selected=[plan,...fallback], used=new Set(selected.map(c=>c.action));
+    const remaining=choices.filter(c=>!used.has(c.action));
+    if(remaining.length)select('Add fallback',[{label:'Select an alternative',value:''},...remaining.map(c=>({label:c.label,value:key(c)}))],'',v=>{
+      if(v)edit(r.id,{endgame:{...plan,fallbacks:[...fallback,lookup(v)]}});
+    });
+    const criteria=new Set();
+    for(const c of selected){
+      const a=spec.actions.find(a=>a.id===c.action);
+      rehearsal.terminal.criteria(a).forEach(name=>criteria.add(name));
+    }
+    if(fallback.length){
+      const clear=button('Clear fallbacks: '+fallback.map(f=>spec.actions.find(a=>a.id===f.action).label).join(', '),()=>{
+        const allowed=rehearsal.terminal.criteria(spec.actions.find(a=>a.id===plan.action));
+        const witnesses=Object.fromEntries(Object.entries(plan.witnesses ?? {}).filter(([k])=>allowed.includes(k)));
+        edit(r.id,{endgame:{...plan,fallbacks:[],witnesses}});
+      });section.append(clear);
+    }
+    for(const name of criteria)select('At assessment, assume '+name,[
+      {value:'unknown',label:'Unknown'},{value:'met',label:'Met at assessment'},{value:'failed',label:'Failed at assessment'}
+    ],plan.witnesses?.[name] ?? 'unknown',v=>edit(r.id,{endgame:{...plan,witnesses:{...plan.witnesses,[name]:v}}}));
+  }
   function listRoster(){
     rosterBox.replaceChildren();
     for(const side of ['blue','red']){
@@ -172,7 +236,7 @@
       const apply=button('Use trial box',()=>edit(r.id,{length:state.length,width:state.width,height:state.height,heading:state.heading}));
       apply.setAttribute('aria-label','Use trial box for '+r.id);
       const remove=button('Remove',()=>setRoster(roster.filter(other=>other.id!==r.id)));
-      remove.setAttribute('aria-label','Remove '+r.id);configLine.append(apply,remove);card.append(configLine);group.append(card);
+      remove.setAttribute('aria-label','Remove '+r.id);configLine.append(apply,remove);card.append(configLine);terminalEditor(r,card);group.append(card);
       }
     }
   }
@@ -194,7 +258,18 @@
     byId('replaySeries').textContent=series && !series.done ? (seriesPaused?'Resume series at 10×':'Pause series') : 'Play match series at 10×';
     byId('replayScore').textContent=(config.stations?.length?'Modeled rehearsal score · Blue '+sim.game.score.blue+' · Red '+sim.game.score.red+
       '. '+config.stations.filter(s=>s.kind==='retrieval').map(s=>s.label+' '+sim.game.stock[s.id].length+' '+s.piece+' available').join(' · '):
-      'This profile has no registered piece or scoring stations.')+(series?' · '+activeSource+' · Match '+series.match.id+' · '+series.match.basis:'');
+      (sim.game.endgame?'Modeled rehearsal score · Blue '+sim.game.score.blue+' · Red '+sim.game.score.red:'This profile has no registered piece or scoring stations.'))+(series?' · '+activeSource+' · Match '+series.match.id+' · '+series.match.basis:'');
+    const terminal=sim.game.endgame, report=byId('replayTerminal');
+    report.hidden=!terminal;
+    if(terminal){
+      const rows=terminal.attempts.map(a=>a.robot+' · '+a.action+' · '+(a.awardedAction?'awarded '+a.awardedAction+' (+'+a.points+')':a.outcome==='pending'?
+        (a.completedAtS!==null?'service complete; awaiting assessment':a.arrivedAtS!==null?'at target':a.interruptedAtS!==null?'approaching':'switch at '+a.startS+' s'):a.outcome));
+      if(terminal.assessed){
+        rows.unshift('Powered time ended at '+terminal.activeCutoffS+' s. Assessed at '+terminal.assessmentTimeS+' s. Terminal points: Blue '+terminal.terminalScore.blue+', Red '+terminal.terminalScore.red+'.');
+        for(const b of terminal.bonusAwards.filter(b=>b.points))rows.push(b.side+' '+b.id+' · '+b.robots.join(', ')+' · +'+b.points);
+      }
+      report.textContent=rows.join(' · ') || 'Choose a terminal objective in a robot’s roster to interrupt its ordinary scoring cycle.';
+    }
     for(const s of stations){
       const count=s.kind==='retrieval'?sim.game.stock[s.id].length+' available':
         sim.game.attempts[s.id]+' attempted'+(s.capacity===undefined?'':' · '+sim.game.occupied[s.id]+'/'+s.capacity+' occupied');

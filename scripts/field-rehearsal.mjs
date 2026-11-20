@@ -1,4 +1,5 @@
 import { createRehearsalGame } from './rehearsal-game.mjs';
+import { createTerminalRehearsal } from './rehearsal-terminal.mjs';
 import { fieldGeometry } from './field-rehearsal-geometry.mjs';
 
 // Functions are serialized by the kickoff builder. Keep this factory self-contained.
@@ -7,6 +8,7 @@ export function createFieldRehearsal(profile) {
   const model=profile.rehearsal, supported=Boolean(model?.schema==='field-rehearsal/v1');
   const L=profile.field.length,W=profile.field.width,dt=0.05;
   const game=supported ? createRehearsalGame(profile) : null;
+  const terminal=supported ? createTerminalRehearsal(profile) : null;
   const behaviors=Object.fromEntries(Object.entries(model?.programs || {}).map(([key,p])=>[key,p.label]));
   const phases=model?.periods || [];
   const duration=name=>Math.round((phases.find(p=>p.name===name)?.seconds || 0)/dt);
@@ -30,7 +32,7 @@ export function createFieldRehearsal(profile) {
     }
     return Object.fromEntries([...names].map(key=>[key,{owner:null,queue:[]}]));
   }
-  function create(roster,setup=model?.setups[0],tieWinner) {
+  function create(roster,setup=model?.setups[0],tieWinner,atRestAfterS) {
     if(!supported)throw Error('Supply an external rehearsal geometry and behavior model.');
     if(!model.setups.includes(setup))throw Error('Unknown obstacle setup.');
     if(!Array.isArray(roster) || roster.length>6)throw Error('Use up to three robots per alliance.');
@@ -50,7 +52,10 @@ export function createFieldRehearsal(profile) {
       robots.push({...b,p,leg:0,waypoints:null,target:0,dwell:0,wait:0,visits:0,blocked:'',action:''});
     }
     robots.sort((a,b)=>a.id.localeCompare(b.id));
-    return {robots,setup,game:game.start(robots,tieWinner),phase:phases[0].name,phaseIndex:0,ticks:0,paused:true,ended:false,resources:reservations(),hotspots:[],
+    const ledger=game.start(robots,tieWinner);
+    if(terminal)ledger.endgame=terminal.start(robots,atRestAfterS,setup);
+    else if(robots.some(r=>r.endgame!==undefined) || atRestAfterS!==undefined)throw Error('Supply an endgame model before scheduling a terminal action.');
+    return {robots,setup,game:ledger,phase:phases[0].name,phaseIndex:0,ticks:0,paused:true,ended:false,resources:reservations(),hotspots:[],
       log:[], carry:0,phaseHistory:[]};
   }
   function program(r,sim){return model.programs[r.plans[sim.phase]];}
@@ -81,7 +86,11 @@ export function createFieldRehearsal(profile) {
   }
   function proposal(sim,r) {
     r.blocked='';
-    const legs=itinerary(r,sim);
+    const goal=terminal?.enter(sim,r,sim.ticks*dt);
+    if(goal && terminal.inside(r,goal)){
+      r.action='Holding at '+goal.label;return r.p;
+    }
+    const legs=goal?[{point:goal.at,action:'Approach '+goal.label}]:itinerary(r,sim);
     if(!legs.length || r.leg>=legs.length){r.action=legs.length?'Holding at destination':'Holding position';return r.p;}
     const leg=legs[r.leg];
     r.action=leg.action;
@@ -144,8 +153,10 @@ export function createFieldRehearsal(profile) {
       if(r.waypoints?.[r.target] && norm(b,r.waypoints[r.target])<1e-8)r.target++;
     }
     sim.robots.forEach((r,i)=>{r.p=ends[i];});
+    terminal?.observe(sim,begins,sim.ticks*dt,(sim.ticks+1)*dt);
     sim.ticks++;
     if(sim.ticks>=duration(sim.phase)){
+      terminal?.assess(sim);
       sim.paused=true;sim.ended=true;sim.carry=0;
       sim.phaseHistory.push({phase:sim.phase,seconds:sim.ticks*dt,
         robots:sim.robots.map(r=>({id:r.id,visits:r.visits,waitSeconds:r.wait*dt,blocked:r.blocked,position:[...r.p]}))});
@@ -165,6 +176,6 @@ export function createFieldRehearsal(profile) {
     sim.phase=phases[++sim.phaseIndex].name;sim.ticks=0;sim.carry=0;sim.ended=false;sim.paused=true;sim.resources=reservations();
     for(const r of sim.robots)Object.assign(r,{leg:0,waypoints:null,target:0,dwell:0,wait:0,visits:0,blocked:'',action:''});
   }
-  return {supported,behaviors,defaults,create,advance,nextPhase,assessRoute,geom,dt,periods:phases,
+  return {supported,behaviors,defaults,create,advance,nextPhase,assessRoute,geom,dt,periods:phases,terminal,
     phaseSeconds:name=>duration(name)*dt};
 }
