@@ -87,7 +87,7 @@ function motion(native,plan,arch,read,ref){
 
 function applicableRating(r,plan){
   return ['application-approved-rating','validated-analysis','qualified-load-test'].includes(r.evidence)||
-    r.evidence==='teaching-assumption'&&plan.purpose==='teaching';
+    r.evidence==='teaching-assumption'&&plan.purpose==='teaching'&&plan.evidence==='integrated-simulation';
 }
 function rated(arch,nativeRef,read){
   if(!arch.allowable||arch.allowable.sha256===nativeRef.sha256)return null;
@@ -205,7 +205,7 @@ export function reviewActuatorDuties(study,read){
     const normal=run.normal??run,hold=run.hold??run;
     rows.push({architecture:a.id,caseId:c.id,motionSource:e?.motion,obstructionSource:e?.obstruction,normal,hold,obstruction:jam,
       status:verdict([normal.status,jam.status,hold.status]),
-      installedStatus:p.evidence==='physical'?verdict([normal.status,jam.status,hold.status,hold.capacity??'open']):'open'});
+      installedStatus:p.evidence==='physical'&&p.purpose!=='teaching'?verdict([normal.status,jam.status,hold.status,hold.capacity??'open']):'open'});
   }
   return {schema:'agent-frc/actuator-duty-result@1',plan:study.plan,evidence:p.evidence,rows,status:verdict(rows.filter(r=>r.status!=='not-applicable').map(r=>r.status)),
     limits:'The verdict covers the registered revision, branch and observed conditions. A modeled trip or passive hold does not qualify installed hardware. A basic static catalog value is not an approved service envelope.'};

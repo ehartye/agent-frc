@@ -74,6 +74,7 @@ test('physical release requires an applicable actual hold rating, complete path 
   assert.equal(run().rows[2].installedStatus,'open');
   const rating=read(arch.holdingAllowable);rating.evidence='qualified-load-test';
   assert.equal(run().rows[2].installedStatus,'pass');
+  plan.purpose='teaching';assert.equal(run().rows[2].installedStatus,'open');plan.purpose='project';
   rating.durationS=1;assert.equal(run().rows[2].installedStatus,'open');rating.durationS=10;
   rating.positiveN=20;assert.equal(run().rows[2].hold.status,'fail');
   delete study.entries[2].motion;assert.equal(run().rows[2].normal.status,'open');
