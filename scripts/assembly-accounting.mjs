@@ -2,6 +2,7 @@ import {readFile} from 'node:fs/promises';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {readPinned} from './release-height.mjs';
+import {reconcileNativeMass} from './assembly-native-mass.mjs';
 
 function requireValue(ok, message) {
   if (!ok) throw Error(message);
@@ -234,6 +235,7 @@ export async function reviewAssembly(file) {
     const actual=Array.isArray(value)?value:[value,value];
     requireValue(actual.length===2&&actual.every((n,i)=>Number.isFinite(n)&&n===row.rangeKg[i]),'Mass interval differs from pinned source.');
   }
+  if (request.nativeMass !== undefined) result.nativeMass = reconcileNativeMass(request, result, pins, locate);
   return result;
 }
 

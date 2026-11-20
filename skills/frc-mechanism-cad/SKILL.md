@@ -14,6 +14,8 @@ External shape authoring requires a project-specific reason why that operation i
 
 Before selecting parts or combining design changes, use the [assembly accounting check](../../docs/assembly-accounting.md) to reconcile installed instances, supplied articles and inspection mass. When a later revision replaces a candidate part, select the installing change first and record each revision’s own signed net mass. Trace the comparison limit to the project’s selected rule or budget before relying on a final margin.
 
+For an issued engineering assembly, [reconcile the full reopened physical-material inventory with the configured BOM](../../docs/engineering-material-mass.md). Separate stock grades, complete purchased articles and display or fixture bodies. Reconstruct a critical fastened interface from the drawing and loose parts before making a fabrication claim.
+
 When a saved assembly replaces a temporary CAD document, use the [native study replay procedure](../../docs/native-study-replay.md) to verify the destination, assembly revision and moving geometry before repeating a clearance query. Save the binding and pose inputs in the design project.
 
 When resuming an existing design, follow the [design continuation procedure](../../docs/strategy-first-continuation.md) before proposing the next CAD edit or mechanism experiment.

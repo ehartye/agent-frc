@@ -20,3 +20,5 @@ The example contains two physical bearings with one article number, a drive shaf
 Review incomplete coverage, open selections and missing mass before using the result. The command reads project files and returns JSON. Invalid evidence or incompatible changes produce a nonzero exit. An incomplete but valid analysis returns its unknowns.
 
 In a copy of the example mapping, select `["shield","swap-shield"]` to install the 0.16 kg shield and then exchange it for the 0.09 kg retainer. The second change records its own −0.07 kg net delta. The final inventory contains the retainer and the modeled assembly weighs 3.69–3.89 kg. Reversing those IDs fails because the shield is absent at the time of removal. [Synthetic change inputs](../examples/assembly-accounting/mapping.json)
+
+To compare the final archive with these physical instances, [review native materials, supplier substitutions and inspection mass](engineering-material-mass.md).
