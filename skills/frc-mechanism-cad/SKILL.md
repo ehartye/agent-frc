@@ -24,6 +24,8 @@ Read [grounding policy](../../docs/grounding.md). Start with the [learning brief
 
 For a new kickoff design, use the [field lab and narrative handoff](../../docs/kickoff-field-lab.md) first. Identify the chosen match role, the student observation that supports it and the capability the proposed mechanism must satisfy.
 
+Before issuing a still, [verify the saved viewport or registered render](../../docs/cad-capture-review.md). Reopen and activate the selected assembly, restore only the intended display state and compare the resulting pixels with an independent view. Check the whole outline, visible mechanism, cover finish and readable markings promised in this pose. Keep failed captures and distinguish a verified renderer from a native viewport.
+
 ## Establish context
 
 - Game-piece geometry and season envelope.

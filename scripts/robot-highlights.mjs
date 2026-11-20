@@ -235,6 +235,7 @@ export async function buildHighlights(manifest, directory) {
     const receiptFile = await projectFile(config.receipt);
     const record = JSON.parse(await readFile(receiptFile,'utf8'));
     requireValue(['agent-frc/cad-still@1','agent-frc/cad-still@2'].includes(record.schema) && await digest(await projectFile(record.source)) === record.sourceSha256,'Changed CAD source');
+    let captureReview=config.captureReview;
     const selectedFile = path.join(root,'cad-showcase.json');
     const selectedText = await optionalRead(selectedFile);
     if (selectedText !== undefined) {
@@ -243,6 +244,10 @@ export async function buildHighlights(manifest, directory) {
       if (selected.source === record.source || path.normalize(config.receipt) === path.join('docs','robot','cad','receipt.json')) {
         requireValue(selected.source === record.source, 'Selected CAD source differs from the export');
         requireValue(JSON.stringify(backdrop(selected)) === JSON.stringify(backdrop(record)), 'Selected backdrop differs from the CAD export');
+        if(selected.captureReview!==undefined){
+          requireValue(captureReview===undefined||captureReview===selected.captureReview,'Selected capture review differs from the showcase');
+          captureReview=selected.captureReview;
+        }
         const colored = record.schema === 'agent-frc/cad-still@2';
         requireValue(Object.hasOwn(selected,'appearances') === colored &&
           (!colored || selected.appearances === record.appearances?.file), 'Selected appearance manifest differs from the export');
@@ -253,6 +258,11 @@ export async function buildHighlights(manifest, directory) {
     const mesh = await projectFile(path.join(folder,'assembly.stl.gz'));
     requireValue(await digest(still) === record.imageSha256 && await digest(mesh) === record.meshSha256, 'Changed CAD export');
     requireValue(Array.isArray(record.nativeBounds) && record.nativeBounds.length === 6 && record.nativeBounds.every(Number.isFinite), 'Invalid CAD bounds');
+    if(captureReview!==undefined){
+      await projectFile(captureReview);
+      const checker=fileURLToPath(new URL('./cad_capture.py',import.meta.url));
+      await promisify(execFile)(python,[checker,root,captureReview,'--source-sha256',record.sourceSha256,'--image-sha256',record.imageSha256],{encoding:'utf8'});
+    }
     let layout = record.nativeBounds;
     if (record.schema === 'agent-frc/cad-still@2') {
       await projectFile(record.appearances?.file);

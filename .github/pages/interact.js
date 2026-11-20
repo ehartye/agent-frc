@@ -123,3 +123,10 @@ document.getElementById('frameChoice').addEventListener('change',event=>{
 document.getElementById('throughputChoice').addEventListener('change',event=>{
   for(const row of document.querySelectorAll('[data-throughput-trial]'))row.hidden=row.dataset.throughputTrial!==event.target.value;
 });
+
+document.getElementById('captureChoice').addEventListener('change',event=>{
+  const whole=event.target.value==='0',rect=document.getElementById('captureRegion');
+  const bounds=whole?[2,2,1020,1020]:[276,594,502,287];
+  ['x','y','width','height'].forEach((attr,i)=>rect.setAttribute(attr,bounds[i]));
+  document.getElementById('captureNote').textContent=whole?'Check the assembly silhouette against its saved projection.':'Inspect the exposed wheel and fork. A missing lower assembly changes the occupied shape inside this rectangle.';
+});

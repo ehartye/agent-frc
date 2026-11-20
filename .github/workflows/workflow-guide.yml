@@ -27,6 +27,7 @@ on:
       - 'scripts/frame-*.mjs'
       - 'scripts/design-artifact.mjs'
       - 'scripts/check-showcase-inventory.py'
+      - 'scripts/cad_capture.py'
       - 'scripts/showcase_geometry.py'
       - 'examples/kickoff/training-field.json'
       - 'examples/highlights/**'
