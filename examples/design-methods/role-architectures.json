@@ -1,0 +1,122 @@
+{
+  "schema": "agent-frc/design-review@1",
+  "cases": [
+    {
+      "id": "nominal",
+      "condition": "Receiver available at the start."
+    },
+    {
+      "id": "receiver-busy",
+      "condition": "Receiver occupied during the first twelve seconds."
+    }
+  ],
+  "objectives": [
+    {
+      "id": "lastAcceptedS",
+      "unit": "s",
+      "max": 45
+    }
+  ],
+  "concepts": [
+    {
+      "id": "shared",
+      "architecture": "A single reversible channel retains the piece until its receiver resets.",
+      "interfaces": [
+        {
+          "to": "reversible channel",
+          "exchange": "piece and release permission",
+          "from": "drivetrain"
+        }
+      ],
+      "runs": [
+        {
+          "case": "nominal",
+          "source": {
+            "path": "examples/design-methods/role-fixture-results.json",
+            "sha256": "f3cb64496b5f59a2ca471f7fe6d743e7060bc1f6893dae9eb6e9d910bf13b760"
+          },
+          "execution": "/runs/shared/nominal",
+          "values": {
+            "lastAcceptedS": "/runs/shared/nominal/lastAcceptedS"
+          }
+        },
+        {
+          "case": "receiver-busy",
+          "source": {
+            "path": "examples/design-methods/role-fixture-results.json",
+            "sha256": "f3cb64496b5f59a2ca471f7fe6d743e7060bc1f6893dae9eb6e9d910bf13b760"
+          },
+          "execution": "/runs/shared/receiver-busy",
+          "values": {
+            "lastAcceptedS": "/runs/shared/receiver-busy/lastAcceptedS"
+          }
+        }
+      ]
+    },
+    {
+      "id": "independent",
+      "architecture": "An independent output gate resets while the drive returns for the next piece.",
+      "interfaces": [
+        {
+          "to": "independent gate",
+          "exchange": "piece and release permission",
+          "from": "drivetrain"
+        }
+      ],
+      "runs": [
+        {
+          "case": "nominal",
+          "source": {
+            "path": "examples/design-methods/role-fixture-results.json",
+            "sha256": "f3cb64496b5f59a2ca471f7fe6d743e7060bc1f6893dae9eb6e9d910bf13b760"
+          },
+          "execution": "/runs/independent/nominal",
+          "values": {
+            "lastAcceptedS": "/runs/independent/nominal/lastAcceptedS"
+          }
+        },
+        {
+          "case": "receiver-busy",
+          "source": {
+            "path": "examples/design-methods/role-fixture-results.json",
+            "sha256": "f3cb64496b5f59a2ca471f7fe6d743e7060bc1f6893dae9eb6e9d910bf13b760"
+          },
+          "execution": "/runs/independent/receiver-busy",
+          "values": {
+            "lastAcceptedS": "/runs/independent/receiver-busy/lastAcceptedS"
+          }
+        }
+      ]
+    }
+  ],
+  "roleHandoff": {
+    "selection": {
+      "path": "examples/design-methods/role-selection.json",
+      "sha256": "3840c28f75b252582dd15f4f232d192c62fb4ae3be4c06e34df25f802a0ebbcc"
+    },
+    "pairs": [
+      {
+        "id": "nominal",
+        "case": "nominal",
+        "before": "shared",
+        "after": "independent",
+        "premise": "Must the drive wait for the receiver to reset before it can fetch another piece?",
+        "change": "Move the reset to an independent gate so the unloaded drive can depart on acceptance.",
+        "fieldPolicies": {
+          "before": "pad",
+          "after": "shuttle"
+        },
+        "nextExperiment": "Repeat the revised gate with a delayed receiving station and retain the original five-piece target."
+      },
+      {
+        "id": "receiver-busy",
+        "case": "receiver-busy",
+        "before": "shared",
+        "after": "independent",
+        "premise": "Must the drive wait for the receiver to reset before it can fetch another piece?",
+        "change": "Move the reset to an independent gate so the unloaded drive can depart on acceptance.",
+        "nextExperiment": "Measure the first four seconds after the receiver becomes free and test whether an earlier transfer can recover the fifth placement."
+      }
+    ]
+  }
+}

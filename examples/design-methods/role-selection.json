@@ -1,0 +1,15 @@
+{
+  "schema": "agent-frc/role-selection@1",
+  "profile": {
+    "path": "examples/kickoff/training-field.json",
+    "sha256": "2e1beefe13f356d7d6803115103976c06f6804ad845f7639d033501fcd7b1a7b"
+  },
+  "study": {
+    "path": "examples/design-methods/alliance.json",
+    "sha256": "01f922ae115ee69bbfc9631df120319b8839a2319f60ebbf2618004e4bcfb980"
+  },
+  "role": "shuttle",
+  "context": "local",
+  "phase": "Main play",
+  "station": "blue-bay"
+}

@@ -1,3 +1,4 @@
+import path from 'node:path';
 import {readFileSync,writeFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
@@ -114,7 +115,19 @@ if (process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href) {
     const [p,s]=[profile,study].map(f=>readFileSync(f));
     const decode = b => JSON.parse(b.toString('utf8').replace(/^\uFEFF/,''));
     const profileData=decode(p),comparison=compareRoles(profileData,decode(s));
-    if(extra[0]==='--html')await buildLab(profileData,extra[1],comparison);
+    if(extra[0]==='--html'){
+      const files=[profile,study].map(f=>path.resolve(f));
+      const within=(base,file)=>{const rel=path.relative(base,file);return !path.isAbsolute(rel)&&rel!=='..'&&!rel.startsWith('..'+path.sep);};
+      let base=process.cwd();
+      if(!files.every(f=>within(base,f))){
+        base=path.dirname(files[0]);
+        while(!files.every(f=>within(base,f))&&base!==path.dirname(base))base=path.dirname(base);
+      }
+      if(files.every(f=>within(base,f))){
+        comparison.files=Object.fromEntries(files.map((f,i)=>[i?'study':'profile',{path:path.relative(base,f).split(path.sep).join('/'),sha256:hash(i?s:p)}]));
+      }
+      await buildLab(profileData,extra[1],comparison);
+    }
     if(extra[0]==='--replay'){
       const [,role,context,destination]=extra;
       const cell=comparison.cells.find(row=>row.role===role && row.context===context);

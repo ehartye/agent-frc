@@ -1,4 +1,6 @@
 import path from 'node:path';
+import {buildRoleReport} from './role-design-report.mjs';
+import {compareRefinements} from './role-handoff.mjs';
 import {pathToFileURL} from 'node:url';
 import {studyRows} from './strategy-lab.mjs';
 import {readStudy,evidenceReader,atPointer,label} from './study-evidence.mjs';
@@ -64,6 +66,7 @@ export function reviewConcepts(study,read) {
     return {id:d.id,architecture:d.architecture,interfaces:d.interfaces,cases:results,status:verdict(results)};
   });
   return {schema:'agent-frc/design-comparison@1',objectives:goals,resources:budgets,cases,concepts,
+    ...(study.roleHandoff?{roleHandoff:compareRefinements(study.roleHandoff,concepts,read)}:{}),
     qualifiedForTheseCases:concepts.filter(c=>c.status==='pass').map(c=>c.id),
     scope:'Recorded values compared in declared units. Check native metric definitions, execution identity and failure coverage before promoting a concept.'};
 }
@@ -73,9 +76,12 @@ function verdict(rows) {
 }
 if(process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href) {
   try {
-    const [file,root,...extra]=process.argv.slice(2);
-    if(!file||extra.length) throw Error('Usage: design-review.mjs REVIEW.json [PROJECT_ROOT]');
+    const [file,...args]=process.argv.slice(2);
+    const root=args[0]&&args[0]!=='--html'?args.shift():path.dirname(file??'.');
+    if(!file||(args.length&&!(args.length===2&&args[0]==='--html')))throw Error('Usage: design-review.mjs REVIEW.json [PROJECT_ROOT] [--html NEW_REPORT.html]');
     const input=readStudy(file);
-    console.log(JSON.stringify({...reviewConcepts(input.value,evidenceReader(root??path.dirname(file))),studySha256:input.sha256},null,2));
+    const comparison=reviewConcepts(input.value,evidenceReader(root));
+    if(args.length)buildRoleReport(comparison,args[1]);
+    console.log(JSON.stringify({...comparison,studySha256:input.sha256},null,2));
   } catch(e){console.error(e.message);process.exitCode=1;}
 }

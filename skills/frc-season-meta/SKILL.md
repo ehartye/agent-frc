@@ -12,3 +12,5 @@ Give students a card for each plausible role. Record what it does for each partn
 Run the [matched alliance study](../../docs/season-meta-lab.md) before selecting a mechanism. Keep the other robots fixed within each comparison. Change partners, opponent routes, scarcity and terminal occupancy between contexts. Inspect individual waits and failures even when scores tie. Save a held-out setup before using results to choose or revise a role. List the worst observed margin, opportunity cost and the partner mix at which the choice changes.
 
 Hand the selected role, scope, demand window, unresolved rule questions and fallback to the strategic narrative. A modeled score establishes a field opportunity. A competitive mechanism rate needs accepted events from the installed design.
+
+When the team selects a role, save its period and station from the Field Lab. Replay the [role handoff](../../docs/season-meta-lab.md#hand-the-selected-opportunity-to-the-robot-designers) to identify exactly which pieces and actors established the observed demand.

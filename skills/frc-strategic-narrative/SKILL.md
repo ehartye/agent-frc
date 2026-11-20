@@ -18,3 +18,5 @@ Write the [strategy brief](../../docs/game-to-robot-strategy.md) in the student'
 When a design repeatedly loses an observation or pays a large cycle-time penalty to keep it, ask **could the premise be wrong?** Write the physical outcome the strategy requires and the assumption tying it to the current solution. Compare improving the existing solution, observing a different quantity and changing the mechanism or match action. Replay the same difficult case and a plausible failure for each alternative. Record what would change the selection. [Worked camera and retention comparison](../../docs/camera-reference.md#could-the-premise-be-wrong).
 
 Carry the focal role, scored criterion, fallback and required window rate forward from the [matched alliance study](../../docs/season-meta-lab.md).
+
+Attach the [exported role selection](../../docs/season-meta-lab.md#hand-the-selected-opportunity-to-the-robot-designers) when a strategic narrative becomes a whole-robot design requirement. State whether the witnessed action is acquisition, a credited placement or an opportunity still awaiting evidence.
