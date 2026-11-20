@@ -1,0 +1,109 @@
+{
+  "schema": "agent-frc/design-review@1",
+  "objectives": [
+    {
+      "id": "placed",
+      "unit": "pieces per window",
+      "min": 2
+    },
+    {
+      "id": "serviceS",
+      "unit": "s",
+      "max": 30
+    }
+  ],
+  "cases": [
+    {
+      "id": "nominal",
+      "condition": "Open route."
+    },
+    {
+      "id": "blocked",
+      "condition": "Shared path unavailable."
+    }
+  ],
+  "concepts": [
+    {
+      "id": "shared",
+      "architecture": "A reversible channel handles both acquisition and placement.",
+      "interfaces": [
+        {
+          "from": "intake",
+          "to": "common channel",
+          "exchange": "piece possession and permission to move"
+        }
+      ],
+      "runs": [
+        {
+          "case": "nominal",
+          "source": {
+            "path": "fixture-results.json",
+            "sha256": "8b8866857397bfe4d356da10e6d31afbd2894d73fdc10ca6210511f20efe808a"
+          },
+          "values": {
+            "placed": "/architectures/shared/nominal/placed",
+            "serviceS": "/architectures/shared/nominal/serviceS"
+          },
+          "execution": "/architectures/shared/nominal"
+        },
+        {
+          "case": "blocked",
+          "source": {
+            "path": "fixture-results.json",
+            "sha256": "8b8866857397bfe4d356da10e6d31afbd2894d73fdc10ca6210511f20efe808a"
+          },
+          "values": {
+            "placed": "/architectures/shared/blocked/placed",
+            "serviceS": "/architectures/shared/blocked/serviceS"
+          },
+          "execution": "/architectures/shared/blocked"
+        }
+      ]
+    },
+    {
+      "id": "separate",
+      "architecture": "An independent side path leaves the receiving port available.",
+      "interfaces": [
+        {
+          "from": "intake",
+          "to": "side channel",
+          "exchange": "piece possession and permission to move"
+        }
+      ],
+      "runs": [
+        {
+          "case": "nominal",
+          "source": {
+            "path": "fixture-results.json",
+            "sha256": "8b8866857397bfe4d356da10e6d31afbd2894d73fdc10ca6210511f20efe808a"
+          },
+          "values": {
+            "placed": "/architectures/separate/nominal/placed",
+            "serviceS": "/architectures/separate/nominal/serviceS"
+          },
+          "execution": "/architectures/separate/nominal"
+        },
+        {
+          "case": "blocked",
+          "source": {
+            "path": "fixture-results.json",
+            "sha256": "8b8866857397bfe4d356da10e6d31afbd2894d73fdc10ca6210511f20efe808a"
+          },
+          "values": {
+            "placed": "/architectures/separate/blocked/placed",
+            "serviceS": "/architectures/separate/blocked/serviceS"
+          },
+          "execution": "/architectures/separate/blocked"
+        }
+      ]
+    }
+  ],
+  "resources": [
+    {
+      "id": "bus",
+      "unit": "A",
+      "capacity": 24,
+      "basis": "Synthetic supply budget in the robot blockout."
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+---
+name: frc-whole-robot-design
+description: "Develop and compare original whole-robot architectures from a chosen match role, especially before allocating mechanisms or committing to detailed CAD."
+---
+
+# Choose how the whole robot works
+
+Start with the alliance role, scored event, reserve time and fallback. Walk one identifiable piece through approach, capture, retention, transfer, placement and reset. Include the robot's position, occupied volume, time, controls and energy. Mark the operations that can overlap and the shared resources that prevent overlap.
+
+Sketch competing allocations of these functions before choosing purchased mechanisms. Use a simple baseline. Try removing a transfer, reversing a path, using passive geometry or arranging parallel functions. A change in material or supplier alone provides little architectural contrast. State what each candidate deliberately gives up.
+
+Create one editable blockout per plausible architecture in the project. Show the same drivetrain, datum, field targets, loaded mass and CG bounds, power source, wiring and service envelope. Mark the parts sharing a port, volume, current budget or driver action. Name the owner, trigger, clearance, failure behavior and recovery for each interface, including returning to a known state after servicing.
+
+Run the [whole-robot comparison](../../docs/whole-robot-comparison.md) against common nominal and adverse conditions. Inspect integrated execution records and score the same external outcome. Reject an infeasible resource schedule even when its independent subsystems pass. Keep unresolved constraints visible and carry the most discriminating next experiment forward. Hand the selected assembly, rejected alternative, interface datums and measured margins to mechanism CAD and controls.

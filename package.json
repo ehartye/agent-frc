@@ -1,6 +1,6 @@
 {
   "name": "agent-frc",
-  "version": "0.37.0",
+  "version": "0.38.0",
   "private": true,
   "type": "module",
   "description": "Season-aware high-school FRC engineering guidance with explicit evidence and optional local vault grounding.",
@@ -36,6 +36,9 @@
     "power:review": "node scripts/power-review.mjs",
     "sensor:review": "node scripts/sensor-observability.mjs",
     "field:route": "node scripts/field-route-evidence.mjs",
+    "strategy:compare": "node scripts/strategy-lab.mjs",
+    "architecture:compare": "node scripts/design-review.mjs",
+    "mechanism:review": "node scripts/hardening.mjs",
     "release:height": "node scripts/release-height.mjs"
   }
 }

@@ -52,6 +52,12 @@ header{max-width:none;padding:23px max(clamp(14px,3vw,48px),calc((100vw - 1344px
 <fieldset><legend>Field pose</legend><div id="pose"></div></fieldset>
 <div id="elevations"><label for="level">Compare box top with</label><select id="level"></select><p id="difference"></p></div></aside></div>
 <article id="rehearsal" hidden><h2>Rehearse a match</h2>
+<fieldset id="roleLab" hidden><legend>Compare alliance roles</legend>
+<label>Focal robot role<select id="roleChoice"></select></label>
+<label>Partner and opponent setup<select id="roleContext"></select></label>
+<p id="roleBasis"></p><p id="roleOutcome" aria-live="polite"></p>
+<ul id="rolePhases"></ul><button id="rolePlay" type="button">Replay this role and setup at 10×</button>
+</fieldset>
 <p>Assign up to three robots per alliance. Each robot follows its prescribed route with its full bumper footprint. Use the timer to see who waits and which trips finish.</p>
 <figure class="rehearsal-board"><canvas id="replayField" aria-label="Timed overhead field showing labeled blue and red robots, structures and blocked positions. The roster below describes each robot."></canvas>
 <figcaption>Blue and red rectangles show occupied robot footprints. Amber circles mark accumulated waiting. Hatched obstacles block the selected height or reserve uncertain space. Dotted lines show planned robot paths.</figcaption></figure>
@@ -95,6 +101,7 @@ const profile = JSON.parse(document.querySelector('#profile').textContent);
 /* WINDOW MODEL */
 /* LAB */
 /* OPPORTUNITIES */
+const roleComparison=/* ROLE COMPARISON */;
 /* REHEARSAL UI */
 </script>
 </body></html>

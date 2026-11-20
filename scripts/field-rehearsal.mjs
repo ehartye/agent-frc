@@ -49,7 +49,7 @@ export function createFieldRehearsal(profile) {
       if(collision)throw Error(b.id+' start overlaps '+collision.name+'.');
       for(const other of robots) if(geom.robotContact(p,p,b,other.p,other.p,other)!==null)
         throw Error(b.id+' start overlaps '+other.id+'.');
-      robots.push({...b,p,leg:0,waypoints:null,target:0,dwell:0,wait:0,visits:0,blocked:'',action:''});
+      robots.push({...b,p,leg:0,waypoints:null,target:0,dwell:0,wait:0,travelIn:0,visits:0,blocked:'',action:''});
     }
     robots.sort((a,b)=>a.id.localeCompare(b.id));
     const ledger=game.start(robots,tieWinner);
@@ -152,14 +152,14 @@ export function createFieldRehearsal(profile) {
       ends[i]=b;
       if(r.waypoints?.[r.target] && norm(b,r.waypoints[r.target])<1e-8)r.target++;
     }
-    sim.robots.forEach((r,i)=>{r.p=ends[i];});
+    sim.robots.forEach((r,i)=>{r.travelIn+=norm(begins[i],ends[i]);r.p=ends[i];});
     terminal?.observe(sim,begins,sim.ticks*dt,(sim.ticks+1)*dt);
     sim.ticks++;
     if(sim.ticks>=duration(sim.phase)){
       terminal?.assess(sim);
       sim.paused=true;sim.ended=true;sim.carry=0;
       sim.phaseHistory.push({phase:sim.phase,seconds:sim.ticks*dt,
-        robots:sim.robots.map(r=>({id:r.id,visits:r.visits,waitSeconds:r.wait*dt,blocked:r.blocked,position:[...r.p]}))});
+        robots:sim.robots.map(r=>({id:r.id,visits:r.visits,waitSeconds:r.wait*dt,travelIn:r.travelIn,blocked:r.blocked,position:[...r.p]}))});
       event(sim,sim.phase+' clock expired');
     }
   }
@@ -174,7 +174,7 @@ export function createFieldRehearsal(profile) {
   function nextPhase(sim) {
     if(!sim.ended || sim.phaseIndex===phases.length-1)throw Error('Finish the active period before advancing to a configured next period.');
     sim.phase=phases[++sim.phaseIndex].name;sim.ticks=0;sim.carry=0;sim.ended=false;sim.paused=true;sim.resources=reservations();
-    for(const r of sim.robots)Object.assign(r,{leg:0,waypoints:null,target:0,dwell:0,wait:0,visits:0,blocked:'',action:''});
+    for(const r of sim.robots)Object.assign(r,{leg:0,waypoints:null,target:0,dwell:0,wait:0,travelIn:0,visits:0,blocked:'',action:''});
   }
   return {supported,behaviors,defaults,create,advance,nextPhase,assessRoute,geom,dt,periods:phases,terminal,
     phaseSeconds:name=>duration(name)*dt};

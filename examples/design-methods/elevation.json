@@ -1,0 +1,18 @@
+{
+  "schema": "agent-frc/elevation-study@1",
+  "inventory": {
+    "path": "fixture-results.json",
+    "sha256": "8b8866857397bfe4d356da10e6d31afbd2894d73fdc10ca6210511f20efe808a",
+    "pointer": "/inventory"
+  },
+  "mechanisms": [
+    {
+      "id": "transfer-stand",
+      "source": {
+        "path": "fixture-results.json",
+        "sha256": "8b8866857397bfe4d356da10e6d31afbd2894d73fdc10ca6210511f20efe808a",
+        "pointer": "/elevation"
+      }
+    }
+  ]
+}

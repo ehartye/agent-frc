@@ -12,6 +12,8 @@ on:
       - 'docs/**'
       - 'templates/**'
       - 'scripts/kickoff*.mjs'
+      - 'scripts/strategy-lab.mjs'
+      - 'examples/design-methods/alliance.json'
       - 'scripts/field-rehearsal*.mjs'
       - 'scripts/rehearsal-*.mjs'
       - 'scripts/project-layout.mjs'

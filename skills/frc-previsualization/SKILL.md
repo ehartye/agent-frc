@@ -17,3 +17,5 @@ For a new game, extract the [project rules model](../../docs/project-rules-model
 Use [complete match rehearsals](../../docs/match-series.md) to test likely per-period behaviors for both alliances with finite piece stock, occupied robot footprints and explicit target activity. Compare the independent matches at 10× and carry observed queues and unresolved scoring conditions into the project strategy.
 
 In each scoring opportunity state where the supply is, which pieces are already aboard and when loaded travel can begin. Use the loaded-batch screen for a single later transfer and preserve the assumption in the student narrative.
+
+Use the editable blockouts for a [whole-robot architecture comparison](../../docs/whole-robot-comparison.md) before detailing a subsystem.

@@ -101,3 +101,5 @@ Before using a sensor to advance the mechanism, [check the mounted optical path 
 Trace the same camera rays with the piece removed at pickup and during travel. Identify which rays still see a calibrated surface as the mechanism moves. Use those rays to distinguish a seated piece from an empty or shifted one. [Check the traveling camera view](../../docs/camera-reference.md).
 
 For a publicly downloadable whole robot, bind the student archive to its own reopened component, feature and joint evidence. [Verify the public Fusion handoff](../../docs/public-fusion-handoff.md).
+
+Begin detailed CAD from the selected [whole-robot architecture](../../docs/whole-robot-comparison.md). Check the installed revision against its [elevation loads, cycle rate and recovery](../../docs/mechanism-hardening.md).
