@@ -36,6 +36,8 @@ Read `residualAfterVerticalForcesXYNm` as applied load still requiring restraint
 
 The spatial check covers vertical reactions, acceleration along Z, and two horizontal moment equations. Horizontal forces, yaw, lateral slip, compliance, impacts and transient rotation require separate evidence. A moment-balanced pose can still fail a working load rating or retain an unknown capacity. Existing one-plane studies keep their original output and scope.
 
+A horizontally braced or frictional suspension needs its [complete coupled contact wrench](coupled-support.md), including the signed yaw moment and contact capacities.
+
 ## Can the robot repeatedly score at the required rate?
 
 ```sh

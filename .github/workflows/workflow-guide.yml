@@ -17,6 +17,8 @@ on:
       - 'scripts/design-review.mjs'
       - 'scripts/study-evidence.mjs'
       - 'scripts/spatial-elevation.mjs'
+      - 'scripts/coupled-support.mjs'
+      - 'scripts/support-ranges.mjs'
       - 'scripts/hardening.mjs'
       - 'scripts/throughput-cohort.mjs'
       - 'scripts/piece-window.mjs'

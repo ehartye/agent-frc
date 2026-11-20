@@ -1,4 +1,6 @@
 import {analyzeWindow} from '../../scripts/kickoff-window.mjs';
+import {makeSupportFixture} from '../../examples/design-methods/make-support-fixture.mjs';
+import {reviewCoupled} from '../../scripts/coupled-support.mjs';
 import {makeThroughputCohort} from '../../examples/design-methods/make-throughput-cohort.mjs';
 import {tmpdir} from 'node:os';
 import {mkdtemp,rm} from 'node:fs/promises';
@@ -73,16 +75,23 @@ ${suspension.cases.map((c,i)=>{
   return '<div data-suspension-pose="'+i+'"'+(i?' hidden':'')+'><p>Vertical reactions: '+fmt(b.loads)+' N.</p><p>Unbalanced moments about X and Y: <strong>'+fmt(b.unbalancedMomentXYNm)+' N·m</strong>. '+(b.momentEquilibrium==='balanced'?'The pose balances. Component capacity is open.':'The carriage can rotate from this pose.')+'</p></div>';
 }).join('')}</details>`;
 const throughputDir=await mkdtemp(path.join(tmpdir(),'agent-frc-guide-cohort-'));
-let throughput;
+let throughput,coupled;
 try{
   const study=makeThroughputCohort(throughputDir),read=evidenceReader(throughputDir);
   throughput=reviewThroughput(read(study),read);
+  const demo=path.join(throughputDir,'spring'),file=makeSupportFixture(demo),readSpring=evidenceReader(demo);
+  coupled=reviewCoupled(readSpring(file),readSpring);
 }finally{await rm(throughputDir,{recursive:true,force:true});}
 const throughputStudy=`<details class="reading"><summary>Can the carrier repeat its delivery rate?</summary>
 <p>The tabletop timing model needs two accepted blocks in the first ten seconds of the work phase. The phase begins at match time 20 s. Check how much time an occupied aisle leaves.</p>
 <label>Frozen trial <select id="throughputChoice">${throughput.episodes.map((r,i)=>'<option value="'+i+'">'+escape(r.id)+' · '+r.parameters.queueS+' s queue</option>').join('')}</select></label>
 ${throughput.episodes.map((r,i)=>'<div data-throughput-trial="'+i+'"'+(i?' hidden':'')+'><p>'+escape(r.partition)+' · '+r.windowS.join('–')+' s on the match clock</p><p><strong>'+r.accepted+' of '+throughput.demand.requiredPieces+' required</strong> · '+r.acceptedPerSecond.toFixed(2)+' blocks/s · '+escape(r.status)+'</p></div>').join('')}
 <p>The frozen cohort includes all three starts. Each rate uses the entire ten seconds.</p>${link('Run the rate study','docs/mechanism-hardening.md')}</details>`;
+const supportLab=`<details class="reading"><summary>Can the guides hold the carrier at this pose?</summary>
+<p>Two seats carry the weight. Opposed guides also have to resist rotation. Change one feature of the spring fixture and inspect the force and all three moments.</p>
+<label>Load case <select id="coupledChoice">${coupled.cases.map((r,i)=>'<option value="'+i+'">'+escape(r.id)+'</option>').join('')}</select></label>
+${coupled.cases.map((r,i)=>'<div data-coupled-case="'+i+'"'+(i?' hidden':'')+'><p>Net force X, Y, Z: '+r.residualForceN.join(', ')+' N</p><p>Residual roll, pitch, yaw: <strong>'+r.residualMomentNm.join(', ')+' N·m</strong></p><p>Lower brace: '+r.reactions[3].magnitudeN+' N on the 28 N classroom envelope · '+escape(r.status)+'</p></div>').join('')}
+${link('Review a recorded free body','docs/coupled-support.md')}</details>`;
 const captureLab=`<details class="reading"><summary>Inspect the saved CAD still</summary>
 <p>Compare the visible outline of this teaching module with the preview inside its saved Fusion archive. The lower wheel and fork must also appear in their registered region.</p>
 <label>Inspect <select id="captureChoice"><option value="0">Entire module</option><option value="1">Wheel and fork</option></select></label>
@@ -115,7 +124,7 @@ const highlightsLink='<a href="robot/index.html">Explore the example robot evide
 const chapters=stages.map((s,i)=>`<details id="${s.id}" class="chapter"${i===0?' open':''}>
 <summary><span class="ordinal">${chapter(i)}</span><span>${escape(s.name)}</span><span class="toggle" aria-hidden="true"></span></summary>
 <div class="chapter-body"><h3>${escape(s.question)}</h3><p>${escape(s.objective)}</p><p>${escape(s.activity)}</p>
-<div class="handoff"><h4>Carry forward</h4><p>${escape(s.handoff)}</p></div>${s.docs.some(([,p])=>p==='docs/camera-reference.md')?cameraComparison:''}${s.id==='contract'?serviceComparison:''}${s.id==='design'?frameStudy:''}${s.id==='verify'?suspensionStudy+throughputStudy+captureLab:''}
+<div class="handoff"><h4>Carry forward</h4><p>${escape(s.handoff)}</p></div>${s.docs.some(([,p])=>p==='docs/camera-reference.md')?cameraComparison:''}${s.id==='contract'?serviceComparison:''}${s.id==='design'?frameStudy:''}${s.id==='verify'?suspensionStudy+supportLab+throughputStudy+captureLab:''}
 <h4>Supporting skills</h4><div class="chips">${s.skills.map(k=>link(k,'skills/'+k+'/SKILL.md')).join('')}</div>
 <div class="reading">${s.id==='design'?'<a href="role-design.html">Compare robot designs against a selected match role ↗</a> · ':''}${s.id==='verify'?highlightsLink:''}${s.id==='story'?'<a href="field-lab.html#roleLab">Compare alliance roles and replay the field ↗</a> · ':''}${s.id==='rules'?'<a href="rules.json" download>Download the training rules model ↓</a> · ':''}${s.docs.some(([,p])=>p===powerGuide)?'<a href="#power">Try the shared-power comparison ↓</a> · ':''}${s.docs.map(([label,p])=>link(label+' ↗',p)).join(' · ')}</div></div></details>`).join('\n');
 const directory=Object.keys(purpose).map(k=>{
