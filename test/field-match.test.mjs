@@ -135,3 +135,28 @@ test('rectangle entry, rear contact, a lateral miss and the wrong loose ID earn 
   assert.equal(grab(4),true);assert.equal(grab(4),false);
   assert.deepEqual(sim.game.cargo.B1.map(p=>p.id),[s.id+'/4']);
 });
+
+
+test('a hopper meters each ID at the scoring pose until empty, interrupted or the scoring window closes',()=>{
+  for(const [load,closeS,admitted] of [[8,9,8],[2,9,2],[8,1.6,3]]){
+    const p=fresh(),m=p.rehearsal,[source,station]=m.stations;
+    const at=m.starts[0];source.stock=8;delete source.floor;
+    Object.assign(station,{at,activeWindows:[{phase:'Opening',fromS:0,toS:closeS}]});
+    m.programs.meter={label:'Meter delivery',steps:[{at,label:'Feed at target',station:station.id,operation:'attempt',
+      outcome:'credited',deliveryRatePerS:2},{at:[at[0]+8,at[1]],label:'Depart'}]};
+    const e=createFieldRehearsal(p),r={...e.defaults('blue',1),capacity:8,preload:{station:source.id,quantity:load},
+      plans:{Opening:'meter','Main play':'hold'}};
+    const sim=e.createProbe([r]);sim.paused=false;
+    e.advance(sim,.45);assert.equal(sim.game.score.blue,0);
+    e.advance(sim,5);
+    const events=sim.game.events.filter(v=>v.operation==='attempt');
+    assert.equal(events.length,admitted);assert.equal(sim.game.score.blue,admitted);
+    assert.equal(sim.game.cargo.B1.length,load-admitted);
+    for(const [i,event] of events.entries()){
+      assert.equal(event.pieces.length,1);assert.ok(Math.abs(event.timeS-(i+1)*.5)<=.051);
+      assert.ok(event.timeS<closeS);
+    }
+    assert.notDeepEqual(sim.robots[0].p,at);
+    e.advance(sim,2);assert.equal(sim.game.score.blue,admitted);
+  }
+});

@@ -112,6 +112,9 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
     }
   }
   function validateStep(step) {
+    if(step.deliveryRatePerS!==undefined)legal(step.operation==='attempt' && step.quantity===undefined &&
+      Number.isFinite(step.deliveryRatePerS) && step.deliveryRatePerS>0 && step.deliveryRatePerS<=20,
+      'A hopper delivery needs an attempt, a positive rate within one piece per simulation tick and no batch limit.');
     if(step.openingAlternatives!==undefined)legal(step.operation==='acquire' && Array.isArray(step.openingAlternatives) &&
       step.openingAlternatives.every(id=>stations.get(id)?.kind==='retrieval'), 'Opening alternatives must be registered pickup sources.');
     if (step.operation===undefined && step.station===undefined) return;
@@ -303,8 +306,7 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
     if (!step.operation) return;
     const key = typeof step.station==='string' ? step.station : step.station[robot.side];
     const s=stations.get(key),g=sim.game,bay=g.cargo[robot.id],n=step.quantity ?? 1;
-    const inRange=s.areaIn ? robot.p.every((v,i)=>v>=s.areaIn[0][i] && v<=s.areaIn[1][i]) :
-      Math.hypot(robot.p[0]-s.at[0],robot.p[1]-s.at[1])<=s.radiusIn;
+    const inRange=inStation(s,robot);
     if (![robot.side,'both'].includes(s.side) || (!s.floor && !(s.service && robot.intake) && !inRange)) {
       record(sim,robot,s,step.operation,'ineligible-position-or-alliance',[],timeS);return;
     }
@@ -339,19 +341,29 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
     g.cargo[robot.id]=bay.filter(p=>!used.has(p));
     dispose(sim,robot,s,pieces,step.outcome ?? 'unresolved',timeS);
   }
+  function stationActivity(sim,s,timeS){
+    if(!s.activeWindows)return 'active';
+    const windows=s.activeWindows.filter(w=>w.phase===sim.phase && w.fromS<=timeS && timeS<w.toS);
+    const counts=sim.game.firstPeriodCount;
+    const leader=sim.phaseIndex===0?undefined:counts.blue===counts.red?sim.game.tieWinner:counts.blue>counts.red?'blue':'red';
+    if(windows.some(w=>!w.firstPeriodLeader || w.firstPeriodLeader===leader))return 'active';
+    return windows.length && !leader?'unresolved':'inactive';
+  }
+  function mayDeliver(sim,robot,leg,timeS){
+    const key=typeof leg.station==='string'?leg.station:leg.station[robot.side],s=stations.get(key);
+    return [robot.side,'both'].includes(s.side) && stationActivity(sim,s,timeS)==='active' &&
+      (s.capacity===undefined || sim.game.occupied[key]<s.capacity) &&
+      sim.game.cargo[robot.id].some(p=>p.type===s.piece) && inStation(s,robot);
+  }
+  function inStation(s,robot){
+    return s.areaIn?robot.p.every((v,i)=>v>=s.areaIn[0][i] && v<=s.areaIn[1][i]):
+      Math.hypot(robot.p[0]-s.at[0],robot.p[1]-s.at[1])<=s.radiusIn;
+  }
   function dispose(sim,robot,s,pieces,prescribed,timeS,basis){
     const g=sim.game,key=s.id;
     let outcome=prescribed;
-    let activity='active';
-    if (s.activeWindows) {
-      const possible=s.activeWindows.filter(w=>w.phase===sim.phase && w.fromS<=timeS && timeS<w.toS);
-      const counts=g.firstPeriodCount;
-      const leader=sim.phaseIndex===0 ? undefined : counts.blue===counts.red ? g.tieWinner : counts.blue>counts.red?'blue':'red';
-      if (!possible.some(w=>!w.firstPeriodLeader || w.firstPeriodLeader===leader)) {
-        activity=possible.length && !leader?'unresolved':'inactive';
-        outcome=activity;
-      }
-    }
+    const activity=stationActivity(sim,s,timeS);
+    if(activity!=='active')outcome=activity;
     const admitted=outcome==='credited' && s.capacity!==undefined ?
       Math.min(pieces.length,Math.max(0,s.capacity-g.occupied[key])) : pieces.length;
     for(const [result,batch] of [[outcome,pieces.slice(0,admitted)],['occupied',pieces.slice(admitted)]]){
@@ -375,7 +387,7 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
       }
     }
   }
-  return {start,apply,replenish,move,seek,intake};
+  return {start,apply,replenish,move,seek,intake,mayDeliver};
 }
 
 
