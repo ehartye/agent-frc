@@ -20,3 +20,5 @@ When a design repeatedly loses an observation or pays a large cycle-time penalty
 Carry the focal role, scored criterion, fallback and required window rate forward from the [matched alliance study](../../docs/season-meta-lab.md).
 
 Attach the [exported role selection](../../docs/season-meta-lab.md#hand-the-selected-opportunity-to-the-robot-designers) when a strategic narrative becomes a whole-robot design requirement. State whether the witnessed action is acquisition, a credited placement or an opportunity still awaiting evidence.
+
+When a role relies on a partner, [compare the complete alliance service chain](../../docs/alliance-completion.md) before selecting the robot architecture. Track the same piece from finite supply through delivery and reset on the match clock. Change partner availability and inspect which design completes more cycles.

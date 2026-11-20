@@ -36,3 +36,29 @@ export function buildRoleReport(result,destination) {
   const page=template.replace(/<!-- (scope|options|panels) -->/g,(_,key)=>({scope,options:selectors,panels})[key]);
   writeFileSync(destination,page,{flag:'wx'});
 }
+
+export function buildAllianceReport(result,destination){
+  const {architectures,policies,rows,choices}=result;
+  const scope='<p>'+escape(result.criterion)+' · '+result.windowS.map(escape).join('–')+' s · '+escape(result.scope)+'</p>'+(result.wholeRobotPreference==='open'?'<p>The installed robot preference is open.</p>':'');
+  const options=policies.map((c,i)=>'<option value="'+i+'">'+escape(c.id)+'</option>').join('');
+  const panels=policies.map((p,i)=>{
+    const choice=choices[i],n=result.objective==='completedCycles'?'completed cycles':'terminal deliveries';
+    const verdict=choice.status==='open'?choice.reason:choice.winners.join(', ')+' · '+choice.best+' '+n+
+      (choice.winners.length>1?' (tie).':'.');
+    const cards=rows.filter(r=>r.policy===p.id).map(r=>{
+      const system=architectures.find(a=>a.id===r.architecture);
+      const metric=(name,v)=>'<span><strong>'+escape(v)+'</strong><small>'+escape(name)+'</small></span>';
+      const counts=r.counts?'<div class="metrics">'+[['source pickups','acquisitions'],['focal deposits','focalDeposits'],['partner pickups','partnerReceipts'],
+        ['terminal deliveries','deliveries'],['completed alliance cycles','completedCycles'],['completed via relay','relayCycles'],['partner’s own completed cycles','independentPartnerCycles']].map(([name,key])=>metric(name,r.counts[key])).join('')+'</div>':'';
+      const events=(r.witnesses??[]).map(e=>'<li>'+escape(e.timeS)+' s · '+escape(e.actor)+' · '+escape(e.action)+' · '+escape(e.piece)+' at '+escape(e.station)+'</li>').join('');
+      const custody=Object.entries(r.finalCustody??{}).map(([piece,state])=>'<li>'+escape(piece)+' · '+escape(state.kind)+' · '+escape(state.actor??state.station??'')+'</li>').join('');
+      return '<section><h3>'+escape(system.id)+'</h3><p>'+escape(system.design)+'</p>'+counts+
+        '<p>'+escape(r.status==='open'?r.reason:r.ratePerS.toFixed(3)+' '+n+'/s over the full window.')+'</p>'+
+        (events?'<details><summary>Inspect custody at '+escape(r.asOfS)+' s and event times</summary><ul>'+custody+'</ul><ol class="trace">'+events+'</ol></details>':'')+'</section>';
+    }).join('');
+    return '<article data-policy="'+i+'"'+(i?' hidden':'')+'><h2>'+escape(p.partnerRole)+'</h2><p>'+escape(p.focalRole)+
+      ' · '+p.supply.length+' identified pieces</p><div class="compare">'+cards+'</div><p class="decision">'+escape(verdict)+'</p></article>';
+  }).join('');
+  const template=readFileSync(new URL('../templates/alliance-completion.html',import.meta.url),'utf8');
+  writeFileSync(destination,template.replace(/<!-- (scope|options|panels) -->/g,(_,key)=>({scope,options,panels})[key]),{flag:'wx'});
+}

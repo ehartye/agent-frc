@@ -1,0 +1,22 @@
+# Does the partner finish in time?
+
+Before choosing a robot, compare two ways to move the same finite inventory to its final destination. A carrier can keep a partner busy and still leave the final piece in transit at the horn. Decide whether the role requires a terminal delivery or a complete delivery and reset. Record a match-point value only where the project’s rules artifact awards one.
+
+## Run the two-carriage exercise
+
+```sh
+node examples/design-methods/make-alliance-completion.mjs artifacts/alliance
+npm run architecture:compare -- artifacts/alliance/study.json --html artifacts/alliance/report.html
+```
+
+Open the report and change **Partner strategy**. Under the ready-receiver strategy the relay completes four cycles in twenty seconds, ahead of the direct carriage’s three. Under the second strategy, the partner first carries its own reserved block and can visit a bay at fifteen seconds. The relay still deposits all four focal blocks. Its partner collects two and completes one relay cycle before time expires. Including the partner’s independent cycle gives two alliance cycles for the relay and four for the direct carriage. Expand the custody history to see which robot holds the piece when the clock closes. Both alternatives start with the same four focal blocks, one partner-only block, and two single-block bays. The fourth focal block becomes available at eight seconds.
+
+## Review a project
+
+1. Start with the role, fixed opponents and other allies, game clock, external criterion and finite supply in the project’s field and role study. Pin the common field context and describe what the two participating actors contribute to the alliance. If a different partner duty produces other points, preserve those separately or include them in a complete match study. This comparison accounts only for the registered service chain.
+2. Freeze the complete plan, including a distinct installed revision and interface diagram for each architecture. Register direct focal delivery, partner direct delivery or relay paths as appropriate. Give each partner policy a pinned setup with the roles, service availability, exchange-specific availability when needed, eligible stock owners and a common field-context reference. Record the available time and station for each distinct identity, buffer capacity, simultaneous terminal capacity before rearm, and the half-open clock window. Save the plan’s digest before execution. Pass it back with `--freeze-sha256 PLAN_DIGEST` to reject a different plan.
+3. For each design and strategy cell, record an identifiable native execution, the exact installed design and setup, and the complete registered actor event stream. Keep a source reference for each custody observation. A normalized project adapter should retain its original run, source digest, units, action mapping and event pointer. The starting condition supported here has empty robots and pads. Preloads, pass-through inventories and reused pieces need their own substantiated accounting before applying this exercise.
+4. A source acquisition claims one available identity. A focal deposit frees the carrier only after the piece reaches a pad with capacity. A partner pickup consumes that exact identity from the same pad. A terminal delivery requires the current custodian and the frozen destination and criterion. A completed cycle also requires the delivering actor to rearm, freeing its capacity. Register both actors’ direct deliveries when they contribute to this service. Preserve pending pieces, failed attempts, incomplete clock coverage and late events.
+5. Read the preference under each strategy. Comparing complete robot revisions requires both alternatives on the same setup. A reversal attributed to partner strategy requires matched field context and supply and an actual change in actor service availability or permitted actions. Field rehearsals and timing models give a role hypothesis. Incomplete controls keep the hardware choice open. Carry the governing delay, custody state and first unresolved interface into the [whole-robot design review](whole-robot-comparison.md).
+
+The generated `study.json`, `plan.json`, field setup, design registers and event records form a runnable schema example. Use SHA-256 and JSON pointers relative to the supplied project root. The original exercise models tabletop transport only. It predicts the stated timing and custody outcomes for those two models.

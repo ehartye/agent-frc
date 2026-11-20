@@ -1,0 +1,7 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Who finishes the cycle?</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f3f7fa;color:#17354c;font:1rem/1.55 system-ui,sans-serif}header{background:#153a58;color:white;border-bottom:5px solid #e4b553}main,header>div{max-width:65rem;margin:auto;padding:1.5rem}h1,h2,h3{line-height:1.2}h1{font-size:clamp(2rem,5vw,3.4rem);margin:.35em 0}label{display:grid;gap:.4em;max-width:26rem}select{padding:.65em;background:white;color:#17354c;font:inherit;border:1px solid #54788b}section{background:white;border-top:3px solid #5a819b;padding:1rem;min-width:0}.compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,23rem),1fr));gap:1rem}.decision{padding:.75em 1em;border-left:4px solid #ac7b28;background:#fff7de}h3{margin-top:.3em}summary{cursor:pointer;font-weight:600}.metrics{display:grid;grid-template-columns:repeat(2,1fr);margin:1em 0;gap:.5em}.metrics span,.metrics small{display:block}.metrics strong{font-size:1.4rem}.trace{overflow-wrap:anywhere;padding-left:1.3em}details{margin:.7em 0}
+</style></head><body><header><div><h1>Who finishes the cycle?</h1><!-- scope --></div></header>
+<main><label>Partner strategy<select id="policy"><!-- options --></select></label><!-- panels --></main>
+<script>document.getElementById('policy').onchange=e=>{for(const panel of document.querySelectorAll('[data-policy]'))panel.hidden=panel.dataset.policy!==e.target.value;};</script></body></html>

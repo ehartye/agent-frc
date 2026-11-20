@@ -14,3 +14,5 @@ Run the [matched alliance study](../../docs/season-meta-lab.md) before selecting
 Hand the selected role, scope, demand window, unresolved rule questions and fallback to the strategic narrative. A modeled score establishes a field opportunity. A competitive mechanism rate needs accepted events from the installed design.
 
 When the team selects a role, save its period and station from the Field Lab. Replay the [role handoff](../../docs/season-meta-lab.md#hand-the-selected-opportunity-to-the-robot-designers) to identify exactly which pieces and actors established the observed demand.
+
+When a role relies on a partner, [compare the complete alliance service chain](../../docs/alliance-completion.md) before selecting the robot architecture. Track the same piece from finite supply through delivery and reset on the match clock. Change partner availability and inspect which design completes more cycles.

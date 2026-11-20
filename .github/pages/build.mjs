@@ -9,7 +9,9 @@ import {mkdtemp,rm} from 'node:fs/promises';
 import {reviewElevation,reviewThroughput} from '../../scripts/hardening.mjs';
 import {evidenceReader} from '../../scripts/study-evidence.mjs';
 import {reviewConcepts} from '../../scripts/design-review.mjs';
-import {buildRoleReport} from '../../scripts/role-design-report.mjs';
+import {makeAllianceCompletion} from '../../examples/design-methods/make-alliance-completion.mjs';
+import {reviewAllianceCompletion} from '../../scripts/alliance-completion.mjs';
+import {buildAllianceReport,buildRoleReport} from '../../scripts/role-design-report.mjs';
 import {compareRoles} from '../../scripts/strategy-lab.mjs';
 import {createDesign,deriveGeometry} from '../../scripts/design-artifact.mjs';
 import {frameDxf} from '../../scripts/frame-dxf.mjs';
@@ -77,10 +79,12 @@ ${suspension.cases.map((c,i)=>{
   return '<div data-suspension-pose="'+i+'"'+(i?' hidden':'')+'><p>Vertical reactions: '+fmt(b.loads)+' N.</p><p>Unbalanced moments about X and Y: <strong>'+fmt(b.unbalancedMomentXYNm)+' N·m</strong>. '+(b.momentEquilibrium==='balanced'?'The pose balances. Component capacity is open.':'The carriage can rotate from this pose.')+'</p></div>';
 }).join('')}</details>`;
 const throughputDir=await mkdtemp(path.join(tmpdir(),'agent-frc-guide-cohort-'));
-let throughput,coupled,duties;
+let throughput,coupled,duties,completion;
 try{
   const study=makeThroughputCohort(throughputDir),read=evidenceReader(throughputDir);
   throughput=reviewThroughput(read(study),read);
+  const relayDir=path.join(throughputDir,'relay'),relayFile=makeAllianceCompletion(relayDir),readRelay=evidenceReader(relayDir);
+  completion=reviewAllianceCompletion(readRelay(relayFile),readRelay);
   const demo=path.join(throughputDir,'spring'),file=makeSupportFixture(demo),readSpring=evidenceReader(demo);
   coupled=reviewCoupled(readSpring(file),readSpring);
   const dutyFolder=path.join(throughputDir,'carriage'),dutyFile=makeActuatorDutyFixture(dutyFolder),readDuty=evidenceReader(dutyFolder);
@@ -140,7 +144,7 @@ const chapters=stages.map((s,i)=>`<details id="${s.id}" class="chapter"${i===0?'
 <div class="chapter-body"><h3>${escape(s.question)}</h3><p>${escape(s.objective)}</p><p>${escape(s.activity)}</p>
 <div class="handoff"><h4>Carry forward</h4><p>${escape(s.handoff)}</p></div>${s.docs.some(([,p])=>p==='docs/camera-reference.md')?cameraComparison:''}${s.id==='contract'?serviceComparison:''}${s.id==='design'?frameStudy:''}${s.id==='verify'?suspensionStudy+supportLab+dutyLab+throughputStudy+captureLab:''}
 <h4>Supporting skills</h4><div class="chips">${s.skills.map(k=>link(k,'skills/'+k+'/SKILL.md')).join('')}</div>
-<div class="reading">${s.id==='design'?'<a href="role-design.html">Compare robot designs against a selected match role ↗</a> · ':''}${s.id==='verify'?highlightsLink:''}${s.id==='story'?'<a href="field-lab.html#roleLab">Compare alliance roles and replay the field ↗</a> · ':''}${s.id==='rules'?'<a href="rules.json" download>Download the training rules model ↓</a> · ':''}${s.docs.some(([,p])=>p===powerGuide)?'<a href="#power">Try the shared-power comparison ↓</a> · ':''}${s.docs.map(([label,p])=>link(label+' ↗',p)).join(' · ')}</div></div></details>`).join('\n');
+<div class="reading">${s.id==='design'?'<a href="role-design.html">Compare robot designs against a selected match role ↗</a> · <a href="alliance-completion.html">Which robot design wins when the partner is busy? ↗</a> · ':''}${s.id==='verify'?highlightsLink:''}${s.id==='story'?'<a href="field-lab.html#roleLab">Compare alliance roles and replay the field ↗</a> · ':''}${s.id==='rules'?'<a href="rules.json" download>Download the training rules model ↓</a> · ':''}${s.docs.some(([,p])=>p===powerGuide)?'<a href="#power">Try the shared-power comparison ↓</a> · ':''}${s.docs.map(([label,p])=>link(label+' ↗',p)).join(' · ')}</div></div></details>`).join('\n');
 const directory=Object.keys(purpose).map(k=>{
   const uses=stages.filter(s=>s.skills.includes(k));
   if(!uses.length) throw Error('Skill lacks a workflow stage: '+k);
@@ -169,6 +173,7 @@ await buildHighlights(path.join(root,'examples/highlights/stroke-chapter-page.js
 const roleStudy=JSON.parse(await readFile(path.join(root,'examples/design-methods/alliance.json'),'utf8'));
 const selection=JSON.parse(await readFile(path.join(studyFolder,'role-selection.json'),'utf8'));
 const architectureStudy=JSON.parse(await readFile(path.join(studyFolder,'role-architectures.json'),'utf8'));
+buildAllianceReport(completion,path.join(output,'alliance-completion.html'));
 buildRoleReport(reviewConcepts(architectureStudy,evidenceReader(root)),path.join(output,'role-design.html'));
 await buildLab(profile,path.join(output,'field-lab.html'),{...compareRoles(profile,roleStudy),files:{profile:selection.profile,study:selection.study}});
 console.log('Built '+stages.length+' workflow stages, '+ownedSkills.length+' skills and the current kickoff lab.');
