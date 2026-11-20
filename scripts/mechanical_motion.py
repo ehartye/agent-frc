@@ -67,6 +67,31 @@ def travel_bound(box,moves):
     return bound
 
 
+def separate_translations(a,b,ma,mb,clearance):
+    # A fixed separating coordinate plane may move during a gravity/linear
+    # stroke. Check the exact minimum of each quadratic relative displacement.
+    def coefficients(moves):
+        linear=[0.,0.,0.];square=[0.,0.,0.]
+        for move in moves:
+            if move["kind"]=="translation":
+                linear=[x+y for x,y in zip(linear,move["travelMm"])]
+            elif move["kind"]=="gravity-drop":
+                h=move["fallMm"];w=move["quadraticFraction"]
+                linear[2]-=h*(1-w);square[2]-=h*w
+            else:return None
+        return linear,square
+    pa,pb=coefficients(ma),coefficients(mb)
+    if pa is None or pb is None:return False
+    for i in range(3):
+        for first,second,sign in ((a,b,1),(b,a,-1)):
+            gap=second[i]-first[i+3]
+            v=sign*(pb[0][i]-pa[0][i]);q=sign*(pb[1][i]-pa[1][i])
+            low=min(gap,gap+v+q)
+            if q>0 and 0<-v/(2*q)<1:low=min(low,gap-v*v/(4*q))
+            if low>=clearance:return True
+    return False
+
+
 def distance(a,b):
     from OCP.BRepExtrema import BRepExtrema_DistShapeShape
     q=BRepExtrema_DistShapeShape(a,b)
@@ -161,7 +186,7 @@ def evaluate(root,study):
                 rows.append(dict(pair=[a,b],status="fail" if hit else "pass",witness=dict(t=0,gapMm=g,volumeMm3=v)))
                 continue
             speed=rates.get(a,0)+rates.get(b,0)
-            if box_gap(boxes[a],boxes[b])-speed>cut:
+            if box_gap(boxes[a],boxes[b])-speed>cut or separate_translations(boxes[a],boxes[b],moves.get(a,[]),moves.get(b,[]),cut):
                 counts["broadPhase"]+=1;continue
             poses={}
             def sample(t):

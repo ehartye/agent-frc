@@ -20,7 +20,10 @@ def replay(root,study):
     stock_ids={r["id"] for r in stock}
     require(len(stock_ids)==len(stock) and source_id not in stock_ids and not stock_ids.intersection(actual),
         "Adjacent stock must have distinct, finite, non-installed physical identities")
+    stock_shapes={}
     for row in stock:
+        stock_shape=load_solids(pinned(root,row["file"]))[0][row["solid"]]
+        stock_shapes[row["id"]]=transform(stock_shape,[dict(kind="translation",travelMm=row["offsetMm"])],1)
         require(named(row.get("basis")) and isinstance(row.get("offsetMm"),list) and len(row["offsetMm"])==3 and all(number(v) for v in row["offsetMm"]),
             "Register the source and actual placement of each retained external object")
     require(source_id not in actual,"Piece identity conflicts with an installed part")
@@ -62,7 +65,7 @@ def replay(root,study):
                 if key==source_id and a["custody"]=="free":
                     if not free:speed=0
                     fall=speed*dt+.5*gravity*dt*dt
-                    require(math.hypot(delta[0],delta[1])<=tol and abs(delta[2]+fall)<=tol,
+                    require(math.hypot(delta[0],delta[1])<=1e-8 and delta[2]<=0 and abs(delta[2]+fall)<=tol,
                             "Free descent differs from the registered gravity-from-rest trace")
                     motion[key]=[dict(kind="gravity-drop",fallMm=-delta[2],quadraticFraction=min(1,.5*gravity*dt*dt/max(-delta[2],1e-15)))]
                     speed+=gravity*dt
@@ -87,7 +90,15 @@ def replay(root,study):
                 all(number(x) for x in v) and math.dist(v,terminal["offsetsMm"][k])<=tol for k,v in target.items())
         statuses={r["status"] for r in actual_cases}
         status="fail" if admitted>admission or "fail" in statuses or not inside or not expected else "open" if "open" in statuses else "pass"
-        rows.append(dict(id=case,duty=duty,piece=source_id,admittedGapMm=admitted,windowS=window,releaseTimesS=[f["timeS"] for j,f in enumerate(frames)
+        corridor=status
+        from transfer_execution import inspect
+        try:
+            execution,reason=inspect(root,study,test,trace,actual,shapes[piece["solid"]],stock_shapes)
+        except (ValueError,KeyError,OSError,TypeError) as e:
+            execution,reason="fail",str(e)
+        if execution=="fail" or status=="fail":status="fail"
+        elif execution!="pass":status="open"
+        rows.append(dict(corridorStatus=corridor,executionStatus=execution,executionReason=reason,id=case,duty=duty,piece=source_id,admittedGapMm=admitted,windowS=window,releaseTimesS=[f["timeS"] for j,f in enumerate(frames)
             if f["custody"]=="free" and (not j or frames[j-1]["custody"]!="free")],terminalInside=inside,endBoundsMm=end,status=status,stages=actual_cases))
     require(len({x["id"] for x in rows})==len(rows),"Duplicate loaded case")
     status="fail" if any(r["status"]=="fail" for r in rows) else "open" if types!={"delivery","jam-reset"} or any(r["status"]=="open" for r in rows) else "pass"

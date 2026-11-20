@@ -8,6 +8,7 @@ from mechanical_fixture import fixture, write, SCRIPTS
 from mechanical_readiness import evaluate_inputs as review, verify_delivery, digest,scan
 from showcase_contacts import measure
 from mesh_controls import MeshComparisons
+from observed_transfer import ObservedTransfer
 
 
 class Readiness(unittest.TestCase):
@@ -93,6 +94,19 @@ class Readiness(unittest.TestCase):
         self.s["connections"][0]["evidence"].update(u)
         self.assertEqual(self.status()["showcaseEligibility"],"fail")
 
+    def test_nested_joint_source_cannot_override_governing_seat(self):
+        from joint_sources import verify
+        pair=["block","frame"];step=self.s["step"]["sha256"];archive=self.s["archive"]["sha256"]
+        def qualify(status):
+            child=write(self.root,"seat.json",dict(schema="agent-frc/mechanical-motion-result@1",stepSha256=step,
+                cases=[dict(seats=[dict(pair=pair,areaMm2=48,minAreaMm2=50 if status=="fail" else 45,
+                    status=status,interferenceMm3=0)])]))
+            summary=write(self.root,"qualified.json",dict(stepSha256=step,archiveSha256=archive,status="pass",pair=pair,
+                qualification={"sources":[child]}))
+            return lambda:verify(self.root,[summary],pair,archive,step,"A")
+        qualify("pass")()
+        with self.assertRaisesRegex(ValueError,"area|pass"):qualify("fail")()
+
     def test_coincident_faces_do_not_establish_retention(self):
         self.s["connections"]=[]
         r=self.status()
@@ -159,7 +173,8 @@ class Readiness(unittest.TestCase):
         p=self.root/"view.png";p.write_bytes(b"test view")
         self.s=fixture(self.root,assets=["view.png"])
         self.s["articles"]["block"]["rights"]="derived-views-only"
-        verify_delivery(self.root,self.s,["view.png"])
+        with self.assertRaisesRegex(ValueError,"projection"):
+            verify_delivery(self.root,self.s,["view.png"])
         with self.assertRaisesRegex(ValueError,"redistribution"):
             verify_delivery(self.root,self.s,["test.f3d"])
         self.s["articles"]["block"]["rights"]="private-master"

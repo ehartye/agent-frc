@@ -365,15 +365,15 @@ def evaluate_inputs(root,study, geometry=None):
         else:
             missing("retention",[a,b],"Identify and qualify the physical load-transfer interface.")
             continue
-        for source in proof["sources"]:
-            reviewed=pinned(root,source)
-            if reviewed.suffix.lower()==".json":
-                original=read(reviewed)
-                bad=original.get("status") in ("fail","open")
-                if original.get("schema")=="agent-frc/mechanical-motion-result@1":
-                    bad=bad or original.get("stepSha256")!=step_sha or any(case.get("status")!="pass" for case in original["cases"])
-                if bad:
-                    finding("retention","fail",[a,b],"Underlying joint inspection did not pass.")
+        from joint_sources import verify as verify_joint_sources
+        try:
+            sources=list(proof["sources"])
+            if proof.get("jointResult"):
+                sources.append(proof["jointResult"])
+            verify_joint_sources(root,sources,[a,b],archive_sha,step_sha,configuration,proof.get("interface")=="qualified-joint")
+        except (ValueError,KeyError,TypeError,OSError) as e:
+            finding("retention","fail",[a,b],str(e))
+            continue
         if proof.get("verified") is True:
             structural.append((a,b))
         else:
@@ -594,6 +594,7 @@ def verify_delivery(root,study,files):
                 "Each derivative needs an exact reviewed identity and redistribution basis")
         allowed[file]=ref
     checked_meshes=set()
+    projected=set()
     delivered={project_path(root,f) for f in files}
     for path,entry in allowed.items():
         if path.suffix.lower()==".json":
@@ -605,9 +606,21 @@ def verify_delivery(root,study,files):
                 m=meshes[0]
                 if m not in checked_meshes:
                     verify_render_mesh(root,study,data,m);checked_meshes.add(m)
+                images=[f for f in allowed if allowed[f]["sha256"]==data.get("imageSha256")]
+                require(images,"Displayed still is absent from the distribution")
+                from release_projection import verify as verify_projection
+                verify_projection(root,study,data,m,images[0])
+                projected.update(images)
     for name in files:
         path=project_path(root,name)
         require(path in allowed,"Unreviewed distributed asset: "+name)
+        restricted=any(row.get("rights")!="exact-redistribution" for row in study["articles"].values())
+        if allowed[path]["scope"] in ("native","neutral") or path.suffix.lower() in (".f3d",".f3z",".step",".stp"):
+            require(not restricted,"Full CAD download includes a component without exact redistribution rights")
+        elif any(row.get("rights")=="private-master" for row in study["articles"].values()):
+            require(False,"Rendered derivative includes an item without public view rights")
+        if path.suffix.lower() in (".png",".jpg",".jpeg",".webp",".avif",".gif",".svg"):
+            require(path in projected,"Distributed CAD still lacks a reproduced projection for this issue")
         if path.name.lower().endswith((".glb",".gltf",".stl",".stl.gz",".obj",".3mf")) and path not in checked_meshes:
             from mesh_correspondence import compare
             proof=allowed[path].get("meshStudy")
@@ -617,16 +630,15 @@ def verify_delivery(root,study,files):
             result=compare(pinned(root,study["step"]),path,spec["chordMm"],spec["angleRad"],resolution=spec.get("coordinateResolutionMm",.0001),
                 pose=spec["pose"],registration=spec.get("glbToCad"),surfaces=spec.get("surfaces"))
             require(result["status"]=="pass","Published mesh does not include the actual placed geometry in its declared reference pose")
+            if path.suffix.lower() in (".gltf",".glb"):
+                from release_animation import verify as verify_animation
+                verify_animation(root,study,spec,path)
             if path.suffix.lower()==".gltf":
                 from showcase_geometry import Glb
                 model=Glb.from_project(path)
                 require(set(model.dependencies)<=delivered,"External glTF buffers must be signed with the displayed geometry")
             checked_meshes.add(path)
-        restricted=any(row.get("rights")!="exact-redistribution" for row in study["articles"].values())
-        if allowed[path]["scope"] in ("native","neutral") or path.suffix.lower() in (".f3d",".f3z",".step",".stp"):
-            require(not restricted,"Full CAD download includes a component without exact redistribution rights")
-        elif any(row.get("rights")=="private-master" for row in study["articles"].values()):
-            require(False,"Rendered derivative includes an item without public view rights")
+
 
 
 def main():
@@ -644,15 +656,15 @@ def main():
     args=parser.parse_args()
     root=args.project.resolve()
     study=read(project_path(root,args.study))
-    report=scan(root,study) if args.command=="measure" else review(root,study,scan(root,study) if args.rescan else None)
+    qualified=args.require_publication or args.require_build_ready
+    fresh=scan(root,study) if args.command=="measure" or args.rescan or qualified else None
+    if qualified and args.command=="review":
+        require(fresh==read(pinned(root,study["geometry"])),"Registered geometry differs from a fresh complete STEP scan")
+    report=fresh if args.command=="measure" else review(root,study,fresh)
     if args.source_sha256:
         require(report.get("stepSha256")==args.source_sha256,"Proposed release differs from displayed STEP")
     if args.archive_sha256:
         require(report.get("archiveSha256")==args.archive_sha256,"Proposed release differs from downloadable Fusion archive")
-    if args.command=="review" and (args.require_publication or args.require_build_ready) and report["showcaseEligibility"]=="pass":
-        cold=scan(root,study)
-        require(cold==read(pinned(root,study["geometry"])),"Registered geometry differs from a fresh complete STEP scan")
-        report=review(root,study,cold)
     if (args.require_publication or args.require_build_ready) and study.get("externalIssues") and report.get("showcaseEligibility")=="pass":
         from mechanical_methods import run
         fresh=run(root,read(pinned(root,study["issueRegister"])))

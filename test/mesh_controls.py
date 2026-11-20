@@ -48,10 +48,118 @@ class MeshComparisons(unittest.TestCase):
             names=list(load_solids(step)[0])
             spec=dict(facets={names[0]:[[0,12]],names[1]:[[12,12]]},toleranceMm=.02,basis="Original part ranges")
             self.assertEqual(actual(surfaces=spec)["status"],"pass")
+            # The private issuer must account for the playable channel as well as rest.
+            from release_animation import verify
+            from mechanical_fixture import write,pin
+            from showcase_geometry import IDENTITY
+            import numpy as np
+            native=[dict(path=n,name=n,worldTransform=IDENTITY) for n in names]
+            model=dict(archive={},step=pin(root,step.name),
+                nativeCensus=write(root,"saved.json",dict(bodies=native)),nativePoses=[])
+            def native_pose(kind,delta,value=1):
+                changed=[dict(r) for r in native]
+                changed[1]=dict(native[1],worldTransform=np.asarray(delta).reshape(16).tolist())
+                model["reopen"]=write(root,"mapped.json",dict(movingGroups=["shaft"],installedOccurrences=[
+                    dict(path=n,nativeBodyNames={n:n}) for n in names]))
+                model["nativePoses"]=[write(root,"end.json",dict(bodies=changed,pose=dict(id="end",joints=[
+                    dict(group="shaft",coordinate=kind,nativeValue=value)]))),
+                    write(root,"zero.json",dict(bodies=native,pose=dict(id="zero",joints=[dict(group="shaft",coordinate=kind,nativeValue=0)])))]
+            delta=np.eye(4);delta[0,3]=10
+            native_pose("slideValue",delta)
+            released=dict(surfaces=spec,pose="rest",animations={"service":dict(keyPoses=[dict(timeS=0,pose="saved"),dict(timeS=1,pose="end")],
+                channels={"2":dict(group="shaft",baselinePose="zero",calibrationPose="end",timeS=1)})})
+            verify(root,model,released,file)
+            with self.assertRaisesRegex(ValueError,"clip"):
+                verify(root,model,dict(released,animations={}),file)
+            delta[0,3]=5;native_pose("slideValue",delta)
+            with self.assertRaisesRegex(ValueError,"transform"):verify(root,model,released,file)
+            # A genuine revolute local channel rotates the whole second cube about its registered shaft.
+            import math
+            angle=math.pi/3
+            c,sine=math.cos(angle),math.sin(angle)
+            rotated=np.eye(4);rotated[:2,:2]=[[c,-sine],[sine,c]]
+            origin=np.array([20,0,0]);rotated[:3,3]=origin-rotated[:3,:3]@origin
+            native_pose("rotationValue",rotated,angle)
+            rotation=struct.pack("<8f",0,0,0,1,0,0,math.sin(angle/2),math.cos(angle/2))
+            (root/"mesh.bin").write_bytes(points+clocks+rotation)
+            gltf["buffers"][0]["byteLength"]=len(points)+len(clocks)+len(rotation)
+            gltf["bufferViews"][2]["byteLength"]=len(rotation)
+            gltf["accessors"][2]["type"]="VEC4"
+            gltf["animations"][0]["channels"][0]["target"]["path"]="rotation"
+            file.write_text(json.dumps(gltf))
+            verify(root,model,released,file)
+            # The moving child slides while its parent pivots. Calibration poses
+            # exercise each individual joint plus the actual coordinated final pose.
+            import base64
+            clocks4=struct.pack("<4f",0,1,2,3)
+            quat0=[0,0,0,1];quat1=[0,0,math.sin(angle/2),math.cos(angle/2)]
+            turns=struct.pack("<16f",*(quat0+quat1+quat0+quat1))
+            slides=struct.pack("<12f",.02,0,0,.02,0,0,.025,0,0,.025,0,0)
+            d=points+clocks4+turns+slides
+            gltf["buffers"]=[dict(uri="data:application/octet-stream;base64,"+base64.b64encode(d).decode(),byteLength=len(d))]
+            gltf["bufferViews"][1:]=[dict(buffer=0,byteOffset=len(points),byteLength=16),
+                dict(buffer=0,byteOffset=len(points)+16,byteLength=64),dict(buffer=0,byteOffset=len(points)+80,byteLength=48)]
+            gltf["accessors"][1]["count"]=4;gltf["accessors"][2]["count"]=4
+            gltf["accessors"].append(dict(type="VEC3",componentType=5126,bufferView=3,count=4))
+            clip=gltf["animations"][0];clip["channels"][0]["target"]["node"]=1
+            clip["samplers"].append(dict(input=1,output=3,interpolation="LINEAR"))
+            clip["channels"].append(dict(sampler=1,target=dict(node=2,path="translation")))
+            file.write_text(json.dumps(gltf))
+            model["reopen"]=write(root,"mapped.json",dict(movingGroups=["pivot","slide"],installedOccurrences=[
+                dict(path=n,nativeBodyNames={n:n}) for n in names]))
+            seen=[]
+            for tag,turn,slide in (("zero",0,0),("pivoted",angle,0),("extended",0,5),("combined",angle,5)):
+                m=np.eye(4)
+                m[:2,:2]=[[math.cos(turn),-math.sin(turn)],[math.sin(turn),math.cos(turn)]]
+                m[:3,3]=m[:3,:3]@np.array([slide,0,0])
+                placed=[dict(r) for r in native];placed[1]=dict(placed[1],worldTransform=m.reshape(16).tolist())
+                joint_values=[]
+                if tag!="extended":joint_values.append(dict(group="pivot",coordinate="rotationValue",nativeValue=turn))
+                if tag!="pivoted":joint_values.append(dict(group="slide",coordinate="slideValue",nativeValue=slide/10))
+                seen.append(write(root,tag+".json",dict(bodies=placed,pose=dict(id=tag,joints=joint_values))))
+            model["nativePoses"]=seen
+            compound=dict(surfaces=spec,pose="rest",animations={"service":dict(
+                keyPoses=[dict(timeS=t,pose=name) for t,name in enumerate(["zero","pivoted","extended","combined"])],
+                channels={"1":dict(group="pivot",baselinePose="zero",calibrationPose="pivoted",timeS=1),
+                    "2":dict(group="slide",baselinePose="zero",calibrationPose="extended",timeS=2)})})
+            verify(root,model,compound,file)
             spec["facets"][names[1]]=[[0,12]]
             with self.assertRaisesRegex(ValueError,"two physical articles"):actual(surfaces=spec)
             gltf["scenes"][0]["nodes"]=[0]
             r=actual();self.assertEqual(r["status"],"fail");self.assertEqual(r["missingFacets"],12)
+
+    def test_reproduce_full_two_part_pixels_and_viewpoint(self):
+        try:
+            import vtk
+            from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox
+        except ImportError:self.skipTest("Requires VTK and OpenCascade")
+        import importlib.util
+        from PIL import Image,ImageOps
+        from OCP.gp import gp_Pnt
+        from OCP.STEPControl import STEPControl_Writer,STEPControl_AsIs
+        from mechanical_fixture import SCRIPTS,pin
+        from release_projection import verify
+        module=importlib.util.spec_from_file_location("original_export",SCRIPTS/"export-showcase-cad.py")
+        exporter=importlib.util.module_from_spec(module);module.loader.exec_module(exporter)
+        with TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            for name,count in (("full",2),("partial",1)):
+                box=STEPControl_Writer()
+                for j in range(count):
+                    solid=BRepPrimAPI_MakeBox(gp_Pnt(j*4,0,j),2.,2.,1.+j).Shape()
+                    box.Transfer(solid,STEPControl_AsIs)
+                box.Write(str(root/(name+".step")))
+                exporter.export(root,{"source":name+".step"},root/name)
+            folder=root/"full";img=folder/"assembly.png";mesh=folder/"assembly.stl.gz"
+            receipt=json.loads((folder/"receipt.json").read_text())
+            case={"step":pin(root,"full.step")}
+            verify(root,case,receipt,mesh,img)
+            with Image.open(img) as rendered:
+                ImageOps.mirror(rendered).save(root/"mirrored.png")
+                Image.new("RGB",rendered.size,(30,40,50)).save(root/"blank.png")
+            for path in (root/"partial/assembly.png",root/"mirrored.png",root/"blank.png"):
+                with self.subTest(path=path.name),self.assertRaisesRegex(ValueError,"pixels"):
+                    verify(root,case,receipt,mesh,path)
 
     def test_different_diagonal_complete_surface_and_shift(self):
         try:
@@ -101,8 +209,9 @@ class MeshComparisons(unittest.TestCase):
                     study["cases"].append(dict(id=duty,duty=duty,trace=tr,windowS=[0,rows[-1]["timeS"]],
                         admissionGapMm=.11,readyOffsetsMm={},terminalBoundsMm=[2,0,low,4,2,low+2],minGapMm=.01))
                 result=replay(root,study)
-                self.assertEqual(result["status"],outcome)
-                self.assertEqual(result["cases"][1]["status"],"pass")
+                self.assertEqual(result["cases"][0]["corridorStatus"],outcome)
+                self.assertEqual(result["status"],"fail" if outcome=="fail" else "open")
+                self.assertEqual(result["cases"][1]["status"],"open")
                 if outcome=="fail":self.assertTrue(any(q["status"]=="fail" for q in result["cases"][0]["stages"]))
 
 

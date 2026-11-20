@@ -5,7 +5,7 @@ import {createReadStream,lstatSync,readFileSync,readdirSync,realpathSync,writeFi
 import path from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 
-const schema='agent-frc/signed-model-release@1';
+const schema='agent-frc/signed-model-release@2';
 const geometry=/\.(?:f3[dz]|stp|iges|igs|brep|step|gltf|glb|stl(?:\.gz)?|obj|3mf)$/i;
 const hex=/^[0-9a-f]{64}$/;
 function check(ok,message){if(!ok)throw Error(message);}
@@ -37,6 +37,10 @@ export async function issue(root,studyName,delivery,keyFile){
   check(keyRelative==='..'||keyRelative.startsWith('..'+path.sep)||path.isAbsolute(keyRelative),'Keep the signing key outside the project tree');
   const key=createPrivateKey(readFileSync(privatePath));check(key.asymmetricKeyType==='ed25519','Use an Ed25519 reviewer key');
   const studyFile=file(root,studyName),study=JSON.parse(readFileSync(studyFile,'utf8'));
+  for(const asset of delivery.files){
+    const extension=name=>name.toLowerCase().endsWith('.stl.gz')?'.stl.gz':path.extname(name).toLowerCase();
+    check(extension(asset.local??asset.path)===extension(asset.path),'Public asset type differs from the reviewed source');
+  }
   const inputs=delivery.files.map(r=>file(root,r.local??r.path));
   const result=JSON.parse(execFileSync(process.env.PYTHON ?? (process.platform==='win32'?'python':'python3'),
     [fileURLToPath(new URL('./mechanical_readiness.py',import.meta.url)),'review',root,studyName,'--require-publication','--rescan',

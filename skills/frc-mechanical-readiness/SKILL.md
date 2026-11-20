@@ -20,3 +20,5 @@ If repeated clashes, inaccessible attachments or an unattainable scoring role su
 Use the [Fusion authority and revision handoff](../../docs/fusion-authority.md) to establish the one current saved native design, the STEP exported from that design and the identity of the engineering evidence. Recheck the register when resuming in another checkout or before replacing a published view.
 
 For a mechanism that transfers a game piece, [sweep the actual released object through the installed frame](../../docs/loaded-transfer.md), including its arrival and a jam/reset case. Compare the current vendor purchase BOM to the model’s as-drawn revision for every supplied assembly.
+
+Follow the underlying observations for each qualified joint through to their governing case and numerical acceptance limit. For a replacement showcase verify the rendered pixels and each playable native joint trajectory, including compound motion. [Publishing the checked geometry](../../docs/mesh-correspondence.md)
