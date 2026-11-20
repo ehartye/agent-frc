@@ -1,4 +1,6 @@
 import {analyzeWindow} from '../../scripts/kickoff-window.mjs';
+import {makeActuatorDutyFixture} from '../../examples/design-methods/make-actuator-duty-fixture.mjs';
+import {reviewActuatorDuties} from '../../scripts/actuator-duties.mjs';
 import {makeSupportFixture} from '../../examples/design-methods/make-support-fixture.mjs';
 import {reviewCoupled} from '../../scripts/coupled-support.mjs';
 import {makeThroughputCohort} from '../../examples/design-methods/make-throughput-cohort.mjs';
@@ -75,18 +77,30 @@ ${suspension.cases.map((c,i)=>{
   return '<div data-suspension-pose="'+i+'"'+(i?' hidden':'')+'><p>Vertical reactions: '+fmt(b.loads)+' N.</p><p>Unbalanced moments about X and Y: <strong>'+fmt(b.unbalancedMomentXYNm)+' N·m</strong>. '+(b.momentEquilibrium==='balanced'?'The pose balances. Component capacity is open.':'The carriage can rotate from this pose.')+'</p></div>';
 }).join('')}</details>`;
 const throughputDir=await mkdtemp(path.join(tmpdir(),'agent-frc-guide-cohort-'));
-let throughput,coupled;
+let throughput,coupled,duties;
 try{
   const study=makeThroughputCohort(throughputDir),read=evidenceReader(throughputDir);
   throughput=reviewThroughput(read(study),read);
   const demo=path.join(throughputDir,'spring'),file=makeSupportFixture(demo),readSpring=evidenceReader(demo);
   coupled=reviewCoupled(readSpring(file),readSpring);
+  const dutyFolder=path.join(throughputDir,'carriage'),dutyFile=makeActuatorDutyFixture(dutyFolder),readDuty=evidenceReader(dutyFolder);
+  duties=reviewActuatorDuties(readDuty(dutyFile),readDuty);
 }finally{await rm(throughputDir,{recursive:true,force:true});}
 const throughputStudy=`<details class="reading"><summary>Can the carrier repeat its delivery rate?</summary>
 <p>The tabletop timing model needs two accepted blocks in the first ten seconds of the work phase. The phase begins at match time 20 s. Check how much time an occupied aisle leaves.</p>
 <label>Frozen trial <select id="throughputChoice">${throughput.episodes.map((r,i)=>'<option value="'+i+'">'+escape(r.id)+' · '+r.parameters.queueS+' s queue</option>').join('')}</select></label>
 ${throughput.episodes.map((r,i)=>'<div data-throughput-trial="'+i+'"'+(i?' hidden':'')+'><p>'+escape(r.partition)+' · '+r.windowS.join('–')+' s on the match clock</p><p><strong>'+r.accepted+' of '+throughput.demand.requiredPieces+' required</strong> · '+r.acceptedPerSecond.toFixed(2)+' blocks/s · '+escape(r.status)+'</p></div>').join('')}
 <p>The frozen cohort includes all three starts. Each rate uses the entire ten seconds.</p>${link('Run the rate study','docs/mechanism-hardening.md')}</details>`;
+const dutyLab=`<details class="reading"><summary>What happens when the lift jams or loses power?</summary>
+<p>This teaching carriage must lift a load, withstand a stop and stay raised for four seconds without power. Try the force switch and latch with a delayed response.</p>
+<label>Carriage and condition <select id="dutyChoice">${duties.rows.map((r,i)=>'<option value="'+i+'">'+escape(r.architecture+' · '+r.caseId)+'</option>').join('')}</select></label>
+${duties.rows.map((r,i)=>{
+  const jam=r.obstruction,hold=r.hold;
+  return '<div data-duty-case="'+i+'"'+(i?' hidden':'')+'><p>Powered travel · '+r.normal.status+'</p><p>Obstruction · <strong>'+jam.demand.maxN+' N</strong> against a 90 N teaching limit · '+jam.status+'</p><p>'+
+    (jam.responseDelayS==null?'Protection action unresolved.':'Drive disabled '+jam.responseDelayS.toFixed(2)+' s after the trigger.')+'</p><p>Four-second hold · '+hold.status+
+    (hold.witnessedLossAtS!=null?' · first observed loss '+(hold.witnessedLossAtS-hold.fromS).toFixed(2)+' s after cutoff':'')+'</p><p>Installed hardware · '+r.installedStatus+'</p></div>';
+}).join('')}
+${link('Run the three-duty study','docs/actuator-duty-review.md')}</details>`;
 const supportLab=`<details class="reading"><summary>Can the guides hold the carrier at this pose?</summary>
 <p>Two seats carry the weight. Opposed guides also have to resist rotation. Change one feature of the spring fixture and inspect the force and all three moments.</p>
 <label>Load case <select id="coupledChoice">${coupled.cases.map((r,i)=>'<option value="'+i+'">'+escape(r.id)+'</option>').join('')}</select></label>
@@ -124,7 +138,7 @@ const highlightsLink='<a href="robot/index.html">Explore the example robot evide
 const chapters=stages.map((s,i)=>`<details id="${s.id}" class="chapter"${i===0?' open':''}>
 <summary><span class="ordinal">${chapter(i)}</span><span>${escape(s.name)}</span><span class="toggle" aria-hidden="true"></span></summary>
 <div class="chapter-body"><h3>${escape(s.question)}</h3><p>${escape(s.objective)}</p><p>${escape(s.activity)}</p>
-<div class="handoff"><h4>Carry forward</h4><p>${escape(s.handoff)}</p></div>${s.docs.some(([,p])=>p==='docs/camera-reference.md')?cameraComparison:''}${s.id==='contract'?serviceComparison:''}${s.id==='design'?frameStudy:''}${s.id==='verify'?suspensionStudy+supportLab+throughputStudy+captureLab:''}
+<div class="handoff"><h4>Carry forward</h4><p>${escape(s.handoff)}</p></div>${s.docs.some(([,p])=>p==='docs/camera-reference.md')?cameraComparison:''}${s.id==='contract'?serviceComparison:''}${s.id==='design'?frameStudy:''}${s.id==='verify'?suspensionStudy+supportLab+dutyLab+throughputStudy+captureLab:''}
 <h4>Supporting skills</h4><div class="chips">${s.skills.map(k=>link(k,'skills/'+k+'/SKILL.md')).join('')}</div>
 <div class="reading">${s.id==='design'?'<a href="role-design.html">Compare robot designs against a selected match role ↗</a> · ':''}${s.id==='verify'?highlightsLink:''}${s.id==='story'?'<a href="field-lab.html#roleLab">Compare alliance roles and replay the field ↗</a> · ':''}${s.id==='rules'?'<a href="rules.json" download>Download the training rules model ↓</a> · ':''}${s.docs.some(([,p])=>p===powerGuide)?'<a href="#power">Try the shared-power comparison ↓</a> · ':''}${s.docs.map(([label,p])=>link(label+' ↗',p)).join(' · ')}</div></div></details>`).join('\n');
 const directory=Object.keys(purpose).map(k=>{

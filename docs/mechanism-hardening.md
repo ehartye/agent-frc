@@ -2,6 +2,8 @@
 
 Use the installed revision and the match narrative’s external scoring criterion. Simulate normal operation, adverse conditions, interruption and return to service. Keep bench evidence, integrated simulation and physical testing identifiable in the project.
 
+For a powered lift, check working stroke, force at an obstruction and retention from the actual cutoff in the [three-duty carriage study](actuator-duty-review.md).
+
 ## Can every lifting assembly sustain the robot?
 
 ```sh
