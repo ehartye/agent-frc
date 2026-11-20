@@ -54,6 +54,15 @@ def run(root, update, template):
         layout = dict(bounds=layout, groups=validated_groups(root, receipt, folder / "assembly.stl.gz"))
     elif receipt.get("schema") != "agent-frc/cad-still@1":
         raise ValueError("Unknown CAD receipt schema")
+    from showcase_release import verify_candidate as release_check
+    release_check(root,config.get("mechanicalReadiness"),config["source"],
+                  ["docs/robot/cad/assembly.png","docs/robot/cad/assembly.stl.gz"],receipt=receipt,distribute_source=True)
+    featured=config.get("featuredAssembly") or config.get("featured")
+    if featured:
+        paths=[featured[k] for k in ("still","mesh") if k in featured]
+        if not paths or not featured.get("source"):
+            raise ValueError("Featured model must identify its exact neutral source, still, mesh and readiness study")
+        release_check(root,featured.get("mechanicalReadiness"),featured["source"],paths,featured.get("archive"))
     if "backdrop" in config or "backdrop" in receipt:
         from cad_appearances import backdrop_colors
         backdrop = backdrop_colors(config)

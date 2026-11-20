@@ -1,3 +1,4 @@
+import {authorizeRender} from './authorize-render-fixture.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
@@ -48,6 +49,7 @@ test('opt-in native handoff binds downloadable bytes, components, edits and obse
   await bind();
   assert.equal(publicFusionHandoff(root).joints,1);
   const output=path.join(root,'published');
+  authorizeRender(root,{archive:file,manifest:'highlights.json'});
   const html=await readFile(await buildHighlights(project,output),'utf8');
   assert.match(html,/Download the student assembly/);
   assert.deepEqual(await readFile(path.join(output,'evidence',hash(archive)+'.f3d')),archive);

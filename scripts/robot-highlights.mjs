@@ -37,6 +37,10 @@ async function optionalRead(file) {
 }
 
 export async function buildHighlights(manifest, directory) {
+  const authorizeModel=async (python,root,request)=>{
+    const checker=fileURLToPath(new URL('./showcase_release.py',import.meta.url));
+    await promisify(execFile)(python,[checker,root,JSON.stringify(request)],{encoding:'utf8'});
+  };
   const root = await realpath(path.dirname(manifest));
   const data = JSON.parse(await readFile(manifest, 'utf8'));
   requireValue(data.schema === 'agent-frc/robot-highlights@1', 'Unknown highlights schema');
@@ -228,14 +232,14 @@ export async function buildHighlights(manifest, directory) {
   }
   const template = await readFile(new URL('../templates/robot-highlights.html', import.meta.url), 'utf8');
   let model = '';
-  let modelFiles;
+  let modelFiles,release;
   if (data.cad) {
     const config = data.cad;
     requireValue(config.shareable === true, 'Confirm CAD redistribution');
     const receiptFile = await projectFile(config.receipt);
     const record = JSON.parse(await readFile(receiptFile,'utf8'));
     requireValue(['agent-frc/cad-still@1','agent-frc/cad-still@2'].includes(record.schema) && await digest(await projectFile(record.source)) === record.sourceSha256,'Changed CAD source');
-    let captureReview=config.captureReview;
+    let captureReview=config.captureReview,readiness=config.mechanicalReadiness ?? data.mechanicalReadiness;
     const selectedFile = path.join(root,'cad-showcase.json');
     const selectedText = await optionalRead(selectedFile);
     if (selectedText !== undefined) {
@@ -247,6 +251,10 @@ export async function buildHighlights(manifest, directory) {
         if(selected.captureReview!==undefined){
           requireValue(captureReview===undefined||captureReview===selected.captureReview,'Selected capture review differs from the showcase');
           captureReview=selected.captureReview;
+        }
+        if(selected.mechanicalReadiness!==undefined){
+          requireValue(!readiness || JSON.stringify(readiness)===JSON.stringify(selected.mechanicalReadiness),'Selected mechanical readiness differs from the showcase');
+          readiness=selected.mechanicalReadiness;
         }
         const colored = record.schema === 'agent-frc/cad-still@2';
         requireValue(Object.hasOwn(selected,'appearances') === colored &&
@@ -279,6 +287,8 @@ export async function buildHighlights(manifest, directory) {
     const rendered = applyStyle(viewer.replace(/\{\{(\w+)\}\}/g, (_, key) => values[key]), '../');
     const dest = 'cad-' + createHash('sha256').update(rendered).update(await readFile(receiptFile)).update(record.imageSha256).digest('hex');
     modelFiles = {dest, still, receiptFile, rendered};
+    release={study_path:readiness??null,source:record.source,receipt:record,
+      derivatives:[path.join(folder,'assembly.png'),path.join(folder,'assembly.stl.gz')]};
     model = '<section><h2>Explore the CAD</h2><iframe title="'+values.title+'" loading="lazy" style="width:100%;height: min(48rem,85vh);border:0" src="'+dest+'/index.html"></iframe><p><a href="'+dest+'/index.html">Open the model full screen</a></p></section>';
   }
   let coverage = '';
@@ -345,6 +355,21 @@ export async function buildHighlights(manifest, directory) {
     revisionLabel:stage === 'analysis' ? 'Analysis revision' : 'Candidate', model:model+coverage, media:media ? '<section id="media"><h2>Evidence gallery</h2>' + media + '</section>' : '',
     campaign, campaignLink:campaign ? '<a href="#campaign">Repeatability</a>' : '', mediaLink:media ? '<a href="#media">Gallery</a>' : ''};
   const html = applyStyle(template.replace(/\{\{(\w+)\}\}/g, (_, key) => fields[key]));
+  if(student || release){
+    release??={study_path:data.mechanicalReadiness??null,source:null,derivatives:[]};
+    if(student)release.native=path.relative(root,student.file);
+    await authorizeModel(python,root,release);
+  }
+  const publicConfig=await optionalRead(path.join(root,'cad-showcase.json'));
+  if(publicConfig && (student || release)){
+    const cfg=JSON.parse(publicConfig.replace(/^\uFEFF/,''));
+    const featured=cfg.featuredAssembly ?? cfg.featured;
+    if(featured){
+      requireValue(featured.source && featured.still && featured.mesh,'Featured model needs a registered neutral source, still and mesh');
+      await authorizeModel(python,root,{study_path:featured.mechanicalReadiness??null,source:featured.source,native:featured.archive??null,
+        derivatives:[featured.still,featured.mesh]});
+    }
+  }
   await mkdir(directory, {recursive:true});
   const output = await realpath(directory);
   const page = path.join(output, 'index.html');

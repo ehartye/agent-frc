@@ -79,7 +79,9 @@ def candidate_pairs(bodies,tolerance,extra):
     return pairs
 
 
-def measure(path,tolerance,probes):
+def measure(path,tolerance,probes, *, volumes=False):
+    if not math.isfinite(tolerance) or tolerance < 0:
+        raise ValueError("Use a nonnegative distance tolerance in millimeters")
     from OCP.BRepBndLib import BRepBndLib
     from OCP.Bnd import Bnd_Box
     from OCP.BRepExtrema import BRepExtrema_DistShapeShape
@@ -96,6 +98,24 @@ def measure(path,tolerance,probes):
         query=BRepExtrema_DistShapeShape(shapes[a],shapes[b])
         if not query.IsDone() or not math.isfinite(query.Value()) or query.Value()<0:
             raise ValueError("Unresolved STEP distance: "+str((a,b)))
-        pairs.append([a,b,query.Value()])
-    return {"schema":"agent-frc/step-solid-distances@1","method":"placed-step-solid-distance-v1","units":"mm",
+        row = [a,b,query.Value()]
+        if volumes:
+            from OCP.BRepAlgoAPI import BRepAlgoAPI_Common
+            from OCP.BRepGProp import BRepGProp
+            from OCP.GProp import GProp_GProps
+            # A zero-thickness overlap of the enclosing boxes bounds common material to zero.
+            widths = [min(boxes[a][i+3],boxes[b][i+3])-max(boxes[a][i],boxes[b][i]) for i in range(3)]
+            volume = 0.0
+            if min(widths)>0:
+                common = BRepAlgoAPI_Common(shapes[a],shapes[b])
+                if not common.IsDone() or common.Shape().IsNull():
+                    raise ValueError("Unresolved intersection: "+str((a,b)))
+                props = GProp_GProps()
+                BRepGProp.VolumeProperties_s(common.Shape(),props,True)
+                volume = props.Mass()
+                if not math.isfinite(volume) or volume<0:
+                    raise ValueError("Invalid intersection volume: "+str((a,b)))
+            row.append(volume)
+        pairs.append(row)
+    return {"schema":"agent-frc/step-solid-intersections@1" if volumes else "agent-frc/step-solid-distances@1","method":"placed-step-distance-and-common-volume" if volumes else "placed-step-solid-distance-v1","units":"mm",
             "toleranceMm":tolerance,"bodies":boxes,"nonSolidLeaves":surfaces,"pairs":pairs}

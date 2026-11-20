@@ -43,6 +43,10 @@ on:
       - '**/README.md'
       - 'README.md'
       - 'scripts/robot-highlights.mjs'
+      - 'scripts/mechanical_readiness.py'
+      - 'scripts/showcase_release.py'
+      - 'scripts/showcase_contacts.py'
+      - 'references/retained-teaching-display.json'
   workflow_dispatch:
 permissions:
   contents: read

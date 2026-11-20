@@ -5,6 +5,9 @@ description: "Create or refresh a student robot showcase with explorable CAD mod
 
 # Robot evidence highlights
 
+Before promoting a new whole robot or subsystem model, use `frc-mechanical-readiness` on the exact Fusion configuration and every distributed derivative. Require a passing, scoped mechanical review before replacing the live model, its README image or the native download. On an open or failed candidate, preserve the deployed revision and continue private engineering work. [Model promotion and evidence](../../docs/mechanical-readiness.md)
+
+
 ## Let students explore the model
 
 Resolve the project’s [component palette](../../docs/cad-color-convention.md) before exporting a colored assembly. Use the same stable part roles for Fusion, the README still and the orbit view. Check the bumper cover, adjacent moving parts and supplier finishes in all three.
