@@ -130,3 +130,7 @@ document.getElementById('captureChoice').addEventListener('change',event=>{
   ['x','y','width','height'].forEach((attr,i)=>rect.setAttribute(attr,bounds[i]));
   document.getElementById('captureNote').textContent=whole?'Check the assembly silhouette against its saved projection.':'Inspect the exposed wheel and fork. A missing lower assembly changes the occupied shape inside this rectangle.';
 });
+
+document.getElementById('coupledChoice').addEventListener('change',event=>{
+  for(const row of document.querySelectorAll('[data-coupled-case]'))row.hidden=row.dataset.coupledCase!==event.target.value;
+});
