@@ -15,6 +15,7 @@ on:
       - 'scripts/strategy-lab.mjs'
       - 'scripts/role-*.mjs'
       - 'scripts/design-review.mjs'
+      - 'scripts/alliance-completion.mjs'
       - 'scripts/study-evidence.mjs'
       - 'scripts/spatial-elevation.mjs'
       - 'scripts/coupled-support.mjs'

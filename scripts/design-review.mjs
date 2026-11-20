@@ -1,5 +1,6 @@
 import path from 'node:path';
-import {buildRoleReport} from './role-design-report.mjs';
+import {reviewAllianceCompletion} from './alliance-completion.mjs';
+import {buildAllianceReport,buildRoleReport} from './role-design-report.mjs';
 import {compareRefinements} from './role-handoff.mjs';
 import {pathToFileURL} from 'node:url';
 import {studyRows} from './strategy-lab.mjs';
@@ -77,11 +78,20 @@ function verdict(rows) {
 if(process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href) {
   try {
     const [file,...args]=process.argv.slice(2);
+    const freezeIndex=args.indexOf('--freeze-sha256');
+    let freeze;
+    if(freezeIndex>=0){
+      freeze=args[freezeIndex+1];
+      if(!/^[a-f0-9]{64}$/.test(freeze??''))throw Error('Supply the saved whole alliance plan SHA-256.');
+      args.splice(freezeIndex,2);
+    }
     const root=args[0]&&args[0]!=='--html'?args.shift():path.dirname(file??'.');
-    if(!file||(args.length&&!(args.length===2&&args[0]==='--html')))throw Error('Usage: design-review.mjs REVIEW.json [PROJECT_ROOT] [--html NEW_REPORT.html]');
+    if(!file||(args.length&&!(args.length===2&&args[0]==='--html')))throw Error('Usage: design-review.mjs REVIEW.json [PROJECT_ROOT] [--html NEW_REPORT.html] [--freeze-sha256 PLAN_DIGEST]');
     const input=readStudy(file);
-    const comparison=reviewConcepts(input.value,evidenceReader(root));
-    if(args.length)buildRoleReport(comparison,args[1]);
+    const alliance=input.value.schema==='agent-frc/alliance-completion@1';
+    if(freeze&&(!alliance||input.value.plan?.sha256!==freeze))throw Error('The supplied study does not match the saved alliance plan digest.');
+    const comparison=(alliance?reviewAllianceCompletion:reviewConcepts)(input.value,evidenceReader(root));
+    if(args.length)(alliance?buildAllianceReport:buildRoleReport)(comparison,args[1]);
     console.log(JSON.stringify({...comparison,studySha256:input.sha256},null,2));
   } catch(e){console.error(e.message);process.exitCode=1;}
 }
