@@ -192,7 +192,9 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
           for(const piece of stock[key]){
             const p=places.get(piece.id);
             let approach=key===id?to:s.at;
-            if(p){
+            if(p && r.intake){
+              approach=pickupPose(r,p,s.floor.radiusIn);
+            }else if(p){
               const dx=p[0]-origin[0],dy=p[1]-origin[1],d=Math.hypot(dx,dy);
               if(d>1e-8){
                 const angle=r.heading*Math.PI/180,ux=dx/d,uy=dy/d;
@@ -229,7 +231,59 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
     }
     return assignment;
   }
+  function intake(robot) {
+    const angle=robot.heading*Math.PI/180, forward=[Math.cos(angle),Math.sin(angle)];
+    const lateral=[-forward[1],forward[0]], {widthIn,extensionIn}=robot.intake;
+    const offset=robot.length/2+robot.bumper+extensionIn;
+    const center=robot.p.map((v,i)=>v+offset*forward[i]);
+    const ends=[-1,1].map(sign=>center.map((v,i)=>v+sign*widthIn/2*lateral[i]));
+    return {center,forward,lateral,ends,offset};
+  }
+  function contact(robot,piece) {
+    const mouth=intake(robot), d=piece.p.map((v,i)=>v-mouth.center[i]);
+    const front=d[0]*mouth.forward[0]+d[1]*mouth.forward[1];
+    const side=Math.abs(d[0]*mouth.lateral[0]+d[1]*mouth.lateral[1]);
+    return front>=-1e-6 && Math.hypot(front,Math.max(0,side-robot.intake.widthIn/2))<=piece.radiusIn+1e-6;
+  }
+  function pickupPose(robot,p,radius) {
+    const {forward,offset}=intake(robot);
+    return p.map((v,i)=>v-forward[i]*(offset+radius*.85));
+  }
+  function seek(sim,r,leg) {
+    if(!r.intake || leg.operation!=='acquire')return null;
+    const key=typeof leg.station==='string'?leg.station:leg.station[r.side], s=stations.get(key);
+    if(!(s.floor || s.service) || ![r.side,'both'].includes(s.side))return null;
+    const g=sim.game,bay=g.cargo[r.id];
+    const pickup=r.pickup??={count:0};
+    if(bay.length>=g.capacity[r.id] || pickup.count>=(leg.quantity??1))return {done:true};
+    const free=g.motion.pieces.filter(p=>p.station===key);
+    const current=free.find(p=>p.id===pickup.id);
+    if(current && contact(r,current))return {piece:current};
+    if(current && r.waypoints?.length && r.target<r.waypoints.length &&
+       Math.hypot(...current.p.map((v,i)=>v-pickup.position[i]))<.25)return {moving:true};
+    const another=new Set(sim.robots.filter(peer=>peer!==r).map(peer=>peer.pickup?.id));
+    if(sim.phaseIndex===0)for(const [id,opening] of Object.entries(g.opening)){
+      if(id!==r.id && id[0]===r.id[0])another.add(opening.piece);
+    }
+    const first=sim.phaseIndex===0 && !r.visits && !pickup.count?g.opening[r.id]?.piece:null;
+    const candidates=free.filter(p=>!another.has(p.id)).map(piece=>{
+      const goal=pickupPose(r,piece.p,piece.radiusIn);
+      return {piece,goal,distance:Math.hypot(...goal.map((v,i)=>v-r.p[i]))};
+    }).sort((a,b)=>Number(b.piece.id===first)-Number(a.piece.id===first) || a.distance-b.distance || a.piece.id.localeCompare(b.piece.id));
+    r.waypoints=null;r.dwell=0;delete pickup.id;delete pickup.position;
+    for(const {piece,goal} of candidates){
+      const path=leg.straight?(geom.hit(r.p,goal,r,sim.setup)?[]:[r.p,goal]):geom.plan(r.p,goal,r,sim.setup);
+      if(!path.length)continue;
+      pickup.id=piece.id;pickup.position=[...piece.p];r.waypoints=path;r.target=1;
+      return contact(r,piece)?{piece}:{moving:true};
+    }
+    // Depart with a partial batch only after exhausting reachable released stock.
+    // A staffed outlet may still release the remainder of its batch.
+    if(bay.length && candidates.length===free.length && !g.reserve[key]?.length)return {done:true};
+    return {waiting:true};
+  }
   function canReach(robot,p,physical){
+    if(robot.intake)return contact(robot,{p,radiusIn:physical.radiusIn});
     const poly=geom.footprint(robot.p,robot);
     if(poly.every((a,i)=>{const b=poly[(i+1)%poly.length];return (b[0]-a[0])*(p[1]-a[1])-(b[1]-a[1])*(p[0]-a[0])>=0;}) ||
        poly.every((a,i)=>{const b=poly[(i+1)%poly.length];return (b[0]-a[0])*(p[1]-a[1])-(b[1]-a[1])*(p[0]-a[0])<=0;}))return true;
@@ -251,13 +305,23 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
     const s=stations.get(key),g=sim.game,bay=g.cargo[robot.id],n=step.quantity ?? 1;
     const inRange=s.areaIn ? robot.p.every((v,i)=>v>=s.areaIn[0][i] && v<=s.areaIn[1][i]) :
       Math.hypot(robot.p[0]-s.at[0],robot.p[1]-s.at[1])<=s.radiusIn;
-    if (![robot.side,'both'].includes(s.side) || (!s.floor && !inRange)) {
+    if (![robot.side,'both'].includes(s.side) || (!s.floor && !(s.service && robot.intake) && !inRange)) {
       record(sim,robot,s,step.operation,'ineligible-position-or-alliance',[],timeS);return;
     }
     if (step.operation==='acquire') {
+      const physical=s.floor ?? s.service;
+      if(physical && robot.intake){
+        const piece=g.motion.pieces.find(p=>p.id===step.piece && p.station===key);
+        const index=piece?g.stock[key].findIndex(p=>p.id===piece.id):-1;
+        if(index<0 || bay.length>=g.capacity[robot.id] || !contact(robot,piece))return false;
+        const [cargo]=g.stock[key].splice(index,1);
+        const witness={position:[...piece.p],radiusIn:piece.radiusIn,mouth:intake(robot).ends,robotPosition:[...robot.p]};
+        motion.take(g.motion,piece.id);bay.push(cargo);
+        record(sim,robot,s,'acquire','acquired',[cargo],timeS).contact=witness;
+        return true;
+      }
       const own=g.opening[robot.id]?.piece;
       const reserved=sim.phaseIndex===0?new Set(Object.entries(g.opening).filter(([id])=>id!==robot.id && id[0]===robot.id[0]).map(([,a])=>a.piece)):new Set();
-      const physical=s.floor ?? s.service;
       const nearby=physical?new Set(g.motion.pieces.filter(p=>p.station===key && canReach(robot,p.p,physical)).map(p=>p.id)):null;
       const eligible=g.stock[key].filter(p=>!reserved.has(p.id)&&(!nearby||nearby.has(p.id)));
       if(sim.phaseIndex===0&&own)eligible.sort((a,b)=>Number(b.id===own)-Number(a.id===own));
@@ -311,7 +375,7 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
       }
     }
   }
-  return {start,apply,replenish,move};
+  return {start,apply,replenish,move,seek,intake};
 }
 
 

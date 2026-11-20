@@ -12,6 +12,7 @@
   const seriesSource=byId('replaySeriesSource');
   if(config.series?.matches?.length)seriesSource.add(new Option('Published scenarios · '+config.series.matches.length+' matches','published'));
   seriesSource.add(new Option('My roster · 3 matches','student'));
+  if(config.defaults.roster)seriesSource.value='student';
   for(const setup of config.setups)byId('replaySetup').add(new Option(setup,setup));
   byId('replayBasis').textContent=config.basis+' '+config.boundsNote+
     ' The default bumper adds '+config.defaults.bumper+' in per side. Priorities follow request time, then robot ID for same-tick requests. Completed trips count arrivals and service, with scoring evaluated separately by the project station model.';
@@ -125,6 +126,17 @@
       const blue=r.side==='blue';
       line(rehearsal.geom.footprint(r.p,r),'#f7faff',1.3,blue?'#2867ab':'#af3849');
       line(rehearsal.geom.footprint(r.p,{...r,bumper:0}),blue?'#9ccbff':'#ffadaf',1,blue?'#22518a':'#8e3240');
+      if(r.intake){
+        const mouth=rehearsal.intake(r);
+        line(mouth.ends,'#182d41',4);line(mouth.ends,'#ffdf85',2);
+        const target=sim.game.motion.pieces.find(piece=>piece.id===r.pickup?.id);
+        if(target){
+          const [tx,ty]=at(target.p);
+          context.strokeStyle='#fff5c8';context.lineWidth=2;context.beginPath();
+          context.arc(tx,ty,Math.max(4,(target.radiusIn+2)*scale),0,Math.PI*2);context.stroke();
+          context.setLineDash([2,4]);line([mouth.center,target.p],'#ffe298');context.setLineDash([]);
+        }
+      }
       const [x,y]=at(r.p);context.font='bold '+Math.max(10,Math.min(17,12*scale))+'px system-ui';
       context.textAlign='center';context.textBaseline='middle';context.fillStyle='white';context.fillText(r.id,x,y);
       if(sim.game.cargo[r.id].length){context.fillStyle='#ffe291';context.fillText('● '+sim.game.cargo[r.id].length,x,y+11);}

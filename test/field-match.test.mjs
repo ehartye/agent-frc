@@ -96,3 +96,42 @@ test('opening dispatch uses separate reachable floor locations and yields the th
   assert.deepEqual([sim.game.cargo.B1[0]?.id,sim.game.cargo.B2[0]?.id],['blue-supply/1','other-source/1']);
   assert.deepEqual(sim.game.cargo.B3,[]);
 });
+
+
+test('front intake pursues live IDs again after opening, contacts only its selected ball, and fills the batch',()=>{
+  const p=fresh(),m=p.rehearsal,[source]=m.stations;
+  source.stock=3;source.floor={radiusIn:2,positions:[[69,48],[91,48],[103,50]]};
+  m.defaults.intake={widthIn:10,extensionIn:2};
+  m.programs.collect={label:'Collect two',steps:[{at:[60,48],operation:'acquire',station:source.id,label:'Collect',quantity:2}]};
+  const engine=createFieldRehearsal(p),r={...engine.defaults('blue',1),capacity:2,speed:30,plans:{Opening:'hold','Main play':'collect'}};
+  const sim=engine.createProbe([r]);
+  sim.ended=true;engine.nextPhase(sim);sim.paused=false;
+  engine.advance(sim,.05);
+  const chosen=sim.robots[0].pickup.id;
+  const displaced=sim.game.motion.pieces.find(v=>v.id===chosen);
+  displaced.p=[120,100];
+  engine.advance(sim,.05);
+  assert.notEqual(sim.robots[0].pickup.id,chosen);
+  engine.advance(sim,4);
+  const events=sim.game.events.filter(e=>e.operation==='acquire');
+  assert.equal(events.length,2);
+  assert.equal(sim.game.cargo.B1.length,2);
+  for(const event of events){
+    assert.equal(event.pieces.length,1);assert.ok(event.contact);
+    assert.ok(!sim.game.motion.pieces.some(p=>p.id===event.pieces[0]));
+  }
+  assert.notEqual(events[0].pieces[0],chosen);
+  assert.equal(sim.game.motion.pieces.filter(v=>v.station===source.id).length,1);
+});
+
+test('rectangle entry, rear contact, a lateral miss and the wrong loose ID earn no intake credit',()=>{
+  const p=fresh(),[s]=p.rehearsal.stations;
+  s.stock=4;s.floor={radiusIn:2,positions:[[43,48],[78,57],[82,48],[78,48]]};
+  const actor={...robot,intake:{widthIn:10,extensionIn:2}};
+  const game=createRehearsalGame(p),sim=trial(game,[actor]);
+  const grab=id=>game.apply(sim,actor,{operation:'acquire',station:s.id,piece:s.id+'/'+id},1);
+  for(const id of [1,2,3,99])assert.equal(grab(id),false);
+  assert.deepEqual(sim.game.cargo.B1,[]);
+  assert.equal(grab(4),true);assert.equal(grab(4),false);
+  assert.deepEqual(sim.game.cargo.B1.map(p=>p.id),[s.id+'/4']);
+});
