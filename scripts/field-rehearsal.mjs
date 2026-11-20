@@ -60,6 +60,7 @@ export function createFieldRehearsal(profile) {
         !geom.validBody(b) || !Number.isFinite(b.speed) || b.speed<=0 || b.speed>500) {
         throw Error('Check unique alliance slots, positive dimensions and speed (up to 500 in/s).');
       }
+      if(b.intake && (!(b.intake.widthIn>0) || b.intake.widthIn>b.width+2*b.bumper || !Number.isFinite(b.intake.extensionIn) || b.intake.extensionIn<0))throw Error('Supply a positive intake width within the footprint and a nonnegative extension.');
       const p=sidePoint(model.starts[b.slot-1],b.side);
       const collision=geom.hit(p,p,b,setup);
       if(collision)throw Error(b.id+' start overlaps '+collision.name+'.');
@@ -110,6 +111,7 @@ export function createFieldRehearsal(profile) {
   function proposal(sim,r) {
     r.blocked='';
     const goal=terminal?.enter(sim,r,sim.ticks*dt);
+    if(goal)delete r.pickup;
     if(goal && terminal.inside(r,goal)){
       r.action='Holding at '+goal.label;return r.p;
     }
@@ -117,15 +119,6 @@ export function createFieldRehearsal(profile) {
     if(!legs.length || r.leg>=legs.length){r.action=legs.length?'Holding at destination':'Holding position';return r.p;}
     const leg=legs[r.leg];
     r.action=leg.action;
-    if(!r.waypoints) {
-      if(leg.straight) r.waypoints=geom.hit(r.p,leg.point,r,sim.setup)?[]:[r.p,leg.point];
-      else r.waypoints=geom.plan(r.p,leg.point,r,sim.setup);
-      r.target=1;
-    }
-    if(r.waypoints.length===0){
-      recordWait(sim,r,'No footprint-clear path · '+leg.action);
-      return r.p;
-    }
     const key=typeof leg.lock==='string'?leg.lock:model.resourceLabel;
     const resource=sim.resources[key];
     if(leg.lock && resource.owner!==r.id){
@@ -135,15 +128,40 @@ export function createFieldRehearsal(profile) {
       }
       resource.queue.shift();resource.owner=r.id;event(sim,r.id+' entered '+key);
     }
+    function finishLeg(){
+      if(leg.release)release(sim,r,key);
+      r.leg++;r.dwell=0;r.waypoints=null;delete r.pickup;
+      if(r.leg===legs.length){
+        r.visits++;event(sim,r.id+' completed '+leg.action);
+        if(program(r,sim).loop)r.leg=0;
+      }
+      return r.p;
+    }
+    const pursuit=game.seek(sim,r,leg);
+    if(pursuit?.done)return finishLeg();
+    if(pursuit?.waiting){recordWait(sim,r,'Waiting for reachable stock');return r.p;}
+    if(pursuit?.piece){
+      r.action='Intake contact with '+pursuit.piece.id;
+      if(++r.dwell>=Math.max(1,Math.ceil(leg.dwell/(leg.quantity??1)))){
+        if(game.apply(sim,r,{...leg,piece:pursuit.piece.id},(sim.ticks+1)*dt))r.pickup.count++;
+        delete r.pickup.id;r.waypoints=null;r.dwell=0;
+      }
+      return r.p;
+    }
+    if(pursuit?.moving)r.action='Seeking '+r.pickup.id;
+    if(!r.waypoints) {
+      if(leg.straight) r.waypoints=geom.hit(r.p,leg.point,r,sim.setup)?[]:[r.p,leg.point];
+      else r.waypoints=geom.plan(r.p,leg.point,r,sim.setup);
+      r.target=1;
+    }
+    if(r.waypoints.length===0){
+      recordWait(sim,r,'No footprint-clear path · '+leg.action);
+      return r.p;
+    }
     if(r.target>=r.waypoints.length) {
       if(++r.dwell>=(leg.dwell || 0)) {
         game.apply(sim,r,leg,(sim.ticks+1)*dt);
-        if(leg.release)release(sim,r,key);
-        r.leg++;r.dwell=0;r.waypoints=null;
-        if(r.leg===legs.length){
-          r.visits++;event(sim,r.id+' completed '+leg.action);
-          if(program(r,sim).loop)r.leg=0;
-        }
+        return finishLeg();
       }
       return r.p;
     }
@@ -199,8 +217,8 @@ export function createFieldRehearsal(profile) {
     if(!sim.ended || sim.phaseIndex===phases.length-1)throw Error('Finish the active period before advancing to a configured next period.');
     sim.phase=phases[++sim.phaseIndex].name;sim.ticks=0;sim.carry=0;sim.ended=false;sim.paused=true;sim.resources=reservations();
     game.replenish(sim,0);
-    for(const r of sim.robots)Object.assign(r,{leg:0,waypoints:null,target:0,dwell:0,wait:0,travelIn:0,visits:0,blocked:'',action:''});
+    for(const r of sim.robots)Object.assign(r,{pickup:null,leg:0,waypoints:null,target:0,dwell:0,wait:0,travelIn:0,visits:0,blocked:'',action:''});
   }
-  return {supported,behaviors,defaults,startingRoster,completeRoster,create,createProbe,advance,nextPhase,assessRoute,geom,dt,periods:phases,terminal,
+  return {supported,behaviors,defaults,startingRoster,completeRoster,create,createProbe,advance,nextPhase,assessRoute,geom,intake:game?.intake,dt,periods:phases,terminal,
     phaseSeconds:name=>duration(name)*dt};
 }
