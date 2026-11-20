@@ -1,3 +1,4 @@
+import {reviewActuatorDuties} from './actuator-duties.mjs';
 import {auditPieceWindow} from './piece-window.mjs';
 import {reviewCoupled} from './coupled-support.mjs';
 import {reviewCohort} from './throughput-cohort.mjs';
@@ -190,9 +191,10 @@ if(process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href){
       args.splice(freezeFlag,2);
     }
     const [mode,file,root,...extra]=args;
-    requireInput(file&&!extra.length&&['elevation','throughput','coupled'].includes(mode),'Usage: hardening.mjs elevation|throughput|coupled STUDY.json [PROJECT_ROOT] [--freeze-sha256 DIGEST]');
+    const reviewers={elevation:reviewElevation,throughput:reviewThroughput,coupled:reviewCoupled,duties:reviewActuatorDuties};
+    requireInput(file&&!extra.length&&Object.hasOwn(reviewers,mode),'Usage: hardening.mjs elevation|throughput|coupled|duties STUDY.json [PROJECT_ROOT] [--freeze-sha256 DIGEST]');
     const input=readStudy(file),read=evidenceReader(root??path.dirname(file));
-    const result=mode==='elevation'?reviewElevation(input.value,read):mode==='coupled'?reviewCoupled(input.value,read):reviewThroughput(input.value,read,freeze);
+    const result=reviewers[mode](input.value,read,freeze);
     console.log(JSON.stringify({...result,studySha256:input.sha256},null,2));
   } catch(e){console.error(e.message);process.exitCode=1;}
 }
