@@ -30,7 +30,7 @@ def verify_candidate(root, study_path, source, derivatives, native=None, receipt
         if (root==(Path(__file__).resolve().parents[1]/"examples/highlights").resolve() and receipt and native is None and source and receipt.get("sourceSha256")==plate["step"] and
             receipt.get("imageSha256")==plate["still"] and receipt.get("meshSha256")==plate["mesh"] and
             digest(project_path(root,source))==plate["step"] and
-            sorted(digest(project_path(root,p)) for p in derivatives)==sorted([plate["still"],plate["mesh"]])):
+            sorted(digest(project_path(root,p)) for p in derivatives)==sorted([plate["still"],plate["mesh"],plate["receipt"]])):
             return
         raise ValueError("A proposed showcase model requires a complete mechanical-readiness review")
     study=read(project_path(root,study_path))
@@ -43,6 +43,10 @@ def verify_candidate(root, study_path, source, derivatives, native=None, receipt
     if receipt is not None:
         require(receipt.get("solids")==result["solids"],"Published mesh source census differs from reviewed STEP")
     require(result["showcaseEligibility"]=="pass","Mechanical readiness "+result["showcaseEligibility"]+": "+str(result["findings"][:3]))
+    if study.get("externalIssues"):
+        from mechanical_methods import run
+        fresh=run(root,read(pinned(root,study["issueRegister"])))
+        require(fresh==read(pinned(root,study["issueResult"])) and fresh["status"]=="pass","Installed method rerun differs from the accepted issue results")
     verify_delivery(root,study,[*derivatives,*([source] if distribute_source and source else []),*([native] if native else [])])
 
 

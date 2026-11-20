@@ -77,6 +77,7 @@ def component_inputs(root,study):
         return []
     record=read(pinned(root,study["reopen"]))
     requests=[]
+    inventories={}
     for occ in record["installedOccurrences"]:
         article=study.get("articles",{}).get(occ.get("article"),{})
         neutral=article.get("neutral")
@@ -90,7 +91,15 @@ def component_inputs(root,study):
             raise ValueError("Exact supplier neutral model changed")
         if occ.get("neutralSha256")!=digest(source):
             raise ValueError("Native occurrence does not identify the source neutral export")
-        for target,label in occ.get("sourceSolids",{}).items():
+        if source not in inventories:
+            from showcase_contacts import load_solids
+            source_shapes,other=load_solids(source)
+            require(not other,"Source component includes unresolved non-solid leaves")
+            inventories[source]=set(source_shapes)
+        mapping=occ.get("sourceSolids",{})
+        require(set(mapping)==set(occ["solids"]) and Counter(mapping.values())==Counter(inventories[source]),
+            "Every source solid must appear exactly once per installed occurrence: "+occ["path"])
+        for target,label in mapping.items():
             requests.append((target,source,label,occ["worldTransform"]))
     return requests
 
@@ -105,6 +114,11 @@ def scan(root, study):
     if requests:
         from component_shape import compare_components
         result["componentDifferences"]=compare_components(step,requests)
+    if study.get("connections"):
+        from mechanical_motion import bearing_area
+        from showcase_contacts import load_solids
+        shapes,_=load_solids(step)
+        result["seatAreasMm2"]=[dict(pair=list(pair),area=bearing_area(shapes[pair[0]],shapes[pair[1]])) for pair in sorted(probes)]
     result["stepSha256"]=digest(step)
     return result
 
@@ -171,6 +185,13 @@ def review(root,study, geometry=None):
             require(pinned(root,source)!=file,"A review cannot serve as its own supporting source")
         return row
 
+    if not study.get("authority") or not study.get("lineage"):
+        missing("native","source of truth","Identify the authoritative latest Fusion design and its one-way STEP issue.")
+    else:
+        from fusion_authority import verify
+        lineage=verify(root,pinned(root,study["authority"]),pinned(root,study["lineage"]))
+        require(lineage["archiveSha256"]==archive_sha and lineage["stepSha256"]==step_sha and
+                lineage["configuration"]==configuration,"Quality evidence must derive from the designated current Fusion source")
     native={}
     motion_ids=set()
     motion_ranges={}
@@ -200,6 +221,38 @@ def review(root,study, geometry=None):
         assigned=Counter(b for row in native.values() for b in row["solids"])
         if set(assigned)!=bodies or any(q!=1 for q in assigned.values()):
             finding("native","fail","inventory","Reopened native body ownership differs from complete STEP solids.")
+        if not study.get("nativeCensus"):
+            missing("native","cold census","A complete census from the installed native Fusion inspection is required.")
+        else:
+            census=read(pinned(root,study["nativeCensus"]))
+            require(census.get("schema")=="agent-frc/fusion-body-census@1" and census.get("archiveSha256")==archive_sha and
+                    census.get("programSha256")==digest(Path(__file__).with_name("fusion_issue_inventory.py")) and named(census.get("fusionVersion")),
+                    "Unbound or stale native body census")
+            registered={}
+            for key,occ in native.items():
+                names=occ.get("nativeBodyNames",{})
+                require(set(names)==set(occ["solids"]),"Map every installed solid to its original Fusion body name")
+                for solid,label in names.items():
+                    require(named(label) and (key,label) not in registered,"Ambiguous native identity")
+                    registered[(key,label)]=(solid,occ)
+            observed=set()
+            for body in census["bodies"]:
+                key=(body["path"],body["name"])
+                require(key not in observed and named(body["revision"]) and type(body["bodyLight"]) is bool and
+                        type(body["occurrenceVisible"]) is bool,"Invalid native census row")
+                observed.add(key)
+                if key not in registered:
+                    finding("native","fail",str(key),"Native body absent from installed inventory, irrespective of display visibility.")
+                    continue
+                solid,occ=registered[key]
+                b=body.get("boundsMm",[])
+                if solid not in boxes or len(b)!=6 or not all(number(x) for x in b) or not number(tolerance) or any(
+                        abs(x-y)>tolerance for x,y in zip(b,boxes[solid])) or body.get("worldTransform")!=occ["worldTransform"]:
+                    finding("native","fail",solid,"Installed transform or world bounds disagree with the cold Fusion census.")
+            from native_contact_review import verify as verify_native_contacts
+            verify_native_contacts(root,study,record,census,registered,finding,missing)
+            if set(registered)!=observed or census["otherGeometry"]:
+                finding("native","fail","complete physical inventory","Native solid register or unresolved mesh/surface differs from the release.")
     else:
         missing("native","assembly","No measured reopen/STEP export occurrence reconciliation.")
     if geometry.get("nonSolidLeaves"):
@@ -285,6 +338,28 @@ def review(root,study, geometry=None):
         if gap>0:
             missing("retention",[a,b],"Nominal air space cannot carry load. Register the intervening physical hardware or the actual load-seated contact.")
             continue
+        if proof.get("interface")=="planar-seat":
+            minimum=proof.get("minBearingAreaMm2")
+            actual=next((r["area"] for r in geometry.get("seatAreasMm2",[]) if sorted(r["pair"])==sorted([a,b])),None)
+            if not number(minimum) or minimum<=0 or not number(actual) or actual<minimum:
+                finding("retention","fail",[a,b],"The required opposed bearing area is absent or insufficient.")
+                continue
+        elif proof.get("interface")=="qualified-joint":
+            qualification=proof.get("jointResult")
+            if not qualification:
+                missing("retention",[a,b],"Missing separately qualified joint load path.")
+                continue
+            observed=read(pinned(root,qualification))
+            if observed.get("status")!="pass" or observed.get("stepSha256")!=step_sha or observed.get("archiveSha256")!=archive_sha or sorted(observed.get("pair",[]))!=sorted([a,b]):
+                finding("retention","fail",[a,b],"Separate joint qualification failed or identifies a different assembly.")
+                continue
+        else:
+            missing("retention",[a,b],"Identify and qualify the physical load-transfer interface.")
+            continue
+        for source in proof["sources"]:
+            reviewed=pinned(root,source)
+            if reviewed.suffix.lower()==".json" and read(reviewed).get("status") in ("fail","open"):
+                finding("retention","fail",[a,b],"Underlying joint inspection did not pass.")
         if proof.get("verified") is True:
             structural.append((a,b))
         else:
@@ -328,6 +403,14 @@ def review(root,study, geometry=None):
         obs=witness(duty["observation"])
         require(obs.get("kind")==domain and obs.get("case")==duty["case"] and sorted(obs.get("subjects",[]))==sorted(duty["subjects"]) and
                 obs.get("duty")==duty["id"] and named(obs.get("method")),"Duty evidence differs from its actual case/subjects")
+        for source in obs["sources"]:
+            underlying=pinned(root,source)
+            if underlying.suffix.lower()==".json":
+                measured=read(underlying)
+                if isinstance(measured,dict) and (measured.get("status") in ("fail","open") or
+                        measured.get("schema")=="agent-frc/mechanical-motion-result@1" and
+                        (measured.get("stepSha256")!=step_sha or any(r.get("status")!="pass" for r in measured["cases"]))):
+                    finding(domain,"fail",duty["id"],"Underlying engineering run failed, remains open, or uses different geometry.")
         if not all(named(obs.get("inputs",{}).get(field)) for field in required_basis[domain]):
             missing(domain,duty["id"],"Missing engineering basis: "+", ".join(k for k in required_basis[domain] if not named(obs.get("inputs",{}).get(k))))
         if domain=="sweep":
@@ -357,7 +440,7 @@ def review(root,study, geometry=None):
             require(original.get("schema")=="agent-frc/mechanical-measurements@1" and isinstance(original.get("measurements"),dict),
                     "Use a complete issued case register for numeric measurements")
             run_files[observation["sha256"]]=original
-            require(observation["pointer"].startswith("/measurements/"),"Measurement is outside the issued case register")
+            require(len(observation["pointer"].split("/"))==4 and observation["pointer"].startswith("/measurements/") and observation["pointer"].endswith("/value"),"Measurement is outside the issued case register")
             require(original.get("configuration")==configuration and original.get("archiveSha256")==archive_sha and
                     original.get("stepSha256")==step_sha,"Original run uses a different robot configuration")
             source_value=original
@@ -369,8 +452,16 @@ def review(root,study, geometry=None):
             require(isinstance(measured_row,dict) and measured_row.get("duty")==duty["id"] and measured_row.get("case")==duty["case"]
                     and measured_row.get("unit")==duty["unit"] and sorted(measured_row.get("subjects",[]))==sorted(duty["subjects"]),
                     "Original result does not represent the same duty, units, subjects and case")
+            require(all(measured_row.get(k,v)==v for k,v in (("stepSha256",step_sha),("archiveSha256",archive_sha),("configuration",configuration))),
+                    "Original measured row conflicts with the issued revision or configuration")
             if domain=="sweep" and motion_ids:
                 reached=measured_row.get("motionRanges",{})
+                if "samples" in measured_row:
+                    samples=measured_row["samples"]
+                    for g in groups:
+                        trace=[point.get(g) for point in samples]
+                        if not trace or not all(number(v) for v in trace) or [min(trace),max(trace)]!=motion_ranges.get(g):
+                            missing("sweep",g,"Published motion samples do not traverse the identified native range.")
                 if set(reached)!=groups or any(not isinstance(motion_ranges.get(g),list) or len(motion_ranges[g])!=2
                     or not all(number(v) for v in motion_ranges[g]) or motion_ranges[g][0]>=motion_ranges[g][1]
                     or reached.get(g)!=motion_ranges[g] for g in groups) or measured_row.get("coverage")!=obs.get("coverage"):
@@ -380,12 +471,20 @@ def review(root,study, geometry=None):
             missing(domain,duty["id"],"No finite measured value.")
         elif (lo is not None and value<lo) or (hi is not None and value>hi):
             finding(domain,"fail",duty["id"],f"Observed {value} {duty['unit']} outside registered interval [{lo},{hi}].")
-    covered={(d["id"],d["case"],tuple(sorted(d["subjects"])),d.get("unit")) for d in duties if d.get("observation")}
+    covered={(d["id"],d["case"],tuple(sorted(d["subjects"])),d.get("unit")):d for d in duties if d.get("observation")}
     for original in run_files.values():
         for raw in original["measurements"].values():
             identity=(raw.get("duty"),raw.get("case"),tuple(sorted(raw.get("subjects",[]))),raw.get("unit"))
             if identity not in covered:
                 missing("build",raw.get("case"),"An original issued adverse case is absent from the evaluated duty roster.")
+            else:
+                d=covered[identity];v=raw.get("value")
+                if not number(v) or v<d.get("min",-math.inf) or v>d.get("max",math.inf):
+                    finding(d["domain"],"fail",raw.get("trial",d["id"]),"A trial in the original case register fails the registered interval.")
+    structural_subjects={b for d in duties if d["domain"] in ("strength","stiffness","impact","fatigue") and d.get("observation") for b in d["subjects"]}
+    joint_subjects={b for d in duties if d["domain"] in ("assembly","service","shop") and d.get("observation") for b in d["subjects"]}
+    if bodies-structural_subjects or bodies-joint_subjects:
+        missing("build",sorted((bodies-structural_subjects)|(bodies-joint_subjects)),"Installed body missing structural or production/attachment duty coverage.")
     if bodies-governed:
         missing("build",sorted(bodies-governed),"Installed occurrences absent from all engineering duty subjects.")
     if swept!=motion_ids:
@@ -402,6 +501,26 @@ def review(root,study, geometry=None):
         expected=sorted(d["id"] for d in duties if d["domain"] in need)
         if observed.get("criteriaSha256")!=scope_digest(study) or observed.get("kind")!="scope-review" or observed.get("scope")!=disposition or observed.get("complete") is not True or not named(observed.get("reviewer")) or not named(observed.get("basis")) or sorted(observed.get("bodies",[]))!=sorted(bodies) or sorted(observed.get("duties",[]))!=expected:
             missing(disposition,"coverage","Independent coverage did not reconcile all installed solids and registered duties.")
+    external=study.get("externalIssues")
+    if not isinstance(external,list) or len(external)!=len(set(external)):
+        missing("build","external findings","Reconcile the explicit external defect register; use an empty list if none were found.")
+    elif external:
+        if not study.get("issueRegister") or not study.get("issueResult"):
+            missing("build",external,"Missing installed-method negative controls and candidate reruns.")
+        else:
+            from mechanical_methods import digest_study
+            issue_study=read(pinned(root,study["issueRegister"]))
+            issue_result=read(pinned(root,study["issueResult"]))
+            ids=[r["id"] for r in issue_result.get("issues",[])]
+            require(issue_result.get("schema")=="agent-frc/mechanical-issues-result@1" and
+                    issue_result.get("studySha256")==digest_study(issue_study) and issue_result.get("archiveSha256")==archive_sha and
+                    issue_result.get("stepSha256")==step_sha and sorted(ids)==sorted(external) and
+                    issue_result.get("engineSha256")==digest(Path(__file__).with_name("mechanical_methods.py")) and
+                    issue_result.get("pluginVersion")==read(Path(__file__).resolve().parents[1]/"plugin.json")["version"],
+                    "Stale or incomplete first-party issue register")
+            for row in issue_result["issues"]:
+                if row["status"]!="pass":
+                    finding("build","fail",row["id"],"Installed method did not distinguish the failing control from the corrected candidate.")
     any_failure=any(row["status"]=="fail" for row in findings)
     engineering_domains={"native","identity","interference","retention","sweep","engineering"}
     publication="fail" if any_failure else "open" if any(r["domain"] in engineering_domains for r in findings) else "pass"
@@ -456,6 +575,10 @@ def main():
         cold=scan(root,study)
         require(cold==read(pinned(root,study["geometry"])),"Registered geometry differs from a fresh complete STEP scan")
         report=review(root,study,cold)
+    if (args.require_publication or args.require_build_ready) and study.get("externalIssues") and report.get("showcaseEligibility")=="pass":
+        from mechanical_methods import run
+        fresh=run(root,read(pinned(root,study["issueRegister"])))
+        require(fresh==read(pinned(root,study["issueResult"])) and fresh["status"]=="pass","Installed detector replay differs from the issue receipt")
     if args.deliver:
         verify_delivery(root,study,args.deliver)
     output=json.dumps(report,indent=2,allow_nan=False)+"\n"

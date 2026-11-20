@@ -38,6 +38,60 @@ class Readiness(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"Incomplete"):
             self.status()
 
+    def test_visible_legacy_rail_cannot_be_filtered_out_of_both_step_and_declared_native_bodies(self):
+        def omit(census):
+            census["bodies"].append(dict(census["bodies"][0],path="Legacy stock rail:1",name="Crossing the motor"))
+        self.change("nativeCensus",omit)
+        out=self.status()
+        self.assertEqual(out["showcaseEligibility"],"fail")
+        self.assertTrue(any("Legacy stock" in row["subject"] for row in out["findings"]))
+
+    def test_latest_canonical_source_stale_child_same_name_and_old_step(self):
+        from fusion_authority import verify
+        authority=self.root/self.s["authority"]["file"];lineage=self.root/self.s["lineage"]["file"]
+        spec=json.loads(authority.read_bytes());issued=json.loads(lineage.read_bytes())
+        self.assertEqual(verify(self.root,authority,lineage)["policy"],"registered-offline-archive")
+        spec["source"]={"kind":"cloud","dataFileId":"unique-cloud-file"}
+        issued.update(authority=write(self.root,authority.name,spec),policy="observed-cloud-latest",
+            dataFileId="other-cloud-file",savedVersion=8,latestVersion=8,versionId="exact-8",children=[],hasOutofDateChildReferences=False)
+        def check():
+            write(self.root,lineage.name,issued)
+            return verify(self.root,authority,lineage)
+        with self.assertRaisesRegex(ValueError,"design"):
+            check()
+        issued["dataFileId"]="unique-cloud-file";issued["latestVersion"]=9
+        with self.assertRaisesRegex(ValueError,"latest"):
+            check()
+        issued.update(savedVersion=9,hasOutofDateChildReferences=True,children=[dict(id="link",versionId="v2",latestVersionId="v3")])
+        with self.assertRaisesRegex(ValueError,"stale"):
+            check()
+        spec["pinnedChildren"]=[dict(id="link",versionId="v2",basis="version-qualified option")]
+        issued["authority"]=write(self.root,authority.name,spec)
+        self.assertEqual(check()["status"],"pass")
+        (self.root/issued["step"]["file"]).write_text("stale export")
+        with self.assertRaisesRegex(ValueError,"evidence"):
+            check()
+
+    def test_native_pair_incomplete_and_failed_repeated_readback(self):
+        self.change("nativeCensus",lambda c:c["contacts"].update(pairs=[]))
+        self.assertEqual(self.status()["showcaseEligibility"],"open")
+        self.s=fixture(self.root)
+        self.change("nativeCensus",lambda c:c["contacts"]["pairs"][0].update(interferenceMm3=9))
+        self.assertEqual(self.status()["showcaseEligibility"],"fail")
+        self.s=fixture(self.root)
+        raw=json.loads((self.root/"test-raw.json").read_bytes())
+        raw["measurements"]["heldout"]=dict(raw["measurements"]["strength"],value=1.6)
+        updated=write(self.root,"test-raw.json",raw)
+        obs=json.loads((self.root/"test-observations.json").read_bytes())
+        for row in obs["observations"].values():
+            if "measurement" in row:
+                row["measurement"].update(updated)
+                row["sources"][0].update(updated)
+        u=write(self.root,"test-observations.json",obs)
+        for d in self.s["duties"]:d["observation"].update(u)
+        self.s["connections"][0]["evidence"].update(u)
+        self.assertEqual(self.status()["showcaseEligibility"],"fail")
+
     def test_coincident_faces_do_not_establish_retention(self):
         self.s["connections"]=[]
         r=self.status()
@@ -55,6 +109,32 @@ class Readiness(unittest.TestCase):
         self.s["articles"]["block"]["representation"]="official-exact"
         del self.s["duties"][5]["observation"]
         self.assertEqual(self.status()["showcaseEligibility"],"open")
+
+    def test_complete_signed_load_spectrum_and_supported_fatigue_only(self):
+        from member_duty import evaluate
+        step=self.s["step"]
+        base=dict(body="root",stepSha256=step["sha256"])
+        dims=write(self.root,"dims.json",{**base,"section":"solid-rectangle","bendingAxis":"minor","grade":"fixture",
+            "spanMm":100,"widthMm":10,"depthMm":10})
+        mat=write(self.root,"mat.json",dict(grade="fixture",basis="original teaching fixture",modulusMPa=100000,bendingAllowableMPa=100,
+            fatigueBasis="reversed bending, matching source treatment",fullyReversedSnMPaCycles=[[90,1000],[20,100000]]))
+        cyc=dict(id="adverse",source="synthetic force history",minimumN=-50,maximumN=50,cycles=10)
+        forces={**base,"support":"fixed-free-end-force","axis":"minor","cases":[cyc],"completeLifeSpectrum":True}
+        study=dict(schema="agent-frc/member-duty@1",step=step,material=mat,dimensions=dims,body="root",stressFactor=1,
+            factorBasis="uniform synthetic section",deflectionLimitMm=1,damageLimit=1)
+        def actual():
+            study["load"]=write(self.root,"forces.json",forces)
+            return evaluate(self.root,study)
+        r=actual()
+        self.assertEqual(r["status"],"pass")
+        self.assertAlmostEqual(r["cases"][0]["bendingMPa"],30)
+        self.assertAlmostEqual(r["cases"][0]["tipDeflectionMm"],.2)
+        cyc["cycles"]=1000000
+        self.assertEqual(actual()["fatigue"],"fail")
+        cyc["minimumN"]=0
+        self.assertEqual(actual()["status"],"open")
+        cyc["maximumN"]=400
+        self.assertEqual(actual()["status"],"fail")
 
     def test_changed_pose_assembly_and_raw_evidence(self):
         self.s["installed"]["block"]["transform"][3]=9
@@ -159,6 +239,15 @@ class Readiness(unittest.TestCase):
         miss=evaluate(self.root,m)["cases"][0]
         self.assertEqual(miss["status"],"fail")
         self.assertGreater(miss["requiredContacts"][0]["lowerBoundMm"],.1)
+        from mechanical_motion import bearing_area
+        side=BRepPrimAPI_MakeBox(gp_Pnt(10,0,0),10.,10.,10.).Shape()
+        edge=BRepPrimAPI_MakeBox(gp_Pnt(10,10,0),10.,10.,10.).Shape()
+        self.assertAlmostEqual(bearing_area(cube,side),100)
+        self.assertEqual(bearing_area(cube,edge),0)
+        case.pop("requiredContacts")
+        case["initialPose"]={labels[1]:[dict(kind="translation",travelMm=[-18,0,0])]}
+        case["moves"][labels[1]]=case["moves"][labels[0]]
+        self.assertEqual(evaluate(self.root,m)["cases"][0]["status"],"fail")
 
 
 

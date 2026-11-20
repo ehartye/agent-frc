@@ -92,7 +92,7 @@ def bearing_area(a,b):
     def planar(s):
         it=TopExp_Explorer(s,TopAbs_FACE)
         while it.More():
-            face=TopoDS.Face_s(it.Current());surf=BRepAdaptor_Surface(face)
+            face=(getattr(TopoDS,"Face_s",None) or TopoDS.Face)(it.Current());surf=BRepAdaptor_Surface(face)
             if surf.GetType()==GeomAbs_Plane:
                 n=surf.Plane().Axis().Direction()
                 normal=list(n.Coord())
@@ -107,8 +107,9 @@ def bearing_area(a,b):
 def evaluate(root,study):
     require(study.get("schema")=="agent-frc/mechanical-motion@1","Unknown motion study")
     original=pinned(root,study["step"])
-    shapes,_=load_solids(original)
-    case_ids=set();results=[]
+    identities={}
+    shapes,_=load_solids(original,identities)
+    case_ids=set();results=[];extractions={}
     for case in study["cases"]:
         id=case["id"]
         require(named(id) and id not in case_ids and named(case.get("basis")),"Unique case ID and physical basis required")
@@ -119,8 +120,9 @@ def evaluate(root,study):
             require(ext["id"] not in scene and named(ext.get("basis")),"Duplicate or unjustified tool/piece/field fixture")
             scene[ext["id"]]=source[ext["solid"]]
         removed=case.get("removed",{})
-        for key,basis in removed.items():
-            require(key in scene and named(basis),"A staged removal needs an installed predecessor and reason")
+        for key,prior in removed.items():
+            require(case.get("stage")=="service" and key in shapes and prior in extractions and
+                    key in extractions[prior],"A service removal requires a previously verified complete extraction of that installed body")
             del scene[key]
         moves=case["moves"]
         require(isinstance(moves,dict) and moves and set(moves)<=set(scene),"Motion references absent installed parts")
@@ -144,7 +146,12 @@ def evaluate(root,study):
         rows=[];counts={"broadPhase":0,"bounded":0}
         for a,b in combinations(sorted(scene),2):
             if (a not in moves and b not in moves) or (a,b) in excluded:continue
-            if a in moves and b in moves and moves[a]==moves[b]:continue # rigidly carried; rest clash review still applies
+            if a in moves and b in moves and moves[a]==moves[b]:
+                # Their relative pose is constant. Fixtures and initial offsets are not necessarily in the original assembly.
+                g=distance(scene[a],scene[b]);v=common(scene[a],scene[b]) if g<=1e-7 else 0
+                hit=v>0 or g<cut
+                rows.append(dict(pair=[a,b],status="fail" if hit else "pass",witness=dict(t=0,gapMm=g,volumeMm3=v)))
+                continue
             speed=rates.get(a,0)+rates.get(b,0)
             if box_gap(boxes[a],boxes[b])-speed>cut:
                 counts["broadPhase"]+=1;continue
@@ -208,11 +215,27 @@ def evaluate(root,study):
             sa=transform(scene[a],moves.get(a,[]),time);sb=transform(scene[b],moves.get(b,[]),time)
             v=common(sa,sb);area=bearing_area(sa,sb)
             seats.append(dict(pair=[a,b],areaMm2=area,interferenceMm3=v,status="pass" if v==0 and area>=seat["minAreaMm2"] else "fail"))
-        observed=[r["status"] for r in [*rows,*seats,*goals]]
-        status="fail" if "fail" in observed else "open" if "open" in observed or not rows and not seats and not goals and not counts["broadPhase"] else "pass"
-        results.append(dict(case=id,status=status,moving=list(moves),removed=removed,installedCount=len(scene),pairs=rows,seats=seats,requiredContacts=goals,counts=counts))
+        from mechanical_visibility import observe
+        visibility=[observe(root,v,scene,moves,transform) for v in case.get("visibility",[])]
+        observed=[r["status"] for r in [*rows,*seats,*goals,*visibility]]
+        status="fail" if "fail" in observed else "open" if "open" in observed or not rows and not seats and not goals and not visibility and not counts["broadPhase"] else "pass"
+        extracted=[]
+        if case.get("extract"):
+            require(case.get("stage")=="service" and not case.get("initialPose") and not excluded and
+                    set(case["extract"])==set(moves) and set(moves)<=set(shapes),
+                    "An extraction needs the installed start, all fixed obstacles and an explicit moving group")
+            fixed=[bounds(body) for key,body in scene.items() if key not in moves]
+            require(fixed,"An extraction needs a remaining fixed assembly")
+            envelope=[min(b[i] for b in fixed) for i in range(3)]+[max(b[i] for b in fixed) for i in (3,4,5)]
+            fully_out=all(box_gap(bounds(transform(scene[key],ops,1)),envelope)>cut for key,ops in moves.items())
+            if status=="pass" and fully_out:
+                extracted=sorted(moves)
+                extractions[id]=extracted
+            elif status=="pass":
+                status="open"
+        results.append(dict(case=id,extracted=extracted,status=status,moving=list(moves),removed=removed,installedCount=len(scene),pairs=rows,seats=seats,requiredContacts=goals,visibility=visibility,counts=counts))
     require(results,"Supply at least one operating or service case")
-    return {"schema":"agent-frc/mechanical-motion-result@1","stepSha256":digest(original),"cases":results}
+    return {"schema":"agent-frc/mechanical-motion-result@1","stepSha256":digest(original),"occurrences":identities,"cases":results}
 
 if __name__=="__main__":
     parser=argparse.ArgumentParser(description=__doc__)

@@ -12,7 +12,7 @@ export function authorizeRender(root,{archive,manifest='project.json'}={}){
   process.on('exit',()=>rmSync(keyFolder,{recursive:true,force:true}));
   const hash=file=>createHash('sha256').update(readFileSync(path.join(root,file))).digest('hex');
   const selected=JSON.parse(readFileSync(path.join(root,'cad-showcase.json'))),cad=JSON.parse(readFileSync(path.join(root,'docs/robot/cad/receipt.json')));
-  const files=[selected.source,'docs/robot/cad/assembly.png','docs/robot/cad/assembly.stl.gz',...(archive?[archive]:[])];
+  const files=[selected.source,'docs/robot/cad/assembly.png','docs/robot/cad/assembly.stl.gz','docs/robot/cad/receipt.json',...(archive?[archive]:[])];
   const body={schema:'agent-frc/signed-model-release@1',project:'synthetic-fixture',scope:'Isolated render test',configuration:'Controlled candidate',
     studySha256:'a'.repeat(64),stepSha256:cad.sourceSha256,archiveSha256:archive?hash(archive):'b'.repeat(64),files:files.map(p=>({path:p,sha256:hash(p)}))};
   writeFileSync(path.join(root,'test-release.json'),JSON.stringify({body,signature:sign(null,Buffer.from(JSON.stringify(body)),privateKey).toString('base64')}));

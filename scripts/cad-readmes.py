@@ -56,11 +56,11 @@ def run(root, update, template):
         raise ValueError("Unknown CAD receipt schema")
     from showcase_release import verify_candidate as release_check
     release_check(root,config.get("mechanicalReadiness"),config["source"],
-                  ["docs/robot/cad/assembly.png","docs/robot/cad/assembly.stl.gz"],receipt=receipt,distribute_source=True)
+                  ["docs/robot/cad/assembly.png","docs/robot/cad/assembly.stl.gz","docs/robot/cad/receipt.json"],receipt=receipt,distribute_source=True)
     featured=config.get("featuredAssembly") or config.get("featured")
     if featured:
         paths=[featured[k] for k in ("still","mesh") if k in featured]
-        if not paths or not featured.get("source"):
+        if len(paths)!=2 or not featured.get("source"):
             raise ValueError("Featured model must identify its exact neutral source, still, mesh and readiness study")
         release_check(root,featured.get("mechanicalReadiness"),featured["source"],paths,featured.get("archive"))
     if "backdrop" in config or "backdrop" in receipt:

@@ -113,7 +113,19 @@ export async function auditStaged(approved,candidate,policyPath,packetPath,pubKe
   const old=inventory(base),next=inventory(root);
   for(const name of fixed)check(old.has(name)&&next.has(name),'Registered model output disappeared: '+name);
   for(const name of new Set([...old,...next])){
-    if(mutable.has(name))continue;
+    if(mutable.has(name)){
+      check(old.has(name)&&next.has(name),'Expected registered field page in both stages: '+name);
+      if(await hash(file(base,name))===await hash(file(root,name)))continue;
+      const witness=process.env.FRC_VERIFIED_FIELD_ROOT;
+      check(witness,'Regenerate changed field pages independently using the trusted plugin');
+      const trusted=realpathSync(witness);
+      for(const unsafe of [base,root]){
+        const rel=path.relative(unsafe,trusted);
+        check(rel==='..'||rel.startsWith('..'+path.sep)||path.isAbsolute(rel),'Field rebuild must be outside both deployed trees');
+      }
+      check(await hash(file(trusted,name))===await hash(file(root,name)),'Field page differs from independently regenerated output: '+name);
+      continue;
+    }
     if(inspected.has(name)&&next.has(name))continue;
     check(old.has(name)&&next.has(name),'Unreviewed added or removed output: '+name);
     check(await hash(file(base,name))===await hash(file(root,name)),'Unreviewed changed published output: '+name);

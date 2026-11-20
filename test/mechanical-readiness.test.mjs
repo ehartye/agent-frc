@@ -19,9 +19,14 @@ test('verified public deployment can preserve the previous robot while changing 
   const old=path.join(root,'old'),next=path.join(root,'next');mkdirSync(old);
   writeFileSync(path.join(old,'robot.glb'),'previous');writeFileSync(path.join(old,'index.html'),'<model-viewer src="robot.glb">');
   writeFileSync(path.join(old,'field-lab.html'),'field');cpSync(old,next,{recursive:true});writeFileSync(path.join(next,'field-lab.html'),'six robots');
+  const fieldBuild=path.join(root,'trusted-field');mkdirSync(fieldBuild);writeFileSync(path.join(fieldBuild,'field-lab.html'),'six robots');
+  const previous=process.env.FRC_VERIFIED_FIELD_ROOT;process.env.FRC_VERIFIED_FIELD_ROOT=fieldBuild;
+  t.after(()=>{if(previous===undefined)delete process.env.FRC_VERIFIED_FIELD_ROOT;else process.env.FRC_VERIFIED_FIELD_ROOT=previous;});
   const policy=path.join(root,'policy.json');
   writeFileSync(policy,JSON.stringify({schema:'agent-frc/staged-model-policy@1',project:'test',modelFiles:['index.html','robot.glb'],mutableFieldPages:['field-lab.html']}));
   assert.equal((await auditStaged(old,next,policy)).checked,3);
+  writeFileSync(path.join(next,'field-lab.html'),'<img src="new-robot.png">');await assert.rejects(auditStaged(old,next,policy),/independently regenerated/);
+  writeFileSync(path.join(next,'field-lab.html'),'six robots');
   writeFileSync(path.join(next,'robot.glb'),'new approved');
   await assert.rejects(auditStaged(old,next,policy),/Unreviewed changed/);
   const keys=generateKeyPairSync('ed25519'),key=path.join(root,'reviewer.pem');

@@ -5,7 +5,7 @@ description: "Create or refresh a student robot showcase with explorable CAD mod
 
 # Robot evidence highlights
 
-Before promoting a new whole robot or subsystem model, use `frc-mechanical-readiness` on the exact Fusion configuration and every distributed derivative. Require a passing, scoped mechanical review before replacing the live model, its README image or the native download. On an open or failed candidate, preserve the deployed revision and continue private engineering work. [Model promotion and evidence](../../docs/mechanical-readiness.md)
+Before promoting a new whole robot or subsystem model, use `frc-mechanical-readiness` on the exact Fusion configuration and every distributed derivative. Require a negative-control and candidate receipt from an installed first-party method for externally discovered defects. Require a passing, scoped mechanical review before replacing the live model, its README image or the native download. On an open or failed candidate, preserve the deployed revision and continue private engineering work. [Model promotion and evidence](../../docs/mechanical-readiness.md)
 
 
 ## Let students explore the model
@@ -59,3 +59,5 @@ Use the [publication checks](../../docs/showcase-evidence.md) for a kickoff-only
 Publish the project’s generated student field lab with the `fieldLab` entry and link it directly from the README. Verify the stable `field-lab.html` in the deployed site.
 
 For a publicly downloadable whole robot, bind the student archive to its own reopened component, feature and joint evidence. [Verify the public Fusion handoff](../../docs/public-fusion-handoff.md).
+
+Use the [Fusion authority and revision handoff](../../docs/fusion-authority.md) to establish the one current saved native design, the STEP exported from that design and the identity of the engineering evidence. Recheck the register when resuming in another checkout or before replacing a published view.

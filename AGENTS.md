@@ -12,6 +12,12 @@ Maintain a CAD-rendered still immediately below the title of each project-owned 
 
 Start new robot frame and bumper designs with two rear plan-view chamfers. Preserve explicit project outlines. Size each mitered backing, padding and cover segment from the actual frame, retain the vertical bumper section and verify the applicable edition and cutoff in the owning project. [Frame profile convention](docs/frame-profile.md)
 
+## Use the installed tools to investigate robot defects
+
+When a design study or independent reviewer finds a defect outside the plugin, record the detection method in the FRC wiki. Implement or identify the equivalent first-party skill and callable check. Use an executable comparison for a calculable property and a source-bound native Fusion inspection when expert judgment is required. Preserve a controlled failing case, then run the released plugin from a clean installed copy on the actual successor. Link the candidate inputs, released revision, regression and resulting receipt in the project. Keep open findings visible in private engineering records until the issued evidence satisfies the criterion.
+
+A future showcase model requires the full mechanical-readiness gate. Protect each deployed model, still, selector and download. On failure retain the current release. Bring a repeatedly failing mechanism or role back to whole-robot design when a fair alternative could better meet the same requirements.
+
 ## Maintain the public workflow guide
 
 Update the GitHub Pages guide in the same change whenever a workflow, skill, student objective, artifact contract or user-facing behavior changes. Check the guide against the installed skill inventory, build it, exercise the changed interaction and verify the published result after merge.

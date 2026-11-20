@@ -55,13 +55,15 @@ def fixture(root,source="fixture.step",assets=(),archive_name="test.f3d", measur
     neutral=pin(root,"original.step")
     geom=measured or dict(schema="agent-frc/step-solid-intersections@1",method="placed-step-distance-and-common-volume",
         units="mm",stepSha256=step["sha256"],toleranceMm=.02,bodies=boxes,nonSolidLeaves=[],pairs=[["block","frame",0,0]])
+    geom["seatAreasMm2"]=[dict(pair=sorted(labels),area=100)]
     geom["componentDifferences"]={b:dict(absentMm3=0,extraMm3=0) for b in labels}
     geometry=write(root,"test-geometry.json",geom)
     drawing=write(root,"test-drawing.json",{"fictional":"machining and spacer proof"})
     bought=neutral
     native_rows=[dict(path=b,solids=[b],article=("frame","block")[i],revision="r1",configuration="A",worldTransform=poses[i],
-        worldBoundsMm={b:box},sourceSolids={b:source_label},neutralSha256=neutral["sha256"],modelSha256=(native if i==0 else bought)["sha256"],editable=i==0) for i,b in enumerate(labels) for box in [boxes[b]]]
-    reopened=write(root,"test-reopen.json",dict(**bind,opened=True,movingGroups=["slide"],motionRanges={"slide":[0,10]},installedOccurrences=native_rows))
+        worldBoundsMm={b:box},nativeBodyNames={b:b},sourceSolids={b:source_label},neutralSha256=neutral["sha256"],modelSha256=(native if i==0 else bought)["sha256"],editable=i==0) for i,b in enumerate(labels) for box in [boxes[b]]]
+    poses_to_check=[dict(id="saved",joints=[]),dict(id="extension",joints=[dict(group="slide",type="joint",name="slide",occurrence="@root",coordinate="slideValue",nativeValue=1)])]
+    reopened=write(root,"test-reopen.json",dict(**bind,opened=True,movingGroups=["slide"],inspectionPoses=poses_to_check,motionRanges={"slide":[0,10]},installedOccurrences=native_rows))
     base=dict(shapeResolutionMm3=.000001,neutral=neutral,revision="r1",configuration="A",rights="exact-redistribution",rightsBasis="Original test data.")
     articles={"frame":dict(**base,id="frame",kind="fabricated",materialGrade="Synthetic grade",model=native,drawing=drawing),
               "block":dict(**base,id="block",kind="purchased",manufacturer="Original teaching vendor",partNumber="Test B",
@@ -77,7 +79,7 @@ def fixture(root,source="fixture.step",assets=(),archive_name="test.f3d", measur
     raw_rows["sweep"].update(motionRanges={"slide":[0,10]},coverage="conservatively-bounded")
     raw=write(root,"test-raw.json",{**bind,"schema":"agent-frc/mechanical-measurements@1","measurements":raw_rows,"synthetic":True})
     observations={"joint":{"kind":"retained-joint","pair":labels,"mechanism":"captive guide","inspection":"seated fastener",
-        "loadPath":"guide to fixed plate","verified":True,"maxInterfaceGapMm":.1,"sources":[drawing]}}
+        "loadPath":"guide to fixed plate","verified":True,"maxInterfaceGapMm":.1,"interface":"planar-seat","minBearingAreaMm2":20,"sources":[drawing]}}
     duties=[]
     for domain,inputs in domains.items():
         measurement={**raw,"pointer":"/measurements/"+domain+"/value"}
@@ -103,6 +105,23 @@ def fixture(root,source="fixture.step",assets=(),archive_name="test.f3d", measur
         connections=[dict(pair=sorted(labels),evidence={**obs,"id":"joint"})],mating=[],duties=duties,
         coverage={s:{**obs,"id":s} for s in ("build","engineering")},
         distribution={**bind,"approvedBy":"Test observer","files":release})
+    study["nativeCensus"]=write(root,"test-census.json",{"schema":"agent-frc/fusion-body-census@1","archiveSha256":native["sha256"],
+        "programSha256":digest(SCRIPTS/"fusion_issue_inventory.py"),"fusionVersion":"synthetic test","otherGeometry":[],
+        "bodies":[dict(path=b,name=b,revision="r1",bodyLight=True,occurrenceVisible=True,worldTransform=poses[i],boundsMm=boxes[b])
+            for i,b in enumerate(labels)]})
+    census=json.loads((root/"test-census.json").read_bytes())
+    for b in census["bodies"]:b.update(visible=True,worldVertexErrorMm=0)
+    census.update(documentId="fixture",rootComponentId="frame",rootRevision="r1",pose=poses_to_check[0],
+        contacts={"method":"native paired test","units":"mm3","candidatePairs":1,"complete":True,"programSha256":digest(SCRIPTS/"fusion_issue_contacts.py"),
+                  "pairs":[dict(pair=[0,1],interferenceMm3=geom["pairs"][0][3],temporaryCommonMm3=geom["pairs"][0][3])]})
+    study["nativeCensus"]=write(root,"test-census.json",census)
+    study["nativePoses"]=[write(root,"test-extended.json",dict(census,pose=poses_to_check[1]))]
+    authority=write(root,"test-authority.json",dict(schema="agent-frc/fusion-authority@1",id="bench",revision="r1",basis="Teaching fixture",
+        configuration=bind["configuration"],nativeConfiguration="unconfigured",source=dict(kind="offline",archive=native)))
+    study.update(authority=authority,lineage=write(root,"test-lineage.json",dict(schema="agent-frc/fusion-export-lineage@1",archive=native,step=step,
+        authority=authority,id="bench",revision="r1",configuration=bind["configuration"],nativeConfiguration="unconfigured",exporterSha256=digest(SCRIPTS/"fusion_authority.py"),
+        inspectedAt="captured test",dirty=False,externalReferences=[],policy="registered-offline-archive")))
+    study["externalIssues"]=[]
     if measured:
         geom=scan(root,study)
         study["geometry"]=write(root,"test-geometry.json",geom)

@@ -288,7 +288,7 @@ export async function buildHighlights(manifest, directory) {
     const dest = 'cad-' + createHash('sha256').update(rendered).update(await readFile(receiptFile)).update(record.imageSha256).digest('hex');
     modelFiles = {dest, still, receiptFile, rendered};
     release={study_path:readiness??null,source:record.source,receipt:record,
-      derivatives:[path.join(folder,'assembly.png'),path.join(folder,'assembly.stl.gz')]};
+      derivatives:[path.join(folder,'assembly.png'),path.join(folder,'assembly.stl.gz'),config.receipt]};
     model = '<section><h2>Explore the CAD</h2><iframe title="'+values.title+'" loading="lazy" style="width:100%;height: min(48rem,85vh);border:0" src="'+dest+'/index.html"></iframe><p><a href="'+dest+'/index.html">Open the model full screen</a></p></section>';
   }
   let coverage = '';
@@ -357,6 +357,9 @@ export async function buildHighlights(manifest, directory) {
   const html = applyStyle(template.replace(/\{\{(\w+)\}\}/g, (_, key) => fields[key]));
   if(student || release){
     release??={study_path:data.mechanicalReadiness??null,source:null,derivatives:[]};
+    for(const asset of assets.values()){
+      if(/\.(?:png|jpe?g|webp|mp4|webm|pdf)$/i.test(asset))release.derivatives.push(path.relative(root,asset));
+    }
     if(student)release.native=path.relative(root,student.file);
     await authorizeModel(python,root,release);
   }

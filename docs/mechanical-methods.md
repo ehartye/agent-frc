@@ -1,0 +1,53 @@
+# Reproduce a discovered mechanical defect
+
+The team owns the robot geometry, rules, availability, load cases and acceptance thresholds. The installed plugin owns the comparison methods. When a design study exposes a new failure, record what actually detected it, preserve the failing input and run the same detector on the proposed revision. Keep the prior issue and the corrected candidate distinct. A measurement from a project-only script can motivate a plugin method; reproduce the decision through an installed command or a registered native inspection before claiming closure.
+
+## Select the detector
+
+| What the student needs to establish | Installed method and failing control |
+| --- | --- |
+| Supplier or made part is the expected shape at every installed pose | `mechanical_readiness.py measure` measures bidirectional missing/extra material against the exact registered neutral source at a proper rigid transform. Exercise a same-bounds missing bore, a handed part and a repeated occurrence. |
+| Separate geometric contact from support, interference and restraint | `mechanical_readiness.py review` enumerates all solid groups and checks the complete pair census, fit-specific common volume and declared retained paths to the chassis. Preserve a disconnected group and a penetrating “connected” pair. |
+| Parts move through free space, including tools and the real piece | `mechanical_motion.py` compares moving complete BReps against installed solids, other moving groups, staged tooling and field parts. Interpolate relative translation and rotation; bound unsampled travel. Verify early, middle and late interference, and repeat with changed tolerances. |
+| The intended piece actually reaches the capture point | Add `requiredContacts` to the same geometry study. A clear route with a positive lower bound to the nearest legal piece fails the contact goal. Use the field-route and sensor checks to connect the physical reach to the same piece and the later accepted event. |
+| Bearings, brackets or seats still contact their support at tolerance extremes | Add `seats` and repeat the actual installed pose under controlled offsets or missing supports. Check common material and shared planar face area. Reuse native [hidden backing](hidden-backing-fit.md) for scoped Fusion feature evidence. |
+| Sensor can see the required thing in the actual posture | Run `mechanical_motion.py` with `visibility` for calibrated finite-corner projection and optical obstruction at the declared pose. Follow it with `sensor-observability.mjs` and `field-route-evidence.mjs` for support clearance, latency and feasible arrival. Record wrong ID, dark/missing packet, blocking hardware and occlusion. |
+| Real stock, hardware, service tools and shop process support fabrication | Run `assembly-accounting.mjs`, `fabrication-capabilities.mjs` and the mechanical tool/seat sweep. Compare nominal and adverse length, shoulder, cutter radius, access, grip and service order with controlled drawing and material evidence. [Material reconciliation](engineering-material-mass.md) |
+| Strength, stiffness, impact and fatigue across the actual duty | Use source-bound numerical limits in `mechanical_readiness.py review`. For a uniform solid rectangular cantilever carrying a transverse end force, `member_duty.py` recomputes bending stress, tip deflection and cumulative fatigue damage. For supports and elevation, `hardening.mjs coupled` and `elevation` recompute forces, moments and rating comparisons. For a specialized continuum or fatigue model, preserve the actual solver, installed boundary conditions, material/grade, stress spectrum, design life, mesh/time convergence and perturbed/held-out cases. A signed report alone cannot supply an unknown allowable. |
+| Lift holds, handles a jam and survives loss of a support | `hardening.mjs duties` evaluates powered operation, obstruction and a complete post-cut interval. `hardening.mjs paths` tests a component cut, the consequence of differential motion and common descent. Preserve a blocked path or a nominally level falling load. |
+| Achievable role and repeated complete robot cycles justify an architecture | `hardening.mjs throughput`, `mission-cohort.mjs` and the whole-robot design skill compare the same actor, finite supply, partner context and frozen time window. Preserve the alternate architecture and counts for acquisition, delivery, recovery and reset. |
+
+The [machine-readable catalog](../references/mechanical-methods.json) identifies installed entries, expected arguments and synthetic regression files. An expert native observation or specialized solver remains qualified by its source, assumptions, coverage and operating scope. A source-specific failure that the existing methods cannot observe stays open while the first-party method is added.
+
+## Exercise an intermediate collision
+
+```sh
+python examples/mechanical-readiness/make-exercise.py NEW_PRIVATE_PROJECT
+python scripts/mechanical_motion.py NEW_PRIVATE_PROJECT motion.json
+```
+
+The first withdrawal crosses the bracket halfway through the stroke; the second has a certified gap. Both endpoint positions of the failed stroke are clear. The separate `issue.json` deliberately lacks a qualified Fusion issue and strength/DFM evidence. Use it to practice interpreting an open model.
+
+A `mechanical-motion@1` study supplies a pinned complete `step` and named `cases`. Each case has a `basis`, `minGapMm`, and a `moves` object keyed by exact placed solid name. A translation has `kind: "translation"` and a total XYZ `travelMm`. A rotation has `kind: "rotation"`, `originMm`, `axis` and `travelDeg`. Operations apply in order in the common frame. Endpoints use normalized times 0 and 1. `initialPose` can place tooling or set a tolerance control before the stroke. Register every moving solid; keep the complete native inventory as the source. A fixture has a distinct `id`, pinned `file`, source `solid` and `basis`. Keep operating geometry complete. For service, run the extraction case first with `stage: "service"` and an `extract` list matching its moving solids. Each extracted solid must move from its installed pose to clear the remaining assembly’s enclosing box, with a bounded clear stroke. A later service case may specify `removed` mapping those body names to that prior case ID. Deeper `maxDepth` tightens ambiguous intervals. An independently qualified intentional interface needs the exact pair, case, source digest and reviewed result. A failed pair elsewhere still fails the run.
+
+A `requiredContacts` row gives its `id`, actual piece/body `pair`, `window` on the normalized stroke, permissible `maxGapMm` and `criterion`. A contact witness establishes reach at that pose. Full capture and scoring require retention and a subsequent eligible disposition. A `seats` row gives `pair`, evaluation time `t` and `minAreaMm2`. Positive material intersection fails the seat check.
+
+For sampled visibility provide `id`, a physical `camera` and `target`, `cameraId`, `t`, nominal-frame `eyeMm`, `forwardPointMm`, `upPointMm` and `targetCornersMm`. A pinned `calibration` gives the camera `id`, `imageSizePx` and rectified pinhole `intrinsics` (fx, fy, cx, cy). A pinned `frame` records `cameraId`, `poseFraction`, target, calibration digest, detector method, received flag, detectedId, measured brightness and frame age in seconds. Compare to the goal’s `expectedId`, `minBrightness` and `maxAgeS`. A clear ray without a recorded packet stays open. Repeat across actual poses, including reduced illumination and the missing-frame condition.
+
+## Replay an external finding
+
+```sh
+python scripts/mechanical_methods.py PROJECT issue-register.json --require-pass
+```
+
+An `agent-frc/mechanical-issues@1` register identifies the pinned `archive`, `step` and each finding by `id`, `finding` and catalog `method`. Give it a `negative` case and a `candidate` case. Each case supplies the method’s named `inputs` as pinned project files. The candidate’s `geometryBindings` identify an actual input file, a JSON Pointer in that file and `kind` (archive or step). A shared `criterion` has a result `pointer` and an expected `equals`, or numeric min/max. Keep the same scoped result pointer for the preserved failure and candidate. Record the failing result on the preserved control and passing result on the actual candidate. List the finding IDs in `externalIssues` and pin the register and its receipt in `issueRegister` and `issueResult` in the readiness study. Freeze the installed plugin version when publishing.
+
+Use this same question on systemic failures. If the shop cannot reach the essential joint, a support governs across every plausible material, or the robot cannot collect its assigned pieces before the window closes, compare a different mechanism or whole robot against the same role. [Whole-robot design](../skills/frc-whole-robot-design/SKILL.md)
+
+
+
+## Size a member for its registered load spectrum
+
+Run `python scripts/member_duty.py PROJECT member.json`. The `agent-frc/member-duty@1` input binds the STEP, installed body, measured `dimensions`, controlled `material` and measured or conservatively bounded `load`. Dimensions and loads identify the same body and STEP digest. Specify width, bending depth and span in mm, the section as `solid-rectangle`, the installed bending axis and grade. The material source supplies MPa modulus, bending allowable and the qualified fully reversed S–N curve as decreasing stress/increasing life pairs. Identify its condition and surface treatment. Supply the stress factor and basis, deflection limit and allowable damage. The load file identifies the `fixed-free-end-force` support and bending axis, plus every case’s signed minimum and maximum newtons, lifetime cycles and source. Declare whether the life spectrum is complete.
+
+The solver computes section moment of inertia, bending stress and elastic tip deflection, then interpolates the supported S–N curve logarithmically and sums cycle damage. An incomplete life spectrum, unqualified mean stress or extrapolated fatigue life stays open. Evaluate bearing/joint restraint, shear, buckling, actual impact peak force and other support conditions using appropriate evidence. This member result alone cannot qualify a full assembly.

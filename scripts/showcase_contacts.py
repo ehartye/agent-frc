@@ -3,7 +3,7 @@ import math
 from collections import Counter
 
 
-def load_solids(path):
+def load_solids(path, identities=None):
     from OCP.IFSelect import IFSelect_RetDone
     from OCP.STEPCAFControl import STEPCAFControl_Reader
     from OCP.TCollection import TCollection_ExtendedString
@@ -28,7 +28,11 @@ def load_solids(path):
     table.GetFreeShapes(roots)
     bodies, surfaces = [], []
 
-    def visit(label, location, indices):
+    def label_name(label):
+        attribute=TDataStd_Name()
+        return attribute.Get().ToExtString() if label.FindAttribute(TDataStd_Name.GetID_s(),attribute) else ""
+
+    def visit(label, location, indices, ancestry):
         children = TDF_LabelSequence()
         table.GetComponents_s(label, children)
         if children.Length():
@@ -36,7 +40,7 @@ def load_solids(path):
                 child, definition = children.Value(i), TDF_Label()
                 if not table.GetReferredShape_s(child, definition):
                     raise ValueError("Missing STEP occurrence definition")
-                visit(definition, location.Multiplied(table.GetLocation_s(child)), indices+[i])
+                visit(definition, location.Multiplied(table.GetLocation_s(child)), indices+[i], ancestry+[label_name(child),label_name(definition)])
             return
         attribute = TDataStd_Name()
         name = attribute.Get().ToExtString() if label.FindAttribute(TDataStd_Name.GetID_s(), attribute) else ""
@@ -45,18 +49,20 @@ def load_solids(path):
         n = 0
         while it.More():
             n += 1
-            bodies.append((name, ".".join(map(str,indices+[n])), it.Current()))
+            bodies.append((name, ".".join(map(str,indices+[n])), it.Current(), ancestry))
             it.Next()
         if not n:
             surfaces.append(dict(name=name, occurrence=indices))
     for i in range(1,roots.Length()+1):
-        visit(roots.Value(i), TopLoc_Location(), [i])
+        visit(roots.Value(i), TopLoc_Location(), [i], [label_name(roots.Value(i))])
     if not bodies:
         raise ValueError("No STEP solid instances")
     counts = Counter(row[0] for row in bodies)
-    names = [name if name and counts[name]==1 else f"{name or 'Solid'} [{occ}]" for name,occ,_ in bodies]
+    names = [name if name and counts[name]==1 else f"{name or 'Solid'} [{occ}]" for name,occ,_,_ in bodies]
     if len(set(names)) != len(names):
         raise ValueError("Ambiguous solid occurrence identifiers")
+    if identities is not None:
+        identities.update({key:{"definition":row[0],"instance":row[1],"occurrencePath":row[3]} for key,row in zip(names,bodies)})
     return dict(zip(names,(row[2] for row in bodies))), surfaces
 
 

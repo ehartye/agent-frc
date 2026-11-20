@@ -1,0 +1,166 @@
+{
+  "schema": "agent-frc/mechanical-methods@1",
+  "methods": [
+    {
+      "id": "installed-shape",
+      "runtime": "python",
+      "entry": "scripts/mechanical_readiness.py",
+      "args": [
+        "review",
+        "$root",
+        "$study",
+        "--rescan"
+      ],
+      "detects": "Incorrect purchased bore, hardware option or installed orientation",
+      "regression": "test/mechanical_readiness.py"
+    },
+    {
+      "id": "motion-and-contact",
+      "runtime": "python",
+      "entry": "scripts/mechanical_motion.py",
+      "args": [
+        "$root",
+        "$study"
+      ],
+      "detects": "Moving rigid material, confined tool, perturbed seat, finite piece reach or camera clipping",
+      "regression": "test/mechanical_readiness.py"
+    },
+    {
+      "id": "bill-and-material",
+      "runtime": "node",
+      "entry": "scripts/assembly-accounting.mjs",
+      "args": [
+        "$study"
+      ],
+      "detects": "Repeated or missing BOM instance, catalog mass and native assignment",
+      "regression": "test/assembly-native-mass.test.mjs"
+    },
+    {
+      "id": "shop",
+      "runtime": "node",
+      "entry": "scripts/fabrication-capabilities.mjs",
+      "args": [
+        "$plan",
+        "$profile",
+        "$date"
+      ],
+      "detects": "Unavailable process, machine envelope, tool or stock",
+      "regression": "test/fabrication-capabilities.test.mjs"
+    },
+    {
+      "id": "support",
+      "runtime": "node",
+      "entry": "scripts/hardening.mjs",
+      "args": [
+        "coupled",
+        "$study",
+        "$root"
+      ],
+      "detects": "Unilateral support, unbalanced force or moment, adverse reaction",
+      "regression": "test/coupled-support.test.mjs"
+    },
+    {
+      "id": "elevation",
+      "runtime": "node",
+      "entry": "scripts/hardening.mjs",
+      "args": [
+        "elevation",
+        "$study",
+        "$root"
+      ],
+      "detects": "Missing support, off-axis mass or unknown rating",
+      "regression": "test/spatial-elevation.test.mjs"
+    },
+    {
+      "id": "actuator",
+      "runtime": "node",
+      "entry": "scripts/hardening.mjs",
+      "args": [
+        "duties",
+        "$study",
+        "$root"
+      ],
+      "detects": "Jam, nominal stroke, delayed protection or post-cut loss",
+      "regression": "test/actuator-duties.test.mjs"
+    },
+    {
+      "id": "parallel-paths",
+      "runtime": "node",
+      "entry": "scripts/hardening.mjs",
+      "args": [
+        "paths",
+        "$study",
+        "$root"
+      ],
+      "detects": "Severed local path, upstream cross-link or symmetric descent",
+      "regression": "test/lift-path-faults.test.mjs"
+    },
+    {
+      "id": "route",
+      "runtime": "node",
+      "entry": "scripts/field-route-evidence.mjs",
+      "args": [
+        "$study"
+      ],
+      "detects": "Finite piece or robot enters installed structure before scored event",
+      "regression": "test/field-route-evidence.test.mjs"
+    },
+    {
+      "id": "optical-event",
+      "runtime": "node",
+      "entry": "scripts/sensor-observability.mjs",
+      "args": [
+        "$study"
+      ],
+      "detects": "Optical release event precedes physical clearance or observations disappear",
+      "regression": "test/sensor-observability.test.mjs"
+    },
+    {
+      "id": "throughput",
+      "runtime": "node",
+      "entry": "scripts/hardening.mjs",
+      "args": [
+        "throughput",
+        "$study",
+        "$root"
+      ],
+      "detects": "Rate claim combines different actors, incomplete intervals or repeated setup",
+      "regression": "test/throughput-cohort.test.mjs"
+    },
+    {
+      "id": "native-reopen",
+      "runtime": "node",
+      "entry": "scripts/check-native-revision.mjs",
+      "args": [
+        "$expected",
+        "$observed"
+      ],
+      "detects": "A transient CAD edit or missing native body survives only before cold reopen",
+      "regression": "test/native-revision.test.mjs"
+    },
+    {
+      "id": "mission",
+      "runtime": "node",
+      "entry": "scripts/mission-cohort.mjs",
+      "args": [
+        "$plan",
+        "$journal",
+        "--manifest-sha256",
+        "$freeze"
+      ],
+      "detects": "Run cohort changes its frozen validation cases",
+      "regression": "test/mission-cohort.test.mjs"
+    },
+    {
+      "id": "member-duty",
+      "runtime": "python",
+      "entry": "scripts/member_duty.py",
+      "args": [
+        "$root",
+        "$study"
+      ],
+      "detects": "Elastic section overload, excess deflection, or fatigue damage under an issued supported load spectrum",
+      "regression": "test/mechanical_readiness.py"
+    }
+  ]
+}

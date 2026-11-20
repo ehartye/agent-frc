@@ -1,3 +1,4 @@
+import {authorizeRender} from './authorize-render-fixture.mjs';
 import assert from 'node:assert/strict';
 import {execFileSync,spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
@@ -62,6 +63,7 @@ test('exports the actual standalone project field lab at a stable linked address
   const root=await mkdtemp(path.join(os.tmpdir(),'project-lab-'));
   t.after(()=>rm(root,{recursive:true,force:true}));
   await cp(example,root,{recursive:true});
+  authorizeRender(root);
   const manifest=path.join(root,'project.json'),spec=JSON.parse(await readFile(manifest,'utf8'));
   const file='kickoff/field-lab.html',out=path.join(root,'out');
   await mkdir(path.join(root,'kickoff'));
