@@ -35,6 +35,22 @@ The recipe receives `CONFIG["plugin"]` as the staged scripts directory. Load sib
 
 The bundled [guarded teaching client](../examples/fusion-guarded/README.md) accepts a `nativeJob` object with `bundle` and `registrationSha256` in its usual request configuration. Select `plugin/examples/fusion-guarded/guarded_case.py` as the recipe and use its ordinary `jobId`. Run the client from the staged plugin for later requests. Preserve the original asset rights when retaining the job.
 
+## Check access as the station operator
+
+The staging account may be able to read files that the signed-in Fusion process cannot open. Before dispatching CAD work, run the guarded client's read-only `access` stage against the actual frozen bundle. It can check any registered recipe. Run the client from a readable, pinned plugin package. Supply a fresh request ID, the existing private journal and the actual existing output directories. For an export that creates its own subdirectory, probe the directory that will contain it.
+
+```json
+{"stage":"access","jobId":"trial-plate-a","requestId":"access-01","nativeJob":{"bundle":"ABSOLUTE_FROZEN_BUNDLE","registrationSha256":"PINNED_JOB_SHA256","writeDirectories":["ABSOLUTE_OUTPUT_PARENT","ABSOLUTE_NATIVE_JOURNAL"]}}
+```
+
+```sh
+python -B examples/fusion-guarded/guarded_client.py access.json CLIENT_JOURNAL
+```
+
+Fusion takes and releases the real use lock, reads and hashes every registered dependency, and creates, flushes, reads and deletes a fresh test file in each specified directory. The receipt identifies the job, plugin commit, Fusion process and original document state. Keep it with the request journal. Recheck after changing user, package, permissions or destination. Include the same `writeDirectories` in the staged operation so the guard repeats the access checks before opening the recipe. Use separate directories for frozen inputs and writable results.
+
+To diagnose from the signed-in user's ordinary terminal, run `python -B scripts/native_job.py preflight BUNDLE REGISTRATION_SHA256 OUTPUT_DIRECTORY [OTHER_DIRECTORY ...]`. Its receipt identifies the calling process. Use the in-Fusion stage for dispatch evidence. If access fails, prefer staging as the station user. On Windows, inspect the ACL on the *specific job directory*. If the station owner authorizes a repair, grant the actual operator read and execute on that job's frozen files/directories and limited write access on its external lock and actual output/journal directories only. Keep the exact file inventory and registration hash, then rerun under a fresh request ID. Existing document state and unrelated files must be preserved.
+
 ## Retire after release
 
 A client timeout leaves the station job unresolved. Use the existing read-only inspection and request journal to determine what Fusion actually did. On a terminal outcome the station operator retains a release record outside the bundle, bound to this job ID and registration SHA-256.

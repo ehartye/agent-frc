@@ -57,6 +57,41 @@ class Job(unittest.TestCase):
         self.release.write_text(json.dumps(release))
         return job.sha(self.release)
 
+    def test_access_uses_the_actual_lock_and_leaves_frozen_files_and_outputs_untouched(self):
+        from unittest.mock import patch
+        from types import SimpleNamespace
+        import contextlib,io
+        self.stage()
+        before={p:job.sha(p) for p in self.bundle.rglob("*") if p.is_file()}
+        sentinel=self.project/"existing.txt"
+        sentinel.write_text("preserve")
+        original=set(self.project.iterdir())
+        args=(self.bundle,self.digest,[str(self.project)])
+        receipt=job.preflight(*args)
+        self.assertEqual(receipt["runtime"],"calling-process")
+        self.assertEqual(receipt["registrationSha256"],self.digest)
+        self.assertEqual(set(self.project.iterdir()),original)
+        self.assertEqual(sentinel.read_text(),"preserve")
+        with job.lease(self.bundle),self.assertRaisesRegex(ValueError,"active"):
+            job.preflight(*args)
+        with self.assertRaisesRegex(ValueError,"outside"):
+            job.preflight(self.bundle,self.digest,[str(self.bundle/"inputs")])
+        with patch("tempfile.NamedTemporaryFile",side_effect=PermissionError("writer denied")),self.assertRaises(PermissionError):
+            job.preflight(*args)
+        self.assertEqual({p:job.sha(p) for p in before},before)
+        doc=SimpleNamespace(creationId="original",isModified=True)
+        app=SimpleNamespace(activeDocument=doc,documents=[doc])
+        core=SimpleNamespace(Application=SimpleNamespace(get=lambda:app))
+        namespace={}
+        exec(job.fusion_access_script(self.bundle,self.digest,self.bundle.name,[str(self.project)]),namespace)
+        output=io.StringIO()
+        with patch.dict(sys.modules,{"adsk":SimpleNamespace(core=core),"adsk.core":core}),contextlib.redirect_stdout(output):
+            namespace["run"](None)
+        native=json.loads(output.getvalue())
+        self.assertEqual(native["before"],native["after"])
+        self.assertEqual(native["after"]["documents"],[["original",True]])
+        self.assertEqual(native["runtime"],"fusion-process")
+
     def test_late_import_uses_same_bytes_after_original_cache_and_recipe_disappear(self):
         self.stage()
         self.assertEqual(self.stage()["registrationSha256"], self.digest)

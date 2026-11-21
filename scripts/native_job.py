@@ -229,6 +229,70 @@ def using_job(bundle, expected):
                     del sys.modules[name]
 
 
+def probe_destinations(bundle, directories):
+    """Create, flush, reread and unlink only a new private file in each actual output directory."""
+    require(isinstance(directories,list) and directories,"Register the existing writable station directories")
+    tested=[]
+    for entry in directories:
+        directory=Path(entry)
+        require(directory.is_absolute(),"Use an absolute station output or journal directory")
+        directory=directory.resolve(strict=True)
+        require(directory.is_dir() and not directory.is_relative_to(bundle.resolve()),
+                "Writable station directories must be outside the frozen bundle")
+        with tempfile.NamedTemporaryFile(dir=directory,prefix=".native-access-",mode="w+b") as probe:
+            probe.write(b"station-access")
+            probe.flush()
+            os.fsync(probe.fileno())
+            probe.seek(0)
+            require(probe.read()==b"station-access","Could not read back the station write probe")
+        tested.append(str(directory))
+    return tested
+
+
+def caller_identity():
+    if os.name=="nt":
+        import csv
+        import ctypes
+        import subprocess
+        whoami=Path(os.environ["SystemRoot"])/"System32/whoami.exe"
+        raw=subprocess.check_output([str(whoami),"/user","/fo","csv","/nh"],creationflags=subprocess.CREATE_NO_WINDOW)
+        _,sid=next(csv.reader([raw.decode("mbcs").strip()]))
+        require(re.fullmatch(r"S-[0-9-]+",sid),"Could not identify current Windows principal")
+        return {"windowsSid":sid,"effectiveAdministrator":bool(ctypes.windll.shell32.IsUserAnAdmin())}
+    return {"effectiveUid":os.geteuid()}
+
+
+def preflight(bundle, expected, directories):
+    """Exercise the caller's real filesystem access. The guarded station can call this before any recipe."""
+    bundle=Path(bundle).absolute()
+    with lease(bundle):
+        job=verify(bundle,expected)
+        tested=probe_destinations(bundle,directories)
+    return {"schema":"agent-frc/native-job-access@1","jobId":job["jobId"],"registrationSha256":expected,
+            "pluginCommit":job["pluginCommit"],"bundle":str(bundle),"writerProcessId":os.getpid(),
+            "runtime":"calling-process","principal":caller_identity(),"verifiedWriteDirectories":tested}
+
+
+def fusion_access_script(bundle, expected, job_id, directories):
+    """Embed the verifier so even a denied bundle read is diagnosed inside the actual Fusion process."""
+    require(re.fullmatch(r"[0-9a-f]{64}",expected) and Path(bundle).name==job_id,"Invalid job identity")
+    return f"""def run(context):
+    import adsk.core, json
+    app=adsk.core.Application.get()
+    def documents():
+        return {{"active":app.activeDocument.creationId if app.activeDocument else None,
+                "documents":[[d.creationId,d.isModified] for d in app.documents]}}
+    before=documents()
+    verifier={{"__name__":"_frc_station_access"}}
+    exec(compile({Path(__file__).read_bytes()!r},"native_job.py","exec"),verifier)
+    result=verifier["preflight"]({str(Path(bundle).absolute())!r},{expected!r},{directories!r})
+    after=documents()
+    if before!=after: raise ValueError("Document state changed during access check")
+    result.update(runtime="fusion-process",before=before,after=after)
+    print(json.dumps(result))
+"""
+
+
 def fusion_script(bundle, expected, config):
     """Prepare the run(context) script for an existing guarded Fusion transport."""
     bundle = Path(bundle).absolute()
@@ -240,6 +304,9 @@ def fusion_script(bundle, expected, config):
     verifier = {{"__name__": "_frc_station_job"}}
     exec(compile({Path(__file__).read_bytes()!r}, "native_job.py", "exec"), verifier)
     with verifier["using_job"](Path({str(bundle)!r}), {expected!r}) as job:
+        paths = {config.get('nativeJob',{}).get('writeDirectories')!r}
+        if paths is not None:
+            verifier["probe_destinations"](Path({str(bundle)!r}),paths)
         recipe = Path(job["recipe"])
         request = {config!r}
         request["plugin"] = job["scripts"]
@@ -303,9 +370,15 @@ def main():
         sub = commands.add_parser(action)
         for name in arguments:
             sub.add_argument(name, type=str if "digest" in name else Path)
+    access=commands.add_parser("preflight",help="Test access under the calling identity; use the guarded access stage for the actual Fusion process")
+    access.add_argument("bundle",type=Path)
+    access.add_argument("digest")
+    access.add_argument("directories",nargs="+")
     a = p.parse_args()
     if a.action == "stage":
         result = stage(a.package, a.project, a.registration, a.digest, a.station)
+    elif a.action == "preflight":
+        result=preflight(a.bundle,a.digest,a.directories)
     elif a.action == "verify":
         result = verify(a.bundle, a.digest)
     else:
