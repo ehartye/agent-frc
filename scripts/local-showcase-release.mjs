@@ -4,7 +4,7 @@ import {execFileSync} from 'node:child_process';
 import {createReadStream, lstatSync, readFileSync, readdirSync, realpathSync} from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
-import {audit, auditStaged, verifyCommittedFile, verifyPair} from './public-model-release.mjs';
+import {audit, auditStaged, verifyCommittedFile, verifyDeliveryPair} from './public-model-release.mjs';
 
 function requireValue(value, message) { if (!value) throw Error(message); }
 function git(repo, ...args) {
@@ -91,14 +91,15 @@ export async function checkLocal(configName,project,output) {
   if (present[0]) {
     packetNames.forEach(exactPath);
     key=trustedPath(config.reviewerPublicKey);
-    await verifyPair(repo,JSON.parse(readFileSync(packetNames[0])),stage,JSON.parse(readFileSync(packetNames[1])),
+    await verifyDeliveryPair(repo,JSON.parse(readFileSync(packetNames[0])),stage,JSON.parse(readFileSync(packetNames[1])),
       readFileSync(key),sourcePolicy.project);
+
   }
   const fieldRoot=config.independentFieldRoot?trustedPath(config.independentFieldRoot):null;
   const rows=await siteFiles(stage);
   const source=await audit(repo,config.approvedCommit,config.sourcePolicy,present[0]?packetNames[0]:undefined,key,sourceHead);
   if(present[1]) verifyCommittedFile(repo,sourceHead,config.stagePacket);
-  const final=await auditStaged(approved,stage,stagePolicy,present[1]?packetNames[1]:undefined,key,fieldRoot);
+  const final=await auditStaged(approved,stage,stagePolicy,present[1]?packetNames[1]:undefined,key,fieldRoot,repo);
   requireValue(fingerprint(rows)===fingerprint(await siteFiles(stage)),'Publication directory changed during verification');
   requireValue(git(repo,'rev-parse','HEAD').trim()===sourceHead,'Source revision changed during verification');
   if (branch) checkServedCommit(repo,config.servedDirectory,rows);

@@ -42,9 +42,21 @@ def verify_candidate(root, study_path, source, derivatives, native=None, receipt
     cold=scan(root,study)
     require(read(pinned(root,study["geometry"]))==cold,"Registered geometry differs from a fresh complete STEP scan")
     result=review(root,study,cold)
+    if result.get("iteration"):
+        require(result["iteration"]["kind"]==os.environ.get("FRC_MODEL_SCOPE","whole-robot"),
+                "Scoped mechanical issue differs from the commissioned showcase")
     if receipt is not None:
         require(receipt.get("solids")==result["solids"],"Published mesh source census differs from reviewed STEP")
     require(result["showcaseEligibility"]=="pass","Mechanical readiness "+result["showcaseEligibility"]+": "+str(result["findings"][:3]))
+    if os.environ.get("FRC_ACTIVE_MODEL_SELECTION") or os.environ.get("FRC_REQUIRE_ACTIVE_MODEL_SELECTION")=="true":
+        current=result.get("iteration")
+        summary={k:result[k] for k in ("configuration","archiveSha256","stepSha256","solids")}
+        summary.update(schema="agent-frc/signed-model-release@10" if current else "agent-frc/signed-model-release@9",
+                       iteration=current,scope=current["kind"] if current else None,studySha256=digest(project_path(root,study_path)))
+        project=os.environ.get("FRC_MODEL_PROJECT") or json.loads(os.environ.get("FRC_ACTIVE_MODEL_SELECTION","{}")).get("project","")
+        checked=subprocess.run(["node",str(Path(__file__).with_name("public-model-release.mjs")),"check-selection",str(root),project],
+                               input=json.dumps(summary),text=True,capture_output=True)
+        require(checked.returncode==0,"Active publication selection: "+checked.stderr.strip())
     if study.get("externalIssues"):
         from mechanical_methods import run
         fresh=run(root,read(pinned(root,study["issueRegister"])))

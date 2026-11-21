@@ -96,3 +96,45 @@ test('software-only mode uses an ordinary checkout without a robot layout and ex
     {name:'Failed tests',argv:['node','-e','process.exit(1)'],inputs:[]}]});
   run=invoke('project-checks',repo,'full');assert.notEqual(run.code,0);assert.match(run.err,/failed with status 1/);
 });
+test('a retired signed issue can stay in the frozen baseline; a replacement follows the protected active design', async t=>{
+  const {temp,repo}=workspace(t);
+  const {auditStaged,verifyPair,selectActive}=await import('../scripts/public-model-release.mjs');
+  const keys=generateKeyPairSync('ed25519'), pub=keys.publicKey.export({type:'spki',format:'pem'});
+  const approved=path.join(temp,'approved'),site=path.join(temp,'site'),key=path.join(temp,'review.pem'),receipt=path.join(temp,'packet.json');
+  const project='Teaching project',policy={schema:'agent-frc/staged-model-policy@1',project,modelFiles:['hero.png'],mutableFieldPages:[]};
+  write(temp,'review.pem',pub);write(approved,'hero.png','earlier image');write(site,'hero.png','reviewed image');write(repo,'hero.png','reviewed image');
+  const body={schema:'agent-frc/signed-model-release@9',scope:'Original',project,configuration:'Marked fixture',solids:2,
+    studySha256:sha('results'),archiveSha256:sha('native'),stepSha256:sha('export'),files:[{path:'hero.png',sha256:sha('reviewed image')}]};
+  function packet(body){return {body,signature:sign(null,Buffer.from(JSON.stringify(body)),keys.privateKey).toString('base64')}}
+  const original=packet(body);write(temp,'packet.json',original);
+  const originalSelection=process.env.FRC_ACTIVE_MODEL_SELECTION,originalRequired=process.env.FRC_REQUIRE_ACTIVE_MODEL_SELECTION;
+  t.after(()=>{for(const [name,v] of [['FRC_ACTIVE_MODEL_SELECTION',originalSelection],['FRC_REQUIRE_ACTIVE_MODEL_SELECTION',originalRequired]]){
+    if(v===undefined)delete process.env[name];else process.env[name]=v;
+  }});
+  process.env.FRC_REQUIRE_ACTIVE_MODEL_SELECTION='true';delete process.env.FRC_ACTIVE_MODEL_SELECTION;
+  await assert.rejects(auditStaged(approved,site,policy,receipt,key),/protected active/);
+  const selection={schema:'agent-frc/active-model-selection@1',project,number:2,id:'next',openingSha256:sha('opening'),issue:null};
+  process.env.FRC_ACTIVE_MODEL_SELECTION=JSON.stringify(selection);
+  await assert.rejects(verifyPair(repo,original,site,original,pub,project),/no qualified/);
+  write(approved,'hero.png','reviewed image');
+  assert.equal((await auditStaged(approved,site,policy,receipt,key)).authorizedChanges,0);
+  write(approved,'hero.png','earlier image');
+  const iteration={number:2,id:'next',openingSha256:selection.openingSha256,kind:'whole-robot',authoritySha256:sha('authority'),lineageSha256:sha('lineage')};
+  const current={...body,schema:'agent-frc/signed-model-release@10',scope:iteration.kind,iteration};
+  selection.issue={scope:current.scope,configuration:current.configuration,solids:current.solids,studySha256:current.studySha256,
+    archiveSha256:current.archiveSha256,stepSha256:current.stepSha256,authoritySha256:iteration.authoritySha256,lineageSha256:iteration.lineageSha256};
+  process.env.FRC_ACTIVE_MODEL_SELECTION=JSON.stringify(selection);
+  const signed=packet(current);write(temp,'packet.json',signed);
+  await verifyPair(repo,signed,site,signed,pub,project);
+  assert.equal((await auditStaged(approved,site,policy,receipt,key)).authorizedChanges,1);
+  for(const stale of [original,packet({...current,iteration:{...iteration,id:'old'}}),packet({...current,archiveSha256:sha('another source')}),
+    packet({...current,scope:'subsystem',iteration:{...iteration,kind:'subsystem'}})]){
+    await assert.rejects(verifyPair(repo,stale,site,stale,pub,project),/different active|Different active/);
+  }
+  const actual={schema:'agent-frc/active-iteration@1',number:2,id:'newer',root:'iterations/002/design'};
+  write(repo,'iterations/active.json',actual);write(repo,'iterations/002/iteration.json',{id:'newer',fusionId:'newer',number:2});
+  write(repo,actual.root+'/.gitkeep','');
+  const pending=await selectActive(repo,project);
+  assert.equal(pending.issue,null);assert.equal(pending.id,'newer');
+  await assert.rejects(verifyPair(repo,signed,site,signed,pub,project),/different active design/);
+});
