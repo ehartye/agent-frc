@@ -279,7 +279,7 @@
   }
   function render(){
     const used=sim.ticks*rehearsal.dt,left=rehearsal.phaseSeconds(sim.phase)-used;
-    clock.textContent=sim.phase+' · '+left.toFixed(2)+' s';
+    clock.textContent=left>=0?sim.phase+' · '+left.toFixed(2)+' s':sim.phase+' assessment · '+(-left).toFixed(2)+' s after cutoff';
     const began=Boolean(series) || sim.ticks>0 || sim.phaseIndex>0 || !sim.paused;
     for(const control of rosterBox.querySelectorAll('select,input,button'))control.disabled=began;
     byId('replaySetup').disabled=began;
@@ -406,7 +406,7 @@
   };
   function advancePaused(seconds){sim.paused=false;rehearsal.advance(sim,seconds);sim.paused=true;render();}
   byId('replayStep').onclick=()=>advancePaused(1);
-  byId('replayFast').onclick=()=>advancePaused(rehearsal.phaseSeconds(sim.phase));
+  byId('replayFast').onclick=()=>advancePaused(rehearsal.elapsedSeconds(sim.phase));
   byId('replayReset').onclick=()=>{
     stopFrame();series=null;seriesPaused=false;activeSource='';seriesResults();
     sim=student.reset();roster=student.roster;setup=student.setup;

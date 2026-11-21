@@ -1,3 +1,5 @@
+import {createScoreAssessment} from './score-assessment.mjs';
+import {loadScoreObservations,scoreProfileForOutput} from './score-observations.mjs';
 import {allocateOpeningTasks} from './auto-allocation.mjs';
 import {createFieldPieceMotion} from './field-piece-motion.mjs';
 import { createRehearsalGame,rehearsalFindings } from './rehearsal-game.mjs';
@@ -187,7 +189,7 @@ export async function buildLab(input, destination, comparison) {
         ({role,context,match,roster,focalId:(focal.side==='blue'?'B':'R')+focal.slot,ordinary,terminal,margin,regret,byRobot}))
     } : null).replaceAll('<','\\u003c'),
     PROFILE:json, SCENE:renderer, LAB:controls, 'ROUTE MODEL':routeStudy.toString(), 'WINDOW MODEL':analyzeWindow.toString(),
-    'REHEARSAL MODEL':[framePlan.toString(),starterFrameProfile.toString(),initialTrial.toString(),fieldGeometry.toString(),createFieldPieceMotion.toString(),allocateOpeningTasks.toString(),createRehearsalGame.toString(),rehearsalFindings.toString(),createTerminalRehearsal.toString(),createFieldRehearsal.toString(),createMatchSeries.toString(),createRehearsalSetup.toString(),
+    'REHEARSAL MODEL':[framePlan.toString(),starterFrameProfile.toString(),initialTrial.toString(),fieldGeometry.toString(),createFieldPieceMotion.toString(),allocateOpeningTasks.toString(),createScoreAssessment.toString(),createRehearsalGame.toString(),rehearsalFindings.toString(),createTerminalRehearsal.toString(),createFieldRehearsal.toString(),createMatchSeries.toString(),createRehearsalSetup.toString(),
       'const rehearsal=createFieldRehearsal(profile); const rehearsalNotes=[];'].join('\n'),
     OPPORTUNITIES:opportunities, 'REHEARSAL UI':rehearsalUI
   };
@@ -203,7 +205,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     if(!input || option!=='--profile' || !['--output','--model-output'].includes(out) || !destination || extra.length) {
       throw Error('Usage: node scripts/kickoff.mjs --profile project.json (--model-output rules.json | --output field.html)');
     }
-    const profile=validateProfile(JSON.parse(await readFile(input,'utf8')));
+    const profile=validateProfile(await loadScoreObservations(JSON.parse(await readFile(input,'utf8')),input));
     if(out==='--model-output') {
       const pluginRoot=await realpath(fileURLToPath(plugin));
       const parent=await realpath(path.dirname(path.resolve(destination)));
@@ -211,7 +213,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       if(!relative || (!path.isAbsolute(relative) && relative!=='..' && !relative.startsWith('..'+path.sep))){
         throw Error('Save the rules model in your team project, outside the plugin checkout or installed plugin folder.');
       }
-      await writeFile(destination,JSON.stringify(rulesModel(profile),null,2)+'\n',{flag:'wx'});
+      await writeFile(destination,JSON.stringify(scoreProfileForOutput(rulesModel(profile),input,destination),null,2)+'\n',{flag:'wx'});
     } else {
       await buildLab(profile,destination);
     }

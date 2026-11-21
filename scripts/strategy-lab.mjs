@@ -1,3 +1,4 @@
+import {loadScoreObservations,scoreProfileForOutput} from './score-observations.mjs';
 import path from 'node:path';
 import {readFileSync,writeFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
@@ -26,7 +27,7 @@ export function compareRoles(profile, study) {
   const roles = studyRows(study.roles, 'role', 2, 12);
   const contexts = studyRows(study.contexts, 'context', 2, 16);
   const side = study.side, opponent = side === 'blue' ? 'red' : 'blue';
-  const duration = engine.periods.reduce((sum,p) => sum+engine.phaseSeconds(p.name),0);
+  const duration = engine.periods.reduce((sum,p) => sum+engine.elapsedSeconds(p.name),0);
   const cells = [];
   for (const context of contexts) {
     const match = profile.rehearsal.series.matches.find(row => row.id === context.match);
@@ -61,7 +62,7 @@ export function compareRoles(profile, study) {
       if (!run.done) throw Error('Incomplete match clock.');
       const {game,periods,setup} = run.results[0];
       const byRobot = periods.flatMap(period=>period.robots.map(robot=>{
-        const actions = game.events.filter(ev=>ev.phase===period.phase && ev.robot===robot.id);
+        const actions = game.events.filter(ev=>(ev.creditPhase??ev.phase)===period.phase && ev.robot===robot.id);
         const tally = {};
         for (const ev of actions) {
           const key=ev.operation+'/'+ev.outcome;
@@ -114,7 +115,7 @@ if (process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href) {
     if (!study || (extra.length && !(extra.length===4 && extra[0]==='--replay') && !(extra.length===2 && extra[0]==='--html'))) throw Error('Usage: strategy-lab.mjs PROFILE.json STUDY.json [--html NEW_LAB.html | --replay ROLE CONTEXT NEW_PROFILE.json]');
     const [p,s]=[profile,study].map(f=>readFileSync(f));
     const decode = b => JSON.parse(b.toString('utf8').replace(/^\uFEFF/,''));
-    const profileData=decode(p),comparison=compareRoles(profileData,decode(s));
+    const profileData=await loadScoreObservations(decode(p),profile),comparison=compareRoles(profileData,decode(s));
     if(extra[0]==='--html'){
       const files=[profile,study].map(f=>path.resolve(f));
       const within=(base,file)=>{const rel=path.relative(base,file);return !path.isAbsolute(rel)&&rel!=='..'&&!rel.startsWith('..'+path.sep);};
@@ -133,8 +134,10 @@ if (process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href) {
       const cell=comparison.cells.find(row=>row.role===role && row.context===context);
       if(!cell)throw Error('Unknown role or context for replay.');
       const original=profileData.rehearsal.series.matches.find(m=>m.id===cell.match);
-      profileData.rehearsal.series.matches=[{...original,basis:original.basis+' · '+role+' / '+context,roster:cell.roster}];
-      writeFileSync(destination,JSON.stringify(profileData,null,2)+'\n',{flag:'wx'});
+      // A changed role schedule requires fresh physical observations.
+      const {scoreJournal,scoreObservations,...sourceMatch}=original;
+      profileData.rehearsal.series.matches=[{...sourceMatch,basis:original.basis+' · '+role+' / '+context,roster:cell.roster}];
+      writeFileSync(destination,JSON.stringify(scoreProfileForOutput(profileData,profile,destination),null,2)+'\n',{flag:'wx'});
     }
     console.log(JSON.stringify({...comparison,profileSha256:hash(p),studySha256:hash(s)},null,2));
   } catch(error) {console.error(error.message);process.exitCode=1;}

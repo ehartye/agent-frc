@@ -18,7 +18,7 @@ export function createMatchSeries(engine, matches) {
   const results=[];
   function begin() {
     const match=configs[index];
-    sim=engine.create(match.roster,match.setup,match.tieWinner,match.endgameAtRestAfterS);
+    sim=engine.create(match.roster,match.setup,match.tieWinner,match.endgameAtRestAfterS,matches[index]);
     sim.paused=false;
   }
   begin();
@@ -26,7 +26,7 @@ export function createMatchSeries(engine, matches) {
     if (!Number.isFinite(seconds) || seconds<0) throw Error('Invalid series elapsed seconds');
     remainingS+=seconds;
     while (results.length<configs.length && remainingS>=engine.dt-1e-9) {
-      const remaining=engine.phaseSeconds(sim.phase)-sim.ticks*engine.dt;
+      const remaining=engine.elapsedSeconds(sim.phase)-sim.ticks*engine.dt;
       const ticks=Math.min(Math.round(remaining/engine.dt),Math.floor((remainingS+1e-9)/engine.dt));
       engine.advance(sim,ticks*engine.dt);
       remainingS=Math.max(0,remainingS-ticks*engine.dt);

@@ -1,10 +1,12 @@
 import {fieldGeometry} from './field-rehearsal-geometry.mjs';
 import {createFieldPieceMotion} from './field-piece-motion.mjs';
 import {allocateOpeningTasks} from './auto-allocation.mjs';
+import {createScoreAssessment} from './score-assessment.mjs';
 
 /** Project-owned stations and finite stock for the fixed-step field rehearsal. */
 export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=createFieldPieceMotion(profile,geom)) {
   const model = profile.rehearsal;
+  const assessment=createScoreAssessment(model);
   const stations = new Map();
   const periods = new Map(model.periods.map(p => [p.name,p.seconds]));
   const count = n => Number.isSafeInteger(n) && n >= 0;
@@ -73,7 +75,7 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
     if(sim.game.motion.pieces.length)motion.advance(sim.game.motion,dt,sim.robots.map((r,i)=>({...r,previousP:begins[i]})),sim.setup);
   }
   function elapsed(sim,t) {
-    return sim.phaseHistory.reduce((sum,p)=>sum+p.seconds,0)+t;
+    return sim.phaseHistory.reduce((sum,p)=>sum+(p.elapsedSeconds??p.seconds),0)+t;
   }
   function replenish(sim,t) {
     const time=elapsed(sim,t), pending=[];
@@ -93,7 +95,7 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
         const s=stations.get(operator.job.station),svc=s.service,piece=g.reserve[s.id].shift();
         if(svc.delivery){
           const actor={id:'human/'+svc.operator,side:s.side};
-          dispose(sim,actor,stations.get(svc.delivery.station),[piece],svc.delivery.outcome,t,svc.delivery.basis);
+          releaseAtTarget(sim,actor,stations.get(svc.delivery.station),[piece],svc.delivery.outcome,t,svc.delivery.basis);
         } else{
           g.stock[s.id].push(piece);
           motion.put(g.motion,physicalPiece(s,piece,svc.outlet));
@@ -109,6 +111,64 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
         operator.next=(index+1)%choices.length;
         break;
       }
+    }
+  }
+  function startObservations(sim,match) {
+    if(!assessment)return;
+    const frozen=model.series?.matches.find(m=>m.id===match?.id);
+    const expected=frozen?.scoreObservations??[];
+    // A published trace only describes the original six programs, setup and match.
+    const same=frozen && match.setup===frozen.setup && match.tieWinner===frozen.tieWinner &&
+      match.endgameAtRestAfterS===frozen.endgameAtRestAfterS &&
+      JSON.stringify(match.roster)===JSON.stringify(frozen.roster);
+    sim.game.assessment={pending:[],departures:[],used:[],records:assessment.register(same?expected:[],frozen?.id)};
+  }
+  function observe(sim,t) {
+    if(!assessment)return;
+    const timeline=sim.game.assessment;
+    const now=assessment.phaseStart(sim.phase)+t;
+    // Reserve finite physical seats on passage. Score reports have their own clock.
+    const changes=[];
+    for(const item of timeline.pending){
+      const target=stations.get(item.target);
+      if(target.capacity!==undefined && item.result.status==='credited' && !item.seat &&
+         item.row.observation.passageS<=now+1e-9)
+        changes.push({at:item.row.observation.passageS,item,target:target.id});
+    }
+    for(const arrival of [...changes]){
+      const at=arrival.item.row.observation.vacatedS;
+      if(at!=null && at<=now+1e-9)changes.push({at,target:arrival.target,item:arrival.item,leave:true});
+    }
+    for(const departure of timeline.departures){
+      if(departure.at<=now+1e-9)changes.push(departure);
+    }
+    changes.sort((a,b)=>a.at-b.at || Number(Boolean(a.leave))-Number(Boolean(b.leave)));
+    for(const change of changes){
+      const {target,item}=change;
+      if(change.leave){
+        if(item && item.seat!=='reserved')continue;
+        sim.game.occupied[target]--;
+        const index=timeline.departures.indexOf(change);
+        if(index!==-1)timeline.departures.splice(index,1);
+      }else if(sim.game.occupied[target]>=stations.get(target).capacity){
+        item.seat='occupied';
+        item.result={...item.result,status:'occupied',pointsPhase:null};
+      }else{
+        item.seat='reserved';
+        sim.game.occupied[target]++;
+        const at=item.row.observation.vacatedS;
+        if(at!=null && at>now+1e-9)timeline.departures.push({at,target,leave:true});
+      }
+    }
+    for(const item of [...timeline.pending].sort((a,b)=>a.result.reportAtS-b.result.reportAtS)){
+      if(item.result.reportAtS>now+1e-9)continue;
+      const {row,result}=item;
+      const phase=result.pointsPhase??item.releasePhase;
+      const s=stations.get(item.target);
+      const observedTime=result.reportAtS-assessment.phaseStart(sim.phase);
+      dispose(sim,item.robot,s,[item.piece],result.status,observedTime,'Registered piece assessment',
+        {phase,seat:item.seat,vacatedS:row.observation?.vacatedS,activity:item.activity,observedAtS:result.reportAtS,releaseId:row.id,releasedAtS:row.releasedS,passageAtS:row.observation?.passageS??null});
+      timeline.pending.splice(timeline.pending.indexOf(item),1);
     }
   }
   function validateStep(step) {
@@ -339,7 +399,27 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
     if (!pieces.length) {record(sim,robot,s,'attempt','no-compatible-cargo',[],timeS);return;}
     const used=new Set(pieces);
     g.cargo[robot.id]=bay.filter(p=>!used.has(p));
-    dispose(sim,robot,s,pieces,step.outcome ?? 'unresolved',timeS);
+    releaseAtTarget(sim,robot,s,pieces,step.outcome ?? 'unresolved',timeS);
+  }
+  function releaseAtTarget(sim,robot,s,pieces,prescribed,timeS,basis){
+    const g=sim.game;
+    if(assessment && [...assessment.rules.values()].some(r=>r.target===s.id && r.phase===sim.phase)){
+      const ledger=g.assessment,now=assessment.phaseStart(sim.phase)+timeS;
+      for(const piece of pieces){
+        const choices=ledger.records.filter(({row})=>row.piece===piece.id && row.robot===robot.id && row.target===s.id &&
+          assessment.rules.get(row.rule).phase===sim.phase && !ledger.used.includes(row.id) &&
+          row.releasedS>now-.05-1e-9 && row.releasedS<=now+1e-9);
+        if(choices.length!==1){dispose(sim,robot,s,[piece],'unresolved',timeS,'No matching measured release in this tick');continue;}
+        const {row,result}=choices[0];
+        ledger.used.push(row.id);
+        ledger.pending.push({row,result,releasePhase:sim.phase,activity:result.status==='inactive'?'inactive':'active',
+          target:s.id,robot:{id:robot.id,side:robot.side},piece});
+        const event=record(sim,robot,s,'release','awaiting-assessment',[piece],timeS);
+        event.releaseId=row.id;event.releasedAtS=row.releasedS;
+      }
+      return;
+    }
+    dispose(sim,robot,s,pieces,prescribed,timeS,basis);
   }
   function stationActivity(sim,s,timeS){
     if(!s.activeWindows)return 'active';
@@ -359,35 +439,40 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
     return s.areaIn?robot.p.every((v,i)=>v>=s.areaIn[0][i] && v<=s.areaIn[1][i]):
       Math.hypot(robot.p[0]-s.at[0],robot.p[1]-s.at[1])<=s.radiusIn;
   }
-  function dispose(sim,robot,s,pieces,prescribed,timeS,basis){
+  function dispose(sim,robot,s,pieces,prescribed,timeS,basis,observed){
     const g=sim.game,key=s.id;
     let outcome=prescribed;
-    const activity=stationActivity(sim,s,timeS);
+    const activity=observed?.activity??stationActivity(sim,s,timeS);
     if(activity!=='active')outcome=activity;
-    const admitted=outcome==='credited' && s.capacity!==undefined ?
+    const admitted=outcome==='credited' && s.capacity!==undefined && observed?.seat!=='reserved' ?
       Math.min(pieces.length,Math.max(0,s.capacity-g.occupied[key])) : pieces.length;
     for(const [result,batch] of [[outcome,pieces.slice(0,admitted)],['occupied',pieces.slice(admitted)]]){
       if(!batch.length)continue;
       const event=record(sim,robot,s,'attempt',result,batch,timeS);
-      const points=result==='credited'?batch.length*(typeof s.points==='number'?s.points:s.points[sim.phase]):0;
+      const scoredPhase=observed?.phase??sim.phase;
+      if(observed)Object.assign(event,{creditPhase:observed.phase,observedAtS:observed.observedAtS,
+        releaseId:observed.releaseId,releasedAtS:observed.releasedAtS,passageAtS:observed.passageAtS});
+      const points=result==='credited'?batch.length*(typeof s.points==='number'?s.points:s.points[scoredPhase]):0;
       event.points=points;event.prescribedOutcome=prescribed;event.activity=activity;if(basis)event.basis=basis;
       g.score[robot.side]+=points;
+      if(g.endgame?.assessed)g.endgame.ordinaryScore[robot.side]+=points;
       if(result==='credited'){
-        g.occupied[key]+=batch.length;
-        if(sim.phaseIndex===0)g.firstPeriodCount[robot.side]+=batch.length;
+        if(observed?.seat!=='reserved')g.occupied[key]+=batch.length;
+        if(scoredPhase===model.periods[0].name)g.firstPeriodCount[robot.side]+=batch.length;
       }
       g.attempts[key]+=batch.length;
       for (const piece of batch) {
         const rule=s.returns?.[result];
-        if(rule){
+        if(rule && (observed?.seat!=='reserved' || observed.vacatedS!=null)){
           const entry={piece,at:rule.at,station:rule.station,readyAtS:elapsed(sim,timeS)+rule.delayS};
-          if(result==='credited')entry.releaseSlot=key;
+          if(observed?.seat==='reserved')entry.readyAtS=Math.max(entry.readyAtS,observed.vacatedS);
+          else if(result==='credited')entry.releaseSlot=key;
           g.returning.push(entry);
         }else g.terminal.push({...piece,station:key,outcome:result});
       }
     }
   }
-  return {start,apply,replenish,move,seek,intake,mayDeliver};
+  return {start,startObservations,observe,apply,replenish,move,seek,intake,mayDeliver};
 }
 
 
