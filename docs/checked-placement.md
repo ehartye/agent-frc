@@ -35,6 +35,8 @@ The reporter names both bodies and the proposed pose on a measured clash. A miss
 
 In a synthetic fixture the seat begins at (10, 20, 0) cm and its axes are rotated +90° about robot Z. A plate positioned at (1, 2, 0) cm in that seat belongs at (8, 21, 0) cm in the robot. Its corner at plate-local (1, 0, 0) cm belongs at robot (8, 22, 0) cm. Register the named child, parent matrix and expected material corner from the drawing before editing. If the moving child is a wrapper, set `materialOccurrence` to the full path of its body-bearing descendant. Select the corner in that descendant’s own coordinates.
 
+The packaged regression exercises this example with synthetic Fusion objects, including a displaced material corner, a missing joint and a joint with the wrong endpoints. A native run on the selected archive supplies the actual joint, timeline and physical-point observations.
+
 Stage the [worked edit and cold inspection](../examples/mechanical-readiness/root_frame_placement.py) with the complete installed plugin. The caller below uses the loaded example as `example` and Fusion's `adsk.core` as `core`. It assumes a parametric assembly with a free, independently identified plate. The project supplies the accepted F3D, its registered digest and a fresh output path.
 
 ```python
