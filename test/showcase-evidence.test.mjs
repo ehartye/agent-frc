@@ -1,3 +1,4 @@
+import {authorizeRender} from './authorize-render-fixture.mjs';
 import assert from 'node:assert/strict';
 import {execFileSync,spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
@@ -22,6 +23,11 @@ test('kickoff publication, independent slow-motion event clock and versioned wor
     spec.sources.push({id,file,revision:spec.revision,label:id,shareable:true,sha256});
     return sha256;
   };
+  const trusted=await mkdtemp(path.join(os.tmpdir(),'field-media-witness-'));
+  t.after(()=>rm(trusted,{recursive:true,force:true}));
+  const previous=process.env.FRC_VERIFIED_FIELD_ROOT;process.env.FRC_VERIFIED_FIELD_ROOT=trusted;
+  t.after(()=>{if(previous===undefined)delete process.env.FRC_VERIFIED_FIELD_ROOT;else process.env.FRC_VERIFIED_FIELD_ROOT=previous;});
+  await writeFile(path.join(trusted,'clip.webm'),'test clip pointer');
   const clipSha256=await store('film','clip.webm',Buffer.from('test clip pointer'));
   const evidence={schema:'agent-frc/replay-events@1',revision:spec.revision,clock:'trial',attempt:'one',observedRevision:spec.revision,
     piece:'sample',initialState:'checkpoint-4',scope:'independent-start',clipSha256,traceSha256:spec.sources[0].sha256,
@@ -62,6 +68,7 @@ test('exports the actual standalone project field lab at a stable linked address
   const root=await mkdtemp(path.join(os.tmpdir(),'project-lab-'));
   t.after(()=>rm(root,{recursive:true,force:true}));
   await cp(example,root,{recursive:true});
+  authorizeRender(root);
   const manifest=path.join(root,'project.json'),spec=JSON.parse(await readFile(manifest,'utf8'));
   const file='kickoff/field-lab.html',out=path.join(root,'out');
   await mkdir(path.join(root,'kickoff'));

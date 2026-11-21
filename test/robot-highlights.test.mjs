@@ -1,3 +1,4 @@
+import {authorizeRender} from './authorize-render-fixture.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {cp, mkdtemp, mkdir, readFile, writeFile, rm} from 'node:fs/promises';
@@ -17,6 +18,7 @@ test('bind the same approved project stylesheet to the showcase and its full-scr
   config.stylesheet = {file:'robot.css',shareable:true,sha256};
   await writeFile(manifest,JSON.stringify(config));
   await writeFile(path.join(root,'robot.css'),css);
+  authorizeRender(root);
   const generated = await readFile(await buildHighlights(manifest,out),'utf8');
   const asset = 'evidence/'+sha256+'.css';
   assert.ok(generated.includes('href="'+asset+'"'));

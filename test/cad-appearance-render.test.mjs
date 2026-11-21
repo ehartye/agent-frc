@@ -1,3 +1,4 @@
+import {authorizeRender} from './authorize-render-fixture.mjs';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
@@ -44,6 +45,7 @@ test('colored highlights bind the resolved palette, source assignment and facet 
   await writeFile(selectedFile,JSON.stringify({...shape,appearances:'other-roles.json'}));
   await assert.rejects(buildHighlights(manifest,target),/Selected appearance manifest/);
   await writeFile(selectedFile,JSON.stringify({...shape,appearances:'roles.json'}));
+  authorizeRender(root);
   await buildHighlights(manifest,target);
   const viewer = (await readdir(target)).find(p=>p.startsWith('cad-'));
   const html = await readFile(path.join(target,viewer,'index.html'),'utf8');

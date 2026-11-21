@@ -1,6 +1,6 @@
 # Hand a student an editable whole robot
 
-Start from the exact archive a student can download. Keep supplier originals in their authorized project location. When redistribution calls for a substitute, build a project-owned proxy, place it at the correct interface, and give its occurrences and joints stable names. Save the public assembly and independently reopen a copy of those saved bytes in Fusion. Keep the original receipt for the restricted master separate.
+Start from the exact archive a student can download. Keep supplier originals in their authorized project location. A private layout study can use identified proxies. For a new showcase model, use the exact official purchased geometry and verify the rights for each public view or downloadable file. Keep a restricted master private when necessary. A proxy cannot qualify as a complete student assembly. [Mechanical readiness](mechanical-readiness.md) Save the public assembly and independently reopen a copy of those saved bytes in Fusion. Keep the original receipt for the restricted master separate.
 
 ## Record the native reopen
 

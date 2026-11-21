@@ -99,13 +99,51 @@ class Glb:
         scene=indexed(self.doc["scenes"],self.doc.get("scene",0),"scene")
         for root in scene["nodes"]: visit(root,IDENTITY)
 
-    def accessor(self, index, *, positions=False, times=False):
+    @classmethod
+    def from_project(cls,path):
+        if path.suffix.lower()==".glb":
+            return cls(path.read_bytes())
+        import base64
+        from urllib.parse import urlparse,unquote
+        from pathlib import Path
+        doc=json.loads(path.read_bytes());data=bytearray();base=path.resolve().parent
+        offsets=[];dependencies=[]
+        for buf in doc["buffers"]:
+            uri=buf["uri"]
+            if uri.startswith("data:application/octet-stream;base64,"):
+                chunk=base64.b64decode(uri.split(",",1)[1],validate=True)
+            else:
+                address=urlparse(uri)
+                require(not address.scheme and not address.netloc and not address.query and not address.fragment,
+                    "External glTF geometry is outside the registered delivery")
+                name=unquote(address.path)
+                require(not Path(name).is_absolute(),"Use local relative glTF buffers")
+                target=(base/name).resolve()
+                require(target.is_relative_to(base) and target.is_file(),"glTF buffer escapes the issue")
+                chunk=target.read_bytes();dependencies.append(target)
+            require(len(chunk)==buf["byteLength"],"Incorrect glTF buffer length")
+            while len(data)%4:data.append(0)
+            offsets.append(len(data));data.extend(chunk)
+        for view in doc["bufferViews"]:
+            view["byteOffset"]=indexed(offsets,view["buffer"],"buffer")+view.get("byteOffset",0);view["buffer"]=0
+        length=len(data)
+        while len(data)%4:data.append(0)
+        doc["buffers"]=[{"byteLength":length}];header=json.dumps(doc,separators=(",",":")).encode()
+        header+=b" "*((-len(header))%4)
+        binary=struct.pack("<4sIII4s",b"glTF",2,28+len(header)+len(data),len(header),b"JSON")+header+struct.pack("<I4s",len(data),b"BIN\x00")+data
+        result=cls(binary);result.dependencies=dependencies
+        return result
+
+    def accessor(self, index, *, positions=False, times=False,vector=None):
         a=indexed(self.doc["accessors"],index,"accessor")
         view=indexed(self.doc["bufferViews"],a["bufferView"],"buffer view")
         require(view["buffer"]==0 and not a.get("sparse") and not a.get("normalized"),
                 "Unsupported accessor storage")
         formats={5126:"<fff"} if positions else {5126:"<f"} if times else {5121:"<B",5123:"<H",5125:"<I"}
-        require(a.get("type")==("VEC3" if positions else "SCALAR") and a.get("componentType") in formats,
+        if vector:
+            require(vector in (3,4),"Unsupported animation vector")
+            formats={5126:"<"+"f"*vector}
+        require(a.get("type")==("VEC"+str(vector) if vector else "VEC3" if positions else "SCALAR") and a.get("componentType") in formats,
                 "Unsupported position or triangle index")
         record=struct.Struct(formats[a["componentType"]])
         count=a["count"];stride=view.get("byteStride",record.size)

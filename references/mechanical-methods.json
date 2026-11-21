@@ -1,0 +1,265 @@
+{
+  "schema": "agent-frc/mechanical-methods@1",
+  "methods": [
+    {
+      "id": "installed-shape",
+      "runtime": "python",
+      "entry": "scripts/mechanical_readiness.py",
+      "args": [
+        "review",
+        "$root",
+        "$study",
+        "--rescan"
+      ],
+      "detects": "Incorrect purchased bore, hardware option or installed orientation",
+      "regression": "test/mechanical_readiness.py"
+    },
+    {
+      "id": "motion-and-contact",
+      "runtime": "python",
+      "entry": "scripts/mechanical_motion.py",
+      "args": [
+        "$root",
+        "$study"
+      ],
+      "detects": "Moving rigid material, confined tool, perturbed seat, finite piece reach or camera clipping",
+      "regression": "test/mechanical_readiness.py"
+    },
+    {
+      "id": "bill-and-material",
+      "runtime": "node",
+      "entry": "scripts/assembly-accounting.mjs",
+      "args": [
+        "$study"
+      ],
+      "detects": "Repeated or missing BOM instance, catalog mass and native assignment",
+      "regression": "test/assembly-native-mass.test.mjs"
+    },
+    {
+      "id": "shop",
+      "runtime": "node",
+      "entry": "scripts/fabrication-capabilities.mjs",
+      "args": [
+        "$plan",
+        "$profile",
+        "$date"
+      ],
+      "detects": "Unavailable process, machine envelope, tool or stock",
+      "regression": "test/fabrication-capabilities.test.mjs"
+    },
+    {
+      "id": "support",
+      "runtime": "node",
+      "entry": "scripts/hardening.mjs",
+      "args": [
+        "coupled",
+        "$study",
+        "$root"
+      ],
+      "detects": "Unilateral support, unbalanced force or moment, adverse reaction",
+      "regression": "test/coupled-support.test.mjs"
+    },
+    {
+      "id": "elevation",
+      "runtime": "node",
+      "entry": "scripts/hardening.mjs",
+      "args": [
+        "elevation",
+        "$study",
+        "$root"
+      ],
+      "detects": "Missing support, off-axis mass or unknown rating",
+      "regression": "test/spatial-elevation.test.mjs"
+    },
+    {
+      "id": "actuator",
+      "runtime": "node",
+      "entry": "scripts/hardening.mjs",
+      "args": [
+        "duties",
+        "$study",
+        "$root"
+      ],
+      "detects": "Jam, nominal stroke, delayed protection or post-cut loss",
+      "regression": "test/actuator-duties.test.mjs"
+    },
+    {
+      "id": "parallel-paths",
+      "runtime": "node",
+      "entry": "scripts/hardening.mjs",
+      "args": [
+        "paths",
+        "$study",
+        "$root"
+      ],
+      "detects": "Severed local path, upstream cross-link or symmetric descent",
+      "regression": "test/lift-path-faults.test.mjs"
+    },
+    {
+      "id": "route",
+      "runtime": "node",
+      "entry": "scripts/field-route-evidence.mjs",
+      "args": [
+        "$study"
+      ],
+      "detects": "Finite piece or robot enters installed structure before scored event",
+      "regression": "test/field-route-evidence.test.mjs"
+    },
+    {
+      "id": "optical-event",
+      "runtime": "node",
+      "entry": "scripts/sensor-observability.mjs",
+      "args": [
+        "$study"
+      ],
+      "detects": "Optical release event precedes physical clearance or observations disappear",
+      "regression": "test/sensor-observability.test.mjs"
+    },
+    {
+      "id": "throughput",
+      "runtime": "node",
+      "entry": "scripts/hardening.mjs",
+      "args": [
+        "throughput",
+        "$study",
+        "$root"
+      ],
+      "detects": "Rate claim combines different actors, incomplete intervals or repeated setup",
+      "regression": "test/throughput-cohort.test.mjs"
+    },
+    {
+      "id": "native-reopen",
+      "runtime": "node",
+      "entry": "scripts/check-native-revision.mjs",
+      "args": [
+        "$expected",
+        "$observed"
+      ],
+      "detects": "A transient CAD edit or missing native body survives only before cold reopen",
+      "regression": "test/native-revision.test.mjs"
+    },
+    {
+      "id": "mission",
+      "runtime": "node",
+      "entry": "scripts/mission-cohort.mjs",
+      "args": [
+        "$plan",
+        "$journal",
+        "--manifest-sha256",
+        "$freeze"
+      ],
+      "detects": "Run cohort changes its frozen validation cases",
+      "regression": "test/mission-cohort.test.mjs"
+    },
+    {
+      "id": "member-duty",
+      "runtime": "python",
+      "entry": "scripts/member_duty.py",
+      "args": [
+        "$root",
+        "$study"
+      ],
+      "detects": "Elastic section overload, excess deflection, or fatigue damage under an issued supported load spectrum",
+      "regression": "test/mechanical_readiness.py"
+    },
+    {
+      "id": "published-mesh",
+      "runtime": "python",
+      "entry": "scripts/mesh_correspondence.py",
+      "args": [
+        "$root",
+        "$study"
+      ],
+      "detects": "Omitted, duplicated or wrongly placed visual geometry in a registered student pose",
+      "regression": "test/mesh_controls.py"
+    },
+    {
+      "id": "loaded-transfer",
+      "runtime": "python",
+      "entry": "scripts/loaded_transfer.py",
+      "args": [
+        "$root",
+        "$study"
+      ],
+      "detects": "The admitted object strikes installed geometry, leaves the commissioned receiver between primary frames or changes momentum without a qualified physical impulse",
+      "regression": "test/observed_transfer.py"
+    },
+    {
+      "id": "installed-rigid-mount",
+      "runtime": "python",
+      "entry": "scripts/assembly_kinematics.py",
+      "args": [
+        "$root",
+        "$study"
+      ],
+      "detects": "Mounted hardware changes position or orientation relative to its actual installed member",
+      "regression": "test/installed_kinematics.py"
+    },
+    {
+      "id": "physical-material-reissue",
+      "runtime": "python",
+      "entry": "scripts/fusion_body_materials.py",
+      "args": [
+        "$root",
+        "$study"
+      ],
+      "detects": "A constituent changes physical material between comparable native bodies without engineering review",
+      "regression": "test/installed_kinematics.py"
+    },
+    {
+      "id": "linked-kinematics",
+      "runtime": "python",
+      "entry": "scripts/linked_motion.py",
+      "args": [
+        "$root",
+        "$study"
+      ],
+      "detects": "An installed member or physical tip does not follow an approved driver, follower ratio, phase or mounted pose; measures named contact during a blocked drive",
+      "regression": "test/linked_kinematics.py"
+    },
+    {
+      "id": "interface-consistency",
+      "runtime": "python",
+      "entry": "scripts/interface_consistency.py",
+      "args": [
+        "$root",
+        "$study"
+      ],
+      "detects": "A direct common-volume measurement disagrees with complementary partitions or the material independently contained inside both registered solids",
+      "regression": "test/mission_boundaries.py"
+    },
+    {
+      "id": "release-onset",
+      "runtime": "python",
+      "entry": "scripts/release_onset.py",
+      "args": [
+        "$root",
+        "$study"
+      ],
+      "detects": "A donor still contacts or penetrates a finite article after its measured reaction reaches zero, including between clock observations under a reversed stroke",
+      "regression": "test/mission_boundaries.py"
+    },
+    {
+      "id": "structural-path",
+      "runtime": "python",
+      "entry": "scripts/structural_path.py",
+      "args": [
+        "$root",
+        "$study"
+      ],
+      "detects": "A nominal route may pass through cosmetic parts or a bearing unable to balance all simultaneous signed forces and moments",
+      "regression": "test/mission_boundaries.py"
+    },
+    {
+      "id": "mount-datums",
+      "runtime": "python",
+      "entry": "scripts/mount_datums.py",
+      "args": [
+        "$root",
+        "$study"
+      ],
+      "detects": "A nested purchased instance or manufactured housing misses its independently commissioned physical landmarks even when wrapper or exchange geometry agrees",
+      "regression": "test/mission_boundaries.py"
+    }
+  ]
+}

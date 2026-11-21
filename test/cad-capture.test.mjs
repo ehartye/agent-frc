@@ -1,3 +1,4 @@
+import {authorizeRender} from './authorize-render-fixture.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
@@ -52,7 +53,7 @@ for state in ['good','stale','blank']:
   const run=()=>spawnSync(python,[script('cad_capture.py'),dir,'review.json'],{encoding:'utf8'});
   const readme=()=>spawnSync(python,[script('cad-readmes.py'),dir,'--update'],{encoding:'utf8'});
   spawnSync('git',['init','-q',dir]);
-  await state('good');assert.equal(run().status,0);assert.equal(readme().status,0);
+  await state('good');authorizeRender(dir);assert.equal(run().status,0);assert.equal(readme().status,0);
   await buildHighlights(path.join(dir,'project.json'),out);
   await state('stale');
   const outcome=JSON.parse(run().stdout);

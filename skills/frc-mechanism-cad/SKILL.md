@@ -107,3 +107,5 @@ For a publicly downloadable whole robot, bind the student archive to its own reo
 Begin detailed CAD from the selected [whole-robot architecture](../../docs/whole-robot-comparison.md). Check the installed revision against its [elevation loads, cycle rate and recovery](../../docs/mechanism-hardening.md).
 
 Start a new chassis with [rear plan chamfers](../../docs/frame-profile.md). Use the generated Fusion-importable sketch for the frame and continuous backing, padding and cover. Preserve the ordinary side elevation and verify the actual joint, attachments and wheel clearances.
+
+Use the [Fusion authority and revision handoff](../../docs/fusion-authority.md) to establish the one current saved native design, the STEP exported from that design and the identity of the engineering evidence. Recheck the register when resuming in another checkout or before replacing a published view.
