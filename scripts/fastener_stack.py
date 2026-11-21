@@ -61,95 +61,226 @@ def contact_patch(a, b, zone, radius, minimum_z):
     return (actual[0],areas[actual[0]]) if actual else (None,0.)
 
 
-def full_rim(face, z, radius):
-    """Return the continuous circular edge at this end of a coaxial conical wall."""
+def circular_partition(arcs):
+    """Cover the circle once in world angles, including sectors that cross zero."""
+    intervals = []
+    for start, width in arcs:
+        start %= math.tau
+        if width <= 0 or width > math.tau + 1e-7:
+            return False
+        end = start + min(width, math.tau)
+        intervals.append((start, min(end, math.tau)))
+        if end > math.tau:
+            intervals.append((0., end-math.tau))
+    reached = 0.
+    for lo, hi in sorted(intervals):
+        if abs(lo-reached) > 1e-7:
+            return False
+        reached = hi
+    return abs(reached-math.tau) <= 1e-7
+
+
+def shared_ring(walls, neighbors, z, radius):
+    """Use actual shared topological arcs, all belonging to the same measured rim."""
     from OCP.BRepAdaptor import BRepAdaptor_Curve
     from OCP.GeomAbs import GeomAbs_Circle
     from OCP.TopAbs import TopAbs_EDGE
-    from OCP.TopExp import TopExp_Explorer
     from OCP.TopoDS import TopoDS
-    it = TopExp_Explorer(face, TopAbs_EDGE)
-    while it.More():
-        edge = TopoDS.Edge(it.Current())
-        it.Next()
-        curve = BRepAdaptor_Curve(edge)
-        if curve.GetType() != GeomAbs_Circle:
-            continue
-        circle = curve.Circle()
-        p = circle.Location()
-        if (math.hypot(p.X(), p.Y()) <= 1e-5 and abs(p.Z()-z) <= 1e-5
-                and abs(circle.Radius()-radius) <= 1e-5 and abs(circle.Axis().Direction().Z()) > .999999999
-                and abs(curve.LastParameter()-curve.FirstParameter()-math.tau) < 1e-6):
-            return edge
-    return None
+    from stock_sections import entities
+    other = [edge for face in neighbors for edge in entities(face, TopAbs_EDGE)]
+    arcs = []
+    for face in walls:
+        for edge in entities(face, TopAbs_EDGE):
+            if not any(edge.IsSame(n) for n in other):
+                continue
+            curve = BRepAdaptor_Curve(TopoDS.Edge(edge))
+            if curve.GetType() != GeomAbs_Circle:
+                continue
+            circle = curve.Circle()
+            center = circle.Location()
+            sense = circle.Axis().Direction().Z()
+            if (math.hypot(center.X(), center.Y()) > 1e-5 or abs(center.Z()-z) > 1e-5
+                    or abs(circle.Radius()-radius) > 1e-5 or abs(sense) < .999999999):
+                continue
+            lo, hi = curve.FirstParameter(), curve.LastParameter()
+            start = curve.Value(lo if sense > 0 else hi)
+            arcs.append((math.atan2(start.Y()-center.Y(),start.X()-center.X()),hi-lo))
+    return circular_partition(arcs)
 
 
-def bore_profile(host, radius, grip):
-    """Select coaxial cylindrical wall segments at this mouth and their physical blind end."""
-    from OCP.BRepAdaptor import BRepAdaptor_Surface
+def complete_wall(faces, lo, hi, r0, r1):
+    """Prove rectangular angular trims on the finite analytic surface, with no hole or overlap."""
+    from OCP.BRep import BRep_Tool
+    from OCP.BRepAdaptor import BRepAdaptor_Curve, BRepAdaptor_Surface
     from OCP.BRepGProp import BRepGProp
     from OCP.GProp import GProp_GProps
+    from OCP.GeomAbs import GeomAbs_Circle, GeomAbs_Line, GeomAbs_Cylinder
+    from OCP.TopAbs import TopAbs_EDGE, TopAbs_WIRE
+    from OCP.TopoDS import TopoDS
+    from stock_sections import entities
+    arcs = []
+    for face in faces:
+        if len(list(entities(face, TopAbs_WIRE))) != 1:
+            return False
+        surf = BRepAdaptor_Surface(face)
+        u0, u1 = surf.FirstUParameter(), surf.LastUParameter()
+        v = (surf.FirstVParameter()+surf.LastVParameter())/2
+        begin = surf.Value(u0,v)
+        axis = (surf.Cylinder() if surf.GetType() == GeomAbs_Cylinder else surf.Cone()).Axis()
+        center = axis.Location()
+        bx, by = begin.X()-center.X(), begin.Y()-center.Y()
+        angle = math.atan2(by,bx)
+        # Use an interior increment so a full revolution has an unambiguous sense.
+        near = surf.Value(u0+min(.1,(u1-u0)/2),v)
+        sense = bx*(near.Y()-center.Y())-by*(near.X()-center.X())
+        if abs(sense) < 1e-12:
+            return False
+        arcs.append((angle if sense>0 else angle-(u1-u0), u1-u0))
+        for e in entities(face,TopAbs_EDGE):
+            edge = TopoDS.Edge(e)
+            if r1 == 0 and BRep_Tool.Degenerated_s(edge):
+                continue  # A closed drill cone has a degenerate edge at its apex.
+            curve = BRepAdaptor_Curve(edge)
+            if curve.GetType() == GeomAbs_Circle:
+                c = curve.Circle()
+                h = c.Location()
+                if not (math.hypot(h.X(),h.Y()) <= 1e-5 and abs(c.Axis().Direction().Z()) > .999999999
+                        and any(abs(h.Z()-z)<=1e-5 and abs(c.Radius()-r)<=1e-5 for z,r in ((lo,r0),(hi,r1)))):
+                    return False
+            elif curve.GetType() == GeomAbs_Line:
+                ends = [curve.Value(t) for t in (curve.FirstParameter(),curve.LastParameter())]
+                if not (abs(min(p.Z() for p in ends)-lo)<=1e-5 and abs(max(p.Z() for p in ends)-hi)<=1e-5):
+                    return False
+            else:
+                return False
+        area = GProp_GProps()
+        BRepGProp.SurfaceProperties_s(face,area)
+        expected = (u1-u0)*(r0+r1)/2*math.hypot(hi-lo,r1-r0)
+        if abs(area.Mass()-expected) > max(1e-6,expected*1e-7):
+            return False
+    return circular_partition(arcs)
+
+
+def trace_bore(host, radius, grip, *, through=False):
+    """Trace the original joined faces from the clamp plane through a complete cylindrical wall."""
+    from OCP.BRepAdaptor import BRepAdaptor_Surface
     from OCP.GeomAbs import GeomAbs_Cylinder, GeomAbs_Cone
     from OCP.TopAbs import TopAbs_FACE, TopAbs_REVERSED
-    from OCP.TopExp import TopExp_Explorer
     from OCP.TopoDS import TopoDS
-    cylinders, cones, entrances, other_walls = [], [], [], []
-    it = TopExp_Explorer(host, TopAbs_FACE)
-    while it.More():
-        face = TopoDS.Face(it.Current())
+    from stock_sections import entities
+    cylinders, cones, entrances, shoulders = {}, {}, {}, []
+    for part in entities(host,TopAbs_FACE):
+        face = TopoDS.Face(part)
         surface = BRepAdaptor_Surface(face)
         kind = surface.GetType()
-        if kind in (GeomAbs_Cylinder, GeomAbs_Cone):
-            s = surface.Cylinder() if kind == GeomAbs_Cylinder else surface.Cone()
-            axis = s.Axis()
-            p = axis.Location()
-            if abs(axis.Direction().Z()) > .999999999 and math.hypot(p.X(), p.Y()) <= 1e-5:
-                box = bounds(face)
-                if kind == GeomAbs_Cylinder and face.Orientation() == TopAbs_REVERSED:
-                    if radius[0]-1e-5 <= s.Radius() <= radius[1]+1e-5:
-                        cylinders.append((box[2], box[5], s.Radius(), face))
-                    else:
-                        other_walls.append((box[5],s.Radius()))
-                elif kind == GeomAbs_Cone and face.Orientation() == TopAbs_REVERSED:
-                    apex = s.Apex().Z()
-                    if abs(apex-box[5]) <= 1e-5:
-                        cones.append((box[2], apex))
-                    elif apex > box[5] and grip[0]-1e-5 <= box[2] <= grip[1]+1e-5:
-                        slope = abs(math.tan(s.SemiAngle()))
-                        entrances.append((box[2], box[5], (apex-box[2])*slope, (apex-box[5])*slope, face))
-        it.Next()
-    starts = set()
-    for lo, _, r, f in cylinders:
-        if not grip[0]-1e-5 <= lo <= grip[1]+1e-5:
+        if kind not in (GeomAbs_Cylinder, GeomAbs_Cone) or face.Orientation() != TopAbs_REVERSED:
             continue
-        if any(abs(exit_z-lo)<=1e-5 and outer_r>r for exit_z,outer_r in other_walls):
-            continue  # A recessed annular shoulder may also lie inside the grip tolerance.
-        rim = full_rim(f,lo,r)
-        faces = (full_rim(plane,lo,r) for plane,_ in planar_faces(host,[lo,lo],-1))
-        if rim is not None and any(edge is not None and rim.IsSame(edge) for edge in faces):
-            starts.add((lo,lo))
-    for mouth, pilot, outer_r, inner_r, cone in entrances:
-        # A broad grip tolerance cannot turn the far lip of an unqualified chamfer into a clamp plane.
-        starts = {(a,b) for a,b in starts if a != b or not mouth-1e-5 <= a <= pilot+1e-5}
-        outer, inner = full_rim(cone, mouth, outer_r), full_rim(cone, pilot, inner_r)
+        s = surface.Cylinder() if kind == GeomAbs_Cylinder else surface.Cone()
+        axis = s.Axis()
+        p = axis.Location()
+        if abs(axis.Direction().Z()) <= .999999999 or math.hypot(p.X(),p.Y()) > 1e-5:
+            continue
+        box = bounds(face)
+        lo, hi = round(box[2],7), round(box[5],7)
+        if kind == GeomAbs_Cylinder:
+            r = round(s.Radius(),7)
+            if radius[0]-1e-5 <= r <= radius[1]+1e-5:
+                cylinders.setdefault((lo,hi,r),[]).append(face)
+            else:
+                shoulders.append((hi,r))
+        else:
+            apex = s.Apex().Z()
+            slope = abs(math.tan(s.SemiAngle()))
+            if abs(apex-hi)<=1e-5:
+                cones.setdefault((lo,round(apex,7),round((apex-lo)*slope,7)),[]).append(face)
+            elif apex>hi and grip[0]-1e-5<=lo<=grip[1]+1e-5:
+                key = (lo,hi,round((apex-lo)*slope,7),round((apex-hi)*slope,7))
+                entrances.setdefault(key,[]).append(face)
+
+    def planes(z, normal):
+        return [face for face,_ in planar_faces(host,[z,z],normal)]
+
+    starts = []
+    for key,faces in cylinders.items():
+        lo, hi, r = key
+        if (grip[0]-1e-5 <= lo <= grip[1]+1e-5 and not any(abs(z-lo)<=1e-5 and other>r for z,other in shoulders)
+                and shared_ring(faces,planes(lo,-1),lo,r)):
+            starts.append((lo,key))
+    for (mouth,pilot,outer,inner),faces in entrances.items():
+        starts = [(m,k) for m,k in starts if not mouth-1e-5<=m<=pilot+1e-5]
+        if complete_wall(faces,mouth,pilot,outer,inner) and shared_ring(faces,planes(mouth,-1),mouth,outer):
+            for key,walls in cylinders.items():
+                if abs(key[0]-pilot)<=1e-5 and abs(key[2]-inner)<=1e-5 and shared_ring(faces,walls,pilot,inner):
+                    starts.append((mouth,key))
+    require(len(starts)==1,"Cannot uniquely trace the bore from the commissioned mouth to its cylindrical wall")
+    mouth,key = starts[0]
+    pilot = key[0]
+    while True:
+        lo,end,r = key
+        walls = cylinders[key]
+        require(end>lo and complete_wall(walls,lo,end,r,r),"Incomplete or interrupted cylindrical bore wall")
+        adjacent = [k for k in cylinders if k[0]>lo and abs(k[0]-end)<=1e-5 and abs(k[2]-r)<=1e-5]
+        if not adjacent:
+            break
+        require(len(adjacent)==1 and shared_ring(walls,cylinders[adjacent[0]],end,r),
+                "Unresolved junction between successive cylindrical wall bands")
+        key = adjacent[0]
+    if through:
+        require(shared_ring(walls,planes(end,1),end,r),"No complete through exit shared with the measured wall")
+    tips = [tip for (base,tip,outer),faces in cones.items() if abs(base-end)<=1e-5 and abs(outer-r)<=1e-5
+            and shared_ring(walls,faces,end,r) and complete_wall(faces,base,tip,outer,0)]
+    return mouth,pilot,end,tips,r,walls
+
+
+def bore_profile(host, radius, grip, *, through=False):
+    return trace_bore(host,radius,grip,through=through)[:4]
+
+
+def closed_flat_floor(host, walls, end, radius):
+    """A connected planar cap must have the pilot rim as its entire free boundary."""
+    from OCP.BRepGProp import BRepGProp
+    from OCP.GProp import GProp_GProps
+    from OCP.TopAbs import TopAbs_EDGE
+    from stock_sections import entities
+    candidates = [face for face,_ in planar_faces(host,[end,end],-1)]
+    edges_seen = []
+    def edge_id(edge):
+        for index,previous in enumerate(edges_seen):
+            if edge.IsSame(previous):
+                return index
+        edges_seen.append(edge)
+        return len(edges_seen)-1
+
+    wall_edges = {edge_id(edge) for f in walls for edge in entities(f,TopAbs_EDGE)}
+    face_edges = [[edge_id(edge) for edge in entities(f,TopAbs_EDGE)] for f in candidates]
+    owners = {}
+    for i,edges in enumerate(face_edges):
+        for edge in edges:
+            owners.setdefault(edge,[]).append(i)
+    # Include interior patches connected to a rim patch through actual shared seams.
+    selected = set()
+    pending = [i for i,edges in enumerate(face_edges) if wall_edges.intersection(edges)]
+    while pending:
+        i = pending.pop()
+        if i in selected:
+            continue
+        selected.add(i)
+        for edge in face_edges[i]:
+            pending.extend(j for j in owners[edge] if j not in selected)
+    patches = [candidates[i] for i in selected]
+    if not shared_ring(walls,patches,end,radius):
+        return False
+    for edge in {e for i in selected for e in face_edges[i]}:
+        count = len(owners[edge])
+        if (edge in wall_edges and count != 1) or (edge not in wall_edges and count != 2):
+            return False
+    area = 0.
+    for face in patches:
         props = GProp_GProps()
-        BRepGProp.SurfaceProperties_s(cone, props)
-        full_area = math.pi*(outer_r+inner_r)*math.hypot(pilot-mouth,outer_r-inner_r)
-        if outer is None or inner is None or abs(props.Mass()-full_area) > max(1e-6,full_area*1e-7):
-            continue
-        clamp_rims = (full_rim(f, mouth, outer_r) for f,_ in planar_faces(host,[mouth,mouth],-1))
-        pilot_rims = (full_rim(f, pilot, r) for lo, _, r, f in cylinders if abs(lo-pilot) <= 1e-5)
-        if (any(edge is not None and outer.IsSame(edge) for edge in clamp_rims)
-                and any(edge is not None and inner.IsSame(edge) for edge in pilot_rims)):
-            starts.add((mouth,pilot))
-    require(len(starts)==1, "Cannot uniquely trace the bore from the commissioned mouth to its cylindrical wall")
-    mouth, pilot = starts.pop()
-    end = pilot
-    for lo, hi in sorted((lo,hi) for lo,hi,_,_ in cylinders):
-        if lo <= end + 1e-5 and hi > end:
-            end = hi
-    require(end > pilot, "No finite bore wall at the mouth")
-    return mouth, pilot, end, [tip for lo, tip in cones if abs(lo-end) <= 1e-5]
+        BRepGProp.SurfaceProperties_s(face,props)
+        area += props.Mass()
+    expected = math.pi*radius*radius
+    return abs(area-expected)<=max(1e-6,expected*1e-7)
 
 
 def bore_faces(host, radius, grip):
@@ -231,7 +362,7 @@ def measure(shapes, case, drawing):
     grip = interval(drawing, "gripMm")
     radius = interval(drawing, "boreRadiusMm")
     require(radius[0] > 0 and length[0] > 0, "A screw and bore require positive dimensions")
-    mouth, pilot, end, apex = bore_profile(host_shape, radius, grip)
+    mouth, pilot, end, apex, wall_radius, walls = trace_bore(host_shape, radius, grip, through=kind=="through")
     observed.update(tipFromSeatMm=tip, gripMm=mouth, pilotStartFromSeatMm=pilot,
                     entranceChamferDepthMm=pilot-mouth, cylinderWallLengthMm=end-pilot, cylindricalDepthMm=end-mouth)
     # A local witness makes the actual finite intersection independent of a zero common-volume query.
@@ -240,10 +371,8 @@ def measure(shapes, case, drawing):
             require(max(apex)-min(apex) < 1e-5, "Conflicting drill terminations")
             floor = min(apex)
         else:
-            from OCP.BRepBuilderAPI import BRepBuilderAPI_MakeVertex
-            center = BRepBuilderAPI_MakeVertex(gp_Pnt(0, 0, end)).Vertex()
-            require(any(distance(center, face) <= 1e-6 for face,_ in planar_faces(host_shape, [end,end], -1)),
-                    "Missing a closed flat or conical blind-hole termination")
+            if not closed_flat_floor(host_shape,walls,end,wall_radius):
+                return dict(observed, status="open", reason="Missing a closed flat or conical blind-hole termination")
             floor = end
         observed.update(drillPointDepthMm=floor-mouth, tipToDrillPointMm=floor-tip)
         if tip > floor + 1e-5:
