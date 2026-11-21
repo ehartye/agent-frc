@@ -1,5 +1,5 @@
 import {execFileSync, spawnSync} from 'node:child_process';
-import {mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync} from 'node:fs';
+import {copyFileSync, mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -35,6 +35,27 @@ test('refresh the host selection after cache rotation, including the actual mani
   assert.equal(JSON.parse(active(dir,'1.0.1').stdout).root, path.join(plugin,'1.0.1'));
   writeManifest(path.join(plugin,'1.0.1'),'1.0.2');
   assert.notEqual(active(dir,'1.0.1').status,0);
+});
+
+test('Claude describes the bundled resolver selected by the skill across plugin roots', t => {
+  const dir = workspace(t);
+  for (const version of ['1.0.0', '1.0.1']) {
+    const root = path.join(dir, 'plugin copy ' + version);
+    mkdirSync(path.join(root, 'scripts'), {recursive:true});
+    mkdirSync(path.join(root, '.claude-plugin'));
+    const script = path.join(root, 'scripts', 'resolve-plugin-runtime.mjs');
+    const file = path.join(root, '.claude-plugin', 'plugin.json');
+    copyFileSync(cli, script);
+    writeManifest(root, '9.9.9');
+    const run = (...args) => spawnSync(process.execPath, [script, 'claude', ...args],
+      {cwd:dir, encoding:'utf8'});
+    assert.notEqual(run().status, 0);
+    writeFileSync(file, JSON.stringify({name:'other-plugin', version}));
+    assert.notEqual(run().status, 0);
+    writeFileSync(file, JSON.stringify({name:'agent-frc', version}));
+    assert.deepEqual(JSON.parse(run().stdout), {mode:'claude', name:'agent-frc', version, root});
+    assert.notEqual(run(dir).status, 0);
+  }
 });
 
 test('historical replay requires the exact clean checkout independently of the cache', t => {

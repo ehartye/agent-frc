@@ -2,10 +2,10 @@ import {execFileSync} from 'node:child_process';
 import {readFileSync, realpathSync} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {pathToFileURL} from 'node:url';
+import {fileURLToPath, pathToFileURL} from 'node:url';
 
-function manifest(root) {
-  const file = path.join(root, '.codex-plugin', 'plugin.json');
+function manifest(root, hostDirectory = '.codex-plugin') {
+  const file = path.join(root, hostDirectory, 'plugin.json');
   const description = JSON.parse(readFileSync(file, 'utf8'));
   if (description.name !== 'agent-frc' || typeof description.version !== 'string' || !description.version) {
     throw Error('The selected directory must contain the Agent FRC plugin manifest.');
@@ -52,10 +52,14 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     if (mode === 'active' && selected && !rest.length) {
       const cache = extra ?? path.join(process.env.CODEX_HOME || path.join(os.homedir(), '.codex'), 'plugins', 'cache');
       result = activeRuntime(JSON.parse(readFileSync(0, 'utf8').replace(/^\uFEFF/, '')), selected, cache);
+    } else if (mode === 'claude' && selected === undefined) {
+      const root = realpathSync(fileURLToPath(new URL('../', import.meta.url)));
+      const {name, version} = manifest(root, '.claude-plugin');
+      result = {mode: 'claude', name, version, root};
     } else if (mode === 'pinned' && selected && extra && !rest.length) {
       result = pinnedRuntime(selected, extra);
     } else {
-      throw Error('Usage: resolve-plugin-runtime.mjs active MARKETPLACE [CACHE_DIRECTORY] < inventory.json | pinned CHECKOUT FULL_COMMIT');
+      throw Error('Usage: resolve-plugin-runtime.mjs active MARKETPLACE [CACHE_DIRECTORY] < inventory.json | claude | pinned CHECKOUT FULL_COMMIT');
     }
     console.log(JSON.stringify(result));
   } catch (error) {

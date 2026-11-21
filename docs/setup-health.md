@@ -12,6 +12,14 @@ codex plugin list --marketplace agent-frc-local --json | node scripts/resolve-pl
 
 Pass the returned root to the project runner and record the version with its results. Use the configured marketplace name if different. For a custom cache parent, supply the directory containing the marketplace subdirectories as the last argument. The marketplace source checkout can advance independently. If an update removes the resolved directory, discard the incomplete run, resolve again and rerun the full check. The project tests establish compatibility.
 
+### Claude Code session
+
+In the running session, invoke `/agent-frc:frc-setup` and ask for the plugin root and version. Claude Code expands the installation directory inside the skill, so its command runs the resolver bundled with the selected plugin. The resolver reads that copy's `.claude-plugin/plugin.json` and reports its canonical root, name and declared version. This also works when the session loaded a directory with `--plugin-dir`. Keep the returned root with the check.
+
+An ordinary terminal can inspect a separate launch with `claude --plugin-dir PATH_TO_PLUGIN plugin list --json` or a configured installation with `claude plugin list --json`. Inspect its enabled entry, source ID, scope and version. A local marketplace entry can list both an install path and a live source folder. Use the root expanded by the running skill for that session. Running a resolver from a manually chosen directory describes that directory. A declared version alone does not identify the Git commit or dirty files in a development checkout. [Claude Code plugin path substitutions](https://code.claude.com/docs/en/plugins-reference#where-each-variable-resolves)
+
+### Historical checkout
+
 For a pinned replay, read the full commit from the project receipt and select an existing clean checkout of that commit. The resolver checks the Git root, revision, pending changes and tracked plugin manifest. It reports failure if the reviewed source is absent.
 
 ```sh
