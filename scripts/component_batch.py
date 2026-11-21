@@ -29,6 +29,7 @@ def collector():
 def check_plan(root, plan):
     require(plan.get("schema") == "agent-frc/component-batch@1" and named(plan.get("configuration")),
             "Register the configuration for this diagnostic")
+    require(set(plan) == {"schema", "configuration", "articles"}, "Unsupported batch plan field")
     rows = plan.get("articles")
     require(isinstance(rows, list) and rows, "Register at least one article")
     names = set()
@@ -36,10 +37,12 @@ def check_plan(root, plan):
     for row in rows:
         require(isinstance(row, dict) and named(row.get("id")) and row["id"] not in names,
                 "Register unique article IDs")
+        require(set(row) == {"id", "source", "installed", "worldTransform"}, "Unsupported article comparison option")
         names.add(row["id"])
         proper_rotation(row["worldTransform"])
         for side in ("source", "installed"):
             ref = row[side]
+            require(isinstance(ref, dict) and set(ref) == {"file", "sha256", "solid"}, "Unsupported STEP selection")
             require(named(ref.get("solid")), "Register each selected STEP solid")
             key = (ref["file"], ref["sha256"])
             if key not in checked:
@@ -58,12 +61,13 @@ def measure_one(root, row):
     return raw[label]
 
 
-def attempt(root, row, seconds):
+def attempt(root, row, seconds, expected_collector):
     # subprocess.run kills and waits for the one synchronous kernel worker on
     # timeout. The ordinary component comparison starts no additional processes.
     try:
         child = subprocess.run([sys.executable, "-B", str(Path(__file__).resolve()), "--article", str(root)],
-                               input=encoded(row), capture_output=True, timeout=seconds)
+                               input=encoded({"article": row, "collector": expected_collector}),
+                               capture_output=True, timeout=seconds)
     except subprocess.TimeoutExpired:
         return {"execution": "timeout", "reason": "Article wall-time budget expired before a result"}
     if child.returncode:
@@ -121,7 +125,7 @@ def run(root, plan_path, output, seconds, previous=None):
             row = prior
         else:
             row = {"binding": binding, "article": article, "budgetSeconds": seconds,
-                   **attempt(root, article, seconds)}
+                   **attempt(root, article, seconds, binding["collector"])}
             if name:
                 row["previousAttempt"] = name
         receipts.append(save(output, index, row))
@@ -137,7 +141,11 @@ def run(root, plan_path, output, seconds, previous=None):
 
 if __name__ == "__main__":
     if len(sys.argv) == 3 and sys.argv[1] == "--article":
-        print(json.dumps(measure_one(Path(sys.argv[2]), json.load(sys.stdin.buffer)), allow_nan=False))
+        request = json.load(sys.stdin.buffer)
+        require(collector() == request["collector"], "Worker method or runtime differs")
+        observation = measure_one(Path(sys.argv[2]), request["article"])
+        require(collector() == request["collector"], "Worker method changed during measurement")
+        sys.stdout.buffer.write(encoded(observation))
     else:
         parser = argparse.ArgumentParser(description=__doc__)
         for arg in ("project", "plan", "output"):

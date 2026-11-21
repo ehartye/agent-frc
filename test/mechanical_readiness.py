@@ -28,6 +28,8 @@ class Readiness(unittest.TestCase):
                  "worldTransform": IDENTITY.copy()} for label in labels]
         rows[1]["worldTransform"][3] = 1
         plan = {"schema": "agent-frc/component-batch@1", "configuration": "parked", "articles": rows}
+        with self.assertRaisesRegex(ValueError, "Unsupported article"):
+            batch.check_plan(self.root, {**plan, "articles": [{**rows[0], "interiorPointsMm": [[0, 0, 0]]}]})
         path = self.root/"articles.json"
         path.write_bytes(batch.encoded(plan))
         partial = self.root/"partial"
