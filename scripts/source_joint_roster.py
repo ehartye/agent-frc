@@ -35,6 +35,13 @@ def intended(root, study, reopen, *, trusted=False):
     require(isinstance(record["motionRanges"], dict) and set(record["motionRanges"]) == groups
             and record["motionRanges"] == reopen["motionRanges"] and bool(groups) == (record["mode"] == "articulated"),
             "Intended operating travel differs from the selected native duty register")
+    if "poseStages" in record:
+        planned = reopen["inspectionPoses"]
+        actual = {p["id"]: p.get("stage", "command-response" if p["joints"] else "archive-rest") for p in planned}
+        require(isinstance(record["poseStages"], dict) and record["poseStages"] == actual and
+                len(actual) == len(planned) and actual.get("saved") == "archive-rest" and
+                all(stage in ("archive-rest", "command-response", "after-recompute", "captured-recompute") for stage in actual.values()),
+                "Inspection stages differ from the independently selected motion claims")
     for key, actual in (("transferMissions", reopen["transferMissions"]), ("externalIssues", study.get("externalIssues"))):
         expected = record[key]
         require(isinstance(expected, list) and isinstance(actual, list) and len(expected) == len(set(expected))

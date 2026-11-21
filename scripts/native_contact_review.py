@@ -7,7 +7,64 @@ def allowed_census(digest_value):
     # Previous installed collector measured topological vertex proxies and
     # could not emit a finished result for a body lacking vertices.
     return digest_value in {digest(Path(__file__).with_name("fusion_issue_inventory.py")),
+        "eb807942e574514ac2aaba5408c7dfbeadd342f6883fa69637733d660081d58c",
+        "36755938a8793ab716a9200235aa1eae9aa30922519249602704a8e823597822",
         "4529f1610cc8d361098cebc822437b3f50ad40c4eda7a53105bda94ff9dbe254"}
+
+
+class PoseMismatch(ValueError):
+    """An actual coordinate or material point contradicts the commissioned pose."""
+
+
+def verify_stage(census, base, registered, anchor, tolerance):
+    """Tie the inspection label to the stage actually observed on this archive."""
+    import numpy as np
+    pose = census["pose"]
+    commands = pose["joints"]
+    default = "command-response" if commands else "archive-rest"
+    stage = pose.get("stage", default)
+    require(stage in ("archive-rest", "command-response", "after-recompute", "captured-recompute")
+            and ((stage == "archive-rest") == (not commands))
+            and (pose["id"] != "saved" or not commands), "Invalid native observation stage")
+    if census["programSha256"] != digest(Path(__file__).with_name("fusion_issue_inventory.py")):
+        require("stageEvidence" not in census and "stage" not in pose,
+                "Legacy native capture has no explicit stage evidence. Recapture the commissioned pose.")
+        return
+    evidence = census.get("stageEvidence")
+    require(isinstance(evidence, dict) and evidence.get("stage") == stage,
+            "Native receipt lacks the requested observation stage")
+    values = evidence.get("coordinates")
+    groups = [c["group"] for c in commands]
+    require(isinstance(values, dict) and set(values) == set(groups) and len(groups) == len(set(groups)),
+            "Missing or duplicate observed native coordinates")
+    moved = False
+    for command in commands:
+        row = values[command["group"]]
+        requested = command["nativeValue"]
+        require(isinstance(row, dict) and all(number(v) for v in (row.get("before"),row.get("observed"),requested)),
+                "Incomplete native coordinate readback")
+        if abs(row["observed"]-requested) > 1e-8:
+            raise PoseMismatch(f"Pose {pose['id']} at {stage}: requested {requested}, observed {row['observed']}")
+        moved |= abs(row["before"]-row["observed"]) > 1e-8
+    baseline = {(b["path"], b["name"]): b["worldTransform"] for b in base["bodies"]}
+    motion = {}
+    for body in census["bodies"]:
+        key = (body["path"], body["name"])
+        require(key in registered and key in baseline, "Unknown source of a native motion witness")
+        local = np.asarray(body.get("placementPointsCm"), dtype=float)
+        observed = np.asarray(body.get("observedWorldPointsMm"), dtype=float)
+        require(local.shape == observed.shape == (3, 3) and np.isfinite(local).all() and np.isfinite(observed).all()
+                and np.linalg.norm(np.cross(local[1]-local[0],local[2]-local[0])) > 0,
+                "Three distinct noncollinear native world witnesses are required per body")
+        sites = np.column_stack((10*local, np.ones(3)))
+        predicted = (sites @ np.asarray(body["worldTransform"]).reshape(4,4).T)[:,:3]
+        parked = (sites @ np.asarray(baseline[key]).reshape(4,4).T)[:,:3]
+        require(np.max(np.linalg.norm(observed-predicted,axis=1)) <= .001,
+                "Measured material points disagree with the assembly-world transform")
+        motion[registered[key][0]] = float(np.max(np.linalg.norm(observed-parked,axis=1)))
+    require(anchor in motion and motion[anchor] <= tolerance, "Fixed chassis moved in the observed native pose")
+    if moved:
+        require(any(d > tolerance for d in motion.values()), "Joint changed without material travel above the inspection resolution")
 
 
 def verify(root,study,reopen,base,registered,find,missing):
@@ -20,6 +77,7 @@ def verify(root,study,reopen,base,registered,find,missing):
         return
     by_id={p["id"]:p for p in planned}
     require(len(by_id)==len(planned) and "saved" in by_id and by_id["saved"].get("joints")==[],"Invalid native pose registration")
+    require(base.get("pose",{}).get("id")=="saved", "The base census must be the uncommanded archive rest")
     nominal={(b["path"],b["name"]):b for b in base["bodies"]}
     cold_shapes=None
     completed=set()
@@ -32,6 +90,13 @@ def verify(root,study,reopen,base,registered,find,missing):
         if not named(c.get("documentId")) or not named(c.get("rootComponentId")) or not named(c.get("rootRevision")) or c.get("otherGeometry"):
             missing("native",pid,"Unresolved native identity or non-solid geometry.")
         require(allowed_census(c["programSha256"]),"Unexpected native census program")
+        try:
+            verify_stage(c,base,registered,study["chassisAnchor"],study["reopenBoundsToleranceMm"])
+        except PoseMismatch as error:
+            find("native","fail",pid,str(error))
+        except (ValueError, KeyError, TypeError, IndexError) as error:
+            missing("native",pid,str(error))
+
         rows=c["bodies"]
         mapped=[]
         for row in rows:
@@ -96,7 +161,7 @@ def verify(root,study,reopen,base,registered,find,missing):
             volumes=[v for v in volumes if number(v) and v>=0]
             limit=allowed.get(tuple(sorted((a,b))),0)
             if volumes and max(volumes)>limit:
-                find("interference","fail",[pid,a,b],f"Native overlap {max(volumes):.9g} mm³ exceeds the reviewed pair limit {limit:.9g} mm³.")
+                find("interference","fail",[pid,a,b],f"Native overlap {max(volumes):.9g} mmÃ‚Â³ exceeds the reviewed pair limit {limit:.9g} mmÃ‚Â³.")
         if actual!=expected or record["candidatePairs"]!=len(expected):
             missing("native",pid,"The native scan is incomplete for this pose.")
     if completed!=set(by_id):
