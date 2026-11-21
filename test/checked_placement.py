@@ -44,17 +44,23 @@ class Placements(unittest.TestCase):
         parent_pose = [0,-1,0,10, 1,0,0,20, 0,0,1,0, 0,0,0,1]
         target = [0,-1,0,8, 1,0,0,21, 0,0,1,0, 0,0,0,1]
         desired = Obj(asArray=lambda: target)
-        plan = dict(parent="Seat:1", occurrence="Seat:1+Plate:1", body="Plate",
+        plan = dict(parent="Seat:1", occurrence="Seat:1+Plate:1", body="Plate", backing="Seat:1+Backing:1",
+                    jointName="Plate clamp", jointMotion="adsk::fusion::RigidJointMotion",
                     parentWorldCm=parent_pose, worldTransformCm=target,
                     cornerLocalCm=[1,0,0], cornerWorldCm=[8,22,0])
         world = [8,22,0]
         vertex = Obj(geometry=Obj(asArray=lambda: [1,0,0]),
                      createForAssemblyContext=lambda occ: Obj(geometry=Obj(asArray=lambda: world)))
         body = Obj(isSolid=True, name="Plate", vertices=[vertex])
-        parent = Obj(fullPathName=plan["parent"], component=Obj(), transform2=Obj(asArray=lambda: parent_pose))
+        backing = Obj(fullPathName=plan["backing"])
         child = Obj(fullPathName=plan["occurrence"], component=Obj(bRepBodies=[body]), transform2=desired)
+        joint = Obj(name=plan["jointName"], jointMotion=Obj(objectType=plan["jointMotion"]), isSuppressed=False,
+                    occurrenceOne=Obj(createForAssemblyContext=lambda parent: child),
+                    occurrenceTwo=Obj(createForAssemblyContext=lambda parent: backing))
+        parent = Obj(fullPathName=plan["parent"], component=Obj(asBuiltJoints=[joint]),
+                     transform2=Obj(asArray=lambda: parent_pose))
         snapshots = Obj(hasPendingSnapshot=True, add=Mock())
-        design = Obj(rootComponent=Obj(allOccurrences=[parent, child]), snapshots=snapshots, computeAll=lambda: True)
+        design = Obj(rootComponent=Obj(allOccurrences=[parent, child, backing]), snapshots=snapshots, computeAll=lambda: True)
         attach = Mock()
         with patch.object(example, "placement_witness", return_value=(0., [])):
             first = example.edit_nested(design, plan, desired, attach, None)
@@ -67,10 +73,17 @@ class Placements(unittest.TestCase):
             attach.assert_called_with(parent.component)
             # Re-resolve the path after a cold reopen rather than retaining its warm proxy.
             cold = deepcopy(design)
-            self.assertEqual(example.inspect_material(cold, plan, None)["cornerErrorMm"], 0)
+            self.assertEqual(example.inspect_attachment(cold, plan, None)["cornerErrorMm"], 0)
             world[0] += .4
             with self.assertRaisesRegex(ValueError, "material missed"):
-                example.inspect_material(cold, plan, None)
+                example.inspect_attachment(cold, plan, None)
+            world[0] -= .4
+            joint.occurrenceTwo = joint.occurrenceOne
+            with self.assertRaisesRegex(ValueError, "Wrong joint endpoints"):
+                example.inspect_attachment(design, plan, None)
+            parent.component.asBuiltJoints.clear()
+            with self.assertRaisesRegex(ValueError, "Expected one named as-built joint"):
+                example.inspect_attachment(design, plan, None)
 
     def test_shared_forbidden_material_vetoes_even_when_one_native_volume_is_unknown(self):
         pair=[[s["path"],s["name"]] for s in scene(3)["bodies"]]

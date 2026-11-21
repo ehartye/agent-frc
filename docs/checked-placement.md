@@ -39,6 +39,8 @@ Stage the [worked edit and cold inspection](../examples/mechanical-readiness/roo
 
 ```python
 plan = dict(parent="Seat:1", occurrence="Seat:1+Plate:1", body="Plate",
+            backing="Seat:1+Backing:1", jointName="Plate clamp",
+            jointMotion=adsk.fusion.RigidJointMotion.classType(),
             parentWorldCm=[0,-1,0,10, 1,0,0,20, 0,0,1,0, 0,0,0,1],
             worldTransformCm=[0,-1,0,8, 1,0,0,21, 0,0,1,0, 0,0,0,1],
             cornerLocalCm=[1,0,0], cornerWorldCm=[8,22,0])
@@ -53,7 +55,7 @@ def attach_in_owner(owner):
     origin = adsk.fusion.JointGeometry.createByPoint(owner.originConstructionPoint)
     joint = owner.asBuiltJoints.createInput(plate, back, origin)
     joint.setAsRigidJointMotion()
-    owner.asBuiltJoints.add(joint)
+    owner.asBuiltJoints.add(joint).name = plan["jointName"]
 
 observations = {}
 def edit(design):
@@ -65,7 +67,7 @@ report = example.guard.checked_placement(app, accepted, accepted_sha256, output,
 
 Look up a nested child in `design.rootComponent.allOccurrences` by its complete path. Its root-context proxy takes the desired world matrix directly. Skip the setter when the pose already matches. For a new child created in an owning component, compute its creation transform as `inverse(parentWorld) × desiredWorld`. An occurrence held by an existing joint needs a deliberate edit to that joint. Inspect a nested parent lock through `isGroundToParent`; reading or setting `isGrounded` on an owner-local nested occurrence can throw. Reapplying a parent lock can restore the old pose. Capture a pending position when the edit is intended to persist. Confirm that editing a shared component definition affects only the intended instances before using this recipe.
 
-The example resolves the child again after the joint and recompute, measures three native-to-proxy material witnesses, and checks the commissioned corner in the robot frame. Preserve those readings. On a guard pass, rehash the output against `report["successorSha256"]`, open that file in a fresh document, then run `example.inspect_material(reopened_design, plan, core.Point2D)` and save its result. Check the required feature health and joint membership there. For a moving attachment, use its specified joint type and also check an off-axis material landmark, the parked supports, a signed excursion and the return. A parked corner alone qualifies only that parked check. [Verify the cold issue](fusion-authority.md)
+The example resolves the child again after the joint and recompute, measures native-to-proxy material witnesses, and checks the commissioned corner in the robot frame. It also reads the joint from the owning component, resolves both endpoints in their full assembly contexts and verifies its motion type and suppression state. Preserve those readings. On a guard pass, rehash the output against `report["successorSha256"]`, open that file in a fresh document, then run `example.inspect_attachment(reopened_design, plan, core.Point2D)` and save its result. Check the required feature health there. For a moving attachment, use its specified joint type and also check an off-axis material landmark, the parked supports, a signed excursion and the return. A parked corner alone qualifies only that parked check. [Verify the cold issue](fusion-authority.md)
 
 ## Read a refused placement
 
