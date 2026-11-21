@@ -4,6 +4,10 @@ from pathlib import Path
 import sys
 import unittest
 import copy
+import hashlib
+import json
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 from OCP.BRepAlgoAPI import BRepAlgoAPI_Cut
 from OCP.BRepBuilderAPI import BRepBuilderAPI_MakePolygon
@@ -45,6 +49,40 @@ def cylinder(radius):
 
 
 class SpatialMatingFit(unittest.TestCase):
+    def test_review_preserves_a_confirmed_probe_and_requires_all_negative_observations(self):
+        from mechanical_readiness import digest
+        probes=[{"centerMm":[0,0,-1],"radiusMm":.1},{"centerMm":[0,0,-2],"radiusMm":.1}]
+        ids=[["Screw:1","body"],["Host:1","body"]]
+        commission=dict(COMMISSION,host=ids[1],bodies=ids,basis="Original teaching calculation",
+                        representation="external-thread/smooth-pilot",expectedCommonMm3=[1,2],forbiddenProbes=probes)
+        with TemporaryDirectory() as directory:
+            root=Path(directory)
+            def pin(file,data):
+                (root/file).write_bytes(data)
+                return {"file":file,"sha256":hashlib.sha256(data).hexdigest()}
+            sources={k:pin(k,k.encode()) for k in ("threadDrawing","maleGeometry")}
+            prediction=dict(schema="agent-frc/spatial-fit-prediction@1",archiveSha256="archive",
+                            commission=commission,drawingSha256=sources["threadDrawing"]["sha256"],
+                            maleGeometrySha256=sources["maleGeometry"]["sha256"],calculation=pin("calculation",b"teaching"))
+            sources["independentOverlap"]=pin("prediction.json",json.dumps(prediction).encode())
+            case=dict(id="pair",configuration="fixed",pose="saved",solids=["a","b"],archiveSha256="archive",
+                      stepSha256="step",commission=commission,evidence=sources)
+            section=dict(totalMm3=1.5,outsideCylinderMm3=0,insideCoreMm3=0,permittedMm3=1.5,conservationErrorMm3=0)
+            spatial=dict(commission=commission,programSha256=digest(Path(fit.__file__)),smoothPilot=True,
+                         maleThread={"matched":True},methods={"fusionInterference":section,"fusionTransient":section})
+            observation=dict(identities=ids,spatialFit=spatial,interferenceMm3=1.5,temporaryCommonMm3=1.5)
+            census=dict(archiveSha256="archive",pose=dict(id="saved",spatialFits=[commission],spatialProgramSha256=spatial["programSha256"]),
+                        contacts=dict(complete=True,pairs=[observation],programSha256=digest(Path(fit.__file__).with_name("fusion_issue_contacts.py"))))
+            mapping={tuple(ids[0]):("a",{"neutralSha256":sources["maleGeometry"]["sha256"]}),tuple(ids[1]):("b",{})}
+            clear=[dict(probe=p,sharedInterior=False) for p in probes]
+            with (patch.object(fit,"placed_sections",return_value=section),patch.object(fit,"smooth_host",return_value=True),
+                  patch.object(fit,"placed_thread",return_value={"matched":True}),patch.object(fit,"placed_forbidden",return_value=clear)):
+                for observations,expected in ((clear,"pass"),([clear[0],{"probe":probes[1]}],"open"),
+                                               ([dict(probe=probes[0],sharedInterior=True)],"fail")):
+                    spatial["forbidden"]=observations
+                    result,=fit.review(root,[case],{"a":1,"b":2},mapping,census,"archive","step","fixed",{("a","b"):2})
+                    self.assertEqual(result["status"],expected,result)
+
     def test_positive_helix_smooth_male_and_wrong_hand(self):
         male = twisted_male()
         self.assertTrue(fit.placed_thread(male, COMMISSION)["matched"])
@@ -81,6 +119,15 @@ class SpatialMatingFit(unittest.TestCase):
         wrong["forbiddenProbes"][0]["centerMm"] = [2.1,0,1]
         with self.assertRaises(ValueError):
             fit.forbidden_probes(wrong)
+        second={"centerMm":[0,0,2],"radiusMm":.1}
+        commission["forbiddenProbes"].append(second)
+        known=[{"centerMm":[0,0,1],"radiusMm":.25}]
+        with patch("interface_consistency.inscribed_balls", side_effect=[(known,.02),RuntimeError("unresolved face")]):
+            observations=fit.placed_forbidden(shapes,pair,commission)
+        self.assertEqual([r["sharedInterior"] for r in observations],[True,None])
+        self.assertEqual(fit.probe_result(commission,observations),"fail")
+        observations[0]["sharedInterior"]=False
+        self.assertEqual(fit.probe_result(commission,observations),"open")
 
 
 if __name__ == "__main__":

@@ -137,12 +137,14 @@ def measure_pair(design, rows, proxies, solids, a, b, *, spatial_fit=None):
         shape,other=world(a),world(b)
         if spatial_fit is not None:
             try:
-                witnesses=[]
+                witnesses=row["spatialFit"]["forbidden"]=[]
                 for probe in model.forbidden_probes(spatial_fit):
-                    point=adsk.core.Point3D.create(*[v/10 for v in probe["centerMm"]])
-                    inside=all(forbidden_interior(s,point,probe["radiusMm"]) for s in (shape,other))
-                    witnesses.append({"probe":probe,"sharedInterior":inside})
-                row["spatialFit"]["forbidden"]=witnesses
+                    try:
+                        point=adsk.core.Point3D.create(*[v/10 for v in probe["centerMm"]])
+                        inside=all(forbidden_interior(s,point,probe["radiusMm"]) for s in (shape,other))
+                        witnesses.append({"probe":probe,"sharedInterior":inside})
+                    except Exception as error:
+                        witnesses.append({"probe":probe,"sharedInterior":None,"error":str(error)})
             except Exception as e:
                 spatial_errors["forbidden"]=str(e)
             try:

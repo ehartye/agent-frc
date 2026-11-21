@@ -194,9 +194,29 @@ def placed_forbidden(shapes, pair, commission):
     from interface_consistency import inscribed_balls
     results = []
     for probe in forbidden_probes(commission):
-        balls, _ = inscribed_balls(shapes[pair[0]],shapes[pair[1]],[probe["centerMm"]],1e-5)
-        results.append({"probe":probe,"sharedInterior":bool(balls and balls[0]["radiusMm"]>=probe["radiusMm"])})
+        try:
+            balls, _ = inscribed_balls(shapes[pair[0]],shapes[pair[1]],[probe["centerMm"]],1e-5)
+            results.append({"probe":probe,"sharedInterior":bool(balls and balls[0]["radiusMm"]>=probe["radiusMm"])})
+        except (RuntimeError,ValueError,TypeError,KeyError) as error:
+            results.append({"probe":probe,"sharedInterior":None,"error":str(error)})
     return results
+
+
+def probe_result(commission, observations):
+    probes=forbidden_probes(commission)
+    if not isinstance(observations,list):
+        return "open"
+    verified=[]
+    for observation in observations:
+        if not isinstance(observation,dict) or observation.get("probe") not in probes:
+            continue
+        if not observation.get("error") and type(observation.get("sharedInterior")) is bool:
+            if observation["sharedInterior"]:
+                return "fail"
+            verified.append(observation["probe"])
+    if len(observations)!=len(probes) or len(verified)!=len(probes) or any(verified.count(p)!=1 for p in probes):
+        return "open"
+    return "pass"
 
 
 def native_result(observation,commission):
@@ -206,10 +226,8 @@ def native_result(observation,commission):
     spatial=observation.get("spatialFit",{})
     if spatial.get("commission")!=commission:
         return "open","Missing, mismatched or unresolved spatial observation"
-    probes=forbidden_probes(commission)
-    observations=spatial.get("forbidden",[])
-    if ([r["probe"] for r in observations]==probes and
-            any(r.get("sharedInterior") is True for r in observations)):
+    probe_status=probe_result(commission,spatial.get("forbidden",[]))
+    if probe_status=="fail":
         return "fail","An independently checked interior ball lies in both solids outside the permitted annulus"
     rows=spatial.get("methods",{})
     names=("fusionInterference","fusionTransient")
@@ -220,8 +238,8 @@ def native_result(observation,commission):
         if all(type(x) in (int,float) and math.isfinite(x) and x>=0 for x in (raw,total)) and abs(raw-total)<=max(1e-8,raw*1e-8):
             verified[name]=rows[name]
     status,reason=assess(verified,commission["expectedCommonMm3"],required_methods=names)
-    if status=="pass" and [r["probe"] for r in observations]!=probes:
-        return "open","Missing a required forbidden-region probe"
+    if status=="pass" and probe_status!="pass":
+        return "open","Incomplete or unresolved forbidden-region probe"
     if status=="pass" and (spatial.get("errors") or spatial.get("maleThread",{}).get("matched") is not True):
         return "open","The registered external thread form or required native operation is unresolved"
     if status=="pass" and spatial.get("smoothPilot") is not True:
@@ -230,14 +248,13 @@ def native_result(observation,commission):
 
 
 def review(root, cases, shapes, mapping, census, archive_sha, step_sha, configuration, allowance):
-    from pathlib import Path
-    from mechanical_readiness import digest, named, pinned, require
+    from mechanical_readiness import digest, named, require
     if not isinstance(cases,list):
         raise ValueError("Register spatial fits as a list")
     results=[]
     seen=set()
     for case in cases:
-        result={"status":"open","case":case.get("id")}
+        result={"status":"open","case":case.get("id") if isinstance(case,dict) else None}
         results.append(result)
         try:
             require(named(case["id"]) and case["id"] not in seen,"Ambiguous commissioned spatial fit")
@@ -272,24 +289,37 @@ def review(root, cases, shapes, mapping, census, archive_sha, step_sha, configur
             result["native"]=native
             status,reason=native_result(native,commission)
             result.update(status=status,reason=reason)
-            if status=="fail": continue
             region=commission["region"]
             annulus(region)
-            result["stepForbidden"]=placed_forbidden(shapes,pair,commission)
-            if any(r["sharedInterior"] for r in result["stepForbidden"]):
+            errors={}
+            for key,operation,args in (
+                    ("stepForbidden",placed_forbidden,(shapes,pair,commission)),
+                    ("step",placed_sections,(shapes,pair,region)),
+                    ("stepSmoothPilot",smooth_host,(shapes[pair[1]],region)),
+                    ("stepMaleThread",placed_thread,(shapes[pair[0]],commission))):
+                try:
+                    result[key]=operation(*args)
+                except (KeyError,TypeError,ValueError,RuntimeError,IndexError,OSError) as error:
+                    errors[key]=str(error)
+            if errors: result["stepErrors"]=errors
+            probe_status=probe_result(commission,result.get("stepForbidden",[]))
+            if probe_status=="fail":
                 result.update(status="fail",reason="Placed solids share independently witnessed material outside the permitted annulus")
                 continue
-            result["stepSmoothPilot"]=smooth_host(shapes[pair[1]],region)
-            result["step"]=placed_sections(shapes,pair,region)
-            result["stepMaleThread"]=placed_thread(shapes[pair[0]],commission)
-            methods=dict(spatial["methods"],placedStep=result["step"])
-            combined,reason=assess(methods,commission["expectedCommonMm3"],required_methods=("fusionInterference","fusionTransient","placedStep"))
-            if combined=="fail" or status=="pass":
-                result.update(status=combined,reason=reason)
-            if result["status"]=="pass" and not result["stepSmoothPilot"]:
-                result.update(status="open",reason="Placed host lacks a complete smooth cylindrical pilot across the drawing span")
-            if result["status"]=="pass" and not result["stepMaleThread"]["matched"]:
-                result.update(status="open",reason="Placed male does not reproduce the registered thread form")
+            neutral={"placedStep":result.get("step")}
+            step_status,step_reason=assess(neutral,commission["expectedCommonMm3"],required_methods=["placedStep"])
+            if step_status=="fail":
+                result.update(status=step_status,reason=step_reason)
+            elif status=="pass":
+                if errors or probe_status!="pass":
+                    result.update(status="open",reason="Incomplete placed spatial observations")
+                elif result["stepSmoothPilot"] is not True or not result["stepMaleThread"]["matched"]:
+                    result.update(status="open",reason="Placed solids do not demonstrate the commissioned thread and smooth pilot")
+                else:
+                    combined,reason=assess({**spatial["methods"],**neutral},commission["expectedCommonMm3"],
+                                           required_methods=("fusionInterference","fusionTransient","placedStep"))
+                    result.update(status=combined,reason=reason)
         except (KeyError,TypeError,ValueError,RuntimeError,IndexError,OSError) as e:
-            result.update(status="open",reason=str(e))
+            if result["status"]=="fail": result["additionalError"]=str(e)
+            else: result.update(status="open",reason=str(e))
     return results

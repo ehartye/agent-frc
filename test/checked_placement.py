@@ -46,6 +46,21 @@ class Placements(unittest.TestCase):
         result=decision(3,values,interface)
         self.assertEqual(result["status"],"blocked")
         self.assertIn("interior ball",result["measured"][0]["spatialReason"])
+        other=dict(probe,centerMm=[2,0,-2])
+        commission["forbiddenProbes"].append(other)
+        self.assertEqual(decision(3,values,interface)["status"],"blocked")
+        section=dict(totalMm3=1.5,outsideCylinderMm3=0,insideCoreMm3=0,permittedMm3=1.5,conservationErrorMm3=0)
+        values.update(interferenceMm3=1.5,gapMm=0)
+        spatial=values["spatialFit"]
+        spatial.update(smoothPilot=True,maleThread={"matched":True},
+                       methods={"fusionInterference":section,"fusionTransient":section})
+        spatial["forbidden"]=[dict(probe=probe,sharedInterior=False),dict(probe=other,sharedInterior=False)]
+        self.assertEqual(decision(3,values,interface)["status"],"pass")
+        for invalid in (None,0,"false"):
+            spatial["forbidden"][1]["sharedInterior"]=invalid
+            self.assertEqual(decision(3,values,interface)["status"],"inconclusive")
+        del spatial["forbidden"][1]["sharedInterior"]
+        self.assertEqual(decision(3,values,interface)["status"],"inconclusive")
 
     def test_pose_veto_reports_the_missing_or_attained_occurrence_before_contact_queries(self):
         before, after = scene(0), scene(0)
