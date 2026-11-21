@@ -16,6 +16,42 @@ from spatial_operating_cases import SpatialOperatingCases
 
 
 class Readiness(unittest.TestCase):
+    def test_smooth_belt_pitch_is_separate_from_local_metal_and_other_obstacles(self):
+        import math
+        from belt_envelope import inspect
+        from OCP.BRepAlgoAPI import BRepAlgoAPI_Fuse, BRepAlgoAPI_Cut
+        from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox, BRepPrimAPI_MakeCylinder
+        from OCP.gp import gp_Ax2, gp_Dir, gp_Pnt
+        c = 10*math.pi
+        def cyl(x,r):
+            return BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(x,0,0),gp_Dir(0,0,1)),r,4).Shape()
+        def capsule(r):
+            box = BRepPrimAPI_MakeBox(gp_Pnt(0,-r,0),c,2*r,4).Shape()
+            return BRepAlgoAPI_Fuse(BRepAlgoAPI_Fuse(box,cyl(0,r)).Shape(),cyl(c,r)).Shape()
+        belt = BRepAlgoAPI_Cut(capsule(7),capsule(5)).Shape()
+        parts = dict(band=belt,left=cyl(0,6),right=cyl(c,6),
+                     guide=BRepPrimAPI_MakeBox(gp_Pnt(c/2,5.5,1),1,1,1).Shape())
+        plan = dict(belt="band", axisWorld=[0,0,1], pulleys=[
+            dict(solid="left",teeth=12,centerAtStartMm=[0,0,0]),
+            dict(solid="right",teeth=12,centerAtStartMm=[c,0,0])],pitchMm=math.pi,beltTeeth=32,
+            pitchToInnerMm=1,pitchToOuterMm=1,widthMm=4,pitchLengthToleranceMm=.001,
+            shapeResolutionMm3=.1,stationsFromStartMm=[.5,3.5],obstacles=["guide"])
+        r=inspect(parts,plan)
+        self.assertTrue(r["pitchLengthMatches"])
+        self.assertEqual(r["smoothEnvelopeComparison"],"pass")
+        self.assertAlmostEqual(r["sampledMetal"][0]["aboveInnerRadiusMm"],1)
+        self.assertGreater(r["pairObservations"][0]["measuredCommonMm3"],1)
+        self.assertAlmostEqual(r["pairObservations"][-1]["measuredCommonMm3"],1)
+        self.assertEqual(r["matingAndLoad"],"open")
+        parts["guide"]=BRepPrimAPI_MakeBox(gp_Pnt(c/2,0,1),1,1,1).Shape()
+        plan["pulleys"][1]["centerAtStartMm"][0]+=2
+        r=inspect(parts,plan)
+        self.assertFalse(r["pitchLengthMatches"])
+        self.assertEqual(r["smoothEnvelopeComparison"],"fail")
+        self.assertEqual(r["pairObservations"][-1]["measuredCommonMm3"],0)
+        self.assertAlmostEqual(r["sampledMetal"][-1]["remainingToOuterRadiusMm"],-1)
+        self.assertEqual(r["matingAndLoad"],"open")
+
     def setUp(self):
         self.folder=TemporaryDirectory()
         self.addCleanup(self.folder.cleanup)
