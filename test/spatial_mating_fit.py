@@ -1,5 +1,6 @@
 """Original ruled helical teaching solid and matched placement controls, in mm."""
 import math
+import os
 from pathlib import Path
 import sys
 import unittest
@@ -9,11 +10,14 @@ import json
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from OCP.BRepAlgoAPI import BRepAlgoAPI_Cut
-from OCP.BRepBuilderAPI import BRepBuilderAPI_MakePolygon
-from OCP.BRepOffsetAPI import BRepOffsetAPI_ThruSections
-from OCP.BRepPrimAPI import BRepPrimAPI_MakeCylinder
-from OCP.gp import gp_Pnt
+portable = os.environ.get("FRC_TEST_PROFILE") == "portable"
+cad_test = unittest.skipIf(portable, "Run placed BRep controls in the qualified CAD test environment")
+if not portable:
+    from OCP.BRepAlgoAPI import BRepAlgoAPI_Cut
+    from OCP.BRepBuilderAPI import BRepBuilderAPI_MakePolygon
+    from OCP.BRepOffsetAPI import BRepOffsetAPI_ThruSections
+    from OCP.BRepPrimAPI import BRepPrimAPI_MakeCylinder
+    from OCP.gp import gp_Pnt
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import spatial_fit as fit
@@ -83,6 +87,7 @@ class SpatialMatingFit(unittest.TestCase):
                     result,=fit.review(root,[case],{"a":1,"b":2},mapping,census,"archive","step","fixed",{("a","b"):2})
                     self.assertEqual(result["status"],expected,result)
 
+    @cad_test
     def test_positive_helix_smooth_male_and_wrong_hand(self):
         male = twisted_male()
         self.assertTrue(fit.placed_thread(male, COMMISSION)["matched"])
@@ -90,6 +95,7 @@ class SpatialMatingFit(unittest.TestCase):
         wrong_hand = dict(COMMISSION, threadForm=dict(FORM, hand="left"))
         self.assertFalse(fit.placed_thread(male, wrong_hand)["matched"])
 
+    @cad_test
     def test_same_common_volume_in_wrong_region(self):
         sleeve = BRepAlgoAPI_Cut(cylinder(2.35), cylinder(2.05)).Shape()
         shapes = {"a": sleeve, "b": cylinder(3)}
@@ -102,6 +108,7 @@ class SpatialMatingFit(unittest.TestCase):
             self.assertEqual(fit.assess({"placed":row}, limits, required_methods=["placed"])[0], verdict)
         self.assertEqual(fit.assess({"placed":bad}, limits, required_methods=["placed","missing"])[0],"fail")
 
+    @cad_test
     def test_independent_forbidden_material_survives_an_unresolved_boolean(self):
         commission = dict(COMMISSION, representation="external-thread/smooth-pilot",
                           expectedCommonMm3=[1,2], forbiddenProbes=[{"centerMm":[0,0,1],"radiusMm":.1}])
