@@ -44,3 +44,5 @@ For a shared-station or deferred native readback, [stage its exact plugin and pr
 For a numbered design, commission the whole-robot or subsystem publication scope, then bind both delivery trees to the selected current native issue. [Active model selection](../../docs/private-model-release.md#keep-a-retired-robot-online-during-a-numbered-restart)
 
 For stalled oblique solid pairs, [measure a finite directional clearance bound](../../docs/mechanical-readiness.md#separate-two-oblique-solids-before-a-costly-intersection) on the exact installed articles and keep checks of contact, load and motion in their original scope.
+
+For a keyed drive, commission both loaded flanks, radial support, axial restraint and the signed torque. Reproduce the seated and withdrawn cases before selecting the installed key. [Test torque through a straight key](../../docs/operating-intent.md#check-torque-through-a-straight-key)

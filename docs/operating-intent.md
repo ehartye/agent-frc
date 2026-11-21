@@ -48,3 +48,25 @@ Add a `bounds` pointer to each patch when the observation includes its enclosing
 ## Finite rotating articles
 
 Record the actual 4×4 root-frame rigid displacement in `articlePose` at every solver frame and corresponding observation. Record the center of mass in the source solid, the achieved angular velocity in rad/s, and a source-bound inertia tensor in kg·mm² or an explicit uniform mass distribution. A fixed-orientation study records `orientationModel: fixed-in-saved-axes`. The reviewer carries the entire solid through the bounded segments, including intermediate angles and recipient dwell. The supported angular model is a constant principal-axis spin with measured, balanced contact forces and a verified path on the finite bearing surfaces. An accelerating spin, uncertain contact, or ambiguous full turn requires a more complete execution. A loose key rotated clear of one shaft is an interference diagnostic. Commission its engagement with both keyways, relative phase, axial retention and torque path before qualifying the drive.
+
+## Check torque through a straight key
+
+Can the shaft deliver the required torque to the hub after the key moves axially? Test the two flanks that carry load in the selected direction, and include the radial support that reacts the resulting force. A key can clear the motor and still have too little contact with the hub.
+
+Run the [three-position teaching exercise](../examples/mechanical-readiness/keyed-torque.py) from the plugin root with its CAD Python environment:
+
+```console
+python examples/mechanical-readiness/keyed-torque.py
+```
+
+The script builds and reopens three original STEP fixtures. Their flat sections represent the shaft, key, driven hub and radial bearing surface. Each replay applies the same 150 N·mm moment about the shaft axis. For this exercise the allowable contact pressure is 2 MPa on the two flanks and 10 MPa on the radial support. The structural route evaluator measures the common faces and solves for force and moment balance on each member.
+
+| Key position | Measured hub flank area | Result for this load |
+| --- | ---: | --- |
+| Seated | 24 mm² | **Pass.** The reactions balance the applied moment. |
+| Withdrawn 8 mm | 8 mm² | **Open.** The evaluator leaves about 60.35 N·mm unbalanced on the hub. |
+| Withdrawn 14 mm | 0 mm² | **Fail.** The key has left the hub and the required contact is missing. |
+
+For a real drive, use the drawing and measured installation to establish key length, axial stop locations, backlash and loaded phase. Check the actual flanks after taking up backlash in each commissioned torque direction. Test both axial travel limits, the hub’s operating support and the torque demanded by the mechanism. Attach the capacity evidence for each interface and qualify key shear, bearing pressure, axial retention and fatigue at the required duty. The fixture’s hypothetical pressure limits apply only to the exercise.
+
+Record the members, directed interfaces, pressure evidence and load cases under `structuralRoutes` in the independently approved operating plan. Pin that plan through `operatingRequirements` as described above. Private issuance compares the candidate with the reviewer’s plan and runs the required routes on the selected native issue and its placed STEP. Omitting a commissioned flank or leaving a required route open prevents approval.
