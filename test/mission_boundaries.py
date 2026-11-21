@@ -56,6 +56,34 @@ class MissionBoundaries(unittest.TestCase):
         far=BRepPrimAPI_MakeBox(gp_Pnt(12,0,0),2.,10.,10.).Shape()
         self.assertEqual(measure({"stock":a,"mate":far},case)["status"],"pass")
 
+    def test_excluded_witness_bounds_large_common(self):
+        from unittest.mock import patch
+        from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox
+        from OCP.gp import gp_Pnt
+        from interface_consistency import measure
+        stock=BRepPrimAPI_MakeBox(10.,10.,10.).Solid()
+        mate=BRepPrimAPI_MakeBox(gp_Pnt(6,0,0),10.,10.,10.).Solid()
+        shapes={"stock":stock,"mate":mate}
+        case=dict(pair=["stock","mate"],basis="Registered offset blocks",maxOverlapMm3=1000.,
+                  boundaryReserveMm=.001,volumeToleranceMm3=1e-5,interiorPointsMm=[[8,5,5]],
+                  excludedPointsMm={"stock":[[3,5,5],[3,5,5]],"mate":[[13,5,5]]},
+                  partitions=[dict(subject="stock",frame="installed",originMm=[4,5,0],
+                                   direction=[0,0,1],innerRadiusMm=1,outerRadiusMm=2,lengthMm=4)])
+        actual=measure(shapes,case)
+        self.assertEqual(actual["status"],"pass")
+        self.assertAlmostEqual(actual["directCommonMm3"],400.)
+        self.assertAlmostEqual(actual["commonUpperBoundMm3"],1000.-4*3.141592653589793*2.999**3/3)
+        self.assertEqual(len(actual["excludedMaterial"]["stock"]["disjointBalls"]),1)
+        with patch("component_shape.boolean_measure",return_value=(999.,True)):
+            suspect=measure(shapes,dict(case,pair=["mate","stock"]))
+            self.assertEqual(suspect["status"],"open")
+            self.assertFalse(suspect["numericallyConsistent"])
+            self.assertEqual(suspect["directCommonMm3"],999.)
+            self.assertEqual(measure(shapes,dict(case,maxOverlapMm3=0.))["status"],"fail")
+        bad=measure(shapes,dict(case,excludedPointsMm={"stock":[[6,5,5],[8,5,5]]}))
+        self.assertEqual(bad["status"],"open")
+        self.assertEqual(bad["excludedMaterial"]["stock"]["disjointBalls"],[])
+
     def test_cosmetic_and_directional_chassis_paths(self):
         from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox
         from OCP.gp import gp_Pnt
