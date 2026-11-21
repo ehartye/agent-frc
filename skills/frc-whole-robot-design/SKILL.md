@@ -13,7 +13,7 @@ Sketch competing allocations of these functions before choosing purchased mechan
 
 Create one editable blockout per plausible architecture in the project. Show the same drivetrain, datum, field targets, loaded mass and CG bounds, power source, wiring and service envelope. Mark the parts sharing a port, volume, current budget or driver action. Name the owner, trigger, clearance, failure behavior and recovery for each interface, including returning to a known state after servicing.
 
-Before fixing a mechanism footprint, choose its [attachment stock, pattern and tool side](../../docs/attachment-design.md). Sketch the signed load into the chassis, compare two placements on actual supporting members and reserve room to remove the mechanism.
+Before fixing a mechanism footprint, choose its [attachment stock, pattern and tool side](../../docs/attachment-design.md). Sketch the signed load into the chassis, compare two placements on actual supporting members and reserve room for bracket stock, fasteners, tools and the complete removal path at the worst permitted combination of offsets.
 
 At a meaningful CAD change or saved revision, [check the intended seats, loaded mass and CG, remaining reserve and worst concurrent voltage](../../docs/fusion-design-checkpoints.md). Record the controlling case and rerun the timed route if the change consumes its margin.
 
