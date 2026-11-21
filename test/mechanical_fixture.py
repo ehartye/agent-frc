@@ -132,9 +132,19 @@ def fixture(root,source="fixture.step",assets=(),archive_name="test.f3d", measur
     census.update(documentId="fixture",rootComponentId="frame",rootRevision="r1",pose=poses_to_check[0],
         contacts={"method":"native paired test","units":"mm3","candidatePairs":1,"complete":True,"programSha256":digest(SCRIPTS/"fusion_issue_contacts.py"),
                   "pairs":[dict(pair=[0,1],interferenceMm3=geom["pairs"][0][3],temporaryCommonMm3=geom["pairs"][0][3])]})
+    census["stageEvidence"] = dict(stage="archive-rest", coordinates={})
+    def witness_world(row):
+        local = [[0,0,0],[.1,0,0],[0,.1,0]]
+        m = row["worldTransform"]
+        row["placementPointsCm"] = local
+        row["observedWorldPointsMm"] = [[sum(m[4*i+j]*10*site[j] for j in range(3))+m[4*i+3]
+                                         for i in range(3)] for site in local]
+    for row in census["bodies"]: witness_world(row)
     study["nativeCensus"]=write(root,"test-census.json",census)
     alternate=json.loads(json.dumps(census));alternate["pose"]=poses_to_check[1]
     moving=alternate["bodies"][1];moving["worldTransform"][3]+=10
+    alternate["stageEvidence"] = dict(stage="command-response", coordinates={"slide":{"before":0.0,"observed":1.0}})
+    witness_world(moving)
     for index in (0,3):moving["boundsMm"][index]+=10
     a,b=(r["boundsMm"] for r in alternate["bodies"])
     nearby=all(min(a[k+3],b[k+3])-max(a[k],b[k])>=-1e-6 for k in range(3))
