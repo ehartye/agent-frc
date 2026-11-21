@@ -71,6 +71,24 @@ class Readiness(unittest.TestCase):
         other["leaves"][right]["instance"] = "unrelated"
         with self.assertRaisesRegex(ValueError, "Missing or different"):
             cache.run("measure", self.root, other, folder, pin, True)
+        pending = self.root/"new-cache"
+        with self.assertRaisesRegex(ValueError, "Missing or different"):
+            cache.run("prepare", self.root, other, pending)
+        self.assertFalse(pending.exists())
+        self.assertFalse(list(self.root.glob(".placed-pairs-*")))
+        self.assertEqual(cache.run("prepare", self.root, plan, pending)["indexSha256"], pin)
+        for impossible in (-1., 1001.):
+            with patch("placed_pair_cache.boolean_measure", return_value=(impossible,True)):
+                contradiction = cache.run("measure", self.root, plan, pending, pin)["pairs"][0]
+            self.assertEqual(contradiction["rawCommonMm3"], impossible)
+            self.assertEqual(contradiction["status"], "open")
+        def replace_during_import(path, found):
+            original = load_solids(path, found)
+            path.write_bytes(b"different STEP during full read")
+            return original
+        with patch("placed_pair_cache.load_solids", side_effect=replace_during_import):
+            with self.assertRaisesRegex(ValueError, "changed during the full read"):
+                cache.run("register", self.root, plan)
         (self.root/self.s["step"]["file"]).write_bytes(b"another issue")
         with self.assertRaisesRegex(ValueError, "authority evidence"):
             cache.run("measure", self.root, plan, folder, pin, True)

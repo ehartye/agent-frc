@@ -43,7 +43,7 @@ For a loaded transfer, require its independently registered trajectory law and a
 
 Before promoting a model, run the [local source and final-site release verification](../../docs/private-model-release.md#local-release-command). Keep its receipt with the project and retain the approved public version while any required qualification is open.
 
-For a shared-station or deferred native readback, [stage its exact plugin and project dependencies](../../docs/native-job.md) before dispatch. Keep the same source issue through export, each cold inspection and release.
+For a deferred native readback, [stage its exact plugin and project dependencies](../../docs/native-job.md) before dispatch. Keep the same source issue through export, each cold inspection and release.
 
 For a numbered design, commission the whole-robot or subsystem publication scope, then bind both delivery trees to the selected current native issue. [Active model selection](../../docs/private-model-release.md#keep-a-retired-robot-online-during-a-numbered-restart)
 

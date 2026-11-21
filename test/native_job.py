@@ -72,7 +72,7 @@ class Job(unittest.TestCase):
         self.assertEqual(receipt["registrationSha256"],self.digest)
         self.assertEqual(set(self.project.iterdir()),original)
         self.assertEqual(sentinel.read_text(),"preserve")
-        with job.lease(self.bundle),self.assertRaisesRegex(ValueError,"active"):
+        with job.lease(self.bundle),self.assertRaisesRegex(ValueError,"use lock for 'trial'"):
             job.preflight(*args)
         with self.assertRaisesRegex(ValueError,"outside"):
             job.preflight(self.bundle,self.digest,[str(self.bundle/"inputs")])
@@ -107,7 +107,7 @@ class Job(unittest.TestCase):
             job.retire(self.bundle,self.digest,self.release,self.finish(False),self.archive)
         digest=self.finish()
         with job.using_job(self.bundle,self.digest):
-            with self.assertRaisesRegex(ValueError,"active"):
+            with self.assertRaisesRegex(ValueError,"use lock for 'trial'"):
                 job.retire(self.bundle,self.digest,self.release,digest,self.archive)
         (self.project/"part.step").write_text("changed output")
         with self.assertRaisesRegex(ValueError,"terminal evidence"):
@@ -116,6 +116,12 @@ class Job(unittest.TestCase):
         archived=job.retire(self.bundle,self.digest,self.release,self.finish(),self.archive)
         self.assertFalse(self.bundle.exists())
         self.assertEqual(job.verify(archived,self.digest)["jobId"],"trial")
+
+    def test_different_bundle_ids_can_be_used_concurrently(self):
+        with job.lease(self.bundle), job.lease(self.bundle.with_name("independent")):
+            with self.assertRaisesRegex(ValueError, "use lock for 'trial'"):
+                with job.lease(self.bundle):
+                    self.fail("Acquired the same use lock twice")
 
     def test_interrupted_publication_can_retry_without_exposing_a_partial_job(self):
         original = Path.rename
@@ -141,7 +147,7 @@ native_job.stage(Path(sys.argv[2]),Path(sys.argv[3]),Path(sys.argv[4]),sys.argv[
         self.assertFalse(self.bundle.exists())
         self.assertTrue(list(self.station.glob(".preparing-trial-*")))
         with job.lease(self.bundle, publication=True):
-            with self.assertRaisesRegex(ValueError, "active"):
+            with self.assertRaisesRegex(ValueError, "publication lock for 'trial'"):
                 self.stage()
         first = self.stage()
         preserved = job.sha(self.bundle/"job.json")
