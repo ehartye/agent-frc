@@ -18,14 +18,19 @@ def main(config_path,journal_path):
         staging.__file__ = str(helper)
         exec(compile(helper.read_bytes(), str(helper), "exec"), staging.__dict__)
         job = config['nativeJob']
-        registration = staging.verify(job['bundle'], job['registrationSha256'])
-        teaching = pathlib.Path(job['bundle']).absolute() / 'plugin/examples/fusion-guarded/guarded_case.py'
-        if pathlib.Path(registration['recipe']) != teaching:
-            raise ValueError('The teaching client expects its bundled guarded recipe')
-        script = staging.fusion_script(job['bundle'], job['registrationSha256'], config)
+        if config['stage']=='access':
+            script=staging.fusion_access_script(job['bundle'],job['registrationSha256'],config['jobId'],job['writeDirectories'])
+        else:
+            registration = staging.verify(job['bundle'], job['registrationSha256'])
+            teaching = pathlib.Path(job['bundle']).absolute() / 'plugin/examples/fusion-guarded/guarded_case.py'
+            if pathlib.Path(registration['recipe']) != teaching:
+                raise ValueError('The teaching client expects its bundled guarded recipe')
+            script = staging.fusion_script(job['bundle'], job['registrationSha256'], config)
+    elif config['stage']=='access':
+        raise ValueError('An access check requires the registered native job')
     for key in ('jobId','requestId'):
         if not re.fullmatch(r'[A-Za-z0-9_-]{1,80}',config[key]):raise ValueError('Invalid identifier')
-    readonly=config['stage'] in ('baseline','inspect')
+    readonly=config['stage'] in ('baseline','inspect','access')
     journal=pathlib.Path(journal_path);journal.mkdir(parents=True,exist_ok=True)
     # One cooperating writer for this journal. This is not a lock against the UI or other clients.
     lock=journal/'writer.lock';fd=os.open(lock,os.O_CREAT|os.O_EXCL|os.O_WRONLY)

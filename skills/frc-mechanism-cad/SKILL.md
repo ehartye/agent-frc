@@ -112,4 +112,4 @@ Start a new chassis with [rear plan chamfers](../../docs/frame-profile.md). Use 
 
 Use the [Fusion authority and revision handoff](../../docs/fusion-authority.md) to establish the one current saved native design, the STEP exported from that design and the identity of the engineering evidence. Recheck the register when resuming in another checkout or before replacing a published view.
 
-Before dispatching long native work, [stage the complete pinned package and project inputs in private job storage](../../docs/native-job.md). Reopen and inspect through that directory. Retire it after the station reports terminal release and restores its original open documents.
+Before dispatching long native work, [stage the complete pinned package and project inputs in private job storage](../../docs/native-job.md). Run the guarded access check in Fusion before starting the recipe. Reopen and inspect through that directory. Retire it after the station reports terminal release and restores its original open documents.
