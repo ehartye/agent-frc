@@ -241,6 +241,8 @@ def evaluate_inputs(root,study, geometry=None):
         require(lineage["archiveSha256"]==archive_sha and lineage["stepSha256"]==step_sha and
                 lineage["configuration"]==configuration,"Quality evidence must derive from the designated current Fusion source")
     native={}
+    registered={}
+    census={}
     motion_ids=set()
     motion_ranges={}
     mission_ids=set()
@@ -407,6 +409,7 @@ def evaluate_inputs(root,study, geometry=None):
             finding("identity","fail","constitutive material and density",reason)
     evidence_plan={}
     roster_review=None
+    spatial_results=[]
     allowance={}
     for item in study.get("mating",[]):
         key=tuple(sorted(item["pair"]))
@@ -460,6 +463,20 @@ def evaluate_inputs(root,study, geometry=None):
                     finding("interference",result["status"],result["screw"],json.dumps(result))
         except (KeyError,ValueError,TypeError,RuntimeError,OSError) as error:
             missing("interference","installed fastener stacks",str(error))
+        if "spatialFits" in evidence_plan:
+            from spatial_fit import review as check_regions
+            try:
+                cases=evidence_plan["spatialFits"]
+                if cases:
+                    require(study.get("nativeCensus") and native,"A commissioned spatial fit requires the exact cold body census")
+                    spatial_results=check_regions(root,cases,mount_shapes or load_solids(step)[0],
+                                                  registered,census,archive_sha,step_sha,configuration,allowance)
+                    for row in spatial_results:
+                        if row["status"]!="pass": finding("interference",row["status"],row["case"],row["reason"])
+                else:
+                    require(isinstance(cases,list),"Commission a list of spatial fits")
+            except (KeyError,ValueError,TypeError,OSError,RuntimeError) as error:
+                missing("interference","commissioned spatial fits",str(error))
         checks=evidence_plan.get("numericalInterfaces")
         if not isinstance(checks,dict):
             missing("interference","registered numerical discrepancies","Commission the known numerically ambiguous pairs, or explicitly record an empty inventory.")
@@ -760,7 +777,7 @@ def evaluate_inputs(root,study, geometry=None):
     build="fail" if any_failure else "open" if findings else "pass"
     return {"schema":"agent-frc/mechanical-readiness-result@1","configuration":configuration,"archiveSha256":archive_sha,"stepSha256":step_sha,
             "solids":len(bodies),"measuredPairs":len(pairs),"geometricGroups":geometric,"retainedGroups":retained,"articleFunctions":roster_review,"structuralRoutes":route_results,"loadedTransfers":transfer_results,
-            "engineeringGeometry":publication,"showcaseEligibility":build,"buildReadiness":build,"findings":findings}
+            "spatialFits":spatial_results,"engineeringGeometry":publication,"showcaseEligibility":build,"buildReadiness":build,"findings":findings}
 
 
 def review(root,study,geometry=None):
