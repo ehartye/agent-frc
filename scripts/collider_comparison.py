@@ -69,13 +69,14 @@ def compare(local_bounds, points, expected, observed, tolerance):
         surface[name] = float(np.linalg.norm(np.maximum(q,0)) + min(max(q),0))
     # Cylinder axis polarity and roll do not alter its occupied volume. Only compare its line.
     axial_tilt = math.degrees(math.atan2(math.hypot(rotation[0,2],rotation[1,2]),abs(rotation[2,2])))
-    checks = [max(abs(center)) <= tolerance["mountMm"],
+    mount_offset = float(np.linalg.norm(center))
+    checks = [mount_offset <= tolerance["mountMm"],
               max(abs(residuals)) <= tolerance["extentMm"],
               max(abs(x) for x in surface.values()) <= tolerance["surfaceMm"]]
     if kind == "cylinder":
         checks.append(axial_tilt <= tolerance["axisLineDeg"])
     return dict(status="matched-samples" if all(checks) else "mismatch",
-                centerOffsetLocalMm=center.tolist(), runtimeHalfSizesM=observed["halfSizesM"],
+                centerOffsetLocalMm=center.tolist(), centerOffsetNormMm=mount_offset, runtimeHalfSizesM=observed["halfSizesM"],
                 extentResidualsMm=residuals.tolist(), signedSurfaceDistancesMm=surface,
                 axisLineTiltDeg=axial_tilt if kind=="cylinder" else None)
 

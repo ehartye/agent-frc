@@ -1,5 +1,4 @@
 import unittest
-from copy import deepcopy
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import numpy as np
@@ -59,3 +58,11 @@ class ColliderComparison(unittest.TestCase):
         self.assertAlmostEqual(out['signedSurfaceDistancesMm']['near'],0)
         self.assertAlmostEqual(out['signedSurfaceDistancesMm']['far'],2)
 
+
+    def test_diagonal_mount_offset_exceeds_single_radial_limit(self):
+        obs=dict(kind='box',halfSizesM=[.005]*3,geomToFrameM=pose(.00008,.00008,0))
+        tol=dict(mountMm=.1,extentMm=1,surfaceMm=1,axisLineDeg=1)
+        out=compare(np.array([-5,-5,-5,5,5,5]),{'end':[0,0,5]},pose(),obs,tol)
+        self.assertEqual(out['status'],'mismatch')
+        self.assertAlmostEqual(out['centerOffsetNormMm'],.08*2**.5)
+        self.assertEqual(out['centerOffsetLocalMm'],[.08,.08,0])
