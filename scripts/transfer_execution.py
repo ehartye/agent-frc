@@ -76,13 +76,15 @@ def supported_segment(shape, point, end, displacement, force, outward):
     return False
 
 
-def inspect(root, study, test, trace, parts, piece, stock, *, installed_at=None, rotates=None, mission=None):
+def inspect(root, study, test, trace, parts, piece, stock, *, installed_at=None, rotates=None, mission=None, article=None):
     if installed_at is None:
         installed_at=lambda f,n:placed(parts[n],f["offsetsMm"].get(n,[0,0,0]))
 
     frames=trace["frames"];identity=trace["pieceId"];zero=[0,0,0]
     initial=frames[0]["offsetsMm"]
-    admitted=placed(piece,initial[identity])
+    def part_at(f):
+        return article.at(article.index[f["timeS"]]) if article else placed(piece,f["offsetsMm"][identity])
+    admitted=part_at(frames[0])
     for name,shape in {**parts,**stock}.items():
         obstacle=installed_at(frames[0],name) if name in parts else placed(shape,initial.get(name,zero))
         overlap=common(admitted,obstacle) if distance(admitted,obstacle)<=1e-7 else 0
@@ -94,7 +96,7 @@ def inspect(root, study, test, trace, parts, piece, stock, *, installed_at=None,
         if "frames" in cited and cited["frames"]!=frames:
             return "fail","Proposed trajectory contradicts the clock and positions in its own executed source"
         for f in frames:
-            if f["custody"]=="guided" and distance(placed(piece,f["offsetsMm"][identity]),
+            if f["custody"]=="guided" and distance(part_at(f),
                     installed_at(f,guide))>1e-6:
                 return "fail","The named guide cannot reach the article at the claimed time"
     ref=test.get("execution")
@@ -131,7 +133,7 @@ def inspect(root, study, test, trace, parts, piece, stock, *, installed_at=None,
         require(event.get("timeS")==frame["timeS"],"Execution contact clock differs")
         custody=frame["custody"]
         if custody=="free" or i and frames[i-1]["custody"]=="free":
-            body=trace["holder"];holder=installed_at(frame,body);obj=placed(piece,frame["offsetsMm"][identity])
+            body=trace["holder"];holder=installed_at(frame,body);obj=part_at(frame)
             gap=distance(obj,holder)
             if gap<=1e-7:
                 require(common(obj,holder)==0,"Released article penetrates its original support at the reported release")
@@ -162,7 +164,7 @@ def inspect(root, study, test, trace, parts, piece, stock, *, installed_at=None,
             body=contact["body"]
             require(body in parts,
                     "Observed support needs a compressive contact reaction on an installed body")
-            obj=placed(piece,frame["offsetsMm"][identity])
+            obj=part_at(frame)
             member=installed_at(frame,body)
             require(distance(obj,member)<=1e-6 and common(obj,member)<=1e-9,
                     "Observed support cannot reach the admitted object without penetration")
@@ -180,14 +182,18 @@ def inspect(root, study, test, trace, parts, piece, stock, *, installed_at=None,
                 move=displacement(identity)
                 track=contact.get("nextPointMm",[p+d for p,d in zip(contact["pointMm"],move)])
                 require(len(track)==3 and all(number(n) for n in track),"Missing contact path on the moving support")
-                if not (supported_segment(obj,contact["pointMm"],track,move,force,-1) and
+                if article and article.rotating:
+                    from rigid_article import rotating_face_path
+                    on_article=rotating_face_path(article,i,contact["pointMm"],track,force)
+                else:on_article=supported_segment(obj,contact["pointMm"],track,move,force,-1)
+                if not (on_article and
                         supported_segment(member,contact["pointMm"],track,displacement(body),force,1)):
                     return "open","Continuous contact on the finite reaction surfaces is unqualified"
                 finish=[(x-y-z)/1000 for x,y,z in zip(track,cg,move)]
                 for k in range(3):final_moments[k]+=finish[(k+1)%3]*force[(k+2)%3]-finish[(k+2)%3]*force[(k+1)%3]
         require(math.dist(force_sum,[v*mass/1000 for v in acc])<=1e-6,
                 "Observed forces and gravity do not account for measured translation")
-        require(max(math.hypot(*moments),math.hypot(*final_moments))<=1e-6,"Observed contact wrench cannot sustain the recorded fixed object orientation")
+        require(max(math.hypot(*moments),math.hypot(*final_moments))<=1e-6,"Observed contact wrench cannot sustain the recorded angular motion")
     terminal=events[-1]
     if test["duty"]=="delivery":
         require(raw.get("receiver") in parts and terminal.get("acceptedId")==identity,"No observed receiver admission of this piece")
@@ -199,5 +205,6 @@ def inspect(root, study, test, trace, parts, piece, stock, *, installed_at=None,
             from release_onset import verify_executed
             verify_executed(root,study,test,trace,raw,witness)
         from transfer_mission import verify_terminal
-        verify_terminal(mission,raw,trace,study,piece,installed_at,rotates)
+        verify_terminal(mission,raw,trace,study,piece,installed_at,rotates,article=article)
+    if article and article.dynamics_error:return "open",article.dynamics_error
     return "pass","Full executed clock, physical contacts and terminal observation reconciled"

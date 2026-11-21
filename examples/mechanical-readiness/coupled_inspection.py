@@ -26,7 +26,7 @@ def prepare(root, archive, step, members):
     mass=.000067;normal=mass*9.80665
     ledger=dict(schema="agent-frc/observed-transfer-inventory@1",observed={})
     times={"delivery":[0,.1,.2,.275,.3],"jam-reset":[0,.1,.2]}
-    mission=dict(archiveSha256=archive["sha256"],stepSha256=step["sha256"],mode="handoff",
+    mission=dict(archiveSha256=archive["sha256"],stepSha256=step["sha256"],mode="handoff",orientationModel="fixed-in-saved-axes",
         article=dict(id=part,solid=piece["solid"],sha256=piece["file"]["sha256"]),
         donor=dict(occurrence="Seated gauge:1",body="Seated gauge",solid=near),
         recipient=dict(occurrence="Pocketed base:1",body="Pocketed base",solid=receiver),
@@ -55,7 +55,7 @@ def prepare(root, archive, step, members):
             events.append(observed)
         common=dict(stepSha256=step["sha256"],pieceSha256=piece["file"]["sha256"],pieceId=part,case=duty,
             stockIds=[],holder=near,frames=frames,resetObserved=not travel)
-        raw=dict(common,schema="agent-frc/observed-transfer@1",massKg=mass,centerOfMassLocalMm=[10,5,6.5],
+        raw=dict(common,schema="agent-frc/observed-transfer@1",massKg=mass,orientationModel="fixed-in-saved-axes",centerOfMassLocalMm=[10,5,6.5],
             windowS=[clock[0],clock[-1]],receiver=receiver,duty=duty,outcome="pass",observations=events)
         execution=record("issue/"+duty+"-execution.json",raw)
         ledger["observed"][execution["sha256"]]=dict(origin="executed-simulation",observer="Original analytic teaching fixture",

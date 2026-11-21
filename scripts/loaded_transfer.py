@@ -63,7 +63,15 @@ def replay(root,study,*,motion_model=None,mission=None):
             lm=motion_model["linked"]
             return any(lm["axes"][g][2] and abs(a["nativeCoordinates"][g]-b["nativeCoordinates"][g])>1e-10
                        for g,_ in lm["paths"][lm["owners"][name]])
-        admitted=distance(placed(shapes[piece["solid"]],first[source_id]),installed_at(frames[0],trace["holder"]))
+        article=None
+        if mission or any("articlePose" in f for f in frames):
+            from rigid_article import ArticleMotion
+            observed=read(pinned(root,test["execution"]))
+            article=ArticleMotion(shapes[piece["solid"]],frames,observed,
+                                  fixed_evidence=mission is not None and mission.get("orientationModel")=="fixed-in-saved-axes")
+        def article_at(i):
+            return article.at(i) if article else placed(shapes[piece["solid"]],frames[i]["offsetsMm"][source_id])
+        admitted=distance(article_at(0),installed_at(frames[0],trace["holder"]))
         admission=test.get("admissionGapMm")
         require(number(admission) and admission>=0,"Freeze the measurable piece-to-holder admission gap")
         free=False;speed=0;stages=[]
@@ -94,6 +102,12 @@ def replay(root,study,*,motion_model=None,mission=None):
                 for key in actual:
                     initial.pop(key,None);motion.pop(key,None)
                 initial.update(installed_start);motion.update(installed_moves)
+            if article and article.rotating:
+                article_start,article_moves=article.operations(i)
+                if a["custody"]=="free":
+                    # The rotation is about the initial center; the observed gravity law then moves that center.
+                    article_moves=article_moves[:-1]+motion[source_id]
+                initial[source_id]=article_start;motion[source_id]=article_moves
             if source_id not in motion:motion[source_id]=[dict(kind="translation",travelMm=[0,0,0])]
             free=a["custody"]=="free"
             exemptions=test.get("interfaces",{}).get(str(i),[])
@@ -106,7 +120,7 @@ def replay(root,study,*,motion_model=None,mission=None):
         custody=[f["custody"] for f in frames];terminal=frames[-1];region=test["terminalBoundsMm"]
         require(len(region)==6 and all(number(v) for v in region) and all(region[k]<region[k+3] for k in range(3)),
             "Register the complete terminal piece region in the CAD frame")
-        at=terminal["offsetsMm"][source_id];end=[v+at[i%3] for i,v in enumerate(local)]
+        at=terminal["offsetsMm"][source_id];end=bounds(article_at(len(frames)-1))
         inside=all(region[k]-tol<=end[k] and end[k+3]<=region[k+3]+tol for k in range(3))
         expected=((bool({"free","guided"}&set(custody)) and terminal["custody"]=="received") if duty=="delivery"
                   else "jammed" in custody and terminal["custody"]=="recovery" and trace.get("resetObserved") is True)
@@ -119,7 +133,7 @@ def replay(root,study,*,motion_model=None,mission=None):
         corridor=status
         from transfer_execution import inspect
         try:
-            execution,reason=inspect(root,study,test,trace,actual,shapes[piece["solid"]],stock_shapes,installed_at=installed_at,rotates=rotates_between,mission=mission)
+            execution,reason=inspect(root,study,test,trace,actual,shapes[piece["solid"]],stock_shapes,installed_at=installed_at,rotates=rotates_between,mission=mission,article=article)
         except (ValueError,KeyError,OSError,TypeError) as e:
             execution,reason="fail",str(e)
         if motion_error:execution,reason="fail",motion_error

@@ -28,3 +28,5 @@ Follow the underlying observations for each qualified joint through to their gov
 Verify mounted hardware at alternate native poses and match each installed constituent's physical material and density to its drawing or supplier requirement. Compare unchanged bodies to their previous native issue. Record motion limits and source-backed material substitutions before issuing a replacement. [Installed hardware and stock](../../docs/mechanical-methods.md)
 
 For mechanically linked drives, command only the independent native axes and read back the followers. Compare signed travel, installed phase, obstruction and recovery against the commissioned operating interval. [Review coupled operating motion](../../docs/operating-intent.md)
+
+For a loaded duty, check the entire rotating article and the simultaneous forces and moments on each body through the required interval. Compare the actual nested supplier solids against their commissioned mounting sites. [Finite motion, support and placement](../../docs/operating-intent.md)

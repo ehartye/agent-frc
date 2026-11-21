@@ -247,7 +247,7 @@
         "$root",
         "$study"
       ],
-      "detects": "A mounted assembly can connect to the chassis only through a cosmetic part, its own fixtures or a contact unable to transmit the commissioned direction and load",
+      "detects": "A nominal route may pass through cosmetic parts or a bearing unable to balance all simultaneous signed forces and moments",
       "regression": "test/mission_boundaries.py"
     },
     {
@@ -258,7 +258,7 @@
         "$root",
         "$study"
       ],
-      "detects": "A manufactured housing returns to the wrong commissioned assembly coordinates even when the native and neutral measured poses agree",
+      "detects": "A nested purchased instance or manufactured housing misses its independently commissioned physical landmarks even when wrapper or exchange geometry agrees",
       "regression": "test/mission_boundaries.py"
     }
   ]

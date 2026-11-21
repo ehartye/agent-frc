@@ -57,7 +57,8 @@ def relative_gap(shape,holder,delta,required):
     return gap(0)>=required and gap(1)>=required and clear(0.,1.,0)
 
 
-def verify_terminal(mission,raw,trace,study,piece,installed_at,rotates):
+def verify_terminal(mission,raw,trace,study,piece,installed_at,rotates,article=None):
+    import numpy as np
     frames=trace["frames"];events=raw["observations"];obj=trace["pieceId"]
     donor=mission["donor"]["solid"];receiver=mission["recipient"]["solid"]
     require(trace["holder"]==donor and raw["holder"]==donor,"Run used another initial custodian")
@@ -72,7 +73,7 @@ def verify_terminal(mission,raw,trace,study,piece,installed_at,rotates):
     def offset(f,name):return f["offsetsMm"].get(name,[0.,0.,0.])
     for i in range(start_idx,len(frames)):
         f=frames[i];event=events[i];off=offset(f,obj)
-        shape=transform(piece,[dict(kind="translation",travelMm=off)],1)
+        shape=article.at(i) if article else transform(piece,[dict(kind="translation",travelMm=off)],1)
         b=bounds(shape)
         if mission["regionFrame"]=="recipient-in-saved-root":
             require(not any(rotates(frames[0],g,receiver) for g in frames[:i+1]) if rotates else True,
@@ -80,6 +81,10 @@ def verify_terminal(mission,raw,trace,study,piece,installed_at,rotates):
             dest=offset(f,receiver);b=[v-dest[k%3] for k,v in enumerate(b)]
         require(all(b[k]>=region[k]-tol and b[k+3]<=region[k+3]+tol for k in range(3)),
                 "Complete piece leaves the independently commissioned terminal region")
+        if article and i+1<len(frames):
+            follower=mission["regionFrame"]=="recipient-in-saved-root"
+            p=np.asarray(offset(f,receiver) if follower else [0.,0.,0.]);q=np.asarray(offset(frames[i+1],receiver) if follower else [0.,0.,0.])
+            require(article.terminal(i,np.array(region),tol,p,q),"Complete moving article leaves or lacks a bound within the commissioned dwell region")
         contacts=event.get("contacts",[])
         weight=raw["massKg"]*study["gravityMmS2"]/1000
         load=sum(c["forceOnPieceN"][2] for c in contacts if c["body"]==receiver)
@@ -93,4 +98,14 @@ def verify_terminal(mission,raw,trace,study,piece,installed_at,rotates):
             dest=frames[i+1]
             require(not rotates or not rotates(f,dest,donor),"Rotating donor needs a bounded separation study")
             rel=[v-u-y+x for v,u,y,x in zip(offset(dest,obj),off,offset(dest,donor),offset(f,donor))]
-            require(relative_gap(shape,holder,rel,gap),"Original holder re-enters the piece clearance during receiver dwell")
+            if article and article.rotating:
+                shift=np.array(offset(dest,donor))-np.array(offset(f,donor));speed=math.hypot(*rel)+article.radius*np.linalg.norm(article.rot[i])
+                def certified(a,b,depth):
+                    t=(a+b)/2;h=transform(holder,[dict(kind="translation",travelMm=(shift*t).tolist())],1)
+                    g=distance(article.at(i,t),h)
+                    if g<gap:return False
+                    if g-speed*(b-a)/2>=gap:return True
+                    return depth<18 and certified(a,t,depth+1) and certified(t,b,depth+1)
+                ok=certified(0,1,0)
+            else:ok=relative_gap(shape,holder,rel,gap)
+            require(ok,"Original holder re-enters the piece clearance during receiver dwell")

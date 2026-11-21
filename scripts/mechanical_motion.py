@@ -71,6 +71,7 @@ def separate_translations(a,b,ma,mb,clearance):
     # A fixed separating coordinate plane may move during a gravity/linear
     # stroke. Check the exact minimum of each quadratic relative displacement.
     def coefficients(moves):
+        invariant=[True,True,True]
         linear=[0.,0.,0.];square=[0.,0.,0.]
         for move in moves:
             if move["kind"]=="translation":
@@ -78,11 +79,15 @@ def separate_translations(a,b,ma,mb,clearance):
             elif move["kind"]=="gravity-drop":
                 h=move["fallMm"];w=move["quadraticFraction"]
                 linear[2]-=h*(1-w);square[2]-=h*w
+            elif move["kind"]=="rotation":
+                axis=vec(move["axis"])
+                invariant=[ok and all(axis[k]==0 for k in range(3) if k!=i) for i,ok in enumerate(invariant)]
             else:return None
-        return linear,square
+        return linear,square,invariant
     pa,pb=coefficients(ma),coefficients(mb)
     if pa is None or pb is None:return False
     for i in range(3):
+        if not (pa[2][i] and pb[2][i]):continue
         for first,second,sign in ((a,b,1),(b,a,-1)):
             gap=second[i]-first[i+3]
             v=sign*(pb[0][i]-pa[0][i]);q=sign*(pb[1][i]-pa[1][i])

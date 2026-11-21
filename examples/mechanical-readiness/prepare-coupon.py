@@ -162,7 +162,8 @@ support_capacity=save("issue/support-allowable.json",dict(binding,case=loadcase,
     **{"from":loaded,"to":base},kind="bearing-compression",allowablePressureMPa=2,
     basis="Synthetic desk exercise material bearing allowance from the registered strength duty"))
 intent["structuralRoutes"]={"gauge-support":dict(binding,case=loadcase,loaded=loaded,chassis=base,members=[loaded,base],
-    loadN=1.,direction=load_direction,interfaces=[{"from":loaded,"to":base,"capacitySource":support_capacity}])}
+    loadN=1.,direction=load_direction,appliedForces=[dict(pointMm=[13.8,5,6],forceN=[0,0,-.5]),dict(pointMm=[6.2,5,6],forceN=[0,0,-.5])],
+    appliedMomentsNmm=[],gravityMmS2=[0,0,-9806.65],interfaces=[{"from":loaded,"to":base,"capacitySource":support_capacity}])}
 plan=save("commissioning.json",dict(operatingIntent=intent))
 study["operatingRequirements"]=dict(plan,pointer="/operatingIntent")
 study["materialCensus"]=ref("issue/materials.json")

@@ -35,48 +35,77 @@ def potential(route,boxes):
     return route_exists(route,[(a,b) for a,b in combinations(route["members"],2) if box_gap(boxes[a],boxes[b])<=1e-7])
 
 
-def evaluate(root,route,shapes,approved,anchor,archive,step):
-    from mechanical_motion import bearing_area,common,distance
+def evaluate(root,route,shapes,approved,anchor,archive,step,*,masses=None):
+    from support_equilibrium import applied,bearing_cells,properties,solve
+    import numpy as np
+    permitted={"archiveSha256","stepSha256","configuration","case","loaded","chassis","members","direction","loadN","interfaces","appliedForces","appliedMomentsNmm","gravityMmS2","loadStates","historyLaw"}
+    require(set(route)<=permitted,"Unrecognized structural operating condition or load model")
+    from mechanical_motion import bearing_area,common,distance,vec
     require(route["archiveSha256"]==archive and route["stepSha256"]==step and route["chassis"]==anchor
             and set(route["members"])<=shapes.keys() and named(route["case"]),"Structural load route names another native issue, body or anchor")
     norm=route["direction"];demand=route["loadN"]
-    require(len(norm)==3 and all(number(v) for v in norm) and abs(math.hypot(*norm)-1)<1e-8 and number(demand) and demand>0,
+    require(len(norm)==3 and all(number(v) for v in norm) and abs(math.hypot(*norm)-1)<1e-8 and number(demand) and demand>=0,
             "Freeze a signed unit load direction and a positive installed design load")
-    possible=[];edges=[];limits=[]
+    applied_rows=route.get("appliedForces",[])
+    resultant=np.sum([vec(r["forceN"]) for r in applied_rows],axis=0) if applied_rows else np.zeros(3)
+    require(np.linalg.norm(resultant-demand*np.asarray(norm))<=1e-7,
+            "The declared reference load differs from the combined applied forces before gravity")
+    possible=[];limits=[];contacts=[];seen=set()
     for item in route["interfaces"]:
         a,b=item["from"],item["to"]
         require(a in route["members"] and b in route["members"] and a!=b,"Structural interface names a nonstructural or unknown route member")
+        direction=vec(item.get("direction",norm))
+        key=(a,b,tuple(direction)) if a<b else (b,a,tuple(-x for x in direction))
+        require(key not in seen,"Duplicated structural bearing direction and contact area")
+        seen.add(key)
         if frozenset([a,b]) not in approved:continue
         possible.append((a,b))
         ref=read(pinned(root,item["capacitySource"]))
         require(all(ref[k]==v for k,v in (("archiveSha256",archive),("stepSha256",step),("case",route["case"]),
-                    ("direction",norm),("from",a),("to",b))) and named(ref["basis"]),"Structural allowable belongs to another load case, direction or pair")
+                    ("direction",direction),("from",a),("to",b))) and named(ref["basis"]),"Structural allowable belongs to another load case, direction or pair")
         if ref["kind"]=="bearing-compression":
             pressure=ref["allowablePressureMPa"]
             require(number(pressure) and pressure>0,"Missing reviewed allowable contact pressure")
-            area=bearing_area(shapes[a],shapes[b],norm)
-            capacity=area*pressure if distance(shapes[a],shapes[b])<=1e-7 and common(shapes[a],shapes[b])==0 else 0.
+            patches=bearing_cells(shapes[a],shapes[b],direction,pressure) if distance(shapes[a],shapes[b])<=1e-7 and common(shapes[a],shapes[b])==0 else []
+            capacity=sum(c["capacityN"] for c in patches)
+            contacts.extend(dict(c,**{"from":a,"to":b}) for c in patches)
         else:
             require(ref["kind"]=="installed-joint-allowable" and ref["status"]=="pass" and ref.get("sources"),"Missing installed joint qualification")
             from joint_sources import verify
             verify(root,ref["sources"],[a,b],archive,step,route["configuration"],True)
             capacity=ref["allowableN"];require(number(capacity) and capacity>=0,"Missing joint allowable in the installed direction")
+            point=vec(ref["reactionPointMm"])
+            from OCP.BRepBuilderAPI import BRepBuilderAPI_MakeVertex
+            from OCP.gp import gp_Pnt
+            vertex=BRepBuilderAPI_MakeVertex(gp_Pnt(*point)).Vertex()
+            require(all(distance(vertex,shapes[k])<=1e-7 for k in (a,b)),"Reaction location is outside installed joint solids")
+            contacts.append(dict(pointMm=point,direction=(-np.array(direction)).tolist(),capacityN=capacity,**{"from":a,"to":b}))
         limits.append(dict(pair=[a,b],allowableN=capacity))
-        if capacity>=demand:edges.append((a,b))
-    # Qualification is directional. Each edge transmits the entire registered load;
-    # a parallel load split or an overturning moment needs its own equilibrium study.
-    def directed(pairs):
-        values={route["loaded"]:[route["loaded"]]}
-        for _ in route["members"]:
-            for a,b in pairs:
-                if a in values and b not in values:values[b]=values[a]+[b]
-        return values.get(route["chassis"],[])
-    path=directed(edges)
-    return dict(status="pass" if path else "fail",qualifiedPath=path,interfaceCapacities=limits,
+    from OCP.BRepBuilderAPI import BRepBuilderAPI_MakeVertex
+    from OCP.gp import gp_Pnt
+    for state in [route,*route.get("loadStates",[])]:
+        for f in state["appliedForces"]:
+            name=f.get("body",route["loaded"])
+            require(name in route["members"] and distance(BRepBuilderAPI_MakeVertex(gp_Pnt(*vec(f["pointMm"]))).Vertex(),shapes[name])<=1e-7,
+                    "Applied load point is outside its commissioned installed solid")
+    mass_centers={n:(masses[n],properties(shapes[n],True)[1]) for n in route["members"] if n in (masses or {})}
+    cases=applied(route,route["members"],mass_centers)
+    system=[]
+    for time,forces,moments in cases:
+        # These case loads all act simultaneously on their named bodies.
+        result=solve(route["members"],anchor,contacts,forces,moments)
+        system.append(dict(time=time,**result))
+    path=route_exists(route,possible)
+    status="fail" if not path or not contacts or any(r["status"]=="fail" for r in system) else "pass" if all(r["status"]=="pass" for r in system) else "open"
+    return dict(status=status,
+                qualifiedPath=path,interfaceCapacities=limits,reactionPatches=contacts,loadCases=system,
                 retainedPathWithinStructuralMembers=route_exists(route,approved),case=route["case"])
 
 
 def screen(root,study):
+    if study.get("schema")=="agent-frc/observed-supports@1":
+        from support_equilibrium import observed_supports
+        return observed_supports(root,study)
     census=read(pinned(root,study["nativeCensus"]));route=study["route"]
     require(census["contacts"]["complete"] and census["archiveSha256"]==study["archiveSha256"] and census["pose"]==study["pose"],
             "Missing complete exact native inventory at the selected pose")

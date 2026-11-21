@@ -6,7 +6,7 @@ from mechanical_motion import distance,vec
 from mechanical_readiness import named,number,require
 
 
-def verify(plan,registered,rows,shapes):
+def verify(plan,registered,rows,shapes,*,purchased=()):
     from OCP.BRepBuilderAPI import BRepBuilderAPI_MakeVertex
     from OCP.TopAbs import TopAbs_SHELL
     from OCP.TopExp import TopExp_Explorer
@@ -15,6 +15,7 @@ def verify(plan,registered,rows,shapes):
     require(isinstance(mounts,list),"Independently register the mounting datums of the saved configuration")
     paths=[m["occurrence"] for m in mounts]
     require(len(set(paths))==len(paths) and set(paths)<=set(registered),"Unknown or duplicate commissioned mounting occurrence")
+    require(set(purchased)<=set(paths),"Commission the installed physical occurrence of every purchased article, including nested instances")
     if plan["mode"]=="fixed":
         require(set(paths)==set(registered),"Commission the installation of every fixed placed occurrence")
     native={(row["path"],row["name"]):row for row in rows}
@@ -57,15 +58,21 @@ def observe(root,study):
     require(select(study["archivePointer"])==digest(pinned(root,study["archive"])), "Observation belongs to another native archive")
     rows=[]
     for site in study["sites"]:
-        matrix=np.array(select(site["matrixPointer"]),dtype=float).reshape(4,4)
-        require(site["translationUnit"] in ("cm","mm"),"Unknown native placement units")
-        if site["translationUnit"]=="cm":matrix[:3,3]*=10
-        proper_rotation(matrix.flatten().tolist())
         local=np.asarray(vec(select(site["localMmPointer"])));measured=vec(select(site["worldMmPointer"]))
         target=vec(site["targetWorldMm"]);tol=site["toleranceMm"]
         require(number(tol) and tol>=0 and named(site["occurrence"]) and named(site["basis"]), "Missing physical site or installation authority")
-        projected=matrix[:3,:3]@local+matrix[:3,3]
-        err=math.dist(measured,target);registration=math.dist(measured,projected)
+        if "matrixPointer" in site:
+            matrix=np.array(select(site["matrixPointer"]),dtype=float).reshape(4,4)
+            require(site["translationUnit"] in ("cm","mm"),"Unknown native placement units")
+            if site["translationUnit"]=="cm":matrix[:3,3]*=10
+            proper_rotation(matrix.flatten().tolist())
+            projected=matrix[:3,:3]@local+matrix[:3,3]
+            registration=math.dist(measured,projected)
+        else:
+            require(select(site["nativePathPointer"])==site["occurrence"],"Native vertex belongs to another installed path")
+            registration=select(site["proxyErrorMmPointer"])
+            require(number(registration) and registration>=0,"Missing observed occurrence-context vertex check")
+        err=math.dist(measured,target)
         rows.append(dict(occurrence=site["occurrence"],measuredWorldMm=measured,targetWorldMm=target,
                          registrationErrorMm=registration,installationErrorMm=err,withinTolerance=max(err,registration)<=tol))
     require(rows,"No observed mounting features")

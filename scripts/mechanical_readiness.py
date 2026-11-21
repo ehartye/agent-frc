@@ -381,7 +381,8 @@ def evaluate_inputs(root,study, geometry=None):
             from showcase_contacts import load_solids
             try:
                 mount_shapes=load_solids(step)[0] if evidence_plan.get("mountDatums") else {}
-                verify_mounts(evidence_plan,native,read(pinned(root,study["nativeCensus"]))["bodies"],mount_shapes)
+                purchased=[path for path,obj in native.items() if articles.get(obj.get("article"),{}).get("kind")=="purchased"]
+                verify_mounts(evidence_plan,native,read(pinned(root,study["nativeCensus"]))["bodies"],mount_shapes,purchased=purchased)
             except (ValueError,KeyError,OSError,TypeError,RuntimeError) as e:
                 missing("native","commissioned mounting datums",str(e))
         checks=evidence_plan.get("numericalInterfaces")
@@ -460,6 +461,7 @@ def evaluate_inputs(root,study, geometry=None):
     for group in retained:
         if anchor not in group:
             missing("retention",group,"No registered load-bearing connection to the chassis anchor.")
+    route_results={}
     route_plan=evidence_plan.get("structuralRoutes")
     if not isinstance(route_plan,dict):
         missing("retention","structural duty inventory","Independently nominate structural chassis routes for loaded mounts, or state that none are claimed.")
@@ -467,10 +469,15 @@ def evaluate_inputs(root,study, geometry=None):
         from structural_path import evaluate as structural_check
         from showcase_contacts import load_solids
         installed=load_solids(step)[0];edges={frozenset(x) for x in structural}
+        mass_rows=read(pinned(root,study["materialCensus"]))["bodies"] if study.get("materialCensus") else []
+        native_masses={(r["path"],r["name"]):r["massKg"] for r in mass_rows}
+        solid_mass={solid:native_masses[(path,name)] for path,occ in native.items()
+                    for solid,name in occ.get("nativeBodyNames",{}).items() if (path,name) in native_masses}
         for name,route in route_plan.items():
             try:
-                result=structural_check(root,route,installed,edges,anchor,archive_sha,step_sha)
-                if result["status"]!="pass":finding("retention","fail",name,"No complete directionally qualified load path to the structural chassis.")
+                result=structural_check(root,route,installed,edges,anchor,archive_sha,step_sha,masses=solid_mass)
+                route_results[name]=[dict(time=r["time"],status=r["status"],support=r["normalSupportLimits"],residualsN_Nmm=r["residualsN_Nmm"]) for r in result["loadCases"]]
+                if result["status"]!="pass":finding("retention",result["status"],name,"No demonstrated balance of all simultaneous forces and moments on the qualified installed chassis route.")
             except (ValueError,KeyError,TypeError,OSError,RuntimeError) as e:
                 missing("retention",name,str(e))
     # Numeric checks use project limits, part/operation identities and observed adverse cases.
@@ -625,6 +632,7 @@ def evaluate_inputs(root,study, geometry=None):
                         finding("sweep",case["status"],case["case"],"Linked operating sequence has unresolved clearance or interference.")
         except (ValueError,KeyError,TypeError,OSError) as e:
             missing("native","installed kinematics",str(e))
+    transfer_results={}
     transfers=study.get("transferClaims")
     if not isinstance(transfers,dict) or set(transfers)!=mission_ids:
         missing("build","loaded transfer","The selected physical handoffs must have measured loaded clearance, delivery and recovery cases.")
@@ -643,6 +651,7 @@ def evaluate_inputs(root,study, geometry=None):
             except (KeyError,TypeError,ValueError,OSError) as e:
                 missing("build",name,str(e))
                 continue
+            transfer_results[name]=[{k:c[k] for k in ("id","status","corridorStatus","executionStatus","executionReason","terminalInside","endBoundsMm")} for c in result["cases"]]
             if result["status"]!="pass":
                 reasons=[c["id"]+": "+c["executionReason"] for c in result["cases"] if c["executionStatus"]!="pass"]
                 finding("build",result["status"],name,"Loaded delivery and jam-reset remain unqualified. "+"; ".join(reasons))
@@ -671,7 +680,7 @@ def evaluate_inputs(root,study, geometry=None):
     publication="fail" if any_failure else "open" if any(r["domain"] in engineering_domains for r in findings) else "pass"
     build="fail" if any_failure else "open" if findings else "pass"
     return {"schema":"agent-frc/mechanical-readiness-result@1","configuration":configuration,"archiveSha256":archive_sha,"stepSha256":step_sha,
-            "solids":len(bodies),"measuredPairs":len(pairs),"geometricGroups":geometric,"retainedGroups":retained,
+            "solids":len(bodies),"measuredPairs":len(pairs),"geometricGroups":geometric,"retainedGroups":retained,"structuralRoutes":route_results,"loadedTransfers":transfer_results,
             "engineeringGeometry":publication,"showcaseEligibility":build,"buildReadiness":build,"findings":findings}
 
 

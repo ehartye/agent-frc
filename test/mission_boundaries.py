@@ -61,7 +61,7 @@ class MissionBoundaries(unittest.TestCase):
         from OCP.gp import gp_Pnt
         from structural_path import evaluate,route_exists
         route=dict(archiveSha256="a",stepSha256="s",members=["mount","rail"],loaded="mount",chassis="rail",
-                   loadN=10.,case="vertical duty",direction=[0,0,-1])
+                   loadN=10.,case="vertical duty",direction=[0,0,-1],appliedForces=[dict(pointMm=[1,1,1],forceN=[0,0,-10])],gravityMmS2=[0,0,0],appliedMomentsNmm=[])
         self.assertEqual(route_exists(route,[("mount","skin"),("skin","rail")]),[])
         with TemporaryDirectory() as tmp:
             root=Path(tmp)
@@ -72,6 +72,7 @@ class MissionBoundaries(unittest.TestCase):
             edges={frozenset(shapes)}
             self.assertEqual(evaluate(root,route,shapes,edges,"rail","a","s")["status"],"pass")
             route["direction"]=capacity["direction"]=[0,0,1]
+            route["appliedForces"][0]["forceN"]=[0,0,10]
             route["interfaces"][0]["capacitySource"]=write(root,"capacity.json",capacity)
             self.assertEqual(evaluate(root,route,shapes,edges,"rail","a","s")["status"],"fail")
 
