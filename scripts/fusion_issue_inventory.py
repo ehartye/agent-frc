@@ -74,6 +74,8 @@ def timeline_health(timeline, states):
             if item.objectType.endswith("::TimelineGroup"):
                 row["children"] = read_items(item)
             else:
+                entity = item.entity
+                row["entityType"] = entity.objectType if entity else None
                 row["health"] = names.get(item.healthState, "unknown")
                 if row["health"] in ("warning", "error"):
                     row["message"] = item.errorOrWarningMessage
@@ -109,15 +111,18 @@ def inspect_pose(design, pose, events):
             raise ValueError("Ambiguous or invalid requested native joint coordinate")
         joint = matching[0]
         targets[group] = (joint, attr, value, getattr(joint.jointMotion, attr))
+    evidence = {"stage": stage}
+    rebuilt = stage in ("after-recompute", "captured-recompute")
+    if rebuilt:
+        import adsk.fusion
+        evidence["coldTimeline"] = timeline_health(design.timeline, adsk.fusion.FeatureHealthStates)
     for joint, attr, value, _ in targets.values():
         setattr(joint.jointMotion, attr, value)
         events()
     if stage == "captured-recompute":
         if not design.snapshots.hasPendingSnapshot or design.snapshots.add() is None:
             raise ValueError("A captured-position claim needs a new pending snapshot in the disposable document")
-    evidence = {"stage": stage}
-    if stage in ("after-recompute", "captured-recompute"):
-        import adsk.fusion
+    if rebuilt:
         if not design.computeAll():
             raise ValueError("Fusion could not complete the required recompute")
         events()

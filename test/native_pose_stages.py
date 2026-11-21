@@ -12,7 +12,7 @@ from mechanical_readiness import read, evaluate_inputs, scope_digest
 from fusion_issue_inventory import inspect_pose
 
 
-FEATURE = {"name":"Milled pocket","type":"test::Feature","health":"healthy"}
+FEATURE = {"name":"Milled pocket","type":"test::Feature","entityType":None,"health":"healthy"}
 HEALTH = {k+"FeatureHealthState":i for i,k in enumerate(("Healthy","Warning","Error","Suppressed","RolledBack","Unknown"))}
 
 
@@ -32,7 +32,7 @@ class PoseStages(unittest.TestCase):
         def rebuild():
             motion.slideValue = snaps.position
             return True
-        feature = SimpleNamespace(name=FEATURE["name"], objectType=FEATURE["type"], healthState=0, errorOrWarningMessage="Lost profile")
+        feature = SimpleNamespace(name=FEATURE["name"], objectType=FEATURE["type"], healthState=0, entity=None, errorOrWarningMessage="Lost profile")
         timeline = SimpleNamespace(count=1,item=lambda i:feature)
         design = SimpleNamespace(rootComponent=SimpleNamespace(allJoints=[joint]), snapshots=snaps, computeAll=rebuild, timeline=timeline)
         fusion = SimpleNamespace(FeatureHealthStates=SimpleNamespace(**HEALTH))
@@ -108,6 +108,7 @@ class PoseStages(unittest.TestCase):
                 s["reopen"] = write(root,"reopen-case.json",reopen)
                 obs["stageEvidence"]["stage"] = actual
                 if actual.endswith("recompute"):
+                    obs["stageEvidence"]["coldTimeline"] = {"count":1,"items":[dict(FEATURE)]}
                     obs["stageEvidence"]["timeline"] = {"count":1,"items":[dict(FEATURE)]}
                 adjust(obs)
                 s["nativePoses"] = [write(root,"pose-case.json",obs)]
@@ -125,6 +126,18 @@ class PoseStages(unittest.TestCase):
             self.assertNotEqual(dropped["showcaseEligibility"],"pass")
             error = run("captured-recompute","captured-recompute",lambda r:r["stageEvidence"]["timeline"]["items"][0].update(health="error",message="Lost profile"))
             self.assertTrue(any(f["status"]=="fail" and "Milled pocket" in f["reason"] for f in error["findings"]))
+            def inactive(r):
+                for stream in ("coldTimeline","timeline"):
+                    group = r["stageEvidence"][stream]
+                    group["count"] += 1
+                    group["items"].append({"name":"Alternatives","type":"test::TimelineGroup","children":{
+                        "count":1,"items":[dict(FEATURE,health="suppressed")]}})
+                group = r["stageEvidence"]["timeline"]
+                group["count"] += 1
+                group["items"].append(dict(FEATURE,name="Captured position"))
+            self.assertEqual(run("captured-recompute","captured-recompute",inactive)["showcaseEligibility"],"pass")
+            suppressed = run("after-recompute","after-recompute",lambda r:r["stageEvidence"]["timeline"]["items"][0].update(health="suppressed"))
+            self.assertNotEqual(suppressed["showcaseEligibility"],"pass")
             reset = run("after-recompute","after-recompute",lambda r:r["stageEvidence"]["coordinates"]["slide"].update(observed=0))
             self.assertTrue(any(f["status"]=="fail" and "observed 0" in f["reason"] for f in reset["findings"]))
             drift = run("command-response","command-response",lambda r:r["bodies"][0]["observedWorldPointsMm"][0].__setitem__(0,.5))
