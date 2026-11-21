@@ -12,6 +12,7 @@ from observed_transfer import ObservedTransfer
 from installed_kinematics import InstalledKinematics
 from linked_kinematics import LinkedKinematics
 from native_pose_stages import PoseStages
+from articulated_mass_test import ArticulatedMass
 from mission_boundaries import MissionBoundaries
 from spatial_operating_cases import SpatialOperatingCases
 
