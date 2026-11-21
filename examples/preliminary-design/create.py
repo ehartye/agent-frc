@@ -67,7 +67,7 @@ def create(root):
         carried={"carried article":"carrier"} if c in (duty,service) else {}
         stages[c["id"]]=dict(purpose=c["stage"],movingGroups=moving,carriedWith=carried,
                              allowanceBasis="Synthetic 1 mm packaging reserve")
-    plan=dict(schema="agent-frc/package-layout@1",issue="synthetic-package-A",design=design,step=step,motion=motion,
+    plan=dict(schema="agent-frc/preliminary-layout@1",issue="synthetic-package-A",design=design,step=step,motion=motion,
               datum=datum,groups=groups,mounts=mounts,stages=stages,missingInputs=[],
               control=dict(case="loaded-turn",displaced="rail",moving="head",offsetMm=[0,-50,0],
                            basis="Move the fixed rail into the arc between the same clear endpoints"))
@@ -96,14 +96,14 @@ def create(root):
         identity=dict(id=key,unit=unit,scenario="selected cycle")
         field_input=dict(match="trial-1",actor="B1",input="pickupFace") if key=="pickup-face" else dict(
             match="trial-1",actor="B1",input="actionDwell",period="Opening",stepIndex=0,stepLabel="Pick up tile")
-        accepted=write(key+"-accepted.json",dict(**identity,criterion=criterion,phase="previsualization",
+        accepted=write(key+"-accepted.json",dict(**identity,criterion=criterion,phase="conceptual-design",
                        interfaces=["carrier","carried article"],source=role,fieldInput=field_input,basis="Matched coarse role comparison"))
         measured=write(key+"-current.json",dict(**identity,value=value,issue=plan["issue"],
                        designSha256=design["sha256"],stepSha256=step["sha256"],source=current,
                        valueField="face" if key=="pickup-face" else "acquireSeconds"))
         plan["premises"].append(dict(accepted=accepted,current=measured))
     write("layout.json",plan)
-    subprocess.run(["node",str(cli),"package-check",str(root),"layout.json","--write-view","--require-checked"],
+    subprocess.run(["node",str(cli),"preliminary-check",str(root),"layout.json","--write-view","--require-checked"],
                    stdout=subprocess.DEVNULL,check=True)
     return plan
 

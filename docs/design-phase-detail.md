@@ -4,7 +4,7 @@ Use the least detail that can answer the decision for the current phase. At each
 
 ## 1. Conceptual design
 
-Write the operational concept (ConOps) for the proposed match role. Describe how the robot, partners and operators would carry out a scoring cycle in typical and adverse match scenarios. Use field previsualization (pre-vis) for a trade study of competing cycles. Represent the robot as a movable prism with rough length, width and height. Mark the proposed pickup and release zones relative to the robot. Keep the approach face independent of the direction the robot is driving. Represent the game piece, target and field obstacles at a scale that matters to the route.
+Write the concept of operations (ConOps) for the proposed match role. Describe how the robot, partners and operators would carry out a scoring cycle in typical and adverse match scenarios. Use field rehearsal for a trade study of competing cycles. Represent the robot as a movable prism with rough length, width and height. Mark the proposed pickup and release zones relative to the robot. Keep the approach face independent of the direction the robot is driving. Represent the game piece, target and field obstacles at a scale that matters to the route.
 
 Rehearse the same scoring opportunity with competing approaches. Show headings, clearance on the field, partner traffic, pickup and delivery heights, travel speed, acquisition time, release rate, reset time and the cost of retrying after a miss. Label each value as required, assumed or observed. Where pickup behavior is outside the rehearsal tool's support, record that assumption and leave its result open.
 
@@ -12,7 +12,7 @@ Move to **preliminary design** when the team can replay its chosen cycle, explai
 
 ## 2. Preliminary design
 
-Develop a top-down assembly layout (component blocking) around agreed mounting and motion references. One available CAD technique is a skeleton model containing the common datums, interface geometry and joint axes. Place labeled polyhedra for the frame, bumpers, drivetrain, mechanisms, game piece, battery and other occupied space in one editable robot coordinate system. Give each block dimensions, a function and a fixed or moving parent. Set provisional mounting locations, pivot axes, angles, strokes and handoff poses. Reserve room for cables, tools and part removal where those paths constrain placement.
+Develop a top-down assembly layout around agreed mounting and motion references. One available CAD technique is a skeleton model containing the common datums, interface geometry and joint axes. Place labeled polyhedra for the frame, bumpers, drivetrain, mechanisms, game piece, battery and other occupied space in one editable robot coordinate system. Give each block dimensions, a function and a fixed or moving parent. Set provisional mounting locations, pivot axes, angles, strokes and handoff poses. Reserve room for cables, tools and part removal where those paths constrain placement.
 
 Animate gross mechanism motion through stow, acquisition, loaded transfer, release and reset. Show mechanisms that run together moving on the same clock. Show the piece entering, transferring and leaving. Include any service withdrawal that drives the layout. Use the animation to review the motion and a clearance check on the same geometry and trajectory to verify it between frames. Unrelated occupied volumes must remain separate with the required allowance. Identify intended contact at a particular interface and pose, such as a roller touching the piece.
 

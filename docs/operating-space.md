@@ -1,6 +1,6 @@
 # Define, check and iterate the operating space
 
-Use this shared reference from previsualization, mechanism CAD or troubleshooting. It extends those skills rather than replacing strategy or adding another mandatory interview. Start from the student's selected narrative and existing design revision. Ask one consequential question at a time: “What must still work when the piece arrives off-center, worn, or while the robot is moving?” Offer a small first experiment and do routine artifact work yourself.
+Use this shared reference from conceptual design, mechanism CAD or troubleshooting. It extends those skills rather than replacing strategy or adding another mandatory interview. Start from the student's selected narrative and existing design revision. Ask one consequential question at a time: “What must still work when the piece arrives off-center, worn, or while the robot is moving?” Offer a small first experiment and do routine artifact work yourself.
 
 ## 1. Define what must work, and what each boundary means
 

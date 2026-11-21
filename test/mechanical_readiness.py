@@ -1056,8 +1056,8 @@ class Readiness(unittest.TestCase):
 
     def test_shared_package_keeps_partial_and_stale_handoffs_distinct(self):
         import runpy
-        from package_layout import review
-        build=Path(__file__).resolve().parents[1]/"examples/package-layout/create.py"
+        from preliminary_design import review
+        build=Path(__file__).resolve().parents[1]/"examples/preliminary-design/create.py"
         folder=self.root/"layout"
         plan=runpy.run_path(str(build))["create"](folder)
         file=folder/"layout.json"
@@ -1102,7 +1102,7 @@ class Readiness(unittest.TestCase):
         write(folder,"layout.json",dict(plan,premises=[observations[0],dict(observations[1],current=slower)]))
         stale=review(folder,file)
         self.assertEqual(stale["status"],"reopen")
-        self.assertEqual(stale["reopen"],[dict(phase="previsualization",reason="acquire-time",affected=["carried article","carrier"])])
+        self.assertEqual(stale["reopen"],[dict(phase="conceptual-design",reason="acquire-time",affected=["carried article","carrier"])])
         hold=folder/"hold.json"
         write(folder,hold.name,stale)
         write(folder,"layout.json",plan)
@@ -1116,7 +1116,7 @@ class Readiness(unittest.TestCase):
         field=dict(profile=run_input,result=write(folder,"replayed.json",replay),match="trial-1",actor="B1",
                    input="actionDwell",period="Opening",stepIndex=0,stepLabel="Pick up tile")
         upstream=write(folder,"latest-role.json",dict(issue=plan["issue"],designSha256=plan["design"]["sha256"],
-                       stepSha256=plan["step"]["sha256"],phase="previsualization",scenario="selected cycle",premise="acquire-time",
+                       stepSha256=plan["step"]["sha256"],phase="conceptual-design",scenario="selected cycle",premise="acquire-time",
                        fieldReplay=field))
         repeated=write(folder,"repeat.json",dict(decision,source=upstream,repeat=dict(previousPlanSha256=stale["planSha256"])))
         write(folder,"layout.json",dict(plan,premises=[observations[0],dict(observations[1],accepted=repeated)]))

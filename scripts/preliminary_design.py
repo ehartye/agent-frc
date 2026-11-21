@@ -36,7 +36,7 @@ def compare_premises(root, rows, plan, missing):
         accepted=read(pinned(root,links["accepted"]))
         key=accepted["id"]
         require(named(key) and key not in seen and named(accepted["scenario"]) and named(accepted["basis"])
-                and accepted["phase"] in ("previsualization","package-layout") and named(accepted["unit"]),
+                and accepted["phase"] in ("conceptual-design","preliminary-design") and named(accepted["unit"]),
                 "Bind each premise to a unique ID, scenario, unit, upstream phase and evidence")
         seen.add(key)
         interfaces=names(accepted["interfaces"],"affected interfaces")
@@ -109,7 +109,7 @@ def repeated_field_input(root, repeat, value, unit, replayed):
 
 def verify_reopens(root, plan, prior, decisions, observations, missing, budget):
     """The project supplies its previously held checkpoint independently of the proposed package."""
-    require(prior["schema"]=="agent-frc/package-layout-result@1","Unknown parent checkpoint")
+    require(prior["schema"]=="agent-frc/preliminary-layout-result@1","Unknown parent checkpoint")
     previous_study=prior["planSha256"]
     original={d["id"]:d for d in prior["premises"]}
     current={d["id"]:d for d in decisions}
@@ -118,11 +118,11 @@ def verify_reopens(root, plan, prior, decisions, observations, missing, budget):
     for hold in prior["reopen"]:
         phase,key=hold["phase"],hold["reason"]
         checked=False
-        if phase=="package-layout" and key=="inspection-weight":
+        if phase=="preliminary-design" and key=="inspection-weight":
             checked=budget and budget["massStatus"]=="pass" and not missing
-        elif phase=="package-layout" and key.startswith("voltage/"):
+        elif phase=="preliminary-design" and key.startswith("voltage/"):
             checked=budget and not missing and any(row["case"]==key[len("voltage/"):] and row["status"]=="pass" for row in budget["electricalCases"])
-        elif phase=="package-layout" and key in plan["stages"]:
+        elif phase=="preliminary-design" and key in plan["stages"]:
             checked=set(hold["affected"])<=plan["groups"].keys() and any(row["case"]==key and row["status"]=="pass" for row in observations)
         elif key in current and key in original:
             accepted=read(pinned(root,current[key]["accepted"]))
@@ -136,7 +136,7 @@ def verify_reopens(root, plan, prior, decisions, observations, missing, budget):
                          and evidence.get("issue")==plan["issue"] and evidence.get("designSha256")==plan["design"]["sha256"]
                          and evidence.get("stepSha256")==plan["step"]["sha256"] and evidence.get("phase")==phase
                          and evidence.get("scenario")==accepted["scenario"] and evidence.get("premise")==key
-                         and phase=="previsualization" and isinstance(evidence.get("fieldReplay"),dict)
+                         and phase=="conceptual-design" and isinstance(evidence.get("fieldReplay"),dict)
                          and repeated_field_input(root,evidence["fieldReplay"],current[key]["value"],accepted["unit"],replayed))
         history.append(dict(**hold,repeatVerified=checked))
         if not checked:missing.append("Repeat "+phase+" on this issue before resuming "+key)
@@ -146,7 +146,7 @@ def verify_reopens(root, plan, prior, decisions, observations, missing, budget):
 def review(root, file, previous=None, *, write_view=False):
     plan_hash=digest(file)
     plan=read(file)
-    require(plan["schema"]=="agent-frc/package-layout@1" and named(plan["issue"]), "Select a package issue")
+    require(plan["schema"]=="agent-frc/preliminary-layout@1" and named(plan["issue"]), "Select a package issue")
     design_path=pinned(root,plan["design"])
     check=subprocess.run(["node",str(Path(__file__).with_name("design.mjs")),"validate",str(design_path)],
                          capture_output=True,text=True)
@@ -158,7 +158,7 @@ def review(root, file, previous=None, *, write_view=False):
     robot_frame=design["frames"]["robot"]
     missing=list(plan["missingInputs"])
     names(plan["missingInputs"],"missing inputs",empty=True)
-    result=dict(schema="agent-frc/package-layout-result@1",issue=plan["issue"],planSha256=plan_hash,
+    result=dict(schema="agent-frc/preliminary-layout-result@1",issue=plan["issue"],planSha256=plan_hash,
                 design=plan["design"],designRevision=design["revision"],robotFrame=robot_frame,datum=datum,
                 status="provisional",missingInputs=missing)
     decisions=compare_premises(root,plan.get("premises",[]),plan,missing)
@@ -168,7 +168,7 @@ def review(root, file, previous=None, *, write_view=False):
     if reopen:result["status"]="reopen"
     prior = read(previous) if previous else None
     if prior:
-        require(prior["schema"] == "agent-frc/package-layout-result@1" and prior.get("designId")==design["id"],
+        require(prior["schema"] == "agent-frc/preliminary-layout-result@1" and prior.get("designId")==design["id"],
                 "Prior checkpoint belongs to another design")
         result["previousCheckpointSha256"] = digest(previous)
     result["designId"] = design["id"]
@@ -327,7 +327,7 @@ def review(root, file, previous=None, *, write_view=False):
             hits={n for row in c["pairs"] if row["status"]=="fail" for n in row["pair"]}
             affected=set(stages[c["case"]]["movingGroups"])
             affected.update(k for k,g in groups.items() if hits.intersection(g["members"]))
-            reopen.append(dict(phase="package-layout",reason=c["case"],affected=sorted(affected)))
+            reopen.append(dict(phase="preliminary-design",reason=c["case"],affected=sorted(affected)))
         result["status"]="blocked"
     elif not reopen and observations and not missing and all(c["status"]=="pass" for c in observations):result["status"]="layout-checked"
     budgets = result["budgets"]
@@ -335,7 +335,7 @@ def review(root, file, previous=None, *, write_view=False):
         failures = (["inspection-weight"] if budgets["massStatus"]=="fail" else [])
         failures += ["voltage/"+row["case"] for row in budgets["electricalCases"] if row["status"]=="fail"]
         for key in failures:
-            reopen.append(dict(phase="package-layout",reason=key,affected=sorted(groups)))
+            reopen.append(dict(phase="preliminary-design",reason=key,affected=sorted(groups)))
         if failures:result["status"]="blocked"
     return result
 

@@ -29,7 +29,7 @@ Start with the exact archive and pose the student would receive. Name the scope,
 
 For every defect found by an external study, reproduce its detection using the installed plugin, retain the failing control and rerun the actual candidate. [Method coverage and project issue register](../../docs/mechanical-methods.md)
 
-If repeated clashes, inaccessible attachments or an unattainable scoring role survive local fixes, revisit the premise with `frc-whole-robot-design`. Compare the inherited mechanism with a different architecture under the same role, space, supply, timing and evidence before choosing the next iteration.
+If repeated clashes, inaccessible attachments or an unattainable scoring role survive local fixes, revisit the premise with `frc-preliminary-design`. Compare the inherited mechanism with a different architecture under the same role, space, supply, timing and evidence before choosing the next iteration.
 
 Use the [Fusion authority and revision handoff](../../docs/fusion-authority.md) to establish the one current saved native design, the STEP exported from that design and the identity of the engineering evidence. When resuming in another checkout or before replacing a published view, verify the selected register and lineage with `fusion_authority.py`. For a mechanical review, use `fusion_issue_inventory.capture` in Fusion for missing commissioned poses. [Resume a registered master](../../docs/fusion-authority.md#resume-a-registered-master)
 
