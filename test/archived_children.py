@@ -5,7 +5,55 @@ import json
 from pathlib import Path
 
 
+def rooted_relationship_control():
+    from types import SimpleNamespace as Obj
+    from unittest import TestCase
+    from fusion_occurrence_extract import relationships
+
+    owners = [Obj(fullPathName=f"Mount:{n}") for n in (1, 2)]
+    guides = [Obj(fullPathName=o.fullPathName+"+Guide:1") for o in owners]
+    shafts = [Obj(fullPathName=o.fullPathName+"+Shaft:1") for o in owners]
+    counts = {(path, kind): 0 for path in ["@root", *(o.fullPathName for o in owners + guides + shafts)]
+              for kind in ("joint", "asBuilt", "rigidGroup")}
+    fusion = Obj(RevoluteJointMotion=Obj(cast=lambda m: m.objectType == "revolute"),
+                 SliderJointMotion=Obj(cast=lambda m: m.objectType == "slider"))
+    joints, groups = [], []
+    for i, owner in enumerate(owners):
+        counts[owner.fullPathName, "asBuilt"] = 1
+        counts[owner.fullPathName, "rigidGroup"] = 1
+        joints.append(Obj(name="Pin axis", assemblyContext=owner, occurrenceOne=guides[i], occurrenceTwo=shafts[i],
+                          isSuppressed=False, jointMotion=Obj(objectType="revolute", rotationValue=-0.3+i)))
+        groups.append(Obj(name="Carriage", assemblyContext=owner, occurrences=[guides[i], shafts[i]]))
+    slider = Obj(name="Travel", assemblyContext=owners[0], occurrenceOne=None, occurrenceTwo=guides[0],
+                 isSuppressed=True, jointMotion=Obj(objectType="slider", slideValue=-1.5))
+    counts[owners[0].fullPathName, "joint"] = 1
+    fixed = Obj(name="Root seat", assemblyContext=None, occurrenceOne=None, occurrenceTwo=owners[0],
+                isSuppressed=False, jointMotion=Obj(objectType="rigid"))
+    counts["@root", "joint"] = 1
+    root = Obj(allAsBuiltJoints=joints, allJoints=[slider, fixed], allRigidGroups=groups)
+    rows, sets = relationships(root, counts, fusion)
+    assert [(r["owner"], r["one"], r["two"], r["rotationRad"]) for r in rows[2:]] == [
+        (o.fullPathName, g.fullPathName, s.fullPathName, -0.3+i)
+        for i, (o, g, s) in enumerate(zip(owners, guides, shafts))]
+    assert rows[0]["one"] == "Mount:1" and rows[0]["slideCm"] == -1.5 and rows[0]["suppressed"]
+    assert rows[1]["owner"] == rows[1]["one"] == "@root" and rows[1]["two"] == "Mount:1"
+    assert sets[1]["occurrences"] == [guides[1].fullPathName, shafts[1].fullPathName]
+    case = TestCase()
+    joints[0].occurrenceOne = guides[1]
+    with case.assertRaisesRegex(ValueError, "Unresolved rooted relationship"):
+        relationships(root, counts, fusion)
+    joints[0].occurrenceOne = guides[0]
+    groups[0].occurrences.append(None)
+    with case.assertRaisesRegex(ValueError, "Missing member"):
+        relationships(root, counts, fusion)
+    groups[0].occurrences.pop()
+    root.allAsBuiltJoints = joints[:1]
+    with case.assertRaisesRegex(ValueError, "count differs"):
+        relationships(root, counts, fusion)
+
+
 def run(cli, project, base, vault, temp, parent):
+    rooted_relationship_control()
     packet=temp/"extraction";packet.mkdir()
     def save(name,data):
         p=packet/name

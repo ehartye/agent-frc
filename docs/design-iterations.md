@@ -34,6 +34,8 @@ python <plugin>/scripts/design_iteration.py check PROJECT --vault PRIVATE-CUSTOD
 
 When the team discovers a reason to keep a specific component after retirement, leave the original retrospective and its seal intact. Choose the exact occurrence in the saved parent configuration. Use full paths to distinguish repeated instances. A compound selection can contain several explicit solid-bearing leaf components. Record why each belongs, how its surroundings changed and which installed checks must be rerun.
 
+The cold inventory reads joints and rigid groups in root assembly context. It keeps the owning occurrence, the complete paths of the members, joint type, suppression and measured angle or travel when available. Distinct copies of a shared definition keep their own endpoints. If a rooted collection omits a local relationship, or a member cannot be resolved in its recorded owner, the capture stops before a selection can be accepted.
+
 1. Copy the exact sealed native archive into a [private staged job](native-job.md). Select its SHA-256, saved pose, configuration, occurrence paths and a unique export ID before the run. Keep the reviewed recipe hash with the registration. Begin with Fusion at Home. The following project recipe calls the packaged read-only collector; the output must be a fresh directory under the registered writable location.
 
    ```python
