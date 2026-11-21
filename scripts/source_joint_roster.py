@@ -35,6 +35,8 @@ def intended(root, study, reopen, *, trusted=False):
     require(isinstance(record["motionRanges"], dict) and set(record["motionRanges"]) == groups
             and record["motionRanges"] == reopen["motionRanges"] and bool(groups) == (record["mode"] == "articulated"),
             "Intended operating travel differs from the selected native duty register")
+    require("poseStages" in record or not any("stage" in p for p in reopen.get("inspectionPoses", [])),
+            "Explicit native inspection stages require independently registered poseStages")
     if "poseStages" in record:
         planned = reopen["inspectionPoses"]
         actual = {p["id"]: p.get("stage", "command-response" if p["joints"] else "archive-rest") for p in planned}

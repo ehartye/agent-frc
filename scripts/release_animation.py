@@ -125,7 +125,7 @@ def verify(root, study, spec, path):
                         source.get("stageEvidence",{}).get("stage")==key["stage"],
                         "Published stage needs a freshly observed native census")
                 if pid not in checked_stage_poses:
-                    verify_stage(source,record,{k:(v,) for k,v in naming.items()},study["chassisAnchor"],study["reopenBoundsToleranceMm"])
+                    verify_stage(source,record,{k:(v,) for k,v in naming.items()},study["chassisAnchor"],study["reopenBoundsToleranceMm"],study["connections"])
                     checked_stage_poses.add(pid)
         bindings=contract["channels"]
         require(set(bindings)=={str(i) for i in channels},"Unregistered or unused physics channel")
