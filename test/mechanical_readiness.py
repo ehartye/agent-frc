@@ -51,6 +51,57 @@ class Readiness(unittest.TestCase):
         self.assertNotEqual(result["showcaseEligibility"],"pass")
         self.assertIn("spatial fit roster",json.dumps(result["findings"]))
 
+    def test_piecewise_stock_sections_and_displaced_bore(self):
+        import math
+        from OCP.BRepAlgoAPI import BRepAlgoAPI_Cut
+        from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox, BRepPrimAPI_MakeCylinder, BRepPrimAPI_MakeCone
+        from OCP.gp import gp_Ax2, gp_Dir, gp_Pnt
+        from stock_sections import stock_difference, compare_limit
+        blank = BRepPrimAPI_MakeBox(20, 14, 8).Shape()
+        def bore(x):
+            axis = gp_Ax2(gp_Pnt(x, 7, 3), gp_Dir(0, 0, 1))
+            return BRepAlgoAPI_Cut(blank, BRepPrimAPI_MakeCylinder(axis, 2, 6).Shape()).Shape()
+        left, right = bore(4), bore(14)
+        measured = stock_difference(left, right, [0, 0, 1])
+        for field in ("absentMm3", "extraMm3"):
+            self.assertAlmostEqual(measured[field], 20 * math.pi)
+        self.assertEqual(compare_limit(measured, .01), "fail")
+        self.assertEqual(len(measured["slabs"]), 2)
+        match = stock_difference(left, left, [0, 0, 1])
+        self.assertEqual(compare_limit(match, .01), "pass")
+        self.assertEqual(compare_limit(match, 0), "open")
+        taper = BRepPrimAPI_MakeCone(4, 2, 8).Shape()
+        self.assertEqual(stock_difference(taper, taper, [0, 0, 1])["status"], "open")
+        self.assertEqual(stock_difference(left, right, [1, 0, 0])["status"], "open")
+
+    def test_commissioned_stock_sections_needed_in_release_and_direct_cli(self):
+        from stock_sections import run
+        from mechanical_readiness import component_inputs, scope_digest
+        step = self.root/self.s["step"]["file"]
+        self.s = fixture(self.root, measured=measure(step, .02, [], volumes=True))
+        target, source, label, pose = component_inputs(self.root, self.s)[0]
+        plan = dict(schema="agent-frc/stock-sections@1", before=dict(file=source.name, sha256=digest(source)),
+                    after=self.s["step"], comparisons=[dict(beforeSolid=label, afterSolid=target,
+                    worldTransform=pose, axisWorld=[0,0,1], resolutionMm3=.01)])
+        self.assertEqual(run(self.root, plan)["comparisons"][target]["sourceMatch"], "pass")
+        self.s["componentSectionAxesWorld"] = {target: [0,0,1]}
+        self.s["articles"][self.s["installed"][target]["article"]]["shapeResolutionMm3"] = .01
+        scope = json.loads((self.root/"test-scope.json").read_bytes())
+        for observation in scope["observations"].values():
+            observation["criteriaSha256"] = scope_digest(self.s)
+        signed = write(self.root, "test-scope.json", scope)
+        self.s["coverage"] = {k: {**signed, "id": k} for k in scope["observations"]}
+        self.assertEqual(self.status()["showcaseEligibility"], "open")
+        measured = scan(self.root, self.s)["componentDifferences"]
+        self.change("geometry", lambda g: g.update(componentDifferences=measured))
+        self.assertEqual(self.status()["showcaseEligibility"], "pass")
+        plan["comparisons"][0]["worldTransform"] = list(pose)
+        plan["comparisons"][0]["worldTransform"][3] += 2
+        self.assertEqual(run(self.root, plan)["comparisons"][target]["sourceMatch"], "fail")
+        plan["before"]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(ValueError, "Changed evidence"):
+            run(self.root, plan)
+
     def test_repeated_interfaces_preserve_world_readings_and_distinct_placements(self):
         from unittest.mock import patch
         from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox
