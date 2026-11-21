@@ -1,0 +1,24 @@
+{
+  "schema": "agent-frc/archived-occurrence-request@1",
+  "id": "guide-and-shaft",
+  "iteration": "new-study",
+  "sourceIteration": 1,
+  "evidenceId": "baseline",
+  "sourceSha256": "SEALED_NATIVE_PARENT_SHA256",
+  "destination": "cad/components/selected-guide.json",
+  "configuration": "Saved guide assembly",
+  "sourcePose": "As saved, parked",
+  "occurrences": ["Guide assembly:1+Post:1", "Guide assembly:1+Shaft:1"],
+  "exportId": "guide",
+  "justification": "Retain the measured post spacing and its matched shaft.",
+  "changedConditions": "The mounting face and applied transverse load have changed.",
+  "revalidation": "Cold-verify both installed datums, shaft restraint, service access and guide load.",
+  "inputs": {
+    "parentRoster": {"file": "extraction/roster.json", "sha256": "PARENT_ROSTER_SHA256"},
+    "rosterTerminal": {"file": "extraction/roster-terminal.json", "sha256": "ROSTER_RESULT_SHA256"},
+    "registration": {"file": "native-job.json", "sha256": "JOB_SHA256"},
+    "recipe": {"file": "extract.py", "sha256": "RECIPE_SHA256"},
+    "terminal": {"file": "extraction/terminal.json", "sha256": "EXTRACTION_RESULT_SHA256"},
+    "manifest": {"file": "extraction/manifest.json", "sha256": "COLD_MANIFEST_SHA256"}
+  }
+}

@@ -11,6 +11,7 @@ import sys
 from tempfile import TemporaryDirectory
 
 from native_job import lease, no_link, relative, require, sha, source_file
+import iteration_children
 
 
 def read(file):
@@ -197,6 +198,12 @@ def review(project, vault=None, pending=None, preparing=False, migration=None):
                 and successor["retrospectiveSha256"]==decision_hash, "Archived decision changed")
         observed={f"{f}/{n}":d for f in ("design","carry-forward") for n,d in inventory(base/f).items()}
         require(observed==retro["files"], "Retired iteration contents changed")
+        if vault:
+            for path in observed:
+                if path.startswith("carry-forward/"):
+                    historical=read(base/path)
+                    if historical.get("schema")=="agent-frc/iteration-child-import@1":
+                        validate_import(historical,pointer(i,opening["id"]),prior,base/"design",vault)
         for k,r in retro["evidence"].items():
             prior[(i,k)]=r
             old_digests.add(r["sha256"])
@@ -211,33 +218,109 @@ def review(project, vault=None, pending=None, preparing=False, migration=None):
     explicit={}
     for name in inventory(base.parent/"carry-forward"):
         rec=read(base.parent/"carry-forward"/name)
-        validate_import(rec,active,prior,base)
+        validate_import(rec,active,prior,base,vault)
         require(rec["destination"] not in explicit, "Duplicate manual import destination")
         explicit[rec["destination"]]=rec
     if pending:
-        validate_import(pending,active,prior,base)
+        validate_import(pending,active,prior,base,vault)
         at=pending["destination"]
         require(at not in explicit or pending==explicit[at], "Destination already imported")
         explicit[at]=pending
+    selections={}
+    for name, rec in explicit.items():
+        if rec["schema"]=="agent-frc/iteration-child-import@1":
+            manifest=read(source_file(base,name))
+            used,total=selections.setdefault(rec["sourceSha256"],(set(),manifest["parentBodies"]))
+            require(total==manifest["parentBodies"],"Conflicting full parent counts")
+            used.update((g["occurrence"],body) for g in manifest["members"] for body in g["bodies"])
+            require(len(used)<total,"Selections together cover the entire retired design")
     for name, value in files.items():
         require(value not in master_hashes, "A retired whole design cannot appear as a successor artifact")
         if value in old_digests:
             require(name in explicit and explicit[name]["sourceSha256"]==value,
                     "Historical bytes must match the exact deliberately selected source")
     return dict(active=active, root=active["root"], authority=active["root"]+"/cad/fusion-authority.json",
-                manualImports=len(explicit), historyVerified=active["number"]-1, _prior=prior)
+                manualImports=len(explicit), historyVerified=active["number"]-1, _prior=prior,
+                childCustody=("verified" if vault else "private replay pending") if selections else "none")
 
 
-def validate_import(entry,active,prior,base):
-    require(entry.get("schema")=="agent-frc/iteration-import@1" and entry.get("iteration")==active["id"],
+def validate_import(entry,active,prior,base,vault=None):
+    child = entry.get("schema")=="agent-frc/iteration-child-import@1"
+    require((child or entry.get("schema")=="agent-frc/iteration-import@1") and entry.get("iteration")==active["id"],
             "Carry-forward must name the active successor")
     identifier(entry["id"])
     asset=prior.get((entry["sourceIteration"],entry["evidenceId"]))
-    require(asset and asset["kind"]=="element" and asset["sha256"]==entry["sourceSha256"],
-            "Select one registered element; a prior whole design cannot become the new master")
+    require(asset and asset["kind"]==("design" if child else "element") and asset["sha256"]==entry["sourceSha256"],
+            "Select the exact registered source for this import method")
     for k in ("justification","changedConditions","revalidation"):
         label(entry[k])
     require(sha(source_file(base,entry["destination"]))==entry["destinationSha256"], "Imported artifact differs from its recorded bytes")
+    if child:
+        manifest=read(source_file(base,entry["destination"]))
+        require(manifest["schema"]=="agent-frc/selected-archive-occurrences@1"
+                and manifest["nativeParent"]==asset["sha256"] and manifest["configuration"]==entry["configuration"]
+                and manifest["installedRevalidation"]=="pending"
+                and sorted(g["occurrence"] for g in manifest["members"])==sorted(entry["occurrences"]),
+                "Selected child manifest does not match the import decision")
+        masters={r["sha256"] for r in prior.values() if r["kind"]=="design"}
+        require(all(iteration_children.digest(g["archiveSha256"]) not in masters for g in manifest["members"]),
+                "A selected child archive matches a whole retired design")
+        if vault:
+            require(iteration_children.selection(entry,vault)==manifest,"Replayed private selection differs")
+
+
+def carry_child(project,request_file,expected,vault):
+    require(sha(request_file)==iteration_children.digest(expected),"Child selection request digest differs")
+    req=read(request_file)
+    require(req["schema"]=="agent-frc/archived-occurrence-request@1","Wrong child selection request")
+    vault=vault.resolve(strict=True)
+    require(not vault.is_relative_to(project) and not project.is_relative_to(vault),"Use the independent private custody")
+    it=project/"iterations"
+    with lease(it/"design-iterations",publication=True), TemporaryDirectory(dir=it,prefix=".selecting-") as t:
+        temp=Path(t)
+        old=review(project,vault)
+        require(old["active"] and old["active"]["id"]==req["iteration"],"Select the active successor")
+        asset=old["_prior"].get((req["sourceIteration"],req["evidenceId"]))
+        require(asset and asset["kind"]=="design" and asset["sha256"]==req["sourceSha256"],"Choose the sealed parent design")
+        entry={k:req[k] for k in ("id","iteration","sourceIteration","evidenceId","sourceSha256","destination",
+                                  "configuration","sourcePose","occurrences","exportId","justification","changedConditions","revalidation")}
+        identifier(entry["id"])
+        for key in ("configuration","sourcePose","exportId","justification","changedConditions","revalidation"):
+            label(entry[key])
+        archive_file(request_file,expected,vault)
+        entry.update(schema="agent-frc/iteration-child-import@1",requestSha256=expected,
+                     proof=iteration_children.collect(req,request_file.parent,vault,archive_file))
+        manifest=iteration_children.selection(entry,vault)
+        masters={r["sha256"] for r in old["_prior"].values() if r["kind"]=="design"}
+        require(all(g["archiveSha256"] not in masters for g in manifest["members"]),
+                "An extracted member matches a whole retired design")
+        base=project/old["root"]
+        rel=relative(entry["destination"])
+        require(rel.suffix==".json","Destination must be a selected occurrence manifest")
+        folder=base
+        for part in rel.parts[:-1]:
+            folder=folder/part;no_link(folder)
+            require(folder.is_dir(),"Create the intended private manifest folder first")
+        candidate=temp/"manifest.json";write(candidate,manifest)
+        entry["destinationSha256"]=sha(candidate)
+        target=base/rel
+        if target.exists():
+            no_link(target)
+            require(sha(target)==sha(candidate),"Existing destination differs")
+        previous=[read(base.parent/"carry-forward"/n) for n in inventory(base.parent/"carry-forward")]
+        used={(g["occurrence"],b) for g in manifest["members"] for b in g["bodies"]}
+        for rec in previous:
+            require((rec["id"]!=entry["id"] and rec["destination"]!=entry["destination"]) or rec==entry,
+                    "Import identity or destination is already occupied")
+            if rec["schema"]==entry["schema"] and rec["sourceSha256"]==entry["sourceSha256"]:
+                other=read(source_file(base,rec["destination"]))
+                require(other["parentBodies"]==manifest["parentBodies"],"Conflicting full parent counts")
+                used.update((g["occurrence"],b) for g in other["members"] for b in g["bodies"])
+        require(len(used)<manifest["parentBodies"],"Selections together cover the entire retired design")
+        if not target.exists():
+            os.link(candidate,target)
+        put(base.parent/"carry-forward"/(entry["id"]+".json"),entry,temp)
+        return review(project,vault)
 
 
 def cutover(project, plan, vault):
@@ -325,9 +408,12 @@ def main():
         if name!="carry":p.add_argument("--vault",type=Path,required=name=="start")
     s=sub.add_parser("seal");s.add_argument("project",type=Path)
     s.add_argument("--from-commit",required=True);s.add_argument("--vault",type=Path,required=True)
+    child=sub.add_parser("carry-child");child.add_argument("project",type=Path);child.add_argument("input",type=Path)
+    child.add_argument("--expected",required=True);child.add_argument("--vault",type=Path,required=True)
     args=parser.parse_args();project=args.project.resolve(strict=True)
     if args.action=="start":result=cutover(project,read(args.input),args.vault)
     elif args.action=="seal":result=seal_prototype(project,args.from_commit,args.vault)
+    elif args.action=="carry-child":result=carry_child(project,args.input,args.expected,args.vault)
     elif args.action=="check":result=review(project,args.vault)
     else:
         it=project/"iterations"
@@ -336,6 +422,7 @@ def main():
             # The manual copy precedes its receipt. Validate history without using
             # the new unregistered destination as an accepted import.
             pending=read(args.input)
+            require(pending.get("schema")=="agent-frc/iteration-import@1","Use carry-child with the frozen private proof")
             review(project, pending=pending)
             base=project/active["root"]
             put(base.parent/"carry-forward"/(identifier(pending["id"])+".json"),pending,Path(t))

@@ -84,6 +84,8 @@ with TemporaryDirectory() as d:
     entry["destinationSha256"]=sha(target);entry_file.write_text(json.dumps(entry))
     assert cli("design_iteration.py","carry",project,entry_file).returncode==0
     assert review(project,vault)["manualImports"]==1
+    from archived_children import run
+    run(cli,project,base,vault,temp,sha(baseline/"master.f3d"))
     (base/"cad/master.f3d").write_bytes(b"new empty-root test design")
     candidate={"id":active["id"],"source":{"kind":"offline","archive":{"file":active["root"]+"/cad/master.f3d","sha256":sha(base/"cad/master.f3d")}}}
     register=register_path(project);register.write_text(json.dumps(candidate));verify_active(project,register,candidate)
