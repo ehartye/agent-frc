@@ -192,3 +192,43 @@ class InstalledKinematics(unittest.TestCase):
             self.assertEqual(fixed["unresolvedPairs"],0);self.assertEqual(len(calls),4)
             with self.assertRaisesRegex(ValueError,"another archive"):
                 measure(*args,p,["other",*fingerprint[1:]],1,[(0,1)])
+
+    def test_native_boolean_zero_with_retained_lumps_is_unresolved(self):
+        import sys
+        from types import SimpleNamespace as S
+        from unittest.mock import patch
+        import fusion_issue_contacts as contacts
+
+        def body(lumps, volume):
+            return S(isValid=True, lumps=S(count=lumps), volume=volume)
+
+        class Entities(list):
+            add = list.append
+
+        good, ambiguous, empty = body(2, .004), body(3, 0.), body(0, 0.)
+        manager = S(copy=lambda item: item, booleanOperation=lambda *args: True)
+        api = S(core=S(ObjectCollection=S(create=Entities)), fusion=S(
+            TemporaryBRepManager=S(get=lambda: manager), BooleanTypes=S(IntersectionBooleanType=0)))
+        def design(*bodies):
+            return S(createInterferenceInput=lambda _: S(),
+                     analyzeInterference=lambda _: [S(interferenceBody=b) for b in bodies])
+        rows = [dict(path=name, name="Body") for name in ("Shaft", "Block")]
+        with patch.dict(sys.modules, {"adsk": api, "adsk.core": api.core, "adsk.fusion": api.fusion}):
+            def pair(native, temporary):
+                return contacts.measure_pair(native, rows, [0, 1], [(temporary, None)] * 2, 0, 1)
+
+            for row, key, other in ((pair(design(good, ambiguous), good), "interferenceMm3", "temporaryCommonMm3"),
+                                    (pair(design(good), ambiguous), "temporaryCommonMm3", "interferenceMm3")):
+                self.assertEqual(row["status"], "unresolved")
+                self.assertIsNone(row[key])
+                self.assertEqual(row[other], 4.)
+                self.assertEqual(row["errors"][key]["rawMm3"], 0.)
+                self.assertEqual(row["errors"][key]["lumps"], 3)
+            separated = pair(design(), empty)
+            self.assertEqual(separated["status"], "measured")
+            self.assertEqual([separated["interferenceMm3"], separated["temporaryCommonMm3"]], [0., 0.])
+            # Apply the same reader inside a fit partition even if the original common is positive.
+            model = S(section=lambda common, region, cylinder, boolean, volume: {"insideCoreMm3": volume(ambiguous)})
+            with self.assertRaises(contacts.UnresolvedVolume) as exc:
+                contacts.native_spatial(model, {}, manager, [good])
+            self.assertEqual(exc.exception.observation, {"lumps": 3, "rawMm3": 0.})

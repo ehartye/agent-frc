@@ -6,15 +6,30 @@ import math
 from pathlib import Path
 
 
+class UnresolvedVolume(ValueError):
+    def __init__(self, lumps, raw):
+        self.observation = {"lumps": lumps, "rawMm3": raw if math.isfinite(raw) else str(raw)}
+        super().__init__(f"Native Boolean retained {lumps} lump(s) at reported volume {raw} mm³")
+
+
+def boolean_volume_mm3(body):
+    """Read material volume while distinguishing an empty result from an inconsistent one."""
+    if not body or not body.isValid:
+        raise ValueError("Invalid native Boolean result body")
+    lumps = body.lumps.count
+    if lumps == 0:
+        return 0.
+    raw = 1000 * body.volume
+    if not math.isfinite(raw) or raw <= 0:
+        raise UnresolvedVolume(lumps, raw)
+    return raw
+
+
 def native_spatial(model, region, manager, bodies):
     """Partition copies of Fusion assembly-world intersection bodies."""
     import adsk.core
     import adsk.fusion
     parts = {}
-    def volume(shape):
-        if not shape or not shape.isValid:
-            raise ValueError("Invalid native fit partition")
-        return 1000*shape.volume if shape.lumps.count else 0.
     def cylinder(low,high,r):
         p=lambda xyz:adsk.core.Point3D.create(*[v/10 for v in xyz])
         return manager.createCylinderOrCone(p(low),r/10,p(high),r/10)
@@ -25,7 +40,7 @@ def native_spatial(model, region, manager, bodies):
             raise ValueError("Unresolved native region partition")
         return out
     for body in bodies:
-        for k,v in model.section(body,region,cylinder,boolean,volume).items():
+        for k,v in model.section(body,region,cylinder,boolean,boolean_volume_mm3).items():
             parts[k]=parts.get(k,0.)+v
     if not parts:
         parts={k:0. for k in ("totalMm3","outsideCylinderMm3","insideCoreMm3","permittedMm3","conservationErrorMm3")}
@@ -118,6 +133,8 @@ def measure_pair(design, rows, proxies, solids, a, b, *, spatial_fit=None):
             row["spatialFit"]["methods"][key]=native_spatial(model,region,manager,bodies)
         except Exception as e:
             spatial_errors[key]=str(e)
+            if isinstance(e, UnresolvedVolume):
+                row["spatialFit"].setdefault("rawVolumeErrors", {})[key] = e.observation
     def native():
         entities=adsk.core.ObjectCollection.create()
         entities.add(proxies[a]);entities.add(proxies[b])
@@ -125,7 +142,7 @@ def measure_pair(design, rows, proxies, solids, a, b, *, spatial_fit=None):
         result=design.analyzeInterference(query)
         if result is None:raise ValueError("Fusion returned no interference result")
         bodies=[r.interferenceBody for r in result]
-        total=sum(1000*body.volume for body in bodies)
+        total=sum(boolean_volume_mm3(body) for body in bodies)
         observe("fusionInterference",bodies)
         return total
     def transient():
@@ -161,8 +178,7 @@ def measure_pair(design, rows, proxies, solids, a, b, *, spatial_fit=None):
                 spatial_errors["representation"]=str(e)
         if not manager.booleanOperation(shape,other,adsk.fusion.BooleanTypes.IntersectionBooleanType):
             raise ValueError("Native transient intersection returned failure")
-        if not shape.isValid:raise ValueError("Transient intersection body is invalid")
-        total=1000*shape.volume if shape.lumps.count else 0
+        total=boolean_volume_mm3(shape)
         observe("fusionTransient",[shape] if shape.lumps.count else [])
         return total
     errors={}
@@ -173,6 +189,8 @@ def measure_pair(design, rows, proxies, solids, a, b, *, spatial_fit=None):
             row[key]=value
         except Exception as e:
             errors[key]=dict(type=type(e).__name__,message=str(e));row[key]=None
+            if isinstance(e, UnresolvedVolume):
+                errors[key].update(e.observation)
     row["status"]="unresolved" if errors else "measured"
     if errors:row["errors"]=errors
     if spatial_errors:row["spatialFit"]["errors"]=spatial_errors
