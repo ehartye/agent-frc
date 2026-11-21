@@ -158,12 +158,20 @@ def evaluate_inputs(root,study, geometry=None):
     # A receipt cannot drop a candidate just because the intersection or distance was inconvenient.
     probes={tuple(sorted(j["pair"])) for j in study.get("connections",[])}
     required=candidate_pairs(boxes,tol,probes)
+    unresolved={}
+    for diagnostic in geometry.get("unresolvedIntersections",[]):
+        pair=tuple(sorted(diagnostic["pair"]))
+        raw=diagnostic["rawCommonMm3"]
+        require(pair in required and pair not in unresolved and named(diagnostic.get("reason")) and
+                (raw is None or number(raw)), "Invalid unresolved intersection")
+        unresolved[pair]=diagnostic
     pairs={}
     for row in geometry["pairs"]:
         require(isinstance(row,list) and len(row)==4,"Missing pair volume")
         a,b,gap,vol=row
         pair=tuple(sorted((a,b)))
-        require(pair not in pairs and pair in required and number(gap) and gap>=0 and number(vol) and vol>=0,
+        require(pair not in pairs and pair in required and number(gap) and gap>=0 and
+                ((vol is None and pair in unresolved) or (pair not in unresolved and number(vol) and vol>=0)),
                 "Invalid/repeated solid pair")
         pairs[pair]=(gap,vol)
     require(set(pairs)==required,"Incomplete broad-phase pair measurements")
@@ -426,6 +434,10 @@ def evaluate_inputs(root,study, geometry=None):
                 except (ValueError,KeyError,TypeError,RuntimeError) as e:
                     missing("interference",name,"Unresolved registered numerical control: "+str(e))
     for (a,b),(gap,vol) in pairs.items():
+        if vol is None:
+            detail=unresolved[(a,b)]
+            missing("interference",[a,b],f"Unresolved STEP intersection: {detail['reason']}. Raw volume: {detail['rawCommonMm3']} mm³. Check the corresponding native pair.")
+            continue
         limit=allowance.get((a,b),0)
         if vol>limit:
             finding("interference","fail",[a,b],f"{vol:.9g} mm³ common material exceeds {limit:.9g} mm³.")

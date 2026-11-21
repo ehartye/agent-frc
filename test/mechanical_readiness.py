@@ -85,6 +85,45 @@ class Readiness(unittest.TestCase):
         self.assertTrue(any(r["status"]=="open" and "relative placement" in r["reason"] for r in interference))
         self.assertTrue(any(r["status"]=="fail" and r["subject"]==["spare block","spare frame"] for r in interference))
 
+    def test_world_intersection_checks_topology_before_accepting_a_volume(self):
+        from unittest.mock import patch
+        from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox
+        from OCP.gp import gp_Pnt
+        shapes={"a":BRepPrimAPI_MakeBox(2,2,2).Shape(),
+                "b":BRepPrimAPI_MakeBox(gp_Pnt(1,1,1),2,2,2).Shape()}
+        with patch("showcase_contacts.load_solids", return_value=(shapes,[])):
+            direct=measure(self.root,0,[],volumes=True)
+            self.assertAlmostEqual(direct["pairs"][0][3],1.)
+            for value,valid in [(0.,False),(1.,False),(9.,True)]:
+                with self.subTest(value=value,valid=valid), patch("component_shape.boolean_measure",return_value=(value,valid)) as query:
+                    result=measure(self.root,0,[],volumes=True)
+                    query.assert_called_once()
+                    self.assertIsNone(result["pairs"][0][3])
+                    observation,=result["unresolvedIntersections"]
+                    self.assertEqual(observation["rawCommonMm3"],value)
+                    self.assertEqual(observation["topologyValid"],valid)
+            with patch("component_shape.boolean_measure",side_effect=ValueError("kernel unresolved")):
+                result=measure(self.root,0,[],volumes=True)
+                self.assertIsNone(result["unresolvedIntersections"][0]["rawCommonMm3"])
+
+    def test_unresolved_world_pair_preserves_an_independent_clash(self):
+        def invalid(geometry):
+            geometry["pairs"][0][3]=None
+            geometry["unresolvedIntersections"]=[{"pair":["block","frame"],"topologyValid":False,
+                "rawCommonMm3":8.1,"reason":"Invalid topology"}]
+        self.change("geometry",invalid)
+        findings=self.status()["findings"]
+        self.assertTrue(any(r["status"]=="open" and "Invalid topology" in r["reason"] for r in findings))
+        self.assertFalse(any(r["status"]=="fail" for r in findings))
+        def extra(geometry):
+            geometry["bodies"].update({"spare frame":[100,0,0,110,10,10],"spare block":[109,0,0,119,10,10]})
+            geometry["pairs"].append(["spare block","spare frame",0,1.])
+        self.change("geometry",extra)
+        self.assertEqual(self.status()["showcaseEligibility"],"fail")
+        self.change("geometry",lambda g:g.pop("unresolvedIntersections"))
+        with self.assertRaisesRegex(ValueError,"Invalid/repeated"):
+            self.status()
+
     def test_connected_clash_and_incomplete_pair_coverage(self):
         self.change("geometry",lambda g:g["pairs"][0].__setitem__(3,8.1))
         r=self.status()
