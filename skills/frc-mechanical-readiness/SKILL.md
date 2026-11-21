@@ -32,3 +32,5 @@ For mechanically linked drives, command only the independent native axes and rea
 For a loaded duty, check the entire rotating article and the simultaneous forces and moments on each body through the required interval. Compare the actual nested supplier solids against their commissioned mounting sites. [Finite motion, support and placement](../../docs/operating-intent.md)
 
 For a loaded transfer, require its independently registered trajectory law and all synchronized measurements. Reconcile one-sided article momentum across every custody transition and any independently observed impact. Check the full dwell and retain a matched within-boundary and crossed-boundary case. [Commission measured motion](../../docs/loaded-transfer.md#register-the-executed-trajectory)
+
+Before promoting a model, run the [local source and final-site release verification](../../docs/private-model-release.md#local-release-command). Keep its receipt with the project and retain the approved public version while any required qualification is open.

@@ -75,7 +75,13 @@ export async function verifyPair(sourceRoot,sourcePacket,stageRoot,stagePacket,k
   }
 }
 function git(repo,args){return execFileSync('git',['-C',repo,...args],{maxBuffer:64*1024*1024});}
-async function audit(root,base,policyName,packetPath,pubKey){
+export function verifyCommittedFile(root,commit,name) {
+  const current=git(root,['hash-object','--no-filters',file(root,name)]).toString().trim();
+  const entry=git(root,['ls-tree','-z',commit,'--',':(literal)'+name]).toString();
+  check(entry.match(/^100(?:644|755) blob ([0-9a-f]+)\t/)?.[1]===current,
+    'Selected source differs from committed bytes: '+name);
+}
+export async function audit(root,base,policyName,packetPath,pubKey,sourceCommit){
   root=realpathSync(root);relative(policyName);check(/^[a-f0-9]{40}$/.test(base),'Pin the approved baseline commit from trusted CI');
   // Both the path inventory and scope are read from the approved tree, never from the candidate.
   const policy=JSON.parse(git(root,['show',base+':'+policyName]));
@@ -99,6 +105,11 @@ async function audit(root,base,policyName,packetPath,pubKey){
     const old=git(root,['ls-tree','-r','--name-only','-z',base,'--',dir]).toString().split('\0');
     for(const n of old)if(geometry.test(n))names.add(n);
   }
+  if(sourceCommit) {
+    const required=new Set([...names,...reviewed]);
+    if(packetPath) required.add(path.relative(root,packetPath).split(path.sep).join('/'));
+    for(const name of required) verifyCommittedFile(root,sourceCommit,name);
+  }
   for(const n of names){
     const current=file(root,n);
     if(reviewed.has(n))continue;
@@ -109,8 +120,8 @@ async function audit(root,base,policyName,packetPath,pubKey){
   }
   return {verifiedFiles:names.size,signedFiles:reviewed.size,baseline:base};
 }
-export async function auditStaged(approved,candidate,policyPath,packetPath,pubKey){
-  const base=realpathSync(approved),root=realpathSync(candidate),policy=JSON.parse(readFileSync(policyPath));
+export async function auditStaged(approved,candidate,policyPath,packetPath,pubKey,fieldRoot=process.env.FRC_VERIFIED_FIELD_ROOT){
+  const base=realpathSync(approved),root=realpathSync(candidate),policy=typeof policyPath==='string'?JSON.parse(readFileSync(policyPath)):policyPath;
   check(base!==root && policy.schema==='agent-frc/staged-model-policy@1' && typeof policy.project==='string' &&
     Array.isArray(policy.mutableFieldPages) && Array.isArray(policy.modelFiles) && policy.modelFiles.length,'Invalid independently approved stage policy');
   const fixed=new Set(policy.modelFiles.map(relative)),mutable=new Set(policy.mutableFieldPages.map(relative));
@@ -161,7 +172,7 @@ export async function auditStaged(approved,candidate,policyPath,packetPath,pubKe
       }
       check(old.has(name)&&next.has(name),'Expected registered field page in both stages: '+name);
       if(await hash(file(base,name))===await hash(file(root,name)))continue;
-      const witness=process.env.FRC_VERIFIED_FIELD_ROOT;
+      const witness=fieldRoot;
       check(witness,'Regenerate changed field pages independently using the trusted plugin');
       const trusted=realpathSync(witness);
       for(const unsafe of [base,root]){

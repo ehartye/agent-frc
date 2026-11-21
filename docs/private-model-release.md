@@ -1,6 +1,34 @@
 # Keep the working robot private while checking a public replacement
 
-The protected job is **Mechanical model eligibility**. Run it before a Pages artifact upload and on pull requests that can change the published branch. For branch-served Pages, require a pull request and require this named check before merging changes to the served directory. Add the required status after its first successful run. Preserve the repository’s existing admin override. Read the gate code, baseline revision and verification key from trusted configuration. A candidate must not select its own key or rewrite its own baseline.
+Run the same source and final-site checks at the release station and in CI. For branch-served Pages, require **Mechanical model eligibility** before merging into the served branch. For generated Pages, verify the final build before upload. Read the gate code, baseline revision and verification key from trusted configuration. Preserve the project’s existing admin policy.
+
+## Local release command
+
+Use a clean checkout of the approved commit outside the candidate. Freeze a known approved site's exact digest once with `node PLUGIN/scripts/local-showcase-release.mjs digest APPROVED_SITE`. Retain that digest independently. For the first model on an existing kickoff-only site, include the already published entry page in the protected inventory and require signed delivery for the new CAD assets.
+
+Store the following inputs in the approved project's `.github/showcase-release.json`. Replace the sample digest with the actual frozen SHA-256.
+
+```json
+{
+  "schema": "agent-frc/local-showcase-release@1",
+  "layout": "branch",
+  "servedDirectory": "docs",
+  "sourcePolicy": ".github/source-policy.json",
+  "stagePolicy": ".github/staged-policy.json",
+  "sourcePacket": ".github/model-release/source.json",
+  "stagePacket": ".github/model-release/staged.json",
+  "approvedSiteSha256": "<approved full-site SHA-256>"
+}
+```
+
+Use `"layout":"built"` for a separately generated site. The [trusted adapter](../templates/prepare-showcase-release.mjs) prepares `station.json` from this register, the approved Git SHA, original presentation build, public reviewer key and any independently rebuilt field output. A station can instead directly supply those values using `approvedCommit`, `approvedSite`, `reviewerPublicKey` and optional `independentFieldRoot`. Relative station paths resolve from its configuration file.
+
+```sh
+node APPROVED_PROJECT/scripts/prepare-showcase-release.mjs APPROVED_PROJECT PROJECT PLUGIN FRESH_OUTPUT
+node PLUGIN/scripts/local-showcase-release.mjs check FRESH_OUTPUT/station.json PROJECT
+```
+
+For a separate build, pass its actual final site as the last argument, e.g. `node PLUGIN/scripts/local-showcase-release.mjs check FRESH_OUTPUT/station.json PROJECT FRESH_OUTPUT/site`. Branch mode walks the registered directory in the checkout and compares every file to its committed Git blob. Both modes reconcile every protected source asset, signed asset in the source packet and both public issue packets to their committed Git blobs, use the two policies from the approved commit, compare the complete final tree against the frozen site, and require the two signed packets to designate the same issue when either is supplied. Changed protected model files require a signed issue. Save stdout as the release receipt only on exit zero, and publish those exact bytes. Changes after review require a new run. [Project setup and CI](project-ci.md)
 
 ## Qualify the exact public assets at the private station
 

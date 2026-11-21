@@ -1,47 +1,73 @@
 name: Robot showcase
 on:
-  push:
   pull_request:
+    branches: [main]
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
+  checks:
+    uses: ./.github/workflows/project-checks.yml
+
   build:
     name: Mechanical model eligibility
-    if: github.event_name == 'pull_request' || github.ref_name == github.event.repository.default_branch
+    needs: checks
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Validate owner-controlled release pins
+        env:
+          VERIFIER: ${{ vars.AGENT_FRC_PLUGIN_SHA }}
+          APPROVED: ${{ vars.FRC_APPROVED_MODEL_COMMIT }}
+          LAYOUT: ${{ vars.FRC_PAGES_LAYOUT }}
+        run: |
+          [[ "$VERIFIER" =~ ^[a-f0-9]{40}$ && "$APPROVED" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$LAYOUT" == branch || "$LAYOUT" == built ]]
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           path: project
           fetch-depth: 0
           persist-credentials: false
-      - name: Get the reviewed showcase builder
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ vars.FRC_APPROVED_MODEL_COMMIT }}
+          path: approved
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: ehartye/agent-frc
-          ref: v0.49.0
-          path: builder
+          ref: ${{ vars.AGENT_FRC_PLUGIN_SHA }}
+          path: plugin
           persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
-      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6
+      - name: Prepare the approved output, project final build and independent field evidence
+        env:
+          FRC_REVIEWER_PUBLIC_KEY: ${{ vars.FRC_REVIEWER_PUBLIC_KEY }}
+        run: node approved/scripts/prepare-showcase-release.mjs approved project plugin "$RUNNER_TEMP/release"
+      - name: Verify the final site after all project-specific copies
+        env:
+          LAYOUT: ${{ vars.FRC_PAGES_LAYOUT }}
+          APPROVED: ${{ vars.FRC_APPROVED_MODEL_COMMIT }}
+        run: |
+          config="$RUNNER_TEMP/release/station.json"
+          node --input-type=module -e 'import fs from "node:fs"; const c=JSON.parse(fs.readFileSync(process.argv[1])); if(c.layout!==process.env.LAYOUT || c.approvedCommit!==process.env.APPROVED) throw Error("Wrong release configuration");' "$config"
+          args=()
+          if [[ "$LAYOUT" == built ]]; then args+=("$RUNNER_TEMP/release/site"); fi
+          node plugin/scripts/local-showcase-release.mjs check "$config" project "${args[@]}"
+      - if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch && vars.FRC_PAGES_LAYOUT == 'built'
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa
         with:
-          python-version: '3.12'
-      - name: Install the STEP measurement dependency
-        run: python -m pip install cadquery-ocp==8.0.1.0.0
-      - name: Verify the manifest and build the public files
-        run: node builder/scripts/robot-highlights.mjs project/highlights.json "$RUNNER_TEMP/showcase"
-      - if: github.event_name != 'pull_request'
-        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
-        with:
-          path: ${{ runner.temp }}/showcase
+          path: ${{ runner.temp }}/release/site
 
   deploy:
-    if: github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch
+    if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch && vars.FRC_PAGES_LAYOUT == 'built'
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -55,4 +81,4 @@ jobs:
       cancel-in-progress: false
     steps:
       - id: publish
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e
