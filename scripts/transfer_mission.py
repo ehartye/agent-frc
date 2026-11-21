@@ -3,7 +3,7 @@ from hashlib import sha256
 import json
 import math
 
-from mechanical_readiness import number,require
+from mechanical_readiness import named, number, pinned, read, require
 from mechanical_motion import bounds,distance,transform
 
 
@@ -15,7 +15,7 @@ def commissioned(plan,system,transfer,reopen):
     mission=plan.get("transferCriteria",{}).get(transfer["id"])
     require(isinstance(mission,dict),"An independent mission name alone cannot establish the required physical delivery")
     from transfer_trajectory import keys
-    keys(mission,set("trajectorySchema archiveSha256 stepSha256 mode orientationModel article donor recipient regionFrame terminalBoundsMm positionToleranceMm donorClearanceMm minRecipientWeightFraction dwellS cases".split()),"commissioned mission")
+    keys(mission,set("trajectorySchema archiveSha256 stepSha256 mode orientationModel article donor recipient regionFrame terminalBoundsMm positionToleranceMm donorClearanceMm minRecipientWeightFraction dwellS cases terminalObservations".split()),"commissioned mission")
     for key in ("archive","step"):
         require(mission[key+"Sha256"]==system[key]["sha256"],"Commissioned mission belongs to another native issue")
     obj=transfer["piece"]
@@ -42,7 +42,78 @@ def commissioned(plan,system,transfer,reopen):
     require(isinstance(case_windows,dict) and set(case_windows)=={r["id"] for r in transfer["cases"]} and all(
             case_windows[c["id"]]=={"duty":c["duty"],"windowS":c["windowS"]} for c in transfer["cases"]),
             "Mission is missing a required executed case, duty or clock")
+    if "terminalObservations" in mission:
+        clocks = mission["terminalObservations"]
+        require(isinstance(clocks, dict) and clocks, "Expected a nonempty observation commission")
+        for case_id, clock in clocks.items():
+            require(case_id in case_windows and case_windows[case_id]["duty"] == "delivery",
+                    "Commission the terminal observation on a named delivery case")
+            require(isinstance(clock, dict) and set(clock) == {"channel", "periodNs", "originNs"}
+                    and named(clock["channel"]) and type(clock["periodNs"]) is int and clock["periodNs"] > 0
+                    and type(clock["originNs"]) is int, "Invalid commissioned observation channel or clock")
     return mission
+
+
+def terminal_observation(root, mission, raw, witness, execution_sha):
+    """Check an independently recorded admission decision at every commissioned producer tick."""
+    clock = (mission or {}).get("terminalObservations", {}).get(raw["case"])
+    if clock is None:
+        require("terminalObservation" not in witness, "Observation requires a matching commissioned case")
+        return None
+    binding = witness.get("terminalObservation")
+    if binding is None:
+        return {"status": "open", "reason": "The commissioned terminal observation is missing"}
+    require(isinstance(binding, dict) and set(binding) == {"record", "source"},
+            "Expected independently pinned terminal observation and original acquisition")
+    pinned(root, binding["source"])
+    observation = read(pinned(root, binding["record"]))
+    expected = {"schema": "agent-frc/terminal-observation@1", "executionSha256": execution_sha,
+                "missionSha256": identity(mission), "sourceSha256": binding["source"]["sha256"],
+                "pieceId": raw["pieceId"], "case": raw["case"], "recipient": mission["recipient"],
+                "channel": clock["channel"]}
+    require(isinstance(observation, dict) and set(observation) == set(expected) | {"samples"}
+            and all(observation[k] == v for k, v in expected.items()),
+            "Terminal observation differs from the registered run, article, recipient, source or channel")
+    # Decimal conversion preserves declared decimal endpoints; tolerate only binary roundoff below one picosecond.
+    from decimal import Decimal
+    end = Decimal(str(raw["windowS"][1]))
+    start = end - Decimal(str(mission["dwellS"]))
+    ticks = []
+    for t in (start, end):
+        ns = t * 1_000_000_000
+        rounded = round(ns)
+        tick, remainder = divmod(rounded - clock["originNs"], clock["periodNs"])
+        if abs(ns - rounded) > Decimal("0.0001") or remainder:
+            return {"status": "open", "reason": "Dwell endpoint lies outside the commissioned observation clock"}
+        ticks.append(tick)
+    first, last = ticks
+    samples = observation["samples"]
+    require(isinstance(samples, list), "Expected the original ordered observation samples")
+    previous = None
+    observed = 0
+    denied = None
+    for sample in samples:
+        require(isinstance(sample, dict) and set(sample) == {"tick", "timeNs", "acceptedId"},
+                "Record each original tick, timestamp and observed admission decision")
+        tick = sample["tick"]
+        require(type(tick) is int and type(sample["timeNs"]) is int
+                and sample["timeNs"] == clock["originNs"] + tick * clock["periodNs"]
+                and (previous is None or tick > previous), "Repeated, shifted or unordered observation tick")
+        accepted = sample["acceptedId"]
+        require(accepted is None or named(accepted), "Expected an observed article ID or explicit negative")
+        if first <= tick <= last:
+            observed += 1
+            if accepted != raw["pieceId"] and denied is None:
+                denied = tick
+        previous = tick
+    expected_count = last - first + 1
+    result = {"channel": clock["channel"], "firstTick": first, "lastTick": last,
+              "observedTicks": observed, "requiredTicks": expected_count}
+    if denied is not None:
+        return dict(result, status="fail", reason=f"Admission of the commissioned article was absent at tick {denied}")
+    if observed != expected_count:
+        return dict(result, status="open", reason="The terminal observation does not cover every commissioned tick")
+    return dict(result, status="pass", reason="Article admission observed at each commissioned tick")
 
 
 def relative_gap(shape,holder,delta,required):

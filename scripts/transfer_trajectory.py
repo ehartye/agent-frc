@@ -15,7 +15,7 @@ TRACE=set("stepSha256 pieceSha256 pieceId case stockIds holder frames resetObser
 EVENT=set("timeS accelerationMmS2 velocityMmS angularVelocityRadS articlePose acceptedId contacts ready actuator commandedOffsetMm obstructed".split())
 FRAME=set("timeS custody nativeCoordinates offsetsMm articlePose installedTransforms".split())
 CONTACT=set("body pointMm forceOnPieceN nextPointMm".split())
-WITNESS=set("origin observer producer basis missionSha256 releaseOnsets trajectorySha256 impulseSources".split())
+WITNESS=set("origin observer producer basis missionSha256 releaseOnsets trajectorySha256 impulseSources terminalObservation".split())
 
 
 def keys(data,allowed,kind):

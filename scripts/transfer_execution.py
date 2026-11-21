@@ -208,5 +208,11 @@ def inspect(root, study, test, trace, parts, piece, stock, *, installed_at=None,
             verify_executed(root,study,test,trace,raw,witness)
         from transfer_mission import verify_terminal
         verify_terminal(mission,raw,trace,study,piece,installed_at,rotates,article=article)
+    from transfer_mission import terminal_observation
+    observation = terminal_observation(root, mission, raw, witness, ref["sha256"])
+    if observation is not None:
+        article.trajectory_evidence["terminalObservation"] = observation
+        if observation["status"] != "pass":
+            return observation["status"], observation["reason"]
     if article and article.dynamics_error:return "open",article.dynamics_error
     return "pass","Full executed clock, physical contacts and terminal observation reconciled"
