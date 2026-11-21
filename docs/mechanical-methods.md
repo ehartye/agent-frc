@@ -168,3 +168,32 @@ For a successor, pin a `materialHistory` study referencing both native inventori
 A complete pair census records coverage even when one kernel returns no result. Inspect `unresolvedPairs` and the named pair's independent `interferenceMm3` and `temporaryCommonMm3`. An unresolved kernel keeps release open. A measured clash from either method remains a failure. For a signed complete census, call `fusion_retry_station.retry(app, project, lineage_file, previous_file, new_output, pairs, key, station_folder)` on the same pose. It verifies the old native signature and resolved source, remeasures only the named unresolved indices and issues a new receipt. Keep the former observation for comparison. A different source, pose, Fusion runtime or placed inventory needs a fresh census.
 
 To locate work around a proposed replacement, run `python scripts/native_pair_scope.py PROJECT selection.json`. Pin the complete native `census`, give the exact `members` as occurrence-path/body-name pairs, and set `thresholdMm3`. The report lists measurements inside, crossing and outside the selected subassembly, including unresolved kernel results on either side. A local change still requires a fresh complete assembly check on the successor.
+## Recheck named pairs from a large parked STEP
+
+Use this diagnostic when several workers need the same installed parts, such as a rail and its two supports. One complete import resolves the parts in the registered STEP root frame. Subsequent workers can measure those named pairs from a small cache. Preparation still needs enough memory to import the whole assembly.
+
+Commission the current project's export lineage and copy the exact solid keys, instance indices and occurrence paths from its complete placed inventory. This synthetic plan selects one joint.
+
+```json
+{
+  "schema": "agent-frc/placed-pairs@1",
+  "lineage": {"file": "cad/issue/lineage.json", "sha256": "REPLACE_WITH_EXACT_DIGEST"},
+  "leaves": {
+    "Rail": {"definition": "Rail", "instance": "1.1.1", "occurrencePath": ["Frame", "Rail:1", "Rail"]},
+    "Support": {"definition": "Support", "instance": "1.2.1", "occurrencePath": ["Frame", "Support:1", "Support"]}
+  },
+  "pairs": [["Rail", "Support"]]
+}
+```
+
+```sh
+python PLUGIN/scripts/placed_pair_cache.py prepare PROJECT plan.json NEW_CACHE
+python PLUGIN/scripts/placed_pair_cache.py register PROJECT plan.json
+python PLUGIN/scripts/placed_pair_cache.py measure PROJECT plan.json NEW_CACHE --index-sha256 REGISTERED_DIGEST --fallback
+```
+
+Run `register` against the canonical files in a separate process. Keep its `indexSha256` in the commissioning record, independently of the cache. Use that value for `measure`. Prepare only in a fresh directory. If interrupted, prepare again in another fresh directory. Keep source files and cache quiescent during a run.
+
+Every read verifies the active Fusion source, export lineage, method bytes and selected pairs. Each cached solid must match the commissioned pose and reproduce its entire mesh-free binary BRep after decoding. Some legitimate solids change encoding on this round trip. With `--fallback`, a fresh canonical import must reproduce the independent index before the tool measures the pairs. The receipt records the failed cache check and which geometry it used.
+
+Each row gives minimum distance in mm, raw common volume in mm³ with its topology validity, and coincident opposed planar face area in mm². A positive area can help locate a seat; check its load direction, contact and retention separately. Read `measured` as a completed measurement. An invalid Boolean leaves its row open. Results cover the listed pairs at this saved pose; run the full census and commissioned motion studies for release.
