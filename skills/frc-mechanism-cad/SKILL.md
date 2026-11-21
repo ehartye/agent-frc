@@ -10,7 +10,7 @@ Use **Autodesk Fusion as the student authoring environment**. Start from the pro
 
 Before drawing mounting holes, [design the attachment](../../docs/attachment-design.md). Select a stock section, locate the supported bolt or rivet rows and size the overlap from the actual host edges. Check full bracket and host stock, fastener volumes, tool motion and the removal path at the permitted combined offsets. Document the candidate hardware, governing load, shop process and service order in the project drawing.
 
-When a design agent creates, inserts or moves a part, run the [checked placement](../../docs/checked-placement.md) against the last accepted assembly before adopting the new pose. Keep rejected proposals and their named pair evidence with the experiment.
+When a design agent creates, inserts or moves a part, run the [checked placement](../../docs/checked-placement.md) against the last accepted assembly before adopting the new pose. Keep rejected proposals and their named pair evidence with the experiment. For an edit under a rotated or translated parent, [apply the nested root-frame example](../../docs/checked-placement.md#move-a-nested-child-in-the-root-frame) and remeasure the intended material after attaching and reopening.
 
 After a feature batch or saved revision, [check timeline health, physical seats, mass and center of mass](../../docs/fusion-design-checkpoints.md). Carry changes in load or timing into the project power and route comparisons.
 

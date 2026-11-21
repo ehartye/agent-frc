@@ -33,6 +33,71 @@ def decision(x,values,rule=None):
     return inspect_proposal(a,b,request,measure)
 
 class Placements(unittest.TestCase):
+    def test_worked_nested_callback_and_cold_material_witness(self):
+        from importlib.util import module_from_spec, spec_from_file_location
+        from types import SimpleNamespace as Obj
+        from unittest.mock import Mock, patch
+        file = Path(__file__).resolve().parents[1]/"examples/mechanical-readiness/root_frame_placement.py"
+        spec = spec_from_file_location("worked_nested_placement", file)
+        example = module_from_spec(spec)
+        spec.loader.exec_module(example)
+        parent_pose = [0,-1,0,10, 1,0,0,20, 0,0,1,0, 0,0,0,1]
+        target = [0,-1,0,8, 1,0,0,21, 0,0,1,0, 0,0,0,1]
+        desired = Obj(asArray=lambda: target)
+        plan = dict(parent="Seat:1", occurrence="Seat:1+Plate:1", body="Plate", backing="Seat:1+Backing:1",
+                    jointName="Plate clamp", jointMotion="adsk::fusion::RigidJointMotion",
+                    parentWorldCm=parent_pose, worldTransformCm=target,
+                    cornerLocalCm=[1,0,0], cornerWorldCm=[8,22,0])
+        world = [8,22,0]
+        vertex = Obj(geometry=Obj(asArray=lambda: [1,0,0]),
+                     createForAssemblyContext=lambda occ: Obj(geometry=Obj(asArray=lambda: world)))
+        body = Obj(isSolid=True, name="Plate", vertices=[vertex])
+        backing = Obj(fullPathName=plan["backing"])
+        child = Obj(fullPathName=plan["occurrence"], component=Obj(bRepBodies=[body]), transform2=desired)
+        api = Obj(core=Obj(Point2D=None), fusion=Obj(FeatureHealthStates=Obj(HealthyFeatureHealthState=0)))
+        health = Obj(isValid=True, isSuppressed=False, isRolledBack=False, healthState=0, errorOrWarningMessage="")
+        joint = Obj(name=plan["jointName"], jointMotion=Obj(objectType=plan["jointMotion"]), isSuppressed=False,
+                    isValid=True, timelineObject=health,
+                    occurrenceOne=Obj(createForAssemblyContext=lambda parent: child),
+                    occurrenceTwo=Obj(createForAssemblyContext=lambda parent: backing))
+        parent = Obj(fullPathName=plan["parent"], component=Obj(asBuiltJoints=[joint]),
+                     transform2=Obj(asArray=lambda: parent_pose))
+        snapshots = Obj(hasPendingSnapshot=True, add=Mock())
+        design = Obj(rootComponent=Obj(allOccurrences=[parent, child, backing]), snapshots=snapshots, computeAll=lambda: True)
+        attach = Mock()
+        with patch.object(example, "placement_witness", return_value=(0., [])):
+            first = example.edit_nested(design, plan, desired, attach, api)
+            self.assertFalse(first["wroteTransform"])
+            snapshots.add.assert_not_called()
+            child.transform2 = Obj(asArray=lambda: transform(1,2))
+            moved = example.edit_nested(design, plan, desired, attach, api)
+            self.assertTrue(moved["wroteTransform"])
+            snapshots.add.assert_called_once()
+            attach.assert_called_with(parent.component)
+            with self.assertRaisesRegex(ValueError, "outside the selected child"):
+                example.inspect_attachment(design, {**plan, "materialOccurrence": backing.fullPathName}, api)
+            leaf = Obj(fullPathName=child.fullPathName + "+Corner:1", component=child.component)
+            design.rootComponent.allOccurrences.append(leaf)
+            witnessed = example.inspect_attachment(design, {**plan, "materialOccurrence": leaf.fullPathName}, api)
+            self.assertEqual(witnessed["materialOccurrence"], leaf.fullPathName)
+            # Re-resolve the path after a cold reopen rather than retaining its warm proxy.
+            cold = deepcopy(design)
+            self.assertEqual(example.inspect_attachment(cold, plan, api)["cornerErrorMm"], 0)
+            world[0] += .4
+            with self.assertRaisesRegex(ValueError, "material missed"):
+                example.inspect_attachment(cold, plan, api)
+            world[0] -= .4
+            health.healthState = 1
+            with self.assertRaisesRegex(ValueError, "healthy active timeline"):
+                example.inspect_attachment(design, plan, api)
+            health.healthState = 0
+            joint.occurrenceTwo = joint.occurrenceOne
+            with self.assertRaisesRegex(ValueError, "Wrong joint endpoints"):
+                example.inspect_attachment(design, plan, api)
+            parent.component.asBuiltJoints.clear()
+            with self.assertRaisesRegex(ValueError, "Expected one named as-built joint"):
+                example.inspect_attachment(design, plan, api)
+
     def test_shared_forbidden_material_vetoes_even_when_one_native_volume_is_unknown(self):
         pair=[[s["path"],s["name"]] for s in scene(3)["bodies"]]
         probe={"centerMm":[1,1,-2],"radiusMm":.1}
