@@ -181,9 +181,12 @@ def inspect_proposal(before, after, request, measure, same_shape=None, *, accept
             report["broadPhaseClear"]+=1
             continue
         record={"bodies":pair,"interface":rule.get("kind","nonmating"),"rule":rule}
+        spatial_status=None
         try:
             values=measure(a,b,rule["spatialFit"]) if "spatialFit" in rule else measure(a,b)
             record.update(values)
+            if "spatialFit" in rule:
+                spatial_status,record["spatialReason"]=sibling("spatial_fit").native_result(values,rule["spatialFit"])
             v,w=values["interferenceMm3"],values["temporaryCommonMm3"]
             require(nonnegative(v) and nonnegative(w),"Missing or invalid intersection measurement")
             is_fit=rule.get("kind")=="fit"
@@ -195,14 +198,11 @@ def inspect_proposal(before, after, request, measure, same_shape=None, *, accept
                 distance=values["gapMm"]
                 require(nonnegative(distance),"Missing or invalid separation measurement")
                 status="pass" if rule.get("minGapMm",0)<=distance<=rule.get("maxGapMm",math.inf) else "blocked"
-            if "spatialFit" in rule:
-                spatial_status,reason=sibling("spatial_fit").native_result(values,rule["spatialFit"])
-                record["spatialReason"]=reason
-                if spatial_status=="fail": status="blocked"
-                elif spatial_status=="open" and status=="pass": status="inconclusive"
         except (RuntimeError,ValueError,KeyError,TypeError) as error:
             status="inconclusive"
             record["error"]=str(error)
+        if spatial_status=="fail": status="blocked"
+        elif spatial_status=="open" and status=="pass": status="inconclusive"
         record["status"]=status
         report["measured"].append(record)
         if status=="blocked" or (status=="inconclusive" and report["status"]=="pass"):
@@ -277,7 +277,10 @@ def checked_placement(app, accepted_archive, accepted_sha256, output_archive, re
                 row=measure_pair(design,after["bodies"],after["proxies"],after["solids"],a,b,spatial_fit=spatial_fit)
                 if row["status"]=="measured":
                     objects=after["proxies"]
-                    row["gapMm"]=10*app.measureManager.measureMinimumDistance(objects[a],objects[b]).value
+                    try:
+                        row["gapMm"]=10*app.measureManager.measureMinimumDistance(objects[a],objects[b]).value
+                    except RuntimeError as error:
+                        row["gapError"]=str(error)
                 return row
             compared={}
             def same_shape(prior,current):

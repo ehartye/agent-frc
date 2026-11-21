@@ -66,3 +66,5 @@ When broad-phase boxes overlap for two long diagonal articles, project the compl
 ```
 
 Run `python PLUGIN/scripts/placed_separation.py ASSEMBLY.step PLAN.json`. Copy the plan's `pairs` into the same issue's `projectedSeparationAxes` in its mechanical-readiness study to repeat the projection during the whole-assembly scan. That scan uses its registered contact tolerance. A proven gap skips the expensive common-volume operation for that pair. Commissioned connections still receive an independent distance measurement. Follow other pairs, moving positions, attachment and loaded function through their usual checks. Preserve any conflicting native evidence and investigate it on the same installed bodies.
+
+For a drawing-backed modeled screw in a smooth pilot, check any intentional common against its finite permitted region. [Locate an intentional thread fit](spatial-fits.md).

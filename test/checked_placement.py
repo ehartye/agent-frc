@@ -29,10 +29,24 @@ def decision(x,values,rule=None):
     if isinstance(values,Exception):
         def measure(i,j):raise values
     else:
-        def measure(i,j):return values
+        def measure(i,j,*spatial):return values
     return inspect_proposal(a,b,request,measure)
 
 class Placements(unittest.TestCase):
+    def test_shared_forbidden_material_vetoes_even_when_one_native_volume_is_unknown(self):
+        pair=[[s["path"],s["name"]] for s in scene(3)["bodies"]]
+        probe={"centerMm":[1,1,-2],"radiusMm":.1}
+        commission=dict(representation="external-thread/smooth-pilot",host=pair[1],bodies=pair,
+                        expectedCommonMm3=[1,2],basis="Registered synthetic drawing",forbiddenProbes=[probe],
+                        region=dict(startMm=[0,0,0],endMm=[0,0,3],pilotRadiusMm=1,majorRadiusMm=2,
+                                    classificationSlackMm=.001))
+        interface=dict(kind="fit",minCommonMm3=1,maxCommonMm3=2,evidence={},spatialFit=commission)
+        values=dict(interferenceMm3=None,temporaryCommonMm3=1.5,
+                    spatialFit=dict(commission=commission,methods={},forbidden=[dict(probe=probe,sharedInterior=True)]))
+        result=decision(3,values,interface)
+        self.assertEqual(result["status"],"blocked")
+        self.assertIn("interior ball",result["measured"][0]["spatialReason"])
+
     def test_pose_veto_reports_the_missing_or_attained_occurrence_before_contact_queries(self):
         before, after = scene(0), scene(0)
         prior = deepcopy(before)
