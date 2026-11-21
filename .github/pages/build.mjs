@@ -153,7 +153,7 @@ const ownedSkills=(await readdir(path.join(root,'skills'),{withFileTypes:true}))
 if(ownedSkills.join()!==Object.keys(purpose).sort().join()) throw Error('Update the guide when the skill inventory changes.');
 for(const stage of stages){
   for(const skill of stage.skills) if(!purpose[skill]) throw Error('Unknown workflow skill '+skill);
-  for(const [,p] of stage.docs) await access(path.join(root,p));
+  for(const [,p] of stage.docs) await access(path.join(root,p.split('#')[0]));
 }
 const highlightsLink='<a href="robot/index.html">Explore the example robot evidence page ↗</a> · <a href="stroke/index.html">Play the jaw and inspect the target event ↗</a> · ';
 const chapters=stages.map((s,i)=>`<details id="${s.id}" class="chapter"${i===0?' open':''}>
