@@ -30,7 +30,7 @@ Run the [native reopen check](check_fusion.py) as a Fusion Python script and sel
 
 ## Interpret the native witness
 
-The [four-corner Fusion exercise](check_four_corners.py) inserts four instances of the original module into a new assembly. Select a fresh output F3D. Reopen checks use physical tread and housing witnesses at four distinct headings, then challenge the result with coincident and rotated instances. The JSON receipt preserves the paths, millimetre bounds and Fusion version.
+The [four-corner Fusion exercise](check_four_corners.py) inserts four instances of the original module into a new assembly. The [agent placement guard](../../docs/checked-placement.md) checks each repeated module against previously placed solids in a disposable assembly before exporting the next archive. Select a fresh output F3D. Reopen checks use physical tread and housing witnesses at four distinct headings, then challenge the result with coincident and rotated instances. The JSON receipt preserves the paths, millimetre bounds and Fusion version.
 
 Expect three components containing 5 fixed, 10 carrier and 4 wheel solids. Ground the mounting interface. Rotate the carrier 30° around the vertical spindle. The fork witness at 55 mm radius should travel 28.470 mm, and the wheel witness at 10 mm radius should travel 5.176 mm. Restore the steering angle, then rotate the wheel 30° about its transverse axle. The fork should stay fixed while the wheel witness travels 5.176 mm. Compare measured chord lengths with 2r × sin(15°) and check the nominal tread reaches the ground plane.
 
