@@ -134,8 +134,14 @@ class PoseStages(unittest.TestCase):
                         "count":1,"items":[dict(FEATURE,health="suppressed")]}})
                 group = r["stageEvidence"]["timeline"]
                 group["count"] += 1
-                group["items"].append(dict(FEATURE,name="Captured position"))
+                group["items"].append(dict(FEATURE,name="Captured position",entityType="adsk::fusion::Snapshot"))
             self.assertEqual(run("captured-recompute","captured-recompute",inactive)["showcaseEligibility"],"pass")
+            def unrelated_cut(r):
+                inactive(r)
+                r["stageEvidence"]["timeline"]["items"][-1].update(name="Mounting hole",entityType="adsk::fusion::HoleFeature")
+            cut = run("captured-recompute","captured-recompute",unrelated_cut)
+            self.assertNotEqual(cut["showcaseEligibility"],"pass")
+            self.assertTrue(any("Unexpected timeline addition" in f["reason"] for f in cut["findings"]))
             suppressed = run("after-recompute","after-recompute",lambda r:r["stageEvidence"]["timeline"]["items"][0].update(health="suppressed"))
             self.assertNotEqual(suppressed["showcaseEligibility"],"pass")
             reset = run("after-recompute","after-recompute",lambda r:r["stageEvidence"]["coordinates"]["slide"].update(observed=0))

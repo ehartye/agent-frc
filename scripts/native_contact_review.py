@@ -43,6 +43,9 @@ def check_timeline(before, after, captured):
     require(old.keys() <= new.keys() and len(new)-len(old) <= int(captured),
             "Required timeline identities changed between cold open and recompute")
     for path, row in new.items():
+        if path not in old:
+            require(captured and row.get("entityType") == "adsk::fusion::Snapshot",
+                    f"Unexpected timeline addition after capture: {row['name']} ({row.get('entityType')})")
         previous = old.get(path, {}).get("health")
         current = row.get("health")
         if current == "error":
