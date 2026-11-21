@@ -53,6 +53,8 @@ For a modeled thread in a smooth pilot, check the location of the common materia
 
 For machined stock whose profiles stay constant between machining depths, [compare the material in every section](../../docs/stock-sections.md). Check a displaced control and retain conflicting native observations.
 
+If a valid placed solid even gives invalid self-subtractions, [compare the full placed BReps of that registered occurrence in the two exports](../../docs/mechanical-methods.md#compare-two-placed-representations-of-the-same-solid). Retain the raw Boolean results and a displaced control.
+
 For a purchased flexible drive represented by a smooth band, [compare the finite belt envelope and sampled metal](../../docs/belt-envelope.md). Preserve pulley overlap and every nonmating contact, and qualify tooth engagement, tracking and load separately.
 
 After changing structural stock, [recover stress from its actual cut section](../../docs/section-bending.md). Check both extreme fibers and the signed governing load. Repeat a proposed section on the cold installed derivative.
