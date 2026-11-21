@@ -69,6 +69,11 @@ class MeshComparisons(unittest.TestCase):
             released=dict(surfaces=spec,pose="rest",animations={"service":dict(keyPoses=[dict(timeS=0,pose="saved"),dict(timeS=1,pose="end")],
                 channels={"2":dict(group="shaft",baselinePose="zero",calibrationPose="end",timeS=1)})})
             verify(root,model,released,file)
+            key=released["animations"]["service"]["keyPoses"][1]
+            key["stage"]="after-recompute"
+            with self.assertRaisesRegex(ValueError,"Commission"):
+                verify(root,model,released,file)
+            del key["stage"]
             with self.assertRaisesRegex(ValueError,"clip"):
                 verify(root,model,dict(released,animations={}),file)
             delta[0,3]=5;native_pose("slideValue",delta)

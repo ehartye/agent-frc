@@ -63,11 +63,14 @@ def verify(root, study, spec, path):
     def transforms(record):
         return {naming[b["path"],b["name"]]:np.array(b["worldTransform"]).reshape(4,4) for b in record["bodies"]}
     cold=transforms(record)
+    pose_records={"saved":record}
     require(set(owners)==set(cold),"Every animated and stationary native solid needs a verified rest facet assignment")
     poses={"saved":{k:np.eye(4) for k in cold}}
     pose_inputs={"saved":{}}
     for ref in study["nativePoses"]:
         row=read(pinned(root,ref));pid=row["pose"]["id"]
+        require(pid not in pose_records,"Repeated native pose identifier")
+        pose_records[pid]=row
         poses[pid]={s:m@np.linalg.inv(cold[s]) for s,m in transforms(row).items()}
         pose_inputs[pid]={j["group"]:j for j in row["pose"]["joints"]}
     reg=np.array(spec.get("glbToCad",IDENTITY)).reshape(4,4)
@@ -90,6 +93,8 @@ def verify(root, study, spec, path):
         from assembly_kinematics import native_model
         linked=native_model(root,study)["linked"]
     cases=[]
+    stage_plan=None
+    checked_stage_poses=set()
     for clip in clips:
         name=clip["name"];contract=registry[name];channels={}
         for channel in clip["channels"]:
@@ -105,6 +110,23 @@ def verify(root, study, spec, path):
         clocks=sorted({t for _,ts in channels.values() for t in ts})
         keys=contract["keyPoses"]
         require(clocks and clocks==[k["timeS"] for k in keys],"Every authored physical key must have a native pose")
+        for key in keys:
+            if "stage" in key:
+                from source_joint_roster import intended
+                from native_contact_review import verify_stage, allowed_census
+                require(study.get("operatingRequirements"),"Commission each published stage claim on the native issue")
+                if stage_plan is None:
+                    stage_plan=intended(root,study,native).get("poseStages",{})
+                pid=key["pose"]
+                require(pid in pose_records and pid in stage_plan and stage_plan[pid]==key["stage"],
+                        "Published key stage differs from the commissioned native pose")
+                source=pose_records[pid]
+                require(allowed_census(source.get("programSha256")) and
+                        source.get("stageEvidence",{}).get("stage")==key["stage"],
+                        "Published stage needs a freshly observed native census")
+                if pid not in checked_stage_poses:
+                    verify_stage(source,record,{k:(v,) for k,v in naming.items()},study["chassisAnchor"],study["reopenBoundsToleranceMm"],study["connections"])
+                    checked_stage_poses.add(pid)
         bindings=contract["channels"]
         require(set(bindings)=={str(i) for i in channels},"Unregistered or unused physics channel")
         calibrations={}

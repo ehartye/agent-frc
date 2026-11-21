@@ -16,6 +16,7 @@ test('independent revolute/prismatic witnesses match with negative sign, offset 
  assert.equal(r.status,'matched');assert.deepEqual(r.issues,[]);assert.equal(r.schema,'agent-frc/native-articulation-result@1');assert.equal(r.scope.evidenceBasis,'synthetic');assert.match(r.scope.limit,/supplied/);assert.equal(JSON.stringify([e,o]),reordered);assert.notEqual(before,reordered);
 });
 test('archive and producer pins mismatch; missing pins invalidate',()=>{
+ check('invalid','stage-unsupported',(e,o)=>{e.witnesses[0].stage='after-recompute';o.witnesses[0].stage='after-recompute';});
  for(const key of ['archiveSha256','producerSha256'])check('mismatch','source-mismatch',(e,o)=>o.sourcePins[key]='c'.repeat(64));
  check('invalid','source-pin-invalid',(e,o)=>delete o.sourcePins.archiveSha256);
  check('invalid','source-pin-invalid',(e,o)=>o.sourcePins.producerSha256='bad');

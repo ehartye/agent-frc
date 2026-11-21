@@ -20,6 +20,8 @@ Before selecting parts or combining design changes, use the [assembly accounting
 
 For an issued engineering assembly, [reconcile the full reopened physical-material inventory with the configured BOM](../../docs/engineering-material-mass.md). Separate stock grades, complete purchased articles and display or fixture bodies. Reconstruct a critical fastened interface from the drawing and loose parts before making a fabrication claim.
 
+For each joint pose, [choose the observation stage](../../docs/mesh-correspondence.md#choose-when-to-observe-a-joint) that matches the design claim. Verify the actual coordinate, moving members and stationary structure.
+
 When a saved assembly replaces a temporary CAD document, use the [native study replay procedure](../../docs/native-study-replay.md) to verify the destination, assembly revision and moving geometry before repeating a clearance query. Save the binding and pose inputs in the design project.
 
 When resuming an existing design, follow the [design continuation procedure](../../docs/strategy-first-continuation.md) before proposing the next CAD edit or mechanism experiment.
