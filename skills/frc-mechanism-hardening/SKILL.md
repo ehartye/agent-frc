@@ -18,3 +18,5 @@ Record the governing margin, first violated requirement, causal change to the de
 For parallel lift stations, [trace each failed holding path](../../docs/lift-path-faults.md). Locate the proposed interconnection relative to every belt, nut, holder and shared mount. Replay each side lost, both lost and the governing loose or asymmetric case. Check racking, common descent and individual travel on one post-cut clock.
 
 For loaded ground travel, [check the actual carried identities and robot footprint on the frozen 3v3 clock](../../docs/loaded-route.md). Record the first peer conflict and which later observations remain reachable. Qualify installed motion, downstream custody and scoring with their own evidence.
+
+For a rotary mechanism, [calculate signed gravity and stop work](../../docs/actuator-duty-review.md#signed-rotary-gravity-and-stop-work) using the actual moving group and its payload at each registered pose. Carry the governing direction into the independent power-loss holding duty.
