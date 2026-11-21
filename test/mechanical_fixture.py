@@ -155,7 +155,11 @@ def fixture(root,source="fixture.step",assets=(),archive_name="test.f3d", measur
     part=labels[1];site=[[0,0,0],[10,0,0],[0,10,0]]
     purchase_mount=dict(occurrence=part,toleranceMm=.001,basis="Three corners from the synthetic mounting drawing",
         features=[dict(solid=part,body=part,localMm=p,worldMm=[p[0]+poses[1][3],p[1],p[2]]) for p in site])
-    study["operatingRequirements"]={**write(root,"fixture-commissioning.json",dict(operatingIntent=dict(authorityId="bench",configuration=bind["configuration"],
+    roster=write(root,"article-functions.json",dict(schema="agent-frc/article-functions@1",authorityId="bench",configuration=bind["configuration"],
+        architecture="Sliding inspection fixture",functions={"locate":"Locate the guide relative to the bench","guide":"Guide the test block on its stroke"},
+        occurrences=[dict(path=path,article=article,revision="r1",configuration="A",function=purpose)
+            for path,article,purpose in zip(labels,("frame","block"),("locate","guide"))]))
+    study["operatingRequirements"]={**write(root,"fixture-commissioning.json",dict(operatingIntent=dict(authorityId="bench",configuration=bind["configuration"],articleFunctions=roster,
         mode="articulated",basis="Independent fixture travel requirement",motionRanges={"slide":[0,10]},
         nativeCoordinates={"slide":dict(type="joint",occurrence="@root",name="slide",coordinate="slideValue")},transferMissions=[],numericalInterfaces={},structuralRoutes={},mountDatums=[purchase_mount],externalIssues=[]))),"pointer":"/operatingIntent"}
     study["transferClaims"]={}

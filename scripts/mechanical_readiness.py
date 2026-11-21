@@ -358,6 +358,7 @@ def evaluate_inputs(root,study, geometry=None):
         for reason in stock_results(material_checks):
             finding("identity","fail","constitutive material and density",reason)
     evidence_plan={}
+    roster_review=None
     allowance={}
     for item in study.get("mating",[]):
         key=tuple(sorted(item["pair"]))
@@ -376,6 +377,19 @@ def evaluate_inputs(root,study, geometry=None):
         except (ValueError,KeyError,TypeError,OSError) as e:
             evidence_plan={}
             missing("native","commissioned interface coverage",str(e))
+        if evidence_plan:
+            from article_functions import compare
+            try:
+                target=evidence_plan.get("articleFunctions")
+                roster=read(pinned(root,target))
+                differences=compare(roster,native,evidence_plan["authorityId"],configuration)
+                roster_review={"architecture":roster["architecture"],"rosterSha256":target["sha256"],
+                               "plannedOccurrences":len(roster["occurrences"]),"observedOccurrences":len(native),
+                               "differences":len(differences)}
+                for path,reason in differences:
+                    finding("identity","fail",path,reason)
+            except (ValueError,KeyError,TypeError,OSError) as e:
+                missing("identity","commissioned article functions",str(e))
         if study.get("nativeCensus") and evidence_plan:
             from mount_datums import verify as verify_mounts
             from showcase_contacts import load_solids
@@ -680,7 +694,7 @@ def evaluate_inputs(root,study, geometry=None):
     publication="fail" if any_failure else "open" if any(r["domain"] in engineering_domains for r in findings) else "pass"
     build="fail" if any_failure else "open" if findings else "pass"
     return {"schema":"agent-frc/mechanical-readiness-result@1","configuration":configuration,"archiveSha256":archive_sha,"stepSha256":step_sha,
-            "solids":len(bodies),"measuredPairs":len(pairs),"geometricGroups":geometric,"retainedGroups":retained,"structuralRoutes":route_results,"loadedTransfers":transfer_results,
+            "solids":len(bodies),"measuredPairs":len(pairs),"geometricGroups":geometric,"retainedGroups":retained,"articleFunctions":roster_review,"structuralRoutes":route_results,"loadedTransfers":transfer_results,
             "engineeringGeometry":publication,"showcaseEligibility":build,"buildReadiness":build,"findings":findings}
 
 

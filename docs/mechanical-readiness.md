@@ -1,5 +1,7 @@
 # Qualify the model students will build
 
+For a new issue, [freeze the selected architecture’s article roster](article-functions.md). The review reports which required installations are present and identifies extras even when they are securely attached.
+
 Run this review before promoting new robot CAD to a showcase, README or downloadable student assembly. Keep a failed candidate in the team project. A failed build leaves the last successful deployment serving its previous revision. A game analysis or field lab can appear independently of a robot model.
 
 ## Start with the actual installed assembly

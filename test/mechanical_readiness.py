@@ -44,6 +44,37 @@ class Readiness(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"Incomplete"):
             self.status()
 
+    def test_attached_obsolete_article_and_missing_current_site(self):
+        approved=self.status()
+        self.assertEqual(approved["articleFunctions"]["differences"],0)
+        target=json.loads((self.root/"article-functions.json").read_bytes())
+        target["occurrences"][1]["path"]="right inspection block"
+        target_ref=write(self.root,"next-architecture.json",target)
+        self.change("operatingRequirements",lambda plan:plan["operatingIntent"].update(articleFunctions=target_ref))
+        self.s["operatingRequirements"]["pointer"]="/operatingIntent"
+        actual=self.status()
+        self.assertEqual(actual["retainedGroups"],approved["retainedGroups"])
+        self.assertEqual(actual["showcaseEligibility"],"fail")
+        self.assertEqual(actual["articleFunctions"]["differences"],2)
+        self.assertTrue(any(r["subject"]=="block" and "no commissioned function" in r["reason"] for r in actual["findings"]))
+        self.assertTrue(any(r["subject"]=="right inspection block" and "Missing occurrence" in r["reason"] for r in actual["findings"]))
+
+    def test_approved_function_roster_cannot_be_rewritten_or_reused_for_a_different_issue(self):
+        from article_functions import compare,slots
+        target=json.loads((self.root/"article-functions.json").read_bytes())
+        installed={r["path"]:dict(r) for r in target["occurrences"]}
+        installed["block"]["revision"]="different"
+        self.assertIn("revision",compare(target,installed,"bench",self.s["configuration"])[0][1])
+        with self.assertRaisesRegex(ValueError,"different authority"):
+            compare(target,installed,"another design",self.s["configuration"])
+        target["occurrences"].append(target["occurrences"][0])
+        with self.assertRaisesRegex(ValueError,"Repeated"):
+            slots(target)
+        write(self.root,"article-functions.json",target)
+        result=self.status()
+        self.assertEqual(result["showcaseEligibility"],"open")
+        self.assertTrue(any(r["subject"]=="commissioned article functions" and "Changed evidence" in r["reason"] for r in result["findings"]))
+
     def test_visible_legacy_rail_cannot_be_filtered_out_of_both_step_and_declared_native_bodies(self):
         def omit(census):
             census["bodies"].append(dict(census["bodies"][0],path="Legacy stock rail:1",name="Crossing the motor"))
