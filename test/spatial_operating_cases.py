@@ -41,6 +41,17 @@ class SpatialOperatingCases(unittest.TestCase):
             self.assertEqual(rows["up"]["requiredCompressionN"],-5)
             self.assertEqual(rows["overturned"]["normalSupportLimits"]["loaded assembly"]["missingMomentLowerBoundNmm"],10)
             self.assertTrue(all(r["capacity"]=="open" for r in rows.values()))
+            normal=np.array([1.,-2.,3.])/math.sqrt(14.)
+            for n in ([0.,0.,1.], normal.tolist()):
+                origin=[314.,-115.,27.]
+                angled=dict(raw,origin=origin,centroid=origin,load=(-1000*np.asarray(n)).tolist())
+                plan=case([("origin","load")],known=False)
+                plan["normal"]=(np.asarray(n)*.999999999).tolist()
+                sample=dict(spec,observation=write(root,"rotated.json",angled),cases={"rounded":plan})
+                observed=observed_supports(root,sample)["cases"]["rounded"]
+                self.assertEqual(observed["equilibrium"],"pass")
+                self.assertAlmostEqual(observed["requiredCompressionN"],1000)
+                self.assertLess(observed["unsupportedShearN"],1e-10)
             raw["bounds"]=[0,0,0,0,0,0]
             spec["observation"]=write(root,"data.json",raw)
             with self.assertRaisesRegex(ValueError,"area exceeds"):

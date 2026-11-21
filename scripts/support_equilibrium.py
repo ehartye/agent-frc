@@ -192,7 +192,9 @@ def observed_supports(root,study):
     results={}
     for name,case in study["cases"].items():
         body="loaded assembly";anchor="support"
-        direction=vec(case["normal"]);require(abs(math.hypot(*direction)-1)<1e-8,"Unknown bearing normal")
+        direction=vec(case["normal"]);length=math.hypot(*direction)
+        require(abs(length-1)<1e-8,"Unknown bearing normal")
+        direction=(np.asarray(direction)/length).tolist()
         forces=[dict(body=body,pointMm=vec(select(f["point"])),forceN=vec(select(f["force"]))) for f in case["applied"]]
         moments=[dict(body=body,momentNmm=vec(select(p))) for p in case["couples"]]
         require(forces or moments,"Register the simultaneous load, including explicit zero force for an unloaded control")
