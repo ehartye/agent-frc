@@ -182,7 +182,11 @@ class InstalledKinematics(unittest.TestCase):
         rows=[dict(path=str(i),name="part",boundsMm=[0,0,0,1,1,1],worldTransform=np.eye(4).reshape(16).tolist()) for i in range(3)]
         args=(Design(),rows,list(range(3)),[(None,None)]*3)
         with TemporaryDirectory() as tmp,patch.dict(sys.modules,{"adsk":api,"adsk.core":api.core,"adsk.fusion":api.fusion}):
-            p=Path(tmp)/"progress.json";fingerprint=["archive","saved","app","inventory","contacts"]
+            import fusion_issue_contacts
+            import hashlib
+            import json
+            collector = hashlib.sha256(Path(fusion_issue_contacts.__file__).read_bytes()).hexdigest()
+            p=Path(tmp)/"progress.json";fingerprint=["archive","saved","app","inventory",collector]
             result=measure(*args,p,fingerprint,6)
             self.assertTrue(result["complete"]);self.assertEqual(result["unresolvedPairs"],1)
             self.assertEqual(result["pairs"][0]["temporaryCommonMm3"],2)
@@ -192,6 +196,23 @@ class InstalledKinematics(unittest.TestCase):
             self.assertEqual(fixed["unresolvedPairs"],0);self.assertEqual(len(calls),4)
             with self.assertRaisesRegex(ValueError,"another archive"):
                 measure(*args,p,["other",*fingerprint[1:]],1,[(0,1)])
+
+            legacy_sha = "9a570e82486dbcf077d961a143cf6808666255dda1d17a0ac1a9b9bec0112dfe"
+            roster = [[r["path"], r["name"], r["boundsMm"], r["worldTransform"]] for r in rows]
+            pairs = [(0, 1), (0, 2), (1, 2)]
+            legacy_inputs = [[*fingerprint[:4], legacy_sha], pairs, roster]
+            legacy = json.loads(p.read_bytes())
+            legacy["study"] = hashlib.sha256(json.dumps(legacy_inputs, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+            legacy["pairs"] = [dict(pair=pair, interferenceMm3=0, temporaryCommonMm3=0) for pair in pairs]
+            original_bytes = json.dumps(legacy).encode()
+            p.write_bytes(original_bytes)
+            with self.assertRaisesRegex(ValueError, "new checkpoint"):
+                measure(*args, p, fingerprint, 1)
+            self.assertEqual(p.read_bytes(), original_bytes)
+            new = measure(*args, Path(tmp)/"current.json", fingerprint, 1)
+            self.assertFalse(new["complete"])
+            self.assertEqual(new["pairs"][0]["temporaryCommonMm3"], 2.)
+            self.assertEqual(len(calls), 5)
 
     def test_native_boolean_zero_with_retained_lumps_is_unresolved(self):
         import sys

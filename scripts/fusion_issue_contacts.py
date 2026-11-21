@@ -215,22 +215,17 @@ def measure(design, rows, proxies, solids, checkpoint, fingerprint, batch, retry
         spatial[identities]=entry
     if spatial and pose.get("spatialProgramSha256")!=spatial_module()[1]:
         raise ValueError("Bind the registered native pose to the installed spatial evaluator")
+    program_sha = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+    if fingerprint[-1] != program_sha:
+        raise ValueError("Native contact fingerprint differs from the running collector")
     current=signature(fingerprint)
     progress={"schema":"agent-frc/fusion-interference-progress@1","study":current,"pairs":[]}
     if checkpoint.exists():
         prior=json.loads(checkpoint.read_text(encoding="utf-8"))
-        # Same measured kernels and enumeration. The previous collector stopped
-        # on a null response and only persisted successful numeric pairs.
-        older=signature([*fingerprint[:3],"85fb31fc1040cdfb03eda414b3e67845ec26b8b09c6cabad202d49b7fc602fa9",
-            "f3ea058c88481de80c6cd554cfff73758d2d77787e4a73f8cac9f6ec81b0465c"])
-        previous=signature([*fingerprint[:4],"8a87902d4dddc0c6655febd21de781161866137532aa1bd807c3e565a271359e"])
-        legacy=signature([*fingerprint[:4],"9a570e82486dbcf077d961a143cf6808666255dda1d17a0ac1a9b9bec0112dfe"])
-        compatible=(current,) if spatial else (current,previous,older,legacy)
-        if prior.get("study") not in compatible or any(r["pair"]!=list(pair) for r,pair in zip(prior["pairs"],pairs)):
-            raise ValueError("Checkpoint belongs to another archive, native pose or scan")
-        if prior["study"]==older and not all(all(isinstance(r.get(k),(float,int)) and math.isfinite(r[k]) and r[k]>=0
-                for k in ("interferenceMm3","temporaryCommonMm3")) for r in prior["pairs"]):
-            raise ValueError("Unrecognized legacy checkpoint outcomes")
+        if prior.get("study") != current:
+            raise ValueError("Checkpoint belongs to another archive, native pose or scan. Use a new checkpoint for this collector.")
+        if any(r["pair"] != list(pair) for r, pair in zip(prior["pairs"], pairs)):
+            raise ValueError("Checkpoint pair order differs from the current inventory")
         progress["pairs"]=prior["pairs"]
     def save():
         temp=checkpoint.with_suffix(".writing")
@@ -259,4 +254,4 @@ def measure(design, rows, proxies, solids, checkpoint, fingerprint, batch, retry
     return {"method":"Fusion Design.analyzeInterference and placed temporary BRep intersection",
         "units":"mm3","candidatePairs":len(pairs),"unresolvedPairs":sum(r.get("status")=="unresolved" for r in progress["pairs"]),
         "complete":len(progress["pairs"])==len(pairs),
-        "pairs":progress["pairs"],"programSha256":hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
+        "pairs":progress["pairs"],"programSha256":program_sha}
