@@ -16,6 +16,64 @@ from spatial_operating_cases import SpatialOperatingCases
 
 
 class Readiness(unittest.TestCase):
+    def test_widening_changes_both_extreme_fibers_and_the_bending_comparison(self):
+        from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox
+        from section_bending import measure
+        case=dict(pointMm=[0,0,5],normalWorld=[0,0,1],bendingAxisWorld=[1,0,0],momentNmm=100000,axialN=0)
+        for height in (20,30):
+            s=BRepPrimAPI_MakeBox(40,height,10).Shape()
+            r=measure(s,case)
+            expected=40*height**2/6
+            for z in r["sectionModuliMm3"]: self.assertAlmostEqual(z,expected,places=5)
+            self.assertAlmostEqual(r["stressAtNegativePositiveFiberMPa"][0],-100000/expected)
+        case["comparison"]=dict(sectionModuliMm3=[r["inertiaAboutBendingAxisMm4"]/10]*2,toleranceMm3=.01,
+                                basis="Frozen solver retained the previous extreme distance.")
+        self.assertEqual(measure(s,case)["modulusComparison"],"outside-declared-tolerance")
+        case["pointMm"]=[1e8,-1e8,5]
+        self.assertAlmostEqual(measure(s,case)["sectionModuliMm3"][0],expected,places=5)
+        case["pointMm"]=[0,0,10]
+        with self.assertRaises(ValueError): measure(s,case)
+
+    def test_unsymmetric_net_section_uses_the_full_centroidal_inertia_and_signed_load(self):
+        from OCP.BRepAlgoAPI import BRepAlgoAPI_Cut
+        from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox
+        from OCP.BRepBuilderAPI import BRepBuilderAPI_Transform
+        from OCP.gp import gp_Ax1,gp_Dir,gp_Pnt,gp_Trsf
+        from section_bending import measure
+        s=BRepAlgoAPI_Cut(BRepPrimAPI_MakeBox(8,8,10).Shape(),BRepPrimAPI_MakeBox(gp_Pnt(4,4,-1),6,6,12).Shape()).Shape()
+        c=(64*4-16*6)/48
+        inertia=64*(64/12+(4-c)**2)-16*(16/12+(6-c)**2)
+        product=64*(4-c)**2-16*(6-c)**2
+        det=inertia**2-product**2
+        stress=[3+200*(inertia*(y-c)-product*(x-c))/det for x,y in [(0,0),(0,8),(4,8),(4,4),(8,4),(8,0)]]
+        case=dict(pointMm=[1,2,5],normalWorld=[0,0,1],bendingAxisWorld=[1,0,0],momentNmm=200,axialN=144)
+        r=measure(s,case)
+        self.assertAlmostEqual(r["productOfAreaMm4"], product)
+        self.assertAlmostEqual(r["stressAtNegativePositiveFiberMPa"][0],min(stress))
+        self.assertAlmostEqual(r["stressAtNegativePositiveFiberMPa"][1],max(stress))
+        self.assertGreater(abs(r["sectionModuliMm3"][0]-r["sectionModuliMm3"][1]),1)
+        tr=gp_Trsf(); tr.SetRotation(gp_Ax1(gp_Pnt(3,4,5),gp_Dir(1,2,3)),.72)
+        case.update(pointMm=gp_Pnt(1,2,5).Transformed(tr).Coord(),normalWorld=gp_Dir(0,0,1).Transformed(tr).Coord(),
+                    bendingAxisWorld=gp_Dir(1,0,0).Transformed(tr).Coord(),momentNmm=-200)
+        r=measure(BRepBuilderAPI_Transform(s,tr,True).Shape(),case)
+        for actual, expected in zip(r["stressAtNegativePositiveFiberMPa"],[6-min(stress),6-max(stress)]):
+            self.assertAlmostEqual(actual,expected)
+
+    def test_section_station_registration_preserves_unmeasured_loads_and_other_stations(self):
+        from mechanical_fixture import pin
+        from section_bending import run
+        step=pin(self.root,"fixture.step")
+        first=dict(id="inside",solid="frame",pointMm=[5,5,5],normalWorld=[0,0,1],bendingAxisWorld=[1,0,0])
+        register=dict(schema="agent-frc/section-loads@1",stepSha256=step["sha256"],basis="Installed cube under inspection.",
+                      cases=[first,dict(first,id="shoulder",pointMm=[5,5,10])])
+        plan=dict(schema="agent-frc/section-bending@1",step=step,loadCases=write(self.root,"load-cases.json",register))
+        rows=run(self.root,plan)["sections"]
+        self.assertEqual([r["status"] for r in rows],["measured","open"])
+        self.assertIsNone(rows[0]["stressAtNegativePositiveFiberMPa"])
+        register["stepSha256"]="0"*64
+        plan["loadCases"]=write(self.root,"load-cases.json",register)
+        with self.assertRaises(ValueError): run(self.root,plan)
+
     def test_smooth_belt_pitch_is_separate_from_local_metal_and_other_obstacles(self):
         import math
         from belt_envelope import inspect
