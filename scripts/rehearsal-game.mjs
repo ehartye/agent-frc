@@ -121,12 +121,45 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
     const same=frozen && match.setup===frozen.setup && match.tieWinner===frozen.tieWinner &&
       match.endgameAtRestAfterS===frozen.endgameAtRestAfterS &&
       JSON.stringify(match.roster)===JSON.stringify(frozen.roster);
-    sim.game.assessment={pending:[],used:[],records:assessment.register(same?expected:[],frozen?.id)};
+    sim.game.assessment={pending:[],departures:[],used:[],records:assessment.register(same?expected:[],frozen?.id)};
   }
   function observe(sim,t) {
     if(!assessment)return;
     const timeline=sim.game.assessment;
     const now=assessment.phaseStart(sim.phase)+t;
+    // Reserve finite physical seats on passage. Score reports have their own clock.
+    const changes=[];
+    for(const item of timeline.pending){
+      const target=stations.get(item.target);
+      if(target.capacity!==undefined && item.result.status==='credited' && !item.seat &&
+         item.row.observation.passageS<=now+1e-9)
+        changes.push({at:item.row.observation.passageS,item,target:target.id});
+    }
+    for(const arrival of [...changes]){
+      const at=arrival.item.row.observation.vacatedS;
+      if(at!=null && at<=now+1e-9)changes.push({at,target:arrival.target,item:arrival.item,leave:true});
+    }
+    for(const departure of timeline.departures){
+      if(departure.at<=now+1e-9)changes.push(departure);
+    }
+    changes.sort((a,b)=>a.at-b.at || Number(Boolean(a.leave))-Number(Boolean(b.leave)));
+    for(const change of changes){
+      const {target,item}=change;
+      if(change.leave){
+        if(item && item.seat!=='reserved')continue;
+        sim.game.occupied[target]--;
+        const index=timeline.departures.indexOf(change);
+        if(index!==-1)timeline.departures.splice(index,1);
+      }else if(sim.game.occupied[target]>=stations.get(target).capacity){
+        item.seat='occupied';
+        item.result={...item.result,status:'occupied',pointsPhase:null};
+      }else{
+        item.seat='reserved';
+        sim.game.occupied[target]++;
+        const at=item.row.observation.vacatedS;
+        if(at!=null && at>now+1e-9)timeline.departures.push({at,target,leave:true});
+      }
+    }
     for(const item of [...timeline.pending].sort((a,b)=>a.result.reportAtS-b.result.reportAtS)){
       if(item.result.reportAtS>now+1e-9)continue;
       const {row,result}=item;
@@ -134,7 +167,7 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
       const s=stations.get(item.target);
       const observedTime=result.reportAtS-assessment.phaseStart(sim.phase);
       dispose(sim,item.robot,s,[item.piece],result.status,observedTime,'Registered piece assessment',
-        {phase,activity:item.activity,observedAtS:result.reportAtS,releaseId:row.id,releasedAtS:row.releasedS,passageAtS:row.observation?.passageS??null});
+        {phase,seat:item.seat,vacatedS:row.observation?.vacatedS,activity:item.activity,observedAtS:result.reportAtS,releaseId:row.id,releasedAtS:row.releasedS,passageAtS:row.observation?.passageS??null});
       timeline.pending.splice(timeline.pending.indexOf(item),1);
     }
   }
@@ -411,7 +444,7 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
     let outcome=prescribed;
     const activity=observed?.activity??stationActivity(sim,s,timeS);
     if(activity!=='active')outcome=activity;
-    const admitted=outcome==='credited' && s.capacity!==undefined ?
+    const admitted=outcome==='credited' && s.capacity!==undefined && observed?.seat!=='reserved' ?
       Math.min(pieces.length,Math.max(0,s.capacity-g.occupied[key])) : pieces.length;
     for(const [result,batch] of [[outcome,pieces.slice(0,admitted)],['occupied',pieces.slice(admitted)]]){
       if(!batch.length)continue;
@@ -424,15 +457,16 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
       g.score[robot.side]+=points;
       if(g.endgame?.assessed)g.endgame.ordinaryScore[robot.side]+=points;
       if(result==='credited'){
-        g.occupied[key]+=batch.length;
+        if(observed?.seat!=='reserved')g.occupied[key]+=batch.length;
         if(scoredPhase===model.periods[0].name)g.firstPeriodCount[robot.side]+=batch.length;
       }
       g.attempts[key]+=batch.length;
       for (const piece of batch) {
         const rule=s.returns?.[result];
-        if(rule){
+        if(rule && (observed?.seat!=='reserved' || observed.vacatedS!=null)){
           const entry={piece,at:rule.at,station:rule.station,readyAtS:elapsed(sim,timeS)+rule.delayS};
-          if(result==='credited')entry.releaseSlot=key;
+          if(observed?.seat==='reserved')entry.readyAtS=Math.max(entry.readyAtS,observed.vacatedS);
+          else if(result==='credited')entry.releaseSlot=key;
           g.returning.push(entry);
         }else g.terminal.push({...piece,station:key,outcome:result});
       }

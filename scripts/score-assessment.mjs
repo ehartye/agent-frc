@@ -50,6 +50,8 @@ export function createScoreAssessment(model) {
       'Observation differs from its released article, target, criterion, scenario or clock.');
     if(o.result==='met')check(time(o.passageS) && o.passageS>=row.releasedS && o.passageS<=o.observedS,
       'A successful assessment needs a chronological criterion passage.');
+    if(o.vacatedS!=null)check(o.result==='met' && time(o.vacatedS) && o.vacatedS>o.passageS,
+      'A vacated target needs an observed departure strictly after passage.');
     if(o.result==='met' && (rule.entryUntilS!==undefined || rule.checkActivityAt==='entry')){
       if(o.entryS==null)return result;
       check(time(o.entryS) && row.releasedS<=o.entryS && o.entryS<=o.passageS,'Invalid entry before the assessed passage.');
@@ -75,7 +77,7 @@ export function createScoreAssessment(model) {
   function register(rows,scenario) {
     check(Array.isArray(rows),'Supply an array of released-article observations.');
     const ids=new Set(),articleTimes=new Set(),previous=new Map();
-    return rows.map(row=>{
+    const records=rows.map(row=>{
       const key=JSON.stringify([row.piece,row.releasedS]);
       check(row.scenario===scenario && !ids.has(row.id) && !articleTimes.has(key),'Duplicate release or unrelated scenario.');
       ids.add(row.id);articleTimes.add(key);
@@ -88,6 +90,20 @@ export function createScoreAssessment(model) {
       previous.set(row.piece,{row,result});
       return {row,result};
     });
+    // A later report cannot free an earlier occupied seat. At equal timestamps
+    // the trace needs enough seats for both until the ordering is established.
+    for(const target of model.stations.filter(s=>s.capacity!==undefined)){
+      const arrivals=records.filter(({row,result})=>row.target===target.id && result.status==='credited')
+        .map(({row})=>row).sort((a,b)=>a.observation.passageS-b.observation.passageS);
+      let occupied=[];
+      for(const row of arrivals){
+        occupied=occupied.filter(previous=>(previous.observation.vacatedS??Infinity)>=row.observation.passageS);
+        check(occupied.length<target.capacity,'Conflicting physical occupancy at '+target.id+' on passage of '+row.id+
+          '; reconcile '+occupied.map(r=>r.id).join(', ')+' with observed target departure or distinct seats.');
+        occupied.push(row);
+      }
+    }
+    return records;
   }
   function phaseStart(phase){return periods.get(phase).start;}
   return {rules,judge,register,phaseStart,elapsed};

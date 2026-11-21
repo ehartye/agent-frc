@@ -73,7 +73,7 @@ export async function loadScoreObservations(profile,filename) {
         const o=await evidence(attempt.observation,true);
         check(o.schema==='field-rehearsal/criterion-observation@1' && o.releaseSha256===attempt.release.sha256 &&
           Array.isArray(o.sources) && o.sources.length>0,'Bind the observed criterion to its original release and source.');
-        await corroborate(o,['piece','result','observedS',...(['entryS','passageS'].filter(k=>o[k]!=null))]);
+        await corroborate(o,['piece','result','observedS',...(['entryS','passageS','vacatedS'].filter(k=>o[k]!=null))]);
         row.observation={...o,traceSha256:attempt.observation.sha256};
       }
       rows.push(row);

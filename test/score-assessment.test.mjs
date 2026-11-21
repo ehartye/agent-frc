@@ -122,3 +122,34 @@ test('ordinary profile loading binds the original result, criterion time and mat
   save('trace.json',{piece:'other ID'});
   await assert.rejects(load(sensor),/Changed score evidence/);
 });
+
+test('a one-place target is occupied on physical passage before its scoreboard reports',()=>{
+  const {p,m,match}=fixture();
+  m.stations.find(s=>s.id==='blue-bay').capacity=1;
+  const first=observed(.2);
+  Object.assign(first.observation,{passageS:.54,observedS:1.2});
+  const second=structuredClone(first);
+  Object.assign(second,{id:'second',piece:'blue-supply/2',robot:'B2'});
+  Object.assign(second.observation,{releaseId:'second',piece:second.piece,robot:'B2',passageS:.7,observedS:.9});
+  const review=(rows)=>createScoreAssessment(m).register(rows,match.id);
+  for(const time of [.54,.7]){
+    second.observation.passageS=time;
+    assert.throws(()=>review([second,first]),/Conflicting physical occupancy/);
+    match.scoreObservations=[first,second];
+    assert.throws(()=>createMatchSeries(createFieldRehearsal(p),[match]),/Conflicting physical occupancy/);
+  }
+  first.observation.vacatedS=.7;
+  assert.throws(()=>review([first,second]),/Conflicting physical occupancy/);
+  first.observation.vacatedS=.65;
+  assert.equal(review([second,first]).length,2);
+  match.scoreObservations=[first];
+  const series=createMatchSeries(createFieldRehearsal(p),[match]);
+  series.advance(.55);
+  assert.equal(series.sim.game.occupied['blue-bay'],1);
+  assert.equal(series.sim.game.score.blue,0);
+  series.advance(.15);
+  assert.equal(series.sim.game.occupied['blue-bay'],0);
+  series.advance(.5);
+  assert.equal(series.sim.game.score.blue,6);
+  assert.equal(series.sim.game.occupied['blue-bay'],0);
+});
