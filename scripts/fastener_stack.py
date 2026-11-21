@@ -84,7 +84,7 @@ def full_rim(face, z, radius):
     return None
 
 
-def bore_faces(host, radius, grip):
+def bore_profile(host, radius, grip):
     """Select coaxial cylindrical wall segments at this mouth and their physical blind end."""
     from OCP.BRepAdaptor import BRepAdaptor_Surface
     from OCP.BRepGProp import BRepGProp
@@ -93,7 +93,7 @@ def bore_faces(host, radius, grip):
     from OCP.TopAbs import TopAbs_FACE, TopAbs_REVERSED
     from OCP.TopExp import TopExp_Explorer
     from OCP.TopoDS import TopoDS
-    cylinders, cones, entrances = [], [], []
+    cylinders, cones, entrances, other_walls = [], [], [], []
     it = TopExp_Explorer(host, TopAbs_FACE)
     while it.More():
         face = TopoDS.Face(it.Current())
@@ -105,8 +105,11 @@ def bore_faces(host, radius, grip):
             p = axis.Location()
             if abs(axis.Direction().Z()) > .999999999 and math.hypot(p.X(), p.Y()) <= 1e-5:
                 box = bounds(face)
-                if kind == GeomAbs_Cylinder and face.Orientation() == TopAbs_REVERSED and radius[0]-1e-5 <= s.Radius() <= radius[1]+1e-5:
-                    cylinders.append((box[2], box[5], s.Radius(), face))
+                if kind == GeomAbs_Cylinder and face.Orientation() == TopAbs_REVERSED:
+                    if radius[0]-1e-5 <= s.Radius() <= radius[1]+1e-5:
+                        cylinders.append((box[2], box[5], s.Radius(), face))
+                    else:
+                        other_walls.append((box[5],s.Radius()))
                 elif kind == GeomAbs_Cone and face.Orientation() == TopAbs_REVERSED:
                     apex = s.Apex().Z()
                     if abs(apex-box[5]) <= 1e-5:
@@ -115,10 +118,19 @@ def bore_faces(host, radius, grip):
                         slope = abs(math.tan(s.SemiAngle()))
                         entrances.append((box[2], box[5], (apex-box[2])*slope, (apex-box[5])*slope, face))
         it.Next()
-    starts = {(lo, lo) for lo, _, _, _ in cylinders if grip[0]-1e-5 <= lo <= grip[1]+1e-5}
+    starts = set()
+    for lo, _, r, f in cylinders:
+        if not grip[0]-1e-5 <= lo <= grip[1]+1e-5:
+            continue
+        if any(abs(exit_z-lo)<=1e-5 and outer_r>r for exit_z,outer_r in other_walls):
+            continue  # A recessed annular shoulder may also lie inside the grip tolerance.
+        rim = full_rim(f,lo,r)
+        faces = (full_rim(plane,lo,r) for plane,_ in planar_faces(host,[lo,lo],-1))
+        if rim is not None and any(edge is not None and rim.IsSame(edge) for edge in faces):
+            starts.add((lo,lo))
     for mouth, pilot, outer_r, inner_r, cone in entrances:
         # A broad grip tolerance cannot turn the far lip of an unqualified chamfer into a clamp plane.
-        starts = {(a,b) for a,b in starts if a != b or abs(a-pilot)>1e-5}
+        starts = {(a,b) for a,b in starts if a != b or not mouth-1e-5 <= a <= pilot+1e-5}
         outer, inner = full_rim(cone, mouth, outer_r), full_rim(cone, pilot, inner_r)
         props = GProp_GProps()
         BRepGProp.SurfaceProperties_s(cone, props)
@@ -138,6 +150,13 @@ def bore_faces(host, radius, grip):
             end = hi
     require(end > pilot, "No finite bore wall at the mouth")
     return mouth, pilot, end, [tip for lo, tip in cones if abs(lo-end) <= 1e-5]
+
+
+def bore_faces(host, radius, grip):
+    """Return the mouth, end and drill terminations for existing dimensional probes."""
+    mouth, _, end, tips = bore_profile(host,radius,grip)
+    return mouth,end,tips
+
 
 def thread_envelope(shape, first, last, radii, *, external):
     """Certify uninterrupted cylindrical patches across the full registered axial band."""
@@ -212,7 +231,7 @@ def measure(shapes, case, drawing):
     grip = interval(drawing, "gripMm")
     radius = interval(drawing, "boreRadiusMm")
     require(radius[0] > 0 and length[0] > 0, "A screw and bore require positive dimensions")
-    mouth, pilot, end, apex = bore_faces(host_shape, radius, grip)
+    mouth, pilot, end, apex = bore_profile(host_shape, radius, grip)
     observed.update(tipFromSeatMm=tip, gripMm=mouth, pilotStartFromSeatMm=pilot,
                     entranceChamferDepthMm=pilot-mouth, cylinderWallLengthMm=end-pilot, cylindricalDepthMm=end-mouth)
     # A local witness makes the actual finite intersection independent of a zero common-volume query.
@@ -256,7 +275,7 @@ def measure(shapes, case, drawing):
         return dict(observed, status="open", reason="Qualify the measured entrance chamfer depth in the host drawing")
     chamfer_range = interval(drawing,"entranceChamferDepthMm") if chamfer is not None else [0,0]
     if not chamfer_range[0]-1e-5 <= pilot-mouth <= chamfer_range[1]+1e-5:
-        reasons.append("Observed entrance chamfer depth differs from the drawing")
+        return dict(observed,status="fail",reasons=["Observed entrance chamfer depth differs from the drawing"])
     layers = case["grippedLayers"]
     require(isinstance(layers,list),"Commission the ordered gripped layers, including an empty list for direct seating")
     ids = [row["solid"] for row in layers]
@@ -280,12 +299,14 @@ def measure(shapes, case, drawing):
             previous_z=z
     if abs(previous_z-mouth)>1e-5:
         reasons.append("The clamped material stack does not reach the measured host mouth")
-    observed["layerContacts"]=contacts
+    observed.update(layerContacts=contacts,seatAreaMm2=area)
     if not length[0]-1e-5 <= tip <= length[1]+1e-5:
         reasons.append("Installed length differs from the screw drawing")
+    if reasons:
+        return dict(observed, status="fail", reasons=reasons)
     depth = interval(drawing, "cylindricalDepthMm")
     if not depth[0]-1e-5 <= end-mouth <= depth[1]+1e-5:
-        reasons.append("Observed bore depth differs from its drawing")
+        return dict(observed,status="fail",reasons=["Observed bore depth differs from its drawing"])
     male_start = interval(drawing, "maleThreadStartFromSeatMm")
     male_tip_loss = interval(drawing, "maleTipRunoutMm")
     female_start = interval(drawing, "femaleLeadMm")
@@ -308,7 +329,9 @@ def measure(shapes, case, drawing):
     require(number(minimum) and minimum > 0, "Register a positive minimum full-thread engagement")
     if engagement < minimum:
         reasons.append("Worst-case full-thread engagement is too short")
-    observed.update(seatAreaMm2=area, minimumFullEngagementMm=engagement)
+    observed["minimumFullEngagementMm"]=engagement
+    if reasons:
+        return dict(observed, status="fail", reasons=reasons)
     if kind == "blind":
         drill = interval(drawing, "drillPointDepthMm")
         require(depth[0] <= drill[0] and depth[1] <= drill[1], "Drill tip depth cannot precede the cylindrical bore")

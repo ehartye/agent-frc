@@ -128,10 +128,21 @@ class Readiness(unittest.TestCase):
         self.assertEqual(bottomed["status"],"fail")
         self.assertGreater(bottomed["sharedLowerBoundMm3"],0)
         stepped = dict(solids,h=BRepAlgoAPI_Cut(solids["h"],cylinder(2.25,3,4.25)).Shape())
+        for grip in ([3.9,4.1],[3.9,4.3]):
+            with self.assertRaisesRegex(ValueError,"commissioned mouth"):
+                check(stepped,case,dict(specified,gripMm=grip))
+        from math import pi
+        lip = BRepAlgoAPI_Cut(cylinder(6,4,5),cylinder(2,3,6)).Shape()
+        body = BRepAlgoAPI_Cut(cylinder(6,5,17),cylinder(2,3,14)).Shape()
+        split = BRepAlgoAPI_Fuse(lip,body).Shape()
+        half = BRepPrimAPI_MakeCone(mouth_axis,2.25,2,.25,pi).Shape()
+        late_thread = dict(drawing, femaleLeadMm=[1.1,1.2])
+        self.assertEqual(check(dict(solids,h=split),case,late_thread)["status"],"pass")
         with self.assertRaisesRegex(ValueError,"commissioned mouth"):
-            check(stepped,case,specified)
+            check(dict(solids,h=BRepAlgoAPI_Cut(split,half).Shape()),case,late_thread)
         thin = BRepAlgoAPI_Cut(cylinder(5,0,.5),cylinder(2.2,-1,5)).Shape()
         self.assertEqual(check(dict(solids,p=thin),case,drawing)["status"],"fail")
+        self.assertEqual(check(dict(solids,p=thin),case,dict(drawing,externalProfile={}))["status"],"fail")
         spacer=BRepAlgoAPI_Cut(cylinder(5,.5,4),cylinder(2.2,-1,5)).Shape()
         packed=dict(case,grippedLayers=[dict(case["grippedLayers"][0],exitFromSeatMm=[.5,.5]),
                                         dict(case["grippedLayers"][0],solid="spacer")])
