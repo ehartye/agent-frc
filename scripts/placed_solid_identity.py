@@ -54,9 +54,12 @@ def run(root, plan):
         require(named(name) and named(selection["configuration"]), "Register the exact solid and configuration")
         ref = selection.get("registration")
         if "registration" in selection:
-            record = read(pinned(root, ref))
-            require(pointer(record, ref["stepDigestAt"]) == selection["step"]["sha256"]
-                    and pointer(record, ref["solidAt"]) == name,
+            require(isinstance(ref, dict) and set(ref) <= {"file", "sha256", "rowAt"},
+                    "Select one registration row for this occurrence")
+            record = pointer(read(pinned(root, ref)), ref.get("rowAt", ""))
+            require(isinstance(record, dict) and isinstance(record.get("step"), dict)
+                    and record["step"].get("sha256") == selection["step"]["sha256"]
+                    and record.get("selected") == name,
                     "Registration does not identify the selected STEP and solid")
         identities = {}
         solids, _ = load_solids(step, identities)
@@ -65,7 +68,7 @@ def run(root, plan):
         shape = solids[name]
         row = {**selection, "resolved": identities[name], "occurrenceRegistration": "unverified"}
         if ref is not None:
-            require(pointer(record, ref["identityAt"]) == identities[name],
+            require(record.get("STEPidentity") == identities[name],
                     "Registration does not identify this STEP and full resolved occurrence")
             row["occurrenceRegistration"] = "matched"
         try:

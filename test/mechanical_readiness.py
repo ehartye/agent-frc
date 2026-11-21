@@ -27,8 +27,8 @@ class Readiness(unittest.TestCase):
         identities = {}
         solids, _ = load_solids(step, identities)
         first, other = sorted(solids)
-        register = write(self.root, "parked.json", {"step": self.s["step"], "solid": first, "identity": identities[first]})
-        register.update(stepDigestAt="/step/sha256", solidAt="/solid", identityAt="/identity")
+        registered = {"step": self.s["step"], "selected": first, "STEPidentity": identities[first]}
+        register = write(self.root, "parked.json", registered)
         side = dict(step=self.s["step"], registration=register, configuration="parked",
                     solid=first, instance=identities[first]["instance"])
         plan = dict(schema="agent-frc/placed-solid-identity@1", frame="base",
@@ -37,6 +37,12 @@ class Readiness(unittest.TestCase):
             equal = run(self.root, plan)
         self.assertEqual(equal["representedSolidEquality"], "proved")
         self.assertEqual(equal["directedComparison"]["measurementStatus"], "open")
+        mismatched_rows = write(self.root, "two-issues.json", {"rows": [
+            {**registered, "selected": other, "STEPidentity": identities[other]},
+            {**registered, "step": {"sha256": "a" * 64}}]})
+        for path in ("/rows/0", "/rows/1"):
+            with self.assertRaisesRegex(ValueError, "Registration does not identify"):
+                run(self.root, {**plan, "before": {**side, "registration": {**mismatched_rows, "rowAt": path}}})
 
         shape = solids[first]
         move = gp_Trsf()

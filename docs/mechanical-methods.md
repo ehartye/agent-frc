@@ -85,19 +85,19 @@ Run `python PLUGIN/scripts/placed_solid_identity.py PROJECT PLAN.json`. This syn
   "before": {
     "configuration": "Parked fixture, first issue",
     "step": {"file": "cad/first.step", "sha256": "FIRST_STEP_DIGEST"},
-    "registration": {"file": "cad/first-lineage.json", "sha256": "FIRST_REGISTER_DIGEST", "stepDigestAt": "/step/sha256", "solidAt": "/solid", "identityAt": "/identity"},
+    "registration": {"file": "cad/first-lineage.json", "sha256": "FIRST_REGISTER_DIGEST"},
     "solid": "Locator plate", "instance": "1.2.1"
   },
   "after": {
     "configuration": "Parked fixture, successor",
     "step": {"file": "cad/successor.step", "sha256": "SUCCESSOR_STEP_DIGEST"},
-    "registration": {"file": "cad/successor-lineage.json", "sha256": "SUCCESSOR_REGISTER_DIGEST", "stepDigestAt": "/step/sha256", "solidAt": "/solid", "identityAt": "/identity"},
+    "registration": {"file": "cad/successor-lineage.json", "sha256": "SUCCESSOR_REGISTER_DIGEST"},
     "solid": "Locator plate", "instance": "1.3.1"
   }
 }
 ```
 
-The optional registration pointers select the STEP digest, exact solid name and complete resolved identity (definition, instance index and occurrence path) from an existing project receipt. A mismatched receipt rejects the comparison. Omit the registration to inspect the supplied STEP files alone. Confirm the native coordinate system and configuration independently in either case.
+The optional registration identifies one project receipt row. Its `step.sha256`, `selected` and `STEPidentity` fields must bind the digest, solid name and complete resolved identity (definition, instance index and occurrence path) together. A receipt with several rows can specify one JSON pointer in `rowAt`. Keep both occurrence registrations for a paired issue replay. A mismatched receipt rejects the comparison. Omit the registration to inspect the supplied STEP files alone. Confirm the native coordinate system and configuration independently in either case.
 
 The reader imports each complete STEP, resolves the registered leaf in world coordinates and checks that its geometric faces enclose a valid solid with positive signed volume. It compares the full binary BRep streams in one kernel, including orientation and location. The receipt preserves both hashes, resolved paths and the separate directed Boolean measurements. `representedSolidEquality: "proved"` establishes equal represented geometry for those two selected leaves. Different encodings can describe equivalent geometry, so differing bytes leave this exact test open. Repeat the plan against a deliberately displaced export and retain the measured differences. For paired issue replay use `placed-solid-identity`, criterion `/representedSolidEquality` equal to `proved`, and candidate STEP binding `/after/step/sha256`.
 
