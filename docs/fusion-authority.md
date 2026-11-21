@@ -1,6 +1,6 @@
 # Find the current Fusion design
 
-Keep one project authority register at `cad/fusion-authority.json`. Project setup records the designated design before the first engineering export. The register names the whole system or the explicitly bounded subsystem, its active configuration, revision and source policy. Keep historical publications and alternate designs in separate records. A document title, a revision integer without its design identity, or the most recently touched STEP file cannot establish the current design.
+Keep one authority register under the active design root at `cad/fusion-authority.json`. Project setup records the designated design before the first engineering export. The register names the whole system or the explicitly bounded subsystem, its active configuration, revision and source policy. Keep historical publications and alternate designs in separate records. A document title, a revision integer without its design identity, or the most recently touched STEP file cannot establish the current design.
 
 ```json
 {
@@ -16,6 +16,28 @@ Keep one project authority register at `cad/fusion-authority.json`. Project setu
 ```
 
 For a configured design, set `nativeConfiguration` to the exact Fusion row ID. For an offline master, set `source` to `{"kind":"offline","archive":{"file":"cad/student.f3d","sha256":"<full digest>"}}`. An offline check establishes the latest archive explicitly registered by the project. A cloud check measures the latest saved cloud version of the designated design as of export. Cloud child references must be current, or pinned to a specific `id` and `versionId` with a reviewed `basis`. Unresolved links, a modified cloud document, and a different configuration leave the new issue unqualified.
+
+## Resume a registered master
+
+1. Read `iterations/active.json` in the receiving project and follow its `root` to `cad/fusion-authority.json`. An unnumbered project uses `cad/fusion-authority.json` at the project root. If a numbered design lacks its pointer or the selected design is still pending its first issue, record that state and recover the missing evidence or author the first issue. An older issue remains available for historical replay.
+2. Recover the registered archive, its exported STEP and the corresponding `lineage.json` at their recorded project-relative paths. Resolve the [installed runtime](setup-health.md#resolve-the-plugin-used-by-this-check). From an ordinary terminal, run the installed verifier with the project directory and the two paths relative to it. Quote paths containing spaces.
+
+   ```sh
+   python "PLUGIN_ROOT/scripts/fusion_authority.py" "PROJECT_ROOT" "REGISTER_RELATIVE_PATH" "LINEAGE_RELATIVE_PATH"
+   ```
+
+   Read the reported revision, configuration, observation time, policy and both SHA-256 values. The verifier also checks the exporter bytes. If it reports a mismatch, compare the project pointer, register, issue and tool identity to the recorded inputs. Recover the exact source and exporter for a pinned replay. A successful offline check establishes the registered file identities. A cloud result reports the exporter's observation as of the recorded time.
+3. For a mechanical review, look for complete native inventories from that same archive for the commissioned poses. Where a required receipt is absent, run the packaged `fusion_issue_inventory.capture` in Fusion on the verified archive in a disposable document. Pass absolute `pathlib.Path` values for the archive and a fresh private output, and the project's pose record. A parked-only check uses `pose=None`.
+
+   In the Fusion recipe, use the active `adsk.core.Application` and put the checked plugin's `scripts` directory on the Python import path.
+
+   ```python
+   import fusion_issue_inventory
+
+   result = fusion_issue_inventory.capture(app, archive, output, pose=commissioned_pose)
+   ```
+
+   If a batch returns `complete: false`, repeat with the same archive, pose and output path. Leave the adjacent generated `.progress.json` in place. If you supplied `checkpoint=`, use that same checkpoint path. Give each further pose a separate output. A completed census can still report unresolved pairs or measured intersections. Review those findings with the corresponding pose and keep missing evidence open. [Native pose capture and review](#save-and-resume)
 
 ## Save and resume
 
