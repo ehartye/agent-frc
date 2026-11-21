@@ -1,6 +1,6 @@
 # Check a proposed part placement
 
-Before an agent adds or moves robot hardware, identify its intended root-frame pose and the nearby physical interfaces. For an existing accepted design, use a separately saved, self-contained Fusion archive. Stage the native job including its plugin dependencies when it will run on a shared station. [Keep a native job reproducible](native-job.md)
+Before an agent adds or moves robot hardware, identify its intended root-frame pose and the nearby physical interfaces. For an existing accepted design, use a separately saved, self-contained Fusion archive. Freeze the native recipe and its plugin dependencies when a later inspection or reopen will use them. [Keep a native job reproducible](native-job.md)
 
 Use `fusion_checked_placement.checked_placement(app, accepted_archive, accepted_sha256, new_archive, request, edit)` from the installed plugin’s `scripts` directory. The project’s `edit(design)` callback performs its native insert or move in a disposable copy of the accepted assembly. Limit the callback to that supplied design and the requested placement. It must leave saving and exporting to the guard. The source archive remains available after a veto, a native exception or an interrupted client. Store the returned receipt with the decision. Adopt the newly emitted F3D only after a pass.
 

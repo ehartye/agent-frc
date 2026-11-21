@@ -23,4 +23,4 @@ Validate the source with `npm test` and `npm run validate`. A successful plugin 
 
 See the [OpenAI local plugin packaging documentation](https://developers.openai.com/plugins/build/plugins) for current marketplace and cache behavior.
 
-For a long native job, [preserve its pinned package on the shared station](native-job.md) before starting. Confirm that active jobs have staged dependencies before refreshing the marketplace or removing a worktree.
+For a deferred native job, [freeze its plugin and project inputs](native-job.md) before dispatch. Keep those bytes through cold readback. Before replacing a cache or removing a worktree, check whether a job still reads files there.

@@ -188,7 +188,8 @@ def lease(bundle, *, publication=False):
                 import fcntl
                 fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError as error:
-            raise ValueError("Native job is active; its station lock is held") from error
+            operation = "publication" if publication else "use"
+            raise ValueError(f"The {operation} lock for {bundle.name!r} is held in {bundle.parent}") from error
         try:
             yield
         finally:

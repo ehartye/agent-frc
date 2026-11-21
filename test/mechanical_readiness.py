@@ -16,6 +16,83 @@ from spatial_operating_cases import SpatialOperatingCases
 
 
 class Readiness(unittest.TestCase):
+    def test_named_pair_cache_is_bound_to_independent_registration(self):
+        from copy import deepcopy
+        from hashlib import sha256
+        from unittest.mock import patch
+        from OCP.gp import gp_Trsf, gp_Vec
+        from OCP.TopLoc import TopLoc_Location
+        import placed_pair_cache as cache
+        from showcase_contacts import load_solids
+
+        identities = {}
+        solids, _ = load_solids(self.root/self.s["step"]["file"], identities)
+        left, right = sorted(identities)
+        plan = {"schema":"agent-frc/placed-pairs@1","lineage":self.s["lineage"],
+                "leaves":identities,"pairs":[[left,right]]}
+        folder = self.root/"cache"
+        pin = cache.run("register", self.root, plan)["indexSha256"]
+        self.assertEqual(cache.run("prepare", self.root, plan, folder)["indexSha256"], pin)
+        with self.assertRaises(FileExistsError):
+            cache.run("prepare", self.root, plan, folder)
+        with patch("placed_pair_cache.load_solids", side_effect=AssertionError("Unexpected full import")):
+            measured = cache.run("measure", self.root, plan, folder, pin)
+        self.assertEqual(measured["readFrom"], "placed-cache")
+        self.assertEqual(measured["pairs"][0]["status"], "measured")
+        self.assertAlmostEqual(measured["pairs"][0]["opposedPlanarAreaMm2"], 100.)
+        path = folder/"index.json"
+        saved = path.read_bytes()
+        index = json.loads(saved)
+        moved = gp_Trsf()
+        moved.SetTranslation(gp_Vec(1,2,0))
+        wrong = cache.binary_solid(solids[left].Moved(TopLoc_Location(moved)))
+        changed = deepcopy(index)
+        changed["leaves"][left]["sha256"] = sha256(wrong).hexdigest()
+        (folder/(changed["leaves"][left]["sha256"]+".brep")).write_bytes(wrong)
+        path.write_bytes(cache.encoded(changed))
+        with self.assertRaisesRegex(ValueError, "independent full-source"):
+            cache.run("measure", self.root, plan, folder, pin)
+        changed["leaves"].pop(right)
+        path.write_bytes(cache.encoded(changed))
+        with self.assertRaisesRegex(ValueError, "independent index"):
+            cache.run("measure", self.root, plan, folder, sha256(path.read_bytes()).hexdigest(), True)
+        path.write_bytes(saved)
+        blob = folder/(index["leaves"][left]["sha256"]+".brep")
+        blob.write_bytes(wrong)
+        with self.assertRaisesRegex(ValueError, "Cached"):
+            cache.run("measure", self.root, plan, folder, pin)
+        recovered = cache.run("measure", self.root, plan, folder, pin, True)
+        self.assertEqual(recovered["readFrom"], "canonical-step")
+        self.assertTrue(recovered["cacheFinding"])
+        self.assertEqual(recovered["pairs"], measured["pairs"])
+        with self.assertRaises(ValueError):
+            cache.run("measure", self.root, {**plan,"wholeRobot":True}, folder, pin, True)
+        other = deepcopy(plan)
+        other["leaves"][right]["instance"] = "unrelated"
+        with self.assertRaisesRegex(ValueError, "Missing or different"):
+            cache.run("measure", self.root, other, folder, pin, True)
+        pending = self.root/"new-cache"
+        with self.assertRaisesRegex(ValueError, "Missing or different"):
+            cache.run("prepare", self.root, other, pending)
+        self.assertFalse(pending.exists())
+        self.assertFalse(list(self.root.glob(".placed-pairs-*")))
+        self.assertEqual(cache.run("prepare", self.root, plan, pending)["indexSha256"], pin)
+        for impossible in (-1., 1001.):
+            with patch("placed_pair_cache.boolean_measure", return_value=(impossible,True)):
+                contradiction = cache.run("measure", self.root, plan, pending, pin)["pairs"][0]
+            self.assertEqual(contradiction["rawCommonMm3"], impossible)
+            self.assertEqual(contradiction["status"], "open")
+        def replace_during_import(path, found):
+            original = load_solids(path, found)
+            path.write_bytes(b"different STEP during full read")
+            return original
+        with patch("placed_pair_cache.load_solids", side_effect=replace_during_import):
+            with self.assertRaisesRegex(ValueError, "changed during the full read"):
+                cache.run("register", self.root, plan)
+        (self.root/self.s["step"]["file"]).write_bytes(b"another issue")
+        with self.assertRaisesRegex(ValueError, "authority evidence"):
+            cache.run("measure", self.root, plan, folder, pin, True)
+
     def test_bounded_source_comparison_retains_finished_rows_and_retries_partial_writes(self):
         from unittest.mock import patch
         import component_batch as batch

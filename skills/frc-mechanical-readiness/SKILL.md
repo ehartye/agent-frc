@@ -7,6 +7,8 @@ description: "Review a selected robot or subsystem before shop release or showca
 
 For an axial bearing adjustment, [check the complete stack](../../docs/axial-bearing-stack.md). Trace both race load paths, measure the full retained shaft stroke, and test a displaced bearing against the hub, spacer and outside supports.
 
+For repeated parked checks on a few named parts, [verify and reuse their placed STEP geometry](../../docs/mechanical-methods.md#recheck-named-pairs-from-a-large-parked-step). Keep the complete issue as the input to whole-assembly review.
+
 Use the [agent placement guard](../../docs/checked-placement.md) when moving or installing components. Then repeat the complete cold census and the operating sweep on the issued assembly. [Keep independent pose receipts](../../docs/fusion-authority.md#keep-independent-pose-observations-when-one-trial-stops) so a failed motion trial leaves parked measurements available for diagnosis.
 
 Compare every physical occurrence in the cold successor with the [pre-CAD target roster](../../docs/article-functions.md). Reconcile added, missing and substituted parts, then qualify actual retention and clearance across the complete assembly.
@@ -41,7 +43,7 @@ For a loaded transfer, require its independently registered trajectory law and a
 
 Before promoting a model, run the [local source and final-site release verification](../../docs/private-model-release.md#local-release-command). Keep its receipt with the project and retain the approved public version while any required qualification is open.
 
-For a shared-station or deferred native readback, [stage its exact plugin and project dependencies](../../docs/native-job.md) before dispatch. Keep the same source issue through export, each cold inspection and release.
+For a deferred native readback, [stage its exact plugin and project dependencies](../../docs/native-job.md) before dispatch. Keep the same source issue through export, each cold inspection and release.
 
 For a numbered design, commission the whole-robot or subsystem publication scope, then bind both delivery trees to the selected current native issue. [Active model selection](../../docs/private-model-release.md#keep-a-retired-robot-online-during-a-numbered-restart)
 
