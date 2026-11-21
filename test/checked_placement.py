@@ -6,7 +6,7 @@ from copy import deepcopy
 from pathlib import Path
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"scripts"))
-from fusion_checked_placement import inspect_proposal,verify_fit,sibling
+from fusion_checked_placement import PlacementPoseError,inspect_proposal,verify_fit,sibling
 
 def transform(x,y):
     return [1,0,0,x,0,1,0,y,0,0,1,0,0,0,0,1]
@@ -33,6 +33,34 @@ def decision(x,values,rule=None):
     return inspect_proposal(a,b,request,measure)
 
 class Placements(unittest.TestCase):
+    def test_pose_veto_reports_the_missing_or_attained_occurrence_before_contact_queries(self):
+        before, after = scene(0), scene(0)
+        prior = deepcopy(before)
+        target = "Mount:1+Roller:1"
+        requested = transform(.32,2)
+        source = "a"*64
+        for reason in ("pose-mismatch","missing-occurrence"):
+            if reason == "missing-occurrence":
+                del after["poses"][target]
+            with self.assertRaises(PlacementPoseError) as raised:
+                inspect_proposal(before,after,dict(occurrence=target,worldTransformCm=requested),
+                                 self.fail,accepted_sha256=source)
+            observation = raised.exception.receipt
+            self.assertEqual(json.loads(str(raised.exception)),observation)
+            self.assertEqual(observation["reason"],reason)
+            self.assertEqual(observation["occurrence"],target)
+            self.assertEqual(observation["acceptedSha256"],source)
+            self.assertEqual(observation["priorWorldTransformCm"],transform(0,2))
+            self.assertEqual(observation["requestedWorldTransformCm"],requested)
+            self.assertEqual(observation["observedWorldTransformCm"],after["poses"].get(target))
+            self.assertEqual(before,prior)
+        # A relative insertion combines the requested displacement with the reference's accepted pose.
+        request = dict(occurrence="Copy:1",sourceOccurrence=target,worldDeltaFromSourceCm=transform(2,1))
+        with self.assertRaises(PlacementPoseError) as raised:
+            inspect_proposal(before,after,request,self.fail,accepted_sha256=source)
+        self.assertEqual(raised.exception.receipt["requestedWorldTransformCm"],transform(2,3))
+        self.assertIsNone(raised.exception.receipt["priorWorldTransformCm"])
+
     def test_pinned_native_helpers_leave_the_next_jobs_imports_intact(self):
         from unittest.mock import patch
         import types
