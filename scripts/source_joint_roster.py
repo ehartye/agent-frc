@@ -86,7 +86,8 @@ def active_coordinates(raw, owners, anchor):
             connect(group["members"])
     for link in raw["motionLinks"]:
         counts[link["occurrence"]]["motionLinks"] += 1
-        require(link["suppressed"] is True, "Active native motion link needs independently calibrated dependent coordinates: " + link["name"])
+        require(type(link["suppressed"]) is bool and (link["suppressed"] or link["health"]=="healthy"),
+                "Unresolved active native motion link: "+link["name"])
     for owner, summary in raw["localCounts"].items():
         require(set(summary) == {"joint", "asBuilt", "rigidGroups", "motionLinks"} and all(
             type(n) is int and n >= 0 and counts[owner][k] == n for k, n in summary.items()),

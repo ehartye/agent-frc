@@ -9,7 +9,7 @@ from mesh_correspondence import stl_triangles
 from mechanical_readiness import digest
 
 
-def write_view(root,shapes,slider,travel_mm,filename):
+def write_view(root,shapes,slider,travel_mm,filename,companion=None):
     binary=bytearray();views=[];accessors=[];nodes=[];meshes=[];facets={};offset=0
     def accessor(data,kind,width):
         packed=struct.pack("<"+"f"*len(data),*data)
@@ -31,10 +31,18 @@ def write_view(root,shapes,slider,travel_mm,filename):
     active=list(shapes).index(slider);time=accessor([0,1],"SCALAR",1)
     position=accessor([0,0,0,travel_mm/1000,0,0],"VEC3",3)
     name="Inspect the carriage stroke"
+    samplers=[dict(input=time,output=position,interpolation="LINEAR")]
+    channels=[dict(sampler=0,target=dict(node=active,path="translation"))]
+    binding={str(active):dict(group="carriage",baselinePose="home",calibrationPose="extended",timeS=1)}
+    if companion is not None:
+        mirror=list(shapes).index(companion)
+        position=accessor([0,0,0,travel_mm/1000,0,0],"VEC3",3)
+        samplers.append(dict(input=time,output=position,interpolation="LINEAR"))
+        channels.append(dict(sampler=1,target=dict(node=mirror,path="translation")))
+        binding[str(mirror)]=dict(group="companion")
     doc=dict(asset={"version":"2.0"},scene=0,scenes=[dict(nodes=list(range(len(nodes))))],nodes=nodes,meshes=meshes,
         buffers=[dict(byteLength=len(binary))],bufferViews=views,accessors=accessors,
-        animations=[dict(name=name,samplers=[dict(input=time,output=position,interpolation="LINEAR")],
-            channels=[dict(sampler=0,target=dict(node=active,path="translation"))])])
+        animations=[dict(name=name,samplers=samplers,channels=channels)])
     payload=json.dumps(doc,separators=(",",":")).encode()
     payload+=b" "*(-len(payload)%4)
     file=root/filename
@@ -43,4 +51,4 @@ def write_view(root,shapes,slider,travel_mm,filename):
     return dict(mesh=dict(file=filename,sha256=digest(file)),chordMm=.18,angleRad=.18,pose="rest",
         surfaces=dict(facets=facets,basis="Directly registered facets for every original solid",toleranceMm=.01),
         animations={name:dict(keyPoses=[dict(timeS=0,pose="home"),dict(timeS=1,pose="extended")],
-            channels={str(active):dict(group="carriage",baselinePose="home",calibrationPose="extended",timeS=1)})})
+            channels=binding)})

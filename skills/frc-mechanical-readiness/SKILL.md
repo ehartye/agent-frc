@@ -24,3 +24,5 @@ For a mechanism that transfers a game piece, [sweep the actual released object t
 Follow the underlying observations for each qualified joint through to their governing case and numerical acceptance limit. For a replacement showcase verify the rendered pixels and each playable native joint trajectory, including compound motion. [Publishing the checked geometry](../../docs/mesh-correspondence.md)
 
 Verify mounted hardware at alternate native poses and match each installed constituent's physical material and density to its drawing or supplier requirement. Compare unchanged bodies to their previous native issue. Record motion limits and source-backed material substitutions before issuing a replacement. [Installed hardware and stock](../../docs/mechanical-methods.md)
+
+For mechanically linked drives, command only the independent native axes and read back the followers. Compare signed travel, installed phase, obstruction and recovery against the commissioned operating interval. [Review coupled operating motion](../../docs/operating-intent.md)

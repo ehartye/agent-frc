@@ -129,6 +129,35 @@ def linear_envelope_clear(moving_box,fixed,moving_ops,fixed_ops,clearance):
     return gap>=clearance and (gap>1e-7 or common(envelope,fixed)==0)
 
 
+def planar_translation_clear(shape, fixed, moving_ops, fixed_ops, clearance):
+    """Certify a piecewise-planar solid's relative sweep, including reentrant corners."""
+    from OCP.BRepAdaptor import BRepAdaptor_Surface
+    from OCP.BRepPrimAPI import BRepPrimAPI_MakePrism
+    from OCP.GeomAbs import GeomAbs_Plane
+    from OCP.TopAbs import TopAbs_FACE
+    from OCP.TopExp import TopExp_Explorer
+    from OCP.TopoDS import TopoDS
+    from OCP.gp import gp_Vec
+    if any(op["kind"]!="translation" for op in [*moving_ops,*fixed_ops]):
+        return False
+    travel=gp_Vec(*[sum(op["travelMm"][i] for op in moving_ops)-sum(op["travelMm"][i] for op in fixed_ops) for i in range(3)])
+    def clear(s):
+        gap=distance(s,fixed)
+        return gap>=clearance and (gap>1e-7 or common(s,fixed)==0)
+    if travel.Magnitude()==0 or not clear(shape):return False
+    # The original solid and prisms swept by its boundary cover every occupied point.
+    # Tangential planar faces add no interior. Restrict this proof to exact planarity.
+    faces=TopExp_Explorer(shape,TopAbs_FACE)
+    while faces.More():
+        face=(getattr(TopoDS,"Face_s",None) or TopoDS.Face)(faces.Current());surface=BRepAdaptor_Surface(face)
+        if surface.GetType()!=GeomAbs_Plane:return False
+        if travel.Dot(gp_Vec(surface.Plane().Axis().Direction()))!=0:
+            prism=BRepPrimAPI_MakePrism(face,travel)
+            if not prism.IsDone() or not clear(prism.Shape()):return False
+        faces.Next()
+    return True
+
+
 def bearing_area(a,b):
     from OCP.TopAbs import TopAbs_FACE
     from OCP.TopExp import TopExp_Explorer
@@ -203,7 +232,9 @@ def evaluate(root,study):
             if box_gap(boxes[a],boxes[b])-speed>cut or separate_translations(boxes[a],boxes[b],moves.get(a,[]),moves.get(b,[]),cut):
                 counts["broadPhase"]+=1;continue
             if case.get("checkLinearEnvelope") and (linear_envelope_clear(boxes[a],scene[b],moves.get(a,[]),moves.get(b,[]),cut)
-                    or linear_envelope_clear(boxes[b],scene[a],moves.get(b,[]),moves.get(a,[]),cut)):
+                    or linear_envelope_clear(boxes[b],scene[a],moves.get(b,[]),moves.get(a,[]),cut)
+                    or planar_translation_clear(scene[a],scene[b],moves.get(a,[]),moves.get(b,[]),cut)
+                    or planar_translation_clear(scene[b],scene[a],moves.get(b,[]),moves.get(a,[]),cut)):
                 counts["bounded"]+=1
                 rows.append(dict(pair=[a,b],status="pass",method="enclosed relative linear stroke"))
                 continue

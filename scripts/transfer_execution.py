@@ -76,12 +76,15 @@ def supported_segment(shape, point, end, displacement, force, outward):
     return False
 
 
-def inspect(root, study, test, trace, parts, piece, stock):
+def inspect(root, study, test, trace, parts, piece, stock, *, installed_at=None, rotates=None):
+    if installed_at is None:
+        installed_at=lambda f,n:placed(parts[n],f["offsetsMm"].get(n,[0,0,0]))
+
     frames=trace["frames"];identity=trace["pieceId"];zero=[0,0,0]
     initial=frames[0]["offsetsMm"]
     admitted=placed(piece,initial[identity])
     for name,shape in {**parts,**stock}.items():
-        obstacle=placed(shape,initial.get(name,zero))
+        obstacle=installed_at(frames[0],name) if name in parts else placed(shape,initial.get(name,zero))
         overlap=common(admitted,obstacle) if distance(admitted,obstacle)<=1e-7 else 0
         if overlap>0:
             return "fail",f"Initial admitted piece penetrates {name} by {overlap:.9g} mm^3"
@@ -92,7 +95,7 @@ def inspect(root, study, test, trace, parts, piece, stock):
             return "fail","Proposed trajectory contradicts the clock and positions in its own executed source"
         for f in frames:
             if f["custody"]=="guided" and distance(placed(piece,f["offsetsMm"][identity]),
-                    placed(parts[guide],f["offsetsMm"].get(guide,zero)))>1e-6:
+                    installed_at(f,guide))>1e-6:
                 return "fail","The named guide cannot reach the article at the claimed time"
     ref=test.get("execution")
     if not ref:
@@ -147,7 +150,7 @@ def inspect(root, study, test, trace, parts, piece, stock):
             require(body in parts,
                     "Observed support needs a compressive contact reaction on an installed body")
             obj=placed(piece,frame["offsetsMm"][identity])
-            member=placed(parts[body],frame["offsetsMm"].get(body,zero))
+            member=installed_at(frame,body)
             require(distance(obj,member)<=1e-6 and common(obj,member)<=1e-9,
                     "Observed support cannot reach the admitted object without penetration")
             force=contact["forceOnPieceN"]
@@ -156,6 +159,8 @@ def inspect(root, study, test, trace, parts, piece, stock):
             arm=[(x-y)/1000 for x,y in zip(contact["pointMm"],cg)]
             for k in range(3):moments[k]+=arm[(k+1)%3]*force[(k+2)%3]-arm[(k+2)%3]*force[(k+1)%3]
             if i+1<len(frames):
+                if rotates and rotates(frame,frames[i+1],body):
+                    return "open","Continuous support on a rotating finite contact needs a qualified force-path model"
                 after=frames[i+1]["offsetsMm"]
                 def displacement(key):
                     return [x-y for x,y in zip(after.get(key,zero),frame["offsetsMm"].get(key,zero))]

@@ -17,6 +17,12 @@ class InstalledKinematics(unittest.TestCase):
             def f(t,x,q):
                 return dict(timeS=t,nativeCoordinates={"slide":q},offsetsMm={moving:[x,0,0],"admitted":[30,0,4]})
             check_trace(m,[f(0,0,0),f(.15,3,.3),f(.5,10,1)])
+            m["operatingRanges"]["slide"]=[2,6]
+            check_trace(m,[f(0,2,.2),f(.5,6,.6)])
+            for outside in [f(0,1,.1),f(1,7,.7)]:
+                with self.assertRaisesRegex(ValueError,"selected operating interval"):
+                    check_trace(m,[outside])
+            m["operatingRanges"]["slide"]=[0,10]
             for row in (f(0,30,0),f(.15,0,.3),f(.5,14,1.4)):
                 with self.subTest(frame=row),self.assertRaises(ValueError):check_trace(m,[row])
             stationary=dict(cold=m["cold"],groups={},sliders={})

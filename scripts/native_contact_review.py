@@ -93,5 +93,12 @@ def verify(root,study,reopen,base,registered,find,missing):
         missing("native",sorted(set(by_id)-completed),"Required moving native inspection pose is absent.")
     groups=set(reopen.get("movingGroups",[]))
     checked={j.get("group") for pose in planned for j in pose["joints"]}
+    if study.get("linkCalibration"):
+        # The native station drives independent axes, then reads back every coupled
+        # coordinate. The full kinematics review verifies the associated body poses.
+        observed=read(pinned(root,study["linkCalibration"]))
+        for row in observed["frames"]:
+            if row["id"] in completed and row["id"]!="saved":
+                checked.update(g for g,value in row["values"].items() if abs(value-observed["frames"][0]["values"][g])>1e-8)
     if groups-checked:
         missing("native",sorted(groups-checked),"A native moving group has no evaluated operating pose.")

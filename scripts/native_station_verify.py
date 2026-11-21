@@ -21,16 +21,22 @@ def inspect_archive(path):
 
 
 def verify(root,study):
+    observations=[("canonical-export",study["lineage"]),("native-contacts",study["nativeCensus"])]
+    observations.extend([("native-body-materials",study["materialCensus"]),("native-joint-authority",study["jointAuthority"])])
+    if study.get("linkCalibration"):
+        observations.append(("native-link-calibration",study["linkCalibration"]))
+    observations.extend(("native-contacts",r) for r in study.get("nativePoses",[]))
+    authenticate(root,study,observations)
+    from source_joint_roster import intended
+    intended(root,study,read(pinned(root,study["reopen"])),trusted=True)
+
+
+def authenticate(root,study,observations):
     key=os.environ.get("FRC_NATIVE_WITNESS_PUBLIC_KEY")
     require(key and Path(key).is_file() and not Path(key).resolve().is_relative_to(root),
             "Supply the independently trusted native station public key outside the candidate")
     inspect_archive(pinned(root,study["archive"]))
     register=pinned(root,study["authority"])
-    observations=[("canonical-export",study["lineage"]),("native-contacts",study["nativeCensus"])]
-    observations.extend([("native-body-materials",study["materialCensus"]),("native-joint-authority",study["jointAuthority"])])
-    from source_joint_roster import intended
-    intended(root,study,read(pinned(root,study["reopen"])),trusted=True)
-    observations.extend(("native-contacts",r) for r in study.get("nativePoses",[]))
     script="const fs=require('node:fs'),c=require('node:crypto');const args=JSON.parse(fs.readFileSync(0));const k=c.createPublicKey(fs.readFileSync(process.argv[1]));if(k.asymmetricKeyType!=='ed25519'||!args.every(x=>c.verify(null,Buffer.from(x.raw),k,Buffer.from(x.signature,'base64'))))process.exit(1)"
     signatures=[]
     for kind,ref in observations:

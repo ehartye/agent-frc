@@ -205,6 +205,17 @@
       ],
       "detects": "A constituent changes physical material between comparable native bodies without engineering review",
       "regression": "test/installed_kinematics.py"
+    },
+    {
+      "id": "linked-kinematics",
+      "runtime": "python",
+      "entry": "scripts/linked_motion.py",
+      "args": [
+        "$root",
+        "$study"
+      ],
+      "detects": "An installed member or physical tip does not follow an approved driver, follower ratio, phase or mounted pose; measures named contact during a blocked drive",
+      "regression": "test/linked_kinematics.py"
     }
   ]
 }

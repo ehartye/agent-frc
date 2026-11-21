@@ -570,6 +570,14 @@ def evaluate_inputs(root,study, geometry=None):
         from assembly_kinematics import native_model
         try:
             motion_model=native_model(root,study)
+            if motion_model.get("linked"):
+                from linked_motion import duty_sweep
+                from source_joint_roster import intended
+                intent=intended(root,study,read(pinned(root,study["reopen"])))
+                result=duty_sweep(root,study,motion_model,intent)
+                for case in result["cases"]:
+                    if case["status"]!="pass":
+                        finding("sweep",case["status"],case["case"],"Linked operating sequence has unresolved clearance or interference.")
         except (ValueError,KeyError,TypeError,OSError) as e:
             missing("native","installed kinematics",str(e))
     transfers=study.get("transferClaims")

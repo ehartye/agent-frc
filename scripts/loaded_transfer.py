@@ -51,7 +51,19 @@ def replay(root,study,*,motion_model=None):
         require(set(trace.get("stockIds",[]))==stock_ids,"Remaining physical stock differs from the source trajectory")
         first=frames[0]["offsetsMm"]
         def placed(shape,offset):return transform(shape,[{"kind":"translation","travelMm":offset}],1)
-        admitted=distance(placed(shapes[piece["solid"]],first[source_id]),placed(actual[trace["holder"]],first.get(trace["holder"],[0,0,0])))
+        def installed_at(frame,name):
+            if motion_model and motion_model.get("linked") and not motion_error:
+                from linked_motion import segment_ops,coordinates
+                lm=motion_model["linked"];n=lm["owners"][name]
+                ops=segment_ops(lm,lm["paths"][n],lm["saved"],coordinates(motion_model,frame))
+                return transform(actual[name],ops,1)
+            return placed(actual[name],frame["offsetsMm"].get(name,[0,0,0]))
+        def rotates_between(a,b,name):
+            if not motion_model or not motion_model.get("linked") or motion_error:return False
+            lm=motion_model["linked"]
+            return any(lm["axes"][g][2] and abs(a["nativeCoordinates"][g]-b["nativeCoordinates"][g])>1e-10
+                       for g,_ in lm["paths"][lm["owners"][name]])
+        admitted=distance(placed(shapes[piece["solid"]],first[source_id]),installed_at(frames[0],trace["holder"]))
         admission=test.get("admissionGapMm")
         require(number(admission) and admission>=0,"Freeze the measurable piece-to-holder admission gap")
         free=False;speed=0;stages=[]
@@ -76,6 +88,12 @@ def replay(root,study,*,motion_model=None):
                     speed+=gravity*dt
                 elif any(delta):
                     motion[key]=[dict(kind="translation",travelMm=delta)]
+            if motion_model and motion_model.get("linked") and not motion_error:
+                from linked_motion import geometry_segment
+                installed_start,installed_moves=geometry_segment(motion_model,a,b)
+                for key in actual:
+                    initial.pop(key,None);motion.pop(key,None)
+                initial.update(installed_start);motion.update(installed_moves)
             if source_id not in motion:motion[source_id]=[dict(kind="translation",travelMm=[0,0,0])]
             free=a["custody"]=="free"
             stages.append(dict(id=case+"-"+str(i),basis=study["basis"],fixtures=[dict(piece,id=source_id,basis="Finite admitted piece from the trace"),*stock],
@@ -98,7 +116,7 @@ def replay(root,study,*,motion_model=None):
         corridor=status
         from transfer_execution import inspect
         try:
-            execution,reason=inspect(root,study,test,trace,actual,shapes[piece["solid"]],stock_shapes)
+            execution,reason=inspect(root,study,test,trace,actual,shapes[piece["solid"]],stock_shapes,installed_at=installed_at,rotates=rotates_between)
         except (ValueError,KeyError,OSError,TypeError) as e:
             execution,reason="fail",str(e)
         if motion_error:execution,reason="fail",motion_error

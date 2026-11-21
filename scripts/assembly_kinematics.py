@@ -42,6 +42,37 @@ def native_model(root,study):
             {(joint_key(row),row["coordinate"]) for row in intent["nativeCoordinates"].values()}==
             {(key,coordinate) for key,j in joints.items() for coordinate in j["coordinates"]},
             "Commissioning coordinates must exactly cover all active native degrees of freedom")
+    coupled=any(not link["suppressed"] for link in raw["motionLinks"])
+    require(coupled==bool(intent.get("motionLinks")),"Native links and the selected commissioning requirements disagree")
+    moving_rotation=any("rotationValue" in j["coordinates"] for j in joints.values())
+    require(not (coupled or moving_rotation) or study.get("linkCalibration"),
+            "Rotating and mechanically linked assemblies need a signed driver and physical landmark calibration")
+    if study.get("linkCalibration"):
+        from linked_motion import observations,shares_rigid_motion
+        model=observations(root,study,raw,owners,study["chassisAnchor"],intent)
+        actual={g:(joint_key(c),c["coordinate"],joints[joint_key(c)]["coordinates"][c["coordinate"]],joints[joint_key(c)]["members"])
+                for g,c in intent["nativeCoordinates"].items()}
+        poses={"saved":cold}
+        for s,n in owners.items():
+            require(np.allclose(cold[s],model["savedTransforms"][n],rtol=0,atol=1e-5),"Source link calibration starts at another installed pose")
+        for ref in study["nativePoses"]:
+            row=read(pinned(root,ref));pid=row["pose"]["id"];pose=matrices(row)
+            require(pid in model["states"],"Native interference pose absent from driver-only linked calibration")
+            q=model["states"][pid];forecast=model["predict"](q)
+            for command in row["pose"]["joints"]:
+                g=command["group"];require(g in actual and joint_key(command)==actual[g][0] and command["coordinate"]==actual[g][1]
+                    and abs(command["nativeValue"]-q[g])<=1e-6,"Registered joint command disagrees with the independent linked readback")
+            for s,n in owners.items():
+                require(np.allclose(forecast[n]@cold[s],pose[s],rtol=0,atol=2e-5),"Interference census and attained linked pose disagree")
+            poses[pid]=pose
+        for edge in study["connections"]:
+            a,b=edge["pair"];g=edge.get("jointGroup")
+            if g:
+                require(g in actual and {tuple(model["paths"][n]) for n in actual[g][3]}==
+                        {tuple(model["paths"][owners[s]]) for s in (a,b)},"Articulating attachment disagrees with its installed rigid member groups")
+            else:
+                require(shares_rigid_motion(model,owners[a],owners[b]),"Declared rigid mount changes relative position along its coupled native constraints")
+        return dict(cold=cold,groups=actual,poses=poses,sliders={},operatingRanges=intent["motionRanges"],linked=model)
     if not groups:
         for ref in study.get("nativePoses",[]):
             pose=matrices(read(pinned(root,ref)))
@@ -122,7 +153,7 @@ def native_model(root,study):
                 delta,angle=relative_errors(cold[a],cold[b],pose[a],pose[b])
                 require(delta<=1e-5 and angle<=1e-5,
                     f"Rigid attachment {a} / {b} changed by {delta:.6g} mm and {angle:.6g} degrees at {pid}")
-    return dict(cold=cold,groups=real,poses=poses,sliders=sliders)
+    return dict(cold=cold,groups=real,poses=poses,sliders=sliders,operatingRanges=intent["motionRanges"])
 
 
 def check_trace(model,frames):
@@ -130,9 +161,17 @@ def check_trace(model,frames):
     for frame in frames:
         supplied=frame.get("nativeCoordinates",{})
         require(isinstance(supplied,dict) and set(supplied)<=set(groups),"Unregistered native joint in loaded trace")
+        if model.get("linked"):
+            from linked_motion import check_frame
+            check_frame(model,frame)
+            continue
         expected={s:np.zeros(3) for s in cold}
         for group,(_,coord,axis,_) in groups.items():
             value=supplied.get(group,axis["saved"]);require(number(value),"Nonfinite native coordinate")
+            lower,upper=model["operatingRanges"][group]
+            demand=value*(10 if coord=="slideValue" else 180/np.pi)
+            require(lower-1e-8<=demand<=upper+1e-8,
+                    f"Loaded coordinate {group} at {frame['timeS']} s exceeds its selected operating interval")
             if coord!="slideValue":
                 require(abs(value-axis["saved"])<1e-9,"A rotating installed body requires an orientation-aware loaded trajectory solver")
                 continue

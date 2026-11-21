@@ -85,6 +85,10 @@ def verify(root, study, spec, path):
         if a>1e-12:ops.append(dict(kind="rotation",originMm=[0,0,0],axis=(v/a).tolist(),travelDeg=math.degrees(a)))
         if np.linalg.norm(m[:3,3])>1e-12:ops.append(dict(kind="translation",travelMm=m[:3,3].tolist()))
         return ops
+    linked=None
+    if study.get("linkCalibration"):
+        from assembly_kinematics import native_model
+        linked=native_model(root,study)["linked"]
     cases=[]
     for clip in clips:
         name=clip["name"];contract=registry[name];channels={}
@@ -106,7 +110,11 @@ def verify(root, study, spec, path):
         calibrations={}
         # Calibrate each joint independently against a nonzero cold native move.
         for i,(kind,times) in channels.items():
-            binding=bindings[str(i)];group=binding["group"];pid=binding["calibrationPose"]
+            binding=bindings[str(i)];group=binding["group"]
+            if linked:
+                require(group in linked["axes"] and linked["axes"][group][2]==(kind=="rotation"),"Unregistered linked display coordinate")
+                continue
+            pid=binding["calibrationPose"]
             require(group in groups and pid in pose_inputs and set(pose_inputs[pid])=={group},
                     "A display channel requires an isolated, measured native joint calibration")
             joint=pose_inputs[pid][group]
@@ -168,6 +176,24 @@ def verify(root, study, spec, path):
                         require(angle<math.pi-1e-7,"Insert a native intermediate pose to disambiguate half turns")
                         if angle>1e-12:ops.append(dict(kind="rotation",axis=(v/angle).tolist(),travelDeg=math.degrees(angle),
                             originMm=(convert@wa[i][:,3])[:3].tolist()))
+                if linked:
+                    from linked_motion import segment_ops
+                    src=linked["states"][keys[j]["pose"]];dst=linked["states"][keys[j+1]["pose"]]
+                    chain=linked["paths"][linked["owners"][solid]]
+                    expected_ops=segment_ops(linked,chain,src,dst)
+                    expected_groups=[g for g,_ in reversed(chain) if abs(dst[g]-src[g])>1e-10]
+                    actual_groups=[bindings[str(i)]["group"] for i in reversed(paths[node]) if i in channels and
+                                   abs(dst[bindings[str(i)]["group"]]-src[bindings[str(i)]["group"]])>1e-10]
+                    require(actual_groups==expected_groups and len(expected_ops)==len(ops),"Display channel ancestry differs from the installed coupled assembly")
+                    for got,want in zip(ops,expected_ops):
+                        require(got["kind"]==want["kind"],"Display interpolation changes installed joint kind")
+                        if got["kind"]=="translation":
+                            require(np.allclose(got["travelMm"],want["travelMm"],rtol=0,atol=1e-5),"Displayed coupled translation differs from installed travel")
+                        else:
+                            a1=np.array(got["axis"])*got["travelDeg"];a2=np.array(want["axis"])*want["travelDeg"]
+                            require(np.allclose(a1,a2,rtol=0,atol=1e-5) and
+                                    np.linalg.norm(np.cross(np.array(got["originMm"])-want["originMm"],got["axis"]))<1e-5,
+                                    "Displayed coupled rotation differs in sign, turns or pivot")
                 if ops:moves[solid]=ops
             if moves:cases.append(dict(id=f"{name}/{j}",basis="Continuous glTF rigid interpolation between measured Fusion poses",
                 initialPose=initial,moves=moves,minGapMm=0,maxDepth=9,checkLinearEnvelope=True))

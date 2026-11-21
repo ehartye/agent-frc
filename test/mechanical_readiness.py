@@ -10,6 +10,7 @@ from showcase_contacts import measure
 from mesh_controls import MeshComparisons
 from observed_transfer import ObservedTransfer
 from installed_kinematics import InstalledKinematics
+from linked_kinematics import LinkedKinematics
 
 
 class Readiness(unittest.TestCase):
@@ -272,6 +273,16 @@ class Readiness(unittest.TestCase):
         edge=BRepPrimAPI_MakeBox(gp_Pnt(10,10,0),10.,10.,10.).Shape()
         self.assertAlmostEqual(bearing_area(cube,side),100)
         self.assertEqual(bearing_area(cube,edge),0)
+        # Sliding a bored block past a stud: its bounding box collides even when
+        # the finite stud stays inside the bored-through channel for the whole stroke.
+        from mechanical_motion import planar_translation_clear
+        from OCP.BRepAlgoAPI import BRepAlgoAPI_Cut
+        channel=BRepPrimAPI_MakeBox(gp_Pnt(-1,2,2),12.,6.,6.).Shape()
+        carrier=BRepAlgoAPI_Cut(cube,channel).Shape()
+        travel=[dict(kind="translation",travelMm=[20,0,0])]
+        for y,expected in ((3,True),(1,False)):
+            stud=BRepPrimAPI_MakeBox(gp_Pnt(12,y,3),2.,2.,2.).Shape()
+            self.assertEqual(planar_translation_clear(carrier,stud,travel,[],0),expected)
         case.pop("requiredContacts")
         case["initialPose"]={labels[1]:[dict(kind="translation",travelMm=[-18,0,0])]}
         case["moves"][labels[1]]=case["moves"][labels[0]]
