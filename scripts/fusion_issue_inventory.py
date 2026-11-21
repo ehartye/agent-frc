@@ -62,6 +62,26 @@ def placement_witness(body,occ,point2d,world_points=None):
     return max(errors),samples
 
 
+def timeline_health(timeline, states):
+    """Read timeline leaves, including the children of collapsed display groups."""
+    names = {getattr(states, name+"FeatureHealthState"): name.lower()
+             for name in ("Healthy", "Warning", "Error", "Suppressed", "RolledBack", "Unknown")}
+    def read_items(collection):
+        rows = []
+        for i in range(collection.count):
+            item = collection.item(i)
+            row = {"name": item.name, "type": item.objectType}
+            if item.objectType.endswith("::TimelineGroup"):
+                row["children"] = read_items(item)
+            else:
+                row["health"] = names.get(item.healthState, "unknown")
+                if row["health"] in ("warning", "error"):
+                    row["message"] = item.errorOrWarningMessage
+            rows.append(row)
+        return {"count": collection.count, "items": rows}
+    return read_items(timeline)
+
+
 def inspect_pose(design, pose, events):
     """Apply only the commissioned commands and read every coordinate at the observed stage."""
     import math
@@ -95,14 +115,17 @@ def inspect_pose(design, pose, events):
     if stage == "captured-recompute":
         if not design.snapshots.hasPendingSnapshot or design.snapshots.add() is None:
             raise ValueError("A captured-position claim needs a new pending snapshot in the disposable document")
+    evidence = {"stage": stage}
     if stage in ("after-recompute", "captured-recompute"):
+        import adsk.fusion
         if not design.computeAll():
             raise ValueError("Fusion could not complete the required recompute")
         events()
+        evidence["timeline"] = timeline_health(design.timeline, adsk.fusion.FeatureHealthStates)
     values = {group: {"before": before, "observed": getattr(joint.jointMotion, attr)}
               for group, (joint, attr, _, before) in targets.items()}
     # Keep the actual readback, including a return to rest. The reviewer compares it to the plan.
-    return {"stage": stage, "coordinates": values}
+    return {**evidence, "coordinates": values}
 
 
 def capture(app, archive, output, *, batch=256, pose=None, retry_pairs=(), checkpoint=None):

@@ -16,7 +16,22 @@ class PoseMismatch(ValueError):
     """An actual coordinate or material point contradicts the commissioned pose."""
 
 
-def verify_stage(census, base, registered, anchor, tolerance):
+def check_timeline(group):
+    items = group.get("items") if isinstance(group, dict) else None
+    require(isinstance(items, list) and type(group.get("count")) is int and group["count"] == len(items),
+            "Incomplete post-compute timeline inventory")
+    for item in items:
+        require(isinstance(item, dict) and named(item.get("name")) and named(item.get("type")),
+                "Unidentified post-compute timeline item")
+        if item["type"].endswith("::TimelineGroup"):
+            check_timeline(item.get("children"))
+        elif item.get("health") == "error":
+            raise PoseMismatch(f"Recompute failed on {item['name']}: {item.get('message', '')}")
+        else:
+            require(item.get("health") == "healthy", f"Unqualified post-compute feature {item['name']}: {item.get('health')}")
+
+
+def verify_stage(census, base, registered, anchor, tolerance, connections):
     """Tie the inspection label to the stage actually observed on this archive."""
     import numpy as np
     pose = census["pose"]
@@ -33,11 +48,13 @@ def verify_stage(census, base, registered, anchor, tolerance):
     evidence = census.get("stageEvidence")
     require(isinstance(evidence, dict) and evidence.get("stage") == stage,
             "Native receipt lacks the requested observation stage")
+    if stage in ("after-recompute", "captured-recompute"):
+        check_timeline(evidence.get("timeline"))
     values = evidence.get("coordinates")
     groups = [c["group"] for c in commands]
     require(isinstance(values, dict) and set(values) == set(groups) and len(groups) == len(set(groups)),
             "Missing or duplicate observed native coordinates")
-    moved = False
+    changed = set()
     for command in commands:
         row = values[command["group"]]
         requested = command["nativeValue"]
@@ -45,9 +62,11 @@ def verify_stage(census, base, registered, anchor, tolerance):
                 "Incomplete native coordinate readback")
         if abs(row["observed"]-requested) > 1e-8:
             raise PoseMismatch(f"Pose {pose['id']} at {stage}: requested {requested}, observed {row['observed']}")
-        moved |= abs(row["before"]-row["observed"]) > 1e-8
+        if abs(row["before"]-row["observed"]) > 1e-8:
+            changed.add(command["group"])
     baseline = {(b["path"], b["name"]): b["worldTransform"] for b in base["bodies"]}
     motion = {}
+    matrices = {}
     for body in census["bodies"]:
         key = (body["path"], body["name"])
         require(key in registered and key in baseline, "Unknown source of a native motion witness")
@@ -61,10 +80,20 @@ def verify_stage(census, base, registered, anchor, tolerance):
         parked = (sites @ np.asarray(baseline[key]).reshape(4,4).T)[:,:3]
         require(np.max(np.linalg.norm(observed-predicted,axis=1)) <= .001,
                 "Measured material points disagree with the assembly-world transform")
-        motion[registered[key][0]] = float(np.max(np.linalg.norm(observed-parked,axis=1)))
+        solid = registered[key][0]
+        matrices[solid] = (np.asarray(baseline[key]).reshape(4,4), np.asarray(body["worldTransform"]).reshape(4,4))
+        motion[solid] = float(np.max(np.linalg.norm(observed-parked,axis=1)))
     require(anchor in motion and motion[anchor] <= tolerance, "Fixed chassis moved in the observed native pose")
-    if moved:
-        require(any(d > tolerance for d in motion.values()), "Joint changed without material travel above the inspection resolution")
+    from assembly_kinematics import relative_errors
+    for group in changed:
+        pairs = [edge["pair"] for edge in connections if edge.get("jointGroup") == group]
+        require(pairs, f"Joint {group} has no registered material pair for observed travel")
+        for a,b in pairs:
+            a0,a1 = matrices[a]
+            b0,b1 = matrices[b]
+            distance, angle = relative_errors(a0,b0,a1,b1)
+            require(distance > tolerance or angle > 1e-5,
+                    f"Joint {group} changed without relative travel of registered members {a} / {b}")
 
 
 def verify(root,study,reopen,base,registered,find,missing):
@@ -91,7 +120,7 @@ def verify(root,study,reopen,base,registered,find,missing):
             missing("native",pid,"Unresolved native identity or non-solid geometry.")
         require(allowed_census(c["programSha256"]),"Unexpected native census program")
         try:
-            verify_stage(c,base,registered,study["chassisAnchor"],study["reopenBoundsToleranceMm"])
+            verify_stage(c,base,registered,study["chassisAnchor"],study["reopenBoundsToleranceMm"],study["connections"])
         except PoseMismatch as error:
             find("native","fail",pid,str(error))
         except (ValueError, KeyError, TypeError, IndexError) as error:
@@ -161,7 +190,7 @@ def verify(root,study,reopen,base,registered,find,missing):
             volumes=[v for v in volumes if number(v) and v>=0]
             limit=allowed.get(tuple(sorted((a,b))),0)
             if volumes and max(volumes)>limit:
-                find("interference","fail",[pid,a,b],f"Native overlap {max(volumes):.9g} mmÃ‚Â³ exceeds the reviewed pair limit {limit:.9g} mmÃ‚Â³.")
+                find("interference","fail",[pid,a,b],f"Native overlap {max(volumes):.9g} mm³ exceeds the reviewed pair limit {limit:.9g} mm³.")
         if actual!=expected or record["candidatePairs"]!=len(expected):
             missing("native",pid,"The native scan is incomplete for this pose.")
     if completed!=set(by_id):
