@@ -79,9 +79,12 @@ export async function issue(root,studyName,delivery,keyFile){
   }else check(process.env.FRC_REQUIRE_ACTIVE_MODEL_SELECTION!=='true','Supply the protected active model selection');
   return {body,signature:sign(null,bytes(body),key).toString('base64')};
 }
-export async function verifyIssued(root,packet,pubKey,project){
-  root=realpathSync(root);opened(packet.body);check(packet.body.project===project,'Release belongs to a different project');
+function verifySignature(packet,pubKey,project){
+  opened(packet.body);check(packet.body.project===project,'Release belongs to a different project');
   const key=createPublicKey(pubKey);check(key.asymmetricKeyType==='ed25519'&&verify(null,bytes(packet.body),key,Buffer.from(packet.signature,'base64')),'Invalid reviewer signature');
+}
+export async function verifyIssued(root,packet,pubKey,project){
+  root=realpathSync(root);verifySignature(packet,pubKey,project);
   for(const r of packet.body.files)check(await hash(file(root,r.path))===r.sha256,'Changed signed public asset: '+r.path);
   return new Set(packet.body.files.map(r=>r.path));
 }
@@ -110,7 +113,8 @@ export async function selectActive(root,project,packet,key,studyName) {
   check(opening && typeof project==='string' && project.trim(),'Select a numbered active design and project');
   const result={schema:selectionSchema,project,...opening,issue:null};
   if(!packet)return result;
-  await verifyIssued(root,packet,key,project);
+  // A private issue may give a derivative a different public delivery path.
+  verifySignature(packet,key,project);
   assertOpening(packet.body,opening);
   const authority=path.join(activeDesignFor(path.join(root,'.model-selection')),'cad','fusion-authority.json');
   check(await hash(authority)===packet.body.iteration.authoritySha256,'Current native authority differs from the signed issue');
