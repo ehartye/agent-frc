@@ -66,6 +66,14 @@ def run(root,study):
                 # issued model through its pinned input. Check the selected pointer.
                 refs=case.get("geometryBindings",[])
                 require(refs,"Candidate lacks a geometry identity witness")
+                if method["id"] == "placed-solid-identity":
+                    require(rule == {"pointer": "/representedSolidEquality", "equals": "proved"},
+                            "Review the observed placed-solid equality result")
+                    require(all(output[side]["occurrenceRegistration"] == "matched" for side in ("before", "after")),
+                            "An issued comparison requires both independently registered STEP occurrences")
+                    require(any(a.get("kind") == "step" and a.get("file") == case["inputs"]["study"]
+                                and a.get("pointer") == "/after/step/sha256" for a in refs),
+                            "Bind the exact after STEP selected for the placed-solid comparison")
                 for anchor in refs:
                     ref=anchor["file"]
                     require(ref in pins,"Geometry binding is not an actual method input")

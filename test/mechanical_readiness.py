@@ -16,6 +16,59 @@ from spatial_operating_cases import SpatialOperatingCases
 
 
 class Readiness(unittest.TestCase):
+    def test_exact_placed_identity_keeps_locations_orientation_and_failed_cuts(self):
+        from unittest.mock import patch
+        from placed_solid_identity import IDENTITY, binary_solid, run
+        from showcase_contacts import load_solids
+        from OCP.gp import gp_Trsf, gp_Vec
+        from OCP.TopLoc import TopLoc_Location
+
+        step = self.root/self.s["step"]["file"]
+        identities = {}
+        solids, _ = load_solids(step, identities)
+        first, other = sorted(solids)
+        registered = {"step": self.s["step"], "selected": first, "STEPidentity": identities[first]}
+        register = write(self.root, "parked.json", registered)
+        side = dict(step=self.s["step"], registration=register, configuration="parked",
+                    solid=first, instance=identities[first]["instance"])
+        plan = dict(schema="agent-frc/placed-solid-identity@1", frame="base",
+                    beforeToAfter=IDENTITY[:], before=side, after=dict(side))
+        with patch("component_shape.boolean_measure", return_value=(0., False)):
+            equal = run(self.root, plan)
+        self.assertEqual(equal["representedSolidEquality"], "proved")
+        self.assertEqual(equal["directedComparison"]["measurementStatus"], "open")
+        mismatched_rows = write(self.root, "two-issues.json", {"rows": [
+            {**registered, "selected": other, "STEPidentity": identities[other]},
+            {**registered, "step": {"sha256": "a" * 64}}]})
+        for path in ("/rows/0", "/rows/1"):
+            with self.assertRaisesRegex(ValueError, "Registration does not identify"):
+                run(self.root, {**plan, "before": {**side, "registration": {**mismatched_rows, "rowAt": path}}})
+
+        shape = solids[first]
+        move = gp_Trsf()
+        move.SetTranslation(gp_Vec(1e-10, 0., 0.))
+        self.assertNotEqual(binary_solid(shape), binary_solid(shape.Moved(TopLoc_Location(move))))
+        with self.assertRaises(ValueError):
+            binary_solid(shape.Reversed())
+        plan["after"]["solid"] = other
+        with self.assertRaisesRegex(ValueError, "Registration does not identify"):
+            run(self.root, plan)
+        del plan["after"]["registration"]
+        with self.assertRaisesRegex(ValueError, "occurrence index"):
+            run(self.root, plan)
+        plan["after"]["instance"] = identities[other]["instance"]
+        plan["after"]["registration"] = register
+        with self.assertRaisesRegex(ValueError, "Registration does not identify"):
+            run(self.root, plan)
+        del plan["after"]["registration"]
+        shifted = run(self.root, plan)
+        self.assertEqual(shifted["after"]["occurrenceRegistration"], "unverified")
+        self.assertEqual(shifted["representedSolidEquality"], "open")
+        self.assertGreater(shifted["directedComparison"]["absentMm3"], 0.)
+        plan["beforeToAfter"][3] = 1e-10
+        with self.assertRaisesRegex(ValueError, "same world frame"):
+            run(self.root, plan)
+
     def test_registered_volume_retest_stays_separate_from_shape(self):
         from component_shape import measured_difference, volume
         from fusion_volume_readback import compare, run

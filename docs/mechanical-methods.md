@@ -71,6 +71,38 @@ A correctly located plate with a missing bore has a measurable material differen
 
 For a known thin or irregular region, add `componentInteriorPointsMm` to the readiness study. Map the exact placed solid ID to a list of XYZ probe points in the installed frame. Preserve the raw directed differences, direct common volume and certified lower bound in the measurement receipt. A finite set of probes can establish shared material. To resolve identity, reconstruct the drawing at its commissioned pose, partition the solid into disjoint regions, compare each region, and rerun the original case and a deliberately displaced control. Keep the original issue open until the trusted review qualifies the comparison.
 
+### Compare two placed representations of the same solid
+
+When even subtracting a solid from itself gives an invalid result, check whether the previous export and the new export carry exactly the same occupied solid. Register each STEP, its supporting configuration or lineage record and the particular occurrence. Confirm independently that both exports already use the same parked coordinate frame. A shared part name or local definition can occur at several locations.
+
+Run `python PLUGIN/scripts/placed_solid_identity.py PROJECT PLAN.json`. This synthetic plan compares one plate in two saved assemblies. Use the actual STEP occurrence indices reported by the complete inventory.
+
+```json
+{
+  "schema": "agent-frc/placed-solid-identity@1",
+  "frame": "Fixture base datum, millimetres",
+  "beforeToAfter": [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1],
+  "before": {
+    "configuration": "Parked fixture, first issue",
+    "step": {"file": "cad/first.step", "sha256": "FIRST_STEP_DIGEST"},
+    "registration": {"file": "cad/first-lineage.json", "sha256": "FIRST_REGISTER_DIGEST"},
+    "solid": "Locator plate", "instance": "1.2.1"
+  },
+  "after": {
+    "configuration": "Parked fixture, successor",
+    "step": {"file": "cad/successor.step", "sha256": "SUCCESSOR_STEP_DIGEST"},
+    "registration": {"file": "cad/successor-lineage.json", "sha256": "SUCCESSOR_REGISTER_DIGEST"},
+    "solid": "Locator plate", "instance": "1.3.1"
+  }
+}
+```
+
+The optional registration identifies one project receipt row. Its `step.sha256`, `selected` and `STEPidentity` fields must bind the digest, solid name and complete resolved identity (definition, instance index and occurrence path) together. A receipt with several rows can specify one JSON pointer in `rowAt`. Keep both occurrence registrations for a paired issue replay. A mismatched receipt rejects the comparison. Omit the registration to inspect the supplied STEP files alone. Confirm the native coordinate system and configuration independently in either case.
+
+The reader imports each complete STEP, resolves the registered leaf in world coordinates and checks that its geometric faces enclose a valid solid with positive signed volume. It compares the full binary BRep streams in one kernel, including orientation and location. The receipt preserves both hashes, resolved paths and the separate directed Boolean measurements. `representedSolidEquality: "proved"` establishes equal represented geometry for those two selected leaves. Different encodings can describe equivalent geometry, so differing bytes leave this exact test open. Repeat the plan against a deliberately displaced export and retain the measured differences. For paired issue replay use `placed-solid-identity`, criterion `/representedSolidEquality` equal to `proved`, and candidate STEP binding `/after/step/sha256`.
+
+The native inspection, supplier identity, installed fit, neighboring bodies and motion each retain their own findings. The reviewer checks that both registration records actually establish the frame, configuration and article claimed in the plan.
+
 ## Replay an external finding
 
 ```sh

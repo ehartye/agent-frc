@@ -2,6 +2,14 @@
   "schema": "agent-frc/mechanical-methods@1",
   "methods": [
     {
+      "id": "placed-solid-identity",
+      "runtime": "python",
+      "entry": "scripts/placed_solid_identity.py",
+      "args": ["$root", "$study"],
+      "detects": "Whether two registered STEP occurrences in a common frame have an exactly identical solid representation",
+      "regression": "test/mechanical_readiness.py"
+    },
+    {
       "id": "installed-shape",
       "runtime": "python",
       "entry": "scripts/mechanical_readiness.py",
