@@ -5,6 +5,8 @@ description: "Review a selected robot or subsystem before shop release or showca
 
 # Review the selected robot for fabrication and publication
 
+Use the [agent placement guard](../../docs/checked-placement.md) when moving or installing components. Then repeat the complete cold census and the operating sweep on the issued assembly.
+
 Compare every physical occurrence in the cold successor with the [pre-CAD target roster](../../docs/article-functions.md). Reconcile added, missing and substituted parts, then qualify actual retention and clearance across the complete assembly.
 
 Check saved installation features against independently frozen world datums, including fixed hardware. Trace each loaded mount through its qualified structural members to the chassis. Identify cosmetic covers and inspect the direction each actual joint can carry. Commission the physical donor, recipient, finite article and supported acceptance interval for every loaded duty. Verify measured separation through a free release, including a held or reversed drive as a control. Review registered numerical disagreements between mating solids using independent interior witnesses and complementary regions. [Operating criteria](../../docs/operating-intent.md)

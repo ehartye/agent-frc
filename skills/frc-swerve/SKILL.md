@@ -5,6 +5,8 @@ description: "Design and explain FRC swerve drivetrains across module hardware, 
 
 # Swerve drive
 
+Use the [checked Fusion placement](../../docs/checked-placement.md) when a design agent installs or moves each module. Measure the root-frame position and heading of its actual wheel and offset motor after reopening the complete robot.
+
 Start an unspecified robot drivetrain as four independently steered swerve modules. Honor an explicitly specified drivetrain and preserve a historical robot's recorded configuration. Guide the student through the [supplier and in-shop comparison](references/hardware.md#compare-purchased-and-shop-built-modules) before choosing modules or freezing chassis holes. The default selects the architecture. The team selects the implementation.
 
 For a purchased module, use the manufacturer's exact assembly, motor, wheel and selected gearing in the student Fusion project wherever available. Verify which options the supplied file actually contains. Record absent internals, simplified geometry or substituted options and check mounting and steering frames independently. Use the teaching fixture for instruction. Follow the [student Fusion handoff and supplier-model requirements](../frc-mechanism-cad/SKILL.md) for the installed design.

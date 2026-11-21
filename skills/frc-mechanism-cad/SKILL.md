@@ -8,6 +8,8 @@ When the project has not specified a drivetrain, start with four-module swerve a
 
 Use **Autodesk Fusion as the student authoring environment**. Start from the project's active Fusion design. Maintain student-editable sketches, parameters, components, joints and drawings there. Hand off a saved version and a reopened F3D or F3Z archive with linked components resolved. Record which features a student can edit and which came from imported solids.
 
+When a design agent creates, inserts or moves a part, run the [checked placement](../../docs/checked-placement.md) against the last accepted assembly before adopting the new pose. Keep rejected proposals and their named pair evidence with the experiment.
+
 For each purchased part, look for the manufacturer's model of the exact part number, generation and installed configuration. Import an official STEP into Fusion when the supplier provides that format. Verify units, revision, mounting datums, occurrence count and installed orientation against the manufacturer drawing. Record the source, retrieval date, configuration, file digest and redistribution terms in the project's parts register. Keep restricted geometry in the authorized library and give students retrieval and relink instructions.
 
 External shape authoring requires a project-specific reason why that operation is impractical in Fusion, the result it enables, and a path back into the student assembly. For a large scripted family of candidates, for example, preserve the generator and its inputs and import the chosen solid into Fusion. Where an exact purchased model cannot be obtained, record the failed lookup or mismatch, mark the replacement as a proxy, cite its dimensional basis and identify which design decisions remain open.
