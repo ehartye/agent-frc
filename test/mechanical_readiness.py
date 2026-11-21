@@ -223,6 +223,43 @@ class Readiness(unittest.TestCase):
     def status(self):
         return review(self.root,self.s)
 
+    def test_independent_native_pose_results_survive_an_unusable_peer(self):
+        good=self.status()
+        self.assertEqual(good["showcaseEligibility"],"pass")
+        self.assertEqual([r["status"] for r in good["nativePoseReviews"]],["checked","checked"])
+        self.change("nativeCensus",lambda c:c["contacts"]["pairs"][0].update(temporaryCommonMm3=9))
+        moving=self.s["nativePoses"][0]
+        alternate=json.loads((self.root/moving["file"]).read_bytes())
+        absent={"file":"absent.json","sha256":"1"*64}
+        controls=[
+            (absent,"unavailable"),
+            (write(self.root,"aborted.json",{"error":"joint write refused"}),"rejected"),
+            (write(self.root,"other.json",dict(alternate,archiveSha256="2"*64)),"rejected"),
+            (write(self.root,"broken.json",dict(alternate,bodies=[None])),"rejected"),
+            (dict(moving,sha256="3"*64),"rejected"),
+        ]
+        for ref,expected in controls:
+            with self.subTest(ref=ref):
+                self.s["nativePoses"]=[ref,moving]
+                report=self.status()
+                self.assertEqual(report["showcaseEligibility"],"fail")
+                self.assertTrue(any(f["domain"]=="interference" and f["subject"][0]=="saved" for f in report["findings"]))
+                saved,bad,valid=report["nativePoseReviews"]
+                self.assertEqual((saved["source"],saved["status"]),(self.s["nativeCensus"],"fail"))
+                self.assertEqual((bad["source"],bad["status"]),(ref,expected))
+                self.assertEqual((valid["source"],valid["status"]),(moving,"checked"))
+        self.s["nativePoses"]=[moving]
+        self.change("nativeCensus",lambda c:c["bodies"][0].update(worldTransform=[None]))
+        damaged=self.status()
+        self.assertEqual(damaged["showcaseEligibility"],"fail")
+        self.assertEqual([r["status"] for r in damaged["nativePoseReviews"]],["rejected","open"])
+        self.assertFalse(any("pose bounds disagree" in f["reason"] for f in damaged["findings"]))
+        self.s["nativeCensus"]=absent
+        report=self.status()
+        self.assertNotEqual(report["showcaseEligibility"],"pass")
+        self.assertEqual([(r["pose"],r["status"]) for r in report["nativePoseReviews"]],
+                         [("saved","unavailable"),(alternate["pose"]["id"],"open")])
+
     def test_control_and_real_governing_case(self):
         self.assertEqual(self.status()["showcaseEligibility"],"pass")
         self.s["duties"][-1]["max"]=.7
