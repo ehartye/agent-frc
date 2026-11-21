@@ -6,6 +6,8 @@ The selected section contains the canonical `authorityId`, `configuration`, `mod
 
 The station collects the occurrences, owning component counts, joints, rigid groups, suppressed states, solver health and motion links when the selected archive reopens. Hidden parts remain in scope. Every installed occurrence needs a native constraint path to the declared anchor. A mounted contact and a loose removable piece can have identical saved geometry. Test a truly fixed assembly with a real rigid constraint and test removal under its own operating duty. For sliders and revolute axes connected by motion links, measure the drive and its followers under the installed coupling. Other unresolved constraints stay open. Keep access, retention and contact qualifications scoped to the actual loads and positions.
 
+[Freeze the required physical articles](article-functions.md) before opening an earlier assembly. Pin their roster in the same commissioning plan.
+
 ## Commission a mechanically coupled drive
 
 Freeze each group's operating interval in millimeters or degrees. The loaded review applies that interval to every achieved state, including both endpoints, throughout delivery and recovery. A separate unloaded service calibration may travel farther. Check the complete piece inside the receiver within the permitted stroke.

@@ -164,6 +164,16 @@ support_capacity=save("issue/support-allowable.json",dict(binding,case=loadcase,
 intent["structuralRoutes"]={"gauge-support":dict(binding,case=loadcase,loaded=loaded,chassis=base,members=[loaded,base],
     loadN=1.,direction=load_direction,appliedForces=[dict(pointMm=[13.8,5,6],forceN=[0,0,-.5]),dict(pointMm=[6.2,5,6],forceN=[0,0,-.5])],
     appliedMomentsNmm=[],gravityMmS2=[0,0,-9806.65],interfaces=[{"from":loaded,"to":base,"capacitySource":support_capacity}])}
+# These slots come from the original fixture design and are independent of the body measurements.
+functions={"locate":"Locate the removable gauge in a flat pocket","inspect":"Carry the dimensional inspection surface"}
+sites={"Pocketed base":"locate","Seated gauge":"inspect"}
+if coupled:
+    functions["synchronize"]="Keep the companion gauge synchronized with the measured slide"
+    sites["Keyed gauge"]="synchronize"
+intent["articleFunctions"]=save("article-functions.json",dict(schema="agent-frc/article-functions@1",
+    authorityId=intent["authorityId"],configuration=configuration,architecture="Pocket and inspection gauge",
+    functions=functions,occurrences=[dict(path=name+":1",article=name,revision="r1",configuration="original",function=key)
+                                   for name,key in sites.items()]))
 plan=save("commissioning.json",dict(operatingIntent=intent))
 study["operatingRequirements"]=dict(plan,pointer="/operatingIntent")
 study["materialCensus"]=ref("issue/materials.json")
