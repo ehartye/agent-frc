@@ -42,3 +42,5 @@ Before pushing a workflow change, [check the committed caller and its local reus
 Register the project’s changed and full test commands, verify the actual default branch and run the same commands locally and in CI. Choose branch-served or generated Pages when the team publishes CAD. [Set up project checks and release gates](../../docs/project-ci.md)
 
 For a project with `iterations/active.json`, follow its active design root before recovering older records. After a decision to start over, use `frc-start-over` to preserve the evidence and open a fresh numbered design. [Design iterations](../../docs/design-iterations.md)
+
+When pausing or transferring an issued Fusion design, record the selected native files and canonical STEP, then verify them in the receiving checkout. [Transfer an issued design](../../docs/fusion-authority.md#transfer-an-issued-design-to-another-checkout)
