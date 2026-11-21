@@ -112,7 +112,7 @@ def inspect(root, study, test, trace, parts, piece, stock, *, installed_at=None,
             digest(source) in registered["observed"],"Execution is absent from independent operator inventory")
     witness=registered["observed"][digest(source)]
     from transfer_trajectory import verify as verify_trajectory
-    verify_trajectory(root,mission,trace,raw,witness,article,study["gravityMmS2"],installed_at)
+    verify_trajectory(root,mission,trace,raw,witness,article,study["gravityMmS2"],installed_at,rotates)
     if mission is not None:
         from transfer_mission import identity as mission_identity
         require(witness.get("missionSha256")==mission_identity(mission),

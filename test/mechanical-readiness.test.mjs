@@ -40,7 +40,7 @@ test('verified public deployment can preserve the previous robot while changing 
   await assert.rejects(auditStaged(old,next,policy),/Unreviewed changed/);
   const keys=generateKeyPairSync('ed25519'),key=path.join(root,'reviewer.pem');
   writeFileSync(key,keys.publicKey.export({type:'spki',format:'pem'}));
-  const body={schema:'agent-frc/signed-model-release@8',project:'test',scope:'Registered issue',configuration:'fixed',solids:2,studySha256:'f'.repeat(64),archiveSha256:'a'.repeat(64),stepSha256:'b'.repeat(64),
+  const body={schema:'agent-frc/signed-model-release@9',project:'test',scope:'Registered issue',configuration:'fixed',solids:2,studySha256:'f'.repeat(64),archiveSha256:'a'.repeat(64),stepSha256:'b'.repeat(64),
     files:[{path:'robot.glb',sha256:createHash('sha256').update('new approved').digest('hex')}]};
   const packet={body,signature:sign(null,Buffer.from(JSON.stringify(body)),keys.privateKey).toString('base64')};
   const receipt=path.join(root,'packet.json');writeFileSync(receipt,JSON.stringify(packet));

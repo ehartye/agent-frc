@@ -15,7 +15,7 @@ TRACE=set("stepSha256 pieceSha256 pieceId case stockIds holder frames resetObser
 EVENT=set("timeS accelerationMmS2 velocityMmS angularVelocityRadS articlePose acceptedId contacts ready actuator commandedOffsetMm obstructed".split())
 FRAME=set("timeS custody nativeCoordinates offsetsMm articlePose installedTransforms".split())
 CONTACT=set("body pointMm forceOnPieceN nextPointMm".split())
-WITNESS=set("origin observer producer basis missionSha256 releaseOnsets trajectorySha256".split())
+WITNESS=set("origin observer producer basis missionSha256 releaseOnsets trajectorySha256 impulseSources".split())
 
 
 def keys(data,allowed,kind):
@@ -27,7 +27,7 @@ def vector_matches(observed,expected,label):
     require(max(abs(np.asarray(vec(observed))-expected))<=1e-7,"Observed "+label+" contradicts the executed trajectory")
 
 
-def verify(root,mission,trace,raw,witness,article,gravity,installed_at):
+def verify(root,mission,trace,raw,witness,article,gravity,installed_at,rotates):
     """Support exact producer laws. A handful of samples alone cannot bound unknown interpolation."""
     law=raw.get("trajectory")
     require((mission is None or mission.get("trajectorySchema")==SCHEMA) and isinstance(law,dict) and law.get("schema")==SCHEMA,
@@ -36,7 +36,7 @@ def verify(root,mission,trace,raw,witness,article,gravity,installed_at):
             trace.get("trajectorySha256")==identity(law)==witness.get("trajectorySha256"),
             "Proposed interpolation differs from the independently registered trajectory")
     keys(raw,RAW,"execution");keys(trace,TRACE,"trace");keys(witness,WITNESS,"observer")
-    keys(law,{"schema","segments","series","errorMm","errorRad"},"trajectory")
+    keys(law,{"schema","segments","series","errorMm","errorRad","impulses"},"trajectory")
     require(all(number(law.get(k)) and law[k]==0 for k in ("errorMm","errorRad")),
             "A nonzero or unknown trajectory error needs a qualified swept uncertainty model")
     require(raw.get("orientationModel") in (None,"fixed-in-saved-axes") and raw.get("massDistribution") in (None,"uniform"),
@@ -64,6 +64,8 @@ def verify(root,mission,trace,raw,witness,article,gravity,installed_at):
             fall_speed+=gravity*dt
         else:fall_speed=0.
         rates.append((vel,acc))
+    from transfer_momentum import verify_boundaries
+    momentum=verify_boundaries(root,rates,frames,events,article,raw,witness,installed_at,rotates)
     def check_sample(s,i,t):
         dt=t-clock[i];vel,acc=rates[i];fraction=dt/(clock[i+1]-clock[i])
         center=article.center_at(i)+vel*dt+.5*acc*dt**2
@@ -129,4 +131,4 @@ def verify(root,mission,trace,raw,witness,article,gravity,installed_at):
             keys(s,{"timeS","centerMm","articlePose","velocityMmS","accelerationMmS2","angularVelocityRadS","nativeCoordinates","externalForceN","endBoundsMm","donorGapMm","normalReactionsN"},"synchronized observation")
             require("centerMm" in s or "articlePose" in s,"A synchronized observation must identify actual placement")
             i=max(0,min(bisect_right(clock,t)-1,len(rates)-1));check_sample(s,i,t)
-    article.trajectory_evidence=dict(schema=SCHEMA,primaryFrames=len(frames),segments=len(rates),observationSeries=len(series),synchronizedSamples=count)
+    article.trajectory_evidence=dict(schema=SCHEMA,primaryFrames=len(frames),segments=len(rates),observationSeries=len(series),synchronizedSamples=count,momentum=momentum)

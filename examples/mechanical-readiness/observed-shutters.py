@@ -67,11 +67,21 @@ def generate(folder):
         law=dict(schema=SCHEMA,series=[],errorMm=0,errorRad=0,segments=[dict(windowS=[a["timeS"],b["timeS"]],
             center="gravity-from-rest" if a["custody"]=="free" else "constant-velocity",orientation="constant-orientation",
             installed="linear-native-coordinates") for a,b in zip(frames,frames[1:])])
+        if running:
+            # Integrate the original normal contact model through the perfectly
+            # inelastic capture; the finite fall supplies the incident speed.
+            impulse=mass*math.sqrt(2*g*8)/1000
+            receipt=write(root,"capture-impulse.json",dict(schema="agent-frc/contact-impulse@1",case=duty,pieceId=piece_id,
+                stepSha256=step["sha256"],pieceSha256=file["sha256"],timeS=time,receiver=floor,
+                model="fixed-frictionless-inelastic-capture",pointMm=[.5,.5,0],normalOnArticle=[0,0,1],
+                impulseOnArticleNs=[0,0,impulse],impulseOnReceiverNs=[0,0,-impulse],
+                observerBasis="Original analytic perfectly inelastic contact of the centered falling block on the fixed floor"))
+            law["impulses"]=[receipt]
         execution=write(root,duty+"-observed.json",dict(common,schema="agent-frc/observed-transfer@1",massKg=mass,
             centerOfMassLocalMm=[.5,.5,8.5],windowS=[0,frames[-1]["timeS"]],receiver=floor,duty=duty,
             trajectory=law,orientationModel="fixed-in-saved-axes",outcome="pass",observations=obs))
         trusted["observed"][execution["sha256"]]=dict(origin="executed-simulation",observer="Teaching fixture",
-            trajectorySha256=identity(law),producer="Analytical gravity and static two-support reactions",basis="Two equal and opposite opening strokes")
+            impulseSources=[r["sha256"] for r in law.get("impulses",[])],trajectorySha256=identity(law),producer="Analytical gravity and static two-support reactions",basis="Two equal and opposite opening strokes")
         study["cases"].append(dict(id=duty,duty=duty,trace=write(root,duty+"-trace.json",dict(common,trajectorySha256=identity(law),source="Observed fixture")),
             execution=execution,windowS=[0,frames[-1]["timeS"]],admissionGapMm=0,readyOffsetsMm={left:[0,0,0],right:[0,0,0]},
             terminalBoundsMm=([-1,-1,-1,2,2,2] if running else [-1,-1,7,2,2,10])))

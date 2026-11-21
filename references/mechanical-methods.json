@@ -181,7 +181,7 @@
         "$root",
         "$study"
       ],
-      "detects": "The admitted object strikes installed geometry or its observed trajectory leaves the commissioned receiver between primary frames",
+      "detects": "The admitted object strikes installed geometry, leaves the commissioned receiver between primary frames or changes momentum without a qualified physical impulse",
       "regression": "test/observed_transfer.py"
     },
     {
