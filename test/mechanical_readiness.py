@@ -85,6 +85,43 @@ class Readiness(unittest.TestCase):
         self.assertTrue(any(r["status"]=="open" and "relative placement" in r["reason"] for r in interference))
         self.assertTrue(any(r["status"]=="fail" and r["subject"]==["spare block","spare frame"] for r in interference))
 
+    def test_directional_clearance_preserves_actual_contacts_and_probe_distance(self):
+        from unittest.mock import patch
+        import math
+        from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox
+        from OCP.TopLoc import TopLoc_Location
+        from OCP.gp import gp_Trsf, gp_Vec, gp_Ax1, gp_Pnt, gp_Dir
+        from placed_separation import projected_clearance
+
+        rotate=gp_Trsf()
+        rotate.SetRotation(gp_Ax1(gp_Pnt(),gp_Dir(0,0,1)), math.pi/4)
+        bar=BRepPrimAPI_MakeBox(10,1,1).Shape().Moved(TopLoc_Location(rotate))
+        normal=[-math.sqrt(.5), math.sqrt(.5), 0]
+        def placed(offset):
+            tr=gp_Trsf()
+            tr.SetTranslation(gp_Vec(*[v*offset for v in normal]))
+            return {"guide":bar,"shoe":bar.Moved(TopLoc_Location(tr))}
+
+        axes=[{"pair":["guide","shoe"],"axesWorld":[normal]}]
+        clear=placed(1.6)
+        with patch("showcase_contacts.load_solids",return_value=(clear,[])):
+            with patch("component_shape.boolean_measure",side_effect=AssertionError("unexpected common")):
+                scan=measure(self.root,.01,[],volumes=True,separation_axes=axes)
+                actual=measure(self.root,.01,[("guide","shoe")],volumes=True,separation_axes=axes)
+        pair,=scan["pairs"]
+        self.assertAlmostEqual(pair[2],.6,places=5)
+        self.assertEqual(pair[3],0.)
+        self.assertEqual(scan["projectedSeparations"][0]["pairDistanceKind"],"lower-bound")
+        self.assertEqual(actual["projectedSeparations"][0]["pairDistanceKind"],"extrema")
+        self.assertGreaterEqual(actual["pairs"][0][2],pair[2])
+        self.assertEqual(projected_clearance(clear,("guide","shoe"),[normal],.6)["status"],"open")
+        crossed=placed(.8)
+        self.assertEqual(projected_clearance(crossed,("guide","shoe"),[normal])["status"],"open")
+        with patch("showcase_contacts.load_solids", return_value=(crossed,[])):
+            scan=measure(self.root,.01,[],volumes=True,separation_axes=axes)
+        self.assertAlmostEqual(scan["pairs"][0][3],2.)
+        self.assertEqual(scan["projectedSeparations"][0]["status"],"open")
+
     def test_world_intersection_checks_topology_before_accepting_a_volume(self):
         from unittest.mock import patch
         from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox

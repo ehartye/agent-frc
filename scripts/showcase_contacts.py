@@ -144,7 +144,7 @@ def repeated_interface_disagreements(shapes, pairs):
     return disagreements
 
 
-def measure(path,tolerance,probes, *, volumes=False):
+def measure(path,tolerance,probes, *, volumes=False, separation_axes=()):
     if not math.isfinite(tolerance) or tolerance < 0:
         raise ValueError("Use a nonnegative distance tolerance in millimeters")
     from OCP.BRepBndLib import BRepBndLib
@@ -162,9 +162,27 @@ def measure(path,tolerance,probes, *, volumes=False):
     if volumes:
         from OCP.BRepAlgoAPI import BRepAlgoAPI_Common
         from component_shape import boolean_measure, volume as solid_volume
-    for a,b in sorted(candidate_pairs(boxes,tolerance,probes)):
+    from placed_separation import projected_clearance, registered_axes
+    requested=registered_axes(separation_axes,shapes)
+    probes=set(probes)
+    projections=[]
+    for a,b in sorted(candidate_pairs(boxes,tolerance,probes | set(requested))):
         if a not in shapes or b not in shapes:
             raise ValueError("Unknown solid in distance probe: "+str((a,b)))
+        projected=None
+        if (a,b) in requested:
+            projected=projected_clearance(shapes,(a,b),requested[(a,b)],tolerance)
+            projections.append(projected)
+            if projected["status"]=="separated" and (a,b) not in probes:
+                # Only separation from the contact graph is required for this pair.
+                # A commissioned connection below still receives its exact distance.
+                row=[a,b,projected["clearanceLowerBoundMm"]]
+                if volumes:
+                    row.append(0.0)
+                pairs.append(row)
+                projected["pairDistanceKind"]="lower-bound"
+                continue
+            projected["pairDistanceKind"]="extrema"
         query=BRepExtrema_DistShapeShape(shapes[a],shapes[b])
         if not query.IsDone() or not math.isfinite(query.Value()) or query.Value()<0:
             raise ValueError("Unresolved STEP distance: "+str((a,b)))
@@ -173,7 +191,12 @@ def measure(path,tolerance,probes, *, volumes=False):
             # A zero-thickness overlap of the enclosing boxes bounds common material to zero.
             widths = [min(boxes[a][i+3],boxes[b][i+3])-max(boxes[a][i],boxes[b][i]) for i in range(3)]
             volume = 0.0
-            if min(widths)>0:
+            certified=projected is not None and projected["status"]=="separated"
+            if certified and query.Value()+1e-7<projected["clearanceLowerBoundMm"]:
+                unresolved.append({"pair":[a,b],"rawCommonMm3":None,"topologyValid":None,
+                                   "reason":"Exact distance disagrees with the directional separation bound"})
+                volume=None
+            elif min(widths)>0 and not certified:
                 diagnostic={"pair":[a,b],"rawCommonMm3":None,"topologyValid":None}
                 try:
                     volume,valid=boolean_measure(shapes[a],shapes[b],BRepAlgoAPI_Common)
@@ -198,6 +221,8 @@ def measure(path,tolerance,probes, *, volumes=False):
         pairs.append(row)
     result={"schema":"agent-frc/step-solid-intersections@1" if volumes else "agent-frc/step-solid-distances@1","method":"placed-step-distance-and-common-volume" if volumes else "placed-step-solid-distance-v1","units":"mm",
             "toleranceMm":tolerance,"bodies":boxes,"nonSolidLeaves":surfaces,"pairs":pairs}
+    if projections:
+        result["projectedSeparations"]=projections
     if unresolved:
         result["unresolvedIntersections"]=unresolved
     if volumes:
