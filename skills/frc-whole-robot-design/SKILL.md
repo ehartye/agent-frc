@@ -5,7 +5,7 @@ description: "Develop and compare original whole-robot architectures from a chos
 
 # Choose how the whole robot works
 
-Share one moving layout, its checked clearance, complete weight estimate and loaded-voltage range before distributing detailed CAD. [Engineering detail and exit criteria for the three phases](../../docs/design-phase-detail.md)
+During preliminary design, use top-down assembly layout (component blocking). Share one moving layout, its checked clearance, complete weight estimate and loaded-voltage range before distributing detailed CAD. [Engineering detail and exit criteria for the three phases](../../docs/design-phase-detail.md)
 
 Start with the alliance role, scored event, reserve time and fallback. Walk one identifiable piece through approach, capture, retention, transfer, placement and reset. Include the robot's position, occupied volume, time, controls and energy. Mark the operations that can overlap and the shared resources that prevent overlap.
 

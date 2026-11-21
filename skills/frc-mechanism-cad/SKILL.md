@@ -4,7 +4,7 @@ description: "Use when planning an FRC intake, launcher, mechanism, Fusion CAD m
 ---
 # Mechanism and CAD evidence plan
 
-Take the accepted component-blocking issue into Fusion. Show actual joint-driven motion on the saved supplier and fabricated geometry and return a violated reservation to its owner. [Engineering detail and exit criteria for the three phases](../../docs/design-phase-detail.md)
+During detailed design, take the accepted preliminary assembly layout into Fusion. Show actual joint-driven motion on the saved supplier and fabricated geometry and return a violated reservation to its owner. [Engineering detail and exit criteria for the three phases](../../docs/design-phase-detail.md)
 
 When the project has not specified a drivetrain, start with four-module swerve and use the [module selection workflow](../frc-swerve/SKILL.md) before committing mounting interfaces. Follow a specified drivetrain for that project.
 

@@ -196,7 +196,7 @@ def evaluate(root,study,*,mount_hosts=(),package_scene=None):
     original=pinned(root,study["step"])
     identities={}
     shapes,non_solids=load_solids(original,identities)
-    host_bounds={n:bounds(shapes[n]) for n in mount_hosts if n in shapes}
+    host_bounds={n:bounds(shapes[n]) for n in sorted(mount_hosts) if n in shapes}
     case_ids=set();results=[];extraction_states=[]
     for case in study["cases"]:
         id=case["id"]

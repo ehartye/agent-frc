@@ -5,7 +5,7 @@ description: "Compare field routes, pickup approaches and provisional cycle time
 
 # Rehearse a design in the space it will occupy
 
-Hand off the field prism, chosen cycle, interaction faces, measured or assumed times and the conditions that would change the role. [Engineering detail and exit criteria for the three phases](../../docs/design-phase-detail.md)
+During conceptual design, use field pre-vis for match-scenario trade studies. Hand off the operational concept (ConOps), field prism, chosen cycle, interaction faces, measured or assumed times and the conditions that would change the role. [Engineering detail and exit criteria for the three phases](../../docs/design-phase-detail.md)
 
 For a new game, extract the [project rules model](../../docs/project-rules-model.md) and build the [interactive field lab](../../docs/kickoff-field-lab.md). For an existing design, recover the selected cycle and current candidate through [design continuation](../../docs/strategy-first-continuation.md).
 

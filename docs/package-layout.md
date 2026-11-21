@@ -1,8 +1,8 @@
-# Check the shared package before detailed Fusion CAD
+# Preliminary design of the shared assembly layout
 
-[Follow the three design phases and their exit criteria](design-phase-detail.md). Field previsualization uses a robot-sized prism, gross headings, approach faces and assumed acquisition, shot and reset times. Compare roles cheaply on the same field clock. Carry the chosen cycle, pickup and release poses, interaction faces and uncertain times into whole-robot design.
+[Follow the three design phases and their exit criteria](design-phase-detail.md). During conceptual design, field previsualization uses a robot-sized prism, gross headings, approach faces and assumed acquisition, shot and reset times. Compare roles cheaply on the same field clock. Carry the chosen cycle, pickup and release poses, interaction faces and uncertain times into whole-robot design.
 
-**The whole-robot designer owns the package checkpoint.** Establish one robot datum and one revision of the proposed arrangement. Share the editable blockout with subsystem designers. On a common placed STEP, represent fixed structure and bumpers, mounts, moving members, a finite payload, adjacent moving mechanisms and the service envelope. Simple conservative solids are suitable for an early decision. Record what they bound and what geometry is missing. A saved issue identifies the geometry. Its endpoints alone leave the intervening path untested.
+**The whole-robot designer owns the preliminary design checkpoint.** Component blocking establishes the top-down assembly layout for detailed design. Establish one robot datum and one revision of the proposed arrangement. Share the editable blockout with subsystem designers. On a common placed STEP, represent fixed structure and bumpers, mounts, moving members, a finite payload, adjacent moving mechanisms and the service envelope. Simple conservative solids are suitable for an early decision. Record what they bound and what geometry is missing. A saved issue identifies the geometry. Its endpoints alone leave the intervening path untested.
 
 ## Work a synthetic package
 
@@ -13,7 +13,7 @@ python examples/package-layout/create.py layout-trial
 node scripts/design.mjs package-check layout-trial layout.json --require-checked
 ```
 
-The carrier rotates 90° with a finite article while a neighboring slide travels 12 mm. A separate park case returns the carrier and slide. The service case withdraws the group 80 mm. Each case reserves 1 mm between unrelated bodies. The proposed layout clears all three paths. As a control, moving a fixed rail 50 mm into the arc leaves both operating endpoints clear and produces about 52.04 mm³ shared material at half travel. Read the actual pair and path fraction in the receipt. The example uses invented figures and simple shapes.
+The carrier rotates 90° with a finite article while a neighboring slide travels 12 mm. A separate park case returns the carrier and slide. The service case withdraws the group 80 mm. Each case reserves 1 mm between unrelated bodies. The proposed layout clears acquisition, the loaded turn, release, parking and service withdrawal. As a control, moving a fixed rail 50 mm into the arc leaves both operating endpoints clear and produces about 52.04 mm³ shared material at half travel. Read the actual pair and path fraction in the receipt. The example uses invented figures and simple shapes.
 
 ## Commission the project paths
 
@@ -39,7 +39,7 @@ The synthetic robot weighs 11 to 13.5 kg against its invented 15 kg limit. Its 1
 
 Register each premise under `premises`. Its independently pinned acceptance records a named scenario, unit, source, numeric interval or categorical condition, affected groups and the phase that chose it. Pin a current observation with the same identity and unit, the current issue and geometry hashes, and the actual field containing its value in a source measurement. Unknown data or an earlier issue leaves the decision provisional. The example accepts the front approach and 2–3 s acquisition only for its selected cycle.
 
-A nominal clearance violation reopens **package layout** for the moving groups and implicated neighbors. Pause their detailing, move or reshape the layout, then rerun those paths and the control on the new revision. A change from the front approach to a side approach, or acquisition above 3 s in the example, makes the old field conclusion stale and reopens **previsualization** for the dependent interfaces. Rerun the matched field route with the revised capabilities and compare the objective and time reserve. Independent work can continue against its own verified interfaces.
+A nominal clearance violation reopens **preliminary design** for the moving groups and implicated neighbors. Pause their detailing, move or reshape the layout, then rerun those paths and the control on the new revision. A change from the front approach to a side approach, or acquisition above 3 s in the example, makes the old field conclusion stale and reopens the **conceptual design trade study** for the dependent interfaces. Rerun the matched field route with the revised capabilities and compare the objective and time reserve. Independent work can continue against its own verified interfaces.
 
 Keep the held receipt in project custody and pass it separately on resubmission.
 
