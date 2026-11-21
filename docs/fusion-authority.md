@@ -39,6 +39,12 @@ For a configured design, set `nativeConfiguration` to the exact Fusion row ID. F
 
    If a batch returns `complete: false`, repeat with the same archive, pose and output path. Leave the adjacent generated `.progress.json` in place. If you supplied `checkpoint=`, use that same checkpoint path. Give each further pose a separate output. A completed census can still report unresolved pairs or measured intersections. Review those findings with the corresponding pose and keep missing evidence open. [Native pose capture and review](#save-and-resume)
 
+## Resume a native contact batch
+
+Read `completedPairs`, `unresolvedPairs` and `unexaminedPairs` together. Completed pairs include attempted pairs whose results are unresolved. Each pair records the exact two bodies and separate results for Fusion interference and the temporary BRep intersection. If a method fails, the collector keeps its error and the other method's observation, and proceeds to the next pair while the design is valid.
+
+A batch budget leaves the unexamined tail for the next call. A `stop` reports that the design is unavailable, including the next pair when known. Recover the native session and cold-open the identical archive, pose and collector to resume its checkpoint. A terminated host can resume from its last atomic checkpoint. Keep the historical checkpoint and use a fresh output and checkpoint when the collector changes. A completed scan with unresolved measurements still requires investigation before release.
+
 ## Transfer an issued design to another checkout
 
 For a pause or workstation handoff, keep the same active design and freeze the files while recording or checking them. The receiving checkout needs the project revision containing the active pointer, iteration records, authority register and export lineage. Use the [runtime whose exporter matches the issue](setup-health.md#resolve-the-plugin-used-by-this-check). Keep private files and their inventory in approved custody.

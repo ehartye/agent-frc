@@ -3,10 +3,15 @@ from pathlib import Path
 from mechanical_readiness import digest,named,number,pinned,read,require
 
 
+def staged_census(digest_value):
+    return digest_value in {digest(Path(__file__).with_name("fusion_issue_inventory.py")),
+                            "f3b9db179d3adee5c01cddeb175f83732730358abc0f0761b9c9c3f09425df4f"}
+
+
 def allowed_census(digest_value):
     # Previous installed collector measured topological vertex proxies and
     # could not emit a finished result for a body lacking vertices.
-    return digest_value in {digest(Path(__file__).with_name("fusion_issue_inventory.py")),
+    return staged_census(digest_value) or digest_value in {
         "eb807942e574514ac2aaba5408c7dfbeadd342f6883fa69637733d660081d58c",
         "36755938a8793ab716a9200235aa1eae9aa30922519249602704a8e823597822",
         "4529f1610cc8d361098cebc822437b3f50ad40c4eda7a53105bda94ff9dbe254"}
@@ -66,7 +71,7 @@ def verify_stage(census, base, registered, anchor, tolerance, connections):
     require(stage in ("archive-rest", "command-response", "after-recompute", "captured-recompute")
             and ((stage == "archive-rest") == (not commands))
             and (pose["id"] != "saved" or not commands), "Invalid native observation stage")
-    if census["programSha256"] != digest(Path(__file__).with_name("fusion_issue_inventory.py")):
+    if not staged_census(census["programSha256"]):
         require("stageEvidence" not in census and "stage" not in pose,
                 "Legacy native capture has no explicit stage evidence. Recapture the commissioned pose.")
         return
@@ -185,10 +190,11 @@ def check_pose(root,study,c,registered,nominal,cold_shapes,find,missing):
         "8a87902d4dddc0c6655febd21de781161866137532aa1bd807c3e565a271359e",
         "f3ea058c88481de80c6cd554cfff73758d2d77787e4a73f8cac9f6ec81b0465c",
     }
-    if record.get("complete") is not True or collector not in {current, *historical} or record.get("units") != "mm3":
+    checked_lumps = {current, "78619a14ea834445d8fd1dc971198c8200585b8cd3c45252021e373d6bb7c2bd"}
+    if record.get("complete") is not True or collector not in checked_lumps | historical or record.get("units") != "mm3":
         missing("native",pid,"Complete source-bound native interference pass is missing.")
         return
-    if collector != current:
+    if collector not in checked_lumps:
         missing("native", pid, "Fresh native census required. The historical collector did not check retained lumps against reported volume.")
     expected={(i,j) for i,x in enumerate(rows) for j in range(i+1,len(rows))
               if min(min(x["boundsMm"][k+3],rows[j]["boundsMm"][k+3])-max(x["boundsMm"][k],rows[j]["boundsMm"][k]) for k in range(3))>=-1e-6}

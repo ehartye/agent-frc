@@ -190,8 +190,11 @@ def capture(app, archive, output, *, batch=256, pose=None, retry_pairs=(), check
         contact=importlib.util.module_from_spec(loader);loader.loader.exec_module(contact)
         native=contact.measure(design,rows,proxies,operands,Path(checkpoint) if checkpoint else output.with_suffix(".progress.json"),
             [native_hash,pose,app.version,sha(Path(__file__)),sha(Path(contact.__file__))],batch,retry_pairs)
+        summary = {key: native[key] for key in ("complete", "candidatePairs", "completedPairs", "unexaminedPairs", "unresolvedPairs")}
         if not native["complete"]:
-            return {"complete":False,"completedPairs":len(native["pairs"]),"candidatePairs":native["candidatePairs"]}
+            if "stop" in native:
+                summary["stop"] = native["stop"]
+            return summary
         receipt = {"contacts":native,"pose":pose,"stageEvidence":stage_evidence,"documentId":opened.creationId,"rootComponentId":root.id,
             "rootRevision":root.revisionId,"dataVersion":opened.dataFile.versionNumber if opened.dataFile else None,
             "schema": "agent-frc/fusion-body-census@1", "archiveSha256": native_hash,
@@ -199,9 +202,10 @@ def capture(app, archive, output, *, batch=256, pose=None, retry_pairs=(), check
             "bodies": rows, "otherGeometry": extra}
         with output.open("x", encoding="utf-8") as stream:
             json.dump(receipt, stream, indent=2, allow_nan=False)
-        return {"complete":True,"completedPairs":len(native["pairs"]),"file":output.name,"unresolvedPairs":native["unresolvedPairs"]}
+        return {**summary, "file":output.name}
     finally:
-        opened.close(False)
+        if opened.isValid:
+            opened.close(False)
         if previous and previous.isValid:
             previous.activate()
 

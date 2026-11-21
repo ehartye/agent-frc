@@ -114,11 +114,24 @@ def forbidden_interior(body, point, radius_mm):
         if gap.value<=radius: return False
     return True
 
+class NativeSessionUnavailable(RuntimeError):
+    """The design can no longer be used to examine another pair."""
+
+
+def require_live_design(design):
+    try:
+        valid = design.isValid
+    except RuntimeError as error:
+        raise NativeSessionUnavailable(f"Cannot check native design validity: {error}") from error
+    if not valid:
+        raise NativeSessionUnavailable("The cold native design is no longer valid")
+
+
 def measure_pair(design, rows, proxies, solids, a, b, *, spatial_fit=None):
     """Measure the same placed pair with both Fusion kernels, recording unknown results."""
     import adsk.core
     import adsk.fusion
-    manager = adsk.fusion.TemporaryBRepManager.get()
+    require_live_design(design)
     row={"pair":[a,b],"identities":[[rows[i]["path"],rows[i]["name"]] for i in (a,b)]}
     spatial_errors={}
     if spatial_fit is not None:
@@ -127,9 +140,11 @@ def measure_pair(design, rows, proxies, solids, a, b, *, spatial_fit=None):
         if spatial_fit["host"] not in row["identities"]:
             raise ValueError("Spatial fit host is outside the exact pair")
         row["spatialFit"]={"commission":spatial_fit,"programSha256":model_sha,"methods":{}}
-    def observe(key,bodies):
+    def observe(key,bodies,manager=None):
         if spatial_fit is None: return
         try:
+            if manager is None:
+                manager = adsk.fusion.TemporaryBRepManager.get()
             row["spatialFit"]["methods"][key]=native_spatial(model,region,manager,bodies)
         except Exception as e:
             spatial_errors[key]=str(e)
@@ -146,6 +161,7 @@ def measure_pair(design, rows, proxies, solids, a, b, *, spatial_fit=None):
         observe("fusionInterference",bodies)
         return total
     def transient():
+        manager = adsk.fusion.TemporaryBRepManager.get()
         def world(index):
             body,matrix=solids[index];shape=manager.copy(body)
             if not shape or (matrix and not manager.transform(shape,matrix)):
@@ -179,7 +195,7 @@ def measure_pair(design, rows, proxies, solids, a, b, *, spatial_fit=None):
         if not manager.booleanOperation(shape,other,adsk.fusion.BooleanTypes.IntersectionBooleanType):
             raise ValueError("Native transient intersection returned failure")
         total=boolean_volume_mm3(shape)
-        observe("fusionTransient",[shape] if shape.lumps.count else [])
+        observe("fusionTransient",[shape] if shape.lumps.count else [],manager)
         return total
     errors={}
     for key,evaluate in (("interferenceMm3",native),("temporaryCommonMm3",transient)):
@@ -244,14 +260,29 @@ def measure(design, rows, proxies, solids, checkpoint, fingerprint, batch, retry
     def scan(pair):
         ids=tuple(sorted((rows[i]["path"],rows[i]["name"]) for i in pair))
         return measure_pair(design,rows,proxies,solids,*pair,spatial_fit=spatial.get(ids)) if ids in spatial else measure_pair(design,rows,proxies,solids,*pair)
-    for pair in sorted(retry):
-        progress["pairs"][indices[pair]]=scan(pair)
-    for i in range(offset,min(len(pairs),offset+batch-len(retry))):
-        progress["pairs"].append(scan(pairs[i]))
-        if (i+1)%16==0:
-            save()
-    save()
+    active = None
+    stop = None
+    try:
+        for active in sorted(retry):
+            progress["pairs"][indices[active]] = scan(active)
+        for i in range(offset, min(len(pairs), offset + batch - len(retry))):
+            active = pairs[i]
+            progress["pairs"].append(scan(active))
+            if (i + 1) % 16 == 0:
+                save()
+        active = None
+        require_live_design(design)
+    except NativeSessionUnavailable as error:
+        stop = {"type": type(error).__name__, "message": str(error)}
+        if active is not None:
+            stop["pair"] = list(active)
+            stop["identities"] = [[rows[i]["path"], rows[i]["name"]] for i in active]
+        progress["stop"] = stop
+    finally:
+        save()
+    completed = len(progress["pairs"])
     return {"method":"Fusion Design.analyzeInterference and placed temporary BRep intersection",
-        "units":"mm3","candidatePairs":len(pairs),"unresolvedPairs":sum(r.get("status")=="unresolved" for r in progress["pairs"]),
-        "complete":len(progress["pairs"])==len(pairs),
+        "units":"mm3","candidatePairs":len(pairs),"completedPairs":completed,
+        "unexaminedPairs":len(pairs)-completed,"unresolvedPairs":sum(r.get("status")=="unresolved" for r in progress["pairs"]),
+        "complete":stop is None and completed==len(pairs), **({"stop": stop} if stop else {}),
         "pairs":progress["pairs"],"programSha256":program_sha}
