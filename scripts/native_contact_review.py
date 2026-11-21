@@ -67,9 +67,19 @@ def verify(root,study,reopen,base,registered,find,missing):
         if len(set(mapped))!=len(mapped) or set(mapped)!={v[0] for v in registered.values()}:
             find("native","fail",pid,"Pose omits or repeats an installed native body.")
         record=c.get("contacts",{})
-        if record.get("complete") is not True or record.get("programSha256") not in (digest(Path(__file__).with_name("fusion_issue_contacts.py")),"9a570e82486dbcf077d961a143cf6808666255dda1d17a0ac1a9b9bec0112dfe","8a87902d4dddc0c6655febd21de781161866137532aa1bd807c3e565a271359e","f3ea058c88481de80c6cd554cfff73758d2d77787e4a73f8cac9f6ec81b0465c") or record.get("units")!="mm3":
+        collector = record.get("programSha256")
+        current = digest(Path(__file__).with_name("fusion_issue_contacts.py"))
+        historical = {
+            "d1e1c1abdc918155b16aa62e79137762fc4ccfd272e1e9072207825c566ac121",
+            "9a570e82486dbcf077d961a143cf6808666255dda1d17a0ac1a9b9bec0112dfe",
+            "8a87902d4dddc0c6655febd21de781161866137532aa1bd807c3e565a271359e",
+            "f3ea058c88481de80c6cd554cfff73758d2d77787e4a73f8cac9f6ec81b0465c",
+        }
+        if record.get("complete") is not True or collector not in {current, *historical} or record.get("units") != "mm3":
             missing("native",pid,"Complete source-bound native interference pass is missing.")
             continue
+        if collector != current:
+            missing("native", pid, "Fresh native census required. The historical collector did not check retained lumps against reported volume.")
         expected={(i,j) for i,x in enumerate(rows) for j in range(i+1,len(rows))
                   if min(min(x["boundsMm"][k+3],rows[j]["boundsMm"][k+3])-max(x["boundsMm"][k],rows[j]["boundsMm"][k]) for k in range(3))>=-1e-6}
         actual=set()

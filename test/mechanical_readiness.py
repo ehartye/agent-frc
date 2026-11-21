@@ -35,6 +35,15 @@ class Readiness(unittest.TestCase):
         self.s["duties"][-1]["max"]=.7
         self.assertEqual(self.status()["showcaseEligibility"],"fail")
 
+    def test_historical_volume_census_still_reports_clashes_but_cannot_qualify_new_issue(self):
+        legacy = "9a570e82486dbcf077d961a143cf6808666255dda1d17a0ac1a9b9bec0112dfe"
+        self.change("nativeCensus", lambda c: c["contacts"].update(programSha256=legacy))
+        result = self.status()
+        self.assertEqual(result["showcaseEligibility"], "open")
+        self.assertIn("Fresh native census", json.dumps(result["findings"]))
+        self.change("nativeCensus", lambda c: c["contacts"]["pairs"][0].update(temporaryCommonMm3=999))
+        self.assertEqual(self.status()["showcaseEligibility"], "fail")
+
     def test_required_spatial_pair_cannot_disappear_from_the_cold_census(self):
         self.change("operatingRequirements",lambda r:r["operatingIntent"].update(spatialFits=[{"commission":{"bodies":[]}}]))
         self.s["operatingRequirements"]["pointer"]="/operatingIntent"
