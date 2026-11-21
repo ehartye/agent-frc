@@ -150,6 +150,32 @@ def measure(parts,case,*,original=None):
                 errors.append("Direct common exceeds the independently bounded available material")
         except (TypeError,ValueError,RuntimeError) as exc:
             errors.append("Unresolved excluded material: "+str(exc))
+    forbidden=[]
+    forbidden_status=None
+    if "forbiddenWitnesses" in case:
+        from spatial_fit import placed_forbidden, probe_result
+        try:
+            scope=case["forbiddenWitnesses"]
+            require(isinstance(scope,dict) and set(scope)=={"region","forbiddenProbes"} and scope["forbiddenProbes"],
+                    "Register a finite permitted annulus and at least one forbidden witness")
+            forbidden=placed_forbidden(parts,(a,b),scope)
+            forbidden_status=probe_result(scope,forbidden)
+            if forbidden_status=="fail":
+                errors.append("Independent shared interior outside the registered annulus")
+            elif forbidden_status!="pass":
+                errors.append("Unresolved forbidden material witness")
+        except (KeyError,TypeError,ValueError,RuntimeError) as exc:
+            errors.append("Unresolved forbidden material witness: "+str(exc))
+    separation=None
+    if valid and mm3==0 and (upper is None or upper>limit) and lower<=limit and forbidden_status!="fail":
+        from placed_separation import projected_clearance, registered_axes
+        registration={"pair":[a,b],"axesWorld":case.get("separationAxesWorld",[[1,0,0],[0,1,0],[0,0,1]])}
+        axes=registered_axes([registration],parts)[tuple(sorted((a,b)))]
+        separation=projected_clearance(parts,(a,b),axes)
+        if separation["status"]=="separated" and lower>0:
+            errors.append("Separating intervals contradict the shared material witness")
+        elif separation["status"]!="separated":
+            errors.append("Zero common on a numerically ambiguous pair lacks independent separation or a sufficient common upper bound")
     rows=[]
     for c in cuts:
         subject=c["subject"]
@@ -163,10 +189,11 @@ def measure(parts,case,*,original=None):
             rows.append(dict(error=str(e)));errors.append("unresolved partition for "+subject)
     # A partition missing the physical material provides no conservation control.
     consistent=not errors and all(r["wholeMm3"]>error and r["residualMm3"]<=error for r in rows) and mm3+error>=lower
-    status="fail" if (lower>limit or valid and mm3>limit and (upper is None or mm3<=upper+error)) else "pass" if consistent else "open"
+    status="fail" if (forbidden_status=="fail" or lower>limit or valid and mm3>limit and (upper is None or mm3<=upper+error)) else "pass" if consistent else "open"
     return dict(pair=[a,b],directCommonMm3=mm3,disjointInteriorBalls=balls,certifiedLowerBoundMm3=lower,
                 directCommonTopologyValid=valid,excludedMaterial=exclusions,commonUpperBoundMm3=upper,
-                partitions=rows,errors=errors,numericallyConsistent=consistent,status=status)
+                partitions=rows,errors=errors,numericallyConsistent=consistent,status=status,
+                separation=separation,forbiddenWitnesses=forbidden,forbiddenWitnessStatus=forbidden_status)
 
 
 def run(root,study):
