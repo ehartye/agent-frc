@@ -109,7 +109,7 @@ def scan(root, study):
     tolerance=study["contactToleranceMm"]
     require(number(tolerance) and tolerance>=0, "Invalid contact reporting tolerance")
     probes={tuple(sorted(j["pair"])) for j in study.get("connections",[])}
-    result=measure(step,tolerance,probes,volumes=True)
+    result=measure(step,tolerance,probes,volumes=True,separation_axes=study.get("projectedSeparationAxes",[]))
     requests=component_inputs(root,study)
     if requests:
         from component_shape import compare_components
@@ -157,7 +157,9 @@ def evaluate_inputs(root,study, geometry=None):
     bodies=set(boxes)
     # A receipt cannot drop a candidate just because the intersection or distance was inconvenient.
     probes={tuple(sorted(j["pair"])) for j in study.get("connections",[])}
-    required=candidate_pairs(boxes,tol,probes)
+    from placed_separation import registered_axes
+    projections=registered_axes(study.get("projectedSeparationAxes",[]),boxes)
+    required=candidate_pairs(boxes,tol,probes | set(projections))
     unresolved={}
     for diagnostic in geometry.get("unresolvedIntersections",[]):
         pair=tuple(sorted(diagnostic["pair"]))
@@ -175,6 +177,33 @@ def evaluate_inputs(root,study, geometry=None):
                 "Invalid/repeated solid pair")
         pairs[pair]=(gap,vol)
     require(set(pairs)==required,"Incomplete broad-phase pair measurements")
+    receipts=geometry.get("projectedSeparations",[])
+    require(len(receipts)==len(projections) and {tuple(r["pair"]) for r in receipts}==set(projections),
+            "Missing or unrelated placed-solid projection")
+    for row in receipts:
+        pair=tuple(row["pair"])
+        kind=row.get("pairDistanceKind")
+        require(row.get("requiredClearanceMm")==tol and kind in ("lower-bound","extrema")
+                and row.get("status") in ("separated","open"),"Invalid placed-solid projection")
+        if row["status"]=="separated":
+            intervals=row.get("intervalsMm")
+            axis=row.get("axisWorld")
+            require(isinstance(axis,list) and len(axis)==3 and all(number(v) for v in axis)
+                    and any(all(abs(actual-requested)<1e-12 for actual,requested in zip(axis,registered))
+                            for registered in projections[pair]),"Unregistered projection basis")
+            require(isinstance(intervals,list) and len(intervals)==2
+                    and all(isinstance(limits,list) and len(limits)==2 and all(number(v) for v in limits)
+                            and limits[0]<=limits[1] for limits in intervals),"Invalid projected body intervals")
+            a,b=intervals
+            reserve=row.get("numericReserveMm")
+            lower=row.get("clearanceLowerBoundMm")
+            require(number(reserve) and reserve>0 and number(lower) and lower>tol and
+                    lower==row.get("signedBoundMm")==max(a[0]-b[1],b[0]-a[1])-reserve,
+                    "Invalid projected clearance certificate")
+        if kind=="lower-bound":
+            gap=row.get("clearanceLowerBoundMm")
+            require(row["status"]=="separated" and number(gap) and gap>tol and pair not in probes
+                    and pairs[pair]==(gap,0.0),"A separation bound only certifies a noncontact pair")
 
     for group in geometry.get("repeatedInterfaceDisagreements", []):
         observations = group["observations"]

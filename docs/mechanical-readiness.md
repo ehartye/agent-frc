@@ -50,3 +50,19 @@ The native reopen gives `opened: true`, `configuration`, `archiveSha256`, `stepS
 Observation files bind the same configuration and both source hashes. Their `observations` are keyed by ID. Every observation cites the original pinned `sources`. Numeric observations repeat the duty ID, domain as `kind`, case, subjects, method, unit and value, with `measurement` pointing to an original JSON numeric value using a file, digest and JSON Pointer. Their `inputs` identify the engineering basis. Scope reviews use `kind: "scope-review"`, scope, reviewer, basis, complete flag, covered bodies and duties. The complete original numeric file uses `agent-frc/mechanical-measurements@1`, both source hashes, configuration and a `measurements` register. Each numeric result sits in a row that identifies the same duty, case, subjects and units. Every row of a cited case roster must be represented. For motion, report native `motionRanges` by group in the reopen and actual executed ranges and coverage in the raw result. The independent approval has `criteriaSha256` from the checker's `scope_digest(study)`; it freezes the occurrence assignments, cases, thresholds and source receipts. A reviewer must independently challenge whether all applicable cases are represented. A digest authenticates the bytes as selected by the project; it cannot independently validate a supplier specification or certify a person's approval.
 
 The report returns geometry groups, retained groups, failed or open duties and their exact subjects. Visual inspection of the engineering model can continue when shop or structural evidence is incomplete. A new showcase model requires the full mechanical disposition. The gate assesses submitted evidence for the stated build and duty. It does not command a robot, authorize fabrication, or replace inspection of a physical assembly.
+
+
+### Separate two oblique solids before a costly intersection
+
+When broad-phase boxes overlap for two long diagonal articles, project the complete placed solids onto a common direction normal to their nearest faces. Register the exact issued STEP SHA-256, both occurrence names and one or more world directions. The checker includes shape tolerances and a numerical reserve. A positive interval gap gives a conservative lower bound on clearance in that pose. Touching or overlapping intervals leave the question open. A displaced control should lose its separating gap.
+
+```json
+{
+  "schema": "agent-frc/placed-separation@1",
+  "stepSha256": "FULL_SHA256_OF_ISSUED_STEP",
+  "requiredClearanceMm": 0.1,
+  "pairs": [{"pair": ["Left guide", "Moving shoe"], "axesWorld": [[-1, 1, 0]]}]
+}
+```
+
+Run `python PLUGIN/scripts/placed_separation.py ASSEMBLY.step PLAN.json`. Copy the plan's `pairs` into the same issue's `projectedSeparationAxes` in its mechanical-readiness study to repeat the projection during the whole-assembly scan. That scan uses its registered contact tolerance. A proven gap skips the expensive common-volume operation for that pair. Commissioned connections still receive an independent distance measurement. Follow other pairs, moving positions, attachment and loaded function through their usual checks. Preserve any conflicting native evidence and investigate it on the same installed bodies.

@@ -42,3 +42,5 @@ Before promoting a model, run the [local source and final-site release verificat
 For a shared-station or deferred native readback, [stage its exact plugin and project dependencies](../../docs/native-job.md) before dispatch. Keep the same source issue through export, each cold inspection and release.
 
 For a numbered design, commission the whole-robot or subsystem publication scope, then bind both delivery trees to the selected current native issue. [Active model selection](../../docs/private-model-release.md#keep-a-retired-robot-online-during-a-numbered-restart)
+
+For stalled oblique solid pairs, [measure a finite directional clearance bound](../../docs/mechanical-readiness.md#separate-two-oblique-solids-before-a-costly-intersection) on the exact installed articles and keep checks of contact, load and motion in their original scope.
