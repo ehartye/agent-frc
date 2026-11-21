@@ -71,25 +71,57 @@ def bore_faces(host, radius, grip):
     require(end > mouth, "No finite bore wall at the mouth")
     return mouth, end, [tip for lo, tip in cones if abs(lo-end) <= 1e-5]
 
-
-def coaxial_shank(shape, mouth):
+def thread_envelope(shape, first, last, radii, *, external):
+    """Certify uninterrupted cylindrical patches across the full registered axial band."""
     from OCP.BRepAdaptor import BRepAdaptor_Surface
+    from OCP.BRepGProp import BRepGProp
+    from OCP.GProp import GProp_GProps
     from OCP.GeomAbs import GeomAbs_Cylinder
-    from OCP.TopAbs import TopAbs_FACE, TopAbs_FORWARD
+    from OCP.TopAbs import TopAbs_FACE, TopAbs_FORWARD, TopAbs_REVERSED
     from OCP.TopExp import TopExp_Explorer
     from OCP.TopoDS import TopoDS
+    spans = {}
     it = TopExp_Explorer(shape, TopAbs_FACE)
     while it.More():
         face = TopoDS.Face(it.Current())
         surface = BRepAdaptor_Surface(face)
-        if surface.GetType() == GeomAbs_Cylinder and face.Orientation() == TopAbs_FORWARD:
-            axis = surface.Cylinder().Axis()
-            if abs(axis.Direction().Z()) > .999999999 and math.hypot(axis.Location().X(), axis.Location().Y()) < 1e-5:
-                section = bounds(face)
-                if section[5] > mouth + 1e-5:
-                    return True
+        if surface.GetType() == GeomAbs_Cylinder and face.Orientation() == (TopAbs_FORWARD if external else TopAbs_REVERSED):
+            cylinder = surface.Cylinder()
+            axis, radius = cylinder.Axis(), cylinder.Radius()
+            if (abs(axis.Direction().Z()) > .999999999 and math.hypot(axis.Location().X(), axis.Location().Y()) < 1e-5
+                    and radii[0] - 1e-6 <= radius <= radii[1] + 1e-6):
+                box = bounds(face)
+                props = GProp_GProps()
+                BRepGProp.SurfaceProperties_s(face, props)
+                # Coincident seam halves on one valid solid may jointly cover the cylinder.
+                span = (round(box[2],7), round(box[5],7), round(radius,7))
+                spans[span] = spans.get(span,0) + props.Mass()
         it.Next()
-    return False
+    reach = first
+    for (z0,z1,radius),area in sorted(spans.items()):
+        full = 2 * math.pi * radius * (z1-z0)
+        if z0 <= reach+1e-6 and abs(area-full) <= max(1e-6,full*1e-7):
+            reach = max(reach,z1)
+    return reach >= last-1e-6
+
+
+def profiles(drawing):
+    models = []
+    for field in ("externalProfile", "internalProfile"):
+        record = drawing[field]
+        require(record["representation"] in ("minor","pitch","major"),
+                "This check supports source-qualified cylindrical minor, pitch or major diameter representations")
+        dimensions = {k:interval(record,k+"DiameterMm") for k in ("minor","pitch","major")}
+        require(0 < dimensions["minor"][0] and dimensions["minor"][1] < dimensions["pitch"][0]
+                and dimensions["pitch"][1] < dimensions["major"][0], "Invalid qualified thread diameters")
+        require(number(record["pitchMm"]) and record["pitchMm"]>0 and record["hand"] in ("right","left")
+                and named(record["form"]), "Qualify the thread pitch, hand and form")
+        models.append((record,dimensions))
+    (male,m),(female,f) = models
+    require(all(male[k]==female[k] for k in ("pitchMm","hand","form")), "Mismatched thread pitch, hand or form")
+    require(all(m[k][1] <= f[k][0] for k in ("minor","pitch","major")) and m["major"][0] > f["minor"][1],
+            "Tolerance ranges do not establish compatible diameters and positive thread overlap")
+    return [[d/2 for d in dims[record["representation"]]] for record,dims in models]
 
 
 def measure(shapes, case, drawing):
@@ -147,7 +179,6 @@ def measure(shapes, case, drawing):
     # Preserve a discovered physical bottom even when no thread drawing has been qualified.
     if reasons:
         return dict(observed, status="fail", reasons=reasons)
-    require(coaxial_shank(screw_shape, mouth), "No coaxial external shank surface extends into the registered bore")
     require(named(drawing.get("screwThread")) and drawing["screwThread"] == drawing.get("hostThread")
             and named(drawing.get("threadFitBasis")), "Supply matching screw/host thread specification and fit evidence")
     seats = list(planar_faces(seat_shape, 0., -1))
@@ -166,6 +197,11 @@ def measure(shapes, case, drawing):
     female_end = interval(drawing, "lastFullThreadDepthMm")
     require(female_end[1] <= depth[1] and female_start[1] <= female_end[0]
             and male_start[1]+male_tip_loss[1] <= length[0], "Full threads extend outside the drawing stack")
+    male_radius, female_radius = profiles(drawing)
+    if not thread_envelope(screw_shape, male_start[1], tip-male_tip_loss[1], male_radius, external=True):
+        return dict(observed, status="open", reason="Actual screw does not establish its full commissioned thread diameter and axial span")
+    if not thread_envelope(host_shape, mouth+female_start[1], mouth+female_end[0], female_radius, external=False):
+        return dict(observed, status="open", reason="Actual host does not establish its full commissioned thread diameter and axial span")
     # Evaluate both limits of grip. Translating the host moves BOTH ends of its usable thread interval together.
     def engaged(g):
         return max(0, min(length[0]-male_tip_loss[1], g+min(female_end[0], depth[0]))

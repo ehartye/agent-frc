@@ -16,6 +16,8 @@ Each stack names `screw`, `host` and `seat` by exact placed solid ID, plus the i
 
 Register a scalar `minSeatAreaMm2` and `minEngagementMm`. A blind mount also requires `minBottomClearanceMm` measured against the end of the full-diameter bore. A through mount uses `minThroughProjectionMm` past the host exit. Use fabrication and purchased-part tolerances. Verify specially relieved tips, countersunk seats, inserts, stepped mouths and fully modeled helical bores independently when this straight, planar-seat method leaves geometry open.
 
+Record `externalProfile` and `internalProfile` from the screw and host drawings. Each supplies its `form`, `hand` (`right` or `left`), `pitchMm`, and inclusive ranges for `minorDiameterMm`, `pitchDiameterMm` and `majorDiameterMm`. Set `representation` to the diameter actually drawn in the CAD (`minor`, `pitch` or `major`). The evaluator checks the physical diameter relationship, matching hand and pitch, and uninterrupted cylindrical surface coverage over each declared threaded span. A short land with the correct radius cannot qualify a waisted or incorrect shank. Supply separate qualified profile measurements for geometry outside this supported convention.
+
 To examine a registered stack outside a complete release, save the contents of `fastenerStacks` as `fasteners.json` and run the installed script:
 
 ```sh

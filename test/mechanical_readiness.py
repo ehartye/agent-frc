@@ -108,7 +108,20 @@ class Readiness(unittest.TestCase):
                        threadFitBasis="Dimensioned matching teaching parts", minSeatAreaMm2=3)
         solids = dict(s=screw(12), h=BRepAlgoAPI_Cut(cylinder(6,4,17),cylinder(2,3,14)).Shape(),
                       p=BRepAlgoAPI_Cut(cylinder(5,0,4),cylinder(2.2,-1,5)).Shape())
+        drawing.update(externalProfile=dict(representation="minor",form="original V",pitchMm=.7,hand="right",
+                           minorDiameterMm=[3.58,3.62],pitchDiameterMm=[4.10,4.12],majorDiameterMm=[4.48,4.52]),
+                       internalProfile=dict(representation="minor",form="original V",pitchMm=.7,hand="right",
+                           minorDiameterMm=[3.98,4.02],pitchDiameterMm=[4.15,4.17],majorDiameterMm=[4.55,4.60]))
         self.assertEqual(check(solids,case,drawing)["status"],"pass")
+        for radius in (.2,2.9):
+            wrong = BRepAlgoAPI_Fuse(cylinder(3.6,-2,0),cylinder(radius,0,12)).Shape()
+            self.assertEqual(check(dict(solids,s=wrong),case,drawing)["status"], "open")
+        middle = BRepAlgoAPI_Cut(cylinder(3,6,8),cylinder(.2,5,9)).Shape()
+        waist = BRepAlgoAPI_Cut(solids["s"],middle).Shape()
+        self.assertEqual(check(dict(solids,s=waist),case,drawing)["status"],"open")
+        bad_host = dict(drawing, internalProfile=dict(drawing["internalProfile"],hand="left"))
+        with self.assertRaisesRegex(ValueError,"hand"):
+            check(solids,case,bad_host)
         short=check(dict(solids,s=screw(7)),case,dict(drawing,underHeadLengthMm=[6.9,7.1]))
         self.assertEqual(short["status"], "fail")
         self.assertLess(short["minimumFullEngagementMm"],6)
