@@ -1,0 +1,53 @@
+{
+  "revision": "Synthetic weighted inspection flap, model A",
+  "gravityMps2": [
+    0,
+    0,
+    -10
+  ],
+  "poses": [
+    {
+      "id": "closed",
+      "frame": "bench +Z up, +X outboard",
+      "custody": "calibration weight attached",
+      "otherAxesHeld": "flap and weight are rigidly attached",
+      "originM": [
+        0,
+        0,
+        0
+      ],
+      "axisUnit": [
+        0,
+        -1,
+        0
+      ],
+      "intervalRad": [
+        -0.12,
+        3.141592653589793
+      ],
+      "omissions": [],
+      "members": [
+        {
+          "id": "weight",
+          "basis": "synthetic 2 kg point mass at 0.5 m",
+          "role": "moving",
+          "massKg": 2,
+          "cgM": [
+            0.5,
+            0,
+            0
+          ]
+        },
+        {
+          "id": "stationary frame",
+          "role": "fixed",
+          "basis": "bolted to bench"
+        }
+      ],
+      "stop": {
+        "freeRad": -0.1,
+        "compressionRad": -0.02
+      }
+    }
+  ]
+}

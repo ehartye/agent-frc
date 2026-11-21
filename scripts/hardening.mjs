@@ -1,3 +1,4 @@
+import {reviewRotaryHolding} from './rotary-holding.mjs';
 import {reviewLiftPaths} from './lift-path-faults.mjs';
 import {reviewActuatorDuties} from './actuator-duties.mjs';
 import {auditPieceWindow} from './piece-window.mjs';
@@ -192,8 +193,8 @@ if(process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href){
       args.splice(freezeFlag,2);
     }
     const [mode,file,root,...extra]=args;
-    const reviewers={elevation:reviewElevation,throughput:reviewThroughput,coupled:reviewCoupled,duties:reviewActuatorDuties,paths:reviewLiftPaths};
-    requireInput(file&&!extra.length&&Object.hasOwn(reviewers,mode),'Usage: hardening.mjs elevation|throughput|coupled|duties|paths STUDY.json [PROJECT_ROOT] [--freeze-sha256 DIGEST]');
+    const reviewers={elevation:reviewElevation,throughput:reviewThroughput,coupled:reviewCoupled,duties:reviewActuatorDuties,rotary:reviewRotaryHolding,paths:reviewLiftPaths};
+    requireInput(file&&!extra.length&&Object.hasOwn(reviewers,mode),'Usage: hardening.mjs elevation|throughput|coupled|duties|rotary|paths STUDY.json [PROJECT_ROOT] [--freeze-sha256 DIGEST]');
     const input=readStudy(file),read=evidenceReader(root??path.dirname(file));
     const result=reviewers[mode](input.value,read,freeze);
     console.log(JSON.stringify({...result,studySha256:input.sha256},null,2));

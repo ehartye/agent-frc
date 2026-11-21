@@ -1,0 +1,8 @@
+{
+  "source": {
+    "path": "rotary-holding-model.json",
+    "sha256": "cf015bd0a4682fba65d9fb00b04f41125733f6a0d0cb4aa9075f0679374f8943",
+    "pointer": ""
+  },
+  "schema": "agent-frc/rotary-holding-study@1"
+}
