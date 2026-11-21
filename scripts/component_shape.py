@@ -33,55 +33,67 @@ def volume(shape):
     return value
 
 
-def difference(a,b):
-    from OCP.BRepAlgoAPI import BRepAlgoAPI_Cut
-    cut=BRepAlgoAPI_Cut(a,b)
-    if not cut.IsDone() or cut.Shape().IsNull():
-        raise ValueError("Unresolved directed Boolean difference")
-    return volume(cut.Shape())
+def boolean_measure(a,b,operation):
+    from OCP.BRepCheck import BRepCheck_Analyzer
+    result=operation(a,b)
+    if not result.IsDone() or result.Shape().IsNull():
+        raise ValueError("Unresolved solid Boolean operation")
+    shape=result.Shape()
+    return volume(shape),BRepCheck_Analyzer(shape).IsValid()
 
 
 def measured_difference(a,b,registered_points):
     # Keep source observations separate from the readiness decision. A kernel
     # failure on this solid must not discard measurements of other occurrences.
-    from mechanical_motion import bounds,common
+    from OCP.BRepAlgoAPI import BRepAlgoAPI_Cut,BRepAlgoAPI_Common
+    from OCP.BRepCheck import BRepCheck_Analyzer
+    from mechanical_motion import bounds
     from interface_consistency import inscribed_balls
     raw={"absentMm3":None,"extraMm3":None}
     detail={}
+    problems=[]
     try:
-        raw["absentMm3"]=difference(a,b)
-        raw["extraMm3"]=difference(b,a)
         src=volume(a);placed=volume(b)
-        detail.update(sourceVolumeMm3=src,installedVolumeMm3=placed)
+        detail.update(sourceVolumeMm3=src,installedVolumeMm3=placed,
+                      sourceTopologyValid=BRepCheck_Analyzer(a).IsValid(),
+                      installedTopologyValid=BRepCheck_Analyzer(b).IsValid())
+        if not detail["sourceTopologyValid"] or not detail["installedTopologyValid"]:
+            raise ValueError("Invalid source or installed solid topology")
+        raw["absentMm3"],detail["absentTopologyValid"]=boolean_measure(a,b,BRepAlgoAPI_Cut)
+        raw["extraMm3"],detail["extraTopologyValid"]=boolean_measure(b,a,BRepAlgoAPI_Cut)
+        if not detail["absentTopologyValid"] or not detail["extraTopologyValid"]:
+            problems.append("Invalid directed Boolean topology")
         absent,extra=raw["absentMm3"],raw["extraMm3"]
         if min(src,placed)<=0 or min(absent,extra)<0:
             raise ValueError("Nonphysical volume from source comparison")
         eps=max(1e-8,max(src,placed)*1e-9)
         expected=(src-absent,placed-extra)
         if min(expected)<-eps or abs(expected[0]-expected[1])>eps:
-            raise ValueError("Directed source differences violate volume conservation")
-        if not registered_points and min(expected)>eps:
-            return raw
-        # No inferred shared material despite overlapping bounds: seek a
-        # counterexample, never use unsuccessful probing to infer equality.
-        left,right=bounds(a),bounds(b)
-        box=[(max(left[i],right[i]),min(left[i+3],right[i+3])) for i in range(3)]
-        if not registered_points and any(lo>=hi for lo,hi in box):
-            return raw
-        actual=common(a,b)
-        detail["commonMm3"]=actual
-        candidates=list(registered_points)
-        if max(min(expected),actual)<=eps:
-            candidates.extend([list(point) for point in product(*[
-                [lo+(hi-lo)*fraction for fraction in (.25,.5,.75)] for lo,hi in box])])
-        balls,lower=inscribed_balls(a,b,candidates,0.000001)
-        detail.update(interiorBalls=balls,certifiedLowerBoundMm3=lower)
-        if (actual==0 and lower>0 or actual+eps<lower or min(expected)+eps<lower
-                or max(abs(v-actual) for v in expected)>eps):
-            raise ValueError("Direct common, directed differences or certified shared interior disagree")
-        return raw
+            problems.append("Directed source differences violate volume conservation")
+        if registered_points or min(expected)<=eps:
+            left,right=bounds(a),bounds(b)
+            box=[(max(left[i],right[i]),min(left[i+3],right[i+3])) for i in range(3)]
+            if registered_points or all(lo<hi for lo,hi in box):
+                actual,valid_common=boolean_measure(a,b,BRepAlgoAPI_Common)
+                detail.update(commonMm3=actual,commonTopologyValid=valid_common)
+                if not valid_common or actual<0:
+                    problems.append("Invalid direct common geometry or volume")
+                candidates=list(registered_points)
+                # All points are checked against the original solids independently
+                # of any invalid Boolean result; a missed probe proves nothing.
+                if min(expected)<=eps and actual<=eps:
+                    coordinates=[[lo+(hi-lo)*f for f in (.25,.5,.75)] for lo,hi in box]
+                    candidates.extend(list(point) for point in product(*coordinates))
+                balls,lower=inscribed_balls(a,b,candidates,0.000001)
+                detail.update(interiorBalls=balls,certifiedLowerBoundMm3=lower)
+                if (actual==0 and lower>0 or actual+eps<lower or min(expected)+eps<lower
+                        or max(abs(v-actual) for v in expected)>eps):
+                    problems.append("Direct common, directed differences or certified shared interior disagree")
     except (RuntimeError,ValueError) as exc:
-        return {**raw,"measurementStatus":"open","reason":str(exc),"numericalEvidence":detail}
+        problems.append(str(exc))
+    if problems:
+        raw.update(measurementStatus="open",reason="; ".join(problems),numericalEvidence=detail)
+    return raw
 
 
 def compare_components(placed_path,comparisons,*,interior_points=None):

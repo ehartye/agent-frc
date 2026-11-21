@@ -278,7 +278,7 @@ class Readiness(unittest.TestCase):
         self.assertAlmostEqual(disjoint["extraMm3"],480)
         # Fault-inject only the three Boolean scalar returns; the independent
         # interior test still runs both solid classifiers and measures real faces.
-        with patch("component_shape.difference",return_value=480.),patch("mechanical_motion.common",return_value=0.):
+        with patch("component_shape.boolean_measure",side_effect=[(480.,True),(480.,True),(0.,True)]*2):
             contradicted=measured_difference(block,placed(0),[])
             thin=measured_difference(block,placed(9.99999),[])
         self.assertEqual(thin["measurementStatus"],"open")
@@ -290,7 +290,15 @@ class Readiness(unittest.TestCase):
         self.assertEqual(self.status()["showcaseEligibility"],"open")
         self.change("geometry",lambda g:g["componentDifferences"]["block"].update(extraMm3=2))
         self.assertEqual(self.status()["showcaseEligibility"],"fail")
-        with patch("component_shape.difference",side_effect=ValueError("kernel failure")):
+        with patch("component_shape.boolean_measure",side_effect=[(0.,False),(0.,True)]):
+            invalid=measured_difference(block,placed(0),[])
+            self.assertEqual(invalid["measurementStatus"],"open")
+            self.assertFalse(invalid["numericalEvidence"]["absentTopologyValid"])
+        with patch("component_shape.boolean_measure",side_effect=[(0.,True),(0.,True),(480.,False)]):
+            invalid=measured_difference(block,placed(0),[[5,4,3]])
+            self.assertEqual(invalid["measurementStatus"],"open")
+            self.assertFalse(invalid["numericalEvidence"]["commonTopologyValid"])
+        with patch("component_shape.boolean_measure",side_effect=ValueError("kernel failure")):
             self.assertEqual(measured_difference(block,placed(0),[])["measurementStatus"],"open")
 
     def test_true_placed_bore_and_midstroke_tool_collision(self):
