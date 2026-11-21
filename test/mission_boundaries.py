@@ -41,6 +41,42 @@ class MissionBoundaries(unittest.TestCase):
         frames[1]["offsetsMm"]["piece"]=[1,0,0]
         with self.assertRaisesRegex(ValueError,"region"):end()
 
+    def test_independent_admission_clock_preserves_negative_and_missing_ticks(self):
+        from transfer_mission import identity, terminal_observation
+        raw = dict(case="deliver", pieceId="tile-A", windowS=[1, 1.02])
+        mission = dict(recipient={"solid": "ledge"}, dwellS=.02, terminalObservations={
+            "deliver": dict(channel="four switches engaged", originNs=0, periodNs=10_000_000)})
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            acquisition = write(root, "acquisition.json", {"switches": [True, True, True]})
+            samples = [dict(tick=i, timeNs=i*10_000_000, acceptedId="tile-A") for i in (100, 101, 102)]
+            record = dict(schema="agent-frc/terminal-observation@1", missionSha256=identity(mission),
+                          executionSha256="bound execution", sourceSha256=acquisition["sha256"],
+                          case="deliver", pieceId="tile-A", recipient=mission["recipient"],
+                          channel="four switches engaged", samples=samples)
+            def inspect(**change):
+                ref = write(root, "observation.json", {**record, **change})
+                return terminal_observation(root, mission, raw,
+                    {"terminalObservation": {"source": acquisition, "record": ref}}, "bound execution")
+            self.assertEqual(inspect()["status"], "pass")
+            self.assertEqual(inspect(samples=samples[::2])["status"], "open")
+            self.assertEqual(inspect(samples=[])["status"], "open")
+            self.assertEqual(terminal_observation(root, mission, raw, {}, "bound execution")["status"], "open")
+            self.assertIsNone(terminal_observation(root, {}, raw, {}, "bound execution"))
+            for neg in (None, "tile-B"):
+                self.assertEqual(inspect(samples=[samples[0], dict(samples[1], acceptedId=neg)])["status"], "fail")
+            for wrong in (dict(pieceId="tile-B"), dict(channel="substitute"), dict(sourceSha256="other"),
+                          dict(executionSha256="other"), dict(recipient={"solid":"other ledge"})):
+                with self.assertRaisesRegex(ValueError, "differs"):
+                    inspect(**wrong)
+            with self.assertRaisesRegex(ValueError, "shifted"):
+                inspect(samples=[dict(samples[0], timeNs=samples[0]["timeNs"]+1), *samples[1:]])
+            mission["dwellS"] += .000000001
+            self.assertEqual(inspect(missionSha256=identity(mission))["status"], "open")
+            (root/"acquisition.json").write_text("[]", encoding="utf8")
+            with self.assertRaisesRegex(ValueError, "Changed evidence"):
+                inspect()
+
     def test_conservative_material_and_separation(self):
         from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox
         from OCP.gp import gp_Pnt
