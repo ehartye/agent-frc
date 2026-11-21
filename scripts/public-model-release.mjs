@@ -75,7 +75,7 @@ export async function verifyPair(sourceRoot,sourcePacket,stageRoot,stagePacket,k
   }
 }
 function git(repo,args){return execFileSync('git',['-C',repo,...args],{maxBuffer:64*1024*1024});}
-async function audit(root,base,policyName,packetPath,pubKey){
+export async function audit(root,base,policyName,packetPath,pubKey){
   root=realpathSync(root);relative(policyName);check(/^[a-f0-9]{40}$/.test(base),'Pin the approved baseline commit from trusted CI');
   // Both the path inventory and scope are read from the approved tree, never from the candidate.
   const policy=JSON.parse(git(root,['show',base+':'+policyName]));
@@ -109,8 +109,8 @@ async function audit(root,base,policyName,packetPath,pubKey){
   }
   return {verifiedFiles:names.size,signedFiles:reviewed.size,baseline:base};
 }
-export async function auditStaged(approved,candidate,policyPath,packetPath,pubKey){
-  const base=realpathSync(approved),root=realpathSync(candidate),policy=JSON.parse(readFileSync(policyPath));
+export async function auditStaged(approved,candidate,policyPath,packetPath,pubKey,fieldRoot=process.env.FRC_VERIFIED_FIELD_ROOT){
+  const base=realpathSync(approved),root=realpathSync(candidate),policy=typeof policyPath==='string'?JSON.parse(readFileSync(policyPath)):policyPath;
   check(base!==root && policy.schema==='agent-frc/staged-model-policy@1' && typeof policy.project==='string' &&
     Array.isArray(policy.mutableFieldPages) && Array.isArray(policy.modelFiles) && policy.modelFiles.length,'Invalid independently approved stage policy');
   const fixed=new Set(policy.modelFiles.map(relative)),mutable=new Set(policy.mutableFieldPages.map(relative));
@@ -161,7 +161,7 @@ export async function auditStaged(approved,candidate,policyPath,packetPath,pubKe
       }
       check(old.has(name)&&next.has(name),'Expected registered field page in both stages: '+name);
       if(await hash(file(base,name))===await hash(file(root,name)))continue;
-      const witness=process.env.FRC_VERIFIED_FIELD_ROOT;
+      const witness=fieldRoot;
       check(witness,'Regenerate changed field pages independently using the trusted plugin');
       const trusted=realpathSync(witness);
       for(const unsafe of [base,root]){
