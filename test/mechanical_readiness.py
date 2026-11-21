@@ -35,6 +35,56 @@ class Readiness(unittest.TestCase):
         self.s["duties"][-1]["max"]=.7
         self.assertEqual(self.status()["showcaseEligibility"],"fail")
 
+    def test_repeated_interfaces_preserve_world_readings_and_distinct_placements(self):
+        from unittest.mock import patch
+        from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox
+        from OCP.TopLoc import TopLoc_Location
+        from OCP.gp import gp_Trsf, gp_Vec
+        from showcase_contacts import repeated_interface_disagreements
+
+        def placement(x):
+            tr = gp_Trsf()
+            tr.SetTranslation(gp_Vec(x, 0, 0))
+            return TopLoc_Location(tr)
+
+        block = BRepPrimAPI_MakeBox(2, 2, 2).Shape()
+        bar = BRepPrimAPI_MakeBox(3, 1, 1).Shape()
+        offset = placement(1)
+        moved = placement(20)
+        shapes = {"block": block, "bar": bar.Moved(offset),
+                  "second block": block.Moved(moved), "second bar": bar.Moved(offset).Moved(moved),
+                  "shifted bar": bar.Moved(placement(3)).Moved(moved),
+                  "different bar": BRepPrimAPI_MakeBox(3, 1, 1).Shape().Moved(offset).Moved(moved)}
+        rows = [["block", "bar", 0, 1.], ["second bar", "second block", 0, 1.],
+                ["second block", "shifted bar", 1., 0.], ["second block", "different bar", 0., 0.]]
+        self.assertEqual(repeated_interface_disagreements(shapes, rows), [])
+        rows[1][3] = 0.
+        group, = repeated_interface_disagreements(shapes, rows)
+        self.assertEqual(group["status"], "open")
+        self.assertEqual([r["worldCommonMm3"] for r in group["observations"]], [1., 0.])
+        self.assertAlmostEqual(group["referenceCommonMm3"], 1.)
+        self.assertTrue(group["referenceTopologyValid"])
+        with patch("component_shape.boolean_measure", side_effect=ValueError("reference kernel unresolved")):
+            group, = repeated_interface_disagreements(shapes, rows)
+        self.assertIn("unresolved", group["referenceError"])
+        self.assertEqual(rows[1][3], 0.)
+
+    def test_disagreeing_step_pairs_stay_open_and_other_clashes_are_reported(self):
+        def add_pair(geometry):
+            geometry["bodies"].update({"spare frame": [100,0,0,110,10,10],
+                                       "spare block": [109,0,0,119,10,10]})
+            geometry["pairs"].append(["spare block","spare frame",0,1.])
+            geometry["repeatedInterfaceDisagreements"] = [{
+                "status":"open", "observations":[
+                    {"pair":["block","frame"],"worldCommonMm3":0.},
+                    {"pair":["spare block","spare frame"],"worldCommonMm3":1.}]}]
+        self.change("geometry",add_pair)
+        result=self.status()
+        self.assertEqual(result["showcaseEligibility"],"fail")
+        interference=[r for r in result["findings"] if r["domain"]=="interference"]
+        self.assertTrue(any(r["status"]=="open" and "relative placement" in r["reason"] for r in interference))
+        self.assertTrue(any(r["status"]=="fail" and r["subject"]==["spare block","spare frame"] for r in interference))
+
     def test_connected_clash_and_incomplete_pair_coverage(self):
         self.change("geometry",lambda g:g["pairs"][0].__setitem__(3,8.1))
         r=self.status()
