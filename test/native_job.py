@@ -1,5 +1,6 @@
 """An original two-request job with a delayed module import and a non-code dependency."""
 import stat
+import subprocess
 import json
 from pathlib import Path
 import shutil
@@ -91,6 +92,19 @@ class Job(unittest.TestCase):
             with self.assertRaisesRegex(OSError, "Interrupted"):
                 self.stage()
         self.assertFalse(self.bundle.exists())
+        # A process killed just before rename skips Python cleanup and releases its OS lock.
+        crash = """import os,sys
+from pathlib import Path
+sys.path.insert(0,sys.argv[1])
+import native_job
+Path.rename=lambda self,target: os._exit(23)
+native_job.stage(Path(sys.argv[2]),Path(sys.argv[3]),Path(sys.argv[4]),sys.argv[5],Path(sys.argv[6]))
+"""
+        stopped=subprocess.run([sys.executable,"-B","-c",crash,str(Path(job.__file__).parent),
+            str(self.package),str(self.project),str(self.reg),self.digest,str(self.station)],check=False)
+        self.assertEqual(stopped.returncode,23)
+        self.assertFalse(self.bundle.exists())
+        self.assertTrue(list(self.station.glob(".preparing-trial-*")))
         with job.lease(self.bundle, publication=True):
             with self.assertRaisesRegex(ValueError, "active"):
                 self.stage()
