@@ -438,6 +438,7 @@ def evaluate_inputs(root,study, geometry=None):
                     finding("identity","fail",path,reason)
             except (ValueError,KeyError,TypeError,OSError) as e:
                 missing("identity","commissioned article functions",str(e))
+        mount_shapes={}
         if study.get("nativeCensus") and evidence_plan:
             from mount_datums import verify as verify_mounts
             from showcase_contacts import load_solids
@@ -447,6 +448,18 @@ def evaluate_inputs(root,study, geometry=None):
                 verify_mounts(evidence_plan,native,read(pinned(root,study["nativeCensus"]))["bodies"],mount_shapes,purchased=purchased)
             except (ValueError,KeyError,OSError,TypeError,RuntimeError) as e:
                 missing("native","commissioned mounting datums",str(e))
+        from fastener_stack import review as check_stacks
+        try:
+            stack_roster=evidence_plan.get("fastenerStacks")
+            stack_shapes=dict.fromkeys(bodies)
+            if isinstance(stack_roster,dict) and stack_roster.get("stacks"):
+                stack_shapes=mount_shapes or load_solids(step)[0]
+            owners={solid:row["article"] for row in native.values() for solid in row["solids"]}
+            for result in check_stacks(root,stack_roster,stack_shapes,step_sha,owners=owners):
+                if result["status"]!="pass":
+                    finding("interference",result["status"],result["screw"],json.dumps(result))
+        except (KeyError,ValueError,TypeError,RuntimeError,OSError) as error:
+            missing("interference","installed fastener stacks",str(error))
         checks=evidence_plan.get("numericalInterfaces")
         if not isinstance(checks,dict):
             missing("interference","registered numerical discrepancies","Commission the known numerically ambiguous pairs, or explicitly record an empty inventory.")

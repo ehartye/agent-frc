@@ -85,6 +85,48 @@ class Readiness(unittest.TestCase):
         self.assertTrue(any(r["status"]=="open" and "relative placement" in r["reason"] for r in interference))
         self.assertTrue(any(r["status"]=="fail" and r["subject"]==["spare block","spare frame"] for r in interference))
 
+    def test_blind_and_through_fastener_commissioning(self):
+        from fastener_stack import measure as check, review as roster_check
+        from OCP.BRepAlgoAPI import BRepAlgoAPI_Cut, BRepAlgoAPI_Fuse
+        from OCP.BRepPrimAPI import BRepPrimAPI_MakeCylinder
+        from OCP.gp import gp_Ax2, gp_Dir, gp_Pnt
+
+        def cylinder(r, start, end):
+            axis = gp_Ax2(gp_Pnt(0, 0, start), gp_Dir(0, 0, 1))
+            return BRepPrimAPI_MakeCylinder(axis, r, end - start).Shape()
+
+        def screw(length):
+            return BRepAlgoAPI_Fuse(cylinder(3.6,-2,0), cylinder(1.8,0,length)).Shape()
+
+        case = dict(screw="s", host="h", seat="p", kind="blind",
+                    underHeadCenterMm=[0,0,0], axisIntoHost=[0,0,1])
+        drawing = dict(underHeadLengthMm=[11.9,12.1], gripMm=[3.9,4.1], boreRadiusMm=[1.9,2.1],
+                       cylindricalDepthMm=[9.9,10.1], drillPointDepthMm=[9.9,10.1],
+                       maleThreadStartFromSeatMm=[0,1], maleTipRunoutMm=[.3,.5], femaleLeadMm=[.3,.5],
+                       lastFullThreadDepthMm=[8,9], minEngagementMm=6, minBottomClearanceMm=.5,
+                       screwThread="original fixture thread", hostThread="original fixture thread",
+                       threadFitBasis="Dimensioned matching teaching parts", minSeatAreaMm2=3)
+        solids = dict(s=screw(12), h=BRepAlgoAPI_Cut(cylinder(6,4,17),cylinder(2,3,14)).Shape(),
+                      p=BRepAlgoAPI_Cut(cylinder(5,0,4),cylinder(2.2,-1,5)).Shape())
+        self.assertEqual(check(solids,case,drawing)["status"],"pass")
+        short=check(dict(solids,s=screw(7)),case,dict(drawing,underHeadLengthMm=[6.9,7.1]))
+        self.assertEqual(short["status"], "fail")
+        self.assertLess(short["minimumFullEngagementMm"],6)
+        bottom=check(dict(solids,s=screw(15)),case,dict(drawing,underHeadLengthMm=[14.9,15.1]))
+        self.assertEqual(bottom["status"], "fail")
+        self.assertGreater(bottom["sharedLowerBoundMm3"],0)
+        through = dict(solids,h=BRepAlgoAPI_Cut(cylinder(6,4,11),cylinder(2,3,12)).Shape())
+        td = dict(drawing,cylindricalDepthMm=[6.9,7.1], lastFullThreadDepthMm=[6.6,6.8],
+                  minEngagementMm=5.5, minThroughProjectionMm=.5)
+        self.assertEqual(check(through,dict(case,kind="through"),td)["status"],"pass")
+        with self.assertRaisesRegex(ValueError, "through"):
+            check(solids,dict(case,kind="through"),td)
+        with self.assertRaisesRegex(ValueError,"Unclassified"):
+            roster_check(self.root,dict(stepSha256="issue",nonScrewSolids=["h","p"],stacks=[]),solids,"issue")
+        self.change("operatingRequirements",lambda plan:plan["operatingIntent"].pop("fastenerStacks"))
+        self.assertNotEqual(self.status()["showcaseEligibility"],"pass")
+
+
     def test_directional_clearance_preserves_actual_contacts_and_probe_distance(self):
         from unittest.mock import patch
         import math
