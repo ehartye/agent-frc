@@ -47,6 +47,8 @@ Start with the installed load case and its signed extraction direction. Identify
 
 Run `mechanical_readiness.py measure` on the selected assembly STEP. For repeated instances of the same two STEP solid definitions with identical relative orientation and placement, the physical intersection should be invariant as the assembly moves around the robot. The census compares the existing pair measurements. For a discrepancy above its numerical comparison resolution (relative `1e-6`, absolute `1e-8 mm³`), it repeats one intersection in the first member's coordinate frame and records the raw measurements under `repeatedInterfaceDisagreements`. Each instance keeps its own fit limits and original positive overlap.
 
+The census checks the BRep topology of each computed intersection, including an empty result. An invalid result leaves the pair open even if the kernel returned a plausible volume. A positive common volume must also fit inside each operand within numerical resolution. Look up the pair and raw observation in `unresolvedIntersections`, then inspect the same native bodies and pose. Other measured pairs and independently confirmed native collisions retain their findings.
+
 Open the named paths in the native census. Check both kernels, inspect the exact mating faces and compare an independent material witness where needed. A repeated-interface discrepancy stays open even if the recalculated reference gives a valid solid. Independently modeled parts, opposite handedness and changed mounting positions require their own measurements. The comparison resolution governs disagreement detection only. The commissioned fit limit still governs each measured interference.
 
 ### Resolve a contradictory source-shape measurement

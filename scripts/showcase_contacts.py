@@ -110,7 +110,7 @@ def repeated_interface_disagreements(shapes, pairs):
 
     groups = {}
     for a, b, _, volume in pairs:
-        if a not in instances or b not in instances:
+        if volume is None or a not in instances or b not in instances:
             continue
         left, lp = instances[a]
         right, rp = instances[b]
@@ -157,6 +157,11 @@ def measure(path,tolerance,probes, *, volumes=False):
         BRepBndLib.AddOptimal_s(shape,box,False,False)
         boxes[name]=[*box.CornerMin().Coord(),*box.CornerMax().Coord()]
     pairs=[]
+    unresolved=[]
+    body_volumes={}
+    if volumes:
+        from OCP.BRepAlgoAPI import BRepAlgoAPI_Common
+        from component_shape import boolean_measure, volume as solid_volume
     for a,b in sorted(candidate_pairs(boxes,tolerance,probes)):
         if a not in shapes or b not in shapes:
             raise ValueError("Unknown solid in distance probe: "+str((a,b)))
@@ -165,25 +170,36 @@ def measure(path,tolerance,probes, *, volumes=False):
             raise ValueError("Unresolved STEP distance: "+str((a,b)))
         row = [a,b,query.Value()]
         if volumes:
-            from OCP.BRepAlgoAPI import BRepAlgoAPI_Common
-            from OCP.BRepGProp import BRepGProp
-            from OCP.GProp import GProp_GProps
             # A zero-thickness overlap of the enclosing boxes bounds common material to zero.
             widths = [min(boxes[a][i+3],boxes[b][i+3])-max(boxes[a][i],boxes[b][i]) for i in range(3)]
             volume = 0.0
             if min(widths)>0:
-                common = BRepAlgoAPI_Common(shapes[a],shapes[b])
-                if not common.IsDone() or common.Shape().IsNull():
-                    raise ValueError("Unresolved intersection: "+str((a,b)))
-                props = GProp_GProps()
-                BRepGProp.VolumeProperties_s(common.Shape(),props,True)
-                volume = props.Mass()
-                if not math.isfinite(volume) or volume<0:
-                    raise ValueError("Invalid intersection volume: "+str((a,b)))
+                diagnostic={"pair":[a,b],"rawCommonMm3":None,"topologyValid":None}
+                try:
+                    volume,valid=boolean_measure(shapes[a],shapes[b],BRepAlgoAPI_Common)
+                    diagnostic.update(rawCommonMm3=volume if math.isfinite(volume) else None, topologyValid=valid)
+                    if not valid:
+                        raise ValueError("Computed common has invalid BRep topology")
+                    if not math.isfinite(volume) or volume<0:
+                        raise ValueError("Computed common has an invalid volume")
+                    if volume>0:
+                        for name in (a,b):
+                            if name not in body_volumes:
+                                body_volumes[name]=solid_volume(shapes[name])
+                        bound=min(body_volumes[a],body_volumes[b])
+                        if volume>bound and not math.isclose(volume,bound,rel_tol=1e-8,abs_tol=1e-8):
+                            diagnostic["smallerOperandMm3"]=bound
+                            raise ValueError("Computed common exceeds its smaller operand")
+                except (ValueError,RuntimeError) as error:
+                    diagnostic["reason"]=str(error)
+                    unresolved.append(diagnostic)
+                    volume=None
             row.append(volume)
         pairs.append(row)
     result={"schema":"agent-frc/step-solid-intersections@1" if volumes else "agent-frc/step-solid-distances@1","method":"placed-step-distance-and-common-volume" if volumes else "placed-step-solid-distance-v1","units":"mm",
             "toleranceMm":tolerance,"bodies":boxes,"nonSolidLeaves":surfaces,"pairs":pairs}
+    if unresolved:
+        result["unresolvedIntersections"]=unresolved
     if volumes:
         discrepancies=repeated_interface_disagreements(shapes,pairs)
         if discrepancies:
