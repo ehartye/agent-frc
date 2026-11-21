@@ -9,7 +9,7 @@ from mechanical_motion import bounds,distance,evaluate,transform
 from showcase_contacts import load_solids
 
 
-def replay(root,study,*,motion_model=None):
+def replay(root,study,*,motion_model=None,mission=None):
     require(study.get("schema")=="agent-frc/loaded-transfer@1" and named(study.get("id")),"Missing loaded duty")
     step=pinned(root,study["step"]);piece=study["piece"];shape=pinned(root,piece["file"])
     shapes,_=load_solids(shape)
@@ -96,9 +96,12 @@ def replay(root,study,*,motion_model=None):
                 initial.update(installed_start);motion.update(installed_moves)
             if source_id not in motion:motion[source_id]=[dict(kind="translation",travelMm=[0,0,0])]
             free=a["custody"]=="free"
+            exemptions=test.get("interfaces",{}).get(str(i),[])
+            require(not any(set(r["pair"]) & ({source_id}|stock_ids) for r in exemptions),
+                    "An intended robot mating interface cannot waive finite article or stock interference")
             stages.append(dict(id=case+"-"+str(i),basis=study["basis"],fixtures=[dict(piece,id=source_id,basis="Finite admitted piece from the trace"),*stock],
                 initialPose=initial,moves=motion,checkLinearEnvelope=True,minGapMm=test.get("minGapMm",0),maxDepth=test.get("maxDepth",9),
-                intendedInterfaces=test.get("interfaces",{}).get(str(i),[])))
+                intendedInterfaces=exemptions))
         actual_cases=evaluate(root,dict(schema="agent-frc/mechanical-motion@1",step=study["step"],cases=stages))["cases"]
         custody=[f["custody"] for f in frames];terminal=frames[-1];region=test["terminalBoundsMm"]
         require(len(region)==6 and all(number(v) for v in region) and all(region[k]<region[k+3] for k in range(3)),
@@ -116,7 +119,7 @@ def replay(root,study,*,motion_model=None):
         corridor=status
         from transfer_execution import inspect
         try:
-            execution,reason=inspect(root,study,test,trace,actual,shapes[piece["solid"]],stock_shapes,installed_at=installed_at,rotates=rotates_between)
+            execution,reason=inspect(root,study,test,trace,actual,shapes[piece["solid"]],stock_shapes,installed_at=installed_at,rotates=rotates_between,mission=mission)
         except (ValueError,KeyError,OSError,TypeError) as e:
             execution,reason="fail",str(e)
         if motion_error:execution,reason="fail",motion_error

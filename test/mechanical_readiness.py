@@ -11,6 +11,7 @@ from mesh_controls import MeshComparisons
 from observed_transfer import ObservedTransfer
 from installed_kinematics import InstalledKinematics
 from linked_kinematics import LinkedKinematics
+from mission_boundaries import MissionBoundaries
 
 
 class Readiness(unittest.TestCase):

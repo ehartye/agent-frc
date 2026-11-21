@@ -76,7 +76,7 @@ def supported_segment(shape, point, end, displacement, force, outward):
     return False
 
 
-def inspect(root, study, test, trace, parts, piece, stock, *, installed_at=None, rotates=None):
+def inspect(root, study, test, trace, parts, piece, stock, *, installed_at=None, rotates=None, mission=None):
     if installed_at is None:
         installed_at=lambda f,n:placed(parts[n],f["offsetsMm"].get(n,[0,0,0]))
 
@@ -109,6 +109,10 @@ def inspect(root, study, test, trace, parts, piece, stock, *, installed_at=None,
     require(registered.get("schema")=="agent-frc/observed-transfer-inventory@1" and
             digest(source) in registered["observed"],"Execution is absent from independent operator inventory")
     witness=registered["observed"][digest(source)]
+    if mission is not None:
+        from transfer_mission import identity as mission_identity
+        require(witness.get("missionSha256")==mission_identity(mission),
+                "Independent observer did not register this run for the commissioned article, recipient and duty")
     require(witness.get("origin") in ("executed-simulation","physical-measurement") and named(witness.get("observer")) and
             named(witness.get("producer")) and named(witness.get("basis")),"Register who observed the executed solver or instrument")
     require(raw.get("schema")=="agent-frc/observed-transfer@1" and raw.get("outcome")=="pass" and
@@ -126,7 +130,16 @@ def inspect(root, study, test, trace, parts, piece, stock, *, installed_at=None,
     for i,(frame,event) in enumerate(zip(frames,events)):
         require(event.get("timeS")==frame["timeS"],"Execution contact clock differs")
         custody=frame["custody"]
-        if custody=="free":continue
+        if custody=="free" or i and frames[i-1]["custody"]=="free":
+            body=trace["holder"];holder=installed_at(frame,body);obj=placed(piece,frame["offsetsMm"][identity])
+            gap=distance(obj,holder)
+            if gap<=1e-7:
+                require(common(obj,holder)==0,"Released article penetrates its original support at the reported release")
+                require(custody=="free" and (i==0 or frames[i-1]["custody"]!="free"),
+                        "Released article still contacts its donor after free motion began")
+            if custody=="free":
+                require(not event.get("contacts"),"Free motion cannot retain a measured contact reaction")
+                continue
         mass=raw.get("massKg");acc=event.get("accelerationMmS2")
         require(number(mass) and mass>0 and isinstance(acc,list) and len(acc)==3 and all(number(n) for n in acc),
                 "Executed custody needs piece mass and observed three-axis acceleration")
@@ -181,4 +194,10 @@ def inspect(root, study, test, trace, parts, piece, stock, *, installed_at=None,
     else:
         require(raw.get("resetObserved") is True and terminal.get("ready") is True and
                 obstruction,"No observed loaded obstruction and return to ready")
+    if mission is not None:
+        if any(f["custody"]=="free" for f in frames):
+            from release_onset import verify_executed
+            verify_executed(root,study,test,trace,raw,witness)
+        from transfer_mission import verify_terminal
+        verify_terminal(mission,raw,trace,study,piece,installed_at,rotates)
     return "pass","Full executed clock, physical contacts and terminal observation reconciled"

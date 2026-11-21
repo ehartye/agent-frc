@@ -357,6 +357,7 @@ def evaluate_inputs(root,study, geometry=None):
         from fusion_body_materials import stock_results
         for reason in stock_results(material_checks):
             finding("identity","fail","constitutive material and density",reason)
+    evidence_plan={}
     allowance={}
     for item in study.get("mating",[]):
         key=tuple(sorted(item["pair"]))
@@ -367,6 +368,37 @@ def evaluate_inputs(root,study, geometry=None):
                 proof.get("fit")==item["fit"] and proof.get("maxMm3")==item["maxMm3"] and named(proof.get("basis")),
                 "Fit allowance does not match the independently identified pair and limit")
         allowance[key]=item["maxMm3"]
+    if study.get("operatingRequirements") and study.get("reopen"):
+        from source_joint_roster import intended
+        from interface_consistency import measure as check_interface
+        from showcase_contacts import load_solids
+        try:evidence_plan=intended(root,study,read(pinned(root,study["reopen"])))
+        except (ValueError,KeyError,TypeError,OSError) as e:
+            evidence_plan={}
+            missing("native","commissioned interface coverage",str(e))
+        if study.get("nativeCensus") and evidence_plan:
+            from mount_datums import verify as verify_mounts
+            from showcase_contacts import load_solids
+            try:
+                mount_shapes=load_solids(step)[0] if evidence_plan.get("mountDatums") else {}
+                verify_mounts(evidence_plan,native,read(pinned(root,study["nativeCensus"]))["bodies"],mount_shapes)
+            except (ValueError,KeyError,OSError,TypeError,RuntimeError) as e:
+                missing("native","commissioned mounting datums",str(e))
+        checks=evidence_plan.get("numericalInterfaces")
+        if not isinstance(checks,dict):
+            missing("interference","registered numerical discrepancies","Commission the known numerically ambiguous pairs, or explicitly record an empty inventory.")
+        elif checks:
+            shapes=load_solids(step)[0]
+            for name,case in checks.items():
+                require(case["archiveSha256"]==archive_sha and case["stepSha256"]==step_sha and
+                        case["maxOverlapMm3"]==allowance.get(tuple(sorted(case["pair"])),0),
+                        "Numerical control differs from this assembly or its independently qualified fit allowance")
+                try:
+                    result=check_interface(shapes,case)
+                    if result["status"]!="pass":
+                        finding("interference",result["status"],name,f"Measured common {result['directCommonMm3']} mm³, interior lower bound {result['certifiedLowerBoundMm3']:.9g} mm³, partition consistency {result['numericallyConsistent']}.")
+                except (ValueError,KeyError,TypeError,RuntimeError) as e:
+                    missing("interference",name,"Unresolved registered numerical control: "+str(e))
     for (a,b),(gap,vol) in pairs.items():
         limit=allowance.get((a,b),0)
         if vol>limit:
@@ -428,6 +460,19 @@ def evaluate_inputs(root,study, geometry=None):
     for group in retained:
         if anchor not in group:
             missing("retention",group,"No registered load-bearing connection to the chassis anchor.")
+    route_plan=evidence_plan.get("structuralRoutes")
+    if not isinstance(route_plan,dict):
+        missing("retention","structural duty inventory","Independently nominate structural chassis routes for loaded mounts, or state that none are claimed.")
+    elif route_plan:
+        from structural_path import evaluate as structural_check
+        from showcase_contacts import load_solids
+        installed=load_solids(step)[0];edges={frozenset(x) for x in structural}
+        for name,route in route_plan.items():
+            try:
+                result=structural_check(root,route,installed,edges,anchor,archive_sha,step_sha)
+                if result["status"]!="pass":finding("retention","fail",name,"No complete directionally qualified load path to the structural chassis.")
+            except (ValueError,KeyError,TypeError,OSError,RuntimeError) as e:
+                missing("retention",name,str(e))
     # Numeric checks use project limits, part/operation identities and observed adverse cases.
     # A digest binds the source; the measured value, units, case and subjects must also match.
     required_domains={"sweep","shop","assembly","service","strength","stiffness","impact","fatigue"}
@@ -588,7 +633,16 @@ def evaluate_inputs(root,study, geometry=None):
             from loaded_transfer import replay
             test=read(pinned(root,ref))
             require(test["id"]==name and test["step"]==study["step"],"Loaded transfer names another mechanism or installed assembly")
-            result=replay(root,test,motion_model=motion_model)
+            from source_joint_roster import intended
+            from transfer_mission import commissioned
+            try:
+                reopen=read(pinned(root,study["reopen"]))
+                plan=intended(root,study,reopen)
+                mission=commissioned(plan,study,test,reopen)
+                result=replay(root,test,motion_model=motion_model,mission=mission)
+            except (KeyError,TypeError,ValueError,OSError) as e:
+                missing("build",name,str(e))
+                continue
             if result["status"]!="pass":
                 reasons=[c["id"]+": "+c["executionReason"] for c in result["cases"] if c["executionStatus"]!="pass"]
                 finding("build",result["status"],name,"Loaded delivery and jam-reset remain unqualified. "+"; ".join(reasons))

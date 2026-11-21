@@ -5,7 +5,7 @@ import {createReadStream,lstatSync,readFileSync,readdirSync,realpathSync,writeFi
 import path from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 
-const schema='agent-frc/signed-model-release@5';
+const schema='agent-frc/signed-model-release@6';
 const geometry=/\.(?:f3[dz]|stp|iges|igs|brep|step|gltf|glb|stl(?:\.gz)?|obj|3mf)$/i;
 const hex=/^[0-9a-f]{64}$/;
 function check(ok,message){if(!ok)throw Error(message);}

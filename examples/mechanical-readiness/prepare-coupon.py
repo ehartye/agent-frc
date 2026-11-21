@@ -131,11 +131,13 @@ study=dict(schema="agent-frc/mechanical-readiness@1",configuration=configuration
 study["jointAuthority"]=ref("issue/joints.json")
 intent=dict(authorityId="datum-coupon",configuration=configuration,
     mode="articulated" if moving else "fixed",basis="Original teaching coupon inspected for its registered operating duty",
-    motionRanges=ranges,transferMissions=[],externalIssues=[],
+    motionRanges=ranges,transferMissions=[],externalIssues=[],numericalInterfaces={},
     nativeCoordinates={"carriage":dict(type="asBuilt",occurrence="@root",name="Travel along pocket",coordinate="slideValue")} if moving else {})
 if coupled:
     from coupled_inspection import prepare
-    study["transferClaims"]={"present-to-fixed-receiver":prepare(root,step,members)}
+    transfer,mission=prepare(root,study["archive"],step,members)
+    study["transferClaims"]={"present-to-fixed-receiver":transfer}
+    intent["transferCriteria"]={"present-to-fixed-receiver":mission}
     intent["transferMissions"]=list(study["transferClaims"])
     study["connections"].append(dict(pair=key_pair,evidence=dict(obsref,id="engaged-key")))
     study["linkCalibration"]=ref("issue/links.json")
@@ -147,6 +149,20 @@ if coupled:
             (("anchor","Pocketed base",[0,0,0]),("near","Seated gauge",[14,8,6]),("far","Keyed gauge",[14,22,6]))},
         landmarkTrials=[dict(group=g,frame="extended",anchor="anchor",tip=tip,deltaMm=[dx,0,0],toleranceMm=.0001)
             for g,tip,dx in (("carriage","near",3),("companion","far",3))])
+# These are fabrication coordinates from the coupon definition, independent of as-installed readback.
+width=24 if coupled else 10
+datums={"Pocketed base":[[0,0,0],[20,0,0],[0,width,0]],
+        "Seated gauge":[[6,2,2],[14,2,2],[6,8,2]]}
+if coupled:datums["Keyed gauge"]=[[6,16,2],[14,16,2],[6,22,2]]
+intent["mountDatums"]=[dict(occurrence=name+":1",toleranceMm=.001,basis="Original coupon stock datums in the assembly reference",
+     features=[dict(solid=members[name],body=name,localMm=p,worldMm=p) for p in points]) for name,points in datums.items()]
+loadcase="Downward teaching load on the seated gauge"
+load_direction=[0,0,-1];loaded=members["Seated gauge"];base=members["Pocketed base"]
+support_capacity=save("issue/support-allowable.json",dict(binding,case=loadcase,direction=load_direction,
+    **{"from":loaded,"to":base},kind="bearing-compression",allowablePressureMPa=2,
+    basis="Synthetic desk exercise material bearing allowance from the registered strength duty"))
+intent["structuralRoutes"]={"gauge-support":dict(binding,case=loadcase,loaded=loaded,chassis=base,members=[loaded,base],
+    loadN=1.,direction=load_direction,interfaces=[{"from":loaded,"to":base,"capacitySource":support_capacity}])}
 plan=save("commissioning.json",dict(operatingIntent=intent))
 study["operatingRequirements"]=dict(plan,pointer="/operatingIntent")
 study["materialCensus"]=ref("issue/materials.json")

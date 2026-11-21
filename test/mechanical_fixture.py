@@ -141,7 +141,7 @@ def fixture(root,source="fixture.step",assets=(),archive_name="test.f3d", measur
         inspectedAt="captured test",dirty=False,externalReferences=[],policy="registered-offline-archive")))
     study["operatingRequirements"]={**write(root,"fixture-commissioning.json",dict(operatingIntent=dict(authorityId="bench",configuration=bind["configuration"],
         mode="articulated",basis="Independent fixture travel requirement",motionRanges={"slide":[0,10]},
-        nativeCoordinates={"slide":dict(type="joint",occurrence="@root",name="slide",coordinate="slideValue")},transferMissions=[],externalIssues=[]))),"pointer":"/operatingIntent"}
+        nativeCoordinates={"slide":dict(type="joint",occurrence="@root",name="slide",coordinate="slideValue")},transferMissions=[],numericalInterfaces={},structuralRoutes={},mountDatums=[],externalIssues=[]))),"pointer":"/operatingIntent"}
     study["transferClaims"]={}
     study["externalIssues"]=[]
     if measured:

@@ -216,6 +216,50 @@
       ],
       "detects": "An installed member or physical tip does not follow an approved driver, follower ratio, phase or mounted pose; measures named contact during a blocked drive",
       "regression": "test/linked_kinematics.py"
+    },
+    {
+      "id": "interface-consistency",
+      "runtime": "python",
+      "entry": "scripts/interface_consistency.py",
+      "args": [
+        "$root",
+        "$study"
+      ],
+      "detects": "A direct common-volume measurement disagrees with complementary partitions or the material independently contained inside both registered solids",
+      "regression": "test/mission_boundaries.py"
+    },
+    {
+      "id": "release-onset",
+      "runtime": "python",
+      "entry": "scripts/release_onset.py",
+      "args": [
+        "$root",
+        "$study"
+      ],
+      "detects": "A donor still contacts or penetrates a finite article after its measured reaction reaches zero, including between clock observations under a reversed stroke",
+      "regression": "test/mission_boundaries.py"
+    },
+    {
+      "id": "structural-path",
+      "runtime": "python",
+      "entry": "scripts/structural_path.py",
+      "args": [
+        "$root",
+        "$study"
+      ],
+      "detects": "A mounted assembly can connect to the chassis only through a cosmetic part, its own fixtures or a contact unable to transmit the commissioned direction and load",
+      "regression": "test/mission_boundaries.py"
+    },
+    {
+      "id": "mount-datums",
+      "runtime": "python",
+      "entry": "scripts/mount_datums.py",
+      "args": [
+        "$root",
+        "$study"
+      ],
+      "detects": "A manufactured housing returns to the wrong commissioned assembly coordinates even when the native and neutral measured poses agree",
+      "regression": "test/mission_boundaries.py"
     }
   ]
 }

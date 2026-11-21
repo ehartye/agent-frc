@@ -158,7 +158,7 @@ def planar_translation_clear(shape, fixed, moving_ops, fixed_ops, clearance):
     return True
 
 
-def bearing_area(a,b):
+def bearing_area(a,b,load_direction=None):
     from OCP.TopAbs import TopAbs_FACE
     from OCP.TopExp import TopExp_Explorer
     from OCP.TopoDS import TopoDS
@@ -177,7 +177,8 @@ def bearing_area(a,b):
             it.Next()
     faces=list(planar(b))
     return sum(common(f,g,True) for f,n in planar(a) for g,m in faces
-        if sum(i*j for i,j in zip(n,m))<-.999999999 and distance(f,g)<=1e-7)
+        if (load_direction is None or sum(x*y for x,y in zip(n,load_direction))>.999999999)
+        and sum(i*j for i,j in zip(n,m))<-.999999999 and distance(f,g)<=1e-7)
 
 
 def evaluate(root,study):

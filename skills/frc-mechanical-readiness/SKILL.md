@@ -5,6 +5,8 @@ description: "Review a selected robot or subsystem before shop release or showca
 
 # Review the selected robot for fabrication and publication
 
+Check saved installation features against independently frozen world datums, including fixed hardware. Trace each loaded mount through its qualified structural members to the chassis. Identify cosmetic covers and inspect the direction each actual joint can carry. Commission the physical donor, recipient, finite article and supported acceptance interval for every loaded duty. Verify measured separation through a free release, including a held or reversed drive as a control. Review registered numerical disagreements between mating solids using independent interior witnesses and complementary regions. [Operating criteria](../../docs/operating-intent.md)
+
 Start with the exact archive and pose the student would receive. Name the scope, planned operations and candidate revision. Freeze the required operating travel, handoffs and known defects from the commissioning plan. On cold reopen, compare them with the signed rooted Fusion joint inventory, including fixed and hidden assemblies. A usable engineering model can stay in the project while any required check remains open.
 
 1. Cold-reopen the Fusion archive. Reconcile occurrence hierarchy, installed transforms, native body bounds and exact placed STEP solids against the expected build. Bind a purchased article to the official part, configuration, model bytes and item-level rights. Bind a shop-made article to its editable native design, drawing, stock grade and revision. Identify the repeat count and installed position of each identical fastener.
