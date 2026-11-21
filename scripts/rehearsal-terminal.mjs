@@ -23,7 +23,7 @@ export function createTerminalRehearsal(profile) {
   check(spec && spec.period === model.periods.at(-1)?.name, 'choose the final powered period');
   check((spec.basis === undefined || text(spec.basis)) && (spec.sources === undefined || list(spec.sources)), 'invalid basis or sources');
   const periodS = model.periods.at(-1).seconds;
-  const activeS = model.periods.reduce((sum, p) => sum + p.seconds, 0);
+  const activeS = model.periods.reduce((sum,p,i) => sum+p.seconds+(i<model.periods.length-1?(p.passiveAfterS??0):0),0);
   const assessment = spec.assessment ?? {maxDelayS: 0};
   check(seconds(assessment.maxDelayS) && (assessment.atRestAfterS === undefined || seconds(assessment.atRestAfterS)),
     'provide a nonnegative passive assessment delay');

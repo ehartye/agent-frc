@@ -12,7 +12,7 @@ export const stages = [
     objective: 'Give students an adjustable box and a scale field. Try different widths, headings and approaches using the same manual edition.',
     activity: 'Play three robots on each alliance. Watch the front intake pursue a marked loose piece. Follow the hopper and live score as each delivered piece clears the feeder at the project’s modeled rate. Compare distinct opening assignments and wait times. Compare one more scoring trip with switching to a terminal objective. Change the switch time and the assumed support at assessment, then compare ordinary points, occupied slots and terminal awards on the same match clock.',
     handoff: 'Recorded poses, robot dimensions and student observations that the team can cite in its match story.',
-    skills: ['frc-previsualization','frc-season'], docs: [['Kickoff field lab','docs/kickoff-field-lab.md'],['Match rehearsal','docs/field-rehearsal.md'],['Terminal objectives and shared capacity','docs/terminal-objectives.md']]
+    skills: ['frc-previsualization','frc-season'], docs: [['Kickoff field lab','docs/kickoff-field-lab.md'],['Match rehearsal','docs/field-rehearsal.md'],['Score a piece across a period boundary','docs/score-assessment.md'],['Terminal objectives and shared capacity','docs/terminal-objectives.md']]
   },
   {
     id: 'story', milestone: 'Team-selected match narrative', name: 'Choose a match role', question: 'Which scoring cycle should our team own?',

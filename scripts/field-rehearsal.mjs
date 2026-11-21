@@ -13,6 +13,7 @@ export function createFieldRehearsal(profile) {
   const behaviors=Object.fromEntries(Object.entries(model?.programs || {}).map(([key,p])=>[key,p.label]));
   const phases=model?.periods || [];
   const duration=name=>Math.round((phases.find(p=>p.name===name)?.seconds || 0)/dt);
+  const wallDuration=name=>duration(name)+Math.round((phases.find(p=>p.name===name)?.passiveAfterS??0)/dt);
   const norm=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
   const sidePoint=(q,side)=>side==='blue'?[...q]:[model.mirror.redX?L-q[0]:q[0],model.mirror.redY?W-q[1]:q[1]];
   const assessRoute=(line,body,setup=model?.setups[0])=>supported?geom.assessRoute(line,body,setup):
@@ -44,11 +45,11 @@ export function createFieldRehearsal(profile) {
     }
     return Object.fromEntries([...names].map(key=>[key,{owner:null,queue:[]}]));
   }
-  function create(roster,setup,tieWinner=model?.defaultTieWinner,atRestAfterS) {
+  function create(roster,setup,tieWinner=model?.defaultTieWinner,atRestAfterS,match) {
     if(roster?.length!==6)throw Error('A match needs exactly six unique alliance slots, three per side.');
-    return createProbe(roster,setup,tieWinner,atRestAfterS);
+    return createProbe(roster,setup,tieWinner,atRestAfterS,match);
   }
-  function createProbe(roster,setup=model?.setups[0],tieWinner,atRestAfterS) {
+  function createProbe(roster,setup=model?.setups[0],tieWinner,atRestAfterS,match) {
     if(!supported)throw Error('Supply an external rehearsal geometry and behavior model.');
     if(!model.setups.includes(setup))throw Error('Unknown obstacle setup.');
     if(!Array.isArray(roster) || roster.length>6)throw Error('Use up to three robots per alliance.');
@@ -70,10 +71,21 @@ export function createFieldRehearsal(profile) {
     }
     robots.sort((a,b)=>a.id.localeCompare(b.id));
     const ledger=game.start(robots,tieWinner,setup);
-    if(terminal)ledger.endgame=terminal.start(robots,atRestAfterS,setup);
+    if(terminal){
+      ledger.endgame=terminal.start(robots,atRestAfterS,setup);
+      const g=ledger.endgame;
+      if(model.scoreAssessment && g.assessmentTimeS>g.activeCutoffS+(phases.at(-1).passiveAfterS??0)+1e-9)
+        throw Error('Include the registered final assessment time in the continuous replay clock.');
+    }
     else if(robots.some(r=>r.endgame!==undefined) || atRestAfterS!==undefined)throw Error('Supply an endgame model before scheduling a terminal action.');
     const sim={robots,setup,game:ledger,phase:phases[0].name,phaseIndex:0,ticks:0,paused:true,ended:false,resources:reservations(),hotspots:[],
       log:[], carry:0,phaseHistory:[]};
+    if(model.scoreAssessment){
+      const sameExecution=match && roster.length===6 && setup===match.setup &&
+        tieWinner===(match.tieWinner??model.defaultTieWinner) && atRestAfterS===match.endgameAtRestAfterS &&
+        JSON.stringify(completeRoster(roster))===JSON.stringify(completeRoster(match.roster));
+      game.startObservations(sim,sameExecution?match:null);
+    }
     game.replenish(sim,0);
     return sim;
   }
@@ -180,8 +192,7 @@ export function createFieldRehearsal(profile) {
     const f=d?Math.min(1,r.speed*dt/d):1;
     return [r.p[0]+(dest[0]-r.p[0])*f,r.p[1]+(dest[1]-r.p[1])*f];
   }
-  function step(sim) {
-    if(sim.paused || sim.ended)return;
+  function poweredStep(sim) {
     game.replenish(sim,(sim.ticks+1)*dt);
     const begins=sim.robots.map(r=>[...r.p]), ends=begins.map(p=>[...p]);
     // Each move reserves a continuous sweep. Earlier movers saw later peers stationary.
@@ -207,11 +218,24 @@ export function createFieldRehearsal(profile) {
     sim.robots.forEach((r,i)=>{r.travelIn+=norm(begins[i],ends[i]);r.p=ends[i];});
     game.move(sim,dt,begins);
     terminal?.observe(sim,begins,sim.ticks*dt,(sim.ticks+1)*dt);
+  }
+  function step(sim) {
+    if(sim.paused || sim.ended)return;
+    // Prior releases may complete before this tick's newly commanded actions.
+    game.observe(sim,(sim.ticks+1)*dt);
+    if(sim.ticks<duration(sim.phase))poweredStep(sim);
     sim.ticks++;
-    if(sim.ticks>=duration(sim.phase)){
-      terminal?.assess(sim);
+    game.observe(sim,sim.ticks*dt);
+    const endgame=sim.game.endgame;
+    if(endgame && model.scoreAssessment && sim.phase===endgame.period){
+      const elapsed=endgame.activeCutoffS-endgame.periodCutoffS+sim.ticks*dt;
+      if(elapsed+1e-9>=endgame.assessmentTimeS)terminal.assess(sim);
+    }
+    if(sim.ticks>=wallDuration(sim.phase)){
+      if(!model.scoreAssessment)terminal?.assess(sim);
       sim.paused=true;sim.ended=true;sim.carry=0;
-      sim.phaseHistory.push({phase:sim.phase,seconds:sim.ticks*dt,
+      sim.phaseHistory.push({phase:sim.phase,seconds:duration(sim.phase)*dt,
+        ...(sim.ticks>duration(sim.phase)?{elapsedSeconds:sim.ticks*dt}:{}),
         robots:sim.robots.map(r=>({id:r.id,visits:r.visits,waitSeconds:r.wait*dt,travelIn:r.travelIn,blocked:r.blocked,position:[...r.p]}))});
       event(sim,sim.phase+' clock expired');
     }
@@ -220,7 +244,7 @@ export function createFieldRehearsal(profile) {
     if(!Number.isFinite(seconds) || seconds<0)throw Error('Use nonnegative elapsed seconds.');
     if(sim.paused || sim.ended)return;
     sim.carry+=seconds;
-    const steps=Math.min(duration(sim.phase)-sim.ticks,Math.floor((sim.carry+1e-9)/dt));
+    const steps=Math.min(wallDuration(sim.phase)-sim.ticks,Math.floor((sim.carry+1e-9)/dt));
     sim.carry-=steps*dt;
     for(let i=0;i<steps;i++)step(sim);
   }
@@ -231,5 +255,5 @@ export function createFieldRehearsal(profile) {
     for(const r of sim.robots)Object.assign(r,{pickup:null,leg:0,waypoints:null,target:0,dwell:0,wait:0,travelIn:0,visits:0,blocked:'',action:''});
   }
   return {supported,behaviors,defaults,startingRoster,completeRoster,create,createProbe,advance,nextPhase,assessRoute,geom,intake:game?.intake,dt,periods:phases,terminal,
-    phaseSeconds:name=>duration(name)*dt};
+    phaseSeconds:name=>duration(name)*dt,elapsedSeconds:name=>wallDuration(name)*dt};
 }

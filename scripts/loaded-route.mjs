@@ -5,6 +5,7 @@ import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {createFieldRehearsal} from './field-rehearsal.mjs';
 import {createMatchSeries} from './rehearsal-series-core.mjs';
+import {loadScoreObservations} from './score-observations.mjs';
 import {validateProfile} from './kickoff.mjs';
 import {atPointer,evidenceReader,readStudy} from './study-evidence.mjs';
 
@@ -164,7 +165,7 @@ function compareContext(engine,match,context,reg,motion,read) {
   const {focal,clearanceIn:margin,entry}=reg;
   const period=engine.periods.find(p=>p.name===context.phase);
   check(period && Number.isFinite(context.offsetS) && context.offsetS>=0,'Unknown phase or offset');
-  const start=engine.periods.slice(0,engine.periods.indexOf(period)).reduce((s,p)=>s+engine.phaseSeconds(p.name),0)+context.offsetS;
+  const start=engine.periods.slice(0,engine.periods.indexOf(period)).reduce((s,p)=>s+engine.elapsedSeconds(p.name),0)+context.offsetS;
   const clockRecord=checkClock(reg,context,read,start,motion.samples[0].t);
   if(clockRecord)check(clockRecord.rows.length===motion.samples.length,'Recorded roster must cover the entire physical window');
   const end=start+motion.samples.at(-1).t-motion.samples[0].t;
@@ -224,7 +225,7 @@ function compareContext(engine,match,context,reg,motion,read) {
     previous={tick,points,matchS:time};
   }
   // Complete the original roster with the same simulation, including its original focal role.
-  const total=engine.periods.reduce((s,p)=>s+engine.phaseSeconds(p.name),0);
+  const total=engine.periods.reduce((s,p)=>s+engine.elapsedSeconds(p.name),0);
   trial.advance(total-elapsed);
   check(trial.done,'The original match did not reach its cutoff');
   const clearance=firstConflict?'occupied-or-below-margin':continuous?'bounded-clear':'clear-at-samples';
@@ -272,7 +273,10 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1]
     check(root&&input&&/^[0-9a-f]{64}$/.test(expected)&&!extra.length,'Usage: loaded-route.mjs PROJECT REGISTRATION.json EXPECTED_SHA256 [NEW_RESULT.json]');
     const {value,sha256}=readStudy(input);
     check(sha256===expected,'Registration differs from the independently frozen SHA-256');
-    const result=reviewLoadedRoute(value,evidenceReader(root));result.registrationSha256=sha256;
+    const read=evidenceReader(root);
+    const profile=await loadScoreObservations(read(value.profile),path.resolve(root,value.profile.path));
+    const result=reviewLoadedRoute(value,ref=>ref===value.profile?profile:read(ref));
+    result.registrationSha256=sha256;
     const json=JSON.stringify(result,null,2)+'\n';
     if(out)writeFileSync(out,json,{flag:'wx'});else process.stdout.write(json);
   }catch(error){console.error(error.message);process.exitCode=1;}

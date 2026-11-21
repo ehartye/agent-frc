@@ -2,6 +2,8 @@
 
 The field lab reads a rehearsal description from a project-owned rules model. Use it to compare routes, traffic, lost time and available space before the team chooses a match role. The simulation runs locally in the generated HTML.
 
+For a target with delayed or cross-period assessment, register the actual release, criterion and observation for the same piece. [Scoring clocks and target evidence](score-assessment.md)
+
 ## Prepare the external project model
 
 From the team project, pass its own profile to the installed kickoff CLI. Save generated rules and student records with the project. The kickoff guide covers the surrounding workflow. [Project rules model](project-rules-model.md) · [Kickoff field lab](kickoff-field-lab.md)

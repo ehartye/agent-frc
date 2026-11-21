@@ -5,6 +5,8 @@ description: "Use when turning project-supplied game rules into a field rehearsa
 
 # From game rules to a robot design
 
+When a piece can meet a scoring criterion or be assessed after the powered cutoff, use the project’s [registered scoring clock and source observations](../../docs/score-assessment.md).
+
 If the project awards a final robot state, compare continued piece scoring with a timed switch to that objective. Bind the route, shared resource, service time and terminal evidence to the same match; preserve the unpowered assessment interval. [Terminal objective rehearsal](../../docs/terminal-objectives.md)
 
 Before crediting a simulated scoring event, [review the route to that observation](../../docs/field-route-evidence.md). Bind the detector and continuous motion evidence to the same project geometry, transform, trajectory, observed body or piece, and clock. For either subject, reconcile every robot body swept through the observed pose with the independently pinned assembly catalog. A mechanism-only catalog leaves whole-robot qualification pending. For a chassis or mechanism observation, trace the registered part and measured criterion through its assessment time. Preserve the observed detector result when the route is unresolved or infeasible.
