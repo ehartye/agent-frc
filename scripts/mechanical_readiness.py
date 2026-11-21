@@ -244,6 +244,7 @@ def evaluate_inputs(root,study, geometry=None):
     native={}
     registered={}
     census={}
+    pose_reviews=[]
     motion_ids=set()
     motion_ranges={}
     mission_ids=set()
@@ -275,21 +276,29 @@ def evaluate_inputs(root,study, geometry=None):
         assigned=Counter(b for row in native.values() for b in row["solids"])
         if set(assigned)!=bodies or any(q!=1 for q in assigned.values()):
             finding("native","fail","inventory","Reopened native body ownership differs from complete STEP solids.")
-        if not study.get("nativeCensus"):
-            missing("native","cold census","A complete census from the installed native Fusion inspection is required.")
-        else:
-            from native_contact_review import allowed_census
-            census=read(pinned(root,study["nativeCensus"]))
+        registered={}
+        for key,occ in native.items():
+            names=occ.get("nativeBodyNames",{})
+            require(set(names)==set(occ["solids"]),"Map every installed solid to its original Fusion body name")
+            for solid,label in names.items():
+                require(named(label) and (key,label) not in registered,"Ambiguous native identity")
+                registered[(key,label)]=(solid,occ)
+        saved_reference_valid=True
+        saved_error=None
+        saved_bytes_verified=False
+        try:
+            from native_contact_review import allowed_census,pose_path
+            if not study.get("nativeCensus"):
+                raise FileNotFoundError("No native cold census provided")
+            source=pose_path(root,study["nativeCensus"])
+            saved_bytes_verified=True
+            census=read(source)
+            require(isinstance(census,dict) and isinstance(census.get("bodies"),list)
+                    and isinstance(census.get("pose"),dict) and census["pose"].get("id")=="saved",
+                    "Invalid saved native body census")
             require(census.get("schema")=="agent-frc/fusion-body-census@1" and census.get("archiveSha256")==archive_sha and
                     allowed_census(census.get("programSha256")) and named(census.get("fusionVersion")),
                     "Unbound or stale native body census")
-            registered={}
-            for key,occ in native.items():
-                names=occ.get("nativeBodyNames",{})
-                require(set(names)==set(occ["solids"]),"Map every installed solid to its original Fusion body name")
-                for solid,label in names.items():
-                    require(named(label) and (key,label) not in registered,"Ambiguous native identity")
-                    registered[(key,label)]=(solid,occ)
             observed=set()
             for body in census["bodies"]:
                 key=(body["path"],body["name"])
@@ -303,11 +312,18 @@ def evaluate_inputs(root,study, geometry=None):
                 b=body.get("boundsMm",[])
                 if solid not in boxes or len(b)!=6 or not all(number(x) for x in b) or not number(tolerance) or any(
                         abs(x-y)>tolerance for x,y in zip(b,boxes[solid])) or body.get("worldTransform")!=occ["worldTransform"]:
+                    saved_reference_valid=False
                     finding("native","fail",solid,"Installed transform or world bounds disagree with the cold Fusion census.")
-            from native_contact_review import verify as verify_native_contacts
-            verify_native_contacts(root,study,record,census,registered,finding,missing)
             if set(registered)!=observed or census["otherGeometry"]:
+                saved_reference_valid=False
                 finding("native","fail","complete physical inventory","Native solid register or unresolved mesh/surface differs from the release.")
+        except (KeyError,ValueError,TypeError,OSError,AttributeError) as error:
+            census={}
+            saved_error=error
+        from native_contact_review import verify as verify_native_contacts
+        pose_reviews=verify_native_contacts(root,study,record,census,registered,finding,missing,
+                                         saved_reference_valid=saved_reference_valid,saved_error=saved_error,
+                                         saved_bytes_verified=saved_bytes_verified)
     else:
         missing("native","assembly","No measured reopen/STEP export occurrence reconciliation.")
     if geometry.get("nonSolidLeaves"):
@@ -459,7 +475,7 @@ def evaluate_inputs(root,study, geometry=None):
             try:
                 mount_shapes=load_solids(step)[0] if evidence_plan.get("mountDatums") else {}
                 purchased=[path for path,obj in native.items() if articles.get(obj.get("article"),{}).get("kind")=="purchased"]
-                verify_mounts(evidence_plan,native,read(pinned(root,study["nativeCensus"]))["bodies"],mount_shapes,purchased=purchased)
+                verify_mounts(evidence_plan,native,census["bodies"],mount_shapes,purchased=purchased)
             except (ValueError,KeyError,OSError,TypeError,RuntimeError) as e:
                 missing("native","commissioned mounting datums",str(e))
         from fastener_stack import review as check_stacks
@@ -730,7 +746,9 @@ def evaluate_inputs(root,study, geometry=None):
         if observed.get("criteriaSha256")!=scope_digest(study) or observed.get("kind")!="scope-review" or observed.get("scope")!=disposition or observed.get("complete") is not True or not named(observed.get("reviewer")) or not named(observed.get("basis")) or sorted(observed.get("bodies",[]))!=sorted(bodies) or sorted(observed.get("duties",[]))!=expected:
             missing(disposition,"coverage","Independent coverage did not reconcile all installed solids and registered duties.")
     motion_model=None
-    if native:
+    if native and any(r["status"] in ("rejected","unavailable") for r in pose_reviews):
+        missing("native","installed kinematics","Restore the unavailable or rejected native pose receipts before evaluating joint travel.")
+    elif native:
         from assembly_kinematics import native_model
         try:
             motion_model=native_model(root,study)
@@ -793,7 +811,7 @@ def evaluate_inputs(root,study, geometry=None):
     build="fail" if any_failure else "open" if findings else "pass"
     return {"schema":"agent-frc/mechanical-readiness-result@1","configuration":configuration,"archiveSha256":archive_sha,"stepSha256":step_sha,
             "solids":len(bodies),"measuredPairs":len(pairs),"geometricGroups":geometric,"retainedGroups":retained,"articleFunctions":roster_review,"structuralRoutes":route_results,"loadedTransfers":transfer_results,
-            "spatialFits":spatial_results,"engineeringGeometry":publication,"showcaseEligibility":build,"buildReadiness":build,"findings":findings}
+            "nativePoseReviews":pose_reviews,"spatialFits":spatial_results,"engineeringGeometry":publication,"showcaseEligibility":build,"buildReadiness":build,"findings":findings}
 
 
 def review(root,study,geometry=None):
