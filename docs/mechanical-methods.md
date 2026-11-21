@@ -1,5 +1,33 @@
 # Reproduce a discovered mechanical defect
 
+## Keep completed source comparisons when a solid takes too long
+
+During design, one intricate constituent can occupy a solid kernel long after its neighbours have returned useful results. Register each source and installed STEP, exact solid label and drawing-derived transform. The transform maps source millimetres into the installed STEP frame. Repeated definitions use the full occurrence-qualified labels returned by `showcase_contacts.load_solids`. For an extracted file, keep the independent registration to its parent issue, physical landmarks and world placement. The command measures only the supplied files.
+
+In this synthetic plan a spacer's source origin moves 12 mm along the installed X axis. Replace the example hashes with the SHA-256 of the actual files. Add one entry per independently commissioned constituent. An as-drawn or deliberately displaced control can have its own entry and transform.
+
+```json
+{
+  "schema": "agent-frc/component-batch@1",
+  "configuration": "parked gearbox",
+  "articles": [{
+    "id": "inboard spacer",
+    "source": {"file": "input/spacer.step", "sha256": "<source SHA-256>", "solid": "Spacer"},
+    "installed": {"file": "issue/parked.step", "sha256": "<installed SHA-256>", "solid": "Spacer [1.2.1]"},
+    "worldTransform": [1,0,0,12, 0,1,0,0, 0,0,1,0, 0,0,0,1]
+  }]
+}
+```
+
+```sh
+python scripts/component_batch.py project project/plan.json run-01 --seconds 90
+python scripts/component_batch.py project project/plan.json run-02 --seconds 180 --resume run-01
+```
+
+Choose a per-article wall-time budget that includes a fresh read of both STEP files, hashing them and running the normal directed comparisons. The runner processes one article at a time. A timed-out worker is terminated and reaped before the next starts. Each finished receipt is written under its checksum. Resume into a **new** directory from a trusted, quiescent run, including a run interrupted before its summary. The runner checks the source bytes, plan, installed Python helpers, Python version and OCP binding. It retains completed results, including numerical disagreements, and retries unfinished articles. Preserve the original directories. A fresh run without `--resume` remeasures every article.
+
+Read both the execution summary and the raw absent/extra material volumes. A timeout or worker error leaves that article unfinished. A completed observation can be numerically open or show a genuine displacement. An exit code of zero means that all registered measurements returned without a numerical-open finding. Compare those measurements with the article's registered engineering limits. Independently verify any conflicting source or installed volume. Whole-model readiness still regenerates the full scan and all commissioned source comparisons.
+
 The team owns the robot geometry, rules, availability, load cases and acceptance thresholds. The installed plugin owns the comparison methods. When a design study exposes a new failure, record what actually detected it, preserve the failing input and run the same detector on the proposed revision. Keep the prior issue and the corrected candidate distinct. A measurement from a project-only script can motivate a plugin method; reproduce the decision through an installed command or a registered native inspection before claiming closure.
 
 ## Select the detector

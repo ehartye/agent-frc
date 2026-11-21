@@ -16,6 +16,55 @@ from spatial_operating_cases import SpatialOperatingCases
 
 
 class Readiness(unittest.TestCase):
+    def test_bounded_source_comparison_retains_finished_rows_and_retries_partial_writes(self):
+        from unittest.mock import patch
+        import component_batch as batch
+        from placed_solid_identity import IDENTITY
+        from showcase_contacts import load_solids
+
+        step = self.s["step"]
+        labels = sorted(load_solids(self.root/step["file"])[0])
+        rows = [{"id": label, "source": {**step, "solid": label}, "installed": {**step, "solid": label},
+                 "worldTransform": IDENTITY.copy()} for label in labels]
+        rows[1]["worldTransform"][3] = 1
+        plan = {"schema": "agent-frc/component-batch@1", "configuration": "parked", "articles": rows}
+        path = self.root/"articles.json"
+        path.write_bytes(batch.encoded(plan))
+        partial = self.root/"partial"
+        opened = {"execution": "completed", "observation": {"absentMm3": 0, "extraMm3": 0,
+                  "measurementStatus": "open", "reason": "conflicting integrations"}}
+        with patch.object(batch, "attempt", side_effect=[opened, KeyboardInterrupt]), self.assertRaises(KeyboardInterrupt):
+            batch.run(self.root, path, partial, 20)
+        (partial/".pending-interrupted").write_bytes(b'{"observation":')
+        self.assertEqual(len(list(partial.glob("00001-*.json"))), 1)
+        self.assertFalse((partial/"summary.json").exists())
+        resumed = self.root/"resumed"
+        timed = batch.run(self.root, path, resumed, 0.001, partial)
+        self.assertEqual(timed["execution"], "incomplete")
+        self.assertEqual(timed["unfinished"], [labels[1]])
+        self.assertEqual(timed["unresolved"], [labels[0]])
+        final = self.root/"finished"
+        result = batch.run(self.root, path, final, 45, resumed)
+        self.assertEqual(result["execution"], "complete")
+        self.assertEqual(result["unresolved"], [labels[0]])
+        success = json.loads((final/result["receipts"][1]).read_bytes())
+        self.assertGreater(success["observation"]["absentMm3"], 0)
+        self.assertEqual(success["previousAttempt"], timed["receipts"][1])
+        with patch.object(batch, "collector", return_value={"scriptsSha256": "different"}), self.assertRaisesRegex(ValueError, "method"):
+            batch.run(self.root, path, self.root/"changed-method", 20, final)
+        receipts = list(final.glob("00001-*.json"))
+        receipts[0].write_bytes(b"{}")
+        with self.assertRaisesRegex(ValueError, "checksum"):
+            batch.run(self.root, path, self.root/"changed-receipt", 20, final)
+        rows[0]["worldTransform"][3] += 1
+        path.write_bytes(batch.encoded(plan))
+        with self.assertRaisesRegex(ValueError, "Prior plan"):
+            batch.run(self.root, path, self.root/"changed-pose", 20, final)
+        with (self.root/step["file"]).open("ab") as stream:
+            stream.write(b"changed")
+        with self.assertRaisesRegex(ValueError, "Changed evidence"):
+            batch.run(self.root, path, self.root/"changed-input", 20, final)
+
     def test_exact_placed_identity_keeps_locations_orientation_and_failed_cuts(self):
         from unittest.mock import patch
         from placed_solid_identity import IDENTITY, binary_solid, run

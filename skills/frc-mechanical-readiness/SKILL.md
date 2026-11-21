@@ -58,3 +58,5 @@ If a valid placed solid even gives invalid self-subtractions, [compare the full 
 For a purchased flexible drive represented by a smooth band, [compare the finite belt envelope and sampled metal](../../docs/belt-envelope.md). Preserve pulley overlap and every nonmating contact, and qualify tooth engagement, tracking and load separately.
 
 After changing structural stock, [recover stress from its actual cut section](../../docs/section-bending.md). Check both extreme fibers and the signed governing load. Repeat a proposed section on the cold installed derivative.
+
+When a named supplier comparison stalls, [retain and resume the individual source measurements](../../docs/mechanical-methods.md#keep-completed-source-comparisons-when-a-solid-takes-too-long). Use the full fresh readiness scan for promotion.
