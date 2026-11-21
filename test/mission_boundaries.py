@@ -92,6 +92,37 @@ class MissionBoundaries(unittest.TestCase):
         far=BRepPrimAPI_MakeBox(gp_Pnt(12,0,0),2.,10.,10.).Shape()
         self.assertEqual(measure({"stock":a,"mate":far},case)["status"],"pass")
 
+    def test_ambiguous_zero_needs_pair_evidence(self):
+        from unittest.mock import patch
+        from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox
+        from OCP.gp import gp_Pnt
+        from interface_consistency import measure
+        stock=BRepPrimAPI_MakeBox(10.,10.,10.).Solid()
+        shapes={"stock":stock,"mate":BRepPrimAPI_MakeBox(gp_Pnt(9,0,0),2.,10.,10.).Solid()}
+        case=dict(pair=["stock","mate"],basis="Synthetic near-interface discrepancy",maxOverlapMm3=0.,
+                  volumeToleranceMm3=1e-5,boundaryReserveMm=.001,interiorPointsMm=[[5,5,5]],
+                  partitions=[dict(subject="stock",frame="installed",originMm=[4,5,0],
+                                   direction=[0,0,1],innerRadiusMm=1,outerRadiusMm=2,lengthMm=4)])
+        with patch("component_shape.boolean_measure",return_value=(0.,True)):
+            unbounded=measure(shapes,case)
+            self.assertEqual(unbounded["status"],"open")
+            self.assertEqual(unbounded["directCommonMm3"],0.)
+            self.assertLess(unbounded["partitions"][0]["residualMm3"],1e-8)
+            scope=dict(region=dict(startMm=[0,0,0],endMm=[0,0,10],pilotRadiusMm=1.,
+                                   majorRadiusMm=2.,classificationSlackMm=.001),
+                       forbiddenProbes=[dict(centerMm=[9.5,5.,5.],radiusMm=.2)])
+            bounded=dict(case,maxOverlapMm3=250.,excludedPointsMm={"mate":[[10.5,5,5]]})
+            allowed=measure(shapes,bounded)
+            self.assertLess(allowed["commonUpperBoundMm3"],250.)
+            self.assertEqual(allowed["status"],"pass")
+            outside=measure(shapes,dict(bounded,forbiddenWitnesses=scope))
+            self.assertEqual(outside["status"],"fail")
+            self.assertTrue(outside["forbiddenWitnesses"][0]["sharedInterior"])
+            bad=dict(scope,forbiddenProbes=[dict(centerMm=[1.5,0,5.],radiusMm=.1)])
+            self.assertEqual(measure(shapes,dict(bounded,forbiddenWitnesses=bad))["status"],"open")
+        touch=dict(shapes,mate=BRepPrimAPI_MakeBox(gp_Pnt(10,0,0),2.,10.,10.).Solid())
+        self.assertEqual(measure(touch,case)["status"],"open")
+
     def test_excluded_witness_bounds_large_common(self):
         from unittest.mock import patch
         from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox
