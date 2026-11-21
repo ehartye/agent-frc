@@ -99,13 +99,14 @@ class Readiness(unittest.TestCase):
             return BRepAlgoAPI_Fuse(cylinder(3.6,-2,0), cylinder(1.8,0,length)).Shape()
 
         case = dict(screw="s", host="h", seat="p", kind="blind",
+                    grippedLayers=[dict(solid="p",exitFromSeatMm=[3.9,4.1],minBearingAreaMm2=3,bearingRadiusMm=4)],
                     underHeadCenterMm=[0,0,0], axisIntoHost=[0,0,1])
         drawing = dict(underHeadLengthMm=[11.9,12.1], gripMm=[3.9,4.1], boreRadiusMm=[1.9,2.1],
                        cylindricalDepthMm=[9.9,10.1], drillPointDepthMm=[9.9,10.1],
                        maleThreadStartFromSeatMm=[0,1], maleTipRunoutMm=[.3,.5], femaleLeadMm=[.3,.5],
                        lastFullThreadDepthMm=[8,9], minEngagementMm=6, minBottomClearanceMm=.5,
                        screwThread="original fixture thread", hostThread="original fixture thread",
-                       threadFitBasis="Dimensioned matching teaching parts", minSeatAreaMm2=3)
+                       threadFitBasis="Dimensioned matching teaching parts", minSeatAreaMm2=3,headBearingRadiusMm=3.6)
         solids = dict(s=screw(12), h=BRepAlgoAPI_Cut(cylinder(6,4,17),cylinder(2,3,14)).Shape(),
                       p=BRepAlgoAPI_Cut(cylinder(5,0,4),cylinder(2.2,-1,5)).Shape())
         drawing.update(externalProfile=dict(representation="minor",form="original V",pitchMm=.7,hand="right",
@@ -113,6 +114,15 @@ class Readiness(unittest.TestCase):
                        internalProfile=dict(representation="minor",form="original V",pitchMm=.7,hand="right",
                            minorDiameterMm=[3.98,4.02],pitchDiameterMm=[4.15,4.17],majorDiameterMm=[4.55,4.60]))
         self.assertEqual(check(solids,case,drawing)["status"],"pass")
+        thin = BRepAlgoAPI_Cut(cylinder(5,0,.5),cylinder(2.2,-1,5)).Shape()
+        self.assertEqual(check(dict(solids,p=thin),case,drawing)["status"],"fail")
+        spacer=BRepAlgoAPI_Cut(cylinder(5,.5,4),cylinder(2.2,-1,5)).Shape()
+        packed=dict(case,grippedLayers=[dict(case["grippedLayers"][0],exitFromSeatMm=[.5,.5]),
+                                        dict(case["grippedLayers"][0],solid="spacer")])
+        self.assertEqual(check(dict(solids,p=thin,spacer=spacer),packed,drawing)["status"],"pass")
+        direct=dict(solids,s=screw(8),h=BRepAlgoAPI_Cut(cylinder(6,0,13),cylinder(2,-1,10)).Shape())
+        self.assertEqual(check(direct,dict(case,seat="h",grippedLayers=[]),
+                               dict(drawing,underHeadLengthMm=[7.9,8.1],gripMm=[0,0]))["status"],"pass")
         for radius in (.2,2.9):
             wrong = BRepAlgoAPI_Fuse(cylinder(3.6,-2,0),cylinder(radius,0,12)).Shape()
             self.assertEqual(check(dict(solids,s=wrong),case,drawing)["status"], "open")

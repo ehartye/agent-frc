@@ -30,9 +30,35 @@ def planar_faces(shape, z, normal):
         if surface.GetType() == GeomAbs_Plane:
             plane = surface.Plane()
             nz = plane.Axis().Direction().Z() * (-1 if face.Orientation() == TopAbs_REVERSED else 1)
-            if normal * nz > .999999999 and abs(plane.Location().Z() - z) <= 1e-5:
-                yield face
+            actual = plane.Location().Z()
+            if normal * nz > .999999999 and z[0]-1e-5 <= actual <= z[1]+1e-5:
+                yield face, actual
         it.Next()
+
+
+def contact_patch(a, b, zone, radius, minimum_z):
+    from OCP.BRepAlgoAPI import BRepAlgoAPI_Common
+    from OCP.BRepBuilderAPI import BRepBuilderAPI_MakeEdge, BRepBuilderAPI_MakeFace, BRepBuilderAPI_MakeWire
+    from OCP.BRepCheck import BRepCheck_Analyzer
+    from OCP.gp import gp_Ax2, gp_Circ, gp_Dir, gp_Pnt
+    require(number(radius) and radius > 0, "Register a positive local bearing inspection radius")
+    areas = {}
+    targets = list(planar_faces(b,zone,-1))
+    for face, z in planar_faces(a,zone,1):
+        if z < minimum_z:
+            continue
+        circle = gp_Circ(gp_Ax2(gp_Pnt(0,0,z),gp_Dir(0,0,1)),radius)
+        disc = BRepBuilderAPI_MakeFace(BRepBuilderAPI_MakeWire(BRepBuilderAPI_MakeEdge(circle).Edge()).Wire()).Face()
+        for other, h in targets:
+            if abs(z-h) > 1e-7 or distance(face,other) > 1e-7:
+                continue
+            shared = BRepAlgoAPI_Common(face,other)
+            require(shared.IsDone() and not shared.Shape().IsNull() and BRepCheck_Analyzer(shared.Shape()).IsValid(),
+                    "Unresolved bearing intersection between consecutive layers")
+            areas[z] = areas.get(z,0) + common(shared.Shape(),disc,True)
+    actual = [z for z,area in areas.items() if area>1e-7]
+    require(len(actual)<=1,"Multiple bearing planes make the stack datum ambiguous")
+    return (actual[0],areas[actual[0]]) if actual else (None,0.)
 
 
 def bore_faces(host, radius, grip):
@@ -154,7 +180,7 @@ def measure(shapes, case, drawing):
         else:
             from OCP.BRepBuilderAPI import BRepBuilderAPI_MakeVertex
             center = BRepBuilderAPI_MakeVertex(gp_Pnt(0, 0, end)).Vertex()
-            require(any(distance(center, face) <= 1e-6 for face in planar_faces(host_shape, end, -1)),
+            require(any(distance(center, face) <= 1e-6 for face,_ in planar_faces(host_shape, [end,end], -1)),
                     "Missing a closed flat or conical blind-hole termination")
             floor = end
         observed.update(drillPointDepthMm=floor-mouth, tipToDrillPointMm=floor-tip)
@@ -169,7 +195,7 @@ def measure(shapes, case, drawing):
     else:
         from OCP.BRepClass3d import BRepClass3d_SolidClassifier
         from OCP.TopAbs import TopAbs_OUT
-        require(not apex and any(planar_faces(host_shape, end, 1)), "No registered through exit at the far face")
+        require(not apex and any(planar_faces(host_shape, [end,end], 1)), "No registered through exit at the far face")
         c = BRepClass3d_SolidClassifier(host_shape)
         for z in (end-1e-4, end+1e-4):
             c.Perform(gp_Pnt(0, 0, z), 1e-7)
@@ -181,11 +207,30 @@ def measure(shapes, case, drawing):
         return dict(observed, status="fail", reasons=reasons)
     require(named(drawing.get("screwThread")) and drawing["screwThread"] == drawing.get("hostThread")
             and named(drawing.get("threadFitBasis")), "Supply matching screw/host thread specification and fit evidence")
-    seats = list(planar_faces(seat_shape, 0., -1))
-    area = sum(common(f, g, True) for f in planar_faces(screw_shape, 0., 1) for g in seats if distance(f, g) <= 1e-6)
+    layers = case["grippedLayers"]
+    require(isinstance(layers,list),"Commission the ordered gripped layers, including an empty list for direct seating")
+    ids = [row["solid"] for row in layers]
+    require(len(set(ids)) == len(ids) and not set(ids).intersection((screw,host))
+            and seat == (ids[0] if ids else host),"Gripped layer order does not connect the named head seat to this host")
+    _, area = contact_patch(screw_shape,seat_shape,[0,0],drawing["headBearingRadiusMm"],-1e-6)
     require(number(drawing["minSeatAreaMm2"]) and drawing["minSeatAreaMm2"] > 0, "Register minimum under-head bearing area")
     if area < drawing["minSeatAreaMm2"]:
         reasons.append("Under-head contact misses the commissioned seat")
+    contacts=[]
+    previous_z=0
+    for i,(name,layer) in enumerate(zip(ids,layers)):
+        following=(ids+[host])[i+1]
+        require(number(layer["minBearingAreaMm2"]) and layer["minBearingAreaMm2"]>0,"Require positive local contact at every layer")
+        zone=interval(layer,"exitFromSeatMm")
+        z, contact=contact_patch(shapes[name].Moved(loc),shapes[following].Moved(loc),zone,layer["bearingRadiusMm"],previous_z+1e-6)
+        contacts.append(dict(pair=[name,following],zMm=z,areaMm2=contact))
+        if contact < layer["minBearingAreaMm2"]:
+            reasons.append("Missing local bearing contact from "+name+" to "+following)
+        if z is not None:
+            previous_z=z
+    if abs(previous_z-mouth)>1e-5:
+        reasons.append("The clamped material stack does not reach the measured host mouth")
+    observed["layerContacts"]=contacts
     if not length[0]-1e-5 <= tip <= length[1]+1e-5:
         reasons.append("Installed length differs from the screw drawing")
     depth = interval(drawing, "cylindricalDepthMm")
