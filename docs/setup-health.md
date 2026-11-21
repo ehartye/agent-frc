@@ -22,13 +22,21 @@ Compare the recorded input hashes and toolchain versions separately. For a self-
 
 ## Check the selected toolchain
 
+For a project that uses VTK to render native CAD, read the exact versions from its lockfile and check them together in the rendering interpreter:
+
+```sh
+node scripts/check-environment.mjs --task native-cad --python PYTHON_EXECUTABLE --expect cadquery-ocp=OCP_VERSION --expect numpy=NUMPY_VERSION --expect vtk=VTK_VERSION
+```
+
+A pinned library must import and report the requested distribution version. A mismatch gives `ready: false` and exit 2. For geometry work without a VTK requirement, omit its pin. Run the project's render check separately to exercise the graphics backend.
+
 For a Python suite that uses both native CAD and simulation, run the combined check with the suite's Python executable and its working directory.
 
 ```sh
 node scripts/check-environment.mjs --task cad-physics --python PYTHON_EXECUTABLE --cwd TEST_DIRECTORY
 ```
 
-The probe imports MuJoCo, NumPy and OCP in one Python process. Matplotlib is optional. Supply exact project pins with repeated `--expect distribution=version` arguments. The child inherits the caller's environment and uses the test directory for imports as in `python -m unittest`. If the real suite appends extra import directories after its interpreter's packages, mirror them in order with repeated `--append-path DIRECTORY` arguments. Use trusted project directories and the same interpreter options and environment when running the suite. Keep the JSON report private. It includes working directory, import path order, module origins, versions and import exceptions. A successful check establishes that the selected interpreter can import these libraries together. Run the suite to verify the design.
+The probe imports MuJoCo, NumPy and OCP in one Python process. Matplotlib and VTK are optional unless the project pins their versions. Supply exact project pins with repeated `--expect distribution=version` arguments. The child inherits the caller's environment and uses the test directory for imports as in `python -m unittest`. If the real suite appends extra import directories after its interpreter's packages, mirror them in order with repeated `--append-path DIRECTORY` arguments. Use trusted project directories and the same interpreter options and environment when running the suite. Keep the JSON report private. It includes working directory, import path order, module origins, versions and import exceptions. A successful check establishes that the selected interpreter can import these libraries together. Run the suite to verify the design.
 
 For a Java simulation project, use `npm run setup:check -- --task java --jdk ABSOLUTE_JDK_PATH --expect-java PROJECT_MAJOR`. Both options are required: reuse the project's existing trusted JDK and its documented major version. For a project requiring Java 17, PowerShell can pass an already selected absolute path with `--jdk "$env:JAVA_HOME" --expect-java 17`. An unset variable fails; this tool does not search for or select another installation.
 
@@ -40,7 +48,7 @@ Use npm run setup:check -- --task core for Node-only artifact/trace tools. No Py
 
 Supply the project's actual Python executable, including its virtual-environment executable when applicable. The default command python means whichever that command resolves to here, not a claim it is the intended project environment. Output records sys.executable, Python version, prefix/basePrefix and virtual-environment status plus each selected installed distribution version, import health and module location. Imports execute installed package initialization; no installer, network call or hardware operation is requested by the probe. Only use trusted project environments. Each Python probe is bounded by a 20-second timeout and 1 MiB output limit.
 
-Example: npm run setup:check -- --task physics --python python --expect mujoco=4.0.1. Repeat --expect for other selected distribution exact versions from the project's lockfile. No universal MuJoCo version is prescribed. A mismatched required version, missing distribution metadata or failed required import makes ready:false and exit2. Optional failures are visible but do not block readiness; core success or successful required probes exits0. Readiness means only this selected dependency check, not complete project readiness.
+Example: npm run setup:check -- --task physics --python python --expect mujoco=4.0.1. Repeat --expect for other selected distribution exact versions from the project's lockfile. No universal MuJoCo version is prescribed. A mismatched required version, missing distribution metadata or failed required import makes ready:false and exit2. Every explicit pin becomes a requirement for that invocation. A missing unpinned optional library is reported and the other checks can still pass. Readiness means only this selected dependency check, not complete project readiness.
 
 Inspect import failure details separately from absent metadata: an installed package can fail because of native binaries or incompatible dependencies; a module may import without distribution metadata. Do not solve either by blindly installing another copy. Module locations can expose unexpected environments/shadowing but the tool does not automatically prove a lockfile or verify package authenticity. No GPU/window renderer, simulation behavior, Gradle/WPILib setup, Fusion sign-in, host-plugin registration or hardware is tested.
 

@@ -2,7 +2,7 @@ import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {readFileSync} from 'node:fs';
 import {inspectJavaEnvironment} from './java-health.mjs';
-const profiles={java:[],core:[],physics:[{distribution:'mujoco',module:'mujoco',required:true},{distribution:'numpy',module:'numpy',required:true},{distribution:'matplotlib',module:'matplotlib',required:false}], 'native-cad':[{distribution:'cadquery-ocp',module:'OCP',required:true},{distribution:'numpy',module:'numpy',required:false}]};
+const profiles={java:[],core:[],physics:[{distribution:'mujoco',module:'mujoco',required:true},{distribution:'numpy',module:'numpy',required:true},{distribution:'matplotlib',module:'matplotlib',required:false}], 'native-cad':[{distribution:'cadquery-ocp',module:'OCP',required:true},{distribution:'numpy',module:'numpy',required:false},{distribution:'vtk',module:'vtk',required:false}]};
 export function selectLibraries(task){
  if(task==='cad-physics') {
   const combined=new Map();
@@ -25,7 +25,14 @@ export function inspectEnvironment({task='core',python,expected={},jdk,expectedJ
  if(task!=='java'&&(jdk!==undefined||expectedJava!==undefined))throw Error('Java options require --task java');
  if(task==='java'&&python!==undefined)throw Error('Python options do not apply to --task java');
  const selected=selectLibraries(task);
- for(const [name,version] of Object.entries(expected))if(!selected.some(x=>x.distribution===name)||typeof version!=='string'||!version.trim())throw Error('Expected versions must name selected distributions with nonempty exact versions');
+ for(const [name,version] of Object.entries(expected)){
+  const library=selected.find(item=>item.distribution===name);
+  if(!library||typeof version!=='string'||!version.trim()){
+   const available=selected.map(item=>item.distribution).join(', ')||'none';
+   throw Error(`Use a nonempty exact version. Selectable distributions for ${task}: ${available}`);
+  }
+  library.required=true;
+ }
  const [major,minor]=process.versions.node.split('.').map(Number);const nodeOkay=major>20||(major===20&&minor>=11);
  const report={schema:'agent-frc/environment-health@1',task,node:{version:process.versions.node,supported:nodeOkay},python:null,libraries:[],ready:nodeOkay,limitations:['Installed/importable is not physics calibration or runtime compatibility proof.','No native renderer, GPU, Fusion session, robot hardware or plugin installation is tested.','No software is installed or updated. Reports may contain private executable/module paths; review before sharing.']};
  if(task==='java'){

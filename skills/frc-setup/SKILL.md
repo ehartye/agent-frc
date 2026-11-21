@@ -14,6 +14,8 @@ For core artifact/trace work, Python physics libraries are not required. For a s
 
 Before a project run that loads plugin scripts, [resolve its runtime identity](../../docs/setup-health.md#resolve-the-plugin-used-by-this-check). Use a fresh active install lookup for a compatible-current run, or a verified historical checkout for a pinned replay.
 
+For CAD rendering, check OCP, NumPy and VTK together using `--task native-cad` and repeat `--expect distribution=version` for each project pin. An explicitly pinned library must import at the requested version.
+
 For a suite that imports native CAD and simulation packages together, use `setup:check -- --task cad-physics --python PYTHON_EXECUTABLE --cwd TEST_DIRECTORY`. Match the project's actual test import paths and retain the private diagnostic before running its tests.
 
 For Java simulation work, use `setup:check -- --task java --jdk ABSOLUTE_JDK_PATH --expect-java PROJECT_MAJOR` before a build. Select one existing trusted JDK from project guidance; runtime and compiler must both match the requested major. Missing compiler, timeout and unrecognized version output remain failed prerequisites. This check does not run Gradle or prove cache, WPILib, native dependency or build readiness. Keep environment output private and preserve the established project build command as the next separate verification step.

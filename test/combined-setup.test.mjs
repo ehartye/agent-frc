@@ -9,7 +9,7 @@ import {inspectEnvironment, parseArgs, selectLibraries} from '../scripts/setup-h
 test('mixed tasks require both bindings and retain the stronger shared NumPy requirement',()=>{
   const selected=selectLibraries('cad-physics');
   assert.deepEqual(selected.map(row=>[row.module,row.required]),[
-    ['mujoco',true],['numpy',true],['matplotlib',false],['OCP',true]
+    ['mujoco',true],['numpy',true],['matplotlib',false],['OCP',true],['vtk',false]
   ]);
   assert.deepEqual(parseArgs(['--task','cad-physics','--cwd','project','--append-path','one','--append-path','two']),
     {task:'cad-physics',cwd:'project',appendPaths:['one','two'],expected:{}});
