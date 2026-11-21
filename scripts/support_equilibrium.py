@@ -195,25 +195,57 @@ def observed_supports(root,study):
         direction=vec(case["normal"]);require(abs(math.hypot(*direction)-1)<1e-8,"Unknown bearing normal")
         forces=[dict(body=body,pointMm=vec(select(f["point"])),forceN=vec(select(f["force"]))) for f in case["applied"]]
         moments=[dict(body=body,momentNmm=vec(select(p))) for p in case["couples"]]
+        require(forces or moments,"Register the simultaneous load, including explicit zero force for an unloaded control")
         # For parallel unidirectional normals no individual normal force can exceed
         # the entire sourced compressive resultant. This bound asserts no rating.
-        bound=max(0,-float(np.sum([f["forceN"] for f in forces],axis=0)@direction))
+        total_force=sum((np.asarray(f["forceN"]) for f in forces),np.zeros(3))
+        normal_required=-float(total_force@direction)
+        shear=float(np.linalg.norm(total_force+normal_required*np.asarray(direction)))
+        bound=max(0,normal_required)
         contacts=[]
         for patch in case["patches"]:
             p=vec(select(patch["centroid"]));area=select(patch["area"])
             require(number(area) and area>0,"No measured finite support area")
-            contacts.append(dict(pointMm=p,areaMm2=area,capacityN=bound,direction=direction,**{"from":body,"to":anchor}))
-        require(forces and contacts,"No applied loads or observed bearing faces")
+            contact=dict(pointMm=p,areaMm2=area,capacityN=bound,direction=direction,**{"from":body,"to":anchor})
+            if "bounds" in patch:
+                box=select(patch["bounds"])
+                require(isinstance(box,list) and len(box)==6 and all(number(v) for v in box)
+                        and all(box[i]-1e-7<=p[i]<=box[i+3]+1e-7 for i in range(3)),
+                        "Measured patch bounds must enclose its source centroid")
+                # The projection of a planar patch cannot exceed its enclosing box face.
+                for i in range(3):
+                    j,k=(i+1)%3,(i+2)%3
+                    require(abs(direction[i])*area<=(box[j+3]-box[j])*(box[k+3]-box[k])+max(1e-7,area*1e-7),
+                            "Patch area exceeds its measured projected bounds")
+                contact["footprintBoundsMm"]=box
+            contacts.append(contact)
+        require(contacts,"Register the measured support faces")
         res=solve([body,anchor],anchor,contacts,forces,moments)
         resultant=sum((wrench(f["forceN"],f["pointMm"],np.zeros(3)) for f in forces),np.zeros(6))
         for m in moments:resultant[3:]+=m["momentNmm"]
-        spin=float(resultant[3:]@direction)
+        spin=float(np.asarray(res["externalWrenchesN_Nmm"][body][3:])@direction)
         res.update(rootWrenchN_Nmm=resultant.tolist(),unsupportedTwistingMomentNmm=spin)
-        # The source contains pressure centroids, not boundaries. A net twist
-        # is impossible for ANY distribution of these parallel normal forces
-        # when their resultant is parallel to the normal. Other infeasibility
-        # of the centroid basis alone does not disprove a different distribution.
-        res["equilibrium"]="fail" if abs(spin)>1e-6 and np.linalg.norm(np.cross(resultant[:3],direction))<1e-7 else ("pass" if res["status"]=="pass" else "open")
+        reasons=[]
+        if normal_required < -1e-7:reasons.append("requires-tension")
+        if shear > 1e-7:reasons.append("requires-tangential-reaction")
+        if abs(spin)>1e-6 and shear<=1e-7:reasons.append("requires-twisting-couple")
+        if normal_required==0 and np.linalg.norm(total_force)==0 and np.linalg.norm(resultant[3:])>1e-6:
+            reasons.append("pure-couple-without-compression")
+        limits=res.pop("normalSupportLimits")
+        if all("footprintBoundsMm" in c for c in contacts):
+            res["normalSupportLimits"]=limits
+            limit=limits.get(body)
+            if limit and limit.get("missingMomentLowerBoundNmm",0)>1e-6 and shear<=1e-7:
+                reasons.append("pressure-center-outside-measured-footprints")
+        else:
+            res["centroidModelLimits"]=limits
+        centroid_status=res["status"]
+        res["centroidModelStatus"]=centroid_status
+        res["requiredCompressionN"]=normal_required
+        res["unsupportedShearN"]=shear
+        res["necessaryConditionFailures"]=reasons
+        res["equilibrium"]="fail" if reasons else "pass" if centroid_status=="pass" else "open"
+        res["status"]=res["equilibrium"]
         res["capacity"]="open";results[name]=res
     return dict(status="fail" if any(c["equilibrium"]=="fail" for c in results.values()) else "open",cases=results,
                 scope="Observed compressive centroid reactions. Contact allowables, installed joint retention and other load paths remain unqualified.")

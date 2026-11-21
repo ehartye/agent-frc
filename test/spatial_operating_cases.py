@@ -8,6 +8,44 @@ from OCP.gp import gp_Pnt
 
 
 class SpatialOperatingCases(unittest.TestCase):
+    def test_observed_parallel_seats_distinguish_impossible_from_unresolved_loads(self):
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        from mechanical_fixture import write
+        from support_equilibrium import observed_supports
+        with TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            archive=write(root,"fixture-native.json",{"synthetic":"source"})
+            step=write(root,"fixture-neutral.json",{"synthetic":"export"})
+            raw=dict(archiveSha256=archive["sha256"],stepSha256=step["sha256"],origin=[0,0,0],
+                     outboard=[3,0,0],offcenter=[1,0,0],down=[0,0,-10],up=[0,0,5],tie=[0,0,-15],
+                     side=[1,0,-10],normalCouple=[0,0,1],rollCouple=[1,0,0],zero=[0,0,0],
+                     centroid=[0,0,0],area=8,bounds=[-2,-1,0,2,1,0])
+            patch=dict(centroid="/centroid",area="/area",bounds="/bounds")
+            def case(loads,couples=(),n=1,known=True):
+                return dict(normal=[0,0,n],applied=[dict(point="/"+site,force="/"+force) for site,force in loads],
+                            couples=["/"+v for v in couples],patches=[patch if known else {k:v for k,v in patch.items() if k!="bounds"}])
+            cases={"up":case([("origin","up")]),"opposite seat":case([("origin","up")],n=-1),
+                   "held":case([("origin","up"),("origin","tie")]),"side":case([("origin","side")]),
+                   "pure roll":case([],["rollCouple"]),"twist":case([("origin","down")],["normalCouple"]),
+                   "overturned":case([("outboard","down")]),"unknown extent":case([("outboard","down")],known=False),
+                   "inside":case([("offcenter","down")]),"down":case([("origin","down")])}
+            spec=dict(archive=archive,step=step,observation=write(root,"data.json",raw),cases=cases)
+            rows=observed_supports(root,spec)["cases"]
+            for name in ("up","side","pure roll","twist","overturned"):
+                self.assertEqual(rows[name]["equilibrium"],"fail",name)
+            for name in ("opposite seat","held","down"):
+                self.assertEqual(rows[name]["equilibrium"],"pass",name)
+            for name in ("inside","unknown extent"):
+                self.assertEqual(rows[name]["equilibrium"],"open",name)
+            self.assertEqual(rows["up"]["requiredCompressionN"],-5)
+            self.assertEqual(rows["overturned"]["normalSupportLimits"]["loaded assembly"]["missingMomentLowerBoundNmm"],10)
+            self.assertTrue(all(r["capacity"]=="open" for r in rows.values()))
+            raw["bounds"]=[0,0,0,0,0,0]
+            spec["observation"]=write(root,"data.json",raw)
+            with self.assertRaisesRegex(ValueError,"area exceeds"):
+                observed_supports(root,spec)
+
     def test_rotating_rectangle_exceeds_terminal_region_between_valid_endpoints(self):
         from rigid_article import ArticleMotion
         from mechanical_motion import bounds
