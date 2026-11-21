@@ -5,6 +5,8 @@ description: "Review a selected robot or subsystem before shop release or showca
 
 # Review the selected robot for fabrication and publication
 
+For an axial bearing adjustment, [check the complete stack](../../docs/axial-bearing-stack.md). Trace both race load paths, measure the full retained shaft stroke, and test a displaced bearing against the hub, spacer and outside supports.
+
 Use the [agent placement guard](../../docs/checked-placement.md) when moving or installing components. Then repeat the complete cold census and the operating sweep on the issued assembly.
 
 Compare every physical occurrence in the cold successor with the [pre-CAD target roster](../../docs/article-functions.md). Reconcile added, missing and substituted parts, then qualify actual retention and clearance across the complete assembly.

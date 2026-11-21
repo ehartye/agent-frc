@@ -16,6 +16,19 @@ from spatial_operating_cases import SpatialOperatingCases
 
 
 class Readiness(unittest.TestCase):
+    def test_axial_obstruction_requires_strict_coverage_and_keeps_separate_seats(self):
+        import runpy
+        exercise=runpy.run_path(str(SCRIPTS.parent/"examples/mechanical-readiness/axial-bearing-stack.py"))
+        self.assertFalse(exercise["covered"]([0,1],[(-1,.5),(.5,2)]))
+        self.assertFalse(exercise["covered"]([0,1],[(0,2)]))
+        observed=exercise["exercise"]()
+        self.assertTrue(observed["trapped"]["everyOffsetObstructed"])
+        relieved=observed["relieved"]
+        self.assertFalse(relieved["everyOffsetObstructed"])
+        self.assertEqual(relieved["shaftTravel"],"pass")
+        self.assertAlmostEqual(relieved["outerShoulderAreaMm2"],40.71504,places=2)
+        self.assertAlmostEqual(relieved["innerSpacerAreaMm2"],16.33628,places=2)
+
     def test_widening_changes_both_extreme_fibers_and_the_bending_comparison(self):
         from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox
         from section_bending import measure
