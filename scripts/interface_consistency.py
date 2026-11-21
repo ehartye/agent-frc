@@ -11,10 +11,10 @@ from mechanical_motion import common,distance,vec
 from showcase_contacts import load_solids
 
 
-def inscribed_balls(a,b,probes,reserve):
+def inscribed_balls(a,b,probes,reserve,*,outside_second=False):
     from OCP.BRepBuilderAPI import BRepBuilderAPI_MakeVertex
     from OCP.BRepClass3d import BRepClass3d_SolidClassifier
-    from OCP.TopAbs import TopAbs_IN,TopAbs_SHELL
+    from OCP.TopAbs import TopAbs_IN,TopAbs_OUT,TopAbs_SHELL
     from OCP.TopExp import TopExp_Explorer
     from OCP.gp import gp_Pnt
     classifiers=[BRepClass3d_SolidClassifier(s) for s in (a,b)]
@@ -28,7 +28,7 @@ def inscribed_balls(a,b,probes,reserve):
     for raw in probes:
         center=vec(raw);p=gp_Pnt(*center)
         for c in classifiers:c.Perform(p,1e-7)
-        if any(c.State()!=TopAbs_IN for c in classifiers):continue
+        if classifiers[0].State()!=TopAbs_IN or classifiers[1].State()!=(TopAbs_OUT if outside_second else TopAbs_IN):continue
         point=BRepBuilderAPI_MakeVertex(p).Vertex()
         radius=min(distance(point,shell) for shell in boundaries)-reserve
         if radius<=0:continue
@@ -36,6 +36,36 @@ def inscribed_balls(a,b,probes,reserve):
         radius=min([radius,*[math.dist(center,b["centerMm"])-b["radiusMm"] for b in balls]])
         if radius>0:balls.append(dict(centerMm=center,radiusMm=radius))
     return balls,sum(4*math.pi*b["radiusMm"]**3/3 for b in balls)
+
+
+def excluded_material(parts, pair, points, reserve):
+    from OCP.BRepGProp import BRepGProp
+    from OCP.GProp import GProp_GProps
+    from OCP.TopAbs import TopAbs_SOLID,TopAbs_OUT
+    from OCP.BRepClass3d import BRepClass3d_SolidClassifier
+    require(isinstance(points,dict) and points and set(points)<=set(pair),
+            "Register excluded probes against a member of the measured pair")
+    for member in pair:
+        require(parts[member].ShapeType()==TopAbs_SOLID,"Excluded volume requires individual solids")
+        exterior=BRepClass3d_SolidClassifier(parts[member])
+        exterior.PerformInfinitePoint(1e-7)
+        require(exterior.State()==TopAbs_OUT,"Expected a finite solid with an exterior")
+    rows={}
+    for owner, probes in points.items():
+        require(isinstance(probes,list) and probes,"Missing registered excluded probes")
+        mate=next(k for k in pair if k!=owner)
+        balls,excluded=inscribed_balls(parts[owner],parts[mate],probes,reserve,outside_second=True)
+        props=GProp_GProps()
+        relative_error=BRepGProp.VolumeProperties_s(parts[owner],props,1e-9,True)
+        total=props.Mass()
+        require(number(total) and total>0 and number(relative_error) and 0<=relative_error<1,
+                "Could not integrate the finite material volume")
+        upper=total/(1-relative_error)-excluded
+        require(upper>=0,"Excluded material exceeds the integrated body volume")
+        rows[owner]=dict(disjointBalls=balls,excludedLowerBoundMm3=excluded,
+                         bodyVolumeMm3=total,estimatedRelativeIntegrationError=relative_error,
+                         commonUpperBoundMm3=upper)
+    return rows
 
 
 def partition(shape,record):
@@ -97,10 +127,29 @@ def measure(parts,case,*,original=None):
     probes=case["interiorPointsMm"];cuts=case["partitions"]
     require(isinstance(probes,list) and probes and isinstance(cuts,list) and cuts,"Register both interior probes and independent complementary partitions")
     errors=[]
-    try:mm3=common(parts[a],parts[b])
+    from component_shape import boolean_measure
+    from OCP.BRepAlgoAPI import BRepAlgoAPI_Common
+    valid=False
+    try:
+        mm3,valid=boolean_measure(parts[a],parts[b],BRepAlgoAPI_Common)
+        if not valid or mm3<0:errors.append("Invalid direct common topology or volume")
     except (ValueError,RuntimeError) as e:
         mm3=None;errors.append("direct common: "+str(e))
     balls,lower=inscribed_balls(parts[a],parts[b],probes,reserve)
+    exclusions={}
+    upper=None
+    if "excludedPointsMm" in case:
+        try:
+            exclusions=excluded_material(parts,(a,b),case["excludedPointsMm"],reserve)
+            upper=min(row["commonUpperBoundMm3"] for row in exclusions.values())
+            if any(not row["disjointBalls"] for row in exclusions.values()):
+                errors.append("No excluded material witnessed for a registered member")
+            if lower>upper+error:
+                errors.append("Witness bounds disagree")
+            if mm3 is not None and mm3>upper+error:
+                errors.append("Direct common exceeds the independently bounded available material")
+        except (TypeError,ValueError,RuntimeError) as exc:
+            errors.append("Unresolved excluded material: "+str(exc))
     rows=[]
     for c in cuts:
         subject=c["subject"]
@@ -114,8 +163,9 @@ def measure(parts,case,*,original=None):
             rows.append(dict(error=str(e)));errors.append("unresolved partition for "+subject)
     # A partition missing the physical material provides no conservation control.
     consistent=not errors and all(r["wholeMm3"]>error and r["residualMm3"]<=error for r in rows) and mm3+error>=lower
-    status="fail" if (lower>limit or mm3 is not None and mm3>limit) else "pass" if consistent else "open"
+    status="fail" if (lower>limit or valid and mm3>limit and (upper is None or mm3<=upper+error)) else "pass" if consistent else "open"
     return dict(pair=[a,b],directCommonMm3=mm3,disjointInteriorBalls=balls,certifiedLowerBoundMm3=lower,
+                directCommonTopologyValid=valid,excludedMaterial=exclusions,commonUpperBoundMm3=upper,
                 partitions=rows,errors=errors,numericallyConsistent=consistent,status=status)
 
 

@@ -505,7 +505,7 @@ def evaluate_inputs(root,study, geometry=None):
                 try:
                     result=check_interface(shapes,case)
                     if result["status"]!="pass":
-                        finding("interference",result["status"],name,f"Measured common {result['directCommonMm3']} mm³, interior lower bound {result['certifiedLowerBoundMm3']:.9g} mm³, partition consistency {result['numericallyConsistent']}.")
+                        finding("interference",result["status"],name,f"Measured common {result['directCommonMm3']} mm³, interior lower bound {result['certifiedLowerBoundMm3']:.9g} mm³, available-material upper bound {result['commonUpperBoundMm3']} mm³, numerical consistency {result['numericallyConsistent']}. {', '.join(result['errors'])}")
                 except (ValueError,KeyError,TypeError,RuntimeError) as e:
                     missing("interference",name,"Unresolved registered numerical control: "+str(e))
     for (a,b),(gap,vol) in pairs.items():
