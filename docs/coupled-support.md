@@ -25,6 +25,26 @@ Applied loads are separate `external-load-on-body` rows with prescribed or measu
 
 ## Read balance, capacity and sensitivity separately
 
+### Which forces can act from outside?
+
+Draw the boundary around the entire moving assembly. Wheel-to-chassis bolts transmit internal load. A tire touching the floor, an opposing object or a physical test clamp can exert external force. Put their contact IDs in the commissioned plan and preserve the active state and signed gap on the same clock. Run the free impact, physical clamp and opposed squeeze as separate cases. Try giving a separated support a reaction or removing the only real restraint. A physically impossible case can still give a plausible member stress from a structural solver.
+
+For a friction-limited contact, commission `maxFrictionCoefficient` and its `frictionBasis` on the planned contact. The reviewer checks the measured tangential demand against that coefficient times the same contact's compressive normal force. Record any measured or assumed coefficient and its range in the project. Tire contact during lift, impact or tipping calls for the actual normal force at that instant.
+
+### Cross-check planar inertia against motion
+
+For a rigid body moving in world XY about Z, add `planarBoundary` to the independently frozen plan. The ordinary `mechanism:review -- coupled` command then checks these quantities for every commissioned case. Freeze the member IDs, including payload and removable parts. Pin two separate sources using the usual path, digest and pointer references.
+
+| Plan field | Required evidence |
+| --- | --- |
+| `memberIds`, `massLedger` | Complete, unique IDs. The ledger contains `body`, `revision`, `frame`, `units: "kg,m,kg*m2"` and `members`. Each member records `id`, `massKg`, world `centerXYM: [x,y]` and `centroidYawKgM2` about its own center. Use zero centroidal inertia only for a justified point-mass model. |
+| `motionByCase` | Each case ID maps to a pinned motion sample. Match `body`, `revision`, `frame`, `caseId`, `runId`, `mode` and `timeS` to the reaction sample. Specify `model: "rigid-world-xy"`, `units: "m/s2,rad/s2"`, `cgAccelerationXY: [ax,ay]`, `yawAcceleration`, `basis` and `provenance`. |
+| `massToleranceKg`, `cgToleranceM` | Reconciliation tolerances for the reaction producer's reported mass and center. Register their engineering basis and the existing force and moment tolerances. |
+
+Use independently observed kinematics from the measured or simulated motion for `basis: "kinematic-observation"`. Preserve the original motion and force producers. A fixed condition imposed on the same solver that supplies the mounting reactions cannot independently establish a physical restraint. Mark commanded motion `prescribed-kinematics` and acceleration inferred from the applied wrench `force-derived-prediction`. Their numerical consistency is reported and their qualification stays open.
+
+The reviewer assembles mass, center and yaw inertia by the parallel-axis theorem. It compares the reported momentum rates with `mass × acceleration` and `yaw inertia × angular acceleration` at that center. For example, two 5 kg articles separated by 0.2 m with centroidal inertias of 0.1 and 0.2 kg·m² give 0.4 kg·m² about their common center. At 0.1 m/s² and 0.05 rad/s² the expected demand is 1 N and 0.02 N·m. A fixture that reports zero demand at this instant fails the cross-check. The original complete wrench, capacities and missing components remain visible. Use the full spatial momentum-rate method for changing configuration, roll or pitch. Member stress, fastener strength and the validity of tire and structural models require their own evidence.
+
 The review sums external force and each moment `(point − origin) × force + couple`. Static residuals should approach zero at the declared pose. For a dynamic sample it subtracts `m·aCG` and the time rate of angular momentum about the CG, transferred to the same origin. Supply actual `inertialForceN` and `angularMomentumRateAtCgNm` on that clock. Express a rigid body’s angular term in the common frame, including the gyroscopic term where applicable. Mixing peak reactions recorded at different times cannot support one free-body result.
 
 For unknown coordinates or force components a native contact can record `admissibleBounds` with a physical `basis`. Its `pointM` and `forceN` arrays hold inclusive [minimum, maximum] intervals at the unobserved axes. The static reviewer conservatively encloses each wrench component. Excluding zero beyond the justified tolerance rules out the frozen pose and forces under that enclosure. Including zero does not demonstrate that a single simultaneous set of contacts exists. A hypothesized redistribution must identify itself as a counterfactual and cannot qualify as observed support.
