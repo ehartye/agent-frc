@@ -16,3 +16,5 @@ Hand the selected role, scope, demand window, unresolved rule questions and fall
 When the team selects a role, save its period and station from the Field Lab. Replay the [role handoff](../../docs/season-meta-lab.md#hand-the-selected-opportunity-to-the-robot-designers) to identify exactly which pieces and actors established the observed demand.
 
 When a role relies on a partner, [compare the complete alliance service chain](../../docs/alliance-completion.md) before selecting the robot architecture. Track the same piece from finite supply through delivery and reset on the match clock. Change partner availability and inspect which design completes more cycles.
+
+When choosing a loaded transport route, [replay its physical clock against the other five robots](../../docs/loaded-route.md). Freeze the full match history, initial cargo and phase. Compare partner assignments using the same physical path and locate the first occupied interval before crediting a handoff.
