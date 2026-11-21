@@ -54,7 +54,9 @@ def inspect_attachment(design, plan, api):
     backing = root_occurrence(design, plan["backing"])
     require(backing.fullPathName.rpartition("+")[0] == parent.fullPathName
             and backing.fullPathName != plan["occurrence"], "Register a distinct sibling attachment")
-    joints = [j for j in parent.component.asBuiltJoints if j.name == plan["jointName"]]
+    joints = [j for j in design.rootComponent.allAsBuiltJoints
+              if j.name == plan["jointName"] and j.assemblyContext is not None
+              and j.assemblyContext.fullPathName == parent.fullPathName]
     require(len(joints) == 1, "Expected one named as-built joint in the registered parent")
     joint = joints[0]
     require(joint.isValid and not joint.isSuppressed and joint.jointMotion.objectType == plan["jointMotion"],
@@ -67,11 +69,11 @@ def inspect_attachment(design, plan, api):
             f"No healthy active timeline entry for {joint_path}: health={entry.healthState}, "
             f"suppressed={entry.isSuppressed}, rolledBack={entry.isRolledBack}, {entry.errorOrWarningMessage}")
     ends = []
-    for local in (joint.occurrenceOne, joint.occurrenceTwo):
-        require(local is not None, "Attachment lacks a sibling endpoint")
-        ends.append(local.createForAssemblyContext(parent).fullPathName)
+    for endpoint in (joint.occurrenceOne, joint.occurrenceTwo):
+        require(endpoint is not None, "Attachment lacks a sibling endpoint")
+        ends.append(endpoint.fullPathName)
     require(sorted(ends) == sorted([plan["occurrence"], plan["backing"]]), "Wrong joint endpoints")
-    return {**observed, "joint": joint.name, "owner": parent.fullPathName,
+    return {**observed, "joint": joint.name, "owner": joint.assemblyContext.fullPathName,
             "motion": joint.jointMotion.objectType, "endpoints": ends, "suppressed": joint.isSuppressed,
             "timelineHealth": "healthy"}
 
