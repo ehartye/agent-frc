@@ -13,6 +13,12 @@ codex plugin list --marketplace agent-frc-local --json
 
 Then start a new Codex session in this checkout. In the desktop app, restart the app if the marketplace or plugin does not appear. Select **Agent FRC Local Checkout** in the plugin directory and confirm Agent FRC is enabled. Ask to use `frc-setup` for a core runtime check, or `frc-strategic-narrative` to begin a season-specific strategy discussion.
 
+### Claude Code
+
+From a separate working project, start `claude --plugin-dir PATH_TO_PLUGIN` to load Agent FRC for that session. A configured installation can use the same skill. Invoke `/agent-frc:frc-setup` and ask for the runtime identity. [Check the session's plugin root and version](setup-health.md#claude-code-session)
+
+### Refresh the Codex installation
+
 Commit tracked changes before staging. The staging command copies tracked files into `artifacts/local-plugin`, excluding repository marketplace and host configuration. It records the source commit and file hashes. Git history, untracked files, ignored build outputs and private local evidence are excluded. An existing export is replaced only when it has the staging command's ownership marker.
 
 Codex installs a cached copy of that export. After changing or pulling plugin files, rerun `npm run plugin:stage` and the install command, then start a new session; do not edit the installed cache. This setup does not publish to a public directory or modify any other marketplace.
