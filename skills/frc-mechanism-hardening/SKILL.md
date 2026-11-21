@@ -14,3 +14,5 @@ Start with the capability contract, selected assembly revision and match-role de
 Record the governing margin, first violated requirement, causal change to the design and rerun on the original and a held-out condition. Report simulated, rated and measured evidence separately. A prebuild design can conclude with an explicit failure or unknown and a specific refinement.
 
 For parallel lift stations, [trace each failed holding path](../../docs/lift-path-faults.md). Locate the proposed interconnection relative to every belt, nut, holder and shared mount. Replay each side lost, both lost and the governing loose or asymmetric case. Check racking, common descent and individual travel on one post-cut clock.
+
+For loaded ground travel, [check the actual carried identities and robot footprint on the frozen 3v3 clock](../../docs/loaded-route.md). Record the first peer conflict and which later observations remain reachable. Qualify installed motion, downstream custody and scoring with their own evidence.
