@@ -4,8 +4,15 @@ import {readFileSync} from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
-try {
+import {checkWorkflows} from './workflow-preflight.mjs';
+
+function main() {
   const [project,mode,base,...rest]=process.argv.slice(2);
+  if(mode==='workflows'){
+    if(!project || !base || rest.length!==1)throw Error('Usage: project-checks.mjs PROJECT workflows FULL_COMMIT ABSOLUTE_ACTIONLINT');
+    console.log(JSON.stringify(checkWorkflows(path.resolve(project),base,rest[0])));
+    return;
+  }
   if(!project || rest.length || !(mode==='full' && !base || mode==='changed' && /^[a-f\d]{40}$/.test(base)))
     throw Error('Usage: project-checks.mjs PROJECT changed BASE_COMMIT | PROJECT full');
   const cwd=path.resolve(project);
@@ -52,4 +59,5 @@ try {
     } else run(exe==='node'?process.execPath:exe,args);
   }
   console.log(JSON.stringify({mode,base:base??null,selected,skipped}));
-} catch(error){console.error(error.message);process.exitCode=1;}
+}
+try { main(); } catch(error){console.error(error.message);process.exitCode=1;}

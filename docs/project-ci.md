@@ -23,6 +23,18 @@ node PLUGIN/scripts/project-checks.mjs PROJECT full
 
 Both run the project layout check first in the default `robot-project` layout. A software-only project can use its existing layout. Use an actual ancestor of the candidate as the base. Changes to the check manifest or a workflow select all registered checks. The changed mode includes staged, unstaged and untracked non-ignored inputs in the working checkout. Full mode runs every registered command, including expensive historical replays. Install the project’s pinned runtime dependencies before either command. A private Fusion reissue remains a separate qualified-station operation.
 
+## Check the workflows before pushing
+
+After committing a workflow change, check the exact commit you intend to push. Use an approved local [actionlint release](https://github.com/rhysd/actionlint/releases) and verify its published checksum. The plugin CI exercises v1.7.12.
+
+```sh
+node PLUGIN/scripts/project-checks.mjs PROJECT workflows FULL_COMMIT ABSOLUTE_PATH_TO_ACTIONLINT
+```
+
+The command reads the committed workflow YAML and local action metadata directly from Git. It checks every committed entry workflow and its local reusable calls in an isolated directory. Syntax errors and incompatible local call inputs produce a nonzero exit and a file/line diagnosis. Correct the reported file, commit it and check the new commit. A repair present only in the working directory leaves the earlier result unchanged.
+
+The result identifies the selected commit, checked workflows and executable digest. The checker uses actionlint’s default rules without repository suppressions, shellcheck or pyflakes. A project with custom runner labels may need a separate policy review. Remote reusable workflow bodies, job execution, repository variables, permissions on the host and deployment still require separate verification. Run this command alongside the local project tests. A malformed workflow can prevent GitHub from creating even its first job.
+
 ## Start with a Java robot project
 
 A WPILib Java project can use the general CI entry with just its Gradle wrapper, sources and configured tests. Commit the wrapper files, GradleRIO and vendor dependency versions. Select the JDK required by that project locally and set `FRC_JAVA_MAJOR` to its major version in Actions. Confirm the wrapper distribution and its checksum. Keep the ordinary Java project structure and register its Java check in `tests/ci.json`:
