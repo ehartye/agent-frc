@@ -1,6 +1,7 @@
 """Cold inventory and export of an explicitly chosen set of solid-bearing Fusion leaf occurrences."""
 import hashlib
 import json
+from collections import Counter
 from pathlib import Path
 
 
@@ -31,36 +32,71 @@ def body_rows(component):
     return result
 
 
+def relationships(root, expected, fusion):
+    """Read each relationship once in root context, accounting for each owner instance."""
+    seen = Counter()
+
+    def owner(item, kind):
+        context = item.assemblyContext
+        path = context.fullPathName if context is not None else "@root"
+        if (path, kind) not in expected:
+            raise ValueError("Unknown relationship owner: " + path)
+        seen[path, kind] += 1
+        return path
+
+    def member(occurrence, parent):
+        # A null joint end denotes the owning component. Preserve that convention
+        # for a nested component as well as the document root.
+        if occurrence is None:
+            return parent
+        path = occurrence.fullPathName
+        if ((path, "joint") not in expected or
+                (parent != "@root" and path != parent and not path.startswith(parent + "+"))):
+            raise ValueError(f"Unresolved rooted relationship member {path} in {parent}")
+        return path
+
+    joints = []
+    for kind, collection in (("joint", root.allJoints), ("asBuilt", root.allAsBuiltJoints)):
+        for joint in collection:
+            parent = owner(joint, kind)
+            motion = joint.jointMotion
+            edge = dict(owner=parent, kind=kind, name=joint.name, one=member(joint.occurrenceOne, parent),
+                        two=member(joint.occurrenceTwo, parent), motion=motion.objectType, suppressed=joint.isSuppressed)
+            if fusion.RevoluteJointMotion.cast(motion):
+                edge["rotationRad"] = motion.rotationValue
+            if fusion.SliderJointMotion.cast(motion):
+                edge["slideCm"] = motion.slideValue
+            joints.append(edge)
+    groups = []
+    for group in root.allRigidGroups:
+        parent = owner(group, "rigidGroup")
+        occurrences = list(group.occurrences)
+        if any(occ is None for occ in occurrences):
+            raise ValueError("Missing member of rigid group: " + group.name)
+        groups.append(dict(owner=parent, name=group.name, occurrences=[member(occ, parent) for occ in occurrences]))
+    for key, count in expected.items():
+        if seen[key] != count:
+            raise ValueError(f"Rooted relationship count differs for {key}: expected {count}, observed {seen[key]}")
+    return joints, groups
+
+
 def inventory(design, parent, pose, version):
     from adsk import core, fusion
     root=design.rootComponent
     contexts=[(None,root)]+[(o,o.component) for o in root.allOccurrences]
-    rows, joints, groups=[],[],[]
+    rows, counts=[],{}
     for occ, comp in contexts:
         path=occ.fullPathName if occ else "@root"
+        counts[path, "joint"] = comp.joints.count
+        counts[path, "asBuilt"] = comp.asBuiltJoints.count
+        counts[path, "rigidGroup"] = comp.rigidGroups.count
         transform=occ.transform2 if occ else core.Matrix3D.create()
         bodies=list(comp.bRepBodies)
         rows.append(dict(occurrence=path,component=comp.name,partNumber=comp.partNumber,matrixCm=list(transform.asArray()),
                          solids=[b.name for b in bodies if b.isSolid],
                          otherBodies=[b.name for b in bodies if not b.isSolid]+[m.name for m in comp.meshBodies]))
 
-        def full(local):
-            if not local:
-                return path
-            return (local.createForAssemblyContext(occ) if occ else local).fullPathName
-
-        for kind, collection in (("joint",comp.joints),("asBuilt",comp.asBuiltJoints)):
-            for j in collection:
-                motion=j.jointMotion
-                edge=dict(owner=path,kind=kind,name=j.name,one=full(j.occurrenceOne),two=full(j.occurrenceTwo),
-                          motion=motion.objectType,suppressed=j.isSuppressed)
-                if fusion.RevoluteJointMotion.cast(motion):
-                    edge["rotationRad"]=motion.rotationValue
-                if fusion.SliderJointMotion.cast(motion):
-                    edge["slideCm"]=motion.slideValue
-                joints.append(edge)
-        for g in comp.rigidGroups:
-            groups.append(dict(owner=path,name=g.name,occurrences=[full(o) for o in g.occurrences]))
+    joints, groups = relationships(root, counts, fusion)
     return dict(sourceArchive=parent,pose=pose,rootPath="@root",fusion=version,occurrences=rows,joints=joints,
                 rigidGroups=groups,allBodies=sum(len(r["solids"]) for r in rows))
 
