@@ -96,11 +96,14 @@ def measured_difference(a,b,registered_points):
     return raw
 
 
-def compare_components(placed_path,comparisons,*,interior_points=None):
+def compare_components(placed_path,comparisons,*,interior_points=None,section_axes=None):
     from OCP.BRepBuilderAPI import BRepBuilderAPI_Transform
     from OCP.gp import gp_Trsf
     from mechanical_motion import vec
     comparisons=list(comparisons)
+    axes = {} if section_axes is None else section_axes
+    if not isinstance(axes, dict) or not set(axes) <= {row[0] for row in comparisons}:
+        raise ValueError("Stock sections must reference a registered placed solid")
     points={} if interior_points is None else interior_points
     if not isinstance(points,dict) or not set(points)<={row[0] for row in comparisons}:
         raise ValueError("Interior probes must reference a registered placed solid")
@@ -122,4 +125,16 @@ def compare_components(placed_path,comparisons,*,interior_points=None):
         official=BRepBuilderAPI_Transform(originals[source][label],tr,True).Shape()
         current=placed[name]
         result[name]=measured_difference(official,current,points.get(name,[]))
+        if name in axes:
+            from stock_sections import stock_difference
+            section = stock_difference(official, current, axes[name])
+            result[name]["stockSections"] = section
+            if section["status"] == "measured" and not result[name].get("measurementStatus"):
+                for field in ("absent", "extra"):
+                    lo, hi = section[field+"RangeMm3"]
+                    if not lo <= result[name][field+"Mm3"] <= hi:
+                        section.setdefault("directed3dDisagreement", []).append(field)
+                if section.get("directed3dDisagreement"):
+                    result[name].update(measurementStatus="open",
+                                        reason="Directed 3D volume disagrees with the integrated stock sections")
     return result

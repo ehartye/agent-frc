@@ -111,9 +111,10 @@ def scan(root, study):
     probes={tuple(sorted(j["pair"])) for j in study.get("connections",[])}
     result=measure(step,tolerance,probes,volumes=True,separation_axes=study.get("projectedSeparationAxes",[]))
     requests=component_inputs(root,study)
-    if requests:
+    if requests or study.get("componentSectionAxesWorld"):
         from component_shape import compare_components
-        result["componentDifferences"]=compare_components(step,requests,interior_points=study.get("componentInteriorPointsMm"))
+        result["componentDifferences"]=compare_components(step,requests,interior_points=study.get("componentInteriorPointsMm"),
+                                                          section_axes=study.get("componentSectionAxesWorld"))
     if study.get("connections"):
         from mechanical_motion import bearing_area
         from showcase_contacts import load_solids
@@ -346,6 +347,16 @@ def evaluate_inputs(root,study, geometry=None):
                 finding("identity","fail",key,"Installed source neutral is not the registered component issue.")
             for solid in occ["solids"]:
                 delta=errors.get(solid)
+                if solid in study.get("componentSectionAxesWorld", {}):
+                    from stock_sections import compare_limit
+                    from placed_separation import direction
+                    section = (delta or {}).get("stockSections", {})
+                    axis = list(direction(study["componentSectionAxesWorld"][solid]))
+                    decision = compare_limit(section, policy) if section.get("axisWorld") == axis else "open"
+                    if decision == "fail":
+                        finding("identity","fail",solid,"Planar stock sections exceed the registered source-shape resolution.")
+                    elif decision == "open":
+                        missing("identity",solid,"Unresolved commissioned stock sections: "+str(section.get("reason","insufficient resolution or missing sections")))
                 if delta and delta.get("measurementStatus"):
                     missing("identity",solid,"Unresolved source-shape measurement: "+str(delta.get("reason","missing numerical evidence")))
                 elif not delta or not all(number(delta.get(k)) and delta[k]>=0 for k in ("absentMm3","extraMm3")):

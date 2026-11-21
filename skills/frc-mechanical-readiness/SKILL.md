@@ -48,3 +48,5 @@ For stalled oblique solid pairs, [measure a finite directional clearance bound](
 For a keyed drive, commission both loaded flanks, radial support, axial restraint and the signed torque. Reproduce the seated and withdrawn cases before selecting the installed key. [Test torque through a straight key](../../docs/operating-intent.md#check-torque-through-a-straight-key)
 
 For a modeled thread in a smooth pilot, check the location of the common material in both cold Fusion and the placed STEP. [Commission the physical pair and its permitted region](../../docs/spatial-fits.md).
+
+For machined stock whose profiles stay constant between machining depths, [compare the material in every section](../../docs/stock-sections.md). Check a displaced control and retain conflicting native observations.
