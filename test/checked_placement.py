@@ -74,6 +74,8 @@ class Placements(unittest.TestCase):
             self.assertTrue(moved["wroteTransform"])
             snapshots.add.assert_called_once()
             attach.assert_called_with(parent.component)
+            with self.assertRaisesRegex(ValueError, "outside the selected child"):
+                example.inspect_attachment(design, {**plan, "materialOccurrence": backing.fullPathName}, api)
             # Re-resolve the path after a cold reopen rather than retaining its warm proxy.
             cold = deepcopy(design)
             self.assertEqual(example.inspect_attachment(cold, plan, api)["cornerErrorMm"], 0)

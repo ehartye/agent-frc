@@ -29,18 +29,21 @@ def registered_child(design, plan):
 def inspect_material(design, plan, point2d):
     child = registered_child(design, plan)
     require(close(child.transform2.asArray(), rigid(plan["worldTransformCm"])), "Child world pose differs")
-    bodies = [b for b in child.component.bRepBodies if b.isSolid and b.name == plan["body"]]
+    material = root_occurrence(design, plan.get("materialOccurrence", child.fullPathName))
+    require(guard.under(material.fullPathName, child.fullPathName), "Material witness is outside the selected child")
+    bodies = [b for b in material.component.bRepBodies if b.isSolid and b.name == plan["body"]]
     require(len(bodies) == 1, "Expected one selected solid")
     body = bodies[0]
-    context_error, local_sites = placement_witness(body, child, point2d)
+    context_error, local_sites = placement_witness(body, material, point2d)
     # The synthetic plate has a distinctive corner away from its rotation axis.
     # Find that source vertex again because entity indices can change on reopen.
     corners = [v for v in body.vertices if math.dist(v.geometry.asArray(), plan["cornerLocalCm"]) <= 1e-7]
     require(len(corners) == 1, "Source corner is missing or ambiguous")
-    observed = list(corners[0].createForAssemblyContext(child).geometry.asArray())
+    observed = list(corners[0].createForAssemblyContext(material).geometry.asArray())
     error_mm = 10 * math.dist(observed, plan["cornerWorldCm"])
     require(math.isfinite(error_mm) and error_mm <= .001, "Placed material missed the fixture datum")
-    return {"occurrence": child.fullPathName, "body": body.name, "contextSitesLocalCm": local_sites,
+    return {"occurrence": child.fullPathName, "materialOccurrence": material.fullPathName,
+            "body": body.name, "contextSitesLocalCm": local_sites,
             "cornerLocalCm": list(corners[0].geometry.asArray()), "expectedCornerWorldCm": plan["cornerWorldCm"],
             "cornerWorldCm": observed, "cornerErrorMm": error_mm, "contextErrorMm": context_error}
 
