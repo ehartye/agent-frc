@@ -3,6 +3,7 @@ import math
 from pathlib import Path
 import sys
 import unittest
+import copy
 
 from OCP.BRepAlgoAPI import BRepAlgoAPI_Cut
 from OCP.BRepBuilderAPI import BRepBuilderAPI_MakePolygon
@@ -62,6 +63,24 @@ class SpatialMatingFit(unittest.TestCase):
         for row, verdict in [(good, "pass"), (bad, "fail")]:
             self.assertEqual(fit.assess({"placed":row}, limits, required_methods=["placed"])[0], verdict)
         self.assertEqual(fit.assess({"placed":bad}, limits, required_methods=["placed","missing"])[0],"fail")
+
+    def test_independent_forbidden_material_survives_an_unresolved_boolean(self):
+        commission = dict(COMMISSION, representation="external-thread/smooth-pilot",
+                          expectedCommonMm3=[1,2], forbiddenProbes=[{"centerMm":[0,0,1],"radiusMm":.1}])
+        pair = ["male","host"]
+        shapes = {key:cylinder(3) for key in pair}
+        observations = fit.placed_forbidden(shapes,pair,commission)
+        self.assertTrue(observations[0]["sharedInterior"])
+        raw = {"spatialFit":{"commission":commission,"methods":{},"forbidden":observations}}
+        self.assertEqual(fit.native_result(raw,commission)[0],"fail")
+        shapes["host"] = BRepAlgoAPI_Cut(cylinder(3),cylinder(2)).Shape()
+        raw["spatialFit"]["forbidden"] = fit.placed_forbidden(shapes,pair,commission)
+        self.assertFalse(raw["spatialFit"]["forbidden"][0]["sharedInterior"])
+        self.assertEqual(fit.native_result(raw,commission)[0],"open")
+        wrong = copy.deepcopy(commission)
+        wrong["forbiddenProbes"][0]["centerMm"] = [2.1,0,1]
+        with self.assertRaises(ValueError):
+            fit.forbidden_probes(wrong)
 
 
 if __name__ == "__main__":

@@ -463,10 +463,15 @@ def evaluate_inputs(root,study, geometry=None):
                     finding("interference",result["status"],result["screw"],json.dumps(result))
         except (KeyError,ValueError,TypeError,RuntimeError,OSError) as error:
             missing("interference","installed fastener stacks",str(error))
-        if "spatialFits" in evidence_plan:
+        native_regions=census.get("pose",{}).get("spatialFits",[])
+        if "spatialFits" in evidence_plan or native_regions:
             from spatial_fit import review as check_regions
             try:
-                cases=evidence_plan["spatialFits"]
+                cases=evidence_plan.get("spatialFits",[])
+                require(isinstance(cases,list),"Commission a list of spatial fits")
+                planned=[case["commission"] for case in cases]
+                require(len(planned)==len(native_regions) and all(planned.count(item)==native_regions.count(item)==1 for item in planned),
+                        "The commissioned spatial fit roster differs from the cold native pose")
                 if cases:
                     require(study.get("nativeCensus") and native,"A commissioned spatial fit requires the exact cold body census")
                     spatial_results=check_regions(root,cases,mount_shapes or load_solids(step)[0],

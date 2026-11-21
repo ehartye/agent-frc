@@ -78,6 +78,27 @@ def spatial_module():
     exec(compile(code,str(path),"exec"),module.__dict__)
     return module,hashlib.sha256(code).hexdigest()
 
+
+def forbidden_interior(body, point, radius_mm):
+    """Verify a strictly interior ball using every nearby actual trimmed face."""
+    import adsk.core
+    import adsk.fusion
+    if body.pointContainment(point)!=adsk.fusion.PointContainment.PointInsidePointContainment:
+        return False
+    measure=adsk.core.Application.get().measureManager
+    # Fusion length units are cm. Keep 10 nm outside the numerical classification boundary.
+    radius=(radius_mm+1e-5)/10
+    for face in body.faces:
+        box=face.boundingBox
+        if any(p < a-radius or p > b+radius for p,a,b in
+               zip(point.asArray(),box.minPoint.asArray(),box.maxPoint.asArray())):
+            continue
+        gap=measure.measureMinimumDistance(point,face)
+        if not gap or not math.isfinite(gap.value) or gap.value<0:
+            raise ValueError("Unresolved distance to a material probe boundary")
+        if gap.value<=radius: return False
+    return True
+
 def measure_pair(design, rows, proxies, solids, a, b, *, spatial_fit=None):
     """Measure the same placed pair with both Fusion kernels, recording unknown results."""
     import adsk.core
@@ -115,6 +136,15 @@ def measure_pair(design, rows, proxies, solids, a, b, *, spatial_fit=None):
             return shape
         shape,other=world(a),world(b)
         if spatial_fit is not None:
+            try:
+                witnesses=[]
+                for probe in model.forbidden_probes(spatial_fit):
+                    point=adsk.core.Point3D.create(*[v/10 for v in probe["centerMm"]])
+                    inside=all(forbidden_interior(s,point,probe["radiusMm"]) for s in (shape,other))
+                    witnesses.append({"probe":probe,"sharedInterior":inside})
+                row["spatialFit"]["forbidden"]=witnesses
+            except Exception as e:
+                spatial_errors["forbidden"]=str(e)
             try:
                 host=shape if row["identities"][0]==spatial_fit["host"] else other
                 row["spatialFit"]["smoothPilot"]=native_pilot(host,region,model)

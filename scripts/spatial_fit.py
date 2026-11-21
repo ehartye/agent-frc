@@ -170,6 +170,35 @@ def placed_thread(shape, commission):
     return thread_witness(commission["region"], commission["threadForm"], classify)
 
 
+def forbidden_probes(commission):
+    """Each probe lies strictly beyond an end, beyond the OD or wholly inside the forbidden core."""
+    start, _, axis, length, inner, outer, slack = annulus(commission["region"])
+    probes = commission.get("forbiddenProbes", [])
+    if not isinstance(probes, list):
+        raise ValueError("Register forbidden material probes as individual balls")
+    for probe in probes:
+        center, radius = probe["centerMm"], probe["radiusMm"]
+        if (not isinstance(center, list) or len(center)!=3 or
+                any(type(v) not in (float,int) or not math.isfinite(v) for v in [*center,radius]) or radius <= 0):
+            raise ValueError("Malformed forbidden material probe")
+        offset = [p-s for p,s in zip(center,start)]
+        height = sum(a*b for a,b in zip(offset,axis))
+        radial = math.hypot(*(v-height*a for v,a in zip(offset,axis)))
+        if not (height+radius < -slack or height-radius > length+slack or
+                radial-radius > outer+slack or radial+radius < inner-slack):
+            raise ValueError("A forbidden ball overlaps the commissioned annulus")
+    return probes
+
+
+def placed_forbidden(shapes, pair, commission):
+    from interface_consistency import inscribed_balls
+    results = []
+    for probe in forbidden_probes(commission):
+        balls, _ = inscribed_balls(shapes[pair[0]],shapes[pair[1]],[probe["centerMm"]],1e-5)
+        results.append({"probe":probe,"sharedInterior":bool(balls and balls[0]["radiusMm"]>=probe["radiusMm"])})
+    return results
+
+
 def native_result(observation,commission):
     """Reconcile both measured native partitions to the ordinary pair readings."""
     if commission.get("representation")!="external-thread/smooth-pilot":
@@ -177,6 +206,11 @@ def native_result(observation,commission):
     spatial=observation.get("spatialFit",{})
     if spatial.get("commission")!=commission:
         return "open","Missing, mismatched or unresolved spatial observation"
+    probes=forbidden_probes(commission)
+    observations=spatial.get("forbidden",[])
+    if ([r["probe"] for r in observations]==probes and
+            any(r.get("sharedInterior") is True for r in observations)):
+        return "fail","An independently checked interior ball lies in both solids outside the permitted annulus"
     rows=spatial.get("methods",{})
     names=("fusionInterference","fusionTransient")
     verified={}
@@ -186,6 +220,8 @@ def native_result(observation,commission):
         if all(type(x) in (int,float) and math.isfinite(x) and x>=0 for x in (raw,total)) and abs(raw-total)<=max(1e-8,raw*1e-8):
             verified[name]=rows[name]
     status,reason=assess(verified,commission["expectedCommonMm3"],required_methods=names)
+    if status=="pass" and [r["probe"] for r in observations]!=probes:
+        return "open","Missing a required forbidden-region probe"
     if status=="pass" and (spatial.get("errors") or spatial.get("maleThread",{}).get("matched") is not True):
         return "open","The registered external thread form or required native operation is unresolved"
     if status=="pass" and spatial.get("smoothPilot") is not True:
@@ -239,6 +275,10 @@ def review(root, cases, shapes, mapping, census, archive_sha, step_sha, configur
             if status=="fail": continue
             region=commission["region"]
             annulus(region)
+            result["stepForbidden"]=placed_forbidden(shapes,pair,commission)
+            if any(r["sharedInterior"] for r in result["stepForbidden"]):
+                result.update(status="fail",reason="Placed solids share independently witnessed material outside the permitted annulus")
+                continue
             result["stepSmoothPilot"]=smooth_host(shapes[pair[1]],region)
             result["step"]=placed_sections(shapes,pair,region)
             result["stepMaleThread"]=placed_thread(shapes[pair[0]],commission)
