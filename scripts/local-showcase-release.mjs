@@ -4,7 +4,7 @@ import {execFileSync} from 'node:child_process';
 import {createReadStream, lstatSync, readFileSync, readdirSync, realpathSync} from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
-import {audit, auditStaged, verifyPair} from './public-model-release.mjs';
+import {audit, auditStaged, verifyCommittedFile, verifyPair} from './public-model-release.mjs';
 
 function requireValue(value, message) { if (!value) throw Error(message); }
 function git(repo, ...args) {
@@ -82,6 +82,7 @@ export async function checkLocal(configName,project,output) {
   const sourcePolicy=policy(config.sourcePolicy), stagePolicy=policy(config.stagePolicy);
   requireValue(sourcePolicy.project && sourcePolicy.project===stagePolicy.project,'Source and stage policies name different projects');
   if(branch) requireValue(sourcePolicy.publicRoots.includes(config.servedDirectory),'Branch directory is outside the commissioned public roots');
+  const sourceHead=git(repo,'rev-parse','HEAD').trim();
   const packetNames=[config.sourcePacket,config.stagePacket].map(name=>path.join(repo,publicPath(name)));
   requireValue(packetNames[0]!==packetNames[1],'Register distinct source and stage packet paths');
   const present=packetNames.map(name=>lstatSync(name,{throwIfNoEntry:false})!==undefined);
@@ -95,12 +96,14 @@ export async function checkLocal(configName,project,output) {
   }
   const fieldRoot=config.independentFieldRoot?trustedPath(config.independentFieldRoot):null;
   const rows=await siteFiles(stage);
-  const source=await audit(repo,config.approvedCommit,config.sourcePolicy,present[0]?packetNames[0]:undefined,key);
+  const source=await audit(repo,config.approvedCommit,config.sourcePolicy,present[0]?packetNames[0]:undefined,key,sourceHead);
+  if(present[1]) verifyCommittedFile(repo,sourceHead,config.stagePacket);
   const final=await auditStaged(approved,stage,stagePolicy,present[1]?packetNames[1]:undefined,key,fieldRoot);
   requireValue(fingerprint(rows)===fingerprint(await siteFiles(stage)),'Publication directory changed during verification');
+  requireValue(git(repo,'rev-parse','HEAD').trim()===sourceHead,'Source revision changed during verification');
   if (branch) checkServedCommit(repo,config.servedDirectory,rows);
   return {schema:'agent-frc/local-showcase-verification@1',project:sourcePolicy.project,layout:config.layout,
-    sourceHead:git(repo,'rev-parse','HEAD').trim(),approvedSiteSha256:approvedDigest,stageSha256:fingerprint(rows),
+    sourceHead,approvedSiteSha256:approvedDigest,stageSha256:fingerprint(rows),
     files:rows.length,source,final};
 }
 

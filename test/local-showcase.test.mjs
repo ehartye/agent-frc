@@ -61,6 +61,12 @@ test('both local layouts verify the same signed model and check the final output
   result=check();assert.equal(result.code,0,result.err);assert.equal(JSON.parse(result.out).source.signedFiles,1);
   const site=path.join(temp,'final');cpSync(docs,site,{recursive:true});cfg.layout='built';
   result=check(site);assert.equal(result.code,0,result.err);
+  git(repo,'checkout','-q','--detach',approvedCommit);
+  write(repo,'docs/'+fixed,'reviewed');write(repo,cfg.sourcePacket,receipt('docs/'+fixed));write(repo,cfg.stagePacket,receipt(fixed));
+  assert.match(check(site).err,/Selected source differs from committed bytes/);
+  git(repo,'add','.');git(repo,'commit','-qm','Commit reviewed source');
+  const sameIssue=receipt(fixed);
+  write(repo,cfg.stagePacket,JSON.stringify(sameIssue,null,2));assert.match(check(site).err,/committed bytes: .github\/new-stage.json/);
   write(repo,cfg.stagePacket,receipt(fixed,sha('other study')));assert.match(check(site).err,/different engineering issue/);
   write(repo,cfg.stagePacket,receipt(fixed));write(site,'extra.glb','unreviewed');
   assert.match(check(site).err,/Unreviewed added/);

@@ -75,7 +75,13 @@ export async function verifyPair(sourceRoot,sourcePacket,stageRoot,stagePacket,k
   }
 }
 function git(repo,args){return execFileSync('git',['-C',repo,...args],{maxBuffer:64*1024*1024});}
-export async function audit(root,base,policyName,packetPath,pubKey){
+export function verifyCommittedFile(root,commit,name) {
+  const current=git(root,['hash-object','--no-filters',file(root,name)]).toString().trim();
+  const entry=git(root,['ls-tree','-z',commit,'--',':(literal)'+name]).toString();
+  check(entry.match(/^100(?:644|755) blob ([0-9a-f]+)\t/)?.[1]===current,
+    'Selected source differs from committed bytes: '+name);
+}
+export async function audit(root,base,policyName,packetPath,pubKey,sourceCommit){
   root=realpathSync(root);relative(policyName);check(/^[a-f0-9]{40}$/.test(base),'Pin the approved baseline commit from trusted CI');
   // Both the path inventory and scope are read from the approved tree, never from the candidate.
   const policy=JSON.parse(git(root,['show',base+':'+policyName]));
@@ -98,6 +104,11 @@ export async function audit(root,base,policyName,packetPath,pubKey){
     visit(location);
     const old=git(root,['ls-tree','-r','--name-only','-z',base,'--',dir]).toString().split('\0');
     for(const n of old)if(geometry.test(n))names.add(n);
+  }
+  if(sourceCommit) {
+    const required=new Set([...names,...reviewed]);
+    if(packetPath) required.add(path.relative(root,packetPath).split(path.sep).join('/'));
+    for(const name of required) verifyCommittedFile(root,sourceCommit,name);
   }
   for(const n of names){
     const current=file(root,n);
