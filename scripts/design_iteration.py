@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 import re
 import shutil
+import hashlib
+import subprocess
 import sys
 from tempfile import TemporaryDirectory
 
@@ -62,7 +64,9 @@ def inventory(folder):
             for n in names:
                 file = Path(current)/n
                 require(file.is_file(), f"Unsupported archive member: {file}")
-                entries[file.relative_to(folder).as_posix()] = sha(file)
+                name = file.relative_to(folder).as_posix()
+                if name != ".gitkeep" or file.stat().st_size:
+                    entries[name] = sha(file)
     return entries
 
 
@@ -154,7 +158,7 @@ def harvest(project, old, plan, vault):
                 lessons=claims(plan["lessons"], evidence.keys(), ("observation","nextChange")), files=frozen)
 
 
-def review(project, vault=None, pending=None, preparing=False):
+def review(project, vault=None, pending=None, preparing=False, migration=None):
     active=current(project)
     if not active:
         require(preparing or not any((project/"iterations").glob("[0-9][0-9][0-9]")),
@@ -180,8 +184,17 @@ def review(project, vault=None, pending=None, preparing=False):
             break
         retro=read(source_file(project,f"iterations/{directory(i)}/retrospective.json"))
         successor=read(source_file(project,f"iterations/{directory(i+1)}/iteration.json"))
-        require(retro["openingSha256"]==sha(base/"iteration.json") and retro["id"]==previous_id and retro["number"]==i and successor["retrospectiveSha256"]==sha(base/"retrospective.json"),
-                "Archived decision changed")
+        opening_hash = sha(base/"iteration.json")
+        decision_hash = sha(base/"retrospective.json")
+        expected = retro.get("openingSha256")
+        if expected is None:
+            seal = migration if migration and migration["number"]==i else read(source_file(project,f"iterations/seals/{directory(i)}.json"))
+            require(seal["schema"]=="agent-frc/iteration-history-seal@1" and seal["number"]==i and
+                    seal["retrospectiveSha256"]==decision_hash and re.fullmatch(r"[0-9a-f]{40}",seal["commit"]),
+                    "Historical opening seal differs")
+            expected=seal["openingSha256"]
+        require(expected==opening_hash and retro["id"]==previous_id and retro["number"]==i
+                and successor["retrospectiveSha256"]==decision_hash, "Archived decision changed")
         observed={f"{f}/{n}":d for f in ("design","carry-forward") for n,d in inventory(base/f).items()}
         require(observed==retro["files"], "Retired iteration contents changed")
         for k,r in retro["evidence"].items():
@@ -236,6 +249,9 @@ def cutover(project, plan, vault):
     it.mkdir(exist_ok=True); no_link(it)
     with lease(it/"design-iterations",publication=True), TemporaryDirectory(dir=it,prefix=".starting-") as t:
         tmp=Path(t)
+        for name,contents in ((".gitattributes","* -text\n"),(".gitignore","/.native-publish-design-iterations\n/.starting-*/\n/.selecting-*/\n/.sealing-*/\n")):
+            if not (it/name).exists():
+                (it/name).write_text(contents,encoding="ascii",newline="\n")
         old=current(project)
         frm=plan["from"];next_id=identifier(plan["to"]["id"])
         n=frm["number"];last=identifier(frm["id"]);num=directory(n);nxt=directory(n+1)
@@ -264,7 +280,10 @@ def cutover(project, plan, vault):
         if not new_dir.exists():
             staged=tmp/"new";staged.mkdir()
             write(staged/"iteration.json",opening)
-            (staged/"design").mkdir();(staged/"carry-forward").mkdir()
+            for name in ("design", "carry-forward"):
+                folder=staged/name
+                folder.mkdir()
+                (folder/".gitkeep").touch()
             staged.rename(new_dir)
         no_link(new_dir)
         require(set(x.name for x in new_dir.iterdir())=={"iteration.json","design","carry-forward"}
@@ -276,6 +295,27 @@ def cutover(project, plan, vault):
         return record
 
 
+def seal_prototype(project, commit, vault):
+    """Bind the first prototype's unsealed opening to its already committed original bytes."""
+    require(re.fullmatch(r"[0-9a-f]{40}",commit), "Select the complete known original cutover commit")
+    it=project/"iterations"
+    with lease(it/"design-iterations",publication=True), TemporaryDirectory(dir=it,prefix=".sealing-") as temporary:
+        require(current(project)["number"]>=2, "No completed cutover to seal")
+        require("openingSha256" not in read(it/"001/retrospective.json"), "History already has a native seal")
+        values={}
+        for name in ("001/iteration.json","001/retrospective.json","002/iteration.json"):
+            file=source_file(project,"iterations/"+name)
+            original=subprocess.check_output(["git","-C",str(project),"show",commit+":iterations/"+name])
+            require(hashlib.sha256(original).hexdigest()==sha(file),"Current archive differs from the approved Git evidence: "+name)
+            values[name]=sha(file)
+        record=dict(schema="agent-frc/iteration-history-seal@1",number=1,commit=commit,
+                    openingSha256=values["001/iteration.json"],retrospectiveSha256=values["001/retrospective.json"])
+        result=review(project,vault,migration=record)
+        target=it/"seals";target.mkdir(exist_ok=True);no_link(target)
+        put(target/"001.json",record,Path(temporary))
+        return result
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     sub=parser.add_subparsers(dest="action",required=True)
@@ -283,12 +323,15 @@ def main():
         p=sub.add_parser(name);p.add_argument("project",type=Path)
         if name!="check":p.add_argument("input",type=Path)
         if name!="carry":p.add_argument("--vault",type=Path,required=name=="start")
+    s=sub.add_parser("seal");s.add_argument("project",type=Path)
+    s.add_argument("--from-commit",required=True);s.add_argument("--vault",type=Path,required=True)
     args=parser.parse_args();project=args.project.resolve(strict=True)
     if args.action=="start":result=cutover(project,read(args.input),args.vault)
+    elif args.action=="seal":result=seal_prototype(project,args.from_commit,args.vault)
     elif args.action=="check":result=review(project,args.vault)
     else:
         it=project/"iterations"
-        with lease(it/"design-iterations",publication=True), TemporaryDirectory(dir=it) as t:
+        with lease(it/"design-iterations",publication=True), TemporaryDirectory(dir=it,prefix=".selecting-") as t:
             active=current(project);require(active,"Start an iteration first")
             # The manual copy precedes its receipt. Validate history without using
             # the new unregistered destination as an accepted import.

@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 SCRIPTS=Path(__file__).resolve().parents[1]/"scripts"
 sys.path.insert(0,str(SCRIPTS))
-from design_iteration import cutover, current, read, review, sha
+from design_iteration import cutover, current, inventory, read, review, sha
 from fusion_authority import register_path, verify_active
 
 
@@ -48,8 +48,16 @@ with TemporaryDirectory() as d:
         expect_bad(lambda:cutover(project,plan,vault))
     assert current(project) is None
     active=cutover(project,plan,vault);base=project/active["root"]
-    assert not list(base.iterdir()) and review(project,vault)["historyVerified"]==1
-    base.rmdir();expect_bad(lambda:review(project))
+    assert not inventory(base) and review(project,vault)["historyVerified"]==1
+    subprocess.run(["git","init","-q",str(project)],check=True)
+    def git(*args):
+        return subprocess.run(["git","-C",str(project),*args],capture_output=True,check=True)
+    git("add","iterations")
+    git("-c","user.name=Test","-c","user.email=fixture@example.invalid","commit","-qm","Cut over")
+    checkout=temp/"student-checkout"
+    subprocess.run(["git","clone","-q",str(project),str(checkout)],check=True)
+    assert review(checkout,vault)["historyVerified"]==1
+    (base/".gitkeep").unlink();base.rmdir();expect_bad(lambda:review(project))
     base.mkdir()
     prior_open=project/"iterations/001/iteration.json";original=prior_open.read_bytes()
     altered=read(prior_open);altered["scope"]="rewritten past"
@@ -71,7 +79,7 @@ with TemporaryDirectory() as d:
         shutil.copyfile(baseline/wrong,target)
         entry["destinationSha256"]=sha(target);entry_file.write_text(json.dumps(entry))
         assert cli("design_iteration.py","carry",project,entry_file).returncode!=0
-        assert not list((base.parent/"carry-forward").iterdir())
+        assert not inventory(base.parent/"carry-forward")
     target.write_text("Freshly rebuilt geometry for this selected part")
     entry["destinationSha256"]=sha(target);entry_file.write_text(json.dumps(entry))
     assert cli("design_iteration.py","carry",project,entry_file).returncode==0
@@ -86,7 +94,7 @@ with TemporaryDirectory() as d:
     again=deepcopy(plan);again['from']={'id':active['id'],'number':2,'scope':'Current concept'}
     again['to'].update(id='third-design',fusionId='third-design')
     again['evidence'][0].update(file=active['root']+'/cad/master.f3d',sha256=sha(base/'cad/master.f3d'))
-    third=cutover(project,again,vault);assert third['number']==3 and not list((project/third['root']).iterdir())
+    third=cutover(project,again,vault);assert third['number']==3 and not inventory(project/third['root'])
     assert review(project,vault)['historyVerified']==2
     assert (vault/sha(base/'untracked-simulation.log')).read_text()=="unpublished evidence"
     (base/"untracked-simulation.log").write_text("changed")

@@ -29,3 +29,13 @@ python <plugin>/scripts/design_iteration.py check PROJECT --vault PRIVATE-CUSTOD
 ```
 
 [Manual import record](../templates/design-import.json). The helper records the decision after the designer brings the file across. Checks compare archive hashes, numbered history and imported files. A new filename or changed bytes cannot prove original authorship, and an import record alone cannot establish that a mounted component remains qualified. Inspect the new native root and roster before release. Ordinary projects keep their existing layout until they choose a numbered restart.
+
+## Resume from a fresh checkout
+
+Commit the active pointer, opening and retired decisions, import receipts and empty-directory markers together. The helper seeds iteration-local Git attributes to preserve exact bytes. If the project already defines these attributes, verify the committed image and receipt hashes against the original files after checkout. Select an image by its evidence ID in the retrospective. Its SHA-256 identifies the original image in private custody.
+
+An early prototype saved the first retrospective before it included the opening digest. Its owner can seal the original committed cutover while keeping the original records byte-identical. Supply the independently retained original commit and its private custody directory.
+
+```text
+python <plugin>/scripts/design_iteration.py seal PROJECT --from-commit ORIGINAL-CUTOVER-COMMIT --vault PRIVATE-CUSTODY
+```
