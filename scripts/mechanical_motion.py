@@ -191,7 +191,7 @@ def evaluate(root,study):
     original=pinned(root,study["step"])
     identities={}
     shapes,_=load_solids(original,identities)
-    case_ids=set();results=[];extractions={}
+    case_ids=set();results=[];extraction_states=[]
     for case in study["cases"]:
         id=case["id"]
         require(named(id) and id not in case_ids and named(case.get("basis")),"Unique case ID and physical basis required")
@@ -202,10 +202,12 @@ def evaluate(root,study):
             require(ext["id"] not in scene and named(ext.get("basis")),"Duplicate or unjustified tool/piece/field fixture")
             scene[ext["id"]]=source[ext["solid"]]
         removed=case.get("removed",{})
-        for key,prior in removed.items():
-            require(case.get("stage")=="service" and key in shapes and prior in extractions and
-                    key in extractions[prior],"A service removal requires a previously verified complete extraction of that installed body")
-            del scene[key]
+        require(isinstance(removed,dict),"Service removals must map installed bodies to extraction case IDs")
+        if removed:
+            require(case.get("stage")=="service" and removed in extraction_states,
+                    "Service removals must match the complete state of one previously verified extraction")
+            for key in removed:
+                del scene[key]
         moves=case["moves"]
         require(isinstance(moves,dict) and moves and set(moves)<=set(scene),"Motion references absent installed parts")
         for name,ops in case.get("initialPose",{}).items():
@@ -319,7 +321,7 @@ def evaluate(root,study):
             fully_out=all(box_gap(bounds(transform(scene[key],ops,1)),envelope)>cut for key,ops in moves.items())
             if status=="pass" and fully_out:
                 extracted=sorted(moves)
-                extractions[id]=extracted
+                extraction_states.append({**removed,**dict.fromkeys(extracted,id)})
             elif status=="pass":
                 status="open"
         results.append(dict(case=id,extracted=extracted,status=status,moving=list(moves),removed=removed,installedCount=len(scene),pairs=rows,seats=seats,requiredContacts=goals,visibility=visibility,counts=counts))
