@@ -35,7 +35,7 @@ For a publicly downloadable whole robot, bind the student archive to its own reo
 
 Keep the project’s [frame and bumper outline](../../docs/frame-profile.md) with CAD settings. Fresh project setup creates the rear-chamfer convention. Preserve any explicit robot outline during adoption.
 
-Use the [Fusion authority and revision handoff](../../docs/fusion-authority.md) to establish the one current saved native design, the STEP exported from that design and the identity of the engineering evidence. Recheck the register when resuming in another checkout or before replacing a published view.
+Use the [Fusion authority and revision handoff](../../docs/fusion-authority.md) to establish the one current saved native design, the STEP exported from that design and the identity of the engineering evidence. When resuming in another checkout or before replacing a published view, verify the selected register and lineage with `fusion_authority.py`. For a mechanical review, use `fusion_issue_inventory.capture` in Fusion for missing commissioned poses. [Resume a registered master](../../docs/fusion-authority.md#resume-a-registered-master)
 
 Before pushing a workflow change, [check the committed caller and its local reusable workflows](../../docs/project-ci.md#check-the-workflows-before-pushing) with the approved actionlint executable.
 

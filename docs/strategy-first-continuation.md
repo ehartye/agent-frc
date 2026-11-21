@@ -14,6 +14,8 @@ When someone asks what to try next on an existing robot design, recover the deci
 
 For conflicting records, say which claim each record supports and how its date, revision or authority affects its use. If an essential source is missing, name the gap and keep the recommendation conditional. For a missing rule, leave legality unresolved until the applicable text is available. If a consequential choice is still open after reading the records, explain what work can proceed under either choice and ask the single question that changes the next experiment.
 
+When resuming a registered Fusion master, run the read-only lineage verifier before editing. Use the native inventory collector for any missing commissioned pose that the mechanical review requires. [Resume a registered master](fusion-authority.md#resume-a-registered-master)
+
 ## When the decision is missing from this checkout
 
 Start with the current project and the locators supplied by the team. If a selection is missing or two records materially disagree, look for a relevant local branch or registered worktree of this repository. A plain folder, or a project without Git available, still has its files and any records the owner supplied. Describe what is missing and use the shared-work and priority question above.
