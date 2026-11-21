@@ -7,8 +7,9 @@ import test from 'node:test';
 import {inspectEnvironment, parseArgs, selectLibraries} from '../scripts/setup-health.mjs';
 
 test('mixed tasks require both bindings and retain the stronger shared NumPy requirement',()=>{
-  const selected=selectLibraries('cad-physics');
-  assert.deepEqual(selected.map(row=>[row.module,row.required]),[
+  const selectable=selectLibraries('cad-physics');
+  const selected=selectable.filter(row=>row.module!=='vtk');
+  assert.deepEqual(selectable.map(row=>[row.module,row.required]),[
     ['mujoco',true],['numpy',true],['matplotlib',false],['OCP',true],['vtk',false]
   ]);
   assert.deepEqual(parseArgs(['--task','cad-physics','--cwd','project','--append-path','one','--append-path','two']),
@@ -43,6 +44,7 @@ test('the actual Python process preserves project and fallback precedence and re
     fs.mkdirSync(metadata);
     fs.writeFileSync(path.join(metadata,'METADATA'),'Metadata-Version: 2.1\nName: '+distribution+'\nVersion: 1\n');
   }
+  fixture(project,'vtk','vtk','raise SystemExit(17)\n');
   fixture(project,'mujoco','mujoco','active = True\n');
   fixture(project,'numpy','numpy','value = 1\n');
   fixture(fallback,'OCP','cadquery-ocp',"import sys\nassert sys.modules['mujoco'].active\n");
@@ -52,6 +54,10 @@ test('the actual Python process preserves project and fallback precedence and re
   assert.equal(inspectEnvironment(options).ready,false);
   const good=inspectEnvironment({...options,appendPaths:[fallback]});
   assert.equal(good.ready,true);
+  assert.ok(good.libraries.every(row=>row.module!=='vtk'));
+  const requested=inspectEnvironment({...options,appendPaths:[fallback],expected:{vtk:'1'}});
+  assert.equal(requested.ready,false);
+  assert.equal(requested.pythonStatus,'probe-failed');
   assert.equal(fs.realpathSync(good.python.workingDirectory),fs.realpathSync(project));
   assert.equal(fs.realpathSync(good.python.importPath.at(-1)),fs.realpathSync(fallback));
   assert.equal(fs.realpathSync(good.libraries.find(r=>r.module==='OCP').origin),fs.realpathSync(path.join(fallback,'OCP.py')));

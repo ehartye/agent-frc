@@ -24,15 +24,17 @@ export function inspectEnvironment({task='core',python,expected={},jdk,expectedJ
  if(!Array.isArray(appendPaths)||appendPaths.some(p=>typeof p!=='string'||!p.trim()))throw Error('Each appended import path must be nonempty');
  if(task!=='java'&&(jdk!==undefined||expectedJava!==undefined))throw Error('Java options require --task java');
  if(task==='java'&&python!==undefined)throw Error('Python options do not apply to --task java');
- const selected=selectLibraries(task);
+ const selectable=selectLibraries(task);
  for(const [name,version] of Object.entries(expected)){
-  const library=selected.find(item=>item.distribution===name);
+  const library=selectable.find(item=>item.distribution===name);
   if(!library||typeof version!=='string'||!version.trim()){
-   const available=selected.map(item=>item.distribution).join(', ')||'none';
+   const available=selectable.map(item=>item.distribution).join(', ')||'none';
    throw Error(`Use a nonempty exact version. Selectable distributions for ${task}: ${available}`);
   }
   library.required=true;
  }
+ // Loading VTK can initialize native graphics libraries. Geometry-only callers do not need it.
+ const selected=selectable.filter(library=>library.distribution!=='vtk'||library.required);
  const [major,minor]=process.versions.node.split('.').map(Number);const nodeOkay=major>20||(major===20&&minor>=11);
  const report={schema:'agent-frc/environment-health@1',task,node:{version:process.versions.node,supported:nodeOkay},python:null,libraries:[],ready:nodeOkay,limitations:['Installed/importable is not physics calibration or runtime compatibility proof.','No native renderer, GPU, Fusion session, robot hardware or plugin installation is tested.','No software is installed or updated. Reports may contain private executable/module paths; review before sharing.']};
  if(task==='java'){
@@ -56,4 +58,25 @@ export function inspectEnvironment({task='core',python,expected={},jdk,expectedJ
  report.python=data.interpreter;report.pythonStatus='probed';report.libraries=assessLibraries(data.libraries,expected);report.ready=nodeOkay&&report.libraries.every(r=>!r.required||r.status==='available');
  report.nextSteps=report.libraries.filter(r=>r.status!=='available').map(r=>({distribution:r.distribution,required:r.required,action:r.status==='version-mismatch'?'Compare with project lockfile; do not silently upgrade':r.status==='metadata-missing'?'Import succeeded but distribution version is unresolved; inspect this interpreter':r.errorType==='ModuleNotFoundError'?'Confirm selected interpreter and project dependency manifest before proposing installation':'Inspect import exception and native dependency compatibility in the selected interpreter'}));return report;
 }
-export function parseArgs(args){const opts={expected:{}};for(let i=0;i<args.length;i++){const k=args[i],v=args[++i];if(!v)throw Error('Missing option value');if(k==='--task')opts.task=v;else if(k==='--python')opts.python=v;else if(k==='--cwd')opts.cwd=v;else if(k==='--append-path')(opts.appendPaths??=[]).push(v);else if(k==='--jdk')opts.jdk=v;else if(k==='--expect-java')opts.expectedJava=v;else if(k==='--expect'){const at=v.indexOf('=');if(at<1)throw Error('Use distribution=exact-version');opts.expected[v.slice(0,at)]=v.slice(at+1);}else throw Error('Unknown option '+k);}return opts;}
+export function parseArgs(args){
+ const opts={};
+ const pins=new Map();
+ for(let i=0;i<args.length;i++){
+  const key=args[i],value=args[++i];
+  if(!value)throw Error('Missing option value');
+  if(key==='--expect'){
+   const at=value.indexOf('=');
+   if(at<1)throw Error('Use distribution=exact-version');
+   const name=value.slice(0,at),version=value.slice(at+1);
+   if(pins.has(name)&&pins.get(name)!==version)throw Error('Conflicting exact versions for '+name);
+   pins.set(name,version);
+  }else if(key==='--task')opts.task=value;
+  else if(key==='--python')opts.python=value;
+  else if(key==='--cwd')opts.cwd=value;
+  else if(key==='--append-path')(opts.appendPaths??=[]).push(value);
+  else if(key==='--jdk')opts.jdk=value;
+  else if(key==='--expect-java')opts.expectedJava=value;
+  else throw Error('Unknown option '+key);
+ }
+ return {...opts,expected:Object.fromEntries(pins)};
+}

@@ -25,7 +25,13 @@ test('native CAD pins require the selected bindings together for this invocation
     assert.equal(pinned.nextSteps[0].required,true);
     const unpinned=probe({},changes);
     assert.equal(unpinned.ready,true);
-    assert.equal(unpinned.libraries.find(row=>row.distribution===distribution).required,false);
+    if(distribution==='vtk')assert.ok(unpinned.libraries.every(row=>row.module!=='vtk'));
+    else assert.equal(unpinned.libraries.find(row=>row.distribution===distribution).required,false);
   }
   assert.throws(()=>probe({unknown:'1'}),/native-cad: cadquery-ocp, numpy, vtk/);
+  assert.throws(()=>parseArgs(['--expect','vtk=1','--expect','vtk=2']),/Conflicting exact versions for vtk/);
+  const repeated=parseArgs(['--expect','vtk=1','--expect','vtk=1']);
+  assert.deepEqual(repeated.expected,{vtk:'1'});
+  const unknown=parseArgs(['--task','native-cad','--expect','__proto__=1']);
+  assert.throws(()=>inspectEnvironment(unknown),/native-cad: cadquery-ocp, numpy, vtk/);
 });
