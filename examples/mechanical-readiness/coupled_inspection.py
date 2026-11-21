@@ -26,7 +26,8 @@ def prepare(root, archive, step, members):
     mass=.000067;normal=mass*9.80665
     ledger=dict(schema="agent-frc/observed-transfer-inventory@1",observed={})
     times={"delivery":[0,.1,.2,.275,.3],"jam-reset":[0,.1,.2]}
-    mission=dict(archiveSha256=archive["sha256"],stepSha256=step["sha256"],mode="handoff",orientationModel="fixed-in-saved-axes",
+    from transfer_trajectory import SCHEMA
+    mission=dict(trajectorySchema=SCHEMA,archiveSha256=archive["sha256"],stepSha256=step["sha256"],mode="handoff",orientationModel="fixed-in-saved-axes",
         article=dict(id=part,solid=piece["solid"],sha256=piece["file"]["sha256"]),
         donor=dict(occurrence="Seated gauge:1",body="Seated gauge",solid=near),
         recipient=dict(occurrence="Pocketed base:1",body="Pocketed base",solid=receiver),
@@ -57,11 +58,15 @@ def prepare(root, archive, step, members):
             stockIds=[],holder=near,frames=frames,resetObserved=not travel)
         raw=dict(common,schema="agent-frc/observed-transfer@1",massKg=mass,orientationModel="fixed-in-saved-axes",centerOfMassLocalMm=[10,5,6.5],
             windowS=[clock[0],clock[-1]],receiver=receiver,duty=duty,outcome="pass",observations=events)
+        law=dict(schema=SCHEMA,errorMm=0,errorRad=0,series=[],segments=[
+            dict(windowS=[a,b],center="constant-velocity",orientation="constant-orientation",installed="linear-native-coordinates")
+            for a,b in zip(clock,clock[1:])])
+        raw["trajectory"]=law
         execution=record("issue/"+duty+"-execution.json",raw)
         ledger["observed"][execution["sha256"]]=dict(origin="executed-simulation",observer="Original analytic teaching fixture",
-            missionSha256=mission_identity(mission),producer="coupled_inspection.py",basis="Finite article on a level carrier and two fixed rails; prescribed constant velocity or ideal blocked drive")
-        trace=dict(common,source="Original analytic presentation with equal signed keyed travel")
-        if travel:trace.update(guide=near,interpolationBasis="Constant horizontal velocity and balanced vertical reactions",trajectorySource=execution)
+            trajectorySha256=mission_identity(law),missionSha256=mission_identity(mission),producer="coupled_inspection.py",basis="Finite article on a level carrier and two fixed rails; prescribed constant velocity or ideal blocked drive")
+        trace=dict(common,trajectorySha256=mission_identity(law),source="Original analytic presentation with equal signed keyed travel")
+        if travel:trace.update(guide=near,interpolationBasis=SCHEMA,trajectorySource=execution)
         cases.append(dict(id=duty,duty=duty,execution=execution,trace=record("issue/"+duty+"-trace.json",trace),windowS=[clock[0],clock[-1]],
             admissionGapMm=0,readyOffsetsMm={near:[0,0,0],far:[0,0,0]},terminalBoundsMm=mission["terminalBoundsMm"] if travel else [12,.7,5.9,14,9.3,7.1]))
     record("issue/teaching-observer.json",ledger)

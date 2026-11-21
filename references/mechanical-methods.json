@@ -181,8 +181,8 @@
         "$root",
         "$study"
       ],
-      "detects": "Real admitted object hits a fixed or moving member after the holder releases it",
-      "regression": "test/mesh_controls.py"
+      "detects": "The admitted object strikes installed geometry or its observed trajectory leaves the commissioned receiver between primary frames",
+      "regression": "test/observed_transfer.py"
     },
     {
       "id": "installed-rigid-mount",

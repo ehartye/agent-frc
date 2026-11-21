@@ -8,6 +8,8 @@ import sys
 SCRIPTS=Path(__file__).resolve().parents[2]/"scripts"
 sys.path.insert(0,str(SCRIPTS))
 from mechanical_readiness import digest
+from transfer_mission import identity
+from transfer_trajectory import SCHEMA
 
 
 def pin(root,name):
@@ -47,7 +49,7 @@ def generate(folder):
                 rows.append(dict(body=member,pointMm=[x,.5,8],forceOnPieceN=[0,0,weight/2]))
         elif state=="received":
             rows.append(dict(body=floor,pointMm=[.5,.5,0],forceOnPieceN=[0,0,weight]))
-        return dict(timeS=f["timeS"],accelerationMmS2=[0,0,0],contacts=rows)
+        return dict(timeS=f["timeS"],accelerationMmS2=[0,0,-g if state=="free" else 0],contacts=rows)
     for duty in ("delivery","jam-reset"):
         time=.1+math.sqrt(16/g)
         frames=([frame(0,"held"),frame(.1,"free",.5),frame(time,"received",.5,-8)] if duty=="delivery" else
@@ -62,12 +64,15 @@ def generate(folder):
             obs[-1]["ready"]=True
         common=dict(stepSha256=step["sha256"],pieceSha256=file["sha256"],pieceId=piece_id,case=duty,stockIds=[],
             holder=left,frames=frames,resetObserved=not running)
+        law=dict(schema=SCHEMA,series=[],errorMm=0,errorRad=0,segments=[dict(windowS=[a["timeS"],b["timeS"]],
+            center="gravity-from-rest" if a["custody"]=="free" else "constant-velocity",orientation="constant-orientation",
+            installed="linear-native-coordinates") for a,b in zip(frames,frames[1:])])
         execution=write(root,duty+"-observed.json",dict(common,schema="agent-frc/observed-transfer@1",massKg=mass,
             centerOfMassLocalMm=[.5,.5,8.5],windowS=[0,frames[-1]["timeS"]],receiver=floor,duty=duty,
-            outcome="pass",observations=obs))
+            trajectory=law,orientationModel="fixed-in-saved-axes",outcome="pass",observations=obs))
         trusted["observed"][execution["sha256"]]=dict(origin="executed-simulation",observer="Teaching fixture",
-            producer="Analytical gravity and static two-support reactions",basis="Two equal and opposite opening strokes")
-        study["cases"].append(dict(id=duty,duty=duty,trace=write(root,duty+"-trace.json",dict(common,source="Observed fixture")),
+            trajectorySha256=identity(law),producer="Analytical gravity and static two-support reactions",basis="Two equal and opposite opening strokes")
+        study["cases"].append(dict(id=duty,duty=duty,trace=write(root,duty+"-trace.json",dict(common,trajectorySha256=identity(law),source="Observed fixture")),
             execution=execution,windowS=[0,frames[-1]["timeS"]],admissionGapMm=0,readyOffsetsMm={left:[0,0,0],right:[0,0,0]},
             terminalBoundsMm=([-1,-1,-1,2,2,2] if running else [-1,-1,7,2,2,10])))
     ledger=folder/"observations.json";ledger.write_text(json.dumps(trusted))

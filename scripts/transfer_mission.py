@@ -14,6 +14,8 @@ def identity(mission):
 def commissioned(plan,system,transfer,reopen):
     mission=plan.get("transferCriteria",{}).get(transfer["id"])
     require(isinstance(mission,dict),"An independent mission name alone cannot establish the required physical delivery")
+    from transfer_trajectory import keys
+    keys(mission,set("trajectorySchema archiveSha256 stepSha256 mode orientationModel article donor recipient regionFrame terminalBoundsMm positionToleranceMm donorClearanceMm minRecipientWeightFraction dwellS cases".split()),"commissioned mission")
     for key in ("archive","step"):
         require(mission[key+"Sha256"]==system[key]["sha256"],"Commissioned mission belongs to another native issue")
     obj=transfer["piece"]

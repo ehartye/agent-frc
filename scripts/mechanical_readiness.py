@@ -651,7 +651,7 @@ def evaluate_inputs(root,study, geometry=None):
             except (KeyError,TypeError,ValueError,OSError) as e:
                 missing("build",name,str(e))
                 continue
-            transfer_results[name]=[{k:c[k] for k in ("id","status","corridorStatus","executionStatus","executionReason","terminalInside","endBoundsMm")} for c in result["cases"]]
+            transfer_results[name]=[{k:c[k] for k in ("id","status","corridorStatus","executionStatus","executionReason","terminalInside","endBoundsMm","trajectoryEvidence")} for c in result["cases"]]
             if result["status"]!="pass":
                 reasons=[c["id"]+": "+c["executionReason"] for c in result["cases"] if c["executionStatus"]!="pass"]
                 finding("build",result["status"],name,"Loaded delivery and jam-reset remain unqualified. "+"; ".join(reasons))

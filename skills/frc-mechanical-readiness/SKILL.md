@@ -30,3 +30,5 @@ Verify mounted hardware at alternate native poses and match each installed const
 For mechanically linked drives, command only the independent native axes and read back the followers. Compare signed travel, installed phase, obstruction and recovery against the commissioned operating interval. [Review coupled operating motion](../../docs/operating-intent.md)
 
 For a loaded duty, check the entire rotating article and the simultaneous forces and moments on each body through the required interval. Compare the actual nested supplier solids against their commissioned mounting sites. [Finite motion, support and placement](../../docs/operating-intent.md)
+
+For a loaded transfer, require its independently registered trajectory law and all synchronized measurements. Check the full dwell and retain a matched within-boundary and crossed-boundary case. [Commission measured motion](../../docs/loaded-transfer.md#register-the-executed-trajectory)

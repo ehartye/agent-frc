@@ -11,6 +11,9 @@ from showcase_contacts import load_solids
 
 def replay(root,study,*,motion_model=None,mission=None):
     require(study.get("schema")=="agent-frc/loaded-transfer@1" and named(study.get("id")),"Missing loaded duty")
+    from transfer_trajectory import keys
+    keys(study,set("schema id step piece basis gravityMmS2 traceToleranceMm cases stock".split()),"loaded study")
+    keys(study["piece"],{"id","solid","file"},"admitted article")
     step=pinned(root,study["step"]);piece=study["piece"];shape=pinned(root,piece["file"])
     shapes,_=load_solids(shape)
     require(named(piece["id"]) and set(shapes)=={piece["solid"]},"Register the entire finite admitted article")
@@ -22,6 +25,7 @@ def replay(root,study,*,motion_model=None,mission=None):
         "Adjacent stock must have distinct, finite, non-installed physical identities")
     stock_shapes={}
     for row in stock:
+        keys(row,{"id","file","solid","offsetMm","basis"},"adjacent inventory")
         stock_shape=load_solids(pinned(root,row["file"]))[0][row["solid"]]
         stock_shapes[row["id"]]=transform(stock_shape,[dict(kind="translation",travelMm=row["offsetMm"])],1)
         require(named(row.get("basis")) and isinstance(row.get("offsetMm"),list) and len(row["offsetMm"])==3 and all(number(v) for v in row["offsetMm"]),
@@ -31,6 +35,7 @@ def replay(root,study,*,motion_model=None,mission=None):
     require(number(gravity) and gravity>0 and number(tol) and tol>=0 and named(study.get("basis")),"Missing physical trace basis")
     rows=[];types=set()
     for test in study["cases"]:
+        keys(test,set("id duty execution trace windowS admissionGapMm readyOffsetsMm terminalBoundsMm interfaces maxDepth minGapMm releaseOnsets".split()),"loaded case")
         trace=read(pinned(root,test["trace"]));case=test["id"];duty=test["duty"];types.add(duty)
         require(duty in ("delivery","jam-reset") and named(case) and trace.get("stepSha256")==digest(step) and
             trace.get("pieceSha256")==digest(shape) and trace.get("pieceId")==source_id and trace.get("case")==case and
@@ -64,7 +69,7 @@ def replay(root,study,*,motion_model=None,mission=None):
             return any(lm["axes"][g][2] and abs(a["nativeCoordinates"][g]-b["nativeCoordinates"][g])>1e-10
                        for g,_ in lm["paths"][lm["owners"][name]])
         article=None
-        if mission or any("articlePose" in f for f in frames):
+        if test.get("execution") or mission or any("articlePose" in f for f in frames):
             from rigid_article import ArticleMotion
             observed=read(pinned(root,test["execution"]))
             article=ArticleMotion(shapes[piece["solid"]],frames,observed,
@@ -139,7 +144,7 @@ def replay(root,study,*,motion_model=None,mission=None):
         if motion_error:execution,reason="fail",motion_error
         if execution=="fail" or status=="fail":status="fail"
         elif execution!="pass":status="open"
-        rows.append(dict(corridorStatus=corridor,executionStatus=execution,executionReason=reason,id=case,duty=duty,piece=source_id,admittedGapMm=admitted,windowS=window,releaseTimesS=[f["timeS"] for j,f in enumerate(frames)
+        rows.append(dict(trajectoryEvidence=getattr(article,"trajectory_evidence",None),corridorStatus=corridor,executionStatus=execution,executionReason=reason,id=case,duty=duty,piece=source_id,admittedGapMm=admitted,windowS=window,releaseTimesS=[f["timeS"] for j,f in enumerate(frames)
             if f["custody"]=="free" and (not j or frames[j-1]["custody"]!="free")],terminalInside=inside,endBoundsMm=end,status=status,stages=actual_cases))
     require(len({x["id"] for x in rows})==len(rows),"Duplicate loaded case")
     status="fail" if any(r["status"]=="fail" for r in rows) else "open" if types!={"delivery","jam-reset"} or any(r["status"]=="open" for r in rows) else "pass"
