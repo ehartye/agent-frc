@@ -16,19 +16,41 @@ class PoseMismatch(ValueError):
     """An actual coordinate or material point contradicts the commissioned pose."""
 
 
-def check_timeline(group):
+def timeline_states(group, parent=()):
+    """Identify each leaf by its nested group, native type/name and same-name ordinal."""
+    from collections import Counter
+    seen = Counter()
+    result = {}
     items = group.get("items") if isinstance(group, dict) else None
     require(isinstance(items, list) and type(group.get("count")) is int and group["count"] == len(items),
             "Incomplete post-compute timeline inventory")
     for item in items:
         require(isinstance(item, dict) and named(item.get("name")) and named(item.get("type")),
                 "Unidentified post-compute timeline item")
+        key = (item["name"], item["type"], item.get("entityType"))
+        path = parent + ((*key, seen[key]),)
+        seen[key] += 1
         if item["type"].endswith("::TimelineGroup"):
-            check_timeline(item.get("children"))
-        elif item.get("health") == "error":
-            raise PoseMismatch(f"Recompute failed on {item['name']}: {item.get('message', '')}")
+            result.update(timeline_states(item.get("children"), path))
         else:
-            require(item.get("health") == "healthy", f"Unqualified post-compute feature {item['name']}: {item.get('health')}")
+            result[path] = item
+    return result
+
+
+def check_timeline(before, after, captured):
+    old = timeline_states(before)
+    new = timeline_states(after)
+    require(old.keys() <= new.keys() and len(new)-len(old) <= int(captured),
+            "Required timeline identities changed between cold open and recompute")
+    for path, row in new.items():
+        previous = old.get(path, {}).get("health")
+        current = row.get("health")
+        if current == "error":
+            raise PoseMismatch(f"Recompute failed on {row['name']}: {row.get('message', '')}")
+        if previous in ("suppressed", "rolledback"):
+            require(current == previous, f"Cold inactive feature {row['name']} changed state")
+        else:
+            require(current == "healthy", f"Unqualified post-compute feature {row['name']}: {current}")
 
 
 def verify_stage(census, base, registered, anchor, tolerance, connections):
@@ -49,7 +71,7 @@ def verify_stage(census, base, registered, anchor, tolerance, connections):
     require(isinstance(evidence, dict) and evidence.get("stage") == stage,
             "Native receipt lacks the requested observation stage")
     if stage in ("after-recompute", "captured-recompute"):
-        check_timeline(evidence.get("timeline"))
+        check_timeline(evidence.get("coldTimeline"), evidence.get("timeline"), stage == "captured-recompute")
     values = evidence.get("coordinates")
     groups = [c["group"] for c in commands]
     require(isinstance(values, dict) and set(values) == set(groups) and len(groups) == len(set(groups)),
