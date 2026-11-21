@@ -29,11 +29,15 @@ For a configured design, set `nativeConfiguration` to the exact Fusion row ID. F
    Read the reported revision, configuration, observation time, policy and both SHA-256 values. The verifier also checks the exporter bytes. If it reports a mismatch, compare the project pointer, register, issue and tool identity to the recorded inputs. Recover the exact source and exporter for a pinned replay. A successful offline check establishes the registered file identities. A cloud result reports the exporter's observation as of the recorded time.
 3. For a mechanical review, look for complete native inventories from that same archive for the commissioned poses. Where a required receipt is absent, run the packaged `fusion_issue_inventory.capture` in Fusion on the verified archive in a disposable document. Pass absolute `pathlib.Path` values for the archive and a fresh private output, and the project's pose record. A parked-only check uses `pose=None`.
 
+   In the Fusion recipe, use the active `adsk.core.Application` and put the checked plugin's `scripts` directory on the Python import path.
+
    ```python
+   import fusion_issue_inventory
+
    result = fusion_issue_inventory.capture(app, archive, output, pose=commissioned_pose)
    ```
 
-   If a batch returns `complete: false`, repeat the same invocation with its progress file. Give each further pose a separate output. A completed census can still report unresolved pairs or measured intersections. Review those findings with the corresponding pose and keep missing evidence open. [Native pose capture and review](#save-and-resume)
+   If a batch returns `complete: false`, repeat with the same archive, pose and output path. Leave the adjacent generated `.progress.json` in place. If you supplied `checkpoint=`, use that same checkpoint path. Give each further pose a separate output. A completed census can still report unresolved pairs or measured intersections. Review those findings with the corresponding pose and keep missing evidence open. [Native pose capture and review](#save-and-resume)
 
 ## Save and resume
 
