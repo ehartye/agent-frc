@@ -47,6 +47,14 @@ def close(a,b):
     return len(a)==len(b) and all(abs(x-y)<=1e-7 for x,y in zip(a,b))
 
 
+class PlacementPoseError(ValueError):
+    """A requested occurrence was missing or attained a different assembly pose after recompute."""
+
+    def __init__(self, receipt):
+        self.receipt = receipt
+        super().__init__(json.dumps(receipt, allow_nan=False))
+
+
 def under(path, parent):
     return path==parent or path.startswith(parent+"+")
 
@@ -74,7 +82,7 @@ def verify_fit(root, interface, accepted_sha256):
             "Commissioned fit differs from this baseline, body pair, basis or limits")
 
 
-def inspect_proposal(before, after, request, measure, same_shape=None):
+def inspect_proposal(before, after, request, measure, same_shape=None, *, accepted_sha256=None):
     """Root-world matrices use Fusion cm. Distances and volumes in the report use mm and mm³."""
     target=request["occurrence"]
     if "worldDeltaFromSourceCm" in request:
@@ -85,7 +93,19 @@ def inspect_proposal(before, after, request, measure, same_shape=None):
     else:
         pose=rigid(request["worldTransformCm"])
     require(isinstance(target,str) and target and target!="@root", "Name the proposed occurrence in the root assembly")
-    require(target in after["poses"] and close(after["poses"][target],pose),"Target did not attain its requested world pose")
+    actual = after["poses"].get(target)
+    if actual is None or not close(actual,pose):
+        raise PlacementPoseError({
+            "schema": "agent-frc/placement-pose-veto@1",
+            "reason": "missing-occurrence" if actual is None else "pose-mismatch",
+            "message": "Target missing after recompute" if actual is None else "Target did not attain its requested world pose",
+            "occurrence": target,
+            "acceptedSha256": accepted_sha256,
+            "sourceOccurrence": request.get("sourceOccurrence"),
+            "priorWorldTransformCm": before["poses"].get(target),
+            "requestedWorldTransformCm": pose,
+            "observedWorldTransformCm": actual,
+        })
     old={identity(b):b for b in before["bodies"]}
     rows=after["bodies"]
     now={identity(b):b for b in rows}
@@ -261,7 +281,7 @@ def checked_placement(app, accepted_archive, accepted_sha256, output_archive, re
                     else:
                         compared[key]=True
                 return compared[key]
-            report=inspect_proposal(before,after,request,measure,same_shape)
+            report=inspect_proposal(before,after,request,measure,same_shape,accepted_sha256=accepted_sha256)
             report["acceptedSha256"]=accepted_sha256
             if report["status"]=="pass":
                 export=Path(scratch)/"candidate.f3d"

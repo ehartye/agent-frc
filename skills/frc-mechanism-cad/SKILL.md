@@ -115,3 +115,5 @@ Use the [Fusion authority and revision handoff](../../docs/fusion-authority.md) 
 Before dispatching long native work, [stage the complete pinned package and project inputs in private job storage](../../docs/native-job.md). Run the guarded access check in Fusion before starting the recipe. Reopen and inspect through that directory. Retire it after the station reports terminal release and restores its original open documents.
 
 For a project with `iterations/active.json`, follow its active design root before recovering older records. After a decision to start over, use `frc-start-over` to preserve the evidence and open a fresh numbered design. [Design iterations](../../docs/design-iterations.md)
+
+If a scripted placement stops before contact checks, compare the requested and observed assembly-world occurrence matrices after recompute. [Read a refused placement](../../docs/checked-placement.md#read-a-refused-placement)

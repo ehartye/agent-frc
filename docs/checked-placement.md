@@ -30,3 +30,11 @@ The two native kernels measure common volume in mm³. A new nonmating overlap st
 | `fit` | Positive `minCommonMm3` and `maxCommonMm3` | The exact pair lies within its engineered material-overlap interval. Supply `evidence` with the project-relative approved fit record and SHA-256. The record uses `agent-frc/placement-fit@1`, `acceptedSha256`, the two exact `bodies`, the engineering `basis` identifying the drawing, and both volume bounds. Pass its project root as `evidence_root`. |
 
 The reporter names both bodies and the proposed pose on a measured clash. A missing, invalid or disagreeing required measurement holds the proposal. Review the witnessed placement again after a configuration change. The endpoint check leaves insertion travel, known numerical discrepancies, unchanged internal contacts, attachment, load and complete operating motion to the [full mechanical review](mechanical-readiness.md).
+
+## Read a refused placement
+
+When Fusion recomputes the proposal, the guard checks the requested occurrence in the root assembly before it measures any body pair. A `PlacementPoseError` stops the operation and carries a JSON-serializable `receipt`. The exception text also contains that JSON for clients that already record errors.
+
+Read `reason` first. With `missing-occurrence`, inspect the rooted occurrence path and the insertion or removal operation. With `pose-mismatch`, compare the registered target with the observed occurrence after recompute. `priorWorldTransformCm`, `requestedWorldTransformCm` and `observedWorldTransformCm` are row-major 4×4 assembly-world matrices with translations in cm. A missing occurrence has a null observed matrix. An insertion has a null prior matrix. A relative insertion also names its source occurrence and reports the composed absolute target. The native call includes the digest of the accepted input archive.
+
+Save the receipt with the authoring trial. Check whether a constraint, grounding change or recompute moved the occurrence, then retry from the accepted archive. Geometric interference has its own measured-pair result once the occurrence reaches the requested pose.
