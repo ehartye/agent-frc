@@ -4,6 +4,26 @@ Before detailing a subsystem, ask a student to follow one match objective throug
 
 Use the projectâ€™s native assembly datum, footprint and field setup for every concept. Show piece and wire paths, sensors, released/retained states, robot and field clearances, installed mass and CG, simultaneous current and timing, tool access, replacement path and recalibration. Give each interface an owner, exchanged quantity, limits and failure response. Capture the dated geometry, executable strategy and metric definitions with the results.
 
+## Decide what to fix before detailing
+
+While changes cost only CAD time, name one premise whose failure would eliminate a design for the selected role. Keep the original pieces, route, deadline and partner assumptions visible. Before ordering hardware or assigning other subsystems to fixed interfaces, write one row in the architecture decision:
+
+| Premise and owner | Least costly credible test | Nominal and adverse inputs | Measure and stop criterion | Time budget | Result and decision |
+| --- | --- | --- | --- | --- | --- |
+| The loaded chassis can reach the exchange point and stop before its partner leaves | Screen a straight run with an optimistic traction and motor-force bound | Loaded mass and CG, fresh battery; repeat with lower charge and the upper mechanism running | Stop if the optimistic reachable distance falls short of the required route | One design session before sizing mounts | Record the limiting condition and choose continue, revise or restart |
+
+A student can fix a common datum for comparing layouts while leaving the mount pattern provisional. Record each candidate foundation's owner, units and coordinate frame, exact mating hardware or envelope, supported loads and tolerances, electrical and control connections, tool access, removal space and the condition that would reopen it. A layout choice becomes verified only for the configuration and operating range actually tested. Keep adjustable mounting, a connector choice or a clear volume reversible where it buys a meaningful alternative. Commit sketches, assumptions and failed runs to version control throughout. The irreversible cost comes from purchases, fabrication and downstream dependence.
+
+### Worked example: can the loaded drive meet the handoff clock?
+
+In this invented prebuild exercise, a partner leaves in 2.5 s. The robot needs to cover at least 4 m from rest and finish stopped. Treat a straight, level route with instantaneous steering as an optimistic screen. Even with unlimited top speed, equal acceleration and braking limits require at least `4d/T² = 2.56 m/s²`. Where the limits differ, apply the acceleration limit from the start and the braking limit backward from the stop.
+
+For each candidate wheel radius and gear ratio, calculate motor speed from wheel speed. Use the motor's torque/current and back-EMF curves, drivetrain efficiency and resistance to bound wheel force across speed. Bound that again by tire traction and the load on each driven wheel at the loaded CG. For each operating condition use the battery open-circuit voltage at its charge state, resistance of the battery and wiring, and simultaneous drive, steering and mechanism demands to estimate loaded bus voltage. Use battery-side current for sag and motor-side current for torque. Apply controller duty, current and voltage limits plus the actual breaker or protection time response. Check braking separately. Keep measured values, supplier data and assumed values visible with their ranges.
+
+Suppose these inputs yield an optimistic **96 N** aggregate drawbar-force ceiling under the lower-voltage concurrent load, with a **48 kg** loaded robot. Acceleration can reach at most **2.0 m/s²**. If the registered braking bound is also **2.0 m/s²**, the greatest stop-to-stop distance in 2.5 s is **3.125 m**, short by **0.875 m**. Stop detailing this ratio for that role. Revise the role timing or drive arrangement and rerun both cases. If that changes the basic robot premise, [archive the design and start a new iteration](design-iterations.md).
+
+A surviving screen justifies the next experiment. Check the speed where available wheel force balances resistance, then replay the acceleration, turns, stop and repeated duty at the original deadline. Specific shaft power limits acceleration at speed through `F = P/v`; wheel torque and traction bound launch, and thermal or protection limits can reduce repeated duty. Run `npm run power:review -- examples/power/comparison.json` to compare the same actuator schedule under two loads. Its voltage trace establishes an electrical margin. A timed trajectory with the actual payload, peer route and final stop supplies separate evidence for the role deadline. Record both margins and the observation that would reopen the choice. [Loaded route and peer occupancy](loaded-route.md) · [Loaded swerve simulation](../skills/frc-swerve/references/loaded-simulation.md) · [Shared power review](shared-power-review.md)
+
 ## Run a matched review
 
 ```sh
