@@ -39,6 +39,31 @@ For a configured design, set `nativeConfiguration` to the exact Fusion row ID. F
 
    If a batch returns `complete: false`, repeat with the same archive, pose and output path. Leave the adjacent generated `.progress.json` in place. If you supplied `checkpoint=`, use that same checkpoint path. Give each further pose a separate output. A completed census can still report unresolved pairs or measured intersections. Review those findings with the corresponding pose and keep missing evidence open. [Native pose capture and review](#save-and-resume)
 
+## Transfer an issued design to another checkout
+
+For a pause or workstation handoff, keep the same active design and freeze the files while recording or checking them. The receiving checkout needs the project revision containing the active pointer, iteration records, authority register and export lineage. Use the [runtime whose exporter matches the issue](setup-health.md#resolve-the-plugin-used-by-this-check). Keep private files and their inventory in approved custody.
+
+The installed `native_handoff.py record` command verifies the lineage and includes exactly its native archive and canonical STEP. In a JSON list, select any additional files needed for the next task. Use `[]` when the registered pair is sufficient. Each path is relative to the project root, with forward slashes. Use `child-native` for a separately saved child, `diagnostic-native` or `diagnostic-step` for a comparison issue, `historical-native` or `historical-step` for an earlier issued design needed for replay, or `private-input` for another required input. Choose the source files needed to reproduce the next decision. Omit caches, redundant exports and earlier trials once their custody and relevance are accounted for.
+
+```json
+[
+  {"path":"cad/inputs/actuator.f3d","role":"child-native","basis":"Selected supplier configuration needed for insertion"},
+  {"path":"cad/trials/offset.step","role":"diagnostic-step","basis":"Previous rejected insertion depth used as a control"}
+]
+```
+
+```sh
+python "PLUGIN_ROOT/scripts/native_handoff.py" record "PROJECT_ROOT" "LINEAGE_RELATIVE_PATH" selection.json handoff.json
+```
+
+Retain `handoff.json` in the private project record and give its printed SHA-256 to the receiver through a trusted channel. It records relative file paths, byte counts, SHA-256 values, roles and the verified register and lineage identities. Track or privately transfer the selected files in accordance with their rights. The command writes the inventory and leaves the transport to the project.
+
+```sh
+python "PLUGIN_ROOT/scripts/native_handoff.py" check "RECEIVING_PROJECT_ROOT" handoff.json EXPECTED_MANIFEST_SHA256
+```
+
+The receiver verifies each selected file in place and the active Fusion issue. If the handoff also used a dedicated transfer folder, add `--payload TRANSFER_DIRECTORY` to require exactly the listed files under that directory, in project-relative layout. Keep the inventory and ordinary project checkout outside that folder. A checkout may contain other project work. Record the receipt and resume the outstanding engineering checks. This verifies file custody; assembly pose, private input sufficiency and mechanical readiness require their own evidence.
+
 ## Save and resume
 
 1. Before editing or resuming in another checkout, read the tracked authority register at the revision the team is developing. Recover the actual native file by the declared ID or archive digest. Check the operating configuration, project revision and any explicit supplier revision pins. A copy with the same visible name does not inherit authority.
