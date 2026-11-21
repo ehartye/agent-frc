@@ -1,5 +1,6 @@
 """Screen radial location by a seated, nominally coaxial circular pilot in millimeters."""
 import math
+from hashlib import sha256
 
 from component_shape import boolean_measure
 from fastener_stack import planar_faces, thread_envelope
@@ -89,8 +90,19 @@ def measure(host, member, case, budget):
             "reason":"Parallel-axis budget under the specified fully seated condition"}
 
 
+def commission_hash(study):
+    from placed_pair_cache import encoded
+    return sha256(encoded({key:value for key,value in study.items() if key!="budget"})).hexdigest()
+
+
 def review(root, study):
     require(study["schema"]=="agent-frc/seated-pilot@1", "Unknown circular pilot study")
+    require(named(study["serviceOperation"]) and named(study["shaftAxis"]) and named(study["targetAxis"]),
+            "Commission the disturbed service interface, shaft axis and target axis")
+    scope=commission_hash(study)
+    budget=read(pinned(root,study["budget"])) if study.get("budget") else None
+    if budget is not None:
+        require(budget["commissionSha256"]==scope, "Radial budget belongs to a different service or datum commission")
     path=pinned(root,study["step"])
     ids={}
     shapes,_=load_solids(path,ids)
@@ -101,12 +113,8 @@ def review(root, study):
         require(name in shapes and ids[name]==ref["identity"], "Wrong installed occurrence for "+role)
         selected.append(shapes[name])
     require(study["host"]["solid"]!=study["member"]["solid"], "Select two distinct solids")
-    budget=read(pinned(root,study["budget"])) if study.get("budget") else None
-    if budget is not None:
-        require(budget["stepSha256"]==study["step"]["sha256"] and
-                budget["host"]==study["host"] and budget["member"]==study["member"],
-                "Radial budget belongs to a different issue or occurrence")
     output=measure(*selected,study,budget)
     require(digest(path)==study["step"]["sha256"], "Geometry changed during measurement")
     return {**output, "step":study["step"], "host":study["host"], "member":study["member"],
-            "budget":study.get("budget"), "scope":"Selected circular pilot pair, full axial seating, parallel rigid axes"}
+            "budget":study.get("budget"), "commissionSha256":scope,
+            "scope":"Selected circular pilot pair, full axial seating, parallel rigid axes"}

@@ -1,10 +1,13 @@
 """A centered cover can stay seated through its full radial clearance."""
 import unittest
 from copy import deepcopy
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from OCP.BRepAlgoAPI import BRepAlgoAPI_Cut, BRepAlgoAPI_Fuse
 from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox, BRepPrimAPI_MakeCylinder
 from OCP.gp import gp_Ax2, gp_Dir, gp_Pnt
-from pilot_alignment import measure
+from mechanical_fixture import pin, write
+from pilot_alignment import measure, review
 
 
 def cylinder(radius, z, height):
@@ -45,3 +48,27 @@ class SeatedPilot(unittest.TestCase):
         case["axis"]=[1,0,0]
         with self.assertRaisesRegex(ValueError,"cylindrical land"):
             measure(self.host,self.member,case,None)
+
+    def test_qualified_budget_cannot_move_to_another_service_or_land(self):
+        from OCP.STEPControl import STEPControl_Writer, STEPControl_AsIs
+        from showcase_contacts import load_solids
+        with TemporaryDirectory() as directory:
+            root=Path(directory)
+            writer=STEPControl_Writer()
+            for shape in (self.host,self.member):
+                writer.Transfer(shape,STEPControl_AsIs)
+            writer.Write(str(root/"fixture.step"))
+            ids={}
+            shapes,_=load_solids(root/"fixture.step",ids)
+            h,m=shapes
+            case=dict(self.case,schema="agent-frc/seated-pilot@1",step=pin(root,"fixture.step"),
+                      host=dict(solid=h,identity=ids[h]),member=dict(solid=m,identity=ids[m]),
+                      serviceOperation="Remove flanged cover",shaftAxis="Cover spindle",targetAxis="Housing spindle")
+            natural=review(root,case)
+            self.assertEqual(natural["status"],"open")
+            case["budget"]=write(root,"inspection.json",dict(self.budget,commissionSha256=natural["commissionSha256"]))
+            self.assertEqual(review(root,case)["status"],"within-budget")
+            for field,changed in (("engagedBandMm",[1.4,3.7]),("targetAxis","Far spindle"),
+                                  ("serviceOperation","Remove cover and housing")):
+                with self.assertRaisesRegex(ValueError,"different service or datum"):
+                    review(root,{**case,field:changed})
