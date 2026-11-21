@@ -43,6 +43,12 @@ Start with the installed load case and its signed extraction direction. Identify
 3. Read the named pair and witness in the result. First check the seat at rest. In a separate displacement test, a pull that enters the retaining face identifies a geometric stop. A bounded clear path over a short pull rules out a stop over that interval. Use the full service stroke and the `extract` result to establish complete removal. An unintended collision elsewhere still fails the assembly review. Contact inside the moving group leaves retention by the frame unresolved.
 4. Follow the reaction from the stop into the structural member. Check bearing area, material, edge distances, fastener and member capacities, load distribution and duty. For service, register which parts leave together, preceding extractions and the supported removal direction. Repeat with an overlooked sleeve or keeper left in place.
 
+### Resolve a contradictory source-shape measurement
+
+A correctly located plate with a missing bore has a measurable material difference. A Boolean kernel can also return the full volume in both directions for two solids that share material. The source-shape scan checks the volume balance. When it appears that none of the material is shared despite overlapping bounds, it measures the direct intersection and probes for disjoint balls strictly inside both solids. A proved contradiction leaves that article's identity open; independent measurements for other solids continue.
+
+For a known thin or irregular region, add `componentInteriorPointsMm` to the readiness study. Map the exact placed solid ID to a list of XYZ probe points in the installed frame. Preserve the raw directed differences, direct common volume and certified lower bound in the measurement receipt. A finite set of probes can establish shared material. To resolve identity, reconstruct the drawing at its commissioned pose, partition the solid into disjoint regions, compare each region, and rerun the original case and a deliberately displaced control. Keep the original issue open until the trusted review qualifies the comparison.
+
 ## Replay an external finding
 
 ```sh

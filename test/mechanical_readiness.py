@@ -264,6 +264,35 @@ class Readiness(unittest.TestCase):
         self.s["connections"][0]["evidence"].update(updated)
         self.assertNotEqual(self.status()["showcaseEligibility"],"pass")
 
+    def test_inconsistent_solid_comparison_stays_open_without_masking_a_second_failure(self):
+        from unittest.mock import patch
+        from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox
+        from OCP.gp import gp_Pnt
+        from component_shape import measured_difference
+        block=BRepPrimAPI_MakeBox(10.,8.,6.).Shape()
+        def placed(x):
+            return BRepPrimAPI_MakeBox(gp_Pnt(x,0,0),10.,8.,6.).Shape()
+        self.assertAlmostEqual(measured_difference(block,placed(0),[])["absentMm3"],0)
+        disjoint=measured_difference(block,placed(13),[])
+        self.assertNotIn("measurementStatus",disjoint)
+        self.assertAlmostEqual(disjoint["extraMm3"],480)
+        # Fault-inject only the three Boolean scalar returns; the independent
+        # interior test still runs both solid classifiers and measures real faces.
+        with patch("component_shape.difference",return_value=480.),patch("mechanical_motion.common",return_value=0.):
+            contradicted=measured_difference(block,placed(0),[])
+            thin=measured_difference(block,placed(9.99999),[])
+        self.assertEqual(thin["measurementStatus"],"open")
+        self.assertGreater(thin["numericalEvidence"]["certifiedLowerBoundMm3"],0)
+        self.assertEqual(contradicted["absentMm3"],480)
+        self.assertEqual(contradicted["measurementStatus"],"open")
+        self.assertGreater(contradicted["numericalEvidence"]["certifiedLowerBoundMm3"],1)
+        self.change("geometry",lambda g:g["componentDifferences"].update(frame=contradicted))
+        self.assertEqual(self.status()["showcaseEligibility"],"open")
+        self.change("geometry",lambda g:g["componentDifferences"]["block"].update(extraMm3=2))
+        self.assertEqual(self.status()["showcaseEligibility"],"fail")
+        with patch("component_shape.difference",side_effect=ValueError("kernel failure")):
+            self.assertEqual(measured_difference(block,placed(0),[])["measurementStatus"],"open")
+
     def test_true_placed_bore_and_midstroke_tool_collision(self):
         try:
             from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox,BRepPrimAPI_MakeCylinder
