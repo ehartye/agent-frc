@@ -12,7 +12,7 @@ def capture(app, project, lineage_file, output, station_key):
     spec=importlib.util.spec_from_file_location("joint_station",path)
     station=importlib.util.module_from_spec(spec);spec.loader.exec_module(station)
     authority=station.module("fusion_authority")
-    register=root/"cad/fusion-authority.json"
+    register=authority.register_path(root)
     lineage=authority.verify(root,register,Path(lineage_file))
     archive=authority.resolve(root,authority.load(lineage_file)["archive"])
     before=app.activeDocument;count=app.documents.count

@@ -315,7 +315,8 @@ def diagnostic(root,study):
     from native_station_verify import authenticate
     from fusion_authority import verify
     archive=verify(root,pinned(root,study["authority"]),pinned(root,study["lineage"]))
-    require(pinned(root,study["authority"])==(root/"cad/fusion-authority.json").resolve() and
+    from fusion_authority import register_path
+    require(pinned(root,study["authority"])==register_path(root).resolve() and
             archive["archiveSha256"]==raw["archiveSha256"]==study["archive"]["sha256"] and
             archive["stepSha256"]==raw["stepSha256"]==study["step"]["sha256"],"Linked diagnostic is registered to a different authority")
     authenticate(root,study,[("canonical-export",study["lineage"]),("native-joint-authority",study["jointAuthority"]),

@@ -16,7 +16,7 @@ def capture(app, project, lineage_file, request, output, station_key):
     station = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(station)
     authority = station.module("fusion_authority")
-    register = root/"cad/fusion-authority.json"
+    register = authority.register_path(root)
     issue = authority.verify(root,register,Path(lineage_file))
     archive = authority.resolve(root,authority.load(lineage_file)["archive"])
     before = app.activeDocument
