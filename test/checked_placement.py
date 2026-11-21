@@ -54,7 +54,10 @@ class Placements(unittest.TestCase):
         body = Obj(isSolid=True, name="Plate", vertices=[vertex])
         backing = Obj(fullPathName=plan["backing"])
         child = Obj(fullPathName=plan["occurrence"], component=Obj(bRepBodies=[body]), transform2=desired)
+        api = Obj(core=Obj(Point2D=None), fusion=Obj(FeatureHealthStates=Obj(HealthyFeatureHealthState=0)))
+        health = Obj(isValid=True, isSuppressed=False, isRolledBack=False, healthState=0)
         joint = Obj(name=plan["jointName"], jointMotion=Obj(objectType=plan["jointMotion"]), isSuppressed=False,
+                    isValid=True, timelineObject=health,
                     occurrenceOne=Obj(createForAssemblyContext=lambda parent: child),
                     occurrenceTwo=Obj(createForAssemblyContext=lambda parent: backing))
         parent = Obj(fullPathName=plan["parent"], component=Obj(asBuiltJoints=[joint]),
@@ -63,27 +66,31 @@ class Placements(unittest.TestCase):
         design = Obj(rootComponent=Obj(allOccurrences=[parent, child, backing]), snapshots=snapshots, computeAll=lambda: True)
         attach = Mock()
         with patch.object(example, "placement_witness", return_value=(0., [])):
-            first = example.edit_nested(design, plan, desired, attach, None)
+            first = example.edit_nested(design, plan, desired, attach, api)
             self.assertFalse(first["wroteTransform"])
             snapshots.add.assert_not_called()
             child.transform2 = Obj(asArray=lambda: transform(1,2))
-            moved = example.edit_nested(design, plan, desired, attach, None)
+            moved = example.edit_nested(design, plan, desired, attach, api)
             self.assertTrue(moved["wroteTransform"])
             snapshots.add.assert_called_once()
             attach.assert_called_with(parent.component)
             # Re-resolve the path after a cold reopen rather than retaining its warm proxy.
             cold = deepcopy(design)
-            self.assertEqual(example.inspect_attachment(cold, plan, None)["cornerErrorMm"], 0)
+            self.assertEqual(example.inspect_attachment(cold, plan, api)["cornerErrorMm"], 0)
             world[0] += .4
             with self.assertRaisesRegex(ValueError, "material missed"):
-                example.inspect_attachment(cold, plan, None)
+                example.inspect_attachment(cold, plan, api)
             world[0] -= .4
+            health.healthState = 1
+            with self.assertRaisesRegex(ValueError, "healthy active timeline"):
+                example.inspect_attachment(design, plan, api)
+            health.healthState = 0
             joint.occurrenceTwo = joint.occurrenceOne
             with self.assertRaisesRegex(ValueError, "Wrong joint endpoints"):
-                example.inspect_attachment(design, plan, None)
+                example.inspect_attachment(design, plan, api)
             parent.component.asBuiltJoints.clear()
             with self.assertRaisesRegex(ValueError, "Expected one named as-built joint"):
-                example.inspect_attachment(design, plan, None)
+                example.inspect_attachment(design, plan, api)
 
     def test_shared_forbidden_material_vetoes_even_when_one_native_volume_is_unknown(self):
         pair=[[s["path"],s["name"]] for s in scene(3)["bodies"]]

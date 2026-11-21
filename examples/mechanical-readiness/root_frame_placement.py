@@ -43,8 +43,8 @@ def inspect_material(design, plan, point2d):
     return {"cornerWorldCm": observed, "cornerErrorMm": error_mm, "contextErrorMm": context_error}
 
 
-def inspect_attachment(design, plan, point2d):
-    observed = inspect_material(design, plan, point2d)
+def inspect_attachment(design, plan, api):
+    observed = inspect_material(design, plan, api.core.Point2D)
     parent = root_occurrence(design, plan["parent"])
     backing = root_occurrence(design, plan["backing"])
     require(backing.fullPathName.rpartition("+")[0] == parent.fullPathName
@@ -52,18 +52,23 @@ def inspect_attachment(design, plan, point2d):
     joints = [j for j in parent.component.asBuiltJoints if j.name == plan["jointName"]]
     require(len(joints) == 1, "Expected one named as-built joint in the registered parent")
     joint = joints[0]
-    require(not joint.isSuppressed and joint.jointMotion.objectType == plan["jointMotion"],
+    require(joint.isValid and not joint.isSuppressed and joint.jointMotion.objectType == plan["jointMotion"],
             "Required joint is suppressed or has the wrong motion")
+    entry = joint.timelineObject
+    require(entry and entry.isValid and not entry.isSuppressed and not entry.isRolledBack
+            and entry.healthState == api.fusion.FeatureHealthStates.HealthyFeatureHealthState,
+            "Required joint has no healthy active timeline entry")
     ends = []
     for local in (joint.occurrenceOne, joint.occurrenceTwo):
         require(local is not None, "Attachment lacks a sibling endpoint")
         ends.append(local.createForAssemblyContext(parent).fullPathName)
     require(sorted(ends) == sorted([plan["occurrence"], plan["backing"]]), "Wrong joint endpoints")
     return {**observed, "joint": joint.name, "owner": parent.fullPathName,
-            "motion": joint.jointMotion.objectType, "endpoints": ends, "suppressed": joint.isSuppressed}
+            "motion": joint.jointMotion.objectType, "endpoints": ends, "suppressed": joint.isSuppressed,
+            "timelineHealth": "healthy"}
 
 
-def edit_nested(design, plan, desired_matrix, attach_in_owner, point2d):
+def edit_nested(design, plan, desired_matrix, attach_in_owner, api):
     """Use inside checked_placement's edit callback on its disposable design."""
     target = rigid(plan["worldTransformCm"])
     require(close(desired_matrix.asArray(), target), "Edit matrix differs from commissioning")
@@ -79,4 +84,4 @@ def edit_nested(design, plan, desired_matrix, attach_in_owner, point2d):
     # Project-owned operation creating or verifying the specified joint in the design copy.
     attach_in_owner(parent.component)
     require(design.computeAll(), "Joint edit did not recompute")
-    return {"wroteTransform": moved, **inspect_attachment(design, plan, point2d)}
+    return {"wroteTransform": moved, **inspect_attachment(design, plan, api)}
