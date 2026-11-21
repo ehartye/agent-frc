@@ -1,4 +1,5 @@
 import {staticWrenchRanges} from './support-ranges.mjs';
+import {planarSupport} from './planar-support.mjs';
 import {atPointer,label} from './study-evidence.mjs';
 import {studyRows} from './strategy-lab.mjs';
 
@@ -52,6 +53,12 @@ function contact(raw,c,plan,target,rating,mode,duty){
     if(gap!==null&&(gap>plan.gapToleranceM||finite(target?.maxCompressionM)&&-gap>target.maxCompressionM+plan.gapToleranceM)||finite(normalN)&&normalN< -plan.forceToleranceN)admissible='fail';
     else if(finite(shearN)&&finite(mu)&&mu>=0&&shearN>mu*Math.max(0,normalN)+plan.forceToleranceN)admissible='fail';
     else if(gap!==null&&(gap>= -plan.gapToleranceM||finite(target?.maxCompressionM)&&label(target.compressionBasis))&&finite(normalN)&&finite(shearN)&&finite(mu)&&mu>=0)admissible='pass';
+    if (target && Object.hasOwn(target,'maxFrictionCoefficient')) {
+      const limit = target.maxFrictionCoefficient;
+      if (finite(limit) && limit >= 0 && label(target.frictionBasis)) {
+        if (finite(normalN) && finite(shearN) && shearN > limit*Math.max(0,normalN)+plan.forceToleranceN) admissible='fail';
+      } else if (admissible!=='fail') admissible='open';
+    }
     if(rating?.kind==='allowable-resultant-envelope'&&['working-rating','verified-analysis','load-test','teaching-assumption'].includes(rating.evidence)&&(rating.evidence!=='teaching-assumption'||plan.purpose==='teaching')&&rating.unit==='N'&&rating.contact===c.id&&rating.revision===plan.revision&&
         rating.modes?.includes(mode)&&rating.duties?.includes(duty)&&(duty!=='power-loss'||['unpowered','passive'].includes(rating.powerState))&&label(rating.basis)&&finite(rating.workingN)&&rating.workingN>0&&finite(magnitude)){
       marginN=rating.workingN-plan.factor*magnitude;
@@ -74,6 +81,7 @@ function sample(def,plan,read){
     ['static','dynamic'].includes(mode)&&label(runId)&&finite(meta.timeS)&&textIds(meta.contactIds)&&textIds(meta.loadIds)&&
     [...meta.contactIds].sort().join('\n')===ids(contacts)&&[...meta.loadIds].sort().join('\n')===ids(loads);
   const bodyChannels=['settings',...(plan.scope==='whole-body'?['massKg','cgM','gravityMps2']:[]),...(mode==='dynamic'?['cgM','inertialForceN','angularMomentumRateAtCgNm']:[])];
+  if (Object.hasOwn(plan,'planarBoundary')) bodyChannels.push('massKg','cgM');
   const boundBody=bodyChannels.every(k=>JSON.stringify(map[k]??null)===JSON.stringify(meta?.channels?.[k]??'/'+k));
   const qualified=boundBody&&identified&&['hold','raise','power-loss','structural-load'].includes(meta.duty)&&meta.duty===plan.caseDuties?.[def.id]&&['independent-contact-solver','measured-contact'].includes(meta.reactionBasis);
   const paths=new Set(),unbound=[];
@@ -111,6 +119,7 @@ function sample(def,plan,read){
   if(plan.scope==='whole-body')apply(cg,gravity.map(v=>times(mass!==null&&mass>0?mass:null,v)),zero);
   const inertialF=mode==='static'?zero:vector(raw,map.inertialForceN);
   const inertialAtCg=mode==='static'?zero:vector(raw,map.angularMomentumRateAtCgNm);
+  const boundary=Object.hasOwn(plan,'planarBoundary')?planarSupport(plan,def,meta,{mass,cg,inertialF,inertialAtCg},read):null;
   const inertialM=plus(cross(diff(cg,plan.originM),inertialF),inertialAtCg);
   const residualForceN=diff(netForce,inertialF),residualMomentNm=diff(netMoment,inertialM);
   // When motion is unobserved retain the static demand as a diagnostic without certifying equilibrium.
@@ -131,7 +140,8 @@ function sample(def,plan,read){
     .map(([id])=>[id,meta.metrics[id].unit]));
   return {id:def.id,source:def.source,runId,metricUnits,timeS:meta?.timeS,mode,duty:meta?.duty,reactionBasis:meta?.reactionBasis,massEvidence:meta?.massEvidence,settings,metrics,massKg:mass,cgM:cg,
     netForceN:netForce,netMomentNm:netMoment,residualForceN,residualMomentNm,reactions,
-    balance,staticEnclosure:bounds,admissibility,capacity,issues,status:issues.length?'open':verdict([balance,admissibility,capacity])};
+    balance,staticEnclosure:bounds,admissibility,capacity,issues,...(boundary?{planarBoundary:boundary}:{}),
+    status:issues.length?'open':verdict([balance,admissibility,capacity,boundary?.status??'pass'])};
 }
 
 function comparison(c,rows){

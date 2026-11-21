@@ -57,6 +57,46 @@ test('a conservative force range can exclude yaw; containing zero supplies no fe
   box.pointM[1]=[-.1,.1];assert.equal(staticWrenchRanges([load],[0,0,0],25,0).disposition,'inconclusive');
 });
 
+test('a commissioned planar mass ledger and motion observation challenge an otherwise balanced fixed fixture',t=>{
+  const {plan,study,read,native}=fixture(t);
+  const {body,revision,frame}=plan;
+  const massRef={sha256:'1'.repeat(64),pointer:''},motionRef={sha256:'2'.repeat(64),pointer:''};
+  const ledger={body,revision,frame,units:'kg,m,kg*m2',members:[
+    {id:'left',massKg:5,centerXYM:[.1,.02],centroidYawKgM2:.1},
+    {id:'right',massKg:5,centerXYM:[.3,.02],centroidYawKgM2:.2}]};
+  const motion={body,revision,frame,runId:native.identity.runId,caseId:'settled',timeS:0,mode:'static',
+    units:'m/s2,rad/s2',model:'rigid-world-xy',basis:'kinematic-observation',provenance:'Independent teaching tracker.',
+    cgAccelerationXY:[1,0],yawAcceleration:2};
+  const lookup=r=>r===massRef?ledger:r===motionRef?motion:read(r);
+  const run=()=>reviewCoupled(study,lookup).cases[0];
+  assert.equal(run().status,'pass');
+  plan.planarBoundary={massLedger:massRef,memberIds:['left','right'],massToleranceKg:1e-6,cgToleranceM:1e-7,motionByCase:{settled:motionRef}};
+  assert.equal(run().balance,'pass');assert.equal(run().status,'fail');
+  assert.ok(Math.abs(run().planarBoundary.momentAtCgNm-.8)<1e-10);
+  motion.cgAccelerationXY=[0,0];motion.yawAcceleration=0;assert.equal(run().status,'pass');
+  // A one-newton guide increment at y=0, z=.2 also applies a yaw moment about the offset mass center.
+  native.identity.mode='dynamic';motion.mode='dynamic';native.rows[3].forceN=[26,0,0];
+  for(const c of plan.contacts) read(c.rating)[c.id].modes=['static','dynamic'];
+  const map=study.cases[0].map;
+  map.inertialForceN='/inertialForceN';map.angularMomentumRateAtCgNm='/angularMomentumRateAtCgNm';
+  native.inertialForceN=[1,0,0];native.angularMomentumRateAtCgNm=[0,-.3,.02];
+  assert.equal(run().status,'fail');
+  motion.cgAccelerationXY=[.1,0];motion.yawAcceleration=.05;
+  assert.equal(run().status,'pass');
+  motion.basis='force-derived-prediction';assert.equal(run().planarBoundary.consistency,'pass');assert.equal(run().status,'open');
+  motion.basis='kinematic-observation';
+  motion.runId='other';assert.equal(run().status,'open');motion.runId=native.identity.runId;
+  ledger.members.pop();assert.equal(run().status,'open');
+});
+
+test('a reaction outside the commissioned floor cone fails even when the solver permits a larger coefficient',t=>{
+  const {run,plan,native}=fixture(t);
+  plan.contacts[0].maxFrictionCoefficient=.1;plan.contacts[0].frictionBasis='Classroom pad bound.';
+  native.rows[0].mu=1;native.rows[0].forceN=[4,0,40];
+  assert.equal(run().cases[0].reactions[0].admissibility,'pass');
+  native.rows[0].forceN=[5,0,40];assert.equal(run().cases[0].reactions[0].admissibility,'fail');
+});
+
 test('a numerical response screen needs three distinct finer native settings with the remaining inputs held fixed',t=>{
   const {study,plan,read,run}=fixture(t);
   const rows=study.cases.slice(0,3).map(c=>read(c.source));
