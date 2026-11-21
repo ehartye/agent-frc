@@ -134,47 +134,69 @@ def stage(package, project, registration, expected, station):
     package, project, station = (p.resolve(strict=True) for p in (package, project, station))
     require(not station.is_relative_to(package), "Keep the station workspace outside the replaceable plugin")
     bundle = station / plan["jobId"]
-    require(not bundle.exists(), "A job with this ID already exists")
     issued = plugin_files(package, plan)
-    temporary = Path(tempfile.mkdtemp(prefix=".preparing-", dir=station))
-    try:
-        for root, folder, inventory in ((package, "plugin", issued), (project, "inputs", inputs)):
-            destination = temporary / folder
-            destination.mkdir()
-            for name in inventory:
-                source = source_file(root, name)
-                target = destination / relative(name)
-                target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(source, target)
-            check_tree(destination, inventory)
-        shutil.copyfile(registration, temporary / "job.json")
-        pinned_json(temporary / "job.json", expected)
-        # mkdir reserves the final name even when two clients stage the same job.
-        bundle.mkdir()
-        for name in ("plugin", "inputs", "job.json"):
-            (temporary / name).rename(bundle / name)
-        result = verify(bundle, expected)
-        for directory in (bundle / "plugin", bundle / "inputs"):
-            for file in directory.rglob("*"):
+    with lease(bundle, publication=True):
+        if bundle.exists():
+            return verify(bundle, expected)
+        temporary = Path(tempfile.mkdtemp(prefix=f".preparing-{bundle.name}-", dir=station))
+        candidate = temporary / bundle.name
+        candidate.mkdir()
+        try:
+            for root, folder, inventory in ((package, "plugin", issued), (project, "inputs", inputs)):
+                destination = candidate / folder
+                destination.mkdir()
+                for name in inventory:
+                    source = source_file(root, name)
+                    target = destination / relative(name)
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile(source, target)
+            shutil.copyfile(registration, candidate / "job.json")
+            result = verify(candidate, expected)
+            for file in candidate.rglob("*"):
                 if file.is_file():
                     file.chmod(file.stat().st_mode & ~0o222)
-        (bundle / "job.json").chmod(stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)
-        return result
-    finally:
-        shutil.rmtree(temporary)
+            # The verified job becomes visible in one operation on its station filesystem.
+            candidate.rename(bundle)
+            for name in ("recipe", "scripts", "inputs"):
+                result[name] = str(bundle / Path(result[name]).relative_to(candidate))
+            return result
+        finally:
+            def remove_readonly(function, name, _error):
+                os.chmod(name, stat.S_IREAD | stat.S_IWRITE)
+                function(name)
+            shutil.rmtree(temporary, onerror=remove_readonly)
 
 
 @contextmanager
-def lease(bundle):
-    lock = bundle.parent / (".native-use-" + bundle.name)
-    try:
-        lock.mkdir()
-    except FileExistsError as e:
-        raise ValueError("Native job is active or its station lock needs operator reconciliation") from e
-    try:
-        yield
-    finally:
-        lock.rmdir()
+def lease(bundle, *, publication=False):
+    # Reuse one stable lock file. Removing it while a competing process still has an
+    # open handle could create two independent locks for the same job on POSIX.
+    prefix = ".native-publish-" if publication else ".native-use-"
+    path = bundle.parent / (prefix + bundle.name)
+    if path.exists():
+        no_link(path)
+    with path.open("a+b") as lock:
+        if lock.tell() == 0:
+            lock.write(b"0")
+            lock.flush()
+        lock.seek(0)
+        try:
+            if os.name == "nt":
+                import msvcrt
+                msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as error:
+            raise ValueError("Native job is active; its station lock is held") from error
+        try:
+            yield
+        finally:
+            if os.name == "nt":
+                lock.seek(0)
+                msvcrt.locking(lock.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
 
 
 @contextmanager
@@ -236,7 +258,7 @@ def retire(bundle, expected, receipt, receipt_digest, archive):
     require(not archive.is_relative_to(bundle), "Choose a separate private archive")
     destination = archive / bundle.name
     require(not destination.exists(), "Archived job already exists")
-    with lease(bundle):
+    with lease(bundle, publication=True), lease(bundle):
         job = verify(bundle, expected)
         release = pinned_json(receipt, receipt_digest)
         require(release.get("schema") == "agent-frc/native-job-release@1" and

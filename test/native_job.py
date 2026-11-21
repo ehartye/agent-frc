@@ -6,6 +6,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import native_job as job
@@ -57,7 +58,7 @@ class Job(unittest.TestCase):
 
     def test_late_import_uses_same_bytes_after_original_cache_and_recipe_disappear(self):
         self.stage()
-        self.assertRaisesRegex(ValueError, "already exists", self.stage)
+        self.assertEqual(self.stage()["registrationSha256"], self.digest)
         script = job.fusion_script(self.bundle,self.digest,{"jobId":"trial","plugin":str(self.package/"scripts")})
         namespace={}; exec(script,namespace)
         self.assertEqual(Path(namespace["run"]("create")),self.bundle/"plugin/scripts")
@@ -79,6 +80,29 @@ class Job(unittest.TestCase):
         archived=job.retire(self.bundle,self.digest,self.release,self.finish(),self.archive)
         self.assertFalse(self.bundle.exists())
         self.assertEqual(job.verify(archived,self.digest)["jobId"],"trial")
+
+    def test_interrupted_publication_can_retry_without_exposing_a_partial_job(self):
+        original = Path.rename
+        def interrupted(source, target):
+            if target == self.bundle:
+                raise OSError("Interrupted before publishing")
+            return original(source, target)
+        with patch.object(Path, "rename", interrupted):
+            with self.assertRaisesRegex(OSError, "Interrupted"):
+                self.stage()
+        self.assertFalse(self.bundle.exists())
+        with job.lease(self.bundle, publication=True):
+            with self.assertRaisesRegex(ValueError, "active"):
+                self.stage()
+        first = self.stage()
+        preserved = job.sha(self.bundle/"job.json")
+        self.assertEqual(first, self.stage())
+        plan = json.loads(self.reg.read_bytes())
+        plan["inputs"] = []
+        self.reg.write_text(json.dumps(plan))
+        with self.assertRaisesRegex(ValueError,"Changed input"):
+            job.stage(self.package,self.project,self.reg,job.sha(self.reg),self.station)
+        self.assertEqual(job.sha(self.bundle/"job.json"),preserved)
 
     def test_changed_private_or_original_dependencies_stop_before_execution(self):
         self.stage()
