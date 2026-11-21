@@ -174,6 +174,7 @@ class InstalledKinematics(unittest.TestCase):
             BooleanTypes=S(IntersectionBooleanType=0)))
         calls=[]
         class Design:
+            isValid = True
             def createInterferenceInput(self,items):return S(pair=tuple(items))
             def analyzeInterference(self,query):
                 calls.append(query.pair)
@@ -197,6 +198,37 @@ class InstalledKinematics(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"another archive"):
                 measure(*args,p,["other",*fingerprint[1:]],1,[(0,1)])
 
+            # A kernel error can surface while obtaining the next temporary manager.
+            from unittest.mock import Mock
+            api.fusion.TemporaryBRepManager.get = Mock(side_effect=[
+                Manager(), RuntimeError("latent Boolean error"), Manager()])
+            calls.clear()
+            partial_path = Path(tmp)/"partial.json"
+            partial = measure(*args, partial_path, fingerprint, 2)
+            self.assertEqual((partial["completedPairs"], partial["unresolvedPairs"], partial["unexaminedPairs"]), (2, 2, 1))
+            failed = partial["pairs"][1]
+            self.assertEqual(failed["identities"], [["0", "part"], ["2", "part"]])
+            self.assertEqual(failed["interferenceMm3"], 0.)
+            self.assertIsNone(failed["temporaryCommonMm3"])
+            self.assertEqual(failed["errors"]["temporaryCommonMm3"]["message"], "latent Boolean error")
+            before_stop = list(calls)
+            args[0].isValid = False
+            stopped = measure(*args, partial_path, fingerprint, 2)
+            self.assertFalse(stopped["complete"])
+            self.assertEqual(stopped["unexaminedPairs"], 1)
+            self.assertEqual(stopped["stop"]["pair"], [1, 2])
+            self.assertEqual(stopped["pairs"], partial["pairs"])
+            self.assertEqual(calls, before_stop)
+            args[0].isValid = True
+            resumed = measure(*args, partial_path, fingerprint, 2)
+            self.assertTrue(resumed["complete"])
+            self.assertEqual((resumed["unexaminedPairs"], resumed["unresolvedPairs"]), (0, 2))
+            self.assertEqual(resumed["pairs"][:2], partial["pairs"])
+            self.assertEqual(resumed["pairs"][2]["status"], "measured")
+            self.assertEqual(calls[len(before_stop):], [(1, 2)])
+            api.fusion.TemporaryBRepManager.get = Manager
+            calls.clear()
+
             legacy_sha = "9a570e82486dbcf077d961a143cf6808666255dda1d17a0ac1a9b9bec0112dfe"
             roster = [[r["path"], r["name"], r["boundsMm"], r["worldTransform"]] for r in rows]
             pairs = [(0, 1), (0, 2), (1, 2)]
@@ -212,7 +244,7 @@ class InstalledKinematics(unittest.TestCase):
             new = measure(*args, Path(tmp)/"current.json", fingerprint, 1)
             self.assertFalse(new["complete"])
             self.assertEqual(new["pairs"][0]["temporaryCommonMm3"], 2.)
-            self.assertEqual(len(calls), 5)
+            self.assertEqual(len(calls), 1)
 
     def test_native_boolean_zero_with_retained_lumps_is_unresolved(self):
         import sys
@@ -231,7 +263,7 @@ class InstalledKinematics(unittest.TestCase):
         api = S(core=S(ObjectCollection=S(create=Entities)), fusion=S(
             TemporaryBRepManager=S(get=lambda: manager), BooleanTypes=S(IntersectionBooleanType=0)))
         def design(*bodies):
-            return S(createInterferenceInput=lambda _: S(),
+            return S(isValid=True, createInterferenceInput=lambda _: S(),
                      analyzeInterference=lambda _: [S(interferenceBody=b) for b in bodies])
         rows = [dict(path=name, name="Body") for name in ("Shaft", "Block")]
         with patch.dict(sys.modules, {"adsk": api, "adsk.core": api.core, "adsk.fusion": api.fusion}):
