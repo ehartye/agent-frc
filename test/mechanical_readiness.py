@@ -1054,6 +1054,88 @@ class Readiness(unittest.TestCase):
         with patch("component_shape.boolean_measure",side_effect=ValueError("kernel failure")):
             self.assertEqual(measured_difference(block,placed(0),[])["measurementStatus"],"open")
 
+    def test_shared_package_keeps_partial_and_stale_handoffs_distinct(self):
+        import runpy
+        from package_layout import review
+        build=Path(__file__).resolve().parents[1]/"examples/package-layout/create.py"
+        folder=self.root/"layout"
+        plan=runpy.run_path(str(build))["create"](folder)
+        file=folder/"layout.json"
+        good=review(folder,file)
+        self.assertEqual(good["status"],"layout-checked")
+        self.assertEqual(good["control"]["witness"]["witness"]["t"],.5)
+        self.assertGreater(good["control"]["witness"]["witness"]["volumeMm3"],50)
+        self.assertTrue(good["view"]["verified"])
+        self.assertEqual(good["budgets"]["inspectionKg"],[11,13.5])
+        weak=[r for r in good["budgets"]["electricalCases"] if r["batteryCondition"]=="weak"]
+        self.assertEqual({r["stage"] for r in weak},set(plan["cycle"]))
+        self.assertTrue(all(r["loadedBusV"][0]==10 for r in weak))
+        player=folder/plan["view"]
+        original=player.read_bytes()
+        player.write_bytes(original+b"stale")
+        self.assertEqual(review(folder,file)["status"],"provisional")
+        player.write_bytes(original)
+        budget=json.loads((folder/"budgets.json").read_text())
+        budget["electricalCases"]["loaded-turn-weak"]["batterySideA"]["drive"]=[20,80]
+        write(folder,"layout.json",dict(plan,budgets=write(folder,"weak.json",budget)))
+        undervoltage=review(folder,file)
+        self.assertEqual(undervoltage["status"],"blocked")
+        self.assertIn("voltage/loaded-turn-weak",[r["reason"] for r in undervoltage["reopen"]])
+        static=json.loads((folder/"paths.json").read_text())
+        static["cases"][0]["initialPose"]={"rail":[{"kind":"translation","travelMm":[-21,-72,-18]}]}
+        write(folder,"layout.json",dict(plan,motion=write(folder,"stationary.json",static)))
+        collision=review(folder,file)
+        self.assertEqual(collision["status"],"blocked")
+        self.assertTrue(any(set(p["pair"])=={"mount","rail"} and p["status"]=="fail"
+                            for c in collision["cases"] for p in c["pairs"]))
+        off_host=dict(plan,mounts=[dict(plan["mounts"][0],pointMm=[200,0,0]),plan["mounts"][1]])
+        write(folder,"layout.json",off_host)
+        self.assertIn("outside the selected host",review(folder,file)["missingInputs"][0])
+        partial=dict(plan,missingInputs=["Cable loop radius"])
+        write(folder,"layout.json",partial)
+        self.assertEqual(review(folder,file)["status"],"provisional")
+        write(folder,"layout.json",dict(plan,control=dict(plan["control"],offsetMm=[0,50,0])))
+        self.assertEqual(review(folder,file)["status"],"provisional")
+        observations=plan["premises"]
+        current=json.loads((folder/observations[1]["current"]["file"]).read_text())
+        slower=write(folder,"slower.json",dict(current,value=3.01,source=write(folder,"slow-estimate.json",{"acquireSeconds":3.01})))
+        write(folder,"layout.json",dict(plan,premises=[observations[0],dict(observations[1],current=slower)]))
+        stale=review(folder,file)
+        self.assertEqual(stale["status"],"reopen")
+        self.assertEqual(stale["reopen"],[dict(phase="previsualization",reason="acquire-time",affected=["carried article","carrier"])])
+        hold=folder/"hold.json"
+        write(folder,hold.name,stale)
+        write(folder,"layout.json",plan)
+        self.assertEqual(review(folder,file,hold)["status"],"reopen")
+        decision=json.loads((folder/observations[1]["accepted"]["file"]).read_text())
+        import subprocess
+        profile=json.loads((SCRIPTS.parent/"examples/kickoff/training-field.json").read_text())
+        profile["rehearsal"]["programs"]["shuttle"]["steps"][0]["dwell"]=current["value"]
+        run_input=write(folder,"field.json",profile)
+        replay=json.loads(subprocess.check_output(["node",str(SCRIPTS/"rehearsal-series.mjs"),str(folder/"field.json")]))
+        field=dict(profile=run_input,result=write(folder,"replayed.json",replay),match="trial-1",actor="B1",
+                   input="actionDwell",period="Opening",stepIndex=0,stepLabel="Pick up tile")
+        upstream=write(folder,"latest-role.json",dict(issue=plan["issue"],designSha256=plan["design"]["sha256"],
+                       stepSha256=plan["step"]["sha256"],phase="previsualization",scenario="selected cycle",premise="acquire-time",
+                       fieldReplay=field))
+        repeated=write(folder,"repeat.json",dict(decision,source=upstream,repeat=dict(previousPlanSha256=stale["planSha256"])))
+        write(folder,"layout.json",dict(plan,premises=[observations[0],dict(observations[1],accepted=repeated)]))
+        self.assertEqual(review(folder,file,hold)["status"],"layout-checked")
+        earlier=write(folder,"earlier.json",dict(current,issue="outgoing"))
+        write(folder,"layout.json",dict(plan,premises=[dict(observations[1],current=earlier)]))
+        self.assertEqual(review(folder,file)["status"],"provisional")
+        nominal=json.loads((folder/"paths.json").read_text())
+        nominal["cases"][0]["initialPose"]={"rail":[{"kind":"translation","travelMm":[0,-50,0]}]}
+        write(folder,"layout.json",dict(plan,motion=write(folder,"blocked.json",nominal)))
+        self.assertEqual(review(folder,file)["status"],"blocked")
+        nominal["cases"][0]["moves"]["sample"][0]["travelDeg"]=-90
+        write(folder,"layout.json",dict(plan,motion=write(folder,"wrong-carry.json",nominal)))
+        with self.assertRaisesRegex(ValueError,"diverges"):
+            review(folder,file)
+        (folder/"design.json").write_text((folder/"design.json").read_text()+" ")
+        with self.assertRaisesRegex(ValueError,"Changed evidence"):
+            review(folder,file)
+
     def test_true_placed_bore_and_midstroke_tool_collision(self):
         try:
             from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox,BRepPrimAPI_MakeCylinder

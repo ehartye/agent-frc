@@ -5,6 +5,8 @@ description: "Review a selected robot or subsystem before shop release or showca
 
 # Review the selected robot for fabrication and publication
 
+Review fabrication readiness on the current detailed Fusion issue. A blocking animation establishes only the gross paths and allowances covered by that study. [Engineering detail and exit criteria for the three phases](../../docs/design-phase-detail.md)
+
 For an axial bearing adjustment, [check the complete stack](../../docs/axial-bearing-stack.md). Trace both race load paths, measure the full retained shaft stroke, and test a displaced bearing against the hub, spacer and outside supports.
 
 For a removable motor or bearing with a circular pilot, [check its radial locating play](../../docs/seated-pilot.md) and the remaining shaft-alignment allowance across the interfaces disturbed during service.

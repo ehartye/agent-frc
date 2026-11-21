@@ -1,0 +1,50 @@
+# Check the shared package before detailed Fusion CAD
+
+[Follow the three design phases and their exit criteria](design-phase-detail.md). Field previsualization uses a robot-sized prism, gross headings, approach faces and assumed acquisition, shot and reset times. Compare roles cheaply on the same field clock. Carry the chosen cycle, pickup and release poses, interaction faces and uncertain times into whole-robot design.
+
+**The whole-robot designer owns the package checkpoint.** Establish one robot datum and one revision of the proposed arrangement. Share the editable blockout with subsystem designers. On a common placed STEP, represent fixed structure and bumpers, mounts, moving members, a finite payload, adjacent moving mechanisms and the service envelope. Simple conservative solids are suitable for an early decision. Record what they bound and what geometry is missing. A saved issue identifies the geometry. Its endpoints alone leave the intervening path untested.
+
+## Work a synthetic package
+
+With the plugin’s geometry Python environment selected, create a new example folder and run the normal design command.
+
+```sh
+python examples/package-layout/create.py layout-trial
+node scripts/design.mjs package-check layout-trial layout.json --require-checked
+```
+
+The carrier rotates 90° with a finite article while a neighboring slide travels 12 mm. A separate park case returns the carrier and slide. The service case withdraws the group 80 mm. Each case reserves 1 mm between unrelated bodies. The proposed layout clears all three paths. As a control, moving a fixed rail 50 mm into the arc leaves both operating endpoints clear and produces about 52.04 mm³ shared material at half travel. Read the actual pair and path fraction in the receipt. The example uses invented figures and simple shapes.
+
+## Commission the project paths
+
+1. Pin the editable `design.json` produced by the design CLI, the selected millimetre STEP and the project motion study. Use project-relative files and SHA-256 throughout. The study repeats the design digest as `layoutDesignSha256` and the exact `layoutDatum`. Give the datum a physical name and a proper row-major `robotToStepMm` transform with translations in millimetres. Express all mount points, rotation axes, starting poses, fixtures, travel and offsets in the same STEP world frame. The transform records the project’s registration. Validate it against the mounting datums on the first Fusion issue.
+2. Assign every selected solid and fixture to one group. Record the proposed mounting host and point for each mechanism. The checker compares that point with the host’s parked bounding box. Surface seating, hole alignment and strength need separate checks. Include complete stock and protection, the moving head and payload, neighboring mechanisms and a service tool wherever it occupies the path. Reserve wiring, tolerance, deflection or dressing with conservative geometry or a sourced minimum gap. List missing inputs explicitly.
+3. Give each operating, park and service case its own signed start and travel. Use the existing mechanical-motion format for rotations, translations, fixtures and staged extractions. Declare all simultaneously moving groups. Use `carriedWith` for a payload that follows its carrier. Independent moving groups retain their own motion. Tie `minGapMm` to each case’s `allowanceBasis`. Make the service case withdraw the complete group from the installed scene. A case that relies on a previous removal must name that proved extraction in the same history. [Motion and service evidence](mechanical-methods.md)
+4. Select a matched displaced control. Move one named stationary article by a measured world offset, replay the same nominal moving group and check the specified pair. An unrelated collision cannot validate the control. The checker tests endpoints and bounds the path between them. It retains a collision witness or an unresolved interval when clearance cannot be established within the subdivision budget.
+5. Save the checkpoint receipt with the issue. `layout-checked` applies to the represented package, cases and reserves. `blocked` identifies a nominal violation. `reopen` identifies an upstream premise outside its accepted condition. `provisional` keeps partial layouts useful and identifies missing evidence. Use `--require-checked` for an accepted handoff. A malformed or stale registration exits with a diagnostic. For an early concept, omit the STEP or motion reference, identify the missing input and retain the provisional receipt.
+
+Give every downstream designer the issue name, design and STEP hashes, host and mount points, motion study, status and open inputs. If one interface changes, identify its neighbors through the group roster. Recheck the affected loaded, park and withdrawal paths on the revised package, repeat the adverse control and issue the updated receipt before another designer takes the old clearance as available. The executable rechecks every commissioned case. Detailed seat geometry, loads, tolerances, retention, actuator dynamics and physical performance require their own commissioned evidence.
+
+## Examine the moving blocks and budgets
+
+Open the generated `package-motion.html` locally. Select the case and projection, then play or scrub the stroke. Every edge comes from a named placed polyhedron. The player uses the same starting poses and ordered rigid transformations as the interval checker, including simultaneous motion. The frames illustrate the stroke. The separate clearance receipt gives the numerical bound, obstruction or open interval. Stationary pairs are checked in each retained scene. A qualified intended interface must name its exact pair, stage and separately pinned evidence.
+
+List the operating and park cases in performance order in `cycle`. The checker compares each member's attained end pose with its next starting pose. Show the finite article entering, travelling with the head, leaving and resetting as appropriate for the chosen cycle. Include the drivetrain and battery as occupied groups. Service cases start from their commissioned assembled state. For a new trajectory choose a new project-relative HTML filename and generate it with `--write-view`. A saved player earns credit only if its bytes reproduce from the current issue.
+
+Register the whole-robot mass inventory and operating requirements independently in the budget study. Record one weighed mass interval per contributor, the represented block members, and named allowances for wiring, controls and unmodeled robot hardware. Keep the payload separate to obtain the running mass range. Commission simultaneous **battery-side** current ranges per source in each operating and park stage, including a weak pack. The checker bounds bus voltage using open-circuit voltage minus the simultaneous total current times series resistance. It compares the low end against the project's operating limit and the minimum needed for the modeled duty. The designer justifies each duty minimum, current interval, source condition and omitted-stock allowance. The calculation covers nonnegative discharge on this lumped bus. Verify time-resolved inlet voltage, controller limits and attained motion when they control the decision. [Review the loaded route](whole-robot-comparison.md) and [shared electrical loads](shared-power-review.md).
+
+The synthetic robot weighs 11 to 13.5 kg against its invented 15 kg limit. Its 11.2 to 14 kg running estimate includes the article. Simultaneous demand of 32 to 50 A leaves 10.0 to 11.264 V in the weak-pack case, above the 9.2 V required. Increase the drive upper estimate from 30 A to 80 A in the loaded turn and the low end falls to 8.5 V. That change reopens the layout decision, even with identical animation and clear paths. Detailed CAD still needs actual joints, accurate supplier articles and the applicable fabrication and readiness evidence.
+
+## Reopen the phase that chose the premise
+
+Register each premise under `premises`. Its independently pinned acceptance records a named scenario, unit, source, numeric interval or categorical condition, affected groups and the phase that chose it. Pin a current observation with the same identity and unit, the current issue and geometry hashes, and the actual field containing its value in a source measurement. Unknown data or an earlier issue leaves the decision provisional. The example accepts the front approach and 2–3 s acquisition only for its selected cycle.
+
+A nominal clearance violation reopens **package layout** for the moving groups and implicated neighbors. Pause their detailing, move or reshape the layout, then rerun those paths and the control on the new revision. A change from the front approach to a side approach, or acquisition above 3 s in the example, makes the old field conclusion stale and reopens **previsualization** for the dependent interfaces. Rerun the matched field route with the revised capabilities and compare the objective and time reserve. Independent work can continue against its own verified interfaces.
+
+Keep the held receipt in project custody and pass it separately on resubmission.
+
+```sh
+node scripts/design.mjs package-check PROJECT revised-layout.json --previous held-layout.json --require-checked
+```
+
+The package checker repeats the affected package cases. For a held field premise it checks the current issue and the original registered actor, match and input, replays the pinned first-party field profile and compares the full saved result. The upstream decision must identify the held plan hash. Supported replay inputs include a named program step’s dwell, robot speed, height and heading, and a modeled front pickup mouth. An independently chosen different face needs a rehearsal that actually represents it. An unsupported repeat stays open. The project chooses the duty, threshold and acceptance of the resulting field strategy. An initial review without a supplied prior receipt cannot clear a historical hold.
