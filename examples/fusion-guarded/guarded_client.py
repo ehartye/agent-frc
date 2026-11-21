@@ -10,6 +10,19 @@ def write_exclusive(path, data):
 def main(config_path,journal_path):
     config=json.loads(pathlib.Path(config_path).read_text(encoding='utf-8'))
     recipe=pathlib.Path(__file__).with_name('guarded_case.py').read_text(encoding='utf-8')
+    script = 'CONFIG = '+repr(config)+'\n'+recipe
+    if 'nativeJob' in config:
+        import types
+        helper = pathlib.Path(__file__).resolve().parents[2] / 'scripts/native_job.py'
+        staging = types.ModuleType('_frc_guarded_native_job')
+        staging.__file__ = str(helper)
+        exec(compile(helper.read_bytes(), str(helper), "exec"), staging.__dict__)
+        job = config['nativeJob']
+        registration = staging.verify(job['bundle'], job['registrationSha256'])
+        teaching = pathlib.Path(job['bundle']).absolute() / 'plugin/examples/fusion-guarded/guarded_case.py'
+        if pathlib.Path(registration['recipe']) != teaching:
+            raise ValueError('The teaching client expects its bundled guarded recipe')
+        script = staging.fusion_script(job['bundle'], job['registrationSha256'], config)
     for key in ('jobId','requestId'):
         if not re.fullmatch(r'[A-Za-z0-9_-]{1,80}',config[key]):raise ValueError('Invalid identifier')
     readonly=config['stage'] in ('baseline','inspect')
@@ -20,7 +33,8 @@ def main(config_path,journal_path):
     try:
         identity=config['jobId']+'--'+config['requestId']
         intent=journal/(identity+'.intent.json');result_path=journal/(identity+'.result.json')
-        digest=hashlib.sha256((recipe+json.dumps(config,sort_keys=True)).encode()).hexdigest()
+        fingerprint = script if 'nativeJob' in config else recipe
+        digest=hashlib.sha256((fingerprint+json.dumps(config,sort_keys=True)).encode()).hexdigest()
         if intent.exists():
             previous=json.loads(intent.read_text())
             if previous['digest']!=digest:raise ValueError('Request ID reused with changed recipe or payload')
@@ -44,7 +58,7 @@ def main(config_path,journal_path):
         init=rpc('initialize',{'protocolVersion':'2025-03-26','capabilities':{},'clientInfo':{'name':'agent-frc-guarded','version':'1.0.0'}},1)
         if 'error' in init:raise RuntimeError(init['error'])
         rpc('notifications/initialized',{},None)
-        response=rpc('tools/call',{'name':'fusion_mcp_execute','arguments':{'featureType':'script','object':{'script':'CONFIG = '+repr(config)+'\n'+recipe,'readOnly':readonly}}},2)
+        response=rpc('tools/call',{'name':'fusion_mcp_execute','arguments':{'featureType':'script','object':{'script':script,'readOnly':readonly}}},2)
         if 'error' in response:raise RuntimeError(response['error'])
         payload=json.loads(response['result']['content'][0]['text'])
         if not payload.get('success'):raise RuntimeError(payload.get('error','Tool failed'))

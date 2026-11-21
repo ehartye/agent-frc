@@ -35,3 +35,5 @@ Measure the workholding and bearing fits before manufacturing. Record material a
 - [Document creation ID and copied-document identity](https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/core_Document_creationId.htm)
 - [Fusion API units](https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/Units_UM.htm)
 - [Official Fusion local MCP installation and operation](https://github.com/Autodesk/ai-integrations/blob/main/fusion/local-mcp-server/README.md)
+
+For a staged job, put `nativeJob: {"bundle": "ABSOLUTE_PRIVATE_JOB_PATH", "registrationSha256": "PINNED_JOB_SHA256"}` in the usual request configuration. Set the registration recipe to `plugin/examples/fusion-guarded/guarded_case.py`. Use the client in the staged package for later requests. It runs the registered verification and lock on the native side for each operation. [Stage and retire a native job](../../docs/native-job.md)

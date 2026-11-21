@@ -109,3 +109,5 @@ Begin detailed CAD from the selected [whole-robot architecture](../../docs/whole
 Start a new chassis with [rear plan chamfers](../../docs/frame-profile.md). Use the generated Fusion-importable sketch for the frame and continuous backing, padding and cover. Preserve the ordinary side elevation and verify the actual joint, attachments and wheel clearances.
 
 Use the [Fusion authority and revision handoff](../../docs/fusion-authority.md) to establish the one current saved native design, the STEP exported from that design and the identity of the engineering evidence. Recheck the register when resuming in another checkout or before replacing a published view.
+
+Before dispatching long native work, [stage the complete pinned package and project inputs in private job storage](../../docs/native-job.md). Reopen and inspect through that directory. Retire it after the station reports terminal release and restores its original open documents.
