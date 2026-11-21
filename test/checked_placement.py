@@ -56,14 +56,13 @@ class Placements(unittest.TestCase):
         child = Obj(fullPathName=plan["occurrence"], component=Obj(bRepBodies=[body]), transform2=desired)
         api = Obj(core=Obj(Point2D=None), fusion=Obj(FeatureHealthStates=Obj(HealthyFeatureHealthState=0)))
         health = Obj(isValid=True, isSuppressed=False, isRolledBack=False, healthState=0, errorOrWarningMessage="")
+        parent = Obj(fullPathName=plan["parent"], component=Obj(), transform2=Obj(asArray=lambda: parent_pose))
         joint = Obj(name=plan["jointName"], jointMotion=Obj(objectType=plan["jointMotion"]), isSuppressed=False,
-                    isValid=True, timelineObject=health,
-                    occurrenceOne=Obj(createForAssemblyContext=lambda parent: child),
-                    occurrenceTwo=Obj(createForAssemblyContext=lambda parent: backing))
-        parent = Obj(fullPathName=plan["parent"], component=Obj(asBuiltJoints=[joint]),
-                     transform2=Obj(asArray=lambda: parent_pose))
+                    isValid=True, timelineObject=health, assemblyContext=parent, occurrenceOne=child, occurrenceTwo=backing)
+        other = Obj(**{**vars(joint), "assemblyContext": Obj(fullPathName="Seat:2")})
         snapshots = Obj(hasPendingSnapshot=True, add=Mock())
-        design = Obj(rootComponent=Obj(allOccurrences=[parent, child, backing]), snapshots=snapshots, computeAll=lambda: True)
+        design = Obj(rootComponent=Obj(allOccurrences=[parent, child, backing], allAsBuiltJoints=[other, joint]),
+                     snapshots=snapshots, computeAll=lambda: True)
         attach = Mock()
         with patch.object(example, "placement_witness", return_value=(0., [])):
             first = example.edit_nested(design, plan, desired, attach, api)
@@ -94,7 +93,11 @@ class Placements(unittest.TestCase):
             joint.occurrenceTwo = joint.occurrenceOne
             with self.assertRaisesRegex(ValueError, "Wrong joint endpoints"):
                 example.inspect_attachment(design, plan, api)
-            parent.component.asBuiltJoints.clear()
+            joint.occurrenceTwo = backing
+            design.rootComponent.allAsBuiltJoints.append(joint)
+            with self.assertRaisesRegex(ValueError, "Expected one named as-built joint"):
+                example.inspect_attachment(design, plan, api)
+            design.rootComponent.allAsBuiltJoints = [other]
             with self.assertRaisesRegex(ValueError, "Expected one named as-built joint"):
                 example.inspect_attachment(design, plan, api)
 
