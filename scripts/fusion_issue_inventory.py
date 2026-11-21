@@ -12,7 +12,7 @@ def sha(path):
         return h.hexdigest()
 
 
-def placement_witness(body,occ,point2d):
+def placement_witness(body,occ,point2d,world_points=None):
     import math
     samples=[];errors=[]
     def add(before,observed):
@@ -23,6 +23,7 @@ def placement_witness(body,occ,point2d):
         if not math.isfinite(err):raise ValueError("Invalid world point")
         if err>.001:raise ValueError("Native versus occurrence-context placement differs by "+str(err)+" mm")
         errors.append(err)
+        count=len(samples)
         if not samples:
             samples.append(coords)
         elif len(samples)==1:
@@ -31,6 +32,8 @@ def placement_witness(body,occ,point2d):
             a=[q-p for p,q in zip(samples[0],samples[1])];b=[q-p for p,q in zip(samples[0],coords)]
             cross=[a[(j+1)%3]*b[(j+2)%3]-a[(j+2)%3]*b[(j+1)%3] for j in range(3)]
             if math.hypot(*cross)/math.hypot(*a)>1e-6:samples.append(coords)
+        if world_points is not None and len(samples)>count:
+            world_points.append([10*v for v in observed.asArray()])
     n=body.vertices.count
     for ix in dict.fromkeys([i for i in (0,n//2,n-1) if 0<=i<n]):
         v=body.vertices.item(ix);other=v.createForAssemblyContext(occ) if occ else v
@@ -59,6 +62,49 @@ def placement_witness(body,occ,point2d):
     return max(errors),samples
 
 
+def inspect_pose(design, pose, events):
+    """Apply only the commissioned commands and read every coordinate at the observed stage."""
+    import math
+    if not pose.get("id") or not isinstance(pose.get("joints"), list):
+        raise ValueError("Identify the inspected joint pose")
+    commands = pose["joints"]
+    default = "command-response" if commands else "archive-rest"
+    stage = pose.get("stage", default)
+    if (stage not in ("archive-rest", "command-response", "after-recompute", "captured-recompute")
+            or (stage == "archive-rest") != (not commands)
+            or (pose["id"] == "saved" and commands)):
+        raise ValueError("Archive rest needs an untouched cold issue; commanded poses need an observed motion stage")
+    targets = {}
+    root = design.rootComponent
+    for item in commands:
+        group = item["group"]
+        if not isinstance(group, str) or not group or group in targets or item["type"] not in ("joint", "asBuilt"):
+            raise ValueError("Identify each distinct commissioned joint command")
+        collection = root.allJoints if item["type"] == "joint" else root.allAsBuiltJoints
+        matching = [j for j in collection if j.name == item["name"] and
+                    (j.assemblyContext.fullPathName if j.assemblyContext else "@root") == item["occurrence"]]
+        attr = item["coordinate"]
+        value = item["nativeValue"]
+        if len(matching) != 1 or attr not in ("slideValue", "rotationValue") or not math.isfinite(value):
+            raise ValueError("Ambiguous or invalid requested native joint coordinate")
+        joint = matching[0]
+        targets[group] = (joint, attr, value, getattr(joint.jointMotion, attr))
+    for joint, attr, value, _ in targets.values():
+        setattr(joint.jointMotion, attr, value)
+        events()
+    if stage == "captured-recompute":
+        if not design.snapshots.hasPendingSnapshot or design.snapshots.add() is None:
+            raise ValueError("A captured-position claim needs a new pending snapshot in the disposable document")
+    if stage in ("after-recompute", "captured-recompute"):
+        if not design.computeAll():
+            raise ValueError("Fusion could not complete the required recompute")
+        events()
+    values = {group: {"before": before, "observed": getattr(joint.jointMotion, attr)}
+              for group, (joint, attr, _, before) in targets.items()}
+    # Keep the actual readback, including a return to rest. The reviewer compares it to the plan.
+    return {"stage": stage, "coordinates": values}
+
+
 def capture(app, archive, output, *, batch=256, pose=None, retry_pairs=(), checkpoint=None):
     import adsk.fusion
     import adsk.core
@@ -76,21 +122,7 @@ def capture(app, archive, output, *, batch=256, pose=None, retry_pairs=(), check
         root = design.rootComponent
         brep = adsk.fusion.TemporaryBRepManager.get()
         pose=pose or {"id":"saved","joints":[]}
-        if not pose.get("id") or not isinstance(pose.get("joints"),list):
-            raise ValueError("Identify the inspected joint pose")
-        for item in pose["joints"]:
-            collection=root.allJoints if item.get("type")=="joint" else root.allAsBuiltJoints
-            matching=[j for j in collection if j.name==item["name"] and
-                    (j.assemblyContext.fullPathName if j.assemblyContext else "@root")==item["occurrence"]]
-            if len(matching)!=1 or item["coordinate"] not in ("slideValue","rotationValue"):
-                raise ValueError("Ambiguous or unsupported native joint")
-            native_value=item["nativeValue"]
-            if not math.isfinite(native_value):
-                raise ValueError("Nonfinite requested native joint coordinate")
-            setattr(matching[0].jointMotion,item["coordinate"],native_value)
-            adsk.doEvents()
-            if abs(getattr(matching[0].jointMotion,item["coordinate"])-native_value)>1e-8:
-                raise ValueError("Native joint did not reach the requested pose")
+        stage_evidence = inspect_pose(design, pose, adsk.doEvents)
         rows = []
         proxies=[]
         operands=[]
@@ -117,10 +149,11 @@ def capture(app, archive, output, *, batch=256, pose=None, retry_pairs=(), check
                     raise ValueError("Failed native placement: " + repr(key))
                 box = placed.preciseBoundingBox
                 proxy=body.createForAssemblyContext(occ) if occ else body
-                error,local_sites=placement_witness(body,occ,adsk.core.Point2D)
+                world_sites=[]
+                error,local_sites=placement_witness(body,occ,adsk.core.Point2D,world_sites)
                 proxies.append(proxy)
                 operands.append((body,occ.transform2 if occ else None))
-                rows.append({"visible":proxy.isVisible,"worldVertexErrorMm":error,"placementPointsCm":local_sites,"topologicalVertices":body.vertices.count,"path": path, "name": body.name, "revision": body.revisionId,
+                rows.append({"visible":proxy.isVisible,"worldVertexErrorMm":error,"placementPointsCm":local_sites,"observedWorldPointsMm":world_sites,"topologicalVertices":body.vertices.count,"path": path, "name": body.name, "revision": body.revisionId,
                     "bodyLight": body.isLightBulbOn, "occurrenceVisible": occ.isVisible if occ else True,
                     "worldTransform": transform, "boundsMm": [10*v for v in (*box.minPoint.asArray(), *box.maxPoint.asArray())]})
         if not rows or sha(archive) != native_hash:
@@ -131,7 +164,7 @@ def capture(app, archive, output, *, batch=256, pose=None, retry_pairs=(), check
             [native_hash,pose,app.version,sha(Path(__file__)),sha(Path(contact.__file__))],batch,retry_pairs)
         if not native["complete"]:
             return {"complete":False,"completedPairs":len(native["pairs"]),"candidatePairs":native["candidatePairs"]}
-        receipt = {"contacts":native,"pose":pose,"documentId":opened.creationId,"rootComponentId":root.id,
+        receipt = {"contacts":native,"pose":pose,"stageEvidence":stage_evidence,"documentId":opened.creationId,"rootComponentId":root.id,
             "rootRevision":root.revisionId,"dataVersion":opened.dataFile.versionNumber if opened.dataFile else None,
             "schema": "agent-frc/fusion-body-census@1", "archiveSha256": native_hash,
             "programSha256": sha(Path(__file__)), "fusionVersion": app.version,

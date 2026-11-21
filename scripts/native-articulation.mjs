@@ -54,6 +54,7 @@ export function compareNativeArticulation(expected,observed){
   else d.witnesses.forEach((w,i)=>{
    const where=`${p}/witnesses/${i}`;
    if(!record(w)){invalid('witness-invalid',where,'Witness object required');return;}
+   if('stage' in w || 'stageEvidence' in w || (record(w.reopen) && 'stage' in w.reopen))invalid('stage-unsupported',where,'Use the station-signed native pose census for an observation-stage claim');
    if(!joints.has(w.jointId))invalid('unknown-joint',where+'/jointId','Witness joint must be declared');else witnessed.add(w.jointId);
    if(!text(w.poseId))invalid('pose-id-invalid',where+'/poseId','Named pose required');
    const key=JSON.stringify([w.jointId,w.poseId]);
