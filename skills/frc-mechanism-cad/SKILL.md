@@ -14,13 +14,15 @@ When a design agent creates, inserts or moves a part, run the [checked placement
 
 After a feature batch or saved revision, [check timeline health, physical seats, mass and center of mass](../../docs/fusion-design-checkpoints.md). Carry changes in load or timing into the project power and route comparisons.
 
+[Check the collision shape the solver actually used](../../docs/collider-comparison.md) against the issued article and its mounted poses before carrying a contact result into design.
+
 Before sizing an actuator from simulation, [compare the actual articles moving with each joint](../../docs/articulated-mass.md). Verify the signed axis, moving mass, center and rotary inertia at the selected configuration. Keep unknown purchased internals visible.
 
 For each purchased part, look for the manufacturer's model of the exact part number, generation and installed configuration. Import an official STEP into Fusion when the supplier provides that format. Verify units, revision, mounting datums, occurrence count and installed orientation against the manufacturer drawing. Record the source, retrieval date, configuration, file digest and redistribution terms in the project's parts register. Keep restricted geometry in the authorized library and give students retrieval and relink instructions.
 
 External shape authoring requires a project-specific reason why that operation is impractical in Fusion, the result it enables, and a path back into the student assembly. For a large scripted family of candidates, for example, preserve the generator and its inputs and import the chosen solid into Fusion. Where an exact purchased model cannot be obtained, record the failed lookup or mismatch, mark the replacement as a proxy, cite its dimensional basis and identify which design decisions remain open.
 
-Before selecting parts or combining design changes, use the [assembly accounting check](../../docs/assembly-accounting.md) to reconcile installed instances, supplied articles and inspection mass. When a later revision replaces a candidate part, select the installing change first and record each revision’s own signed net mass. Trace the comparison limit to the project’s selected rule or budget before relying on a final margin.
+Before selecting parts or combining design changes, use the [assembly accounting check](../../docs/assembly-accounting.md) to reconcile installed instances, supplied articles and inspection mass. When a later revision replaces a candidate part, select the installing change first and record each revisionâ€™s own signed net mass. Trace the comparison limit to the projectâ€™s selected rule or budget before relying on a final margin.
 
 For an issued engineering assembly, [reconcile the full reopened physical-material inventory with the configured BOM](../../docs/engineering-material-mass.md). Separate stock grades, complete purchased articles and display or fixture bodies. Reconstruct a critical fastened interface from the drawing and loose parts before making a fabrication claim.
 

@@ -67,3 +67,5 @@ Record dimensionality, supply-voltage assumptions, drivetrain reductions and ene
 Pair open, blocked and displaced-obstacle trajectories for each supported motion mode. Demonstrate that the obstacle is registered and reachable using a physical control; independently check finite-piece geometry at a discriminating witness. Record target callbacks separately from physical contact and rule outcomes. A callback alone cannot establish an unobstructed shot.
 
 Preserve the selected model's gravity, drag, shape proxy and time discretization in the record. Reject or label unsupported obstructed-shot scenarios and repeat the controls after engine or API changes. These are reusable test requirements; the plugin does not implement an airborne collision solver or qualify every engine version.
+
+[Compare effective solver contact geometry and mounting positions with the issued CAD](collider-comparison.md) before reusing a simulated transfer.
