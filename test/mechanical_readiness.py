@@ -88,7 +88,7 @@ class Readiness(unittest.TestCase):
     def test_blind_and_through_fastener_commissioning(self):
         from fastener_stack import measure as check, review as roster_check
         from OCP.BRepAlgoAPI import BRepAlgoAPI_Cut, BRepAlgoAPI_Fuse
-        from OCP.BRepPrimAPI import BRepPrimAPI_MakeCylinder
+        from OCP.BRepPrimAPI import BRepPrimAPI_MakeCone, BRepPrimAPI_MakeCylinder
         from OCP.gp import gp_Ax2, gp_Dir, gp_Pnt
 
         def cylinder(r, start, end):
@@ -114,6 +114,22 @@ class Readiness(unittest.TestCase):
                        internalProfile=dict(representation="minor",form="original V",pitchMm=.7,hand="right",
                            minorDiameterMm=[3.98,4.02],pitchDiameterMm=[4.15,4.17],majorDiameterMm=[4.55,4.60]))
         self.assertEqual(check(solids,case,drawing)["status"],"pass")
+        mouth_axis = gp_Ax2(gp_Pnt(0,0,4),gp_Dir(0,0,1))
+        chamfer = BRepPrimAPI_MakeCone(mouth_axis, 2.25, 2, .25).Shape()
+        chamfered = dict(solids,h=BRepAlgoAPI_Cut(solids["h"],chamfer).Shape())
+        specified = dict(drawing,entranceChamferDepthMm=[.24,.26])
+        fit = check(chamfered,case,specified)
+        self.assertEqual(fit["status"],"pass")
+        self.assertAlmostEqual(fit["pilotStartFromSeatMm"],4.25,places=5)
+        self.assertAlmostEqual(fit["cylinderWallLengthMm"],9.75,places=5)
+        for incomplete in (drawing, dict(specified,threadFitBasis=""), dict(specified,femaleLeadMm=[.1,.2])):
+            self.assertEqual(check(chamfered,case,incomplete)["status"],"open")
+        bottomed = check(dict(chamfered,s=screw(15)),case,dict(specified,underHeadLengthMm=[15,15],threadFitBasis=""))
+        self.assertEqual(bottomed["status"],"fail")
+        self.assertGreater(bottomed["sharedLowerBoundMm3"],0)
+        stepped = dict(solids,h=BRepAlgoAPI_Cut(solids["h"],cylinder(2.25,3,4.25)).Shape())
+        with self.assertRaisesRegex(ValueError,"commissioned mouth"):
+            check(stepped,case,specified)
         thin = BRepAlgoAPI_Cut(cylinder(5,0,.5),cylinder(2.2,-1,5)).Shape()
         self.assertEqual(check(dict(solids,p=thin),case,drawing)["status"],"fail")
         spacer=BRepAlgoAPI_Cut(cylinder(5,.5,4),cylinder(2.2,-1,5)).Shape()
