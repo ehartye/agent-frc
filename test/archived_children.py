@@ -23,12 +23,14 @@ def run(cli, project, base, vault, temp, parent):
     rows.append(dict(occurrence="@root",component="source",partNumber="",matrixCm=matrix,solids=[],otherBodies=[]))
     def edge(name,left,right):
         return dict(name=name,one=left,two=right,motion="rigid",suppressed=False)
-    edges=[edge("link",paths[0],paths[1]),edge("mount",paths[0],paths[2])]
+    edges=[dict(edge("link",paths[0],paths[1]),motion="revolute",owner="@root",kind="joint",rotationRad=.23),
+           dict(edge("slide",paths[0],paths[1]),motion="slider",owner="@root",kind="asBuilt",slideCm=1.4),
+           edge("mount",paths[0],paths[2])]
     roster=dict(sourceArchive=parent,pose="saved",rootPath="@root",fusion="test",
                 occurrences=rows,joints=edges,rigidGroups=[],allBodies=3)
     inputs={"parentRoster":write_input("roster.json",roster)}
     done=dict(sourceArchive=parent,fusion="test",status="complete",sourceUnchanged=True,
-              roster=inputs["parentRoster"]["sha256"],bodies=3,joints=2,occurrences=3)
+              roster=inputs["parentRoster"]["sha256"],bodies=3,joints=3,occurrences=3)
     inputs["rosterTerminal"]=write_input("roster-terminal.json",done)
     recipe=write_input("export.py",b"# synthetic recipe")
     inputs["recipe"]=recipe
@@ -40,7 +42,7 @@ def run(cli, project, base, vault, temp, parent):
         f=write_input(f"part-{i}.f3d",f"test component {i}".encode())
         groups[path]=dict(occurrence=path,component="Stock",partNumber="P",matrixCm=matrix,bodies={"body":props},
                           cold={"body":deepcopy(props)},file=f["file"],sha256=f["sha256"])
-    manifest=dict(nativeParent=parent,configuration="parked",groups=groups,sourceJoints=edges[:1])
+    manifest=dict(nativeParent=parent,configuration="parked",groups=groups,sourceJoints=edges[:2])
     inputs["manifest"]=write_input("manifest.json",manifest)
     report=dict(job="example",parent=parent,build="test",parentUnchanged=True,restored=True,
                 exports={"subset":dict(coldManifestSha256=inputs["manifest"]["sha256"],exportedBodies=2)})
@@ -66,6 +68,8 @@ def run(cli, project, base, vault, temp, parent):
     for field,value in (("matrixCm",[0]*16),("cold",{}),("occurrence",paths[-1])):
         bad=deepcopy(manifest);bad["groups"][paths[0]][field]=value;rejected(bad)
     rejected(dict(manifest,sourceJoints=[]))
+    for i,key,value in [(0,"rotationRad",.33),(1,"slideCm",1.5),(0,"suppressed",True),(0,"owner",paths[1])]:
+        bad=deepcopy(manifest);bad["sourceJoints"][i][key]=value;rejected(bad)
     result=invoke(request)
     assert result.returncode==0,result.stderr
     assert invoke(request).returncode==0 and seal.read_bytes()==preserved

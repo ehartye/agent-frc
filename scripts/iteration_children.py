@@ -145,6 +145,16 @@ def selection(entry, vault):
     require(len(emitted)==len(internal)==len(edges) and set(emitted)==edges.keys(), "Internal native joint edges differ")
     for row in manifest["sourceJoints"]:
         original=edges[edge_key(row)]
+        for prop in ("owner","kind","suppressed"):
+            if prop in row:
+                require(type(row[prop]) is type(original[prop]) and row[prop]==original[prop],
+                        f"Source joint {prop} differs")
+        for prop in ("rotationRad","slideCm"):
+            if prop in row or ("owner" in row and prop in original):
+                require(real(row.get(prop)) and real(original.get(prop)) and
+                        abs(row[prop]-original[prop])<=1e-7,f"Source joint {prop} differs")
+        if "owner" in row or "kind" in row:
+            require(all(k in row for k in ("owner","kind","suppressed")), "Incomplete native joint state")
         if "parkedRad" in row:
             require(real(row["parkedRad"]) and real(original["rotationRad"]) and
                     abs(row["parkedRad"]-original["rotationRad"])<=1e-7,"Source joint coordinate differs")
