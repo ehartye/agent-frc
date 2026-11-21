@@ -12,6 +12,8 @@ test('complete mechanical review with geometry and adverse-case controls', {skip
   const py=process.env.PYTHON ?? (process.platform==='win32'?'python':'python3');
   const p=fileURLToPath(new URL('./mechanical_readiness.py',import.meta.url));
   execFileSync(py,[p],{stdio:'pipe'});
+  const keyedTorque = fileURLToPath(new URL('../examples/mechanical-readiness/keyed-torque.py', import.meta.url));
+  execFileSync(py, ['-B', keyedTorque], {stdio:'pipe'});
 });
 
 test('verified public deployment can preserve the previous robot while changing only a field lab',async t=>{
