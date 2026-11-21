@@ -168,6 +168,15 @@ def evaluate_inputs(root,study, geometry=None):
         pairs[pair]=(gap,vol)
     require(set(pairs)==required,"Incomplete broad-phase pair measurements")
 
+    for group in geometry.get("repeatedInterfaceDisagreements", []):
+        observations = group["observations"]
+        require(group["status"] == "open" and len(observations) >= 2 and
+                all(pairs[tuple(sorted(row["pair"]))][1] == row["worldCommonMm3"] for row in observations),
+                "Repeated-interface observations must identify the measured placed pairs")
+        missing("interference", [row["pair"] for row in observations],
+                "Identical solid definitions at the same relative placement yielded different common volumes. "
+                "Reconcile the named pairs against the native issue and independent geometry evidence.")
+
     cache={}
     def witness(ref):
         file=pinned(root,ref)

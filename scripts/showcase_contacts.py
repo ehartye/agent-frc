@@ -85,6 +85,65 @@ def candidate_pairs(bodies,tolerance,extra):
     return pairs
 
 
+def repeated_interface_disagreements(shapes, pairs):
+    """Compare repeated installed interfaces without equating names or copies of geometry."""
+    from OCP.BRepAlgoAPI import BRepAlgoAPI_Common
+    from component_shape import boolean_measure
+
+    # STEP instance paths and display names can differ. Retain the actual shared
+    # OCCT definitions, orientation and exact relative rigid transform as the key.
+    definitions = {}
+    instances = {}
+    for name, shape in shapes.items():
+        placement = shape.Location()
+        transform = placement.Transformation()
+        if transform.IsNegative() or transform.ScaleFactor() != 1:
+            continue
+        token = (shape.TShape(), shape.Orientation())
+        identity = definitions.setdefault(token, len(definitions))
+        instances[name] = (identity, placement)
+
+    counts = Counter(identity for identity, _ in instances.values())
+    def matrix(location):
+        tr = location.Transformation()
+        return tuple(tr.Value(i, j) for i in range(1, 4) for j in range(1, 5))
+
+    groups = {}
+    for a, b, _, volume in pairs:
+        if a not in instances or b not in instances:
+            continue
+        left, lp = instances[a]
+        right, rp = instances[b]
+        if counts[left] < 2 or counts[right] < 2:
+            continue
+        if left > right:
+            a, b, left, right, lp, rp = b, a, right, left, rp, lp
+        relative = lp.Inverted().Multiplied(rp)
+        frame = matrix(relative)
+        if left == right and matrix(relative.Inverted()) < frame:
+            a, b, frame = b, a, matrix(relative.Inverted())
+        groups.setdefault((left, right, frame), []).append((a, b, volume))
+
+    disagreements = []
+    for group in groups.values():
+        volumes = [v for _, _, v in group]
+        if len(group) < 2 or math.isclose(min(volumes), max(volumes), rel_tol=1e-6, abs_tol=1e-8):
+            continue
+        a, b, _ = group[0]
+        inverse = shapes[a].Location().Inverted()
+        record = {"status": "open", "observations": [
+            {"pair": sorted((x, y)), "worldCommonMm3": v} for x, y, v in group],
+            "referencePair": [a, b]}
+        try:
+            value, valid = boolean_measure(shapes[a].Moved(inverse), shapes[b].Moved(inverse), BRepAlgoAPI_Common)
+            record.update(referenceCommonMm3=value if math.isfinite(value) else None,
+                          referenceTopologyValid=valid and math.isfinite(value) and value >= 0)
+        except (ValueError, RuntimeError) as exc:
+            record["referenceError"] = str(exc)
+        disagreements.append(record)
+    return disagreements
+
+
 def measure(path,tolerance,probes, *, volumes=False):
     if not math.isfinite(tolerance) or tolerance < 0:
         raise ValueError("Use a nonnegative distance tolerance in millimeters")
@@ -123,5 +182,10 @@ def measure(path,tolerance,probes, *, volumes=False):
                     raise ValueError("Invalid intersection volume: "+str((a,b)))
             row.append(volume)
         pairs.append(row)
-    return {"schema":"agent-frc/step-solid-intersections@1" if volumes else "agent-frc/step-solid-distances@1","method":"placed-step-distance-and-common-volume" if volumes else "placed-step-solid-distance-v1","units":"mm",
+    result={"schema":"agent-frc/step-solid-intersections@1" if volumes else "agent-frc/step-solid-distances@1","method":"placed-step-distance-and-common-volume" if volumes else "placed-step-solid-distance-v1","units":"mm",
             "toleranceMm":tolerance,"bodies":boxes,"nonSolidLeaves":surfaces,"pairs":pairs}
+    if volumes:
+        discrepancies=repeated_interface_disagreements(shapes,pairs)
+        if discrepancies:
+            result["repeatedInterfaceDisagreements"]=discrepancies
+    return result
