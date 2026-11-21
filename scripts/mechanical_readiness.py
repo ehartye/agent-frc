@@ -113,7 +113,7 @@ def scan(root, study):
     requests=component_inputs(root,study)
     if requests:
         from component_shape import compare_components
-        result["componentDifferences"]=compare_components(step,requests)
+        result["componentDifferences"]=compare_components(step,requests,interior_points=study.get("componentInteriorPointsMm"))
     if study.get("connections"):
         from mechanical_motion import bearing_area
         from showcase_contacts import load_solids
@@ -298,9 +298,11 @@ def evaluate_inputs(root,study, geometry=None):
                 finding("identity","fail",key,"Installed source neutral is not the registered component issue.")
             for solid in occ["solids"]:
                 delta=errors.get(solid)
-                if not delta or not all(number(delta.get(k)) and delta[k]>=0 for k in ("absentMm3","extraMm3")):
+                if delta and delta.get("measurementStatus"):
+                    missing("identity",solid,"Unresolved source-shape measurement: "+str(delta.get("reason","missing numerical evidence")))
+                elif not delta or not all(number(delta.get(k)) and delta[k]>=0 for k in ("absentMm3","extraMm3")):
                     missing("identity",solid,"The installed solid has no measured bidirectional shape difference.")
-                elif max(delta.values())>policy:
+                elif max(delta["absentMm3"],delta["extraMm3"])>policy:
                     finding("identity","fail",solid,"Installed solid differs from its exact component at the installed transform.")
         kind=article.get("kind")
         source=article.get("model")
