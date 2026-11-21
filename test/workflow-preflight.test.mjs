@@ -33,6 +33,9 @@ test('pre-push check follows the selected commit through the local workflow call
       return git('rev-parse','HEAD').trim();
     }
     const probe=rev=>spawnSync(process.execPath,[cli,project,'workflows',rev,lint],{encoding:'utf8'});
+    const nested=path.join(project,'example','.github','workflows');
+    mkdirSync(nested,{recursive:true});
+    writeFileSync(path.join(nested,'demo.yml'),called);
     const good=commit(caller,called);
     for(const [a,b,file] of [
       [caller.replace('on: push','on: [push'),called,'entry.yaml'],
@@ -41,9 +44,15 @@ test('pre-push check follows the selected commit through the local workflow call
     ]){
       const bad=commit(a,b);
       write(caller,called);
+      // The literal pushed commit remains authoritative even when local history substitutes a good tree.
+      git('replace',bad,good);
       const result=probe(bad);
       assert.equal(result.status,1,result.stdout+result.stderr);
       assert.ok((result.stdout+result.stderr).includes(file));
+      const subdir=spawnSync(process.execPath,[cli,path.join(project,'example'),'workflows',bad,lint],{encoding:'utf8'});
+      assert.equal(subdir.status,1);
+      assert.match(subdir.stderr,/project root/);
+      git('replace','-d',bad);
     }
     const ok=probe(good);
     assert.equal(ok.status,0,ok.stderr);

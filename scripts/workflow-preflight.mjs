@@ -8,9 +8,10 @@ import path from 'node:path';
 export function checkWorkflows(project, commit, executable) {
   if (!/^[a-f0-9]{40}$/.test(commit) || !path.isAbsolute(executable))
     throw Error('Supply the full Git commit and absolute path to your trusted actionlint executable');
-  const git = (...args) => execFileSync('git', ['-C', project, ...args], {maxBuffer:64*1024*1024});
+  const git = (...args) => execFileSync('git', ['--no-replace-objects', '-C', project, ...args], {maxBuffer:64*1024*1024});
+  if (git('rev-parse','--show-prefix').toString().trim()) throw Error('Use the project root');
   if (git('cat-file', '-t', commit).toString().trim() !== 'commit') throw Error('Select a Git commit');
-  const entries = git('ls-tree', '-r', '-z', commit).toString('utf8').split('\0').filter(Boolean);
+  const entries = git('ls-tree', '--full-tree', '-r', '-z', commit).toString('utf8').split('\0').filter(Boolean);
   const scratch = mkdtempSync(path.join(os.tmpdir(), 'frc-workflow-check-'));
   const workflows = [];
   try {
