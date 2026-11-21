@@ -44,7 +44,7 @@ def seal(root,record,key,kind,authority,archive,step):
 
 def export_current(app,project,new_issue,key):
     root=Path(project).resolve()
-    register=root/"cad/fusion-authority.json"
+    register=module("fusion_authority").register_path(root)
     issue=Path(new_issue).resolve()
     trusted(root,key)
     result=module("fusion_authority").export_issue(app,root,register,issue)
@@ -53,7 +53,7 @@ def export_current(app,project,new_issue,key):
 
 
 def measure_pose(app,project,lineage,new_output,key,station_folder,pose=None,batch=256):
-    root=Path(project).resolve();register=root/"cad/fusion-authority.json"
+    root=Path(project).resolve();register=module("fusion_authority").register_path(root)
     lineage=Path(lineage).resolve();output=Path(new_output).resolve()
     if not output.is_relative_to(root) or output.exists():
         raise ValueError("Choose a fresh project-owned native result file")

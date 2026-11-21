@@ -1,5 +1,7 @@
 # Resume a design investigation
 
+For a project with `iterations/active.json`, follow its active design root before recovering older records. After a decision to start over, use `frc-start-over` to preserve the evidence and open a fresh numbered design. [Design iterations](design-iterations.md)
+
 If the same difficulty keeps returning, reopen the design premise before tuning again. Name what must be physically true at the next action, the evidence that would contradict the working explanation, and a different way to achieve the objective. Keep the original failure available to compare designs. [Compare camera coverage with a different retention strategy](camera-reference.md#could-the-premise-be-wrong).
 
 When someone asks what to try next on an existing robot design, recover the decision that led to the current candidate. Use the project in front of you. A conversation may resume through setup, CAD, a saved blockout or a strategy review.

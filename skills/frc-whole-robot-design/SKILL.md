@@ -18,3 +18,5 @@ Run the [whole-robot comparison](../../docs/whole-robot-comparison.md) against c
 Use the student’s [saved role and refinement comparison](../../docs/whole-robot-comparison.md#test-a-refinement-against-the-selected-role) when revising an architecture. Read the actual window stock and role criterion. Show the before and after piece witnesses under the same peer setup, clock and source. If a shorter bench test addresses one interface, preserve that finding alongside the open full-robot requirement.
 
 When a role relies on a partner, [compare the complete alliance service chain](../../docs/alliance-completion.md) before selecting the robot architecture. Track the same piece from finite supply through delivery and reset on the match clock. Change partner availability and inspect which design completes more cycles.
+
+For a project with `iterations/active.json`, follow its active design root before recovering older records. After a decision to start over, use `frc-start-over` to preserve the evidence and open a fresh numbered design. [Design iterations](../../docs/design-iterations.md)

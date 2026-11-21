@@ -1,0 +1,13 @@
+{
+  "schema": "agent-frc/iteration-import@1",
+  "id": "drive-wheel",
+  "iteration": "new-study",
+  "sourceIteration": 1,
+  "evidenceId": "wheel",
+  "sourceSha256": "REPLACE_WITH_ARCHIVED_SHA256",
+  "destination": "cad/components/wheel.step",
+  "destinationSha256": "REPLACE_WITH_INSTALLED_SOURCE_SHA256",
+  "justification": "Exact hub interface remains in the selected layout.",
+  "changedConditions": "The revised module plate moves the installed wheel center.",
+  "revalidation": "Check cold world coordinates, shaft retention, running clearance and side load."
+}

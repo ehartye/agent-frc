@@ -205,9 +205,9 @@ def evaluate_inputs(root,study, geometry=None):
     if not study.get("authority") or not study.get("lineage"):
         missing("native","source of truth","Identify the authoritative latest Fusion design and its one-way STEP issue.")
     else:
-        from fusion_authority import verify
+        from fusion_authority import verify,register_path
         authority=pinned(root,study["authority"])
-        require(authority==(root/"cad/fusion-authority.json").resolve(),"A mechanical release must use the project's designated cad/fusion-authority.json")
+        require(authority==register_path(root).resolve(),"A mechanical release must use the project's designated cad/fusion-authority.json")
         lineage=verify(root,authority,pinned(root,study["lineage"]))
         require(lineage["archiveSha256"]==archive_sha and lineage["stepSha256"]==step_sha and
                 lineage["configuration"]==configuration,"Quality evidence must derive from the designated current Fusion source")

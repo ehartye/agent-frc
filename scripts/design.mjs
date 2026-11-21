@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
+import {checkDesignDestination} from './active-design.mjs';
 import {projectFrameProfile} from './project-frame-profile.mjs';
 import {frameDxf} from './frame-dxf.mjs';
 import path from 'node:path';
@@ -12,7 +13,7 @@ function readJson(file) {
   return JSON.parse(fs.readFileSync(file,'utf8').replace(/^\uFEFF/,''));
 }
 function load(file) { return assertDesign(readJson(file)); }
-function write(file,text){fs.writeFileSync(file,text,{encoding:'utf8',flag:'wx'})}
+function write(file,text){checkDesignDestination(file);fs.writeFileSync(file,text,{encoding:'utf8',flag:'wx'})}
 function handoff(a) {
   const checks = spatialChecks(a);
   return [
@@ -35,7 +36,7 @@ try{
  if(command==='new'){if(!input||rest.length)throw Error('Usage: design new output.json [project.json]');const project=out?readJson(out):{};const convention=projectFrameProfile(input);if(project.frameProfile===undefined&&convention!==undefined)project.frameProfile=convention;write(input,canonicalStringify(createDesign(project)));console.log('Created editable design artifact');}
  else if(command==='frame-basis'){if(!input||out)throw Error('Usage: design frame-basis input.json');console.log(JSON.stringify(frameReviewBasis(load(input)),null,2));}
  else if(command==='validate'){if(out)throw Error('Usage: design validate input.json');const a=load(input);console.log(JSON.stringify({valid:true,id:a.id,revision:a.revision,checks:spatialChecks(a),budget:rehearsalBudget(a)},null,2));}
- else if(command==='opening'){if(!out||rest.length!==1||!['on','off'].includes(rest[0]))throw Error('Usage: design opening input.json new-output.json on|off');const a=reviseDesign(load(input),x=>{x.operations[0].enabled=rest[0]==='on'});write(out,canonicalStringify(a));console.log('Saved new revision; prior checks invalidated');}
- else if(command==='export'){if(!out||rest.length)throw Error('Usage: design export input.json NEW-directory');const a=load(input),dir=path.resolve(out);fs.mkdirSync(dir);try{write(path.join(dir,'design.json'),canonicalStringify(a));write(path.join(dir,'geometry.json'),JSON.stringify(deriveGeometry(a),null,2)+'\n');write(path.join(dir,'blockout.scad'),exportCad(a));if(a.design.frameProfile)write(path.join(dir,'frame-plan.dxf'),frameDxf(deriveGeometry(a).framePlan));write(path.join(dir,'checks.json'),JSON.stringify({checks:spatialChecks(a),budget:rehearsalBudget(a)},null,2)+'\n');write(path.join(dir,'HANDOFF.md'),handoff(a));}catch(e){throw Error('Incomplete new export directory retained for inspection: '+e.message)}console.log('Exported editable source and spatial CAD handoff; no physical validation claimed');}
+ else if(command==='opening'){checkDesignDestination(input);if(!out||rest.length!==1||!['on','off'].includes(rest[0]))throw Error('Usage: design opening input.json new-output.json on|off');const a=reviseDesign(load(input),x=>{x.operations[0].enabled=rest[0]==='on'});write(out,canonicalStringify(a));console.log('Saved new revision; prior checks invalidated');}
+ else if(command==='export'){checkDesignDestination(input);if(!out||rest.length)throw Error('Usage: design export input.json NEW-directory');const a=load(input),dir=path.resolve(out);checkDesignDestination(dir);fs.mkdirSync(dir);try{write(path.join(dir,'design.json'),canonicalStringify(a));write(path.join(dir,'geometry.json'),JSON.stringify(deriveGeometry(a),null,2)+'\n');write(path.join(dir,'blockout.scad'),exportCad(a));if(a.design.frameProfile)write(path.join(dir,'frame-plan.dxf'),frameDxf(deriveGeometry(a).framePlan));write(path.join(dir,'checks.json'),JSON.stringify({checks:spatialChecks(a),budget:rehearsalBudget(a)},null,2)+'\n');write(path.join(dir,'HANDOFF.md'),handoff(a));}catch(e){throw Error('Incomplete new export directory retained for inspection: '+e.message)}console.log('Exported editable source and spatial CAD handoff; no physical validation claimed');}
  else throw Error('Usage: design new|frame-basis|validate|opening|export ...');
 }catch(e){console.error(e.message);process.exitCode=1}

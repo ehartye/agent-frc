@@ -15,7 +15,7 @@ def retry(app,project,lineage_file,previous_file,new_output,pairs,key,station_fo
     previous=Path(previous_file).resolve();target=Path(new_output).resolve()
     if not previous.is_relative_to(root) or not target.is_relative_to(root) or target.exists() or not pairs:
         raise ValueError("Use a previously signed project receipt, fresh output and named unresolved pairs")
-    register=root/"cad/fusion-authority.json";lineage=authority.verify(root,register,Path(lineage_file))
+    register=authority.register_path(root);lineage=authority.verify(root,register,Path(lineage_file))
     archive=authority.resolve(root,authority.load(lineage_file)["archive"])
     raw=json.loads(previous.read_bytes());signed=json.loads(previous.with_suffix(".native-signature.json").read_bytes())
     expected=dict(schema="agent-frc/native-station-witness@1",kind="native-contacts",authoritySha256=station.digest(register),

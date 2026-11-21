@@ -11,7 +11,7 @@ def capture(app,project,lineage_file,output,key):
     deploy=Path(__file__).with_name("fusion_issue_station.py")
     spec=importlib.util.spec_from_file_location("material_station",deploy)
     station=importlib.util.module_from_spec(spec);spec.loader.exec_module(station)
-    authority=station.module("fusion_authority");register=root/"cad/fusion-authority.json"
+    authority=station.module("fusion_authority");register=authority.register_path(root)
     lineage=authority.verify(root,register,Path(lineage_file))
     archive=authority.resolve(root,authority.load(lineage_file)["archive"])
     before=app.activeDocument;count=app.documents.count

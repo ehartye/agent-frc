@@ -1,0 +1,71 @@
+{
+  "schema": "agent-frc/design-restart@1",
+  "from": {
+    "number": 1,
+    "id": "original-study",
+    "scope": "Original handling assembly"
+  },
+  "to": {
+    "id": "new-study",
+    "scope": "Whole robot with a shorter custody chain",
+    "fusionId": "new-study"
+  },
+  "reason": "The measured handoff exhausted the role's service window.",
+  "preservation": "Record checked branches, active work, ignored results and private custody here.",
+  "evidence": [
+    {
+      "id": "baseline",
+      "kind": "design",
+      "file": "saved-design.f3d",
+      "sha256": "REPLACE_WITH_SHA256",
+      "source": "Identify the original revision and configuration"
+    },
+    {
+      "id": "overview",
+      "kind": "image",
+      "file": "assembly.png",
+      "sha256": "REPLACE_WITH_SHA256",
+      "source": "Identify the original revision and configuration"
+    },
+    {
+      "id": "trial",
+      "kind": "result",
+      "file": "results.json",
+      "sha256": "REPLACE_WITH_SHA256",
+      "source": "Identify the original revision and configuration"
+    },
+    {
+      "id": "wheel",
+      "kind": "element",
+      "file": "wheel.step",
+      "sha256": "REPLACE_WITH_SHA256",
+      "source": "Identify the original revision and configuration"
+    }
+  ],
+  "highlights": [
+    {
+      "finding": "The guide retained the original item through the turn.",
+      "evidence": [
+        "overview",
+        "trial"
+      ]
+    }
+  ],
+  "failures": [
+    {
+      "finding": "The transfer missed its deadline.",
+      "evidence": [
+        "trial"
+      ]
+    }
+  ],
+  "lessons": [
+    {
+      "observation": "Two stages waited for the same actuator.",
+      "nextChange": "Compare a single transfer under the same clock.",
+      "evidence": [
+        "trial"
+      ]
+    }
+  ]
+}

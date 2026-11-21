@@ -35,9 +35,56 @@ def load(file):
     return json.loads(file.read_text(encoding="utf-8-sig"))
 
 
+def active_design(root):
+    root = Path(root).resolve()
+    pointer = root/"iterations/active.json"
+    if not pointer.exists():
+        check(not any((root/"iterations").glob("[0-9][0-9][0-9]")), "Numbered designs are missing their active pointer")
+        for parent in root.parents:
+            if (parent/"iterations/active.json").is_file():
+                raise ValueError("Use the owning project checkout for Fusion authority")
+            if (parent/".git").exists(): break
+        return root, None
+    record = load(pointer)
+    number = record["number"]
+    check(type(number) is int and 1 <= number <= 999, "Invalid active iteration number")
+    relative = f"iterations/{number:03d}/design"
+    check(record.get("schema") == "agent-frc/active-iteration@1" and record["root"] == relative,
+          "Invalid active design location")
+    check(not any(int(f.name)>number for f in (root/"iterations").glob("[0-9][0-9][0-9]")),
+          "A later numbered design exists; verify the active pointer")
+    base = root/relative
+    opening = load(base.parent/"iteration.json")
+    check(base.resolve() == base and base.is_dir() and opening["id"] == record["id"] == opening["fusionId"]
+          and opening["number"] == number, "Active design root or identity differs")
+    return base, record
+
+
+def register_path(root):
+    return active_design(root)[0]/"cad/fusion-authority.json"
+
+
+def verify_active(root, register, spec):
+    base, active = active_design(root)
+    if active:
+        check(register.resolve() == register_path(root) and spec.get("id") == active["id"],
+              "Use the fresh Fusion authority of the active design iteration")
+        for number in range(1, active["number"]):
+            archive = load(root/f"iterations/{number:03d}/retrospective.json")
+            old = archive.get("fusionSource", {})
+            source = spec["source"]
+            if source["kind"] == "cloud":
+                check(source["dataFileId"] != old.get("dataFileId"), "Create a new Fusion cloud design")
+            else:
+                master = resolve(root, source["archive"])
+                check(master.is_relative_to(base) and source["archive"]["sha256"] not in
+                      {a["sha256"] for a in archive["evidence"].values()} | set(archive["files"].values()),
+                      "Create and save a new native root inside the active design")
+
+
 def verify(root, register, lineage):
     root=root.resolve()
-    spec=load(register);out=load(lineage)
+    spec=load(register);verify_active(root, register, spec);out=load(lineage)
     check(spec.get("schema")=="agent-frc/fusion-authority@1" and all(isinstance(spec.get(k),str) and spec[k].strip()
         for k in ("id","configuration","revision","basis")),"A single named Fusion source, configuration, revision and basis are required")
     check(out.get("schema")=="agent-frc/fusion-export-lineage@1" and out["authority"]==ref(root,register) and
@@ -76,7 +123,7 @@ def export_issue(app,root,register,issue):
     import adsk.fusion
     root=Path(root).resolve();register=Path(register).resolve();issue=Path(issue).resolve()
     check(register.is_relative_to(root) and issue.is_relative_to(root),"Keep private evidence under this project")
-    spec=load(register);source=spec["source"]
+    spec=load(register);verify_active(root, register, spec);source=spec["source"]
     issue.mkdir(parents=True,exist_ok=False)
     old=app.activeDocument
     temporary=None

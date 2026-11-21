@@ -38,3 +38,5 @@ Keep the project’s [frame and bumper outline](../../docs/frame-profile.md) wit
 Use the [Fusion authority and revision handoff](../../docs/fusion-authority.md) to establish the one current saved native design, the STEP exported from that design and the identity of the engineering evidence. Recheck the register when resuming in another checkout or before replacing a published view.
 
 Register the project’s changed and full test commands, verify the actual default branch and run the same commands locally and in CI. Choose branch-served or generated Pages when the team publishes CAD. [Set up project checks and release gates](../../docs/project-ci.md)
+
+For a project with `iterations/active.json`, follow its active design root before recovering older records. After a decision to start over, use `frc-start-over` to preserve the evidence and open a fresh numbered design. [Design iterations](../../docs/design-iterations.md)
