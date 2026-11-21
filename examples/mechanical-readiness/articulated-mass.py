@@ -30,11 +30,11 @@ def make(root):
     reference = write(root, "reference.json", dict(joint, issueFile=issue, sources=[issue, observations],
                                                    members=rows, omissions=[]))
     for case, group in (("matched", names[:2]), ("swapped", names[2:])):
-        roles = [dict(id=n, role="moving" if n in group else "fixed") for n in names]
+        roles = [dict(id=n, role="moving" if n in group else "fixed", massBasis="model-assumption") for n in names]
         total = dict(massKg=.012, centerM=[0,0,0], axisKgM2=.0000305)
         model = write(root, case+"-model.json", dict(total, assignments=roles))
         sim = write(root, case+"-observation.json", dict(joint, sources=[model], **total,
-                    members=roles, contributingIds=group, massBases=["model-assumption"]))
+                    members=roles, contributingIds=group))
         write(root, case+".json", dict(schema="agent-frc/articulated-mass@1", reference=reference,
               simulation=sim, tolerances=dict(massKg=1e-9, centerM=1e-9, axisKgM2=1e-12,
               axisDirection=1e-8, originM=1e-9, coordinate=1e-8)))

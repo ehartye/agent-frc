@@ -40,9 +40,14 @@ class ArticulatedMass(unittest.TestCase):
         self.ref["omissions"] = ["inner rings"]
         self.assertEqual(self.evaluate()["status"], "open")
         self.ref["omissions"].clear()
-        self.sim["massBases"] = ["measured"]
+        self.ref["members"][0]["massBasis"] = "supplier-nominal"
+        self.ref["members"][1]["massBasis"] = "measured"
+        self.sim["members"][0]["massBasis"] = "measured"
+        self.sim["members"][1]["massBasis"] = "supplier-nominal"
         self.assertEqual(self.evaluate()["status"], "mismatch")
-        self.sim["massBases"] = ["model-assumption"]
+        self.assertEqual(len([c for c in self.evaluate()["checks"] if c["field"]=="mass basis" and c["status"]=="mismatch"]), 2)
+        for expected, obs in zip(self.ref["members"],self.sim["members"]):
+            obs["massBasis"] = expected["massBasis"]
         self.sim["axisUnit"] = [0,0,-1]
         self.sim["unit"] = "deg"
         self.assertEqual({c["field"] for c in self.evaluate()["checks"] if c["status"]=="mismatch"},
@@ -81,8 +86,8 @@ class ArticulatedMass(unittest.TestCase):
         mass=.02
         self.ref["members"]=[dict(id=k, role="moving", massKg=mass, massBasis="density-model",
                                   homogeneous=True, solid={"name":k,"identity":v}) for k,v in ids.items()]
-        self.sim.update(members=[dict(id=k,role="moving") for k in ids],contributingIds=list(ids),
-                        massBases=["density-model"],massKg=.04, centerM=[.01,.005,.005],
+        self.sim.update(members=[dict(id=k,role="moving",massBasis="density-model") for k in ids],contributingIds=list(ids),
+                        massKg=.04, centerM=[.01,.005,.005],
                         axisKgM2=sum(mass*(.01**2/6+x**2+.005**2) for x in [.005,.015]))
         self.assertEqual(self.evaluate()["status"],"matched")
         self.ref["members"][0]["solid"]["identity"]["instance"]="wrong"

@@ -182,9 +182,16 @@ def review(root, study):
         scope = None
     else:
         scope = subtotal(rows, coverage, measured, origin, axis, rotary)
-        require(isinstance(sim["massBases"], list) and all(b in BASES for b in sim["massBases"]),
-                "Declare the source basis for the simulated mass")
-        check("mass basis", "matched" if set(sim["massBases"]) == set(scope["massBases"]) else "mismatch")
+        for key in sorted(coverage):
+            basis = observed[key].get("massBasis")
+            require(basis is None or basis in BASES, "Unrecognized mass basis for "+key)
+            expected = rows[key]["massBasis"]
+            state = "open" if basis in (None, "unknown") or expected == "unknown" else (
+                "matched" if basis == expected else "mismatch")
+            if state != "matched":
+                check("mass basis", state, id=key, expected=expected, observed=basis)
+        if not any(c["field"] == "mass basis" for c in checks):
+            check("mass basis", "matched")
         for field in ("massKg", "centerM", "axisKgM2"):
             value = sim.get(field)
             if field == "axisKgM2" and not rotary:
