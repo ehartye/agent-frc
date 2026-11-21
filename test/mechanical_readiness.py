@@ -16,6 +16,54 @@ from spatial_operating_cases import SpatialOperatingCases
 
 
 class Readiness(unittest.TestCase):
+    def test_service_removals_preserve_one_complete_extraction_history(self):
+        try:
+            from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox
+        except ImportError:
+            self.skipTest("Requires OpenCascade")
+        from OCP.STEPControl import STEPControl_AsIs, STEPControl_Writer
+        from OCP.gp import gp_Pnt
+        from mechanical_fixture import pin
+        from mechanical_motion import bounds, evaluate
+        from showcase_contacts import load_solids
+
+        with TemporaryDirectory() as folder:
+            root = Path(folder)
+            writer = STEPControl_Writer()
+            for x in (0, 10, 20, 30):
+                solid = BRepPrimAPI_MakeBox(gp_Pnt(x, 0, 0), 2., 2., 2.).Shape()
+                writer.Transfer(solid, STEPControl_AsIs)
+            writer.Write(str(root / "service.step"))
+            shapes, _ = load_solids(root / "service.step")
+            first, second, panel, _ = sorted(shapes, key=lambda n: bounds(shapes[n])[0])
+            study = dict(schema="agent-frc/mechanical-motion@1", step=pin(root, "service.step"))
+
+            def pull(name, group, removed=None):
+                return dict(id=name, basis="Lift the selected stock vertically", stage="service",
+                            extract=group, removed=removed or {}, minGapMm=.1,
+                            moves={part: [dict(kind="translation", travelMm=[0, 0, 10])] for part in group})
+
+            left = pull("first", [first])
+            right = pull("second", [second])
+            both = pull("pair", [first, second])
+            following = pull("next", [second], {first: "first"})
+            alternatives = [left, right, both, following]
+            for previous in ({first: "first", second: "next"}, {first: "pair", second: "pair"}):
+                final = pull("panel", [panel], previous)
+                result = evaluate(root, dict(study, cases=[*alternatives, final]))
+                self.assertEqual([(r["status"], r["extracted"]) for r in result["cases"]],
+                                 [("pass", sorted(case["extract"])) for case in [*alternatives, final]])
+
+            invalid = {
+                "missing grouped member": {first: "pair"},
+                "missing earlier removal": {second: "next"},
+                "merged independent removals": {first: "first", second: "second"},
+                "future extraction": {first: "later"},
+            }
+            for reason, previous in invalid.items():
+                with self.subTest(reason=reason), self.assertRaisesRegex(ValueError, "complete state"):
+                    evaluate(root, dict(study, cases=[*alternatives, pull("panel", [panel], previous)]))
+
     def test_axial_obstruction_requires_strict_coverage_and_keeps_separate_seats(self):
         import runpy
         exercise=runpy.run_path(str(SCRIPTS.parent/"examples/mechanical-readiness/axial-bearing-stack.py"))
