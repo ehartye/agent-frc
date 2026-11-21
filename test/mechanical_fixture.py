@@ -23,7 +23,20 @@ def pin(root,name):
 
 def fixture(root,source="fixture.step",assets=(),archive_name="test.f3d", measured=None):
     if not (root/source).exists():
-        (root/source).write_text("ISO-10303-21; synthetic unit test input",encoding="ascii")
+        from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox
+        from OCP.gp import gp_Pnt
+        from OCP.STEPCAFControl import STEPCAFControl_Writer
+        from OCP.STEPControl import STEPControl_AsIs
+        from OCP.TCollection import TCollection_ExtendedString
+        from OCP.TDataStd import TDataStd_Name
+        from OCP.TDocStd import TDocStd_Document
+        from OCP.XCAFDoc import XCAFDoc_DocumentTool
+        doc=TDocStd_Document(TCollection_ExtendedString("BinXCAF"))
+        shapes=XCAFDoc_DocumentTool.ShapeTool_s(doc.Main())
+        for x,name in ((0,"frame"),(10,"block")):
+            label=shapes.AddShape(BRepPrimAPI_MakeBox(gp_Pnt(x,0,0),10.,10.,10.).Shape(),False)
+            TDataStd_Name.Set_s(label,TCollection_ExtendedString(name))
+        writer=STEPCAFControl_Writer();writer.Transfer(doc,STEPControl_AsIs);writer.Write(str(root/source))
     if not (root/archive_name).exists():
         with zipfile.ZipFile(root/archive_name,"w") as file:
             file.writestr("FusionAssetName/Manifest.xml","Synthetic reopen receipt for a unit test")
@@ -139,9 +152,12 @@ def fixture(root,source="fixture.step",assets=(),archive_name="test.f3d", measur
     study.update(authority=authority,lineage=write(root,"test-lineage.json",dict(schema="agent-frc/fusion-export-lineage@1",archive=native,step=step,
         authority=authority,id="bench",revision="r1",configuration=bind["configuration"],nativeConfiguration="unconfigured",exporterSha256=digest(SCRIPTS/"fusion_authority.py"),
         inspectedAt="captured test",dirty=False,externalReferences=[],policy="registered-offline-archive")))
+    part=labels[1];site=[[0,0,0],[10,0,0],[0,10,0]]
+    purchase_mount=dict(occurrence=part,toleranceMm=.001,basis="Three corners from the synthetic mounting drawing",
+        features=[dict(solid=part,body=part,localMm=p,worldMm=[p[0]+poses[1][3],p[1],p[2]]) for p in site])
     study["operatingRequirements"]={**write(root,"fixture-commissioning.json",dict(operatingIntent=dict(authorityId="bench",configuration=bind["configuration"],
         mode="articulated",basis="Independent fixture travel requirement",motionRanges={"slide":[0,10]},
-        nativeCoordinates={"slide":dict(type="joint",occurrence="@root",name="slide",coordinate="slideValue")},transferMissions=[],numericalInterfaces={},structuralRoutes={},mountDatums=[],externalIssues=[]))),"pointer":"/operatingIntent"}
+        nativeCoordinates={"slide":dict(type="joint",occurrence="@root",name="slide",coordinate="slideValue")},transferMissions=[],numericalInterfaces={},structuralRoutes={},mountDatums=[purchase_mount],externalIssues=[]))),"pointer":"/operatingIntent"}
     study["transferClaims"]={}
     study["externalIssues"]=[]
     if measured:
