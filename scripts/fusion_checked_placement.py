@@ -78,8 +78,11 @@ def verify_fit(root, interface, accepted_sha256):
     record=json.loads(data)
     require(record.get("schema")=="agent-frc/placement-fit@1" and record.get("acceptedSha256")==accepted_sha256
             and sorted(record["bodies"])==sorted(interface["bodies"])
+            and record.get("spatialFit")==interface.get("spatialFit")
             and all(record[k]==interface[k] for k in ("minCommonMm3","maxCommonMm3","basis")),
             "Commissioned fit differs from this baseline, body pair, basis or limits")
+    if "spatialFit" in interface:
+        sibling("spatial_fit").verify_basis(root,record["sources"],interface["spatialFit"],accepted_sha256)
 
 
 def inspect_proposal(before, after, request, measure, same_shape=None, *, accepted_sha256=None):
@@ -146,7 +149,13 @@ def inspect_proposal(before, after, request, measure, same_shape=None, *, accept
                 and pair not in rules and isinstance(item.get("basis"),str) and item["basis"].strip(),"Unbound or ambiguous placement interface")
         require(kind in ("clearance","bearing","fit"),"Unknown interface disposition")
         limits={"clearance":{"minGapMm"},"bearing":{"maxGapMm"},"fit":{"minCommonMm3","maxCommonMm3"}}[kind]
-        require(set(item)=={"kind","basis","bodies",*limits,*(["evidence"] if kind=="fit" else [])}
+        spatial=item.get("spatialFit")
+        if spatial is not None:
+            require(kind=="fit" and spatial["bodies"]==item["bodies"] and spatial["host"]==spatial["bodies"][1]
+                    and spatial["expectedCommonMm3"]==[item["minCommonMm3"],item["maxCommonMm3"]]
+                    and spatial["representation"]=="external-thread/smooth-pilot" and spatial["basis"]==item["basis"],
+                    "Spatial fit must commission the exact modeled male, smooth pilot, limits and basis")
+        require(set(item)=={"kind","basis","bodies",*limits,*(["evidence"] if kind=="fit" else []),*(["spatialFit"] if spatial is not None else [])}
                 and all(nonnegative(item[k]) for k in limits),"Unexpected or missing pair-specific limit")
         if kind=="clearance":
             require(item["minGapMm"]>0,"Specify the required positive clearance")
@@ -172,9 +181,12 @@ def inspect_proposal(before, after, request, measure, same_shape=None, *, accept
             report["broadPhaseClear"]+=1
             continue
         record={"bodies":pair,"interface":rule.get("kind","nonmating"),"rule":rule}
+        spatial_status=None
         try:
-            values=measure(a,b)
+            values=measure(a,b,rule["spatialFit"]) if "spatialFit" in rule else measure(a,b)
             record.update(values)
+            if "spatialFit" in rule:
+                spatial_status,record["spatialReason"]=sibling("spatial_fit").native_result(values,rule["spatialFit"])
             v,w=values["interferenceMm3"],values["temporaryCommonMm3"]
             require(nonnegative(v) and nonnegative(w),"Missing or invalid intersection measurement")
             is_fit=rule.get("kind")=="fit"
@@ -189,6 +201,8 @@ def inspect_proposal(before, after, request, measure, same_shape=None, *, accept
         except (RuntimeError,ValueError,KeyError,TypeError) as error:
             status="inconclusive"
             record["error"]=str(error)
+        if spatial_status=="fail": status="blocked"
+        elif spatial_status=="open" and status=="pass": status="inconclusive"
         record["status"]=status
         report["measured"].append(record)
         if status=="blocked" or (status=="inconclusive" and report["status"]=="pass"):
@@ -259,11 +273,14 @@ def checked_placement(app, accepted_archive, accepted_sha256, output_archive, re
             require(not doc.documentReferences.count and not any(o.isReferencedComponent for o in design.rootComponent.allOccurrences),
                     "The proposed self-contained placement introduced an external reference")
             after=capture(design,placement_witness)
-            def measure(a,b):
-                row=measure_pair(design,after["bodies"],after["proxies"],after["solids"],a,b)
+            def measure(a,b,spatial_fit=None):
+                row=measure_pair(design,after["bodies"],after["proxies"],after["solids"],a,b,spatial_fit=spatial_fit)
                 if row["status"]=="measured":
                     objects=after["proxies"]
-                    row["gapMm"]=10*app.measureManager.measureMinimumDistance(objects[a],objects[b]).value
+                    try:
+                        row["gapMm"]=10*app.measureManager.measureMinimumDistance(objects[a],objects[b]).value
+                    except RuntimeError as error:
+                        row["gapError"]=str(error)
                 return row
             compared={}
             def same_shape(prior,current):

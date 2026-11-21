@@ -35,6 +35,13 @@ class Readiness(unittest.TestCase):
         self.s["duties"][-1]["max"]=.7
         self.assertEqual(self.status()["showcaseEligibility"],"fail")
 
+    def test_required_spatial_pair_cannot_disappear_from_the_cold_census(self):
+        self.change("operatingRequirements",lambda r:r["operatingIntent"].update(spatialFits=[{"commission":{"bodies":[]}}]))
+        self.s["operatingRequirements"]["pointer"]="/operatingIntent"
+        result=self.status()
+        self.assertNotEqual(result["showcaseEligibility"],"pass")
+        self.assertIn("spatial fit roster",json.dumps(result["findings"]))
+
     def test_repeated_interfaces_preserve_world_readings_and_distinct_placements(self):
         from unittest.mock import patch
         from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox

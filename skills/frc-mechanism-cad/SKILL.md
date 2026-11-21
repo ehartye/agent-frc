@@ -117,3 +117,5 @@ Before dispatching long native work, [stage the complete pinned package and proj
 For a project with `iterations/active.json`, follow its active design root before recovering older records. After a decision to start over, use `frc-start-over` to preserve the evidence and open a fresh numbered design. [Design iterations](../../docs/design-iterations.md)
 
 If a scripted placement stops before contact checks, compare the requested and observed assembly-world occurrence matrices after recompute. [Read a refused placement](../../docs/checked-placement.md#read-a-refused-placement)
+
+If a proposed fit uses a smooth tap pilot and a modeled external thread, register the allowed annulus, validate the actual representations and keep the raw common. [Locate an intentional thread fit](../../docs/spatial-fits.md).
