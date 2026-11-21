@@ -16,6 +16,44 @@ from spatial_operating_cases import SpatialOperatingCases
 
 
 class Readiness(unittest.TestCase):
+    def test_registered_volume_retest_stays_separate_from_shape(self):
+        from component_shape import measured_difference, volume
+        from fusion_volume_readback import compare, run
+        from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox
+        from OCP.gp import gp_Pnt
+
+        source = BRepPrimAPI_MakeBox(8., 5., 3.).Shape()
+        moved = BRepPrimAPI_MakeBox(gp_Pnt(1, 0, 0), 8., 5., 3.).Shape()
+        method = "physicalProperties.VeryHigh"
+        def observed(values):
+            return dict(kernel="Fusion", build="synthetic", unit="mm3",
+                        realization="persistent-definition", readings=values)
+        first = observed({method: volume(source)})
+        other = observed({"body.volume": volume(moved)})
+        self.assertEqual(compare(first, other, method, .01)["status"], "unresolved")
+        other["readings"][method] = volume(moved)
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            model = write(root, "fixture.json", {"synthetic": True})
+            def target(name, result):
+                ref = write(root, name, dict(modelSha256=model["sha256"], bodies={"part": result}))
+                return dict(model=model, observations=ref, body="part")
+            plan = dict(source=target("original.json", first), candidate=target("cold.json", other),
+                        method=method, toleranceMm3=.01)
+            self.assertEqual(run(root, plan)["status"], "consistent-volume")
+            (root / "fixture.json").write_text("changed")
+            with self.assertRaisesRegex(ValueError, "Changed evidence"):
+                run(root, plan)
+        for change in [dict(build="different"), dict(realization="temporary"),
+                       dict(kernel="OCCT"), dict(unit="cm3"), dict(readings={method: 0})]:
+            self.assertEqual(compare(first, dict(other, **change), method, .01)["status"], "unresolved")
+        first["readings"]["body.volume"] = 123.
+        self.assertEqual(compare(first, other, method, .01)["status"], "unresolved")
+        other["readings"][method] += 1
+        self.assertEqual(compare(first, other, method, .01)["status"], "different-volume")
+        self.assertAlmostEqual(measured_difference(source, moved, [])["absentMm3"], 15.)
+        self.assertAlmostEqual(measured_difference(source, source, [])["extraMm3"], 0.)
+
     def test_service_removals_preserve_one_complete_extraction_history(self):
         try:
             from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox
