@@ -5,6 +5,8 @@ description: "Challenge an installed mechanism's repeatability, sustainable scor
 
 # Does the installed mechanism keep working?
 
+When a bracket relies on a bearing face, [screen its measured compression-only support](../../docs/operating-intent.md#test-a-compression-only-seat) against simultaneous forces and moments. Use an installed attachment with a qualified direction and allowable to justify extra shear or hold-down.
+
 Start with the capability contract, selected assembly revision and match-role demand. State the observable event that earns credit. Freeze the cohort and acceptance criteria before rerunning the candidate. Preserve unsuccessful and unknown attempts.
 
 1. **Bench model.** Map failure modes and perturb input position, friction, backlash, voltage or timing within documented bounds. Find the boundary where useful function stops.

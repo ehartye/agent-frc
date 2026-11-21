@@ -39,7 +39,11 @@ For `mountDatums`, use local drawing or original supplier landmarks and the targ
 
 The [mount datum screen](../scripts/mount_datums.py) can reject an installation from an earlier partial native observation. It checks a measured assembly-context vertex against the original component coordinate, its saved transform and the independent target. A passing single landmark leaves mounting qualification open. For external observers, each site may instead identify its exact physical leaf through `nativePathPointer` together with the independently checked `proxyErrorMmPointer`, `localMmPointer` and measured `worldMmPointer`.
 
-A project with an existing measured support study can run `python scripts/structural_path.py PROJECT study.json` with `agent-frc/observed-supports@1`, pinned `archive`, `step` and `observation`. For each named case, supply the common reaction `normal`, JSON pointers for each applied point and force, free couples and each actual face patch’s centroid and area. This screen distinguishes an unsupported net twist from a statically feasible distribution. Installed capacity remains open until qualified.
+## Test a compression-only seat
+
+A project with an existing measured support study can run `python scripts/structural_path.py PROJECT study.json` with `agent-frc/observed-supports@1`, pinned `archive`, `step` and `observation`. For each case, supply the common compressive reaction `normal`, JSON pointers for simultaneous applied points and forces, free couples and each measured face patch’s centroid and area. Express all directions in one frame and retain the source time for each simultaneous load. The report names forces that would require the seat to pull, provide shear or resist a twisting couple. A pure moment with zero resultant load also requires a different support.
+
+Add a `bounds` pointer to each patch when the observation includes its enclosing root-frame `[xmin,ymin,zmin,xmax,ymax,zmax]` in mm. With complete bounds for coplanar seats, an outlying pressure center can prove the load tips beyond the physical support. A center inside the enclosing box can still fall outside the actual faces. A failed centroid-only fit stays open unless a necessary condition is violated. Compare the correct frame, a reversed load, and the same load with a measured corrective reaction before choosing a design. Name and qualify the hold-down, shear interface or other additional load path in the full readiness review. The observed-seat screen always leaves installed capacity open.
 
 ## Finite rotating articles
 

@@ -4,6 +4,8 @@ A robot can reach the required height while its support path overloads or leaves
 
 ## Replay the teaching fixture
 
+For measured parallel bearing seats, the [installed support screen](operating-intent.md#test-a-compression-only-seat) also checks whether the combined same-time forces would require tension, shear or a pressure center beyond the measured footprint. Carry the reaction directions and full moments into any comparison with an added hold-down.
+
 ```sh
 node examples/design-methods/make-support-fixture.mjs artifacts/support-demo
 npm run mechanism:review -- coupled artifacts/support-demo/study.json
