@@ -34,6 +34,15 @@ A `requiredContacts` row gives its `id`, actual piece/body `pair`, `window` on t
 
 For sampled visibility provide `id`, a physical `camera` and `target`, `cameraId`, `t`, nominal-frame `eyeMm`, `forwardPointMm`, `upPointMm` and `targetCornersMm`. A pinned `calibration` gives the camera `id`, `imageSizePx` and rectified pinhole `intrinsics` (fx, fy, cx, cy). A pinned `frame` records `cameraId`, `poseFraction`, target, calibration digest, detector method, received flag, detectedId, measured brightness and frame age in seconds. Compare to the goal’s `expectedId`, `minBrightness` and `maxAgeS`. A clear ray without a recorded packet stays open. Repeat across actual poses, including reduced illumination and the missing-frame condition.
 
+## Can the fastened assembly pull through its mount?
+
+Start with the installed load case and its signed extraction direction. Identify the structural member that must stay fixed and the parts that can leave together. A screw, nut and sleeve can stay bolted together while all three pass through a clearance hole.
+
+1. Pin the assembly STEP generated from the selected Fusion issue. In the installed pose, measure the bearing face that opposes the load on the fixed member. Record its direction, shared area and any initial interference. Check both the nut-to-sleeve and the sleeve-to-frame interfaces.
+2. In a `mechanical-motion@1` case, give every member of the moving stack the same translation in `moves`. Keep the structural member and other installed obstacles in the scene. Set `minGapMm` from the case and record the signed direction, displacement and units. Compare the retained design with the same assembly after removing or reducing its retaining feature. Repeat at the limiting tolerances.
+3. Read the named pair and witness in the result. First check the seat at rest. In a separate displacement test, a pull that enters the retaining face identifies a geometric stop. A bounded clear path over a short pull rules out a stop over that interval. Use the full service stroke and the `extract` result to establish complete removal. An unintended collision elsewhere still fails the assembly review. Contact inside the moving group leaves retention by the frame unresolved.
+4. Follow the reaction from the stop into the structural member. Check bearing area, material, edge distances, fastener and member capacities, load distribution and duty. For service, register which parts leave together, preceding extractions and the supported removal direction. Repeat with an overlooked sleeve or keeper left in place.
+
 ## Replay an external finding
 
 ```sh
