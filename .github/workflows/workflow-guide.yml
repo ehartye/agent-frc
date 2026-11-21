@@ -3,55 +3,32 @@ on:
   push:
     branches: [main]
   pull_request:
-    paths:
-      - '.github/pages/**'
-      - '.github/readme/**'
-      - 'references/cad-color-convention.json'
-      - '.github/workflows/workflow-guide.yml'
-      - 'skills/**'
-      - 'docs/**'
-      - 'templates/**'
-      - 'scripts/kickoff*.mjs'
-      - 'scripts/strategy-lab.mjs'
-      - 'scripts/role-*.mjs'
-      - 'scripts/design-review.mjs'
-      - 'scripts/alliance-completion.mjs'
-      - 'scripts/study-evidence.mjs'
-      - 'scripts/spatial-elevation.mjs'
-      - 'scripts/coupled-support.mjs'
-      - 'scripts/actuator-duties.mjs'
-      - 'scripts/lift-path-faults.mjs'
-      - 'scripts/support-ranges.mjs'
-      - 'scripts/hardening.mjs'
-      - 'scripts/throughput-cohort.mjs'
-      - 'scripts/piece-window.mjs'
-      - 'examples/design-methods/**'
-      - 'scripts/field-rehearsal*.mjs'
-      - 'scripts/field-piece-motion.mjs'
-      - 'scripts/auto-allocation.mjs'
-      - 'scripts/rehearsal-*.mjs'
-      - 'scripts/project-layout.mjs'
-      - 'scripts/frame-*.mjs'
-      - 'scripts/design-artifact.mjs'
-      - 'scripts/check-showcase-inventory.py'
-      - 'scripts/cad_capture.py'
-      - 'scripts/showcase_geometry.py'
-      - 'examples/kickoff/training-field.json'
-      - 'examples/highlights/**'
-      - 'examples/swerve/**'
-      - 'examples/sensor-study/**'
-      - '**/README.md'
-      - 'README.md'
-      - 'scripts/robot-highlights.mjs'
-      - 'scripts/mechanical_readiness.py'
-      - 'scripts/showcase_release.py'
-      - 'scripts/showcase_contacts.py'
-      - 'references/retained-teaching-display.json'
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
+  check:
+    name: Plugin checks
+    runs-on: ubuntu-latest
+    env:
+      GIT_AUTHOR_NAME: Plugin test fixture
+      GIT_AUTHOR_EMAIL: tests@example.invalid
+      GIT_COMMITTER_NAME: Plugin test fixture
+      GIT_COMMITTER_EMAIL: tests@example.invalid
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+        with:
+          python-version: '3.12'
+      - run: python -m pip install Pillow==11.3.0 numpy==2.2.6
+      - run: npm run validate
+      - run: npm run test:portable
   build:
+    needs: check
     permissions:
       contents: read
       pages: read
@@ -63,14 +40,14 @@ jobs:
           node-version: '22'
       - run: python examples/swerve/check-readme-preview.py
       - run: node .github/pages/build.mjs artifacts/workflow-guide
-      - if: github.event_name != 'pull_request'
+      - if: github.event_name == 'push'
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
-      - if: github.event_name != 'pull_request'
+      - if: github.event_name == 'push'
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           path: artifacts/workflow-guide
   deploy:
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     needs: build
     runs-on: ubuntu-latest
     permissions:

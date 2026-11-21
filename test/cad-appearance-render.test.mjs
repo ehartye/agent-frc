@@ -63,7 +63,7 @@ test('colored highlights bind the resolved palette, source assignment and facet 
   await assert.rejects(buildHighlights(manifest,target),/manifest or resolved palette changed/);
 });
 
-test('native STEP still and orbit agree on repeated solid roles', async t => {
+test('native STEP still and orbit agree on repeated solid roles', {skip:process.env.FRC_TEST_PROFILE==='portable' && 'Run the CAD kernel and rendering controls at the qualified station'}, async t => {
   const available=spawnSync(python,['-c','import OCP, vtk, numpy'],{encoding:'utf8'});
   if(available.status!==0){t.skip('Optional OCP, VTK and NumPy are required for native rendering');return;}
   const root=await mkdtemp(path.join(tmpdir(),'cad-native-colors-'));

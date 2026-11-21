@@ -8,7 +8,7 @@ import {fileURLToPath} from 'node:url';
 import test from 'node:test';
 import {auditStaged,verifyIssued,verifyPair} from '../scripts/public-model-release.mjs';
 
-test('complete mechanical review with geometry and adverse-case controls',()=>{
+test('complete mechanical review with geometry and adverse-case controls', {skip:process.env.FRC_TEST_PROFILE==='portable' && 'Run the CAD kernel and rendering controls at the qualified station'},()=>{
   const py=process.env.PYTHON ?? (process.platform==='win32'?'python':'python3');
   const p=fileURLToPath(new URL('./mechanical_readiness.py',import.meta.url));
   execFileSync(py,[p],{stdio:'pipe'});
