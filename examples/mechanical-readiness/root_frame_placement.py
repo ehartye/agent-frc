@@ -60,9 +60,12 @@ def inspect_attachment(design, plan, api):
     require(joint.isValid and not joint.isSuppressed and joint.jointMotion.objectType == plan["jointMotion"],
             "Required joint is suppressed or has the wrong motion")
     entry = joint.timelineObject
-    require(entry and entry.isValid and not entry.isSuppressed and not entry.isRolledBack
+    joint_path = parent.fullPathName + "/" + joint.name
+    require(entry and entry.isValid, "Missing valid timeline entry for " + joint_path)
+    require(not entry.isSuppressed and not entry.isRolledBack
             and entry.healthState == api.fusion.FeatureHealthStates.HealthyFeatureHealthState,
-            "Required joint has no healthy active timeline entry")
+            f"No healthy active timeline entry for {joint_path}: health={entry.healthState}, "
+            f"suppressed={entry.isSuppressed}, rolledBack={entry.isRolledBack}, {entry.errorOrWarningMessage}")
     ends = []
     for local in (joint.occurrenceOne, joint.occurrenceTwo):
         require(local is not None, "Attachment lacks a sibling endpoint")

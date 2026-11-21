@@ -55,7 +55,7 @@ class Placements(unittest.TestCase):
         backing = Obj(fullPathName=plan["backing"])
         child = Obj(fullPathName=plan["occurrence"], component=Obj(bRepBodies=[body]), transform2=desired)
         api = Obj(core=Obj(Point2D=None), fusion=Obj(FeatureHealthStates=Obj(HealthyFeatureHealthState=0)))
-        health = Obj(isValid=True, isSuppressed=False, isRolledBack=False, healthState=0)
+        health = Obj(isValid=True, isSuppressed=False, isRolledBack=False, healthState=0, errorOrWarningMessage="")
         joint = Obj(name=plan["jointName"], jointMotion=Obj(objectType=plan["jointMotion"]), isSuppressed=False,
                     isValid=True, timelineObject=health,
                     occurrenceOne=Obj(createForAssemblyContext=lambda parent: child),
@@ -76,6 +76,10 @@ class Placements(unittest.TestCase):
             attach.assert_called_with(parent.component)
             with self.assertRaisesRegex(ValueError, "outside the selected child"):
                 example.inspect_attachment(design, {**plan, "materialOccurrence": backing.fullPathName}, api)
+            leaf = Obj(fullPathName=child.fullPathName + "+Corner:1", component=child.component)
+            design.rootComponent.allOccurrences.append(leaf)
+            witnessed = example.inspect_attachment(design, {**plan, "materialOccurrence": leaf.fullPathName}, api)
+            self.assertEqual(witnessed["materialOccurrence"], leaf.fullPathName)
             # Re-resolve the path after a cold reopen rather than retaining its warm proxy.
             cold = deepcopy(design)
             self.assertEqual(example.inspect_attachment(cold, plan, api)["cornerErrorMm"], 0)
