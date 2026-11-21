@@ -28,7 +28,14 @@ def verify(root,study):
     observations.extend(("native-contacts",r) for r in study.get("nativePoses",[]))
     authenticate(root,study,observations)
     from source_joint_roster import intended
-    intended(root,study,read(pinned(root,study["reopen"])),trusted=True)
+    intent=intended(root,study,read(pinned(root,study["reopen"])),trusted=True)
+    from fusion_authority import active_design
+    base,active=active_design(root)
+    if active:
+        scope=intent.get("publicationScope")
+        require(scope in ("whole-robot","subsystem"),"Commission the numbered design's publication scope")
+        return {"number":active["number"],"id":active["id"],"openingSha256":digest(base.parent/"iteration.json"),
+                "kind":scope,"authoritySha256":study["authority"]["sha256"],"lineageSha256":study["lineage"]["sha256"]}
 
 
 def authenticate(root,study,observations):

@@ -726,7 +726,7 @@ def review(root,study,geometry=None):
     if result["showcaseEligibility"]=="pass":
         from native_station_verify import verify as verify_station
         try:
-            verify_station(root.resolve(),study)
+            result["iteration"]=verify_station(root.resolve(),study)
         except (ValueError,KeyError,TypeError,OSError) as e:
             result["buildReadiness"]="open";result["showcaseEligibility"]="open"
             result["findings"].append({"domain":"native","status":"open","subject":"trusted native witness","reason":str(e)})

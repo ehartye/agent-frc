@@ -5,6 +5,9 @@ import {createReadStream,lstatSync,readFileSync,readdirSync,realpathSync,writeFi
 import path from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 
+import {activeDesignFor} from './active-design.mjs';
+
+const numberedSchema='agent-frc/signed-model-release@10';
 const schema='agent-frc/signed-model-release@9';
 const geometry=/\.(?:f3[dz]|stp|iges|igs|brep|step|gltf|glb|stl(?:\.gz)?|obj|3mf)$/i;
 const hex=/^[0-9a-f]{64}$/;
@@ -24,9 +27,15 @@ async function hash(f){
 }
 const bytes=x=>Buffer.from(JSON.stringify(x));
 function opened(body){
-  check(body?.schema===schema && typeof body.project==='string'&&body.project.trim() && typeof body.scope==='string'&&body.scope.trim() &&
+  check((body?.schema===schema || body?.schema===numberedSchema) && typeof body.project==='string'&&body.project.trim() && typeof body.scope==='string'&&body.scope.trim() &&
     typeof body.configuration==='string'&&body.configuration.trim()&&Number.isSafeInteger(body.solids)&&body.solids>0&&
     hex.test(body.studySha256)&&hex.test(body.archiveSha256)&&hex.test(body.stepSha256)&&Array.isArray(body.files)&&body.files.length,'Invalid model receipt');
+  if(body.schema===numberedSchema) {
+    const i=body.iteration;
+    check(i && Number.isInteger(i.number) && i.number>=1 && i.number<=999 && typeof i.id==='string' && i.id.length &&
+      ['whole-robot','subsystem'].includes(i.kind) && [i.openingSha256,i.authoritySha256,i.lineageSha256].every(v=>hex.test(v)),
+      'Invalid numbered engineering issue');
+  }else check(body.iteration===undefined,'Unsigned iteration identity in legacy schema');
   const paths=new Set();
   for(const r of body.files){
     relative(r.path);check(!paths.has(r.path)&&hex.test(r.sha256),'Duplicate or invalid public asset');paths.add(r.path);
@@ -58,7 +67,16 @@ export async function issue(root,studyName,delivery,keyFile){
   for(const [i,r] of delivery.files.entries())files.push({path:relative(r.path),sha256:await hash(inputs[i])});
   const body={schema,project:delivery.project,scope:delivery.scope,configuration:result.configuration,studySha256:await hash(studyFile),
     stepSha256:study.step.sha256,archiveSha256:study.archive.sha256,solids:result.solids,files:files.sort((a,b)=>a.path.localeCompare(b.path))};
+  if(result.iteration){
+    body.iteration=result.iteration;body.schema=numberedSchema;
+    check(body.scope===result.iteration.kind,'Use the independently commissioned publication scope');
+  }
   opened(body);
+  if(process.env.FRC_ACTIVE_MODEL_SELECTION){
+    const target=JSON.parse(process.env.FRC_ACTIVE_MODEL_SELECTION);
+    check(target.schema===selectionSchema && target.project===body.project,'Select the commissioned project');
+    assertOpening(body,{number:target.number,id:target.id,openingSha256:target.openingSha256});
+  }else check(process.env.FRC_REQUIRE_ACTIVE_MODEL_SELECTION!=='true','Supply the protected active model selection');
   return {body,signature:sign(null,bytes(body),key).toString('base64')};
 }
 export async function verifyIssued(root,packet,pubKey,project){
@@ -67,12 +85,72 @@ export async function verifyIssued(root,packet,pubKey,project){
   for(const r of packet.body.files)check(await hash(file(root,r.path))===r.sha256,'Changed signed public asset: '+r.path);
   return new Set(packet.body.files.map(r=>r.path));
 }
-export async function verifyPair(sourceRoot,sourcePacket,stageRoot,stagePacket,key,project){
+const selectionSchema='agent-frc/active-model-selection@1';
+function selectedIssue(body) {
+  return Object.fromEntries(['scope','configuration','studySha256','archiveSha256','stepSha256','solids'].map(k=>[k,body[k]]).concat(
+    ['authoritySha256','lineageSha256'].map(k=>[k,body.iteration[k]])));
+}
+async function projectOpening(root) {
+  const design=activeDesignFor(path.join(root,'.model-selection'));
+  if(!design)return null;
+  const name=path.join(design,'..','iteration.json'),record=JSON.parse(readFileSync(name,'utf8'));
+  check(record.id===record.fusionId,'Different active Fusion identity');
+  return {number:record.number,id:record.id,openingSha256:await hash(name)};
+}
+function assertOpening(body,opening) {
+  check(body.schema===numberedSchema && Object.entries(opening).every(([k,v])=>body.iteration[k]===v),
+    'Release belongs to a different active design iteration');
+}
+function sameIssue(expected,body) {
+  const actual=selectedIssue(body);
+  return expected && Object.keys(expected).length===Object.keys(actual).length && Object.entries(actual).every(([k,v])=>expected[k]===v);
+}
+export async function selectActive(root,project,packet,key,studyName) {
+  root=realpathSync(root); const opening=await projectOpening(root);
+  check(opening && typeof project==='string' && project.trim(),'Select a numbered active design and project');
+  const result={schema:selectionSchema,project,...opening,issue:null};
+  if(!packet)return result;
+  await verifyIssued(root,packet,key,project);
+  assertOpening(packet.body,opening);
+  const authority=path.join(activeDesignFor(path.join(root,'.model-selection')),'cad','fusion-authority.json');
+  check(await hash(authority)===packet.body.iteration.authoritySha256,'Current native authority differs from the signed issue');
+  const studyFile=file(root,studyName);
+  check(await hash(studyFile)===packet.body.studySha256,'Selected study differs from the signed issue');
+  const study=JSON.parse(readFileSync(studyFile,'utf8'));
+  const lineage=file(root,study.lineage.file);
+  check(await hash(lineage)===packet.body.iteration.lineageSha256,'Current export lineage differs from the reviewed issue');
+  const replay=JSON.parse(execFileSync(process.env.PYTHON ?? (process.platform==='win32'?'python':'python3'),
+    [fileURLToPath(new URL('./fusion_authority.py',import.meta.url)),root,authority,lineage],{encoding:'utf8'}));
+  check(replay.archiveSha256===packet.body.archiveSha256 && replay.stepSha256===packet.body.stepSha256 &&
+    replay.configuration===packet.body.configuration,'Selected native and STEP differ from the current cold issue');
+  result.issue=selectedIssue(packet.body);return result;
+}
+export async function verifyCurrent(root,body,project) {
+  const opening=await projectOpening(root);
+  if(opening) assertOpening(body,opening);
+  const setting=process.env.FRC_ACTIVE_MODEL_SELECTION;
+  if(!setting){
+    check(process.env.FRC_REQUIRE_ACTIVE_MODEL_SELECTION!=='true' && !opening && body.schema!==numberedSchema,'A numbered replacement needs a protected active model selection');
+    return;
+  }
+  const selection=JSON.parse(setting);
+  check(selection?.schema===selectionSchema && selection.project===project && selection.issue,
+    'The protected selection has no qualified active replacement for this project');
+  assertOpening(body,{number:selection.number,id:selection.id,openingSha256:selection.openingSha256});
+  check(sameIssue(selection.issue,body) && body.scope===body.iteration.kind &&
+    body.scope===(process.env.FRC_MODEL_SCOPE??'whole-robot'),'Different active native issue or commissioned model scope');
+}
+export async function verifyDeliveryPair(sourceRoot,sourcePacket,stageRoot,stagePacket,key,project){
   await verifyIssued(sourceRoot,sourcePacket,key,project);
   await verifyIssued(stageRoot,stagePacket,key,project);
+  check(JSON.stringify(sourcePacket.body.iteration)===JSON.stringify(stagePacket.body.iteration),'Staged packet names a different numbered design');
   for(const identity of ['project','scope','configuration','archiveSha256','stepSha256','studySha256','solids']){
     check(sourcePacket.body[identity]===stagePacket.body[identity],'Staged packet names a different engineering issue: '+identity);
   }
+}
+export async function verifyPair(sourceRoot,sourcePacket,stageRoot,stagePacket,key,project){
+  await verifyDeliveryPair(sourceRoot,sourcePacket,stageRoot,stagePacket,key,project);
+  await verifyCurrent(sourceRoot,sourcePacket.body,project);
 }
 function git(repo,args){return execFileSync('git',['-C',repo,...args],{maxBuffer:64*1024*1024});}
 export function verifyCommittedFile(root,commit,name) {
@@ -88,7 +166,8 @@ export async function audit(root,base,policyName,packetPath,pubKey,sourceCommit)
   check(policy.schema==='agent-frc/public-model-policy@1' && typeof policy.project==='string' &&
     Array.isArray(policy.publicRoots)&&policy.publicRoots.length&&Array.isArray(policy.modelFiles)&&policy.modelFiles.length,'Invalid trusted public model inventory');
   const publicRoots=policy.publicRoots.map(relative);
-  const reviewed=packetPath?await verifyIssued(root,JSON.parse(readFileSync(packetPath)),readFileSync(pubKey),policy.project):new Set();
+  const packet=packetPath?JSON.parse(readFileSync(packetPath)):null;
+  const reviewed=packet?await verifyIssued(root,packet,readFileSync(pubKey),policy.project):new Set();
   const names=new Set(policy.modelFiles.map(relative));
   for(const dir of publicRoots){
     const location=path.resolve(root,dir);
@@ -110,17 +189,22 @@ export async function audit(root,base,policyName,packetPath,pubKey,sourceCommit)
     if(packetPath) required.add(path.relative(root,packetPath).split(path.sep).join('/'));
     for(const name of required) verifyCommittedFile(root,sourceCommit,name);
   }
+  let authorized=0;
   for(const n of names){
     const current=file(root,n);
-    if(reviewed.has(n))continue;
     let old;
-    try{old=git(root,['rev-parse','--verify',base+':'+n]).toString().trim();}catch{throw Error('Unreviewed new public model asset: '+n);}
+    try{old=git(root,['rev-parse','--verify',base+':'+n]).toString().trim();}catch{old=null;}
     const actual=git(root,['hash-object','--no-filters',current]).toString().trim();
+    if(old!==actual && reviewed.has(n)){
+      if(!authorized)await verifyCurrent(root,packet.body,policy.project);
+      authorized++;continue;
+    }
+    check(old!==null,'Unreviewed new public model asset: '+n);
     check(old===actual,'Changed public model asset without matching approved issue: '+n);
   }
-  return {verifiedFiles:names.size,signedFiles:reviewed.size,baseline:base};
+  return {authorizedChanges:authorized,verifiedFiles:names.size,signedFiles:reviewed.size,baseline:base};
 }
-export async function auditStaged(approved,candidate,policyPath,packetPath,pubKey,fieldRoot=process.env.FRC_VERIFIED_FIELD_ROOT){
+export async function auditStaged(approved,candidate,policyPath,packetPath,pubKey,fieldRoot=process.env.FRC_VERIFIED_FIELD_ROOT,sourceRoot=candidate){
   const base=realpathSync(approved),root=realpathSync(candidate),policy=typeof policyPath==='string'?JSON.parse(readFileSync(policyPath)):policyPath;
   check(base!==root && policy.schema==='agent-frc/staged-model-policy@1' && typeof policy.project==='string' &&
     Array.isArray(policy.mutableFieldPages) && Array.isArray(policy.modelFiles) && policy.modelFiles.length,'Invalid independently approved stage policy');
@@ -147,7 +231,9 @@ export async function auditStaged(approved,candidate,policyPath,packetPath,pubKe
       (contract.keys===undefined||JSON.stringify(Object.keys(value).sort())===JSON.stringify([...contract.keys].sort())),
       'Field data differs from approved JSON schema or keys: '+name);
   }
-  const inspected=packetPath?await verifyIssued(root,JSON.parse(readFileSync(packetPath)),readFileSync(pubKey),policy.project):new Set();
+  const packet=packetPath?JSON.parse(readFileSync(packetPath)):null;
+  const inspected=packet?await verifyIssued(root,packet,readFileSync(pubKey),policy.project):new Set();
+  let authorized=0;
   function inventory(folder){
     const entries=new Set();
     function walk(dir){
@@ -182,21 +268,31 @@ export async function auditStaged(approved,candidate,policyPath,packetPath,pubKe
       check(await hash(file(trusted,name))===await hash(file(root,name)),'Field page differs from independently regenerated output: '+name);
       continue;
     }
-    if(inspected.has(name)&&next.has(name))continue;
+    if(inspected.has(name)&&next.has(name)){
+      if(!old.has(name) || await hash(file(base,name))!==await hash(file(root,name))){
+        if(!authorized)await verifyCurrent(sourceRoot,packet.body,policy.project);
+        authorized++;
+      }
+      continue;
+    }
     check(old.has(name)&&next.has(name),'Unreviewed added or removed output: '+name);
     check(await hash(file(base,name))===await hash(file(root,name)),'Unreviewed changed published output: '+name);
   }
-  return {checked:next.size,mutableFieldPages:[...mutable],mutableFieldData:Object.keys(fieldData),signed:inspected.size};
+  return {authorizedChanges:authorized,checked:next.size,mutableFieldPages:[...mutable],mutableFieldData:Object.keys(fieldData),signed:inspected.size};
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href){
   try{
     const [command,root,...args]=process.argv.slice(2);
-    if(command==='issue'&&args.length===4){
+    if(command==='check-selection'&&args.length===1){
+      await verifyCurrent(root,JSON.parse(readFileSync(0,'utf8')),args[0]);
+    }else if(command==='select'&&[1,4].includes(args.length)){
+      console.log(JSON.stringify(await selectActive(root,args[0],args[1]?JSON.parse(readFileSync(args[1])):undefined,args[2]?readFileSync(args[2]):undefined,args[3])));
+    }else if(command==='issue'&&args.length===4){
       const [study,files,key,out]=args;
       const packet=await issue(root,study,JSON.parse(readFileSync(files)),key);
       writeFileSync(out,JSON.stringify(packet,null,2)+'\n',{flag:'wx'});
     }else if(command==='verify'&&args.length===3){
-      await verifyIssued(root,JSON.parse(readFileSync(args[0])),readFileSync(args[1]),args[2]);console.log('Verified exact public issue.');
+      const packet=JSON.parse(readFileSync(args[0]));await verifyIssued(root,packet,readFileSync(args[1]),args[2]);await verifyCurrent(root,packet.body,args[2]);console.log('Verified exact public issue.');
     }else if(command==='verify-pair'&&args.length===5){
       const [sourcePacket,stage,stagePacket,key,project]=args;
       await verifyPair(root,JSON.parse(readFileSync(sourcePacket)),stage,JSON.parse(readFileSync(stagePacket)),readFileSync(key),project);

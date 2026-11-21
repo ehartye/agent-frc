@@ -23,6 +23,8 @@ jobs:
         env:
           VERIFIER: ${{ vars.AGENT_FRC_PLUGIN_SHA }}
           APPROVED: ${{ vars.FRC_APPROVED_MODEL_COMMIT }}
+          FRC_REQUIRE_ACTIVE_MODEL_SELECTION: ${{ vars.FRC_REQUIRE_ACTIVE_MODEL_SELECTION }}
+          FRC_ACTIVE_MODEL_SELECTION: ${{ vars.FRC_ACTIVE_MODEL_SELECTION }}
           LAYOUT: ${{ vars.FRC_PAGES_LAYOUT }}
         run: |
           [[ "$VERIFIER" =~ ^[a-f0-9]{40}$ && "$APPROVED" =~ ^[a-f0-9]{40}$ ]]
@@ -53,6 +55,8 @@ jobs:
         run: node approved/scripts/prepare-showcase-release.mjs approved project plugin "$RUNNER_TEMP/release"
       - name: Verify the final site after all project-specific copies
         env:
+          FRC_REQUIRE_ACTIVE_MODEL_SELECTION: ${{ vars.FRC_REQUIRE_ACTIVE_MODEL_SELECTION }}
+          FRC_ACTIVE_MODEL_SELECTION: ${{ vars.FRC_ACTIVE_MODEL_SELECTION }}
           LAYOUT: ${{ vars.FRC_PAGES_LAYOUT }}
           APPROVED: ${{ vars.FRC_APPROVED_MODEL_COMMIT }}
         run: |

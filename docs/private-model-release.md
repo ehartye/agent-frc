@@ -2,6 +2,21 @@
 
 Run the same source and final-site checks at the release station and in CI. For branch-served Pages, require **Mechanical model eligibility** before merging into the served branch. For generated Pages, verify the final build before upload. Read the gate code, baseline revision and verification key from trusted configuration. Preserve the project’s existing admin policy.
 
+
+## Keep a retired robot online during a numbered restart
+
+At cutover, read the active design from its private checkout. Set the project name to the exact name in the trusted source and stage policies. This command prints a small public selection containing the iteration identity, opening digest and a pending issue.
+
+```sh
+node PLUGIN/scripts/public-model-release.mjs select PRIVATE_PROJECT POLICY_PROJECT
+```
+
+Keep that JSON in the protected CI setting `FRC_ACTIVE_MODEL_SELECTION`. Set `FRC_REQUIRE_ACTIVE_MODEL_SELECTION=true` in the approved verification job. This also works when the public checkout omits private iteration records. A pending selection lets the trusted source and final-site audits retain the exact approved historical output and independently rebuilt field pages. The same setting rejects signed replacements from the previous design. Use the combined local release command for a historic rebuild that still carries its previous packets. Pair verification by itself checks eligibility for a replacement.
+
+For a new whole robot, include `"publicationScope":"whole-robot"` in the independently commissioned operating profile; use `"subsystem"` for a deliberately separate subsystem showcase. Set the numbered delivery's `scope` to this exact value. Run normal private issuance on the active canonical Fusion authority and fresh STEP. A passing numbered packet covers the opening, authority, export lineage, commissioned scope and exact delivered assets. After private approval, run the selection command again with the **source-side signed packet, reviewer public key and project-relative private study path** as its final three arguments. Check the current native issue and update the protected selection with that output. The source and staged packet continue to have separate path inventories. A subsystem destination needs a separately commissioned policy and trusted `FRC_MODEL_SCOPE=subsystem`. Use a distinct destination when publishing both scopes.
+
+Read the setting from trusted workflow configuration before checking a replacement. When CI uses a wrapper, pass it to source audit, staged audit and pair verification. Use a separately trusted verifier pin even where a historic showcase still needs the original builder. The setting carries hashes and a scope; suppliers' private files stay at the qualified station.
+
 ## Local release command
 
 Use a clean checkout of the approved commit outside the candidate. Freeze a known approved site's exact digest once with `node PLUGIN/scripts/local-showcase-release.mjs digest APPROVED_SITE`. Retain that digest independently. For the first model on an existing kickoff-only site, include the already published entry page in the protected inventory and require signed delivery for the new CAD assets.

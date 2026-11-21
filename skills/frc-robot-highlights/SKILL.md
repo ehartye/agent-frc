@@ -65,3 +65,5 @@ Use the [Fusion authority and revision handoff](../../docs/fusion-authority.md) 
 Before replacing a CAD view, reproduce the actual still and reconcile every playable physical clip with the qualified native motion and full swept geometry. Verify the signed assets in the final site directory after the last custom copy, for both branch Pages and workflow deployments. [Published geometry and motion](../../docs/mesh-correspondence.md)
 
 Register an authorized animated GLB with `cad.playableGlb` to include the actual reviewed clip file alongside the orbit viewer. Exercise the real issued model in the final student view.
+
+After a [numbered restart](../../docs/private-model-release.md#keep-a-retired-robot-online-during-a-numbered-restart), verify a replacement against the protected active design selection. Keep serving the exact previously approved bytes until the new whole robot qualifies.
