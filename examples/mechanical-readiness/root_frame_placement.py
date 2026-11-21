@@ -32,7 +32,7 @@ def inspect_material(design, plan, point2d):
     bodies = [b for b in child.component.bRepBodies if b.isSolid and b.name == plan["body"]]
     require(len(bodies) == 1, "Expected one selected solid")
     body = bodies[0]
-    context_error, _ = placement_witness(body, child, point2d)
+    context_error, local_sites = placement_witness(body, child, point2d)
     # The synthetic plate has a distinctive corner away from its rotation axis.
     # Find that source vertex again because entity indices can change on reopen.
     corners = [v for v in body.vertices if math.dist(v.geometry.asArray(), plan["cornerLocalCm"]) <= 1e-7]
@@ -40,7 +40,9 @@ def inspect_material(design, plan, point2d):
     observed = list(corners[0].createForAssemblyContext(child).geometry.asArray())
     error_mm = 10 * math.dist(observed, plan["cornerWorldCm"])
     require(math.isfinite(error_mm) and error_mm <= .001, "Placed material missed the fixture datum")
-    return {"cornerWorldCm": observed, "cornerErrorMm": error_mm, "contextErrorMm": context_error}
+    return {"occurrence": child.fullPathName, "body": body.name, "contextSitesLocalCm": local_sites,
+            "cornerLocalCm": list(corners[0].geometry.asArray()), "expectedCornerWorldCm": plan["cornerWorldCm"],
+            "cornerWorldCm": observed, "cornerErrorMm": error_mm, "contextErrorMm": context_error}
 
 
 def inspect_attachment(design, plan, api):
