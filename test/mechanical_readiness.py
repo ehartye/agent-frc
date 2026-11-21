@@ -596,6 +596,11 @@ class Readiness(unittest.TestCase):
                        internalProfile=dict(representation="minor",form="original V",pitchMm=.7,hand="right",
                            minorDiameterMm=[3.98,4.02],pitchDiameterMm=[4.15,4.17],majorDiameterMm=[4.55,4.60]))
         self.assertEqual(check(solids,case,drawing)["status"],"pass")
+        vent_axis = gp_Ax2(gp_Pnt(.85,.4,13.5),gp_Dir(0,0,1))
+        vent = BRepPrimAPI_MakeCylinder(vent_axis,.25,5).Shape()
+        vented = check(dict(solids,h=BRepAlgoAPI_Cut(solids["h"],vent).Shape()),case,drawing)
+        self.assertEqual(vented["status"], "open")
+        self.assertIn("termination",vented["reason"])
         mouth_axis = gp_Ax2(gp_Pnt(0,0,4),gp_Dir(0,0,1))
         chamfer = BRepPrimAPI_MakeCone(mouth_axis, 2.25, 2, .25).Shape()
         chamfered = dict(solids,h=BRepAlgoAPI_Cut(solids["h"],chamfer).Shape())
@@ -657,6 +662,54 @@ class Readiness(unittest.TestCase):
             roster_check(self.root,dict(stepSha256="issue",nonScrewSolids=["h","p"],stacks=[]),solids,"issue")
         self.change("operatingRequirements",lambda plan:plan["operatingIntent"].pop("fastenerStacks"))
         self.assertNotEqual(self.status()["showcaseEligibility"],"pass")
+
+
+    def test_split_pilot_preserves_the_wall_and_rejects_removed_material(self):
+        from math import pi
+        from fastener_stack import bore_profile, circular_partition, closed_flat_floor, trace_bore
+        from OCP.BRepAlgoAPI import BRepAlgoAPI_Common, BRepAlgoAPI_Cut, BRepAlgoAPI_Fuse
+        from OCP.BRepCheck import BRepCheck_Analyzer
+        from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox, BRepPrimAPI_MakeCone, BRepPrimAPI_MakeCylinder
+        from OCP.gp import gp_Ax2, gp_Dir, gp_Pnt
+
+        def box(x,y,z,dx,dy,dz):
+            return BRepPrimAPI_MakeBox(gp_Pnt(x,y,z),dx,dy,dz).Shape()
+
+        # A small datum rounding error is inside the registered coaxial tolerance.
+        offset = .000006
+        def axis(z):
+            return gp_Ax2(gp_Pnt(offset,0,z),gp_Dir(0,0,1))
+
+        def profile(shape,through=False):
+            self.assertTrue(BRepCheck_Analyzer(shape).IsValid())
+            return bore_profile(shape,[1.99,2.01],[-.01,.01],through=through)
+
+        def divided(shape):
+            half = box(offset,-8,-2,8,16,15)
+            return BRepAlgoAPI_Fuse(BRepAlgoAPI_Cut(shape,half).Shape(),
+                BRepAlgoAPI_Common(shape,half).Shape()).Shape()
+
+        block = box(-5,-5,0,10,10,10)
+        pilot = BRepPrimAPI_MakeCylinder(axis(-1),2,7).Shape()
+        cone = BRepPrimAPI_MakeCone(axis(6),2,0,1.25).Shape()
+        blind = BRepAlgoAPI_Cut(BRepAlgoAPI_Cut(block,pilot).Shape(),cone).Shape()
+        flat = divided(BRepAlgoAPI_Cut(block,pilot).Shape())
+        _,_,end,_,r,walls = trace_bore(flat,[1.99,2.01],[-.01,.01])
+        self.assertTrue(closed_flat_floor(flat,walls,end,r))
+        for host in (blind,divided(blind)):
+            mouth,start,end,tips = profile(host)
+            self.assertEqual([mouth,start,end,tips],[0.,0.,6.,[7.25]])
+            with self.assertRaisesRegex(ValueError,"through exit"):
+                profile(host,True)
+        through = BRepAlgoAPI_Cut(block,BRepPrimAPI_MakeCylinder(axis(-1),2,12).Shape()).Shape()
+        self.assertEqual(profile(divided(through),True),(0.,0.,10.,[]))
+        # Keep both end rings intact while cutting entirely through the middle of the wall.
+        for host in (through,divided(through)):
+            window = box(0,-.35,2,6,.7,2)
+            with self.assertRaisesRegex(ValueError,"wall"):
+                profile(BRepAlgoAPI_Cut(host,window).Shape(),True)
+        self.assertFalse(circular_partition([(0,pi),(0,pi)]))
+        self.assertFalse(circular_partition([(0,pi/2),(pi,pi)]))
 
 
     def test_directional_clearance_preserves_actual_contacts_and_probe_distance(self):
