@@ -1,0 +1,114 @@
+"""Create a synthetic millimetre package and a matched obstruction for the design CLI."""
+from pathlib import Path
+import argparse
+import hashlib
+import json
+import subprocess
+
+from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox
+from OCP.IFSelect import IFSelect_RetDone
+from OCP.STEPCAFControl import STEPCAFControl_Writer
+from OCP.STEPControl import STEPControl_AsIs
+from OCP.TCollection import TCollection_ExtendedString
+from OCP.TDataStd import TDataStd_Name
+from OCP.TDocStd import TDocStd_Document
+from OCP.XCAFDoc import XCAFDoc_DocumentTool
+from OCP.gp import gp_Pnt
+
+
+def create(root):
+    root.mkdir(parents=True,exist_ok=False)
+    cli=Path(__file__).resolve().parents[2]/"scripts/design.mjs"
+    subprocess.run(["node",str(cli),"new",str(root/"design.json")],check=True)
+    def pin(name):
+        return {"file":name,"sha256":hashlib.sha256((root/name).read_bytes()).hexdigest()}
+    def write(name,obj):
+        (root/name).write_text(json.dumps(obj,indent=2)+"\n",encoding="utf-8")
+        return pin(name)
+    doc=TDocStd_Document(TCollection_ExtendedString("BinXCAF"))
+    table=XCAFDoc_DocumentTool.ShapeTool_s(doc.Main())
+    boxes={"mount":([-8,-8,0],[8,8,6]),"bumper":([-20,-20,0],[-16,20,4]),
+           "rail":([19,70,18],[24,75,23]),"head":([28,-2,18],[32,2,22]),
+           "sample":([36,-2,18],[40,2,22]),"gate":([55,-10,15],[58,-7,24])}
+    boxes.update(drive=([-14,-11,0],[-10,-2,6]), battery=([9,-10,0],[17,-3,4]))
+    for name,(lo,hi) in boxes.items():
+        shape=BRepPrimAPI_MakeBox(gp_Pnt(*lo),gp_Pnt(*hi)).Shape()
+        TDataStd_Name.Set_s(table.AddShape(shape,False),TCollection_ExtendedString(name))
+    writer=STEPCAFControl_Writer()
+    assert writer.Transfer(doc,STEPControl_AsIs) and writer.Write(str(root/"package.step"))==IFSelect_RetDone
+    design=pin("design.json");step=pin("package.step")
+    datum=dict(name="Synthetic mounting block axis in parked STEP world, millimetres",
+               robotToStepMm=[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1])
+    def spin(deg):return [dict(kind="rotation",originMm=[0,0,20],axis=[0,0,1],travelDeg=deg)]
+    def travel(v):return [dict(kind="translation",travelMm=v)]
+    duty=dict(id="loaded-turn",stage="operating",basis="Sweep the head and sample while the adjacent gate slides",
+              moves={"head":spin(90),"sample":spin(90),"gate":travel([0,12,0])},minGapMm=1)
+    park=dict(id="park-loaded",stage="park",basis="Return from the reached posture",
+              initialPose=duty["moves"],moves={"head":spin(-90),"sample":spin(-90),"gate":travel([0,-12,0])},minGapMm=1)
+    service=dict(id="remove-carrier",stage="service",basis="Withdraw the parked carrier and representative payload vertically",
+                 moves={n:travel([0,0,80]) for n in ["head","sample"]},extract=["head","sample"],minGapMm=1)
+    intake=dict(id="acquire",stage="operating",basis="Bring the article to the carrier",
+                initialPose={"sample":travel([0,-10,0])},moves={"sample":travel([0,10,0])},minGapMm=1)
+    release=dict(id="release",stage="operating",basis="Move the article clear of the turned carrier",
+                 initialPose=duty["moves"],moves={"sample":travel([0,12,0])},minGapMm=1)
+    park["initialPose"]={**duty["moves"],"sample":spin(90)+travel([0,12,0])}
+    park["moves"]={k:v for k,v in park["moves"].items() if k!="sample"}
+    cases=[duty,park,service,intake,release]
+    motion=write("paths.json",dict(schema="agent-frc/mechanical-motion@1",step=step,layoutDesignSha256=design["sha256"],
+                                    layoutDatum=datum,cases=cases))
+    groups={key:dict(role=role,members=items) for key,role,items in [
+        ("structure","structure",["mount","rail"]),("bumper","bumper",["bumper"]),
+        ("carrier","mechanism",["head"]),("carried article","payload",["sample"]),("neighbor","mechanism",["gate"]),("drive","drive",["drive"]),("battery","battery",["battery"])]}
+    mounts=[dict(group="carrier",on="mount",pointMm=[0,0,6],basis="Sketch origin of the pedestal"),
+            dict(group="neighbor",on="rail",pointMm=[22,72,20],basis="Proposed slide attachment datum")]
+    stages={}
+    for c in cases:
+        moving=[k for k,g in groups.items() if set(g["members"]) & c["moves"].keys()]
+        carried={"carried article":"carrier"} if c in (duty,service) else {}
+        stages[c["id"]]=dict(purpose=c["stage"],movingGroups=moving,carriedWith=carried,
+                             allowanceBasis="Synthetic 1 mm packaging reserve")
+    plan=dict(schema="agent-frc/preliminary-layout@1",issue="synthetic-package-A",design=design,step=step,motion=motion,
+              datum=datum,groups=groups,mounts=mounts,stages=stages,missingInputs=[],
+              control=dict(case="loaded-turn",displaced="rail",moving="head",offsetMm=[0,-50,0],
+                           basis="Move the fixed rail into the arc between the same clear endpoints"))
+    plan.update(cycle=["acquire","loaded-turn","release","park-loaded"], view="package-motion.html")
+    requirements=write("package-limits.json",dict(basis="Invented design brief and loaded operating estimates",
+        inspectionLimitKg=15,operatingMinV=9,
+        massLines=["running gear","power","body","mechanisms","remaining robot"],
+        electricalCases={stage+"-"+condition:dict(stage=stage,duty="Drive and operate the mechanism during "+stage,
+            batteryCondition=condition,
+            requiredMotionMinV=9.2,sources=["drive","carrier","gate","controls"]) for stage in plan["cycle"] for condition in ("nominal","weak")}))
+    sources={"drive":[20,30],"carrier":[8,13],"gate":[2,3],"controls":[2,4]}
+    masses=[("running gear",["drive"],[4,5]),("power",["battery"],[2,2.2]),
+            ("body",["mount","rail","bumper"],[2,2.4]),("mechanisms",["head","gate"],[2,2.4]),
+            ("remaining robot",[],[1,1.5])]
+    plan["budgets"]=write("budgets.json",dict(issue=plan["issue"],step=step,motion=motion,design=design,
+        requirements=requirements,runningPayloadKg=[0.2,0.5],
+        masses=[dict(id=k,members=items,kg=r,basis="Synthetic subtotal, including unmodeled items") for k,items,r in masses],
+        electricalCases={stage+"-"+k:dict(basis="Simultaneous estimated source currents at loaded operating mass",
+            loadedKg=[11.2,14.0],batterySideA=sources,openCircuitV=v,resistanceOhm=r)
+            for stage in plan["cycle"] for k,v,r in (("nominal",[12.3,12.6],[.012,.017]),("weak",[11.5,12],[.023,.03]))}))
+    role=write("role-cycle.json",dict(cycle="Acquire at the front; budget 2.0 to 3.0 s for acquisition"))
+    current=write("capability-estimate.json",dict(face="front",acquireSeconds=2.4,basis="Synthetic timing estimate"))
+    plan["premises"]=[]
+    for key,unit,criterion,value in [("pickup-face","face",{"equals":"front"},"front"),
+                                    ("acquire-time","s",{"range":[2.,3.]},2.4)]:
+        identity=dict(id=key,unit=unit,scenario="selected cycle")
+        field_input=dict(match="trial-1",actor="B1",input="pickupFace") if key=="pickup-face" else dict(
+            match="trial-1",actor="B1",input="actionDwell",period="Opening",stepIndex=0,stepLabel="Pick up tile")
+        accepted=write(key+"-accepted.json",dict(**identity,criterion=criterion,phase="conceptual-design",
+                       interfaces=["carrier","carried article"],source=role,fieldInput=field_input,basis="Matched coarse role comparison"))
+        measured=write(key+"-current.json",dict(**identity,value=value,issue=plan["issue"],
+                       designSha256=design["sha256"],stepSha256=step["sha256"],source=current,
+                       valueField="face" if key=="pickup-face" else "acquireSeconds"))
+        plan["premises"].append(dict(accepted=accepted,current=measured))
+    write("layout.json",plan)
+    subprocess.run(["node",str(cli),"preliminary-check",str(root),"layout.json","--write-view","--require-checked"],
+                   stdout=subprocess.DEVNULL,check=True)
+    return plan
+
+
+if __name__=="__main__":
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("new_directory",type=Path)
+    create(parser.parse_args().new_directory)

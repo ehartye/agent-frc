@@ -28,6 +28,8 @@ To attach project dimensions and rule evidence during creation, pass a project J
 node scripts/design.mjs new robot.json project.json
 ~~~
 
+The blockout export is a provisional handoff. After role selection, the whole-robot designer tests a [shared package layout](preliminary-design.md) on a placed STEP and hands the selected issue to the subsystem designers.
+
 The source artifact uses schema agent-frc/design-artifact@2. Record the robot pose, target pose and the reason for each datum under frames. Reference boxes use x, y, z sizes in metres. Target origin is its center. The object center uses the world frame. The field rectangle starts at x = 0 and is centered on y = 0. Replace the illustrative poses, route, cycle times and requirements with the project's measurements. Populate the planning links to distinguish which action or mechanism depends on each requirement. Use reviseDesign to edit an existing artifact, advance its revision and discard prior check results.
 
 The four supported upper bounds are frame-perimeter, bumper-zone (upper edge), height (all modeled robot volumes), and stow (front extension when starting). Each requires a source record with an edition and a section locator. Missing bounds remain unknown. Support and coverage stay open for assembly review.

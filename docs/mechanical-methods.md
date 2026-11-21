@@ -141,7 +141,7 @@ python scripts/mechanical_methods.py PROJECT issue-register.json --require-pass
 
 An `agent-frc/mechanical-issues@1` register identifies the pinned `archive`, `step` and each finding by `id`, `finding` and catalog `method`. Give it a `negative` case and a `candidate` case. Each case supplies the method’s named `inputs` as pinned project files. The candidate’s `geometryBindings` identify an actual input file, a JSON Pointer in that file and `kind` (archive or step). A shared `criterion` has a result `pointer` and an expected `equals`, or numeric min/max. Keep the same scoped result pointer for the preserved failure and candidate. Record the failing result on the preserved control and passing result on the actual candidate. List the finding IDs in `externalIssues` and pin the register and its receipt in `issueRegister` and `issueResult` in the readiness study. Freeze the installed plugin version when publishing.
 
-Use this same question on systemic failures. If the shop cannot reach the essential joint, a support governs across every plausible material, or the robot cannot collect its assigned pieces before the window closes, compare a different mechanism or whole robot against the same role. [Whole-robot design](../skills/frc-whole-robot-design/SKILL.md)
+Use this same question on systemic failures. If the shop cannot reach the essential joint, a support governs across every plausible material, or the robot cannot collect its assigned pieces before the window closes, compare a different mechanism or whole robot against the same role. [Whole-robot design](../skills/frc-preliminary-design/SKILL.md)
 
 
 

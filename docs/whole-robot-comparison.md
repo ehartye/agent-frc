@@ -4,6 +4,8 @@ Before detailing a subsystem, ask a student to follow one match objective throug
 
 Use the project’s native assembly datum, footprint and field setup for every concept. Show piece and wire paths, sensors, released/retained states, robot and field clearances, installed mass and CG, simultaneous current and timing, tool access, replacement path and recalibration. Give each interface an owner, exchanged quantity, limits and failure response. Capture the dated geometry, executable strategy and metric definitions with the results.
 
+After selecting the field role, commission one [shared package layout](preliminary-design.md) for the team. Use the same selected issue and datum to test the operating, parking and service paths before detailed Fusion work.
+
 ## Decide what to fix before detailing
 
 While changes cost only CAD time, name one premise whose failure would eliminate a design for the selected role. Keep the original pieces, route, deadline and partner assumptions visible. Before ordering hardware or assigning other subsystems to fixed interfaces, write one row in the architecture decision:

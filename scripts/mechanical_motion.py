@@ -29,9 +29,8 @@ def bounds(shape):
     return [*b.CornerMin().Coord(),*b.CornerMax().Coord()]
 
 
-def transform(shape,moves,t):
+def transforms(moves,t):
     from OCP.gp import gp_Trsf,gp_Vec
-    from OCP.BRepBuilderAPI import BRepBuilderAPI_Transform
     for move in moves:
         tr=gp_Trsf()
         if move["kind"]=="gravity-drop":
@@ -43,6 +42,12 @@ def transform(shape,moves,t):
         else:
             require(move["kind"]=="rotation" and number(move["travelDeg"]),"Unknown prescribed motion")
             tr.SetRotation(axes(move),math.radians(move["travelDeg"])*t)
+        yield tr
+
+
+def transform(shape,moves,t):
+    from OCP.BRepBuilderAPI import BRepBuilderAPI_Transform
+    for tr in transforms(moves,t):
         shape=BRepBuilderAPI_Transform(shape,tr,False).Shape()
     return shape
 
@@ -186,11 +191,12 @@ def bearing_area(a,b,load_direction=None):
         and sum(i*j for i,j in zip(n,m))<-.999999999 and distance(f,g)<=1e-7)
 
 
-def evaluate(root,study):
+def evaluate(root,study,*,mount_hosts=(),package_scene=None):
     require(study.get("schema")=="agent-frc/mechanical-motion@1","Unknown motion study")
     original=pinned(root,study["step"])
     identities={}
-    shapes,_=load_solids(original,identities)
+    shapes,non_solids=load_solids(original,identities)
+    host_bounds={n:bounds(shapes[n]) for n in sorted(mount_hosts) if n in shapes}
     case_ids=set();results=[];extraction_states=[]
     for case in study["cases"]:
         id=case["id"]
@@ -213,6 +219,8 @@ def evaluate(root,study):
         for name,ops in case.get("initialPose",{}).items():
             require(name in scene,"Initial pose names absent body")
             scene[name]=transform(scene[name],ops,1)
+        if package_scene is not None:
+            package_scene(case, scene)
         boxes={n:bounds(s) for n,s in scene.items()}
         rates={n:travel_bound(boxes[n],ops) for n,ops in moves.items()}
         cut=case["minGapMm"];depth=case.get("maxDepth",9)
@@ -229,8 +237,9 @@ def evaluate(root,study):
             excluded[tuple(sorted((a,b)))]=ex["basis"]
         rows=[];counts={"broadPhase":0,"bounded":0}
         for a,b in combinations(sorted(scene),2):
-            if (a not in moves and b not in moves) or (a,b) in excluded:continue
-            if a in moves and b in moves and moves[a]==moves[b]:
+            stationary = a not in moves and b not in moves
+            if (stationary and package_scene is None) or (a,b) in excluded:continue
+            if stationary or (a in moves and b in moves and moves[a]==moves[b]):
                 # Their relative pose is constant. Fixtures and initial offsets are not necessarily in the original assembly.
                 g=distance(scene[a],scene[b]);v=common(scene[a],scene[b]) if g<=1e-7 else 0
                 hit=v>0 or g<cut
@@ -326,7 +335,7 @@ def evaluate(root,study):
                 status="open"
         results.append(dict(case=id,extracted=extracted,status=status,moving=list(moves),removed=removed,installedCount=len(scene),pairs=rows,seats=seats,requiredContacts=goals,visibility=visibility,counts=counts))
     require(results,"Supply at least one operating or service case")
-    return {"schema":"agent-frc/mechanical-motion-result@1","stepSha256":digest(original),"occurrences":identities,"cases":results}
+    return {"schema":"agent-frc/mechanical-motion-result@1","stepSha256":digest(original),"occurrences":identities,"nonSolidLeafCount":len(non_solids),"mountHostBoundsMm":host_bounds,"cases":results}
 
 if __name__=="__main__":
     parser=argparse.ArgumentParser(description=__doc__)

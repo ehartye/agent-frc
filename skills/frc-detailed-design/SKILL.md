@@ -1,10 +1,14 @@
 ---
-name: frc-mechanism-cad
-description: "Use when planning an FRC intake, launcher, mechanism, Fusion CAD model or drawing."
+name: frc-detailed-design
+description: "Use for detailed design of mechanisms and their native Fusion assembly, purchased parts, fabrication features, drawings and mechanical evidence."
 ---
-# Mechanism and CAD evidence plan
+# Detailed design of the native assembly and fabrication package
+
+During detailed design, take the accepted preliminary assembly layout into Fusion. Show actual joint-driven motion on the saved supplier and fabricated geometry and return a violated reservation to its owner. [Engineering detail and exit criteria for the three phases](../../docs/design-phase-detail.md)
 
 When the project has not specified a drivetrain, start with four-module swerve and use the [module selection workflow](../frc-swerve/SKILL.md) before committing mounting interfaces. Follow a specified drivetrain for that project.
+
+Begin detailed geometry from the [shared whole-robot package issue](../../docs/preliminary-design.md). Check its revision, datum, mount and path allowances. Return a changed interface to the whole-robot designer with a fresh local path check.
 
 Use **Autodesk Fusion as the student authoring environment**. Start from the project's active Fusion design. Maintain student-editable sketches, parameters, components, joints and drawings there. Hand off a saved version and a reopened F3D or F3Z archive with linked components resolved. Record which features a student can edit and which came from imported solids.
 

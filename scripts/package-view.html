@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preliminary assembly motion</title>
+<style>
+body{font:1rem system-ui;color:#102e3d;background:#f4f7f7;max-width:64rem;margin:2rem auto;padding:0 1rem}
+fieldset{display:flex;flex-wrap:wrap;align-items:center;gap:.75rem;border:0;padding:0}
+button,select{font:inherit;padding:.35rem}svg{width:100%;height:auto;background:white;border:1px solid #aab9bd;margin-top:1rem}
+svg text{paint-order:stroke;stroke:white;stroke-width:3px;fill:#193346;font:12px system-ui}
+output{font-variant-numeric:tabular-nums}
+</style>
+<h1>Preliminary assembly motion</h1><p id="issue"></p>
+<fieldset><legend>Trajectory</legend><label>Case <select id="cases"></select></label>
+<label>Projection <select id="projection"><option>Oblique</option><option>Top</option><option>Front</option><option>Side</option></select></label>
+<button type="button" id="play">Play</button><label>Stroke <input type="range" id="frame" min="0" max="24" value="0"></label><output id="position"></output></fieldset>
+<svg viewBox="0 0 800 480" role="img" aria-label="Labeled component blocks and carried article in their current positions"></svg>
+<p>Stroke shows progress through one commissioned case. The clearance receipt bounds motion between displayed frames.</p>
+<script type="application/json" id="data">PACKAGE_DATA</script>
+<script>
+const data = JSON.parse(document.getElementById('data').textContent);
+const element = id => document.getElementById(id);
+const cases = element('cases'), projection = element('projection'), frame = element('frame');
+const svg = document.querySelector('svg');
+const palette = ['#1a646a','#956032','#b14127','#3155a1','#742c71','#2c713b'];
+element('issue').textContent = data.issue + ' · STEP ' + data.step.sha256.slice(0,12) + ' · motion ' + data.motion.sha256.slice(0,12);
+data.cases.forEach((c,i) => cases.add(new Option(c.id + ' (' + c.stage + ')', i)));
+function point(m, p) {
+  const xyz = [0,4,8].map(k => m[k+3]+p.reduce((s,v,j)=>s+m[k+j]*v,0));
+  const [x,y,z] = xyz;
+  return [[x-.6*y,-z+.32*(x+y)],[x,-y],[y,-z],[x,-z]][projection.selectedIndex];
+}
+function node(tag, attributes) {
+  const n = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.entries(attributes).forEach(([k,v])=>n.setAttribute(k,v));
+  svg.append(n); return n;
+}
+let limits;
+function fit() {
+  limits = [Infinity,Infinity,-Infinity,-Infinity];
+  for(const b of Object.values(data.cases[cases.selectedIndex].bodies)) {
+    for(const m of b.matrices) for(const edge of b.edges) for(const vertex of edge) {
+      const [x,y]=point(m,vertex);
+      limits=[Math.min(x,limits[0]),Math.min(y,limits[1]),Math.max(x,limits[2]),Math.max(y,limits[3])];
+    }
+  }
+  draw();
+}
+function draw() {
+  svg.replaceChildren();
+  const [l,t,r,b]=limits, scale=Math.min(650/Math.max(r-l,1),390/Math.max(b-t,1));
+  const project=(m,p)=>{const [x,y]=point(m,p);return [400+(x-(r+l)/2)*scale,240+(y-(t+b)/2)*scale]};
+  Object.entries(data.cases[cases.selectedIndex].bodies).forEach(([name,body],i)=>{
+    const matrix=body.matrices[Number(frame.value)] || body.matrices[0];
+    const lines=body.edges.map(edge=>edge.map(v=>project(matrix,v)));
+    node('path',{d:lines.map(([a,b])=>'M'+a+'L'+b).join(' '),fill:'none',stroke:palette[i%palette.length],'stroke-width':2});
+    const anchor=lines.flat().reduce((a,b)=>a[0]>b[0]?a:b);
+    node('text',{x:anchor[0]+3,y:anchor[1]-2}).textContent=name;
+  });
+  element('position').textContent=Math.round(Number(frame.value)/24*100)+'%';
+}
+let timer;
+function stop(){clearInterval(timer);timer=null;element('play').textContent='Play'}
+element('play').onclick=()=>{
+  if(timer){stop();return}
+  if(+frame.value===24)frame.value=0;
+  element('play').textContent='Pause';
+  timer=setInterval(()=>{frame.value=+frame.value+1;draw();if(+frame.value===24)stop()},100);
+};
+cases.onchange=()=>{stop();frame.value=0;fit()};projection.onchange=fit;frame.oninput=()=>{stop();draw()};fit();
+</script></html>
