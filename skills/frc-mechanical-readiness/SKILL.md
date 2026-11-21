@@ -50,3 +50,5 @@ For a keyed drive, commission both loaded flanks, radial support, axial restrain
 For a modeled thread in a smooth pilot, check the location of the common material in both cold Fusion and the placed STEP. [Commission the physical pair and its permitted region](../../docs/spatial-fits.md).
 
 For machined stock whose profiles stay constant between machining depths, [compare the material in every section](../../docs/stock-sections.md). Check a displaced control and retain conflicting native observations.
+
+For a purchased flexible drive represented by a smooth band, [compare the finite belt envelope and sampled metal](../../docs/belt-envelope.md). Preserve pulley overlap and every nonmating contact, and qualify tooth engagement, tracking and load separately.
