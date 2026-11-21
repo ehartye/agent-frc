@@ -86,6 +86,12 @@ if __name__=="__main__":
     from mechanical_readiness import project_path,read
     ap=argparse.ArgumentParser(description=__doc__);ap.add_argument("root",type=Path);ap.add_argument("study");args=ap.parse_args()
     try:
-        root=args.root.resolve();r=observe(root,read(project_path(root,args.study)));print(json.dumps(r,indent=2))
-        sys.exit(int(r["status"]!="pass"))
+        root=args.root.resolve();study=read(project_path(root,args.study))
+        if study.get("schema")=="agent-frc/seated-pilot@1":
+            from pilot_alignment import review
+            r=review(root,study)
+        else:
+            r=observe(root,study)
+        print(json.dumps(r,indent=2,allow_nan=False))
+        sys.exit(int(r["status"] not in ("pass","within-budget")))
     except (ValueError,KeyError,TypeError,OSError) as e:sys.exit(str(e))
