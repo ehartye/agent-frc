@@ -65,6 +65,33 @@ def contact_transport(root, key, case, stage, groups, moving, missing):
     return covered
 
 
+def free_paths(root, key, case, stage, groups, moving, missing):
+    """Return, per payload on an unsupported free path in this case, whether a pinned trial records the path.
+
+    No mechanism carries or pushes the payload: it has left every one of them. The pinned trial must record
+    this case, payload and the payload members' exact start and travel, so the path is not an arbitrary
+    animation. A free path never counts as a loaded operating case."""
+    free=stage.get("freePath",{})
+    require(isinstance(free,dict),"List free payload paths by group")
+    bound={}
+    for payload,spec in free.items():
+        require(payload in moving and groups.get(payload,{}).get("role")=="payload" and payload not in stage.get("carriedWith",{})
+                and payload not in stage.get("transportedBy",{}),"Identify the moving payload on a free path")
+        require(isinstance(spec,dict) and named(spec.get("basis")),"Describe the free path of "+payload)
+        bound[payload]=False
+        evidence=spec.get("evidence")
+        if not (isinstance(evidence,dict) and named(evidence.get("file")) and named(evidence.get("sha256"))):
+            missing.append("Pin the free-path evidence for "+payload+" in "+key);continue
+        trial=read(pinned(root,evidence))
+        members=groups[payload]["members"]
+        expected=dict(case=key,payload=payload,moves={n:case["moves"][n] for n in members},
+                      initialPose={n:case.get("initialPose",{}).get(n,[]) for n in members})
+        if not isinstance(trial,dict) or trial.get("freePath")!=expected:
+            missing.append("Free-path evidence for "+payload+" in "+key+" does not record this payload path");continue
+        bound[payload]=True
+    return bound
+
+
 def compare_premises(root, rows, plan, missing):
     require(isinstance(rows,list),"List the accepted upstream premises")
     decisions=[]
@@ -428,6 +455,7 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
     require(set(by_id)==set(stages) and len(by_id)==len(cases),"Commission every selected motion case exactly once")
     covered=set()
     loaded_operating=False
+    free_bound={}
     for key,stage in stages.items():
         c=by_id[key]
         payloads={member for group in groups.values() if group["role"]=="payload" for member in group["members"]}
@@ -453,6 +481,8 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
                         for n in attached), "The attached payload diverges from its carrier")
             if stage["purpose"]=="operating":loaded_operating=True
         if contact_transport(root,key,c,stage,groups,moving,missing) and stage["purpose"]=="operating":loaded_operating=True
+        flights=free_paths(root,key,c,stage,groups,moving,missing)
+        if flights:free_bound[key]=flights
         covered.add(stage["purpose"])
     for purpose in sorted({"operating","park","service"}-covered):
         missing.append("Unexamined stage: "+purpose)
@@ -536,7 +566,7 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
         result["view"]=verify_view(root,plan,sorted(frames,key=lambda f:cycle.index(f["id"]) if f["id"] in cycle else len(cycle)),
                                    write_view,observed,result["budgets"],
                                    dict(control=result.get("control"),missing=missing,
-                                        studyCases=cases,fixtures=fixture_ids))
+                                        studyCases=cases,fixtures=fixture_ids,freePaths=free_bound))
         if not result["view"] or not result["view"]["verified"]:
             missing.append("Generate the matching view of these checked trajectories with --write-view")
     for m in mounts:
@@ -562,7 +592,7 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
         for ref in [*(f["file"] for f in c.get("fixtures",[])),*(e["qualifiedBy"] for e in c.get("intendedInterfaces",[]))]:
             pinned(root,ref)
     for stage in stages.values():
-        for spec in stage.get("transportedBy",{}).values():
+        for spec in [*stage.get("transportedBy",{}).values(),*stage.get("freePath",{}).values()]:
             evidence=spec.get("evidence")
             if isinstance(evidence,dict) and named(evidence.get("file")) and named(evidence.get("sha256")):pinned(root,evidence)
     require(digest(source)==observed["stepSha256"]==plan["step"]["sha256"] and digest(file)==plan_hash,

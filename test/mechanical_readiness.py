@@ -22,6 +22,7 @@ from game_piece_compression import GamePieceCompression
 from checker_progress_failfast import CheckerProgressFailFast
 from motion_heartbeat import MotionHeartbeat
 from atomic_writes import AtomicWrites
+from free_path import FreePath
 from held_position_replay import HeldPositionReplay
 from contact_transport import ContactTransport
 from held_pin_relocation import HeldPinRelocation

@@ -491,7 +491,9 @@ export function checkRelease(id,files,policy={},{added=false}={}){
     if(!linked.has(name))linked.set(name,[]);
     linked.get(name).push(r);
   }
-  const stagePins=new Set(Object.values(receipt.stages??{}).flatMap(s=>Object.values(s?.transportedBy??{}).map(x=>x?.evidence?.sha256)).filter(Boolean));
+  // A stage pins a trial through a contact transport or through an unsupported free path.
+  const pinsOf=s=>[...Object.values(s?.transportedBy??{}),...Object.values(s?.freePath??{})].map(x=>x?.evidence?.sha256).filter(Boolean);
+  const stagePins=new Set(Object.values(receipt.stages??{}).flatMap(pinsOf));
   for(const p of players){
     const page=files.get(p.file),t=p.trial;
     check(page&&hex.test(p.sha256??'')&&sha(page)===p.sha256,'Published field player differs from its pin: '+id+'/'+p.file);
@@ -524,13 +526,15 @@ export function checkRelease(id,files,policy={},{added=false}={}){
       check(m.trial===undefined&&p&&p.objective===m.objective,'The field-interaction player for the '+where+' must be a listed field player for its objective');
       // The player's trial must be the trial of this mission case.
       const trialCase=evidence(files.get(p.trial.file),'trial: '+id);
-      check((trialCase.case??trialCase.transport?.case)===m.case,'The field player trial for the '+where+' records a different case');
+      check((trialCase.case??trialCase.transport?.case??trialCase.freePath?.case)===m.case,'The field player trial for the '+where+' records a different case');
     }else if(m.kind==='field-interaction-trial'){
       const t=m.trial;
       check(object(t)&&trialName.test(t.file??'')&&files.has(t.file)&&pinMatches(t,t.file,files.get(t.file)),
         'Publish the pinned field-interaction trial for the '+where);
-      const bound=Object.values(receipt.stages[m.case].transportedBy??{}).some(s=>s?.evidence?.sha256===t.sha256);
-      check(bound&&evidence(files.get(t.file),'trial: '+id).transport?.case===m.case,
+      // The record must be of the relation that pins it: a transport record for transportedBy, a free-path record for freePath.
+      const record=evidence(files.get(t.file),'trial: '+id),stage=receipt.stages[m.case];
+      const pinnedAs=(relation,key)=>Object.values(stage[relation]??{}).some(s=>s?.evidence?.sha256===t.sha256)&&record[key]?.case===m.case;
+      check(pinnedAs('transportedBy','transport')||pinnedAs('freePath','freePath'),
         'The field-interaction trial for the '+where+' is not the one the receipt pins');
     }
   }

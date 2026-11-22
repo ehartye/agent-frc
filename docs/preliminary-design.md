@@ -37,7 +37,7 @@ The carrier rotates 90Â° with a finite article while a neighboring slide trave
 
 1. Pin the editable `design.json` produced by the design CLI, the selected millimetre STEP and the project motion study. Use project-relative files and SHA-256 throughout. The study repeats the design digest as `layoutDesignSha256` and the exact `layoutDatum`. Give the datum a physical name and a proper row-major `robotToStepMm` transform with translations in millimetres. Express all mount points, rotation axes, starting poses, fixtures, travel and offsets in the same STEP world frame. The transform records the projectâ€™s registration. Validate it against the mounting datums on the first Fusion issue.
 2. Assign every selected solid and fixture to one group. Record the proposed mounting host and point for each mechanism. The checker compares that point with the hostâ€™s parked bounding box. Surface seating, hole alignment and strength need separate checks. Include complete stock and protection, the moving head and payload, neighboring mechanisms and a service tool wherever it occupies the path. Reserve wiring, tolerance, deflection or dressing with conservative geometry or a sourced minimum gap. List missing inputs explicitly.
-3. Give each operating, park and service case its own signed start and travel. Use the existing mechanical-motion format for rotations, translations, fixtures and staged extractions. Declare all simultaneously moving groups. Use `carriedWith` for a payload that follows its carrier. Use `transportedBy` for a payload moved by contact, such as rollers or a lip, when no mechanism shares its motion. Independent moving groups retain their own motion. Tie `minGapMm` to each caseâ€™s `allowanceBasis`. Make the service case withdraw the complete group from the installed scene. A case that relies on a previous removal must name that proved extraction in the same history. [Motion and service evidence](mechanical-methods.md)
+3. Give each operating, park and service case its own signed start and travel. Use the existing mechanical-motion format for rotations, translations, fixtures and staged extractions. Declare all simultaneously moving groups. Use `carriedWith` for a payload that follows its carrier. Use `transportedBy` for a payload moved by contact, such as rollers or a lip, when no mechanism shares its motion. Use `freePath` for a payload that has left every mechanism. Independent moving groups retain their own motion. Tie `minGapMm` to each caseâ€™s `allowanceBasis`. Make the service case withdraw the complete group from the installed scene. A case that relies on a previous removal must name that proved extraction in the same history. [Motion and service evidence](mechanical-methods.md)
 4. Select a matched displaced control. Move one named stationary article by a measured world offset, replay the same nominal moving group and check the specified pair. An unrelated collision cannot validate the control. The checker tests endpoints and bounds the path between them. It retains a collision witness or an unresolved interval when clearance cannot be established within the subdivision budget.
 5. Save the checkpoint receipt with the issue. `layout-checked` applies to the represented package, cases and reserves. `blocked` identifies a nominal violation. `reopen` identifies an upstream premise outside its accepted condition. `provisional` keeps partial layouts useful and identifies missing evidence. Use `--require-checked` for an accepted handoff. A malformed or stale registration exits with a diagnostic. For an early concept, omit the STEP or motion reference, identify the missing input and retain the provisional receipt.
 
@@ -63,6 +63,21 @@ Each transporter must be a `mechanism` group. A transporter that does not move i
 Add `--output receipt.json`, a path relative to the project, to save the receipt instead of printing it. The checker writes a temporary file beside the target and renames it over the target, so a reviewer or another agent reading the package finds the previous receipt or the new one, never an empty or partial file. A run that ends in an error leaves the previous receipt in place. A shell redirect such as `> receipt.json` empties the file as the run starts. `--write-view` writes the page and its scene the same way: each appears whole. On Windows a reader that opens a file during the rename itself can get a brief sharing error; it should retry.
 
 The checker never replaces an existing page or scene. A project that deletes and regenerates them, or that rewrites other package files with its own scripts, opens a gap for concurrent readers. Regenerate into a new issue folder, or pause readers, when that matters.
+
+### Pin the trial behind a free payload path
+
+A released, launched or dropped article is carried by nothing: its path comes from a trial. Give the payload its own signed start and travel in the case and declare the free path in the stage:
+
+```json
+"freePath": {
+  "carried article": {
+    "evidence": {"file": "release-trial.json", "sha256": "..."},
+    "basis": "The article leaves the carrier and flies free"
+  }
+}
+```
+
+The payload must be a moving `payload` group that the same stage does not list under `carriedWith` or `transportedBy`. Pin the trial that established the path. Its `freePath` record must equal the case ID, payload group and the payload members' exact `moves` and `initialPose`, with `[]` for a member that has no start pose. A missing or unpinned trial, or a trial for another path, is listed in `missingInputs`. A free path never satisfies the loaded-operating requirement by itself: another operating case, or a carried or transported payload in the same case, must show the mechanism moving the article. The review scene names the trial in the case's evidence method and lists it under the row's `freePath`. A release may publish that trial as the `field-interaction-trial` of a mission case.
 
 ### Follow progress and stop at the first blocking case
 

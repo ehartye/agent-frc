@@ -437,8 +437,11 @@ def check_release(release):
         if name not in files:
             fail("A field interaction must link a listed field player (" + str(row.get("href")) + ")")
         linked.setdefault(name, []).append(row)
-    stage_pins = {(s.get("evidence") or {}).get("sha256") for st in (receipt.get("stages") or {}).values()
-                  for s in (st.get("transportedBy") or {}).values()}
+    # A stage pins a trial through a contact transport or through an unsupported free path.
+    def pins_of(st):
+        return {(s.get("evidence") or {}).get("sha256")
+                for s in [*(st.get("transportedBy") or {}).values(), *(st.get("freePath") or {}).values()]} - {None}
+    stage_pins = set().union(*map(pins_of, (receipt.get("stages") or {}).values()))
     for q in players:
         t, name = q.get("trial") or {}, q["file"]
         trial = t.get("file") or ""
@@ -472,13 +475,17 @@ def check_release(release):
             ok = ok and "trial" not in m and q is not None and q.get("objective") == m.get("objective")
             if ok:
                 trial = read(release / q["trial"]["file"])
-                ok = (trial.get("case") if "case" in trial else (trial.get("transport") or {}).get("case")) == m.get("case")
+                ok = (trial.get("case") if "case" in trial else
+                      (trial.get("transport") or trial.get("freePath") or {}).get("case")) == m.get("case")
         elif m.get("kind") == "field-interaction-trial":
             t = m.get("trial") or {}
             name = t.get("file") or ""
             ok = (ok and bool(TRIAL.fullmatch(name)) and name not in RESERVED and (release / name).is_file()
-                  and sha(name) == t.get("sha256") and any((s.get("evidence") or {}).get("sha256") == t.get("sha256")
-                                                          for s in (stage_.get("transportedBy") or {}).values()))
+                  and sha(name) == t.get("sha256") and t.get("sha256") in pins_of(stage_))
+            # A trial pinned only for a free path must be a free-path record of this case.
+            if ok and not any((s.get("evidence") or {}).get("sha256") == t.get("sha256")
+                              for s in (stage_.get("transportedBy") or {}).values()):
+                ok = (read(release / name).get("freePath") or {}).get("case") == m.get("case")
             trials.add(name)
         elif "trial" in m:
             ok = False
