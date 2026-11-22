@@ -111,4 +111,13 @@ test('the season script publishes a checked release, records where its inputs ar
   assert.ok(existsSync(path.join(author, 'releases', 'b', 'layout.json')), 'the checked inputs stay');
   assert.match(stage('b').stderr, /Release b is withdrawn; stage the revision under a new ID/);
   assert.match(stage('a').stderr, /Release a is superseded; stage the revision under a new ID/);
+
+  // An in-progress release that a later release replaced is marked superseded directly; the site keeps opening the later one.
+  await fixture('c');
+  await fixture('d');
+  assert.equal(stage('c').status, 0);
+  assert.equal(stage('d').status, 0);
+  assert.equal(stage('--set-status', 'c', 'superseded').status, 0);
+  assert.deepEqual([(await index()).designStatus.c, (await index()).designStatus.d, (await index()).current], ['superseded', 'in-progress', 'd']);
+  assert.ok(existsSync(path.join(site, 'releases', 'c', 'receipt.json')));
 });

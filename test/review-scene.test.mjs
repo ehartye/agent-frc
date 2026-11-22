@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { gzipSync } from 'node:zlib';
 import { checkSchema, validateScene, readScene, compareWithReceipt, compareWithLedger } from '../scripts/review-scene.mjs';
-import { reviewScene } from './fixtures/review-scene.mjs';
+import { reviewScene, replayScene } from './fixtures/review-scene.mjs';
 
 test('the synthetic scene satisfies the schema and cross-checks', () => {
   const {errors, warnings} = validateScene(reviewScene());
@@ -127,4 +127,49 @@ test('field interactions without any registered field fixture are reported', () 
   assert.ok(warnings.some(w => finding.test(w) && /fixtures/.test(w)), warnings.join('\n'));
   linked.fieldInteractions = [];
   assert.ok(!validateScene(linked).warnings.some(w => finding.test(w)), 'no linked interaction, no finding');
+});
+
+test('a trial replay validates beside the cases and shares their ID namespace', () => {
+  assert.deepEqual(validateScene(replayScene()).errors, []);
+  const breaks = [
+    [r => { r.id = 'raise'; }, /replays\/0 repeats case or replay raise/],
+    [r => { r.bodies.ghost = {mesh: 0, group: 'robot'}; }, /replays\/0\/bodies names an unknown body: ghost/],
+    [r => { r.bodies.arm.group = 'wrist'; }, /bodies\/arm names an unknown group: wrist/],
+    [r => { r.bodies.arm.mesh = 40; }, /replays\/0\/bodies\/arm mesh out of range/],
+    [r => { r.groups.arm.pop(); }, /groups\/arm needs one transform per frame \(5\)/],
+    [r => { r.follow = 'nobody'; }, /follow names an unknown group/],
+    [r => { r.groups.robot[2] = null; }, /follow group must be placed in every frame/],
+    [r => { r.time[3] = 0.1; }, /time must never decrease/],
+    [r => { r.measure.pop(); }, /measure needs one entry per frame \(5\)/],
+    [r => { r.events.reverse(); }, /events must be in frame order/],
+    [r => { r.events[1].frame = 9; }, /events must be in frame order/],
+    [r => { r.tubes[0].points.pop(); }, /tubes\/0 needs one centerline, or one per frame \(5\)/],
+    [r => { r.tubes[0].points[1].pop(); }, /tubes\/0 needs the same number of points on every centerline/],
+    [r => { delete r.tubes[0].radiusMm; }, /tubes\/0 needs radiusMm and color, or body and mesh/],
+    [r => { r.tubes[1].body = 'frame'; }, /tubes\/1\/body must be a field body that the replay does not also place/],
+    [r => { r.tubes[1].body = 'target'; }, /tubes\/1\/body must be a field body that the replay does not also place/],
+    [r => { r.tubes[1].mesh = 40; }, /tubes\/1 mesh out of range/]];
+  for (const [change, pattern] of breaks) {
+    const scene = replayScene();
+    change(scene.replays[0]);
+    const {errors} = validateScene(scene);
+    assert.ok(errors.some(e => pattern.test(e)), pattern + ' in ' + errors.join('\n'));
+  }
+  const hidden = replayScene();
+  hidden.replays[0].groups.arm[1] = null;
+  hidden.replays[0].tubes[0].points.length = 1;
+  assert.deepEqual(validateScene(hidden).errors, [], 'a null frame hides a group, and one centerline serves a fixed tube');
+  const extra = replayScene();
+  extra.replays[0].surprise = true;
+  assert.ok(checkSchema(extra).some(e => e === '/replays/0/surprise is not a scene field'));
+  assert.ok(checkSchema({...replayScene(), replays: [{...replayScene().replays[0], evidence: []}]}).some(e => /evidence needs at least 1 items/.test(e)), 'a replay pins the trial it plays back');
+});
+
+test('a replay is playback: the receipt comparison still covers exactly the checked cases', () => {
+  const scene = replayScene(), content = Buffer.from(JSON.stringify(scene)), served = gzipSync(content), read = readScene(served);
+  const receipt = {issue: scene.issue, step: scene.sources.step, motion: scene.sources.motion, cases: [{case: 'raise', status: 'pass'}],
+    control: {witness: {}}, narrativeReview: scene.narrativeReview};
+  assert.deepEqual(compareWithReceipt(read, receipt, {pins: false}), [], 'a replay adds no case to compare');
+  assert.ok(compareWithReceipt(read, {...receipt, cases: [...receipt.cases, {case: 'lane-run', status: 'pass'}]}, {pins: false})
+    .includes('Scene case results differ from the receipt'), 'a receipt cannot credit a replay as a checked case');
 });

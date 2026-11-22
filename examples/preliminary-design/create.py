@@ -3,6 +3,7 @@ from pathlib import Path
 import argparse
 import hashlib
 import json
+import math
 import subprocess
 import shutil
 import re
@@ -17,6 +18,43 @@ from OCP.TDataStd import TDataStd_Name
 from OCP.TDocStd import TDocStd_Document
 from OCP.XCAFDoc import XCAFDoc_DocumentTool
 from OCP.gp import gp_Pnt
+
+
+def replay_set(write):
+    """A synthetic recorded run and the replay set that plays it in the review's one motion list. Every number is invented."""
+    frames, step = 61, 0.05
+    ramp = lambda k, a, b: min(1.0, max(0.0, (k - a) / (b - a)))
+    def pose(x, deg=0.0, shift=(0.0, 0.0, 0.0)):
+        # Turn about the carrier axis through (0, 0, 20), then shift, then move with the robot along X.
+        c, n = math.cos(math.radians(deg)), math.sin(math.radians(deg))
+        return [c, -n, 0, x + shift[0], n, c, 0, shift[1], 0, 0, 1, shift[2]]
+    drive = [60 * ramp(k, 0, 20) for k in range(frames)]
+    turn = [90 * ramp(k, 20, 40) for k in range(frames)]
+    leave = [ramp(k, 40, 56) for k in range(frames)]
+    run = write("release-lane-run.json", dict(case="release-lane-run", basis="Synthetic, invented recorded run",
+        timeS=[round(step * k, 2) for k in range(frames)], robotXMm=drive, carrierDeg=turn,
+        sampleLeaveMm=[[0, round(58 * f, 3), round(-4 * f, 3)] for f in leave]))
+    def hose(x):
+        # A slack line from a fixed post to the moving robot; drawn for display only.
+        a, b = (-60.0, 60.0, 30.0), (x - 8.0, 8.0, 6.0)
+        return [[a[i] + (b[i] - a[i]) * t / 8 - (12 * math.sin(math.pi * t / 8) if i == 2 else 0) for i in range(3)] for t in range(9)]
+    lo, hi = (44, 84, 8), (76, 140, 14)
+    lane = dict(v=[[lo[0], lo[1], lo[2]], [hi[0], lo[1], lo[2]], [hi[0], hi[1], lo[2]], [lo[0], hi[1], lo[2]],
+                   [lo[0], lo[1], hi[2]], [hi[0], lo[1], hi[2]], [hi[0], hi[1], hi[2]], [lo[0], hi[1], hi[2]]],
+                f=[[0, 2, 1], [0, 3, 2], [4, 5, 6], [4, 6, 7], [0, 1, 5], [0, 5, 4], [1, 2, 6], [1, 6, 5], [2, 3, 7], [2, 7, 6], [3, 0, 4], [3, 4, 7]])
+    return write("release-lane-replay.json", dict(schema="agent-frc/review-replays@1",
+        fieldBodies={"lane": dict(name="Release lane", mesh=lane, purpose="Receive the released sample.",
+                                  rationale="Invented field part that the recorded run delivers to.")},
+        replays=[dict(id="release-lane-run", label="Release-lane run (recorded)", objective="Acquire, turn and release",
+            basis="Synthetic recorded run: drive to the lane, turn the carrier and release the sample.", evidence=[dict(run, role="recorded run")],
+            recorded=["Robot position", "Carrier angle", "Sample path after release"], display=["Supply hose shape"],
+            time=[round(step * k, 2) for k in range(frames)], follow="robot",
+            measure=["Robot " + str(round(drive[k])) + " mm along the lane · carrier " + str(round(turn[k])) + "°" for k in range(frames)],
+            events=[dict(frame=20, label="Robot at the lane"), dict(frame=40, label="Carrier turned"), dict(frame=56, label="Sample on the lane")],
+            bodies={**{n: "robot" for n in ("mount", "bumper", "rail", "gate", "drive", "battery")}, "head": "carrier", "sample": "sample", "lane": None},
+            groups=dict(robot=[pose(drive[k]) for k in range(frames)], carrier=[pose(drive[k], turn[k]) for k in range(frames)],
+                        sample=[pose(drive[k], turn[k], (0, 58 * leave[k], -4 * leave[k])) for k in range(frames)]),
+            tubes=[dict(name="Supply hose", radiusMm=1.2, color="#c9a227", points=[hose(drive[k]) for k in range(frames)])])]))
 
 
 RELEASES = "cad/preliminary-design/releases"
@@ -177,6 +215,8 @@ def create(root, release_id=None, project=None):
         plan["presentation"]["fieldInteractions"] = [dict(title="Synthetic release-lane interaction",
             href="field/release-lane.html", objective="Acquire, turn and release",
             evidence=trial, embed=True)]
+        # A synthetic recorded run plays as one more entry of the review's motion list.
+        plan["presentation"]["replays"] = [replay_set(write)]
     write("layout.json",plan)
     result = subprocess.run(["node", str(cli), "preliminary-check", str(project), prefix + "layout.json",
                              "--write-view", "--require-checked"], capture_output=True)

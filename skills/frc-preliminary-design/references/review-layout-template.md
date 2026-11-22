@@ -29,6 +29,8 @@ cad/preliminary-design/
     package-motion.html          the review page: the stock page until the project changes it
     review-scene.json.gz         the scene the page reads (ignored; see below)
     release-lane-trial.json      example pinned evidence for a field interaction
+    release-lane-run.json        example recorded run, synthetic
+    release-lane-replay.json     example replay set that plays the run in the motion list
     field/release-lane.html      synthetic, self-contained season field player
 .github/workflows/
   design-publication.yml         scans each pushed branch, reruns the layout check, deploys from the default branch
@@ -66,7 +68,7 @@ The stock page has these regions, top to bottom. Each value comes from the scene
 | Region | What the page shows | Review action |
 | --- | --- | --- |
 | 1. Header and title | The navy header bar with any season links, which open in the top window. The page has no link back to the release index: the stable index's release picker moves between releases, and links that leave the review open at the top or, for the receipt and field players, in a new tab, so nothing loads a page inside the index's frame. A title block: the project, release ID and "Preliminary design" above the release title (`presentation.title`, else the issue), and a chip combining the design status from the release index with the receipt decision, such as "In progress · layout-checked". The first unmet requirement appears beside the chip only when there is one. A collapsed **Review basis** holds the selected architecture, datum, units, strategic narrative revision, current decision and first unmet requirement, so the page opens onto the model. | Read the chip and any unmet requirement; open the review basis and the narrative objectives. |
-| 2. Viewer row | **Viewer column**, in this order: (a) top bar with the pane title "Assembly layout", then view toggles and view buttons only: **Labels** (with callout paging when the callouts span pages), **Floor**, an optional data-driven cutaway toggle, **Fit robot**, **Fit field interaction** and **Expand**; (b) the canvas; (c) the control hint line; (d) the **playback row, directly below the canvas**: motion case selector, **Play**, speed (1×, ¼×), the slider and its percent or seconds readout; (e) the live readout for the case (its per-frame measure or result, and its basis), with the reason whenever **Fit field interaction** is off; (f) the category legend. **Inspector column**, docked to the right: the component inspector (its heading, hint and search until a part is selected; then the part with Focus part, Show assembly and Locate in ledger), then the selection budget with Whole robot, Category, Subsystem and Custom subsystem groupings, the electrical duty and the allocation detail. | Orbit through 360° and underneath, pan, zoom, fit the robot or the field interaction, expand to full screen, pick a surface, search by name or ID, focus a part and show the assembly, locate a part in the ledgers, toggle labels and page the callouts, play and scrub each case at either speed. |
+| 2. Viewer row | **Viewer column**, in this order: (a) top bar with the pane title "Assembly layout", then view toggles and view buttons only: **Labels** (with callout paging when the callouts span pages), **Floor**, an optional data-driven cutaway toggle, **Fit robot**, **Fit field interaction** and **Expand**; (b) the canvas; (c) the control hint line; (d) the **playback row, directly below the canvas**: one motion selector that lists the checked cases and then any trial replays, **Play**, speed (1×, ¼×, 4×, 10×), the slider and its percent or seconds readout; (e) the live readout for the selected entry (its per-frame measure or result, the current event with numbered jump buttons when a replay records events, and its basis), with the reason whenever **Fit field interaction** is off; (f) the category legend. **Inspector column**, docked to the right: the component inspector (its heading, hint and search until a part is selected; then the part with Focus part, Show assembly and Locate in ledger), then the selection budget with Whole robot, Category, Subsystem and Custom subsystem groupings, the electrical duty and the allocation detail. | Orbit through 360° and underneath, pan, zoom, fit the robot or the field interaction, expand to full screen, pick a surface, search by name or ID, focus a part and show the assembly, locate a part in the ledgers, toggle labels and page the callouts, play and scrub each case and replay at any speed, and jump to a replay's events. |
 | 3. Resource figures | Inspection weight against its limit, the loaded-bus minimum against its requirement, and battery-side demand against the pack budget at that floor, each linking to its ledger. | Choose a duty; the figures follow it. |
 | 4. Weight budget and power by load | The inspection allocation ruler and table with its total, and the running configuration with itemized running additions. Battery-current bars by circuit group, each with its envelope, sag contribution and consuming parts. | Select a row, bar or member to locate the parts in the model. |
 | 5. Required components | The strategic narrative review, then each required role with Present or Missing and the absent IDs, and a warning line that keeps overweight, low-voltage and missing-role findings visible beside the review focus. | Confirm every commissioned role is represented. |
@@ -99,10 +101,44 @@ The schema marks each field `plugin` (derived), `project` (authored under `prese
 | `cutaway` | optional | `presentation.cutaway`: `{label, hides: [fixture IDs], outline: [[x, y, z], ...]}`, for example a target aperture. |
 | `links` | optional | `presentation.links`: `[{label, href}]` header links to season pages, relative or `https:`. |
 | `fieldInteractions` | optional | `presentation.fieldInteractions`; see below. |
+| `replays` | optional | `presentation.replays`: pinned replay sets as `[{file, sha256}]`; see [Play a recorded trial in the motion list](#play-a-recorded-trial-in-the-motion-list). |
 
 The limiting pair on each path comes from pairs that include a moving body: a failure or open interval first, then the smallest gap or interval lower bound. An interval bound has no single limiting pose, so **Jump to limiting pose** needs a witness time. The receipt's `decision` records the final `status` and `firstUnmet` requirement: clearance findings first, then weight, voltage, the displaced control, held reopen decisions and missing inputs. The conceptual-design return criteria list each accepted conceptual premise from the receipt.
 
 Keep field-interaction and physics players project-owned. Each one is first-class preliminary evidence for its mission task. Put it in the release inputs at `field/NAME.html` beside the review page, link it with `{title, href: "field/NAME.html", objective, evidence: {file, sha256}, embed}` and pin its trial. Staging publishes the page and its trial in the release and lists them under `fieldPlayers` in `release.json`. Keep the page self-contained so it plays from the published folder and from a local copy. The starter makes the policy `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; base-uri 'none'; form-action 'none'">` the first element in `<head>`; keep it unless the page needs more. Inline everything the playback needs, including its trace, and name the preliminary design release the page belongs to. The publication check does not inspect the page: your project's pull request review does. Correct a player by staging its release again. The review re-checks each link and sandboxes an embedded player from another origin.
+
+## Play a recorded trial in the motion list
+
+A replay plays a recorded physics trial in the review's own viewer. It is one more entry in the motion selector, after the checked cases, with the same Play, speed, slider and readout. `?case=ID` opens it, so replay and case IDs share one namespace. A replay is evidence playback and not a clearance case: the layout check neither runs nor credits it, the receipt's case set leaves it out, and the motion-evidence table lists only checked cases.
+
+Generate a replay set from the trial in the owning project, write it beside `layout.json`, as JSON or gzipped JSON, and pin it under `presentation.replays` as `{file, sha256}`. A set has the schema `agent-frc/review-replays@1`, a `replays` list and optional `fieldBodies`. This example is abbreviated:
+
+```json
+{
+  "schema": "agent-frc/review-replays@1",
+  "fieldBodies": {"lane": {"name": "Release lane", "mesh": {"v": [[0, 0, 0]], "f": [[0, 1, 2]]}, "purpose": "...", "rationale": "..."}},
+  "replays": [{
+    "id": "lane-run", "label": "Lane run (recorded)", "basis": "What was recorded and under which model",
+    "objective": "The narrative objective it plays",
+    "evidence": [{"file": "lane-run.json", "sha256": "...", "role": "recorded run"}],
+    "recorded": ["Robot position"], "display": ["Hose shape"],
+    "time": [0, 0.05, 0.1], "measure": ["...", "...", "..."], "events": [{"frame": 2, "label": "At the lane"}],
+    "follow": "robot",
+    "bodies": {"frame": "robot", "arm": "arm", "lane": null},
+    "groups": {"robot": [[1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0]], "arm": [null]},
+    "tubes": [{"name": "Hose", "radiusMm": 8, "color": "#c9a227", "points": [[[0, 0, 0], [100, 0, 0]]]},
+              {"name": "Banner", "body": "banner", "points": [[[0, 0, 0], [100, 0, 0]]]}]
+  }]
+}
+```
+
+- `time` holds the seconds of each frame from the run, never decreasing. Its length is the frame count. `measure` is the optional readout per frame, and `events` names moments by frame, in order.
+- `bodies` maps each shown ID, a placed member or a field body, to the rigid group it moves with. `null` keeps the body where its mesh was drawn. `groups` gives each group one row-major 3×4 transform per frame, in the field frame and in millimetres, applied to the mesh as drawn. A `null` frame hides the group. `follow` names the group the robot view tracks; it needs a transform in every frame.
+- `fieldBodies` adds field parts and loose pieces that only replays show. Each needs a `name` and a closed triangle `mesh`, and may give `category`, `color`, `subsystem`, `material`, `purpose` and `rationale`. A field body counts as a fixture and never as robot mass.
+- `tubes` draws flexible parts along a centerline. `points` holds one centerline for a fixed part or one per frame for a moving one, each with the same number of points. Give `radiusMm` and `color` to draw a round tube. Give `body` instead, naming a field body the replay does not otherwise place, and that body's mesh follows the centerline: each vertex moves with the nearest point on it, measured from the first centerline.
+- `evidence` pins every trial file the replay plays back. List what came from the trial under `recorded` and what was prescribed or interpolated under `display`; display motions carry no contact or load claim.
+
+In the scene, each replay appears under `replays[]` with the same fields, except that the plugin resolves each body to `{mesh, group}` and adds `mesh` to a tube that names a `body`. `review-scene.mjs validate` checks the frame counts, groups, event order and tube bodies. A scene without replays is unchanged.
 
 ## Shape the assembly reviewers will inspect
 

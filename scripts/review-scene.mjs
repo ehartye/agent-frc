@@ -81,6 +81,32 @@ export function validateScene(scene) {
     for (const key of ['time', 'measure', 'positions'])
       if (c[key] && c[key].length !== frames) errors.push(at + '/' + key + ' needs one entry per frame (' + frames + ')');
   }
+  // Replays share the motion list and its deep links with the cases, so their IDs share one namespace.
+  for (const [i, r] of (scene.replays || []).entries()) {
+    const at = '/replays/' + i, frames = r.time.length;
+    if (caseIds.has(r.id)) errors.push(at + ' repeats case or replay ' + r.id);
+    caseIds.add(r.id);
+    known(Object.keys(r.bodies), at + '/bodies');
+    for (const [id, b] of Object.entries(r.bodies)) {
+      if (b.mesh >= scene.meshes.length) errors.push(at + '/bodies/' + id + ' mesh out of range');
+      if (b.group !== null && !Object.hasOwn(r.groups, b.group)) errors.push(at + '/bodies/' + id + ' names an unknown group: ' + b.group);
+    }
+    for (const [name, series] of Object.entries(r.groups)) if (series.length !== frames) errors.push(at + '/groups/' + name + ' needs one transform per frame (' + frames + ')');
+    if (!Object.hasOwn(r.groups, r.follow)) errors.push(at + '/follow names an unknown group');
+    else if (r.groups[r.follow].includes(null)) errors.push(at + '/follow group must be placed in every frame');
+    if (r.time.some((t, k) => k && t < r.time[k - 1])) errors.push(at + '/time must never decrease');
+    if (r.measure && r.measure.length !== frames) errors.push(at + '/measure needs one entry per frame (' + frames + ')');
+    if ((r.events || []).some((e, k, all) => e.frame >= frames || k && e.frame < all[k - 1].frame)) errors.push(at + '/events must be in frame order within the replay');
+    for (const [k, tube] of (r.tubes || []).entries()) {
+      const where = at + '/tubes/' + k;
+      if (tube.points.length !== 1 && tube.points.length !== frames) errors.push(where + ' needs one centerline, or one per frame (' + frames + ')');
+      if (tube.points.some(line => line.length !== tube.points[0].length)) errors.push(where + ' needs the same number of points on every centerline');
+      if (tube.body === undefined) {
+        if (tube.radiusMm === undefined || tube.color === undefined || tube.mesh !== undefined) errors.push(where + ' needs radiusMm and color, or body and mesh');
+      } else if (!bodies[tube.body]?.fixture || Object.hasOwn(r.bodies, tube.body)) errors.push(where + '/body must be a field body that the replay does not also place');
+      else if (!(tube.mesh < scene.meshes.length)) errors.push(where + ' mesh out of range');
+    }
+  }
   if (!caseIds.has(scene.openingCase)) errors.push('/openingCase names an unknown case');
   for (const p of scene.parked.positive) known(p.pair, '/parked/positive');
   for (const p of scene.parked.unresolved) known(p, '/parked/unresolved');

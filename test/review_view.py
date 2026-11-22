@@ -188,6 +188,10 @@ class CompressedScene(unittest.TestCase):
             self.assertEqual(data["architecture"], plan["presentation"]["architecture"])
             self.assertEqual([r["kind"] for r in data["motionEvidence"]].count("displaced control"), 1)
             self.assertEqual(data["fieldInteractions"][0]["title"], "Synthetic release-lane interaction")
+            replay = data["replays"][0]
+            self.assertEqual((replay["id"], len(replay["time"]), replay["bodies"]["lane"]["group"], replay["tubes"][0]["name"]),
+                             ("release-lane-run", 61, None, "Supply hose"), "the recorded run joins the scene as a replay, not a case")
+            self.assertNotIn("release-lane-run", [c["id"] for c in data["cases"]])
             self.assertEqual(data["mass"]["runningAdditions"], [dict(name="carried sample", kg=[0.2, 0.5], members=["sample"])])
             self.assertEqual(data["required"], [dict(role="propulsion", ids=["drive"]), dict(role="supply", ids=["battery"])])
             head = data["bodies"]["head"]
