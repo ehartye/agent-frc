@@ -191,11 +191,35 @@ export function checkSelfContained(bytes,where){
  * control rejected and no missing inputs. Mission: at least one passing, playable operating case or
  * receipt-bound field-interaction trial accomplishes a represented narrative objective.
  */
-export function checkRelease(id,files){
+export function checkRelease(id,files,policy={}){
   check(releaseId.test(id),'Invalid preliminary release ID: '+id);
   check(files.has('release.json'),'Preliminary release '+id+' has no release record (release.json)');
   const record=parse(files.get('release.json'),'release record: '+id);
   check(record?.schema===releaseSchema&&record.release===id,'Release record names a different schema or release: '+id);
+  const approved=policy.presentations?.[id];
+  if(approved){
+    check(object(approved.files)&&Object.keys(approved.files).length&&
+      Object.entries(approved.files).every(([name,digest])=>
+        /^[a-z0-9][a-z0-9._-]*\.(?:html|css|js|md|json\.gz)$/.test(name)&&
+        (name==='index.html'||!reserved.includes(name))&&name!=='package-motion.html'&&
+        files.has(name)&&hex.test(digest)&&sha(files.get(name))===digest),
+      'Project presentation differs from its approved assets: '+id);
+    check(Object.hasOwn(approved.files,'index.html'),'Project presentation needs an approved entry point: '+id);
+    if(record.status==='historical-review'){
+      check(approved.historicalRecord===sha(files.get('release.json'))&&record.label==='Historical preliminary review'&&
+        releaseId.test(record.supersededBy??'')&&record.supersededBy!==id&&named(record.knownIssue)&&
+        files.size===Object.keys(approved.files).length+1,'Invalid historical review or unapproved record: '+id);
+      const page=lf(files.get('index.html'));
+      const escaped=record.knownIssue.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+      check(page.includes('<aside role="note"><strong>Historical preliminary review</strong> '+escaped+'</aside>'),
+        'Display the historical review and its known limitation in the project view: '+id);
+      return {release:id,status:record.status,supersededBy:record.supersededBy};
+    }
+    check(!approved.historicalRecord,'An approved historical review cannot become current: '+id);
+    // Preserve the project entry point. Verify the underlying checked player with the ordinary rules.
+    check(record.view?.file==='package-motion.html'&&files.has('package-motion.html'),'Missing checked player: '+id);
+  }
+  const checkedView=approved?'package-motion.html':'index.html';
   check(record.label===releaseLabel,'Label release '+id+' "'+releaseLabel+'"');
   const trials=new Set();
   const missions=record.missionCases;
@@ -217,12 +241,12 @@ export function checkRelease(id,files){
   const geometryPin=object(peek?.view?.geometry)?peek.view.geometry:null;
   const geometryFile=geometryPin&&geometryName.test(geometryPin.file??'')?geometryPin.file:null;
   for(const name of files.keys()){
-    check(reserved.includes(name)||name===geometryFile||playerFiles.has(name)||trials.has(name)&&trialName.test(name)&&!reserved.includes(name),
+    check(reserved.includes(name)||name===checkedView||approved&&Object.hasOwn(approved.files,name)||name===geometryFile||playerFiles.has(name)||trials.has(name)&&trialName.test(name)&&!reserved.includes(name),
       'Unrecognized preliminary output: releases/'+id+'/'+name);
   }
   for(const name of ['index.html','receipt.json','motion.json','budgets.json','limits.json'])
     check(files.has(name),'Preliminary release '+id+' is missing '+name);
-  const receiptBytes=files.get('receipt.json'),view=files.get('index.html'),scene=files.get('motion.json');
+  const receiptBytes=files.get('receipt.json'),view=files.get(checkedView),scene=files.get('motion.json');
   evidence(scene,'scene: '+id,v=>Array.isArray(v.cases));
   evidence(files.get('budgets.json'),'budget ledger: '+id,v=>Array.isArray(v.masses)&&object(v.electricalCases));
   evidence(files.get('limits.json'),'limits: '+id,v=>typeof v.inspectionLimitKg==='number');
@@ -242,7 +266,7 @@ export function checkRelease(id,files){
   check(object(record.scene)&&pinMatches(record.scene,'motion.json',scene)&&object(receipt.motion)&&receipt.motion.sha256===record.scene.sha256&&
     object(receipt.step)&&hex.test(receipt.step.sha256)&&record.scene.stepSha256===receipt.step.sha256,
     'Published scene differs from the receipt and release record: '+id);
-  check(pinMatches(record.view,'index.html',view)&&object(receipt.view)&&receipt.view.verified===true&&receipt.view.sha256===record.view.sha256,
+  check(pinMatches(record.view,checkedView,view)&&object(receipt.view)&&receipt.view.verified===true&&receipt.view.sha256===record.view.sha256,
     'Published view differs from the receipt and release record: '+id);
   const data=playerData(view);
   check(data&&data.issue===receipt.issue&&JSON.stringify(data.step)===JSON.stringify(receipt.step)&&
@@ -346,10 +370,28 @@ function readTree(dir){
   return files;
 }
 /** Author-side check of one staged release directory. */
-export async function verifyRelease(dir){
+export async function verifyRelease(dir,policy={}){
   const real=realpathSync(dir);
   check(lstatSync(real).isDirectory(),'Expected a release directory');
-  return checkRelease(path.basename(real),readTree(real));
+  return checkRelease(path.basename(real),readTree(real),policy);
+}
+
+/** Check a new catalog with the same directory and eligibility rules as a first deployment. */
+export function verifyCatalog(dir,policy){
+  const files=new Map();
+  function visit(folder,prefix){
+    for(const item of readdirSync(folder,{withFileTypes:true})){
+      const key=prefix+item.name, target=path.join(folder,item.name);
+      if(item.isDirectory())visit(target,key+'/');
+      else{
+        check(item.isFile()&&!item.isSymbolicLink(),'Redirected or unsupported catalog file: '+key);
+        files.set(key,readFileSync(target));
+      }
+    }
+  }
+  check(!lstatSync(dir).isSymbolicLink(),'Redirected preliminary catalog');
+  visit(dir,'');
+  return auditTree(new Map(),files,policy);
 }
 
 /** Validate the trusted policy field. Paths are relative to the deployed site. */
@@ -359,13 +401,17 @@ export function preliminaryPolicy(spec,reserved){
     n.split('/').every(x=>x&&x!=='.'&&x!=='..'&&x!=='.git');
   check(object(spec)&&safe(spec.root)&&Array.isArray(spec.primaryEntryPoints)&&spec.primaryEntryPoints.length&&
     spec.primaryEntryPoints.every(safe)&&new Set(spec.primaryEntryPoints).size===spec.primaryEntryPoints.length&&
-    Object.keys(spec).every(k=>['root','primaryEntryPoints','secondaryLink'].includes(k)),
+    Object.keys(spec).every(k=>['root','primaryEntryPoints','secondaryLink','presentations','catalogFiles'].includes(k)),
     'preliminaryReleases needs a root and the approved primary entry points');
   check(spec.secondaryLink===undefined||spec.primaryEntryPoints.includes(spec.secondaryLink)&&/\.html?$/.test(spec.secondaryLink),
     'preliminaryReleases.secondaryLink must name a primary entry page (HTML)');
   const inside=n=>n===spec.root||n.startsWith(spec.root+'/');
   check(![...spec.primaryEntryPoints,...reserved].some(inside),'Keep primary, model and field outputs outside the preliminary tree');
-  return {root:spec.root,primary:new Set(spec.primaryEntryPoints),inside,secondaryLink:spec.secondaryLink};
+  check(spec.presentations===undefined||object(spec.presentations)&&Object.entries(spec.presentations).every(
+    ([id,p])=>releaseId.test(id)&&object(p)&&object(p.files)),'Invalid approved release presentations');
+  check(spec.catalogFiles===undefined||object(spec.catalogFiles)&&Object.keys(spec.catalogFiles).sort().join(',')==='index.html,releases.js'&&
+    Object.values(spec.catalogFiles).every(v=>hex.test(v)),'Pin both project catalog assets');
+  return {...spec,primary:new Set(spec.primaryEntryPoints),inside};
 }
 
 /**
@@ -432,13 +478,13 @@ function elementContentAt(html){
  * Compare the preliminary tree of an approved and candidate site.
  * read(folder,name) returns bytes; oldNames and newNames are the tree-relative inventories.
  */
-export function auditTree(oldFiles,newFiles){
+export function auditTree(oldFiles,newFiles,policy={}){
   const group=files=>{
     const top=new Map(),releases=new Map();
     for(const [name,bytes] of files){
       const parts=name.split('/');
       if(parts.length===1){
-        check(['index.html','releases.json'].includes(name),'Unrecognized preliminary output: '+name);
+        check(['index.html','releases.json'].includes(name)||name==='releases.js'&&policy.catalogFiles,'Unrecognized preliminary output: '+name);
         top.set(name,bytes);
       }else if(parts.length===2&&parts[0]==='fonts'){
         // Only the plugin's bundled theme fonts and their OFL licenses. Text may differ only in line endings.
@@ -465,7 +511,9 @@ export function auditTree(oldFiles,newFiles){
   const viewer=after.top.get('index.html');
   check(viewer,'Publish the stable preliminary viewer (index.html)');
   const approvedViewer=before.top.has('index.html')&&Buffer.compare(before.top.get('index.html'),viewer)===0;
-  check(approvedViewer||lf(readFileSync(stableViewer))===lf(viewer),
+  if(policy.catalogFiles)for(const [name,digest] of Object.entries(policy.catalogFiles))
+    check(after.top.has(name)&&sha(after.top.get(name))===digest,'Changed approved project catalog: '+name);
+  check(approvedViewer||policy.catalogFiles||lf(readFileSync(stableViewer))===lf(viewer),
     'The stable preliminary viewer must equal the approved copy or this plugin\'s template');
   check(after.top.has('releases.json'),'Publish the preliminary release index (releases.json)');
   const index=parse(after.top.get('releases.json'),'preliminary release index');
@@ -484,14 +532,26 @@ export function auditTree(oldFiles,newFiles){
   const added=ids.filter(i=>!before.releases.has(i));
   check(!added.length||lf(viewer).includes('id="wip"')&&lf(viewer).includes(releaseLabel),
     'Update the stable preliminary viewer to this plugin\'s template so new releases show the work-in-progress label');
-  for(const id of added)checkRelease(id,after.releases.get(id));
+  for(const id of ids){
+    const files=after.releases.get(id);
+    if(files.has('release.json')){
+      const record=parse(files.get('release.json'),'release record: '+id);
+      if(record.status==='historical-review')check(id!==index.current&&ids.indexOf(record.supersededBy)>ids.indexOf(id),
+        'A historical review needs a later indexed successor and cannot be current: '+id);
+    }
+  }
+  for(const id of added)checkRelease(id,after.releases.get(id),policy);
   return {releases:ids,added,current:index.current};
 }
 
 if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href){
   try{
     const [mode,dir,...rest]=process.argv.slice(2);
-    if(mode==='verify'&&dir&&!rest.length)console.log(JSON.stringify(await verifyRelease(dir),null,2));
-    else throw Error('Usage: preliminary-release.mjs verify RELEASE_DIRECTORY');
+    if(['verify','verify-catalog'].includes(mode)&&dir&&(!rest.length||rest.length===2&&rest[0]==='--policy')){
+      const policy=rest.length?preliminaryPolicy(parse(readFileSync(rest[1]),'site policy').preliminaryReleases,[]):{};
+      const result=mode==='verify'?await verifyRelease(dir,policy??{}):verifyCatalog(dir,policy??{});
+      console.log(JSON.stringify(result,null,2));
+    }
+    else throw Error('Usage: preliminary-release.mjs verify RELEASE_DIRECTORY | verify-catalog SITE_DIRECTORY [--policy SERVED_POLICY]');
   }catch(error){console.error(error.message);process.exitCode=1;}
 }
