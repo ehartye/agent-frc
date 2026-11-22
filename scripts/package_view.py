@@ -1,38 +1,20 @@
-"""Build a local wireframe player from the exact rigid trajectories being checked."""
+"""Build a local solid-model player from the exact rigid trajectories being checked."""
 import hashlib
 import json
 from pathlib import Path
 
 from mechanical_motion import transforms
-from mechanical_readiness import require
+from mechanical_readiness import pinned, read, require
 
 
 def capture(case, scene):
-    from OCP.BRep import BRep_Tool
-    from OCP.BRepAdaptor import BRepAdaptor_Curve, BRepAdaptor_Surface
     from OCP.BRepCheck import BRepCheck_Analyzer
-    from OCP.GeomAbs import GeomAbs_Line, GeomAbs_Plane
-    from OCP.TopAbs import TopAbs_EDGE, TopAbs_FACE
-    from OCP.TopExp import TopExp, TopExp_Explorer
-    from OCP.TopoDS import TopoDS
+    from package_mesh import surface_mesh
     from OCP.gp import gp_Trsf
     bodies = {}
     for name, solid in sorted(scene.items()):
         require(BRepCheck_Analyzer(solid).IsValid(), "Invalid package solid: " + name)
-        faces = TopExp_Explorer(solid, TopAbs_FACE)
-        while faces.More():
-            face = (getattr(TopoDS,'Face_s',None) or TopoDS.Face)(faces.Current())
-            require(BRepAdaptor_Surface(face).GetType() == GeomAbs_Plane, "Use a planar blocking solid: " + name)
-            faces.Next()
-        edges = TopExp_Explorer(solid, TopAbs_EDGE)
-        segments = set()
-        while edges.More():
-            edge = (getattr(TopoDS,'Edge_s',None) or TopoDS.Edge)(edges.Current())
-            require(BRepAdaptor_Curve(edge).GetType() == GeomAbs_Line, "Use straight blocking edges: " + name)
-            pair = [BRep_Tool.Pnt_s(getter(edge)).Coord() for getter in (TopExp.FirstVertex_s, TopExp.LastVertex_s)]
-            segments.add(tuple(sorted(pair)))
-            edges.Next()
-        require(segments, "No visible block edges: " + name)
+        mesh = surface_mesh(solid)
         matrices = []
         moves = case["moves"].get(name, [])
         for i in range(25 if moves else 1):
@@ -40,11 +22,11 @@ def capture(case, scene):
             for operation in transforms(moves, i / 24):
                 combined.PreMultiply(operation)
             matrices.append([combined.Value(r, c) for r in (1, 2, 3) for c in (1, 2, 3, 4)])
-        bodies[name] = dict(edges=sorted(segments), matrices=matrices)
+        bodies[name] = dict(**mesh, matrices=matrices)
     return dict(id=case["id"], stage=case["stage"], bodies=bodies)
 
 
-def verify_view(root, plan, scenes, write):
+def verify_view(root, plan, scenes, write, observed, budgets):
     name = plan.get("view")
     if not name:
         return None
@@ -53,6 +35,22 @@ def verify_view(root, plan, scenes, write):
             "Select a project-relative HTML view")
     template = Path(__file__).with_name("package-view.html").read_text(encoding="utf-8")
     series = dict(issue=plan["issue"], step=plan["step"], motion=plan["motion"], groups=plan["groups"], cases=scenes)
+    from component_palette import resolve_palette
+    series["palette"] = resolve_palette(root)
+    presentation = plan.get("presentation", {})
+    series["components"] = presentation.get("components", {})
+    series["required"] = presentation.get("required", {})
+    series["evidence"] = {c["case"]: {"status": c["status"], "pairs": c["pairs"]} for c in observed["cases"]}
+    if budgets:
+        ledger = read(pinned(root, budgets["source"]))
+        series["mass"] = {"range": budgets["inspectionKg"], "remaining": budgets["remainingKg"],
+                          "lines": [{k: row[k] for k in ("id", "kg", "members")} for row in ledger["masses"]]}
+        series["power"] = []
+        for row in budgets["electricalCases"]:
+            duty = ledger["electricalCases"][row["case"]]
+            series["power"].append({**row, "loads": duty["batterySideA"], "resistance": duty["resistanceOhm"],
+                                    "openCircuit": duty["openCircuitV"]})
+        series["loadMembers"] = presentation.get("loadMembers", {})
     data = json.dumps(series, allow_nan=False, sort_keys=True, separators=(",", ":")).replace("<", "\\u003c")
     expected = template.replace("PACKAGE_DATA", data).encode("utf-8")
     if write and not path.exists():

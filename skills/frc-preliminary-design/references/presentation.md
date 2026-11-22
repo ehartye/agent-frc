@@ -6,8 +6,23 @@ Give the reviewer an interactive whole-robot blockout and a decision they can in
 
 - Orbit through a full revolution and underneath the robot, pan in the view plane, zoom and reset to a fitted view. Provide pointer and keyboard controls and a visible control legend. Keep the camera where the reviewer puts it when scrubbing motion.
 - Display depth-tested, closed solid volumes. Preserve cavities, holes, independent moving members and the finite game piece. Include fixed and moving neighbors, bumpers, service stock and withdrawal envelopes. Show/hide labels independently of geometry. Provide a textual category legend and component list.
+- Put the floor at the registered ground elevation. Show units and a scale cue. Build visible game pieces and field fixtures from the selected official dimensions or field model, including openings, orientation and height. Preserve the field-to-robot transform during motion. Identify partial fixtures and distinguish nominal surfaces from conservative collision envelopes.
 - Play, pause and scrub operating, loaded, disabled/park and service cases. Identify the pose or fraction, operating stage, simultaneously moving groups and independent piece path. Make a collision selectable by pair and case. Hidden components still count in validation and budgets.
 - Select components by stable identity and assemble a named subsystem from any selection. Keep category (what an article is), subsystem (which function it serves) and motion group (what it moves with) separate. Preserve custom selections locally or in an export. A shared component appears once in the whole-robot total.
+
+## Choose a representative solid
+
+Use whatever shape captures the fit decision. A cylinder preserves a wheel radius, a sphere preserves ball contact, a torus preserves a central opening, and a swept profile follows a cable bend. Combine primitives or use boolean cuts to form fork gaps, hollow rails, offset housings and other compound shapes. Keep a mounting datum and motion axis. Compare extrema, material occupancy, useful voids and volume with a measured article or drawing. Record the deviation and the clearance it could consume. An equal-volume box can still block a passage or conceal a collision. Keep nominal solids, tolerance envelopes and service sweeps selectable separately. Recheck the changed solid over the same path.
+
+## Review interface
+
+Use the Agent FRC blue-and-gold interface with a large, expandable canvas. Keep functional category colors stable in the model, its legend and inventory. Picking a visible surface should identify the frontmost component and reveal its name, material, subsystem, volume and mass basis. Give reviewers a way to focus on an internal part and then restore the full assembly.
+
+For the opening pose, show the real supports and the finite piece in its intended seat. Verify the pose before sharing it. If a coarse box appears to penetrate a piece, compare it with the shaped part in the same pose, retain the original control and check the whole path again. Mark unmounted allowances and unresolved supports. Do not move the piece to improve a picture.
+
+Trace each moving load into the frame. For a driven wheel, identify the wheel, hub, axle or shaft, reacting bearings, carrier, mount and frame member. Trace the torque path from the motor case and output through any reducer, coupling, belt or chain. A datum axis locates the joint. Model the occupied axle, bearings and attachment separately wherever they constrain the piece, travel or service path. Model spring seats and positive stops on guided mechanisms. Use matched names for handed supports, retain the source IDs, and identify each unsupported or conceptual connection explicitly. Verify the opening pose with every proposed support present.
+
+Render a cable corridor as a swept circular section on its actual centerline when the routing allowance is tubular. Include bend radii and distinguish the outside cable diameter from radial clearance.
 
 ## Inventory and budgets
 
@@ -16,6 +31,12 @@ For every component show its category color, role, source or estimate basis, pre
 Let reviewers group the inventory by category and by their own subsystem membership. Roll up unique mass lines and volumes. If a mass estimate covers several members and a selection splits that allocation, report the shared range separately until it is apportioned. Show the inspection basis, running configuration, excluded equipment, reserve and mass limits.
 
 For each duty and battery condition, show the selected group's battery-side current range and contribution to voltage sag, alongside the whole-robot minimum bus voltage and its requirement. Components on the same parallel bus share voltage. Sum coincident currents, apply the pack model, and calculate branch drop separately if measured. When only independent current bounds exist, label the result a conservative bound. Expose combined loads that cannot be attributed to one category or subsystem. Never distribute them by volume, silently count missing loads as zero or sum nominal device voltages. [Shared electrical loads](../../../docs/shared-power-review.md)
+
+Lead the weight ledger with the inspection limit, low/high estimate and signed headroom. Separate running additions. Lead the power ledger with selected duty, battery condition, minimum bus voltage, required voltage and margin. Put load bars in battery-side amperes and let the reviewer select a load to see its members. With a pack resistance model, report current and power available at the chosen voltage floor and identify the limiting duty. A pack sag budget alone cannot qualify a breaker, conductor or thermal limit.
+
+Commission expected counts for the selected architecture, including its wheels, propulsion and steering actuators, control computer, power distribution, main disconnect, supply and communications. Compare expected IDs with the unfiltered placed roster. Display missing roles, counts, unallocated loads, voltage violations, overweight estimates and components awaiting a support or connection. Reviewers need to distinguish a missing representation from a missing physical design. Test a deliberately incomplete roster and a failing power case.
+
+The local package player accepts optional project-authored `presentation.components` keyed by placed ID (fields `category` and `material`), `presentation.required` mapping roles to expected placed IDs, and `presentation.loadMembers` mapping each budget source name to its consuming IDs. Supply these from the architecture and component register. A grouping or camera change preserves the commissioned checks.
 
 ## Evidence behind the picture
 

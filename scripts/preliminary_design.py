@@ -277,10 +277,10 @@ def review(root, file, previous=None, *, write_view=False):
     def inspect_scene(case,scene):
         if case["id"]!=control_id:frames.append(capture(case,scene))
     observed=evaluate(root,study,mount_hosts={m["on"] for m in mounts},package_scene=inspect_scene)
-    result["view"]=verify_view(root,plan,sorted(frames,key=lambda f:cycle.index(f["id"]) if f["id"] in cycle else len(cycle)),write_view)
+    result["budgets"]=budget_review(root,plan,missing)
+    result["view"]=verify_view(root,plan,sorted(frames,key=lambda f:cycle.index(f["id"]) if f["id"] in cycle else len(cycle)),write_view, observed, result["budgets"])
     if not result["view"] or not result["view"]["verified"]:
         missing.append("Generate the matching view of these checked trajectories with --write-view")
-    result["budgets"]=budget_review(root,plan,missing)
     for m in mounts:
         box=observed["mountHostBoundsMm"].get(m["on"])
         if box is None or any(p<box[i]-1e-6 or p>box[i+3]+1e-6 for i,p in enumerate(m["pointMm"])):
