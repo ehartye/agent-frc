@@ -99,6 +99,18 @@ The stand-off is a center-to-center planar distance. It does not represent appro
 
 A held delivery-position acceptance saved before `fieldInput` records may still name its step in its own pinned `source`, under `fieldReplay` or `fieldInput`. The checker derives the held input from that evidence. It must name the same match, actor, period, step index, step label and station as the `stepPosition` repeat, with the same value types. It may also name the input and a `program`, and nothing else. A named program must be the one the actor runs in that period of the saved result. Every named step record must agree, and the held and repeated premises must share a scenario and unit. When nothing in the evidence identifies the step, the hold stays open and the receipt lists `Held premise ID predates fieldInput and its evidence does not identify the step`. A record naming a different step lists `evidence identifies a different field step`.
 
+A generic held premise names no step. Its evidence might be the whole field profile, for example. It needs a series-wide repeat that names only the actor and scoring station:
+
+```json
+{"input": "stationPosition", "actor": "B1", "station": "blue-bay"}
+```
+
+The revised premise carries its own unit and range, in inches from the station center. The held premise may use another unit or reference, and the checker does not compare values between the two premises. It compares the premise ID, phase, scenario and held plan hash. The saved series result must reproduce exactly. Every scoring attempt that actor's programs make at that station, in every period of every series match, must stand off within the revised range and leave the footprint clear. In each match where the actor attempts there, at least one attempt must deliver a carried piece. Attempts that find no cargo after a supply empties count for position but not for delivery. Each failure is listed with the match, period and step, prefixed `Station replay:`. A single-step `stepPosition` repeat cannot clear a generic premise. List the attempts directly with:
+
+```sh
+node scripts/rehearsal-step-pose.mjs PROFILE.json --station B1 blue-bay
+```
+
 A field replay clears only a `conceptual-design` hold. A stale field conclusion reopens the conceptual trade study. Clearance, weight and voltage holds in preliminary design clear through their own repeated cases.
 
 ## Narrative pre-read and component intent

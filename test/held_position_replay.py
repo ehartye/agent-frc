@@ -13,6 +13,7 @@ BAY = [175, 194]
 UNIDENTIFIED = "Held premise delivery-standoff predates fieldInput and its evidence does not identify the step"
 DELIVERY = dict(match="trial-1", actor="B1", input="stepPosition", period="Main play",
                 stepIndex=1, stepLabel="Deliver to bay", station="blue-bay")
+STATION = dict(input="stationPosition", actor="B1", station="blue-bay")
 
 
 class HeldPositionReplay(unittest.TestCase):
@@ -54,21 +55,25 @@ class HeldPositionReplay(unittest.TestCase):
         held = self.review()
         self.assertEqual(held["status"], "reopen")
         self.assertIn("delivery-standoff", [r["reason"] for r in held["reopen"]])
+        self.replays = {}
         write(self.root, tag + "-hold.json", held)
         return held, self.root / (tag + "-hold.json")
 
-    def resubmit(self, tag, held, field_input, delivery_at, value, phase="conceptual-design"):
+    def resubmit(self, tag, held, field_input, delivery_at, value, phase="conceptual-design", edit=None, criterion=(0., 80.)):
         """Re-run the field series with the delivery step at the revised position and resubmit."""
         profile = json.loads(json.dumps(self.base))
         profile["rehearsal"]["programs"]["shuttle"]["steps"][1]["at"] = delivery_at
+        if edit:
+            edit(profile)
         run_input = write(self.root, tag + "-field.json", profile)
         replay = json.loads(subprocess.check_output(["node", str(SCRIPTS / "rehearsal-series.mjs"), str(self.root / run_input["file"])]))
+        self.replays[tag] = replay
         field = dict(profile=run_input, result=write(self.root, tag + "-replayed.json", replay), **field_input)
         plan = self.plan
         upstream = write(self.root, tag + "-upstream.json", dict(issue=plan["issue"], designSha256=plan["design"]["sha256"],
                          stepSha256=plan["step"]["sha256"], phase=phase, scenario="selected cycle",
                          premise="delivery-standoff", fieldReplay=field))
-        self.premise(tag, value, field_input, dict(repeat=dict(previousPlanSha256=held["planSha256"])), phase=phase)
+        self.premise(tag, value, field_input, dict(repeat=dict(previousPlanSha256=held["planSha256"])), phase=phase, criterion=criterion)
         accepted_file = self.root / (tag + "-standoff-accepted.json")
         accepted = json.loads(accepted_file.read_text())
         accepted["source"] = upstream
@@ -182,6 +187,66 @@ class HeldPositionReplay(unittest.TestCase):
         result = self.resubmit("preliminary", held, DELIVERY, [BAY[0], BAY[1] - 10], 10., phase="preliminary-design")
         self.assertFalse(self.prior(result)["repeatVerified"])
         self.assertEqual(result["status"], "reopen")
+
+    def generic(self, tag, field_input, criterion, extra=None):
+        """Hold a generic premise whose evidence is the whole field profile, then replay the series."""
+        source = write(self.root, tag + "-generic-evidence.json", self.base)
+        held, _ = self.hold(tag, None, source=source, unit="m")
+        def edit(profile):
+            programs = profile["rehearsal"]["programs"]
+            # A second invented program delivers to the same bay from 14 in, used by B1 in one match only.
+            programs["shuttle-far"] = json.loads(json.dumps(programs["shuttle"]))
+            programs["shuttle-far"]["label"] = "Move tiles to bay from farther"
+            programs["shuttle-far"]["steps"][1]["at"] = [BAY[0], BAY[1] - 14]
+            roster = profile["rehearsal"]["series"]["matches"][1]["roster"]
+            next(r for r in roster if r["side"] == "blue" and r["slot"] == 1)["plans"]["Main play"] = "shuttle-far"
+            if extra:
+                extra(profile)
+        return self.resubmit(tag, held, field_input, [BAY[0], BAY[1] - 10], 10., edit=edit, criterion=criterion)
+
+    def test_generic_premise_clears_on_a_series_wide_station_replay(self):
+        result = self.generic("generic", STATION, (0., 15.))
+        self.assertTrue(self.prior(result)["repeatVerified"], result["missingInputs"])
+        self.assertEqual(result["status"], "layout-checked")
+        # Empty-cargo attempts after a supply empties count for position but not delivery.
+        events = [e for m in self.replays["generic"]["matches"] for e in m["game"]["events"]
+                  if e["robot"] == "B1" and e["station"] == "blue-bay" and e["operation"] == "attempt"]
+        self.assertIn("no-compatible-cargo", {e["outcome"] for e in events})
+
+    def test_generic_premise_with_one_attempt_out_of_range_stays_open(self):
+        result = self.generic("generic-range", STATION, (0., 12.))
+        self.assertFalse(self.prior(result)["repeatVerified"])
+        self.assertEqual(result["status"], "reopen")
+        self.assertTrue(any("outside the accepted range" in m for m in result["missingInputs"]), result["missingInputs"])
+
+    def test_generic_premise_with_one_blocked_attempt_stays_open(self):
+        def wall(profile):
+            # B1 makes one extra attempt from a footprint across the field boundary, in a period it otherwise holds.
+            profile["rehearsal"]["programs"]["reach-over"] = dict(label="Reach over the boundary", steps=[
+                dict(at=[BAY[0], BAY[1] + 60], label="Deliver over the rail", operation="attempt",
+                     station=dict(blue="blue-bay", red="red-bay"), outcome="credited", dwell=0.6)])
+            roster = profile["rehearsal"]["series"]["matches"][2]["roster"]
+            next(r for r in roster if r["side"] == "blue" and r["slot"] == 1)["plans"]["Opening"] = "reach-over"
+        result = self.generic("generic-wall", STATION, (0., 80.), extra=wall)
+        self.assertFalse(self.prior(result)["repeatVerified"])
+        self.assertTrue(any("footprint is blocked" in m for m in result["missingInputs"]), result["missingInputs"])
+
+    def test_generic_premise_with_a_match_of_empty_attempts_stays_open(self):
+        def dry(profile):
+            # In one match B1 only attempts, never acquires, so every attempt there finds no cargo.
+            programs = profile["rehearsal"]["programs"]
+            programs["attempt-only"] = dict(label="Attempt without pickup", loop=True, steps=[programs["shuttle"]["steps"][1]])
+            roster = profile["rehearsal"]["series"]["matches"][2]["roster"]
+            next(r for r in roster if r["side"] == "blue" and r["slot"] == 1)["plans"]["Main play"] = "attempt-only"
+        result = self.generic("generic-dry", STATION, (0., 15.), extra=dry)
+        self.assertFalse(self.prior(result)["repeatVerified"])
+        self.assertIn("Station replay: B1 delivered no piece at blue-bay in trial-3", result["missingInputs"])
+
+    def test_generic_premise_with_a_single_step_input_stays_open(self):
+        result = self.generic("generic-step", DELIVERY, (0., 15.))
+        self.assertFalse(self.prior(result)["repeatVerified"])
+        self.assertEqual(result["status"], "reopen")
+        self.assertIn(UNIDENTIFIED, result["missingInputs"])
 
 
 if __name__ == "__main__":
