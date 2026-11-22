@@ -445,6 +445,8 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
     if not mounts:missing.append("No mount datums registered")
     for m in mounts:
         require(m["group"] in groups and m["on"] in roster and named(m["basis"]),"Unknown mount group, host or basis")
+        # A mount may name the one member it supports; without a member it stands for the whole group.
+        require("member" not in m or m["member"] in groups[m["group"]]["members"],"A mount names a member of its own group")
         vec(m["pointMm"])
     for key,g in groups.items():
         if g["role"]=="mechanism" and not any(m["group"]==key for m in mounts):
@@ -576,7 +578,7 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
     for m in mounts:
         box=observed["mountHostBoundsMm"].get(m["on"])
         if box is None or any(p<box[i]-1e-6 or p>box[i+3]+1e-6 for i,p in enumerate(m["pointMm"])):
-            missing.append("Mount datum outside the selected host envelope: "+m["group"]+" on "+m["on"])
+            missing.append("Mount datum outside the selected host envelope: "+m["group"]+(" ("+m["member"]+")" if "member" in m else "")+" on "+m["on"])
     fixtures={f["id"] for c in cases for f in c.get("fixtures",[])}
     require(not fixtures & set(observed["occurrences"]), "A fixture shadows an installed member")
     sources={}

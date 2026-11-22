@@ -637,6 +637,37 @@
             "null"
           ]
         },
+        "mounts": {
+          "type": "array",
+          "minItems": 1,
+          "x-supplier": "project",
+          "description": "Plan mounts that name this member: the host, the registered point and its basis.",
+          "items": {
+            "type": "object",
+            "required": [
+              "on",
+              "pointMm",
+              "basis"
+            ],
+            "properties": {
+              "on": {
+                "type": "string"
+              },
+              "pointMm": {
+                "type": "array",
+                "minItems": 3,
+                "maxItems": 3,
+                "items": {
+                  "type": "number"
+                }
+              },
+              "basis": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
         "missing": {
           "$ref": "#/$defs/ids"
         }

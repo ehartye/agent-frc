@@ -85,6 +85,7 @@ The schema marks each field `plugin` (derived), `project` (authored under `prese
 | `bodies[ID]` category, role, colour, motion group, volume, closure, fixture flag, mass exclusion | plugin | Plan groups, fixtures, the palette and the STEP. |
 | `bodies[ID]` name, subsystem, material, volume type, purpose, rationale | project | `presentation.components[ID]` with `name`, `category`, `subsystem`, `material`, `volumeType` (`material`, `envelope` or `gauge`), `purpose`, `rationale`. |
 | `bodies[ID].support` | project | `presentation.loadPaths[ID]`: the support and load path into the frame. |
+| `bodies[ID].mounts` | project | Plan `mounts` entries whose `member` is this ID: the host, the registered point and its basis. The inspector lists them first under Support and load path. A mount without `member` stands for its whole group and is not attributed to one part. |
 | `required` | project | `presentation.required`: `{ROLE: [IDs]}`. Absent IDs show as Missing. |
 | `power[].lines[].members` | project | `presentation.loadMembers`: `{SOURCE: [IDs]}`. An unassigned source says so. |
 | `mass.runningAdditions`, `mass.runningBasis` | project | `presentation.runningAdditions`: `[{name, kg: [low, high], members}]`, and `presentation.runningBasis`. |
