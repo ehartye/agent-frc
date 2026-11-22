@@ -3,12 +3,14 @@ import {createHash} from 'node:crypto';
 import {lstatSync,readFileSync,readdirSync,realpathSync} from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
+import {gunzipSync} from 'node:zlib';
 
 export const releaseSchema='agent-frc/preliminary-release@1';
 export const releaseLabel='Work-in-progress preliminary design';
 const receiptSchema='agent-frc/preliminary-layout-result@1';
 const releaseId=/^[a-z0-9][a-z0-9-]{0,63}$/;
 const trialName=/^[a-z0-9][a-z0-9._-]{0,127}\.json$/;
+const geometryName=/^[a-z0-9][a-z0-9._-]{0,110}\.geometry\.json\.gz$/;
 const hex=/^[0-9a-f]{64}$/;
 const reserved=['index.html','receipt.json','motion.json','release.json','budgets.json','limits.json'];
 const accomplishments=['acquired','delivered','scored','climb-held'];
@@ -16,6 +18,9 @@ const kinds=['operating-case','field-interaction-trial'];
 const controlCase='package-displacement-control';
 const player=new URL('./package-view.html',import.meta.url);
 const stableViewer=new URL('../templates/preliminary-review-index.html',import.meta.url);
+const fontDirectory=new URL('../templates/preliminary-review-fonts/',import.meta.url);
+/** The bundled theme fonts and their licenses, as distributed with this plugin. */
+const bundledFonts=()=>new Map(readdirSync(fontDirectory).map(n=>[n,readFileSync(new URL(n,fontDirectory))]));
 
 function check(ok,message){if(!ok)throw Error(message);}
 const lf=bytes=>bytes.toString('utf8').replace(/\r\n/g,'\n');
@@ -115,8 +120,12 @@ export function checkRelease(id,files){
     if(object(m)&&m.kind==='field-interaction-trial'&&object(m.trial))trials.add(m.trial.file);
     else check(!object(m)||m.trial===undefined,'Only a field-interaction-trial mission case can publish a trial: '+id);
   }
+  // The player fetches its compressed display geometry; the receipt names and pins it.
+  const peek=files.has('receipt.json')?parse(files.get('receipt.json'),'receipt: '+id):null;
+  const geometryPin=object(peek?.view?.geometry)?peek.view.geometry:null;
+  const geometryFile=geometryPin&&geometryName.test(geometryPin.file??'')?geometryPin.file:null;
   for(const name of files.keys()){
-    check(reserved.includes(name)||trials.has(name)&&trialName.test(name)&&!reserved.includes(name),
+    check(reserved.includes(name)||name===geometryFile||trials.has(name)&&trialName.test(name)&&!reserved.includes(name),
       'Unrecognized preliminary output: releases/'+id+'/'+name);
   }
   for(const name of ['index.html','receipt.json','motion.json','budgets.json','limits.json'])
@@ -147,6 +156,15 @@ export function checkRelease(id,files){
   check(data&&data.issue===receipt.issue&&JSON.stringify(data.step)===JSON.stringify(receipt.step)&&
     JSON.stringify(data.motion)===JSON.stringify(receipt.motion)&&object(data.evidence),
     'Published view is not this plugin\'s checked player for the receipt: '+id+'. Regenerate it with --write-view');
+  if(data.geometry!==undefined||geometryPin){
+    const shown=data.geometry,bytes=geometryFile&&files.get(geometryFile);
+    let content=null;
+    try{content=bytes&&gunzipSync(bytes,{maxOutputLength:shown.bytes+1});}catch{content=null;}
+    check(object(shown)&&geometryFile&&shown.file===geometryFile&&hex.test(geometryPin.contentSha256??'')&&
+      shown.contentSha256===geometryPin.contentSha256&&bytes&&sha(bytes)===geometryPin.sha256&&
+      content&&content.length===shown.bytes&&sha(content)===shown.contentSha256,
+      'Published geometry differs from the view and receipt: '+id);
+  }
   // Everything the player displays as a result must be the receipt's result.
   // The player also shows the displaced control, which the receipt reports separately as rejected.
   const shown=Object.keys(data.evidence).filter(k=>k!==controlCase);
@@ -286,6 +304,11 @@ export function auditTree(oldFiles,newFiles){
       if(parts.length===1){
         check(['index.html','releases.json'].includes(name),'Unrecognized preliminary output: '+name);
         top.set(name,bytes);
+      }else if(parts.length===2&&parts[0]==='fonts'){
+        // Only the plugin's bundled theme fonts and their OFL licenses. Text may differ only in line endings.
+        const want=bundledFonts().get(parts[1]);
+        check(want&&(Buffer.compare(want,bytes)===0||!parts[1].endsWith('.woff2')&&lf(want)===lf(bytes)),
+          'Unrecognized preliminary output: '+name);
       }else{
         check(parts.length===3&&parts[0]==='releases'&&releaseId.test(parts[1]),'Unrecognized preliminary output: '+name);
         if(!releases.has(parts[1]))releases.set(parts[1],new Map());

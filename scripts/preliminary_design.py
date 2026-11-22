@@ -10,7 +10,7 @@ from time import perf_counter
 from component_shape import proper_rotation
 from mechanical_motion import evaluate, stderr_progress, transforms, vec
 from package_budgets import budget_review
-from package_view import capture, verify_view
+from package_view import CONTROL_ID, capture, first_unmet, verify_view
 from mechanical_readiness import digest, named, number, pinned, project_path, read, require
 
 
@@ -473,7 +473,7 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
                     missing.append("Discontinuous cycle: "+member+" between "+left+" and "+right)
     result["cycle"]=cycle
     control=plan.get("control")
-    control_id="package-displacement-control"
+    control_id=CONTROL_ID
     if control:
         require(control_id not in by_id,"Reserved control case ID")
         nominal=by_id[control["case"]]
@@ -493,12 +493,21 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
     else:missing.append("Missing matched displaced control")
     frames = []
     def inspect_scene(case,scene):
-        if case["id"]!=control_id:frames.append(capture(case,scene))
+        frames.append(capture(case,scene))
     # The displaced control is expected to fail, so it never stops a fail-fast run. It runs last and
     # only after every nominal case passed; otherwise it is skipped and the receipt cannot be checked.
     observed=evaluate(root,study,mount_hosts={m["on"] for m in mounts},package_scene=inspect_scene,
                       progress=progress,fail_fast=fail_fast,never_stop={control_id})
     partial=observed.get("partial",False)
+    observations=observed["cases"]
+    if control and partial:
+        result["control"]=dict(case=control["case"],displaced=displaced,offsetMm=shift,witness=None,status="skipped")
+    elif control:
+        control_row=observations[-1]
+        hit=next((r for r in control_row["pairs"] if set(r["pair"])=={moving,displaced} and r["status"]=="fail"),None)
+        result["control"]=dict(case=control["case"],displaced=displaced,offsetMm=shift,witness=hit)
+        if hit is None:missing.append("Matched displacement did not reject the commissioned pair")
+        observations=observations[:-1]
     if partial:
         skipped=[c for c in observed["skippedCases"] if c!=control_id]
         result.update(partial=True,stoppedAt=observed["stoppedAt"],checkedCases=observed["checkedCases"],skippedCases=skipped)
@@ -518,7 +527,11 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
             summary="none" if not b else "mass="+b["massStatus"]+" electrical="+(
                 "fail" if any(r["status"]=="fail" for r in b["electricalCases"]) else "pass")
             progress(f"[budgets] done {summary} {perf_counter()-began:.2f}s")
-        result["view"]=verify_view(root,plan,sorted(frames,key=lambda f:cycle.index(f["id"]) if f["id"] in cycle else len(cycle)),write_view, observed, result["budgets"])
+        fixture_ids={f["id"] for c in cases for f in c.get("fixtures",[])}
+        result["view"]=verify_view(root,plan,sorted(frames,key=lambda f:cycle.index(f["id"]) if f["id"] in cycle else len(cycle)),
+                                   write_view,observed,result["budgets"],
+                                   dict(control=result.get("control"),missing=missing,
+                                        studyCases=cases,fixtures=fixture_ids))
         if not result["view"] or not result["view"]["verified"]:
             missing.append("Generate the matching view of these checked trajectories with --write-view")
     for m in mounts:
@@ -537,15 +550,6 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
     actual=set(observed["occurrences"])|fixtures
     require(roster==actual,"Package roster differs from the selected STEP and fixtures")
     if observed["nonSolidLeafCount"]:missing.append("Unexamined non-solid geometry in the selected STEP")
-    observations=observed["cases"]
-    if control and partial:
-        result["control"]=dict(case=control["case"],displaced=displaced,offsetMm=shift,witness=None,status="skipped")
-    elif control:
-        control_row=observations[-1]
-        hit=next((r for r in control_row["pairs"] if set(r["pair"])=={moving,displaced} and r["status"]=="fail"),None)
-        result["control"]=dict(case=control["case"],displaced=displaced,offsetMm=shift,witness=hit)
-        if hit is None:missing.append("Matched displacement did not reject the commissioned pair")
-        observations=observations[:-1]
     for links in plan.get("premises",[]):
         for ref in (links["accepted"],links.get("current")):
             if ref:pinned(root,read(pinned(root,ref))["source"])
@@ -585,6 +589,7 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
         for key in failures:
             reopen.append(dict(phase="preliminary-design",reason=key,affected=sorted(groups)))
         if failures:result["status"]="blocked"
+    result["decision"]=dict(status=result["status"],firstUnmet=first_unmet(result))
     return result
 
 

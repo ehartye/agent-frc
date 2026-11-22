@@ -131,6 +131,16 @@ def create(root, release_id=None):
                      "bumper": "Foam and backing"}
         for part, material in materials.items():
             plan["presentation"]["components"][part]["material"] = material
+        plan["presentation"]["architecture"] = "Synthetic pivoting carrier beside a sliding gate (invented teaching layout)"
+        plan["presentation"]["caseKinds"] = {"park-loaded": "inhibited"}
+        plan["presentation"]["uncoveredCases"] = [dict(id="gate-closes-mid-turn",
+            condition="The gate closes while the loaded head is turning",
+            reason="No interlock timing is modeled; the narrative stops before the turn instead")]
+        trial = write("release-lane-trial.json", dict(case="release", basis="Synthetic, invented field-interaction trial",
+                                                     outcome="Sample leaves the turned carrier toward the lane"))
+        plan["presentation"]["fieldInteractions"] = [dict(title="Synthetic release-lane interaction",
+            href="../../../field-interactions/release-lane.html", objective="Acquire, turn and release",
+            evidence=trial, embed=True)]
     write("layout.json",plan)
     result = subprocess.run(["node", str(cli), "preliminary-check", str(root), "layout.json",
                              "--write-view", "--require-checked"], capture_output=True)
@@ -159,7 +169,14 @@ if __name__=="__main__":
         site.mkdir(parents=True, exist_ok=True)
         author.mkdir(parents=True, exist_ok=True)
         templates = Path(__file__).resolve().parents[2] / "templates"
+        if not (site / "fonts").exists():
+            shutil.copytree(templates / "preliminary-review-fonts", site / "fonts")
+        lane = site.parent / "field-interactions" / "release-lane.html"
+        if not lane.exists():
+            lane.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(templates / "preliminary-review-field-interaction.html", lane)
         for source, dest in [("serve-preliminary-review.py", author / "serve.py"),
+                             ("preliminary-review-gitignore", author / ".gitignore"),
                              ("stage-preliminary-review.py", author / "stage.py"),
                              ("preliminary-review-index.html", site / "index.html"),
                              ("preliminary-review-pages.yml", author / "pages-workflow.yml")]:

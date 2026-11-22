@@ -16,24 +16,34 @@ Open `http://127.0.0.1:8000/`. For a LAN review pass `--bind LAN_ADDRESS --port 
 ```text
 cad/preliminary-design/
   serve.py, stage.py             project-owned launcher and immutable release packager
+  .gitignore                     keeps the input-side compressed geometry out of version control
   pages-workflow.yml             starter for the season's main-branch Pages workflow
   releases/layout-001/
     design.json, layout.json     issue, mounting datums, groups and member IDs
     package.step, paths.json     editable package inputs and checked motions
     package-limits.json          inspection, running and electrical requirements
     budgets.json, narrative.md   source estimates, duty cases and accepted objectives
-    receipt.json                 checker result with verified view digest
+    receipt.json                 checker decision with verified view and geometry digests
     missions.json                mission-task cases this release plays
-    package-motion.html          checked, self-contained display artifact
+    package-motion.html          checked review page: regions, data and interactions
+    package-motion.geometry.json.gz compressed geometry the page fetches (ignored; see below)
+    release-lane-trial.json      example pinned evidence for a field interaction
 docs/preliminary-design/
   index.html, releases.json      stable viewer and ordered release index
+  fonts/                         bundled theme fonts, fonts.css and their OFL licenses
   releases/layout-001/
-    index.html                   this revision's model, local styling and interactions
+    index.html                   this revision's review page, data and interactions
+    package-motion.geometry.json.gz  the only committed copy of this revision's display geometry
+docs/field-interactions/         season-owned field-interaction or physics players, outside the release tree
     motion.json, receipt.json    checked paths and exact review evidence
     release.json                 work-in-progress label, status, digests and mission cases
     budgets.json, limits.json    this revision's resource accounts
   releases/layout-002/           next reviewed revision, same structure
 ```
+
+The page holds the regions, ledgers and evidence rows. It fetches its display geometry from the gzip file beside it, decompresses it with `DecompressionStream` and, in a secure context such as `localhost` or HTTPS, compares it with the content digest embedded in the page. Each distinct tessellation is stored once; cases carry only their placements. In the receipt, `view.sha256` covers the page bytes, `view.geometry.sha256` covers the compressed bytes and `view.geometry.contentSha256` covers the decompressed content. The checker credits a view only when the page matches and the file decompresses to the expected content. Serve the review over HTTP; a page opened from `file://` explains that it cannot load the geometry. Staging copies the file into the release. `stage.py --check-index` and the release gate reject a release whose served geometry differs from its page or receipt.
+
+The starter's `.gitignore` leaves the input-side geometry uncommitted, so the published release holds the only committed copy. The checker writes missing view files but never overwrites one; delete a stale view or geometry file before `--write-view`. A different Python or zlib build can compress the same content to different bytes. Before staging from another workstation, rerun the check with `--write-view` and save that run's receipt; staging refuses geometry bytes the receipt does not pin.
 
 An active iteration can keep its editable inputs under its own design root. Keep its site and launch command reachable from the season root. Check in any custom scene, textures, fonts, styles, scripts, traces or serving config that its display reads. Deliver restricted sources under the project’s declared custody. Inspect each artifact's rights and visibility before adding it to a public site. The starter bundles only its synthetic viewer, reviewed motion, receipt and budget files.
 
@@ -47,14 +57,14 @@ For a new project without a Pages workflow, opt in by copying the provided `cad/
 
 | Region | Put on the page | Review action |
 | --- | --- | --- |
-| 1. Review header | Selected architecture, issue, datum and units, strategic narrative revision, current decision and first unmet requirement. | Open the objective and its nominal, adverse or fallback case. |
-| 2. Model and controls | Largest pane on the page. Show the parked whole robot in three-quarter view on the field floor with a visible scale. Provide a motion selector, play/pause, scrubber, clock and the observed outcome. Put a component inspector alongside or directly below the model. | Orbit through 360° and underneath, pan, zoom, fit/reset, select by face or name, isolate and restore, toggle labels and follow an article through a complete cycle. Keep the camera on scrub. |
+| 1. Review header | Selected architecture, issue, datum and units, strategic narrative revision, current decision and first unmet requirement. The stock view reads `presentation.architecture`, the datum and the narrative pin from the plan, and the decision and first unmet requirement from the receipt. | Open the objective and its nominal, adverse or fallback case. |
+| 2. Model and controls | Largest pane on the page. Open on the parked whole robot in three-quarter view on the field floor with a visible scale. The default fit frames the robot and the floor; **Fit field interaction** frames the robot with its field fixtures. Provide a motion selector, play/pause, scrubber, clock and the observed outcome. Put a component inspector alongside or directly below the model. | Orbit through 360° and underneath, pan, zoom, fit/reset, select by face or name, isolate and restore, toggle labels and follow an article through a complete cycle. Keep the camera on scrub. |
 | 3. Resource figures | Immediately below the viewer and above the ledgers. Show inspection limit, low/high estimate, signed headroom and running weight. Show the selected duty, battery condition, total battery A, minimum bus V, required V and signed margin. | Choose a duty and pack condition. The figures and highlighted ledger rows follow the same selection. |
 | 4. Weight ledger | Rows for physical components or individually owned shared allocations, then outstanding allowances. Include count, material, volume type and units, kg range and basis. Show excluded inspection items and running additions separately. | Drill into a category or define a subsystem by selecting placed IDs. Reconcile each subtotal to the whole robot. |
 | 5. Electrical ledger | List each simultaneous load or shared load, its consuming IDs, battery-side A, pack sag contribution and input power at the reported operating point. Give pack inputs and the whole-robot voltage and power available at the required floor. Show a limiting branch or actuator-terminal drop when known. | Compare nominal and weak pack in the same duty. Select the governing load and locate the consuming articles. |
-| 6. Motion evidence and decision | For each named path list starting pose, participating groups, environment, metric, units, limiting pair/time, clearance allowance, evidence method and result. Include displaced, inhibited or adverse controls and uncovered cases. | Jump to the limiting pose, inspect both bodies and open the pinned receipt. Identify what sends the layout back to preliminary or conceptual design. |
+| 6. Motion evidence and decision | For each named path list starting pose, participating groups, environment, metric, units, limiting pair/time, clearance allowance, evidence method and result. Include displaced, inhibited or adverse controls and uncovered cases. Make the displaced control a playable case. Link season-owned field-interaction or physics players. | Jump to the limiting pose, inspect both bodies and open the pinned receipt. Identify what sends the layout back to preliminary or conceptual design. |
 
-Use the blue-and-gold [field console theme](../../../templates/kickoff/index.html): navy `#142f63` masthead, blue `#194fb0` actions, paper `#f7faf8` panels, ink `#182e49` text and gold `#ffd078` selection. Use Barlow Condensed for display, Source Sans 3 for body text and tabular numerals for budgets. Apply the resolved [component palette](../../../docs/cad-color-convention.md) consistently across the model, selection and ledgers. Keep a readable category swatch and text status in filtered views. Place optional labels in an ordered side rail with leaders approaching along a common axis. Provide keyboard controls and fit the canvas and ledger tables to smaller screens.
+Use the blue-and-gold [field console theme](../../../templates/kickoff/index.html): navy `#142f63` masthead, blue `#194fb0` actions, paper `#f7faf8` panels, ink `#182e49` text and gold `#ffd078` selection. Use Barlow Condensed for display, Source Sans 3 for body text and tabular numerals for budgets. The starter copies Latin subsets of both fonts and their SIL Open Font License files into `docs/preliminary-design/fonts/`, so the review works offline. Keep the license files with the fonts. Without that directory, pages fall back to system fonts. Apply the resolved [component palette](../../../docs/cad-color-convention.md) consistently across the model, selection and ledgers. Keep a readable category swatch and text status in filtered views. Place optional labels in an ordered side rail with leaders approaching along a common axis. Provide keyboard controls and fit the canvas and ledger tables to smaller screens.
 
 ## Shape the assembly reviewers will inspect
 
@@ -85,6 +95,25 @@ For a synthetic 14.0 kg inspection limit, 11.9–12.9 kg inspection weight leave
 
 With 11.5 V open circuit, the modeled bus is **10.0 V**, or **+0.8 V** above a 9.2 V floor. This pack model permits 76.7 A and about 705 W at that floor; compare breaker, wire, branch and thermal limits separately. Calculate power at one coincident voltage/current point. If only ranges are available, label the result a bound and preserve shared or unknown loads. Aggregate current and power by unique load ID. Voltage is common to parallel consumers. [Shared electrical accounting](../../../docs/shared-power-review.md)
 
+### Fill the review header and motion evidence
+
+The checker builds regions 1 and 6 from the plan and its own results. Add these optional fields under `presentation` in `layout.json`:
+
+| Field | Shape | Shown as |
+| --- | --- | --- |
+| `architecture` | string | Selected architecture in the header. A missing name stays visible. |
+| `caseKinds` | `{CASE_ID: KIND}` with `nominal`, `inhibited` or `adverse` | Kind of each commissioned path. Unlisted cases are nominal. The displaced control is added automatically. |
+| `uncoveredCases` | `[{id, condition, reason}]` | Conditions this release has not evaluated. Unrepresented narrative objectives are added automatically. |
+| `fieldInteractions` | `[{title, href, objective, evidence, embed}]` | Links to season-owned field-interaction or physics players. `href` is relative to the release page or an `https:` URL. `objective` names the mission objective; one outside the reviewed narrative is flagged. `evidence` is a description or a `{file, sha256}` pin in the release inputs, which the checker verifies. Optional `embed: true` offers an in-page frame. |
+
+For each path, the stock view takes the limiting pair from pairs that include a moving body: a failure or open interval first, then the smallest gap or interval lower bound. An interval bound has no single limiting pose, so **Jump to limiting pose** needs a witness time. The receipt's `decision` records the final `status` and `firstUnmet` requirement. Clearance findings come first, then weight, voltage, the displaced control, held reopen decisions and missing inputs. The page shows its view-time findings until it loads a `receipt.json` that pins the page and its scene. The conceptual-design return criteria list each accepted conceptual premise from that receipt.
+
+Keep field-interaction and physics players project-owned. Put them in the season site outside `docs/preliminary-design/`, for example under `docs/field-interactions/`, and pin their trials in the release inputs. A gated site registers them as its field pages; the preliminary tree admits only the stable viewer, its index, the bundled fonts and receipt-checked releases. The page re-checks each link and sandboxes an embedded player from another origin. The starter includes a clearly synthetic placeholder.
+
+### Migrate an existing release
+
+Issued releases are immutable. Issue the new regions and compressed scene as a new release such as `layout-002`. Copy the plugin's `templates/stage-preliminary-review.py` over `cad/preliminary-design/stage.py` and `templates/preliminary-review-index.html` over `docs/preliminary-design/index.html`. Copy `templates/preliminary-review-fonts/` to `docs/preliminary-design/fonts/` and `templates/preliminary-review-gitignore` to `cad/preliminary-design/.gitignore`. Copy the pages unchanged; the release gate admits only the plugin's stable viewer and font files. Copy the layout inputs into the new release directory, add the presentation fields, delete the copied `package-motion.html`, then run the check with `--write-view`. Stage the new ID and run `--check-index`. A release that was never published may instead be regenerated in place: delete its input-side view and geometry, its `docs` release directory and its ID in `releases.json`, then check and stage it again.
+
 ## Handoff check
 
-Open the project-owned URL from a clean checkout. Use the component selector and surface picking, orbit underneath, pan, hide labels and scrub a loaded case. Reconcile an editable subsystem against whole-robot mass and battery-side current. Prove that an incomplete roster, an overweight or low-voltage case, and an intentionally obstructed path stay visible even after filtering. Check a nominal path and its adverse control. Link the layout revision, limits, traces and review receipt. List any feature still to be supplied by the season page; the stock player demonstrates prescribed package motion and the budget summary. Project-specific field physics and qualification require their own evidence.
+Open the project-owned URL from a clean checkout. Confirm the header shows the architecture, issue, datum, units, narrative revision, receipt decision and first unmet requirement. Confirm the opening view fits the robot on the floor and **Fit field interaction** frames the fixtures. In region 6, play the displaced control, jump to its limiting pose and inspect both bodies. Open the pinned receipt and each linked field interaction. Use the component selector and surface picking, orbit underneath, pan, hide labels and scrub a loaded case. Reconcile an editable subsystem against whole-robot mass and battery-side current. Prove that an incomplete roster, an overweight or low-voltage case, and an intentionally obstructed path stay visible even after filtering. Check a nominal path and its adverse control. Link the layout revision, limits, traces and review receipt. List any feature still to be supplied by the season page; the stock player demonstrates prescribed package motion and the budget summary. Project-specific field physics and qualification require their own evidence.
