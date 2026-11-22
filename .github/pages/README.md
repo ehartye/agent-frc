@@ -14,4 +14,6 @@ node .github/pages/build.mjs artifacts/workflow-guide
 
 The build generates the classroom lab from the invented training profile and current renderer. Real season models belong to their team projects. Each push to main rebuilds the published guide and lab. Relevant pull requests build the site for review. Only the generated output is uploaded to GitHub Pages.
 
+The build copies the bundled theme fonts and their SIL Open Font License files into `fonts/`, so the guide renders Barlow Condensed and Source Sans 3 without relying on fonts installed on the reader's machine.
+
 Keep original illustrations and explanatory text here. Link to the project-owned model authoring guide for source and revision requirements. The illustrative poses and the loader-rate exercise are teaching assumptions. Update the workflow mapping whenever skills or educational objectives change.
