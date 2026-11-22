@@ -97,50 +97,99 @@ OUTCOMES = {"acquired", "delivered", "scored", "climb-held"}
 
 
 FIELD = re.compile(r"field/[a-z0-9][a-z0-9._-]{0,110}\.html")
-CSP_ALLOWED = {"default-src": {"'none'"}, "script-src": {"'none'", "'unsafe-inline'", "'unsafe-eval'", "'wasm-unsafe-eval'"}}
-CSP_ALLOWED["style-src"] = CSP_ALLOWED["script-src"]
-for _name in ("img-src", "font-src", "media-src"):
-    CSP_ALLOWED[_name] = CSP_ALLOWED["script-src"] | {"data:", "blob:"}
-for _name in ("connect-src", "frame-src", "child-src", "worker-src", "object-src", "base-uri", "form-action", "manifest-src"):
-    CSP_ALLOWED[_name] = {"'none'"}
-BANNED = [
-    (r"<script\b[^>]*\bsrc\s*=", "an external script", re.I),
-    (r"<(?:iframe|frame|frameset|object|embed|portal|base|link|applet|form|area)\b", "an embedded, linked or submitted resource", re.I),
-    (r"<[a-z][^>]*?\s(?:src|srcset|poster|background|data|action|formaction|ping|xlink:href)\s*=\s*[\"']?\s*(?!data:|blob:|#)[^\s\"'>]",
-     "a resource URL", re.I),
-    (r"(?<![\w-])href\s*=\s*(?![\"']?\s*#)", "a link away from the page", re.I),
-    (r"\.(?:href|action|src)\b|\.(?:click|submit|requestSubmit)\s*\(|\bsetAttribute(?:NS)?\s*\(|\bcreateElement(?:NS)?\s*\(",
-     "scripted navigation or element creation", 0),
-    (r"\b(?:fetch|importScripts|sendBeacon)\s*\(|\b(?:XMLHttpRequest|WebSocket|EventSource|RTCPeerConnection|SharedWorker)\b|\bimport\s*\("
-     r"|\bimport\s+[\w{*][^;]*?\bfrom\b|@import\b|\bnew\s+Worker\b|\bopen\s*\(|\b(?:location|history)\s*[.=\[]"
-     r"|['\"`](?:location|history)['\"`]", "a network or navigation API", 0),
-    (r"url\(\s*[\"']?\s*(?!data:|blob:|#)[^)\s\"']", "a stylesheet URL", re.I)]
-LEAD = re.compile(r"[ \t\n]*(?:<!doctype html>[ \t\n]*)?(?:<html(?: lang=\"[A-Za-z-]{1,16}\")?>[ \t\n]*)?(?:<head>[ \t\n]*)?"
-                  r"(?:(?:<meta charset=\"?utf-8\"?>|<meta name=\"viewport\" content=\"[A-Za-z0-9=,. -]{1,80}\">"
-                  r"|<title>[^<>&]{0,120}</title>)[ \t\n]*)*", re.I)
+FIELD_PLAYER_POLICY = ("default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; "
+                       "font-src data:; media-src data: blob:; base-uri 'none'; form-action 'none'")
+RAW_TEXT = {"script", "style", "textarea", "title", "xmp", "iframe", "noembed", "noframes", "noscript", "plaintext"}
+BANNED_TAGS = {"iframe", "frame", "frameset", "object", "embed", "portal", "base", "link", "applet", "form", "area"}
+RESOURCE_ATTRS = {"src", "srcset", "poster", "background", "data", "action", "formaction", "ping", "xlink:href"}
+HEAD = re.compile(r'(?:<!doctype html>[ \t\n\r\f]*)?(?:<html(?: lang="[A-Za-z-]{1,16}")?>[ \t\n\r\f]*)?<head>[ \t\n\r\f]*', re.I)
+URL_SPACE = "".join(map(chr, range(33)))  # a browser strips C0 controls and spaces around a URL
+NETWORK = re.compile(r"\b(?:fetch|importScripts|sendBeacon)\s*\(|\b(?:XMLHttpRequest|WebSocket|EventSource|RTCPeerConnection)\b")
+
+
+def start_tags(html):
+    """Mirror the gate's tokenizer: start tags and attributes as a browser reads them."""
+    tags, i, n = [], 0, len(html)
+    space = lambda c: c in " \t\n\f\r"
+    letter = lambda c: c.isascii() and c.isalpha()
+    while i < n:
+        if html[i] != "<":
+            i += 1
+            continue
+        if html.startswith("<!--", i):
+            e = html.find("-->", i + 4)
+            i = n if e < 0 else e + 3
+            continue
+        nxt = html[i + 1] if i + 1 < n else ""
+        if nxt in ("!", "?", "/"):
+            e = html.find(">", i + 1)
+            i = n if e < 0 else e + 1
+            continue
+        if not letter(nxt):
+            i += 1
+            continue
+        j = i + 1
+        while j < n and not space(html[j]) and html[j] not in "/>":
+            j += 1
+        name, attrs = html[i + 1:j].lower(), []
+        while j < n and html[j] != ">":
+            if space(html[j]) or html[j] == "/":
+                j += 1
+                continue
+            k = j + 1
+            while k < n and not space(html[k]) and html[k] not in "/>=":
+                k += 1
+            attr = html[j:k].lower()
+            while k < n and space(html[k]):
+                k += 1
+            value = ""
+            if k < n and html[k] == "=":
+                k += 1
+                while k < n and space(html[k]):
+                    k += 1
+                if k < n and html[k] in "\"'":
+                    e = html.find(html[k], k + 1)
+                    value, k = (html[k + 1:], n) if e < 0 else (html[k + 1:e], e + 1)
+                else:
+                    e = k
+                    while e < n and not space(html[e]) and html[e] != ">":
+                        e += 1
+                    value, k = html[k:e], e
+            attrs.append((attr, value))
+            j = k
+        tags.append((name, attrs))
+        i = j + 1
+        if name in RAW_TEXT:
+            close = html.lower().find("</" + name, i)
+            i = n if close < 0 else close
+    return tags
 
 
 def self_contained(html):
-    """Mirror the gate: a leading restrictive Content-Security-Policy and no external resource, network or navigation API."""
+    """Mirror the gate: the plugin's exact policy first in <head>, and no external resource, link or network API."""
     html = html.replace("\r\n", "\n")
-    html = html[1:] if html.startswith("\ufeff") else html
-    lead = LEAD.match(html).end()
-    meta = re.match(r"<meta http-equiv=\"content-security-policy\" content=\"([A-Za-z0-9 ;'\-:]*)\">", html[lead:], re.I)
-    if not meta:
-        return "declare a Content-Security-Policy meta element before any script, style or content"
-    policy = {}
-    for part in [x.strip() for x in meta.group(1).split(";") if x.strip()]:
-        name, *sources = [x for x in part.lower().split(" ") if x]
-        if name in policy or name not in CSP_ALLOWED or not sources or not set(sources) <= CSP_ALLOWED[name]:
-            return "the policy may only allow inline code and data or blob media (" + name + ")"
-        policy[name] = sources
-    if policy.get("default-src") != ["'none'"]:
-        return "set default-src 'none'"
-    if len(re.findall("http-equiv", html, re.I)) != 1:
+    html = html[1:] if html.startswith("﻿") else html
+    head = HEAD.match(html)
+    meta = '<meta http-equiv="Content-Security-Policy" content="' + FIELD_PLAYER_POLICY + '">'
+    if not head or not html.startswith(meta, head.end()):
+        return "make " + meta + " the first element in <head>"
+    policies = 0
+    for name, attrs in start_tags(html):
+        if name in BANNED_TAGS:
+            return "an embedded, linked or submitted resource (<" + name + ">)"
+        for attr, value in attrs:
+            v = value.strip(URL_SPACE).lower()
+            policies += attr == "http-equiv"
+            if name == "script" and attr == "src":
+                return "an external script"
+            if attr == "href" and not v.startswith("#"):
+                return "a link away from the page"
+            if attr in RESOURCE_ATTRS and not re.match(r"(?:data:|blob:|#)", v):
+                return "a resource URL (" + attr + ")"
+    if policies != 1:
         return "declare exactly one http-equiv element, the policy"
-    for pattern, why, flags in BANNED:
-        if re.search(pattern, html, flags):
-            return why
+    if NETWORK.search(html):
+        return "a network API"
     if LABEL not in html:
         return 'label the page "' + LABEL + '"'
     return None

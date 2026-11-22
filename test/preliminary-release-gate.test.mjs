@@ -7,7 +7,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
 import {auditStaged} from '../scripts/public-model-release.mjs';
-import {verifyRelease} from '../scripts/preliminary-release.mjs';
+import {fieldPlayerPolicy,verifyRelease} from '../scripts/preliminary-release.mjs';
 
 // Synthetic teaching fixtures: invented groups, cases and objectives with no relation to any game.
 const plugin=fileURLToPath(new URL('..',import.meta.url));
@@ -25,8 +25,8 @@ const objectives=[
   {objective:'Hang from the bar',disposition:'open',basis:'No hanging mechanism selected yet'},
   {objective:'Return to the start box',disposition:'out-of-scope',basis:'Handled by the drive team'}];
 
-const fieldPage='<!doctype html><html lang="en"><head><meta charset="utf-8">'+
-  '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'unsafe-inline\'; style-src \'unsafe-inline\'; img-src data: blob:">'+
+const fieldPage='<!doctype html><html lang="en"><head>'+
+  '<meta http-equiv="Content-Security-Policy" content="'+fieldPlayerPolicy+'"><meta charset="utf-8">'+
   '<title>Invented lane trial</title><style>body{margin:0}</style></head><body><p>Work-in-progress preliminary design</p><canvas></canvas>'+
   '<script>const frames=[0,0.1,0.2];requestAnimationFrame(()=>frames.length);</script></body></html>';
 const laneTrial=JSON.stringify({case:'loaded-turn',outcome:'The invented sample leaves the carrier toward the lane'});
@@ -333,44 +333,48 @@ test('unlisted, mismatched, unpinned or misdirected field players are rejected',
 });
 
 test('a field player must be self-contained', async t=>{
+  const policy='<meta http-equiv="Content-Security-Policy" content="'+fieldPlayerPolicy+'">';
   const pages=[
     fieldPage.replace('<canvas>','<script src="https://cdn.example.invalid/physics.js"></script><canvas>'),
     fieldPage.replace('frames.length','fetch("https://example.invalid/trace.json")'),
+    fieldPage.replace('frames.length','new WebSocket("wss://example.invalid")'),
     fieldPage.replace('<canvas>','<iframe src="https://example.invalid/"></iframe><canvas>'),
     fieldPage.replace('<canvas>','<img src="https://example.invalid/pixel.png"><canvas>'),
     fieldPage.replace('<canvas>','<link rel="stylesheet" href="../../style.css"><canvas>'),
-    fieldPage.replace('frames.length','new WebSocket("wss://example.invalid")'),
-    fieldPage.replace('body{margin:0}','body{background:url(//example.invalid/x.png)}'),
-    fieldPage.replace(/<meta http-equiv[^>]*>/,''),
-    fieldPage.replace('img-src data: blob:','img-src data: blob:; connect-src https:'),
+    fieldPage.replace(policy,''),
+    fieldPage.replace("img-src data: blob:","img-src data: blob:; connect-src https:"),
     fieldPage.replace("default-src 'none'",'default-src *'),
-    fieldPage.replace('<meta charset="utf-8">','<meta charset="utf-8"><script>top.x=1</script>')];
-  pages.push(
-    fieldPage.replace('<html lang="en">','<html lang="en" data-x=\'>').replace('<title>','\'><title>'),
-    '<!doctype html><html data-x=\'><meta http-equiv="content-security-policy" content="default-src \'none\'; script-src \'unsafe-inline\'">\'><body><script>1</script></html>',
-    fieldPage.replace('frames.length','location.assign("https://example.invalid/")'),
-    fieldPage.replace('frames.length','globalThis["location"].href'),
-    fieldPage.replace('frames.length','open("https://example.invalid/")'),
-    fieldPage.replace('<canvas>','<a href="https://example.invalid/">Source</a><canvas>'),
-    fieldPage.replace('<canvas>','<meta http-equiv="&#114;efresh" content="0;url=https://example.invalid"><canvas>'),
-    fieldPage.replace('<p>Work-in-progress preliminary design</p>',''),
     fieldPage.replace("default-src 'none'","default-src"+String.fromCharCode(0xa0)+"'none'"),
     fieldPage.replace("default-src 'none'","default-src"+String.fromCharCode(0x1c)+"'none'"),
-    fieldPage.replace("default-src 'none'","default-src\t'none'"),
+    fieldPage.replace('<head>'+policy,'<head><meta charset="utf-8">'+policy),
+    fieldPage.replace('<head>','<head><script>top.x=1</script>'),
+    fieldPage.replace('<html lang="en">','<html lang="en" data-x=\'>').replace('<title>','\'><title>'),
+    '<!doctype html><html data-x=\'><head>'+policy+'\'><body><script>1</script><p>Work-in-progress preliminary design</p></html>',
+    fieldPage.replace('<canvas>','<a href="https://example.invalid/">Source</a><canvas>'),
     fieldPage.replace('<canvas>','<a/href="https://example.invalid/">x</a><canvas>'),
     fieldPage.replace('<canvas>','<a title=">" href="https://example.invalid/">x</a><canvas>'),
-    fieldPage.replace('<canvas>','<a id=a href="#"></a><canvas>').replace('frames.length',"a.href='https://example.invalid/';a.click()"),
-    fieldPage.replace('frames.length',"document.body.setAttribute('onload','x')"),
-    fieldPage.replace('frames.length',"document.createElement('a')"));
+    fieldPage.replace('<canvas>','<a href="&#104;ttps://example.invalid/">x</a><canvas>'),
+    fieldPage.replace('<canvas>','<meta http-equiv="&#114;efresh" content="0;url=https://example.invalid"><canvas>'),
+    fieldPage.replace('<p>Work-in-progress preliminary design</p>',''),
+    String.fromCharCode(0xfeff,0xfeff)+fieldPage];
   for(const page of pages){
     const f=fixture(t);next(f.site,'layout-002',{field:{page}});
-    await assert.rejects(auditStaged(f.approved,f.site,f.policy),/self-contained/,page.slice(60,220));
+    await assert.rejects(auditStaged(f.approved,f.site,f.policy),/self-contained/,page.slice(0,200));
   }
+  // Ordinary script and in-page fragments stay usable. Script-driven top-level navigation is out of scope for the static check.
   for(const page of [String.fromCharCode(0xfeff)+fieldPage,fieldPage.replace('frames.length','(()=>{let data=frames;const src=1;return data.length+src})()'),
-    fieldPage.replace('<canvas>','<a href="#trace">Trace</a><p>Robot location at release</p><canvas>')]){
+    fieldPage.replace('<canvas>','<a href="#trace">Trace</a><p>Robot location at release</p><script>const t="</div>";</script><canvas>')]){
     const f=fixture(t);next(f.site,'layout-002',{field:{page}});
     assert.deepEqual((await auditStaged(f.approved,f.site,f.policy)).preliminary.added,['layout-002'],page.slice(0,40));
   }
+});
+
+test('the plugin ships one canonical field player policy to both checkers and the starter', ()=>{
+  const stage=readFileSync(path.join(plugin,'templates','stage-preliminary-review.py'),'utf8');
+  const literal=/FIELD_PLAYER_POLICY = \(([\s\S]*?)\)\n/.exec(stage)[1].match(/"([^"]*)"/g).map(x=>x.slice(1,-1)).join('');
+  assert.equal(literal,fieldPlayerPolicy);
+  assert.ok(readFileSync(path.join(plugin,'templates','preliminary-review-field-interaction.html'),'utf8')
+    .includes('<head>\n<meta http-equiv="Content-Security-Policy" content="'+fieldPlayerPolicy+'">'));
 });
 
 test('field player links name the served page and player missions bind their own case', async t=>{
@@ -402,11 +406,9 @@ test('stage.py --check-index applies the same field player rules', async t=>{
     [{rows:[{title:'Lane',href:'field/missing.html',objective:laneObjective,evidence:'x'}]},/listed field player/],
     [{rows:[{title:'Lane',href:'field/lane.html',objective:laneObjective,evidence:'unpinned'}]},/receipt pins/],
     [{page:fieldPage.replace('<html lang="en">','<html lang="en" data-x=\'>').replace('<title>','\'><title>')},/not self-contained/],
-    [{page:fieldPage.replace('frames.length','location.assign("https://example.invalid/")')},/not self-contained/],
     [{page:fieldPage.replace("default-src 'none'","default-src"+String.fromCharCode(0xa0)+"'none'")},/not self-contained/],
     [{page:fieldPage.replace("default-src 'none'","default-src"+String.fromCharCode(0x1c)+"'none'")},/not self-contained/],
     [{page:fieldPage.replace('<canvas>','<a title=">" href="https://example.invalid/">x</a><canvas>')},/not self-contained/],
-    [{page:fieldPage.replace('frames.length',"document.createElement('a')")},/not self-contained/],
     [{page:String.fromCharCode(0xfeff,0xfeff)+fieldPage},/not self-contained/],
     [{page:fieldPage.replace('<p>Work-in-progress preliminary design</p>','')},/not self-contained/],
     [{page:String.fromCharCode(0xfeff)+fieldPage},0],

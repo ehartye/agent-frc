@@ -103,41 +103,85 @@ export function checkSourceInputs(id,files){
   return {step:receipt.step.file};
 }
 
+/** The one Content-Security-Policy a season field player declares, compared byte for byte. */
+export const fieldPlayerPolicy="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; base-uri 'none'; form-action 'none'";
+const rawText=new Set(['script','style','textarea','title','xmp','iframe','noembed','noframes','noscript','plaintext']);
+const bannedTags=new Set(['iframe','frame','frameset','object','embed','portal','base','link','applet','form','area']);
+const resourceAttrs=new Set(['src','srcset','poster','background','data','action','formaction','ping','xlink:href']);
+
+/** Start tags as a browser tokenizes them: comments, bogus markup and raw-text bodies are skipped. */
+export function startTags(html){
+  const tags=[],space=c=>c===' '||c==='\t'||c==='\n'||c==='\f'||c==='\r';
+  let i=0;
+  while(i<html.length){
+    if(html[i]!=='<'){i++;continue;}
+    if(html.startsWith('<!--',i)){const e=html.indexOf('-->',i+4);i=e<0?html.length:e+3;continue;}
+    const next=html[i+1]??'';
+    if(next==='!'||next==='?'||next==='/'){const e=html.indexOf('>',i+1);i=e<0?html.length:e+1;continue;}
+    if(!/[A-Za-z]/.test(next)){i++;continue;}
+    let j=i+1;
+    while(j<html.length&&!space(html[j])&&html[j]!=='/'&&html[j]!=='>')j++;
+    const name=html.slice(i+1,j).toLowerCase(),attrs=[];
+    while(j<html.length&&html[j]!=='>'){
+      if(space(html[j])||html[j]==='/'){j++;continue;}
+      let k=j+1;
+      while(k<html.length&&!space(html[k])&&html[k]!=='/'&&html[k]!=='>'&&html[k]!=='=')k++;
+      const attr=html.slice(j,k).toLowerCase();
+      while(k<html.length&&space(html[k]))k++;
+      let value='';
+      if(html[k]==='='){
+        k++;
+        while(k<html.length&&space(html[k]))k++;
+        if(html[k]==='"'||html[k]==="'"){
+          const q=html[k],e=html.indexOf(q,k+1);
+          value=html.slice(k+1,e<0?html.length:e);k=e<0?html.length:e+1;
+        }else{
+          let e=k;
+          while(e<html.length&&!space(html[e])&&html[e]!=='>')e++;
+          value=html.slice(k,e);k=e;
+        }
+      }
+      attrs.push([attr,value]);j=k;
+    }
+    tags.push({name,attrs});
+    i=j+1;
+    if(rawText.has(name)){
+      const close=html.toLowerCase().indexOf('</'+name,i);
+      i=close<0?html.length:close;
+    }
+  }
+  return tags;
+}
+
 /**
- * A season field-interaction player must run on its own: a leading Content-Security-Policy that forbids every
- * network, frame and navigation source, and no external script, embedded resource or network API in the page.
+ * A season field-interaction player must run on its own. Its first element in <head> is the plugin's exact
+ * policy, which makes the browser refuse every network, frame and form request. Static checks also refuse
+ * external scripts, embedded resources, links away from the page and the obvious network APIs. Script-driven
+ * top-level navigation is outside this check; the season reviews its own player in the pull request.
  */
 export function checkSelfContained(bytes,where){
-  const html=lf(bytes).replace(/^\uFEFF/,'');
+  let html=lf(bytes);
+  if(html.startsWith('﻿'))html=html.slice(1);
   const fail=why=>{throw Error('Field player '+where+' is not self-contained: '+why);};
-  // Only plain, quote-free lead elements may precede the policy, so no attribute can swallow it.
-  const lead=new RegExp('^[ \\t\\n]*(?:<!doctype html>[ \\t\\n]*)?(?:<html(?: lang="[A-Za-z-]{1,16}")?>[ \\t\\n]*)?(?:<head>[ \\t\\n]*)?'+
-    '(?:(?:<meta charset="?utf-8"?>|<meta name="viewport" content="[A-Za-z0-9=,. -]{1,80}">|<title>[^<>&]{0,120}</title>)[ \\t\\n]*)*','i').exec(html)[0];
-  // Browsers split a policy on ASCII whitespace only; allow plain spaces and a small alphabet so both agree.
-  const meta=/^<meta http-equiv="content-security-policy" content="([A-Za-z0-9 ;'\-:]*)">/i.exec(html.slice(lead.length));
-  if(!meta)fail('declare a Content-Security-Policy meta element before any script, style or content');
-  const none=["'none'"],inline=["'none'","'unsafe-inline'","'unsafe-eval'","'wasm-unsafe-eval'"],local=[...inline,'data:','blob:'];
-  const allowed={'default-src':none,'script-src':inline,'style-src':inline,'img-src':local,'font-src':local,'media-src':local,
-    'connect-src':none,'frame-src':none,'child-src':none,'worker-src':none,'object-src':none,'base-uri':none,'form-action':none,'manifest-src':none};
-  const policy=new Map();
-  for(const part of meta[1].split(';').map(x=>x.trim()).filter(Boolean)){
-    const [name,...sources]=part.toLowerCase().split(/ +/);
-    if(policy.has(name)||!Object.hasOwn(allowed,name)||!sources.length||!sources.every(x=>allowed[name].includes(x)))
-      fail('the policy may only allow inline code and data or blob media ('+name+')');
-    policy.set(name,sources);
+  const meta='<meta http-equiv="Content-Security-Policy" content="'+fieldPlayerPolicy+'">';
+  const head=/^(?:<!doctype html>[ \t\n\r\f]*)?(?:<html(?: lang="[A-Za-z-]{1,16}")?>[ \t\n\r\f]*)?<head>[ \t\n\r\f]*/i.exec(html);
+  if(!head||!html.startsWith(meta,head[0].length))
+    fail('make <meta http-equiv="Content-Security-Policy" content="'+fieldPlayerPolicy+'"> the first element in <head>');
+  let policies=0;
+  for(const {name,attrs} of startTags(html)){
+    if(bannedTags.has(name))fail('an embedded, linked or submitted resource (<'+name+'>)');
+    for(const [attr,value] of attrs){
+      // A browser strips C0 controls and spaces around a URL.
+      const v=value.replace(/^[\x00-\x20]+|[\x00-\x20]+$/g,'').toLowerCase();
+      if(attr==='http-equiv')policies++;
+      if(name==='script'&&attr==='src')fail('an external script');
+      if(attr==='href'&&!v.startsWith('#'))fail('a link away from the page');
+      if(resourceAttrs.has(attr)&&!/^(?:data:|blob:|#)/.test(v))fail('a resource URL ('+attr+')');
+    }
   }
-  if(!same(policy.get('default-src'),none))fail("set default-src 'none'");
-  if((html.match(/http-equiv/gi)||[]).length!==1)fail('declare exactly one http-equiv element, the policy');
-  // CSP blocks fetches, frames and workers. These static bans also refuse resources and navigation it cannot stop.
-  const banned=[
-    [/<script\b[^>]*\bsrc\s*=/i,'an external script'],
-    [/<(?:iframe|frame|frameset|object|embed|portal|base|link|applet|form|area)\b/i,'an embedded, linked or submitted resource'],
-    [/<[a-z][^>]*?\s(?:src|srcset|poster|background|data|action|formaction|ping|xlink:href)\s*=\s*["']?\s*(?!data:|blob:|#)[^\s"'>]/i,'a resource URL'],
-    [/(?<![\w-])href\s*=\s*(?!["']?\s*#)/i,'a link away from the page'],
-    [/\.(?:href|action|src)\b|\.(?:click|submit|requestSubmit)\s*\(|\bsetAttribute(?:NS)?\s*\(|\bcreateElement(?:NS)?\s*\(/,'scripted navigation or element creation'],
-    [/\b(?:fetch|importScripts|sendBeacon)\s*\(|\b(?:XMLHttpRequest|WebSocket|EventSource|RTCPeerConnection|SharedWorker)\b|\bimport\s*\(|\bimport\s+[\w{*][^;]*?\bfrom\b|@import\b|\bnew\s+Worker\b|\bopen\s*\(|\b(?:location|history)\s*[.=[]|['"`](?:location|history)['"`]/,'a network or navigation API'],
-    [/url\(\s*["']?\s*(?!data:|blob:|#)[^)\s"']/i,'a stylesheet URL']];
-  for(const [pattern,why] of banned)if(pattern.test(html))fail(why);
+  if(policies!==1)fail('declare exactly one http-equiv element, the policy');
+  if(/\b(?:fetch|importScripts|sendBeacon)\s*\(|\b(?:XMLHttpRequest|WebSocket|EventSource|RTCPeerConnection)\b/.test(html))
+    fail('a network API');
   if(!html.includes(releaseLabel))fail('label the page "'+releaseLabel+'"');
 }
 
