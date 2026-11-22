@@ -7,7 +7,7 @@ import { reviewScene } from './fixtures/review-scene.mjs';
 // The stock page's pure helpers, loaded from the shipped template.
 const html = readFileSync(new URL('../templates/preliminary-review/review.html', import.meta.url), 'utf8');
 const source = html.split('<script id="review-logic">')[1].split('</script>')[0];
-const logic = new Function(source + '\nreturn {inspectorFields, visibleBodies, findComponent, partition, frameCount, massLinesFor, sha256Pure, digestHex, MISSING, NOT_SUPPLIED};')();
+const logic = new Function(source + '\nreturn {inspectorFields, visibleBodies, findComponent, partition, frameCount, massLinesFor, sha256Pure, digestHex, fieldFitState, MISSING, NOT_SUPPLIED};')();
 const field = (fields, label) => fields.find(f => f[0] === label);
 
 test('the inspector shows identity, classification, volume, mass basis, support, loads and moving cases from the scene', () => {
@@ -78,4 +78,24 @@ test('the scene digest falls back to a pure-JS SHA-256 where crypto.subtle is un
   const big = new Uint8Array(3 * 1024 * 1024 + 77).map((_, k) => (k * 31) & 255), view = big.subarray(13, big.length - 5);
   assert.equal(await logic.digestHex(view, undefined), createHash('sha256').update(view).digest('hex'), 'a multi-megabyte offset view hashes in place');
   for (const n of [55, 56, 63, 64, 119, 120]) { const b = new Uint8Array(n).fill(97); assert.equal(logic.sha256Pure(b), createHash('sha256').update(b).digest('hex'), n + ' bytes'); }
+});
+
+test('the field-interaction fit says why it is unavailable', () => {
+  const scene = reviewScene();
+  const withFixture = scene.cases.find(c => Object.keys(c.bodies).some(id => scene.bodies[id].fixture));
+  const present = Object.keys(withFixture.bodies);
+  assert.deepEqual(logic.fieldFitState(present, scene), {enabled: true, reason: ''});
+  const without = present.filter(id => !scene.bodies[id].fixture);
+  const some = logic.fieldFitState(without, scene);
+  assert.equal(some.enabled, false);
+  assert.match(some.reason, /This case places no field fixture/);
+  for (const body of Object.values(scene.bodies)) body.fixture = false;
+  const none = logic.fieldFitState(present, scene);
+  assert.equal(none.enabled, false);
+  assert.equal(none.reason, 'No case registers a field fixture, so Fit field interaction is off.');
+  scene.fieldInteractions = [{title: 'Invented lane', href: 'field/lane.html', objective: 'Invented objective', evidence: 'Invented trial'}];
+  assert.match(logic.fieldFitState(present, scene).reason, /No case registers a field fixture.*package member counts as robot/);
+  assert.match(html, /aria-describedby="fieldWhy"/);
+  assert.doesNotMatch(html, /fieldFitState\(presentIds/, 'the cutaway does not change whether the case places a fixture');
+  assert.match(html, /id="fieldWhy"/, 'the reason has a visible place on the page');
 });
