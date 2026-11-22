@@ -102,6 +102,25 @@ def same_scenario(a, b):
     return a.get("scenario")==b.get("scenario")
 
 
+def mount_notes(groups, mounts):
+    """Advisory stderr lines about members left out of a partly per-member mount registration. Never in the receipt."""
+    lines=[]
+    for key,g in groups.items():
+        own=[m for m in mounts if m["group"]==key]
+        named_members={m["member"] for m in own if "member" in m}
+        # A member that hosts one of the group's own mounts is what the others attach to.
+        hosts={m["on"] for m in own}
+        bare=[n for n in g["members"] if n not in named_members and n not in hosts]
+        if not named_members or not bare or any("member" not in m for m in own):continue
+        if g["role"]=="mechanism":
+            lines.append("[mounts] note: "+key+" members without a mount of their own: "+", ".join(bare)
+                         +" (its mounts name only "+", ".join(sorted(named_members))+")")
+        elif g["role"]=="structure":
+            lines.append("[mounts] note: "+key+" members without a registered joint: "+", ".join(bare)
+                         +" (a root frame member needs none)")
+    return lines
+
+
 def compare_premises(root, rows, plan, missing):
     require(isinstance(rows,list),"List the accepted upstream premises")
     decisions=[]
@@ -476,6 +495,9 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
     for key,g in groups.items():
         if g["role"]=="mechanism" and not any(m["group"]==key for m in mounts):
             missing.append("Missing mount datum for "+key)
+    if progress:
+        for line in mount_notes(groups,mounts):progress(line)
+    view_writes=[]
     cases=study["cases"]
     by_id={c["id"]:c for c in cases}
     stages=plan["stages"]
@@ -597,7 +619,7 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
         result["view"]=verify_view(root,plan,sorted(frames,key=lambda f:cycle.index(f["id"]) if f["id"] in cycle else len(cycle)),
                                    write_view,observed,result["budgets"],
                                    dict(control=result.get("control"),missing=missing,
-                                        studyCases=cases,fixtures=fixture_ids,freePaths=free_bound))
+                                        studyCases=cases,fixtures=fixture_ids,freePaths=free_bound),deferred=view_writes)
         if not result["view"] or not result["view"]["verified"]:
             missing.append("Generate the matching view of these checked trajectories with --write-view")
     for m in mounts:
@@ -657,6 +679,8 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
         if failures:result["status"]="blocked"
     result["parked"]=parked_assembly(result.get("cases",[]),cases,roster-fixtures)
     result["decision"]=dict(status=result["status"],firstUnmet=first_unmet(result))
+    # Nothing above can stop the run any more: a run that ends in an error has left the previous view untouched.
+    for write_file in view_writes:write_file()
     return result
 
 
@@ -664,7 +688,7 @@ if __name__=="__main__":
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("project",type=Path)
     parser.add_argument("plan")
-    parser.add_argument("--write-view",action="store_true",help="Create the matching local player at the plan view path")
+    parser.add_argument("--write-view",action="store_true",help="Create the review page at the plan view path if it is missing, and write or replace its scene")
     parser.add_argument("--require-checked",action="store_true")
     parser.add_argument("--previous",help="Project-selected previous checkpoint, relative to the project")
     parser.add_argument("--fail-fast",action="store_true",

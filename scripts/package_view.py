@@ -2,6 +2,7 @@
 import gzip
 import hashlib
 import json
+import os
 import re
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -501,8 +502,11 @@ def _validate(content):
     require(not errors, "The review scene is invalid: " + "; ".join(errors[:5]))
 
 
-def verify_view(root, plan, scenes, write, observed, budgets, review=None):
-    """Write or check the stock review page and its scene. The page is the plugin template byte for byte; the scene is pinned."""
+def verify_view(root, plan, scenes, write, observed, budgets, review=None, deferred=None):
+    """Write or check the stock review page and its scene. The page is the plugin template byte for byte; the scene is pinned.
+
+    With a `deferred` list, nothing is written here: each write is appended as a callable and the result describes
+    the files as they will be once the caller runs them, after its last check that can still stop the run."""
     name = plan.get("view")
     if not name:
         return None
@@ -515,19 +519,36 @@ def verify_view(root, plan, scenes, write, observed, budgets, review=None):
                          separators=(",", ":")).encode("utf-8")
     _validate(content)
     scene_file = path.with_name(SCENE_FILE)
-    # Each file appears complete or not at all, so a reader never finds a partly written page or scene.
-    if write and not path.exists():
-        write_atomic(path, page, exclusive=True)
-    if write and not scene_file.exists():
-        write_atomic(scene_file, gzip.compress(content, compresslevel=9, mtime=0), exclusive=True)
+    # Each file is written whole through a temporary file and a rename, so a reader never finds a partial one.
+    actions = []
+    page_ok = path.is_file() and path.read_bytes() == page
+    if write and not os.path.lexists(path):
+        # The page is only ever created: a project may keep its own copy, which is never replaced.
+        actions.append(lambda: write_atomic(path, page, exclusive=True))
+        page_ok = True
+    compressed = gzip.compress(content, compresslevel=9, mtime=0)
     try:
         stored = scene_file.read_bytes()
         stream = zlib.decompressobj(16 + zlib.MAX_WBITS)
-        scene_ok = stream.decompress(stored, len(content) + 1) == content and stream.eof
-    except (OSError, zlib.error):
-        stored, scene_ok = None, False
-    served = stored if stored is not None else gzip.compress(content, compresslevel=9, mtime=0)
+        scene_ok, replaceable = stream.decompress(stored, len(content) + 1) == content and stream.eof, True
+    except FileNotFoundError:
+        stored, scene_ok, replaceable = None, False, True
+    except zlib.error:
+        scene_ok, replaceable = False, True
+    except OSError:
+        # A scene that cannot be read right now may be current; it is reported, never replaced.
+        stored, scene_ok, replaceable = None, False, False
+    if write and not scene_ok and replaceable:
+        # The scene is generated data: a missing, stale or corrupt one is replaced whole.
+        actions.append(lambda: write_atomic(scene_file, compressed))
+        stored, scene_ok = compressed, True
+    if deferred is None:
+        for action in actions:
+            action()
+    else:
+        deferred.extend(actions)
+    served = stored if stored is not None else compressed
     return dict(file=name, sha256=hashlib.sha256(page).hexdigest(),
-                verified=path.is_file() and path.read_bytes() == page and scene_ok,
+                verified=page_ok and scene_ok,
                 scene=dict(file=scene_file.relative_to(root).as_posix(), sha256=hashlib.sha256(served).hexdigest(),
                            contentSha256=hashlib.sha256(content).hexdigest(), bytes=len(content)))
