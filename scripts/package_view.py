@@ -44,8 +44,10 @@ def verify_view(root, plan, scenes, write, observed, budgets):
     series["evidence"] = {c["case"]: {"status": c["status"], "pairs": c["pairs"]} for c in observed["cases"]}
     if budgets:
         ledger = read(pinned(root, budgets["source"]))
+        limits = read(pinned(root, budgets["limits"]))
         series["mass"] = {"range": budgets["inspectionKg"], "remaining": budgets["remainingKg"],
-                          "lines": [{k: row[k] for k in ("id", "kg", "members")} for row in ledger["masses"]]}
+                          "limit": limits["inspectionLimitKg"], "running": budgets["runningKg"],
+                          "lines": [{k: row[k] for k in ("id", "kg", "members", "basis")} for row in ledger["masses"]]}
         series["power"] = []
         for row in budgets["electricalCases"]:
             duty = ledger["electricalCases"][row["case"]]

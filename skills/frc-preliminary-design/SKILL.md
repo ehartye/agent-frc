@@ -15,7 +15,7 @@ When a successful transfer might justify removing a part, [isolate its contribut
 
 During preliminary design, use a top-down assembly layout. Share one moving layout, its checked clearance, complete weight estimate and loaded-voltage range before distributing detailed CAD. [Engineering detail and exit criteria for the three phases](../../docs/design-phase-detail.md)
 
-Present the selected layout as an inspectable solid model with motion evidence, inventory and resource budgets. Follow the [preliminary design presentation reference](references/presentation.md) when preparing the review or handing it to another designer.
+Build the review inside the season project or active iteration. Use the [whole-robot review layout template](references/review-layout-template.md) for the viewer, figure strip, inventory, weight and electrical ledgers, and motion evidence. Trace each moving group to a frame attachment, actuator, usable travel and service path before distributing its datum. Commit the project-relative launcher, local assets, data and evidence so another designer can run the same review after cloning. Keep the static review publishable from main, show the latest issue by default and preserve earlier releases at stable `?release=` links. Use the [presentation reference](references/presentation.md) to commission the interaction and physics checks.
 
 Start with the alliance role, scored event, reserve time and fallback. Walk one identifiable piece through approach, capture, retention, transfer, placement and reset. Include the robot's position, occupied volume, time, controls and energy. Mark the operations that can overlap and the shared resources that prevent overlap.
 

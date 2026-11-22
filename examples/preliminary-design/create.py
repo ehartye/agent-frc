@@ -4,6 +4,9 @@ import argparse
 import hashlib
 import json
 import subprocess
+import shutil
+import re
+import sys
 
 from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox
 from OCP.IFSelect import IFSelect_RetDone
@@ -16,7 +19,7 @@ from OCP.XCAFDoc import XCAFDoc_DocumentTool
 from OCP.gp import gp_Pnt
 
 
-def create(root):
+def create(root, release_id=None):
     root.mkdir(parents=True,exist_ok=False)
     cli=Path(__file__).resolve().parents[2]/"scripts/design.mjs"
     subprocess.run(["node",str(cli),"new",str(root/"design.json")],check=True)
@@ -67,7 +70,7 @@ def create(root):
         carried={"carried article":"carrier"} if c in (duty,service) else {}
         stages[c["id"]]=dict(purpose=c["stage"],movingGroups=moving,carriedWith=carried,
                              allowanceBasis="Synthetic 1 mm packaging reserve")
-    plan=dict(schema="agent-frc/preliminary-layout@1",issue="synthetic-package-A",design=design,step=step,motion=motion,
+    plan=dict(schema="agent-frc/preliminary-layout@1",issue="synthetic-package-" + (release_id or "A"),design=design,step=step,motion=motion,
               datum=datum,groups=groups,mounts=mounts,stages=stages,missingInputs=[],
               control=dict(case="loaded-turn",displaced="rail",moving="head",offsetMm=[0,-50,0],
                            basis="Move the fixed rail into the arc between the same clear endpoints"))
@@ -120,13 +123,46 @@ def create(root):
                        designSha256=design["sha256"],stepSha256=step["sha256"],source=current,
                        valueField="face" if key=="pickup-face" else "acquireSeconds"))
         plan["premises"].append(dict(accepted=accepted,current=measured))
+    if release_id:
+        plan["presentation"]["required"] = {"propulsion": ["drive"], "supply": ["battery"]}
+        plan["presentation"]["loadMembers"] = {"drive": ["drive"], "carrier": ["head"], "gate": ["gate"]}
+        materials = {"mount": "Aluminum", "rail": "Steel", "head": "Aluminum", "sample": "Polymer",
+                     "gate": "Polymer", "drive": "Purchased assembly", "battery": "Purchased assembly",
+                     "bumper": "Foam and backing"}
+        for part, material in materials.items():
+            plan["presentation"]["components"][part]["material"] = material
     write("layout.json",plan)
-    subprocess.run(["node",str(cli),"preliminary-check",str(root),"layout.json","--write-view","--require-checked"],
-                   stdout=subprocess.DEVNULL,check=True)
+    result = subprocess.run(["node", str(cli), "preliminary-check", str(root), "layout.json",
+                             "--write-view", "--require-checked"], capture_output=True)
+    if result.returncode:
+        raise RuntimeError(result.stderr.decode(errors="replace") + result.stdout.decode(errors="replace"))
+    if release_id:
+        (root / "receipt.json").write_bytes(result.stdout)
     return plan
 
 
 if __name__=="__main__":
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("new_directory",type=Path)
-    create(parser.parse_args().new_directory)
+    parser.add_argument("--project-review", action="store_true", help="Include a season-local review bundle and launcher")
+    parser.add_argument("--release", default="layout-001", help="Immutable release ID within the season project")
+    args = parser.parse_args()
+    if args.project_review:
+        season = args.new_directory.resolve()
+        if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,63}", args.release):
+            parser.error("Use a lowercase release ID with letters, digits and hyphens")
+        author = season / "cad/preliminary-design"
+        site = season / "docs/preliminary-design"
+        site.mkdir(parents=True, exist_ok=True)
+        author.mkdir(parents=True, exist_ok=True)
+        templates = Path(__file__).resolve().parents[2] / "templates"
+        for source, dest in [("serve-preliminary-review.py", author / "serve.py"),
+                             ("stage-preliminary-review.py", author / "stage.py"),
+                             ("preliminary-review-index.html", site / "index.html"),
+                             ("preliminary-review-pages.yml", author / "pages-workflow.yml")]:
+            if not dest.exists():
+                shutil.copyfile(templates / source, dest)
+        create(author / "releases" / args.release, release_id=args.release)
+        subprocess.run([sys.executable, str(author / "stage.py"), args.release], check=True)
+    else:
+        create(args.new_directory)
