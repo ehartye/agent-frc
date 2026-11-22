@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import subprocess
 import tempfile
 import zlib
 
@@ -38,7 +39,7 @@ def update_index(site):
         yield
 
 
-def index(site, recovering=None):
+def index(site, recovering=None, verifier=None, policy=None):
     listing = site / "releases.json"
     record = read(listing) if listing.exists() else {"releases": []}
     names = record["releases"]
@@ -52,6 +53,14 @@ def index(site, recovering=None):
         raise ValueError("Release index and immutable directories disagree. Reconcile every release before publishing.")
     for name in names:
         release = site / "releases" / name
+        if policy and name in read(policy).get("preliminaryReleases", {}).get("presentations", {}):
+            result = subprocess.run(["node", str(verifier), "verify", str(release), "--policy", str(policy)],
+                                    check=True, capture_output=True, text=True)
+            checked = json.loads(result.stdout)
+            if checked["status"] == "historical-review" and (
+                    record["current"] == name or checked["supersededBy"] not in names[names.index(name)+1:]):
+                raise ValueError("Historical review needs a later successor and cannot be current: " + name)
+            continue
         view = read(release / "receipt.json")["view"]
         if hashlib.sha256((release / "index.html").read_bytes()).hexdigest() != view["sha256"]:
             raise ValueError("Indexed view differs from receipt: " + name)
@@ -367,7 +376,7 @@ def check_release(release):
         fail("Unrecognized release files " + ", ".join(sorted(extra)))
 
 
-def stage(season, inputs, release):
+def stage(season, inputs, release, verifier=None, policy=None):
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,63}", release):
         raise ValueError("Use a lowercase release ID with letters, digits and hyphens")
     site = season / "docs/preliminary-design"
@@ -393,7 +402,7 @@ def stage(season, inputs, release):
     if not missions:
         raise ValueError("Declare a passing mission-task case for a represented objective in missions.json")
     with update_index(site), tempfile.TemporaryDirectory(dir=site.parent, prefix=".stage-") as tmp:
-        record = index(site, recovering=release)
+        record = index(site, recovering=release, verifier=verifier, policy=policy)
         if release in record["releases"]:
             raise FileExistsError("Release already exists: " + release)
         files = {"index.html": viewer, "receipt.json": receipt_file, "motion.json": pinned(inputs, plan["motion"])}
@@ -472,9 +481,13 @@ if __name__ == "__main__":
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("release", nargs="?")
     mode.add_argument("--check-index", action="store_true")
+    parser.add_argument("--policy", type=Path, help="Approved staged policy for project presentations")
+    parser.add_argument("--verifier", type=Path, help="Pinned plugin scripts/preliminary-release.mjs")
     args = parser.parse_args()
+    if bool(args.policy) != bool(args.verifier):
+        parser.error("Supply --policy and --verifier together for a project presentation")
     base = Path(__file__).resolve().parent
     if args.check_index:
-        index(base.parents[1] / "docs/preliminary-design")
+        index(base.parents[1] / "docs/preliminary-design", verifier=args.verifier, policy=args.policy)
     else:
-        stage(base.parents[1], base / "releases" / args.release, args.release)
+        stage(base.parents[1], base / "releases" / args.release, args.release, args.verifier, args.policy)
