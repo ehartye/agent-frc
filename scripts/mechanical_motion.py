@@ -9,6 +9,7 @@ from itertools import combinations, product
 
 from mechanical_readiness import named,number,pinned,project_path,read,require,digest
 from showcase_contacts import load_solids,box_gap
+import payload_compression
 
 
 def vec(x):
@@ -274,8 +275,12 @@ def evaluate(root,study,*,mount_hosts=(),package_scene=None,progress=None,fail_f
             require(record.get("stepSha256")==study["step"]["sha256"] and record.get("case")==id and
                     set(record.get("pair",[]))=={a,b} and record.get("status")=="pass","Interface qualification is stale or incomplete")
             excluded[tuple(sorted((a,b)))]=ex["basis"]
+        compliant=payload_compression.interfaces(case,scene,excluded)
         rows=[];counts={"broadPhase":0,"bounded":0,"constantPoseBroadPhase":0,"constantPoseReused":0}
         for a,b in combinations(sorted(scene),2):
+            if (a,b) in compliant:
+                rows.append(payload_compression.sweep(compliant[a,b],scene,moves,rates,depth,transform,distance))
+                continue
             stationary = a not in moves and b not in moves
             if (stationary and package_scene is None) or (a,b) in excluded:continue
             if stationary or (a in moves and b in moves and moves[a]==moves[b]):
