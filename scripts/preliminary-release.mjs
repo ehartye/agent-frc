@@ -84,7 +84,7 @@ export function checkPhysics(receipt,id){
 
 const solidBodies=new Set(['MANIFOLD_SOLID_BREP','BREP_WITH_VOIDS','FACETED_BREP']);
 // Shape carriers a body count would miss: surface, wireframe and tessellated models, and instanced assemblies.
-const refusedShapes=/^(?:SHELL_BASED_SURFACE_MODEL|FACE_BASED_SURFACE_MODEL|GEOMETRIC_CURVE_SET|GEOMETRIC_SET|TESSELLATED_\w+|TRIANGULATED_\w+|COMPLEX_TRIANGULATED_\w+|MANIFOLD_SURFACE_SHAPE_REPRESENTATION|GEOMETRICALLY_BOUNDED_\w+|MAPPED_ITEM|REPRESENTATION_MAP|NEXT_ASSEMBLY_USAGE_OCCURRENCE|CONTEXT_DEPENDENT_SHAPE_REPRESENTATION)$/;
+const refusedShapes=/^(?:SHELL_BASED_SURFACE_MODEL|FACE_BASED_SURFACE_MODEL|GEOMETRIC_CURVE_SET|GEOMETRIC_SET|TESSELLATED_\w+|TRIANGULATED_\w+|COMPLEX_TRIANGULATED_\w+|MANIFOLD_SURFACE_SHAPE_REPRESENTATION|GEOMETRICALLY_BOUNDED_\w+|MAPPED_ITEM|REPRESENTATION_MAP|NEXT_ASSEMBLY_USAGE_OCCURRENCE|CONTEXT_DEPENDENT_SHAPE_REPRESENTATION|\w*WIREFRAME\w*|SHAPE_REPRESENTATION_RELATIONSHIP|REPRESENTATION_RELATIONSHIP\w*)$/;
 /**
  * Products and solid bodies in a STEP file, read per instance with comments removed and strings respected.
  * A product name with a STEP escape, a product inside a complex instance or a refused shape carrier is reported.
@@ -103,9 +103,18 @@ export function stepProducts(bytes){
     current+=text[i++];
   }
   const products=[];let bodies=0,refused=null;
+  // Every shape representation must be owned by a product's shape definition; the loader transfers an orphan as a free shape.
+  const representations=new Set(),owned=new Set();let definitions=0;
   for(const instance of instances){
     const blank=instance.replace(/'(?:[^']|'')*'/g,"''");
     const keywords=[...blank.matchAll(/([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)].map(m=>m[1].toUpperCase());
+    const ref=/^\s*(#\d+)\s*=/.exec(blank)?.[1];
+    if(keywords.some(k=>k!=='SHAPE_DEFINITION_REPRESENTATION'&&/SHAPE_REPRESENTATION$/.test(k)))representations.add(ref??'unnumbered');
+    if(keywords[0]==='SHAPE_DEFINITION_REPRESENTATION'){
+      definitions++;
+      const target=/SHAPE_DEFINITION_REPRESENTATION\s*\(\s*#\d+\s*,\s*(#\d+)\s*\)/i.exec(blank)?.[1];
+      if(target)owned.add(target);
+    }
     for(const k of keywords){
       if(solidBodies.has(k))bodies++;
       if(refusedShapes.test(k))refused??=k;
@@ -117,6 +126,7 @@ export function stepProducts(bytes){
     if(name.includes('\\'))refused??='escaped product name';
     products.push(name);
   }
+  if([...representations].some(r=>!owned.has(r))||definitions!==products.length)refused??='a shape representation no product owns';
   return {products,bodies,refused};
 }
 

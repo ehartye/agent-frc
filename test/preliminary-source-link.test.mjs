@@ -35,8 +35,11 @@ test('feature a preliminary still only with the exact previous README preserved'
 
 /** Write one release input directory as the checker leaves it, with a receipt that pins every input. */
 /** An invented field fixture STEP: one named product per solid, as the checker's loader reads them. */
-const fixtureStep=(names,extra='')=>'ISO-10303-21;\nDATA;\n'+names.map((n,i)=>"#"+(i*2+1)+"=PRODUCT('"+n+"','"+n+"','',(#90));\n#"+
-  (i*2+2)+"=MANIFOLD_SOLID_BREP('',#91);").join('\n')+extra+'\nENDSEC;\nEND-ISO-10303-21;\n';
+const fixtureStep=(names,extra='')=>'ISO-10303-21;\nDATA;\n'+names.map((n,i)=>{
+  const b=100+i*10;
+  return "#"+b+"=PRODUCT('"+n+"','"+n+"','',(#90));\n#"+(b+1)+"=MANIFOLD_SOLID_BREP('',#91);\n#"+(b+2)+
+    "=ADVANCED_BREP_SHAPE_REPRESENTATION('',(#"+(b+1)+"),#92);\n#"+(b+3)+"=SHAPE_DEFINITION_REPRESENTATION(#"+(b+4)+",#"+(b+2)+");";
+}).join('\n')+extra+'\nENDSEC;\nEND-ISO-10303-21;\n';
 function issueInputs(repo,id,{status='layout-checked',step='solid '+id,edit=r=>r,fixtures,fixtureBody,fixtureRole='other',fixtureKg=[0,0],
   fixturePin}={}){
   const dir=path.join(repo,inputs,id),pin=(file,body)=>{write(dir,file,body);return {file,sha256:sha(body)};};
@@ -243,7 +246,11 @@ test('fixture STEPs cannot hide robot solids from the product and body count', a
     ["surface model","\n#900=SHELL_BASED_SURFACE_MODEL('',(#91));"],
     ["tessellated shell","\n#900=TESSELLATED_SHELL('',(#91),$);"],
     ["instanced assembly","\n#900=MAPPED_ITEM('',#91,#92);"],
-    ["complex product","\n#900=(PRODUCT('arm','arm','',(#90)) PRODUCT_CONTEXT('',#1,''));"]];
+    ["complex product","\n#900=(PRODUCT('arm','arm','',(#90)) PRODUCT_CONTEXT('',#1,''));"],
+    ["orphan representation","\n#900=SHAPE_REPRESENTATION('',(#901),#92);\n#901=ADVANCED_FACE('',(#91),#93,.T.);"],
+    ["orphan brep representation","\n#900=ADVANCED_BREP_SHAPE_REPRESENTATION('',(#101),#92);"],
+    ["wireframe","\n#900=EDGE_BASED_WIREFRAME_MODEL('',(#91));"],
+    ["representation relationship","\n#900=SHAPE_REPRESENTATION_RELATIONSHIP('','',#102,#92);"]];
   for(const [label,extra] of hidden){
     const {repo,base}=sourceRepo(t);
     issueInputs(repo,'layout-002',{fixtures:['hub body'],fixtureBody:fixtureStep(['hub body'],extra)});
