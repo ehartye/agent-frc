@@ -24,13 +24,29 @@ test('season review appends immutable releases and refuses a changed source', as
     }
     const motion = await pin('paths.json', '{"cases":[]}');
     const view = await pin('viewer.html', '<html>'+id+'</html>');
-    const plan = await pin('layout.json', JSON.stringify({motion, view: view.file}));
-    await pin('receipt.json', JSON.stringify({planSha256: plan.sha256, view: {...view, verified: true}}));
+    const limits = await pin('package-limits.json', '{"inspectionLimitKg":14}');
+    const budgets = await pin('budgets.json', JSON.stringify({requirements: limits, masses: [], electricalCases: {}}));
+    const plan = await pin('layout.json', JSON.stringify({motion, budgets, view: view.file}));
+    await pin('receipt.json', JSON.stringify({planSha256: plan.sha256, view: {...view, verified: true}, issue: 'synthetic-' + id,
+      status: 'layout-checked', missingInputs: [], reopen: [], step: {file: 'package.step', sha256: 'a'.repeat(64)}, motion,
+      stages: {turn: {purpose: 'operating'}}, cycle: ['turn'], control: {witness: {pair: ['head', 'rail'], status: 'fail'}},
+      budgets: {source: budgets, limits, massStatus: 'pass', electricalCases: [{case: 'weak', status: 'pass'}]},
+      cases: [{case: 'turn', status: 'pass'}], narrativeReview: {objectives: [{objective: 'Move the sample', disposition: 'represented'}]}}));
+    await pin('missions.json', JSON.stringify({missionCases: [{case: 'turn', kind: 'operating-case', accomplishes: 'delivered', objective: 'Move the sample'}]}));
     return dir;
   }
   const stage = id => spawnSync(process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3'), [script, id], {encoding: 'utf8'});
+  const a = await fixture('a');
+  await writeFile(path.join(a, 'missions.json'), JSON.stringify({missionCases: []}));
+  assert.match(stage('a').stderr, /mission-task case/);
+  await writeFile(path.join(a, 'missions.json'), JSON.stringify({missionCases: [{case: 'turn', kind: 'operating-case', accomplishes: 'admired', objective: 'Move the sample'}]}));
+  assert.match(stage('a').stderr, /Mission case turn/);
   await fixture('a');
   assert.equal(stage('a').status, 0);
+  const record = JSON.parse(await readFile(path.join(site, 'releases', 'a', 'release.json')));
+  assert.equal(record.label, 'Work-in-progress preliminary design');
+  assert.equal(record.view.sha256, createHash('sha256').update('<html>a</html>').digest('hex'));
+  assert.deepEqual(record.missionCases.map(m => m.case), ['turn']);
   const b = await fixture('b');
   await writeFile(path.join(b, 'paths.json'), 'changed');
   assert.match(stage('b').stderr, /Missing or changed release input/);
@@ -47,4 +63,15 @@ test('season review appends immutable releases and refuses a changed source', as
   assert.equal(stage('--check-index').status, 0);
   for (const id of ['a','b'])
     assert.equal(await readFile(path.join(site,'releases',id,'index.html'),'utf8'), '<html>'+id+'</html>');
+  // A release published before release records existed fails the check until it is listed as legacy.
+  const old = path.join(site, 'releases', 'old');
+  await mkdir(old);
+  await writeFile(path.join(old, 'index.html'), '<html>old</html>');
+  await writeFile(path.join(old, 'receipt.json'), JSON.stringify({view: {sha256: createHash('sha256').update('<html>old</html>').digest('hex')}}));
+  await writeFile(listing, JSON.stringify({current:'b',releases:['old','a','b']}));
+  assert.match(stage('--check-index').stderr, /no release record/);
+  await writeFile(listing, JSON.stringify({current:'b',releases:['old','a','b'],legacy:['old']}));
+  assert.equal(stage('--check-index').status, 0);
+  await writeFile(listing, JSON.stringify({current:'b',releases:['old','a','b'],legacy:['old','b']}));
+  assert.match(stage('--check-index').stderr, /earliest entries/, 'a legacy entry cannot excuse a later release');
 });

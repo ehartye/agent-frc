@@ -1,6 +1,6 @@
 # Keep the working robot private while checking a public replacement
 
-Run the same source and final-site checks at the release station and in CI. For branch-served Pages, require **Mechanical model eligibility** before merging into the served branch. For generated Pages, verify the final build before upload. Read the gate code, baseline revision and verification key from trusted configuration. Preserve the project’s existing admin policy.
+Run the same source and final-site checks at the release station and in CI. A detailed showcase model needs the signed mechanical issue below. A [work-in-progress preliminary release](#publish-work-in-progress-preliminary-releases) needs a layout-checked receipt and a mission-task case instead, and stays secondary to the approved detailed model. For branch-served Pages, require **Mechanical model eligibility** before merging into the served branch. For generated Pages, verify the final build before upload. Read the gate code, baseline revision and verification key from trusted configuration. Preserve the project’s existing admin policy.
 
 
 ## Keep a retired robot online during a numbered restart
@@ -87,3 +87,67 @@ A changed field page is exempt only when its exact bytes equal a clean independe
 When the source tree and final Pages output use different filenames, issue each delivery list for the same reviewed model. Run `node PLUGIN/scripts/public-model-release.mjs verify-pair SOURCE_ROOT SOURCE_PACKET STAGED_ROOT STAGED_PACKET TRUSTED_PUBLIC_KEY PROJECT_ID` against the actual two trees before deployment. Both signatures and every listed file must verify. The project, scope, configuration, archive, STEP, study and solid count must agree. Keep the staged inventory check for extra public files.
 
 If a field page also emits independently generated JSON, list each exact existing path under `mutableFieldData` in the approved staged policy. Its contract can specify the exact `schema` value and/or the exact array of top-level `keys`. Pin both where available. A representation without its own schema uses the full key inventory. Both staged files must parse as the approved object shape; any changed bytes must exactly match the independently regenerated file in `FRC_VERIFIED_FIELD_ROOT`. Keep CAD selectors, manifests and their asset inventories under the mechanical model gate.
+
+## Publish work-in-progress preliminary releases
+
+Two classes of model output can share one site. A **detailed showcase model** replaces the primary view, README still, selector or download only through the full mechanical-readiness gate and a signed issue above. A **work-in-progress preliminary release** presents a whole-robot layout revision while the design is still changing. It does not need detailed-design readiness. It must obey the checked physics and play a meaningful mission task. It stays secondary: the latest approved detailed design remains front and center, and the release is linked and labelled as work-in-progress preliminary design with its status.
+
+Opt in through the approved staged policy. The final-site audit reads it from the approved commit, never from the candidate.
+
+```json
+{
+  "schema": "agent-frc/staged-model-policy@1",
+  "project": "Teaching project",
+  "modelFiles": ["models/robot.glb"],
+  "mutableFieldPages": [],
+  "preliminaryReleases": {
+    "root": "preliminary-design",
+    "primaryEntryPoints": ["index.html", "media/robot-still.png", "models/selector.json"]
+  }
+}
+```
+
+`root` is the deployed path of the [preliminary review tree](../skills/frc-preliminary-design/references/review-layout-template.md#multiple-releases-and-pages). `primaryEntryPoints` lists the detailed design's deployed entry page, README still and model selector. Keep these, `modelFiles` and field outputs outside `root`. Without the field, the preliminary tree stays under the full gate.
+
+The final-site audit applies this class only inside `root`:
+
+- **Scope.** Only the stable viewer `index.html`, `releases.json` and the files of `releases/ID/` qualify. A release directory holds `index.html`, `receipt.json`, `motion.json`, `budgets.json`, `limits.json`, `release.json` and any trial file its record names. Any other file is rejected. A signed packet cannot authorize a file inside `root`.
+- **Physics.** Each added release is bound by digest to an Agent FRC preliminary-check receipt with status `layout-checked`: every nominal clearance case, the inspection mass and every loaded-voltage case pass, the displaced control is rejected, and `missingInputs` and `reopen` are empty. `provisional`, `reopen`, `blocked` and partial `--fail-fast` receipts are refused. The receipt, `motion.json` scene and STEP digest, budget files and checked `index.html` view must equal what the receipt and release record pin. The scene, budget, limit and trial files must parse as their evidence JSON, with no nested glTF document, data URI or base64 glTF binary. The view must be the plugin's own player, with its embedded data escaped as the checker writes it, and must display the receipt's case results, narrative objectives, mass and voltage figures.
+- **Mission.** The release record declares at least one mission-task case. Each names a passing operating case in the checked cycle, the accomplishment (`acquired`, `delivered`, `scored` or `climb-held`) and a `narrativeReview` objective whose disposition is `represented`. A `field-interaction-trial` also publishes the trial file that the receipt pins for that case under `transportedBy`.
+- **Front and center.** Every primary entry point must equal its approved bytes unless a signed detailed-model issue covers it.
+- **History.** Releases already in the approved site stay byte-identical. `releases.json` may only append IDs and move `current`. The stable viewer equals the approved copy or the plugin's template. When releases are added, it must show the work-in-progress label and status. The checked player carries the same label when opened directly.
+
+Every other added, changed or removed output keeps the full gate. The audit trusts the receipt's recorded results; it does not rerun the checker. The player's tessellated solids are display data that the audit does not compare with the STEP. Keep the season's checker run, its inputs and review under the project's own controls. Keep the release input directories, including their STEP files, outside the source policy's `publicRoots`; that audit treats any new CAD file there as a detailed model asset.
+
+### Release record
+
+The project's `stage.py` writes `release.json` from the checked receipt and the input directory's `missions.json`:
+
+```json
+{
+  "schema": "agent-frc/preliminary-release@1",
+  "release": "layout-002",
+  "issue": "synthetic-package-layout-002",
+  "label": "Work-in-progress preliminary design",
+  "status": "layout-checked",
+  "receipt": {"file": "receipt.json", "sha256": "<receipt SHA-256>"},
+  "view": {"file": "index.html", "sha256": "<checked view SHA-256>"},
+  "scene": {"file": "motion.json", "sha256": "<motion SHA-256>", "stepSha256": "<STEP SHA-256>"},
+  "missionCases": [
+    {"case": "release", "kind": "operating-case", "accomplishes": "delivered", "objective": "Acquire, turn and release"}
+  ]
+}
+```
+
+For a contact-transport trial, use `"kind": "field-interaction-trial"` with `"trial": {"file": "acquire-trial.json", "sha256": "…"}` in `missions.json`. Staging publishes that pinned file beside the receipt. Check a staged release before committing it:
+
+```sh
+node PLUGIN/scripts/preliminary-release.mjs verify docs/preliminary-design/releases/layout-002
+```
+
+### Adopt the class in a season repository
+
+1. Pin the plugin release that provides `scripts/preliminary-release.mjs`. Copy its `templates/stage-preliminary-review.py` over `cad/preliminary-design/stage.py` and its `templates/preliminary-review-index.html` over `docs/preliminary-design/index.html`. The updated `stage.py --check-index` applies the same physics and mission rules to every listed release.
+2. Add `missions.json` beside each new release's `layout.json` and `receipt.json`. A player saved before this plugin release lacks the work-in-progress label: delete its `package-motion.html`, rerun the preliminary check with `--write-view` and save the new receipt. A release that has never been deployed and lacks `release.json` cannot be restaged under the same ID. Remove its unpublished directory and its `releases.json` entry, then run `python cad/preliminary-design/stage.py RELEASE_ID` again. Do not alter a release in the approved site; issue a new ID. If the approved site already serves releases without `release.json`, list their IDs once under `"legacy"` in `releases.json`. They must be the earliest entries, in order, and already be in the approved site. Neither `stage.py --check-index` nor the final-site audit accepts a later or newly added release as legacy.
+3. Add `preliminaryReleases` to the staged policy. Merge that policy change on its own, then advance the trusted `approvedCommit` so the audit reads it. Add a secondary, labelled link to `preliminary-design/` from the detailed site through its normal approval.
+4. Run `local-showcase-release.mjs check` on the final built site. The trusted configuration gains no new fields.

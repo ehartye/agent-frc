@@ -6,6 +6,7 @@ import path from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 
 import {activeDesignFor} from './active-design.mjs';
+import {auditTree,preliminaryPolicy} from './preliminary-release.mjs';
 
 const numberedSchema='agent-frc/signed-model-release@10';
 const schema='agent-frc/signed-model-release@9';
@@ -252,9 +253,23 @@ export async function auditStaged(approved,candidate,policyPath,packetPath,pubKe
     walk(folder);return entries;
   }
   const old=inventory(base),next=inventory(root);
+  // Work-in-progress preliminary releases are a separate, opt-in class: receipt-checked, never signed, never primary.
+  const prelim=preliminaryPolicy(policy.preliminaryReleases,[...fixed,...mutable,...Object.keys(fieldData)]);
+  let preliminary=null;
+  if(prelim){
+    for(const name of inspected)check(!prelim.inside(name),'A signed packet cannot authorize preliminary output: '+name);
+    for(const name of prelim.primary){
+      check(old.has(name)&&next.has(name),'An approved primary entry point is missing: '+name);
+      check(inspected.has(name)||await hash(file(base,name))===await hash(file(root,name)),
+        'The approved primary entry point changed without a signed detailed-model issue: '+name);
+    }
+    const tree=(folder,names)=>new Map([...names].filter(n=>prelim.inside(n)).map(n=>[n.slice(prelim.root.length+1),readFileSync(file(folder,n))]));
+    preliminary=auditTree(tree(base,old),tree(root,next));
+  }
   for(const name of Object.keys(fieldData))check(old.has(name)&&next.has(name),'Registered field data disappeared: '+name);
   for(const name of fixed)check(old.has(name)&&next.has(name),'Registered model output disappeared: '+name);
   for(const name of new Set([...old,...next])){
+    if(prelim?.inside(name))continue;
     if(mutable.has(name)||Object.hasOwn(fieldData,name)){
       if(Object.hasOwn(fieldData,name)){
         check(old.has(name)&&next.has(name),'Expected the registered field data in both stages: '+name);
@@ -282,7 +297,7 @@ export async function auditStaged(approved,candidate,policyPath,packetPath,pubKe
     check(old.has(name)&&next.has(name),'Unreviewed added or removed output: '+name);
     check(await hash(file(base,name))===await hash(file(root,name)),'Unreviewed changed published output: '+name);
   }
-  return {authorizedChanges:authorized,checked:next.size,mutableFieldPages:[...mutable],mutableFieldData:Object.keys(fieldData),signed:inspected.size};
+  return {authorizedChanges:authorized,checked:next.size,mutableFieldPages:[...mutable],mutableFieldData:Object.keys(fieldData),signed:inspected.size,preliminary};
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href){
   try{
