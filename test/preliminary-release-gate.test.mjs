@@ -67,6 +67,23 @@ test('a field-interaction trial bound by the receipt can carry the mission task'
   await assert.rejects(auditStaged(approved,site,policy),/trial/i);
 });
 
+test('a trial the receipt pins for a free payload path can carry the mission task', async t=>{
+  const mission=trial=>[{case:'loaded-turn',kind:'field-interaction-trial',accomplishes:'delivered',
+    objective:'Carry the sample to the bin',trial:{file:'acquire-trial.json',sha256:sha(trial)}}];
+  const trial=JSON.stringify({freePath:{case:'loaded-turn',payload:'sample'}});
+  const {approved,site,policy}=fixture(t);
+  next(site,'layout-002',{trial,freePath:true,missions:mission(trial)});
+  assert.deepEqual((await auditStaged(approved,site,policy)).preliminary.added,['layout-002']);
+  // The free-path record must name this mission case, and the receipt stage must pin the trial.
+  const other=JSON.stringify({freePath:{case:'park',payload:'sample'}}),wrong=fixture(t);
+  next(wrong.site,'layout-002',{trial:other,freePath:true,missions:mission(other)});
+  await assert.rejects(auditStaged(wrong.approved,wrong.site,wrong.policy),/not the one the receipt pins/);
+  const unpinned=fixture(t);
+  next(unpinned.site,'layout-002',{trial,freePath:true,missions:mission(trial),
+    edit:r=>{delete r.stages['loaded-turn'].freePath;r.stages.park.freePath={sample:{evidence:{file:'acquire-trial.json',sha256:sha(trial)}}};return r;}});
+  await assert.rejects(auditStaged(unpinned.approved,unpinned.site,unpinned.policy),/not the one the receipt pins/);
+});
+
 test('provisional, reopen and blocked receipts are each rejected', async t=>{
   for(const status of ['provisional','reopen','blocked']){
     const {approved,site,policy}=fixture(t);
@@ -405,6 +422,25 @@ test('stage.py --check-index applies the same field player rules', async t=>{
     const run=spawnSync(python,[path.join(temp,'cad','preliminary-design','stage.py'),'--check-index'],{encoding:'utf8'});
     if(expected===0)assert.equal(run.status,0,run.stderr);
     else assert.match(run.stderr,expected,JSON.stringify(field).slice(0,100));
+  }
+});
+
+test('stage.py --check-index accepts a mission trial pinned for a free payload path', async t=>{
+  const python=process.env.PYTHON||(process.platform==='win32'?'python':'python3');
+  const trial=JSON.stringify({freePath:{case:'loaded-turn',payload:'sample'}});
+  const missions=[{case:'loaded-turn',kind:'field-interaction-trial',accomplishes:'delivered',
+    objective:'Carry the sample to the bin',trial:{file:'acquire-trial.json',sha256:sha(trial)}}];
+  for(const [freePath,expected] of [[true,0],[false,0],['unpinned',/Mission case loaded-turn/]]){
+    const temp=mkdtempSync(path.join(os.tmpdir(),'prelim-index-'));
+    t.after(()=>rmSync(temp,{recursive:true,force:true}));
+    const docs=path.join(temp,'docs');
+    write(temp,'cad/preliminary-design/stage.py',readFileSync(path.join(plugin,'templates','stage-preliminary-review.py')));
+    issueRelease(docs,'layout-002',{trial,freePath:!!freePath,missions,
+      edit:r=>{if(freePath==='unpinned')delete r.stages['loaded-turn'].freePath;return r;}});
+    listing(docs,'layout-002',['layout-002']);
+    const run=spawnSync(python,[path.join(temp,'cad','preliminary-design','stage.py'),'--check-index'],{encoding:'utf8'});
+    if(expected===0)assert.equal(run.status,0,run.stderr);
+    else assert.match(run.stderr,expected);
   }
 });
 

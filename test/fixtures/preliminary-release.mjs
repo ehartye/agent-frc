@@ -29,7 +29,7 @@ export const fieldPage='<!doctype html><html lang="en"><head>'+
   '<script>const frames=[0,0.1,0.2];requestAnimationFrame(()=>frames.length);</script></body></html>';
 export const laneTrial=JSON.stringify({case:'loaded-turn',outcome:'The invented sample leaves the carrier toward the lane'});
 export const laneObjective='Carry the sample to the bin';
-export function issueRelease(site,id,{status='layout-checked',edit=r=>r,missions,trial,display=d=>d,field}={}) {
+export function issueRelease(site,id,{status='layout-checked',edit=r=>r,missions,trial,freePath=false,display=d=>d,field}={}) {
   const dir=path.join(site,tree,'releases',id);
   const motion=JSON.stringify({cases:[{id:'loaded-turn'},{id:'park'}],issue:id});
   // One invented robot: the scene, ledger files and receipt below all carry the same figures.
@@ -46,7 +46,8 @@ export function issueRelease(site,id,{status='layout-checked',edit=r=>r,missions
       evidence:{file:'lane-trial.json',sha256:sha(laneTrial)},embed:true,objectiveKnown:true}]:[]});
   const content=Buffer.from(JSON.stringify(scene)),served=gzipSync(content),view=stockPage;
   const stages={'loaded-turn':{purpose:'operating'},park:{purpose:'park'}};
-  if(trial)stages['loaded-turn'].transportedBy={sample:{mechanisms:['carrier'],evidence:{file:'acquire-trial.json',sha256:sha(trial)}}};
+  if(trial&&freePath)stages['loaded-turn'].freePath={sample:{basis:'Invented free flight',evidence:{file:'acquire-trial.json',sha256:sha(trial)}}};
+  else if(trial)stages['loaded-turn'].transportedBy={sample:{mechanisms:['carrier'],evidence:{file:'acquire-trial.json',sha256:sha(trial)}}};
   let receipt={schema:'agent-frc/preliminary-layout-result@1',issue:'synthetic-'+id,planSha256:sha('plan '+id),status,
     missingInputs:[],reopen:[],step,motion:motionPin,narrativeReview:{source:{file:'narrative.md',sha256:sha('narrative')},objectives},
     stages,cycle:['loaded-turn','park'],cases:[{case:'loaded-turn',status:'pass',pairs:[]},{case:'park',status:'pass',pairs:[]}],

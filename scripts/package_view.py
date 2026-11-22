@@ -122,8 +122,10 @@ def _environment(case):
     return text + ("; removed: " + ", ".join(removed) if removed else "")
 
 
-def motion_evidence(plan, study_cases, observed_cases, control=None, control_case=None):
-    """Region 6 rows: nominal, inhibited, adverse, displaced-control and uncovered cases."""
+def motion_evidence(plan, study_cases, observed_cases, control=None, control_case=None, free_paths=None):
+    """Region 6 rows: nominal, inhibited, adverse, displaced-control and uncovered cases.
+
+    A case with a declared free payload path names the trial behind it in its method and under `freePath`."""
     presentation = plan.get("presentation", {})
     kinds = presentation.get("caseKinds", {})
     require(isinstance(kinds, dict) and all(v in CASE_KINDS for v in kinds.values())
@@ -147,6 +149,14 @@ def motion_evidence(plan, study_cases, observed_cases, control=None, control_cas
                      limitingPair=(best or {}).get("pair"), limitingTime=_limit_time(best), limitingValue=value,
                      allowanceMm=case.get("minGapMm"), allowanceBasis=stage.get("allowanceBasis"),
                      method=_method(best), result=(observed or {}).get("status", "not run"), playable=True)
+        flights = [dict(payload=payload, basis=spec.get("basis"), evidence=spec.get("evidence"), bound=bound)
+                   for payload, bound in ((free_paths or {}).get(case["id"]) or {}).items()
+                   for spec in [stage["freePath"][payload]]] if kind != "displaced control" else []
+        if flights:
+            entry["freePath"] = flights
+            entry["method"] += "".join(
+                " · Free path of " + f["payload"] + (" from pinned trial " + f["evidence"]["file"] if f["bound"]
+                                                     else " without a trial that records this path") for f in flights)
         entry.update(extra or {})
         rows.append(entry)
 
@@ -461,7 +471,7 @@ def build_scene(root, plan, scenes, observed, budgets, review):
                  parked=parked_assembly(nominal, study_cases, roster - fixtures), mass=mass, power=power,
                  required=[dict(role=k, ids=list(v)) for k, v in presentation.get("required", {}).items()],
                  narrativeReview=dict(source=narrative.get("source"), objectives=narrative.get("objectives", [])),
-                 motionEvidence=motion_evidence(plan, study_cases, nominal, review.get("control"), control_case),
+                 motionEvidence=motion_evidence(plan, study_cases, nominal, review.get("control"), control_case, review.get("freePaths")),
                  returnCriteria=return_criteria(), fieldInteractions=field_interactions(root, plan),
                  focus=presentation.get("focus"), notes=presentation.get("notes"), cutaway=presentation.get("cutaway"))
     require(scene["openingCase"] in {c["id"] for c in cases}, "presentation.openingCase names a commissioned case")
