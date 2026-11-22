@@ -1,10 +1,12 @@
-# Check published designs
+# Publish and check designs
 
-One command checks everything a project publishes about its designs. The project's CI runs it on every push to every branch. A design is published, withdrawn or marked effective by one reviewed pull request that this check passes.
+A project publishes a design, changes its status or withdraws it in one reviewed pull request. One command checks everything the project publishes about its designs, and the project's CI runs it on every push to every branch.
 
 ```sh
 node PLUGIN/scripts/design-publication.mjs check PROJECT
 ```
+
+A project that still runs the earlier gates moves to this workflow with the [migration guide](design-publication-migration.md).
 
 ## What the check verifies
 
@@ -15,15 +17,18 @@ node PLUGIN/scripts/design-publication.mjs check PROJECT
 | The review shows the checked numbers | The cases, results, displaced control, objectives, mass and duties in the review scene equal the receipt. |
 | The design plays a mission task | The record names a mission case: a passing operating case in the checked cycle, for a narrative objective the receipt marks `represented`. A field-interaction trial must be one the receipt names. |
 | A detailed design builds on an accepted layout | An in-progress detailed design names a preliminary release that is `effective`, its receipt is on the STEP its record names as the Fusion export, and it covers that release's motion cases, cycle and displaced control. |
+| An effective detailed design passed its review | The design carries its mechanical-readiness review result, for the STEP its record names, and the review reports `pass`. |
 | One status per design, one primary view | Each index holds `in-progress`, `effective`, `superseded` or `withdrawn` for each design, at most one `effective`, and the primary view computed from the statuses. |
 
 The rerun compares digests and verdicts. It does not compare measured values digit for digit, because a CAD kernel on another operating system can round them differently.
 
-The check reads data. It does not inspect page markup, compare a page with the stock page or require any wording. A project may change its copy of the review page.
+The check reads data. It does not inspect page markup, compare a page with the stock page or require any wording. A project may change its copy of the review page, the release index page and the design catalog. The pull request shows every change to them.
+
+The check needs no approved baseline, repository variable, signing key or policy file. It reads the branch as pushed.
 
 ## Which designs are checked
 
-A design that is `in-progress` or `effective` is checked and rerun, whatever else its record or the index says about it. A `superseded` or `withdrawn` design is history: it is not rerun. A withdrawn design may drop its files; Git keeps them.
+A design that is `in-progress` or `effective` is checked and rerun, whatever else its record or the index says about it. A `superseded` or `withdrawn` design is history: it is not rerun. A withdrawn design drops its published files; Git keeps them.
 
 The check reads these folders. Pass the option to use another.
 
@@ -35,18 +40,130 @@ The check reads these folders. Pass the option to use another.
 | `--inputs` | `cad/preliminary-design/releases` | `ID/layout.json` and every file it pins, for each preliminary release |
 | `--detailed-inputs` | `cad/detailed-design/designs` | The same, for each detailed design |
 
-A record can name its own inputs with `"check": {"project": "cad/robot", "plan": "layout.json"}`, both relative to the repository. `project` is the folder the layout check ran in and `plan` is the layout inside it.
+A record can name its own inputs with `"check": {"project": "cad/robot", "plan": "layout.json"}`, both relative to the repository. `project` is the folder the layout check ran in and `plan` is the layout inside it. The staging commands below write this field.
 
 A preliminary release must have its inputs committed. Without them the check fails, because nothing can be rerun. A detailed design whose Fusion export is not committed passes with a warning that says the layout check was not rerun.
 
 If the receipt was checked against a held receipt with `--previous`, commit that held receipt inside the same inputs folder. The rerun finds it by digest.
 
+## Design status
+
+Each phase keeps one index: `releases.json` for preliminary design and `designs.json` for detailed design. The index holds a status for every design. [What each status means](design-phase-detail.md#design-status)
+
+- The status lives in the index, never in a design's own record, so a status change does not rewrite published evidence.
+- A status change is an index edit in a reviewed pull request. Git history records what the status was and who changed it.
+- At most one design per phase is `effective`. The commands below mark the earlier one `superseded` in the same edit.
+- The site opens the effective design, or the newest in-progress one when none is effective. The commands compute this, and the check fails an index that points elsewhere.
+
+## Publish a preliminary design release
+
+Keep the release's checked inputs in the repository at `cad/preliminary-design/releases/ID/`: the layout, its STEP and motion study, the budgets and limits, the review page and scene written by `--write-view`, the `layout-checked` `receipt.json` and a `missions.json` that names at least one mission case. The project's `cad/preliminary-design/stage.py` is its copy of the plugin's [staging script](../templates/stage-preliminary-review.py).
+
+```sh
+python cad/preliminary-design/stage.py layout-002
+node PLUGIN/scripts/design-publication.mjs check . --skip-rerun
+```
+
+Staging copies the review page as it is, the scene, receipt, motion, budget and limit files, each field player the scene links and each trial a mission case names into `docs/preliminary-design/releases/ID/`. It writes the release record and lists the release as `in-progress`. Staging the same ID again replaces the published files of an in-progress or effective release, so a fix needs no new ID.
+
+```json
+{
+  "schema": "agent-frc/preliminary-release@1",
+  "release": "layout-002",
+  "issue": "synthetic-package-layout-002",
+  "phase": "preliminary-design",
+  "check": {"project": "cad/preliminary-design/releases/layout-002", "plan": "layout.json"},
+  "missionCases": [
+    {"case": "release", "kind": "operating-case", "accomplishes": "delivered", "objective": "Acquire, turn and release"}
+  ],
+  "fieldPlayers": [
+    {"file": "field/release-lane.html", "trial": {"file": "release-lane-trial.json"}, "objective": "Acquire, turn and release"}
+  ]
+}
+```
+
+A mission case names a passing operating case, what it accomplishes (`acquired`, `delivered`, `scored` or `climb-held`) and a narrative objective the receipt marks `represented`. For a contact-transport or free-path trial use `"kind": "field-interaction-trial"` with `"trial": {"file": "acquire-trial.json"}`, or `"player": "field/release-lane.html"` for a trial shown by a field player. The trial must be one the receipt names for that case. The record carries no digest of its sibling files: they are committed together, and the check compares their content.
+
+Change a status in the same way, in a pull request:
+
+```sh
+python cad/preliminary-design/stage.py --set-status layout-002 effective --readiness PLUGIN/scripts/effective-readiness.mjs
+python cad/preliminary-design/stage.py --set-status layout-001 withdrawn --reason "The carrier moved to the other side."
+```
+
+## Publish a detailed design
+
+Export the STEP from the registered Fusion design. Run the [layout check](preliminary-design.md) on a layout that names that STEP and repeats the motion cases, cycle and displaced control of the effective preliminary release. Keep the inputs, receipt and `missions.json` in the repository at `cad/detailed-design/designs/ID/`.
+
+```sh
+node PLUGIN/scripts/detailed-design-release.mjs stage . --design detail-003 --inputs cad/detailed-design/designs/detail-003 --preliminary layout-002 --authority cad/fusion-authority.json --lineage cad/lineage.json
+node PLUGIN/scripts/detailed-design-release.mjs effective . --design detail-003 --readiness cad/detailed-design/readiness-result.json
+node PLUGIN/scripts/detailed-design-release.mjs withdraw . --design draft-001 --reason "Rough draft published before the design-status process."
+node PLUGIN/scripts/detailed-design-release.mjs refresh .
+```
+
+| Command | What it writes |
+| --- | --- |
+| `stage` | `docs/detailed-design/designs/ID/` with the review files and `design.json`, listed as `in-progress`. It replays the Fusion authority register and lineage with `fusion_authority.py` and refuses a receipt on any other STEP. It leaves the site as it was when the publication check would fail the design. |
+| `effective` | `designs/ID/readiness.json`, a copy of the review result, and the status `effective`. The earlier effective design becomes `superseded`. A design that was never shown in progress gets its record from the review. A review that does not report `pass` is refused. |
+| `withdraw` | The status `withdrawn` with the reason. See [Withdraw a design](#withdraw-a-design). |
+| `refresh` | `current` and `beside` recomputed after a hand edit, and the stock catalog page when the tree has none. |
+
+Each command only edits files. The pull request and the check decide whether they merge.
+
+```json
+{
+  "schema": "agent-frc/detailed-design-index@1",
+  "preliminaryIndex": "../preliminary-design/releases.json",
+  "current": "detail-002",
+  "beside": "detail-003",
+  "designs": ["draft-001", "detail-002", "detail-003"],
+  "designStatus": {"draft-001": "withdrawn", "detail-002": "effective", "detail-003": "in-progress"},
+  "reason": {"draft-001": "Rough draft published before the design-status process."},
+  "lastCommit": {"draft-001": "<commit that last held its published files>"},
+  "preliminary": {"detail-003": "layout-002"}
+}
+```
+
+`current` is the effective design, else the newest in-progress one. `beside` is the newest in-progress design while another is effective. The effective design holds the project's primary view: the entry page model, the README still and the model selector. An in-progress design shows beside it, labelled, and takes the primary view only when no design is effective. Update the entry page, README and selector in the pull request that changes the status.
+
+When the preliminary release that an in-progress detailed design names is superseded, the design stays published and the check adds a warning. Stage it again on the effective preliminary release.
+
 ## Effective designs
 
-A design becomes effective when a reviewed pull request changes its status in the index. The check prints the evidence for the reviewer, in the log and in the run summary, and does not judge it.
+A design becomes effective when a reviewed pull request changes its status in the index. No signature is involved. The reviewer accepts the design by merging the pull request, and the check prints the evidence in the log and in the run summary.
 
-- **Preliminary.** The [effective-readiness report](preliminary-design.md#judge-readiness-to-be-marked-effective) for the release's inputs.
-- **Detailed.** The result of the [mechanical-readiness review](mechanical-readiness.md), committed beside the design as `designs/ID/readiness.json`. It must be a review of the STEP the design record names. Its build readiness, showcase eligibility and findings that do not pass are printed. A review that does not report `pass` adds a warning.
+- **Preliminary.** The check prints the [effective-readiness report](preliminary-design.md#judge-readiness-to-be-marked-effective) for the release's inputs. The report is informational: the check does not fail on it.
+- **Detailed.** The design carries the result of the [mechanical-readiness review](mechanical-readiness.md) as `designs/ID/readiness.json`. Save the output of `mechanical_readiness.py review` and pass it to `effective`. It must be a review of the STEP the design record names, and it must report a showcase eligibility of `pass`. A review with any other verdict fails the check, so the design stays in progress until the findings are resolved. The check prints the build readiness, the showcase eligibility and each finding that does not pass.
+
+### A change to an effective design
+
+An effective design was accepted with the files it had in that pull request. When a later branch edits the committed inputs or the published folder of a design that was already effective where the branch left the default branch, the check adds a warning that names the folders. The warning does not fail the check. The rerun still has to reproduce the committed receipt. Treat the warning as a prompt for the reviewer: accept the change as a revision of the effective design, or publish it as a new design and make that one effective.
+
+The pull request that makes a design effective raises no warning for that design.
+
+## Withdraw a design
+
+Withdrawing is one pull request. Run the command with the reason, update the entry page, README and selector for the new primary view, and open the pull request.
+
+```sh
+python cad/preliminary-design/stage.py --set-status layout-001 withdrawn --reason "The carrier moved to the other side."
+node PLUGIN/scripts/detailed-design-release.mjs withdraw . --design draft-001 --reason "Rough draft published before the design-status process."
+```
+
+- The index keeps the design's ID, the status `withdrawn`, the reason under `reason` and, under `lastCommit`, the last commit that changed its published folder.
+- The published folder leaves the site. Nothing is archived on the site. Read the files with `git show COMMIT:docs/detailed-design/designs/ID/design.json`, or check that commit out.
+- The committed check inputs under `cad/` stay.
+- The stock index and catalog pages list the design as withdrawn, with its reason and the commit.
+- The check adds a warning when a withdrawn design has no reason in the index.
+
+The check requires no declaration before a withdrawal. A model published before this workflow has no entry in `designs.json`. Give it an ID and name its published files:
+
+```sh
+node PLUGIN/scripts/detailed-design-release.mjs withdraw . --design draft-001 --reason "Rough draft published before the design-status process." --files docs/models/robot.glb,docs/media/robot-still.png
+```
+
+The command removes those files, lists the design first in the index as `withdrawn` and records the last commit that changed them.
 
 ## Keep the rerun fast
 
@@ -74,6 +191,13 @@ The workflow runs on every push to every branch, so a pull request shows the res
 
 - **Paths and secrets** runs the [branch scan](project-ci.md#scan-every-pushed-branch).
 - **Design publication** runs this check, then the project's [registered checks](project-ci.md#choose-the-checks).
-- **deploy** publishes the site from the default branch after both pass.
+- **deploy** publishes the site from the default branch after both pass. A failed check leaves the current site online.
 
 The check reads the branch as pushed, not its merge with the default branch. Rebase before merging; the default branch is checked again after the merge and before the site deploys.
+
+## What the check does not do
+
+- It does not open Fusion. `stage` replays the Fusion export lineage on the workstation that has the archive.
+- It does not compare the tessellated display solids with the STEP.
+- It does not verify that an animation shows what a mission case says it accomplishes. The reviewer of the pull request watches it.
+- It does not judge the effective-readiness report of a preliminary release. The reviewer does.
