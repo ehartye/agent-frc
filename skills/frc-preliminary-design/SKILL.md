@@ -7,15 +7,21 @@ description: "Use for preliminary design of the whole robot: compare architectur
 
 During preliminary design, use a top-down assembly layout. Share one moving layout, its checked clearance, complete weight estimate and loaded-voltage range before distributing detailed CAD. [Engineering detail and exit criteria for the three phases](../../docs/design-phase-detail.md)
 
+Present the selected layout as an inspectable solid model with motion evidence, inventory and resource budgets. Follow the [preliminary design presentation reference](references/presentation.md) when preparing the review or handing it to another designer.
+
 Start with the alliance role, scored event, reserve time and fallback. Walk one identifiable piece through approach, capture, retention, transfer, placement and reset. Include the robot's position, occupied volume, time, controls and energy. Mark the operations that can overlap and the shared resources that prevent overlap.
 
 Before detailed CAD or purchase, name the premise most likely to invalidate the role. Set a modest work budget and a measurable stop condition for one nominal and one adverse test. Record the result, make a continue, revise or start-over decision, and commit the evidence. Mark common interfaces as provisional or verified with the loads, tolerances and changed conditions that reopen them. [Worked loaded-drivetrain decision](../../docs/whole-robot-comparison.md#decide-what-to-fix-before-detailing)
+
+For a greenfield review, start from the mission, field and game-piece geometry, legal envelope and operating requirements. Establish new frame, joint and mounting datums in the preliminary layout. Carry forward an earlier CAD interface only when the project explicitly selects it and records the reason. Qualify the new design against its own motion, weight and electrical budgets.
 
 Sketch competing allocations of these functions before choosing purchased mechanisms. Use a simple baseline. Try removing a transfer, reversing a path, using passive geometry or arranging parallel functions. A change in material or supplier alone provides little architectural contrast. State what each candidate deliberately gives up.
 
 Create one editable blockout per plausible architecture in the project. Show the same drivetrain, datum, field targets, loaded mass and CG bounds, power source, wiring and service envelope. Mark the parts sharing a port, volume, current budget or driver action. Name the owner, trigger, clearance, failure behavior and recovery for each interface, including returning to a known state after servicing.
 
 After conceptual design and role selection, own the [shared package layout checkpoint](../../docs/preliminary-design.md). Resolve the active issue, fixed geometry, loaded and simultaneous motions, park and service paths before dividing detailed Fusion work among subsystem designers. Record each premise’s scenario, accepted limit, evidence, owner phase and dependent interfaces. Reopen layout for a lost clearance. Reopen the matched field rehearsal when a changed capability violates its accepted approach, timing or height. Hold affected detailing until the current issue passes the repeat.
+
+Trace both the support path from each moving load to the frame and its drive path from the actuator to the load. Include the occupied shafts, bearings, carriers, stops and mounts that govern clearance. Mark an absent connection in the layout and review.
 
 Before fixing a mechanism footprint, choose its [attachment stock, pattern and tool side](../../docs/attachment-design.md). Sketch the signed load into the chassis, compare two placements on actual supporting members and reserve room for bracket stock, fasteners, tools and the complete removal path at the worst permitted combination of offsets.
 
