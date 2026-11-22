@@ -429,6 +429,10 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
     loaded_operating=False
     for key,stage in stages.items():
         c=by_id[key]
+        payloads={member for group in groups.values() if group["role"]=="payload" for member in group["members"]}
+        for rule in c.get("payloadCompression",[]):
+            require(rule["payload"] in payloads and rule["contact"] in roster and rule["contact"] not in payloads,
+                    "Register the compressible game piece as a payload and name its contact surface")
         require(stage["purpose"] in ("operating","park","service") and c.get("stage")==stage["purpose"]
                 and named(stage["allowanceBasis"]) and number(c["minGapMm"]) and c["minGapMm"]>=0,
                 "Register the purpose and clearance basis for each stage")
