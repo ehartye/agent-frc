@@ -610,6 +610,21 @@ def stage(season, inputs, release, verifier=None, policy=None):
         replace_index(new_index, site)
 
 
+def readiness_report(inputs, reporter=None):
+    """Show the reviewer the plugin's effective-readiness report for a release's inputs. It never stops a status change."""
+    command = "node PLUGIN/scripts/design.mjs effective-readiness " + inputs.as_posix()
+    if reporter is None:
+        print("Exit criteria for an effective preliminary design: run `" + command + "`, or pass --readiness "
+              "PLUGIN/scripts/effective-readiness.mjs to print the report here.")
+        return
+    try:
+        run = subprocess.run(["node", str(reporter), str(inputs)], capture_output=True, text=True)
+        print(run.stdout.rstrip() if run.returncode == 0 and run.stdout.strip()
+              else "Effective-readiness report unavailable for " + inputs.as_posix() + "; run `" + command + "`.")
+    except OSError:
+        print("Effective-readiness report unavailable; run `" + command + "`.")
+
+
 def set_status(site, release, status, verifier=None, policy=None):
     """Mark a release effective or withdrawn in the index; the issued directory never changes.
 
@@ -677,6 +692,7 @@ if __name__ == "__main__":
     mode.add_argument("--set-status", nargs=2, metavar=("RELEASE", "STATUS"), help="Mark a release effective or withdrawn")
     parser.add_argument("--policy", type=Path, help="Approved staged policy for project presentations")
     parser.add_argument("--verifier", type=Path, help="Pinned plugin scripts/preliminary-release.mjs")
+    parser.add_argument("--readiness", type=Path, help="Plugin scripts/effective-readiness.mjs, to print its report with --set-status RELEASE effective")
     args = parser.parse_args()
     if bool(args.policy) != bool(args.verifier):
         parser.error("Supply --policy and --verifier together for a project presentation")
@@ -686,5 +702,8 @@ if __name__ == "__main__":
         template_report(base.parents[1] / "docs/preliminary-design", args.verifier)
     elif args.set_status:
         set_status(base.parents[1] / "docs/preliminary-design", *args.set_status, verifier=args.verifier, policy=args.policy)
+        if args.set_status[1] == "effective":
+            # Informational: the index is already updated, and the reviewer of the pull request judges the report.
+            readiness_report(base / "releases" / args.set_status[0], args.readiness)
     else:
         stage(base.parents[1], base / "releases" / args.release, args.release, args.verifier, args.policy)
