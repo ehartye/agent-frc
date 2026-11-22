@@ -42,3 +42,17 @@ test('the command line rejects an unknown match, robot, period or step',t=>{
   assert.throws(run('trial-1','B1','Overtime','1'),/Select one rehearsal period/);
   assert.throws(run('trial-1','B1','Main play','7'),/Select one program step/);
 });
+
+test('a station listing covers every attempt one robot makes there across the series',async t=>{
+  const {stationPoses}=await import('../scripts/rehearsal-step-pose.mjs');
+  const file=variant(t,p=>{p.rehearsal.programs.shuttle.steps[1].at=[175,184];});
+  const listed=await stationPoses(file,'B1','blue-bay');
+  assert.equal(listed.schema,'agent-frc/rehearsal-station-poses@1');
+  assert.deepEqual(listed.matches,['trial-1','trial-2','trial-3']);
+  // B1 shuttles in both periods of the first match and in the second period of the others.
+  assert.deepEqual(listed.attempts.map(a=>a.match+'/'+a.period),['trial-1/Opening','trial-1/Main play','trial-2/Main play','trial-3/Main play']);
+  assert.ok(listed.attempts.every(a=>a.standoffIn===10 && a.footprint.status==='clear'));
+  assert.deepEqual((await stationPoses(file,'B1','red-bay')).attempts,[]);
+  const cli=JSON.parse(execFileSync(process.execPath,[script,file,'--station','R1','red-bay']));
+  assert.equal(cli.attempts.length,4);assert.deepEqual(cli.attempts[0].pointIn,[305,80]);
+});

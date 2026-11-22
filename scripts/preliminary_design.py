@@ -81,7 +81,42 @@ def compare_premises(root, rows, plan, missing):
 STANDOFF_TOLERANCE_IN=1e-6
 
 
-def repeated_field_input(root, repeat, value, unit, replayed):
+def repeated_station_position(profile_path, saved, repeat, criterion, unit, reasons):
+    """Screen every scoring attempt one actor makes at one station across the whole repeated series.
+
+    Each attempt step must stand off within the accepted range and leave the robot footprint clear. In each
+    match where the actor attempts at the station, at least one attempt must deliver a carried piece.
+    Attempts that find no cargo after a supply empties count for position but not for delivery."""
+    require(set(repeat)=={"profile","result","input","actor","station"} and named(repeat["actor"]) and named(repeat["station"]),
+            "Name only the actor and scoring station for a station replay")
+    if unit!="in" or "range" not in criterion:
+        reasons.append("Station replay: needs an inch stand-off range");return False
+    process=subprocess.run(["node",str(Path(__file__).with_name("rehearsal-step-pose.mjs")),str(profile_path),"--station",
+                            repeat["actor"],repeat["station"]],capture_output=True,text=True,encoding="utf-8")
+    require(process.returncode==0,"Station attempts did not resolve: "+process.stderr)
+    poses=json.loads(process.stdout)
+    if poses["profileSha256"]!=saved["profileSha256"]:return False
+    lo,hi=criterion["range"]
+    where=lambda a:a["match"]+" "+a["period"]+" step "+str(a["stepIndex"])
+    problems=[]
+    if not poses["attempts"]:problems.append("no scoring attempt by "+repeat["actor"]+" at "+repeat["station"])
+    for a in poses["attempts"]:
+        if a["stationKind"]!="scoring":problems.append(where(a)+" does not target a scoring station")
+        elif not lo<=a["standoffIn"]<=hi:problems.append(where(a)+" stands off "+format(a["standoffIn"],".3f")+" in, outside the accepted range")
+        if a["footprint"]["status"]!="clear":problems.append(where(a)+" footprint is blocked by "+str(a["footprint"]["obstacle"]))
+    delivering=0
+    for match in saved["matches"]:
+        tries=[e for e in match["game"]["events"] if e.get("robot")==repeat["actor"] and e.get("station")==repeat["station"]
+               and e.get("operation")=="attempt"]
+        if tries and not any(e.get("pieces") for e in tries):
+            problems.append(repeat["actor"]+" delivered no piece at "+repeat["station"]+" in "+match["id"])
+        delivering+=any(e.get("pieces") for e in tries)
+    if not delivering:problems.append(repeat["actor"]+" delivered no piece at "+repeat["station"]+" in the series")
+    reasons.extend("Station replay: "+text for text in problems)
+    return not problems
+
+
+def repeated_field_input(root, repeat, value, unit, replayed, criterion=None, reasons=None):
     """Read the effective actor and program from the repeated finite field rehearsal."""
     profile_path=pinned(root,repeat["profile"])
     saved=read(pinned(root,repeat["result"]))
@@ -92,6 +127,8 @@ def repeated_field_input(root, repeat, value, unit, replayed):
         require(process.returncode==0,"Field repeat did not finish: "+process.stderr)
         replayed[key]=json.loads(process.stdout)
     require(saved==replayed[key] and saved["profileSha256"]==key,"Prior field result does not reproduce on its selected profile")
+    if repeat["input"]=="stationPosition":
+        return repeated_station_position(profile_path,saved,repeat,criterion or {},unit,[] if reasons is None else reasons)
     matches=[m for m in saved["matches"] if m["id"]==repeat["match"]]
     require(len(matches)==1,"Select one repeated match")
     robots=[r for r in matches[0]["roster"] if r["id"]==repeat["actor"]]
@@ -147,10 +184,13 @@ def held_field_input(root, before, selection, replay):
     the same types, as the repeat. A named program must be the one the repeated actor runs in that period."""
     if "fieldInput" in before:return before["fieldInput"],None
     unidentified="Held premise "+before["id"]+" predates fieldInput and its evidence does not identify the step"
-    if selection.get("input")!="stepPosition":return None,unidentified
+    if selection.get("input") not in ("stepPosition","stationPosition"):return None,unidentified
     evidence=read(pinned(root,before["source"]))
     named_steps=[{k:v for k,v in evidence[key].items() if k not in ("profile","result")}
                  for key in ("fieldReplay","fieldInput") if isinstance(evidence,dict) and isinstance(evidence.get(key),dict)]
+    # A generic premise names no step; only a replay of every attempt at the station can clear it.
+    if not named_steps and selection.get("input")=="stationPosition":return selection,None
+    if selection.get("input")!="stepPosition":return None,unidentified
     if (not named_steps or any(step!=named_steps[0] for step in named_steps)
             or not set(FIELD_STEP)<=set(named_steps[0])<=set(FIELD_STEP)|{"program","input"}):
         return None,unidentified
@@ -191,13 +231,15 @@ def verify_reopens(root, plan, prior, decisions, observations, missing, budget):
                 held_input,reason=held_field_input(root,before,selection,evidence["fieldReplay"]) if selection else (None,None)
                 if reason:missing.append(reason)
                 checked=(bool(selection) and selection==held_input==accepted.get("fieldInput")
-                         and ("fieldInput" in before or before["scenario"]==accepted["scenario"] and before["unit"]==accepted["unit"])
+                         and ("fieldInput" in before or before["scenario"]==accepted["scenario"]
+                              and (before["unit"]==accepted["unit"] or selection.get("input")=="stationPosition"))
                          and phase==accepted["phase"]==before["phase"] and current[key]["status"]=="within" and repeat.get("previousPlanSha256")==previous_study
                          and evidence.get("issue")==plan["issue"] and evidence.get("designSha256")==plan["design"]["sha256"]
                          and evidence.get("stepSha256")==plan["step"]["sha256"] and evidence.get("phase")==phase
                          and evidence.get("scenario")==accepted["scenario"] and evidence.get("premise")==key
                          and phase=="conceptual-design" and isinstance(evidence.get("fieldReplay"),dict)
-                         and repeated_field_input(root,evidence["fieldReplay"],current[key]["value"],accepted["unit"],replayed))
+                         and repeated_field_input(root,evidence["fieldReplay"],current[key]["value"],accepted["unit"],replayed,
+                                                  accepted["criterion"],missing))
         history.append(dict(**hold,repeatVerified=checked))
         if not checked:missing.append("Repeat "+phase+" on this issue before resuming "+key)
     return history
