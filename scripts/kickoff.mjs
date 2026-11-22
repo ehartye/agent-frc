@@ -129,6 +129,7 @@ export function validateProfile(p) {
       !Array.isArray(r.periods) || !labels(r.periods.map(v=>v.name)) ||
       !r.periods.every(v=>positive(v.seconds) && Number.isSafeInteger(v.seconds*20)) ||
       !r.programs || !Object.keys(r.programs).length) throw Error('Invalid rehearsal geometry, setups, starts or periods.');
+    if (r.waitCycles!==undefined && r.waitCycles!=='yield') throw Error('Set rehearsal.waitCycles to "yield" or omit it.');
     if (p.scoring) verifyMatchClock(p.scoring.phases,r.periods);
     else if (r.periods.some(v=>v.scoringPhase!==undefined)) throw Error('A rehearsal scoringPhase needs a scoring clock.');
     for(const ob of r.obstacles){

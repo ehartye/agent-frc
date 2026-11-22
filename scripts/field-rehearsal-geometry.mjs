@@ -145,7 +145,29 @@ export function fieldGeometry(profile) {
   function plan(a,b,body,setup=config?.setups[0]) {
     if(hit(a,a,body,setup) || hit(b,b,body,setup))return [];
     if(!hit(a,b,body,setup))return [a,b];
-    const nodes=[a,b,...space(body,setup).nodes];
+    return search([a,b,...space(body,setup).nodes],(p,q)=>hit(p,q,body,setup));
+  }
+  // Plan as above while also treating the current footprints of named peers as stationary obstacles.
+  function planAround(a,b,body,setup=config?.setups[0],peers=[]) {
+    const extra=peers.map(q=>{const inflated=expand(footprint(q.p,q),offsets(body));return {name:q.id,inflated,faces:prepare(inflated)};});
+    const blocked=(p,q)=>{
+      let result=hit(p,q,body,setup);
+      for(const o of extra){const t=enter(p,q,o.faces);if(t!==null && (!result || t<result.t))result={name:o.name,t};}
+      return result;
+    };
+    if(blocked(a,a) || blocked(b,b))return [];
+    if(!blocked(a,b))return [a,b];
+    const {walls}=space(body,setup);
+    const corners=extra.flatMap(o=>{
+      const c=o.inflated.reduce((v,p)=>add(v,p),[0,0]).map(v=>v/o.inflated.length);
+      return o.inflated.map(p=>{const d=minus(p,c),size=Math.hypot(...d);return [p[0]+d[0]/size*.15,p[1]+d[1]/size*.15];});
+    });
+    const nodes=[...space(body,setup).nodes,...corners].filter(q=>walls.every(w=>dot(q,w.normal)>=w.offset) && !blocked(q,q));
+    return search([a,b,...nodes],blocked);
+  }
+  // A* over visibility nodes from nodes[0] to nodes[1], where blocked(p,q) rejects a straight segment.
+  function search(nodes,blocked) {
+    const b=nodes[1];
     const cost=nodes.map(()=>Infinity), prev=[],seen=new Set();
     const distance=(p,q)=>Math.hypot(...minus(p,q));
     cost[0]=0;
@@ -161,12 +183,12 @@ export function fieldGeometry(profile) {
       nodes.forEach((p,j)=>{
         if(seen.has(j))return;
         const next=cost[i]+distance(nodes[i],p);
-        if(next<cost[j] && !hit(nodes[i],p,body,setup)){prev[j]=i;cost[j]=next;}
+        if(next<cost[j] && !blocked(nodes[i],p)){prev[j]=i;cost[j]=next;}
       });
     }
     const line=[b];
     for(let i=prev[1];i!==undefined;i=prev[i])line.unshift(nodes[i]);
     return line;
   }
-  return {boundary,obstacles,footprint,hit,assessRoute,robotContact,plan,validBody};
+  return {boundary,obstacles,footprint,hit,assessRoute,robotContact,plan,planAround,validBody};
 }
