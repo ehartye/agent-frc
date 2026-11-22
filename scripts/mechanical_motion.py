@@ -4,6 +4,7 @@ import json
 import math
 from pathlib import Path
 import sys
+from time import perf_counter
 from itertools import combinations, product
 
 from mechanical_readiness import named,number,pinned,project_path,read,require,digest
@@ -205,7 +206,22 @@ def pose_key(source,ops):
     return None if source is None else (source,json.dumps(ops,sort_keys=True,allow_nan=False))
 
 
-def evaluate(root,study,*,mount_hosts=(),package_scene=None):
+def progress_line(index,total,result,case_seconds,total_seconds):
+    """One stderr progress line for a finished case. It never enters the receipt."""
+    pairs=[r["status"] for r in result["pairs"]];c=result["counts"]
+    return (f"[motion] {index}/{total} {result['case']} status={result['status']} failing={pairs.count('fail')} "
+            f"open={pairs.count('open')} bounded={c['bounded']} broadPhase={c['broadPhase']} "
+            f"constantPoseBroadPhase={c['constantPoseBroadPhase']} case={case_seconds:.2f}s total={total_seconds:.2f}s")
+
+
+def evaluate(root,study,*,mount_hosts=(),package_scene=None,progress=None,fail_fast=False,never_stop=()):
+    """Evaluate every case in order.
+
+    progress receives one line per finished case. With fail_fast, the first case whose status is not
+    "pass" ends the study. Its cases up to and including that case are returned and the result is
+    marked partial with the stopping case, the checked cases and the skipped cases. Cases named in
+    never_stop, such as an adverse control that is expected to fail, never end the study.
+    """
     require(study.get("schema")=="agent-frc/mechanical-motion@1","Unknown motion study")
     original=pinned(root,study["step"])
     identities={}
@@ -214,7 +230,9 @@ def evaluate(root,study,*,mount_hosts=(),package_scene=None):
     case_ids=set();results=[];extraction_states=[]
     # Exact (gap, volume) of constant-relative-pose pairs, reused only for identical sources and poses.
     measured={}
-    for case in study["cases"]:
+    started=perf_counter();stopped=None
+    for index,case in enumerate(study["cases"],1):
+        case_started=perf_counter()
         id=case["id"]
         require(named(id) and id not in case_ids and named(case.get("basis")),"Unique case ID and physical basis required")
         case_ids.add(id)
@@ -362,16 +380,33 @@ def evaluate(root,study,*,mount_hosts=(),package_scene=None):
             elif status=="pass":
                 status="open"
         results.append(dict(case=id,extracted=extracted,status=status,moving=list(moves),removed=removed,installedCount=len(scene),pairs=rows,seats=seats,requiredContacts=goals,visibility=visibility,counts=counts))
+        now=perf_counter()
+        if progress:progress(progress_line(index,len(study["cases"]),results[-1],now-case_started,now-started))
+        if fail_fast and status!="pass" and id not in never_stop:
+            stopped=id;break
     require(results,"Supply at least one operating or service case")
-    return {"schema":"agent-frc/mechanical-motion-result@1","stepSha256":digest(original),"occurrences":identities,"nonSolidLeafCount":len(non_solids),"mountHostBoundsMm":host_bounds,"cases":results}
+    result={"schema":"agent-frc/mechanical-motion-result@1","stepSha256":digest(original),"occurrences":identities,"nonSolidLeafCount":len(non_solids),"mountHostBoundsMm":host_bounds,"cases":results}
+    if stopped is not None:
+        # A partial receipt can never stand for the whole study: the skipped cases are neither run nor validated.
+        skipped=[c.get("id") for c in study["cases"][len(results):]]
+        result.update(partial=True,stoppedAt=stopped,checkedCases=[r["case"] for r in results],skippedCases=skipped)
+        if progress:progress(f"[motion] fail-fast stopped at {stopped}; skipped {len(skipped)} case{'' if len(skipped)==1 else 's'}: "+(", ".join(map(str,skipped)) or "none"))
+    return result
+
+
+def stderr_progress(line):
+    print(line,file=sys.stderr,flush=True)
 
 if __name__=="__main__":
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("project",type=Path);parser.add_argument("study");parser.add_argument("--require-pass",action="store_true")
+    parser.add_argument("--fail-fast",action="store_true",help="Stop at the first case that does not pass and write a partial receipt")
+    parser.add_argument("--quiet",action="store_true",help="Omit per-case progress lines on stderr")
     args=parser.parse_args()
     try:
-        root=args.project.resolve();res=evaluate(root,read(project_path(root,args.study)))
+        root=args.project.resolve()
+        res=evaluate(root,read(project_path(root,args.study)),progress=None if args.quiet else stderr_progress,fail_fast=args.fail_fast)
         print(json.dumps(res,indent=2,allow_nan=False))
-        sys.exit(int(args.require_pass and any(c["status"]!="pass" for c in res["cases"])))
+        sys.exit(int(args.require_pass and (res.get("partial",False) or any(c["status"]!="pass" for c in res["cases"]))))
     except (OSError,ValueError,TypeError,KeyError,ImportError) as e:
         sys.exit(str(e))

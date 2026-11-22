@@ -5,9 +5,10 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+from time import perf_counter
 
 from component_shape import proper_rotation
-from mechanical_motion import evaluate, transforms, vec
+from mechanical_motion import evaluate, stderr_progress, transforms, vec
 from package_budgets import budget_review
 from package_view import capture, verify_view
 from mechanical_readiness import digest, named, number, pinned, project_path, read, require
@@ -119,9 +120,9 @@ def verify_reopens(root, plan, prior, decisions, observations, missing, budget):
         phase,key=hold["phase"],hold["reason"]
         checked=False
         if phase=="preliminary-design" and key=="inspection-weight":
-            checked=budget and budget["massStatus"]=="pass" and not missing
+            checked=bool(budget) and budget["massStatus"]=="pass" and not missing
         elif phase=="preliminary-design" and key.startswith("voltage/"):
-            checked=budget and not missing and any(row["case"]==key[len("voltage/"):] and row["status"]=="pass" for row in budget["electricalCases"])
+            checked=bool(budget) and not missing and any(row["case"]==key[len("voltage/"):] and row["status"]=="pass" for row in budget["electricalCases"])
         elif phase=="preliminary-design" and key in plan["stages"]:
             checked=set(hold["affected"])<=plan["groups"].keys() and any(row["case"]==key and row["status"]=="pass" for row in observations)
         elif key in current and key in original:
@@ -143,7 +144,8 @@ def verify_reopens(root, plan, prior, decisions, observations, missing, budget):
     return history
 
 
-def review(root, file, previous=None, *, write_view=False):
+def review(root, file, previous=None, *, write_view=False, fail_fast=False, progress=None):
+    """Check one package issue. progress receives stderr-only lines; fail_fast stops at the first non-passing nominal case."""
     plan_hash=digest(file)
     plan=read(file)
     require(plan["schema"]=="agent-frc/preliminary-layout@1" and named(plan["issue"]), "Select a package issue")
@@ -302,11 +304,33 @@ def review(root, file, previous=None, *, write_view=False):
     frames = []
     def inspect_scene(case,scene):
         if case["id"]!=control_id:frames.append(capture(case,scene))
-    observed=evaluate(root,study,mount_hosts={m["on"] for m in mounts},package_scene=inspect_scene)
-    result["budgets"]=budget_review(root,plan,missing)
-    result["view"]=verify_view(root,plan,sorted(frames,key=lambda f:cycle.index(f["id"]) if f["id"] in cycle else len(cycle)),write_view, observed, result["budgets"])
-    if not result["view"] or not result["view"]["verified"]:
-        missing.append("Generate the matching view of these checked trajectories with --write-view")
+    # The displaced control is expected to fail, so it never stops a fail-fast run. It runs last and
+    # only after every nominal case passed; otherwise it is skipped and the receipt cannot be checked.
+    observed=evaluate(root,study,mount_hosts={m["on"] for m in mounts},package_scene=inspect_scene,
+                      progress=progress,fail_fast=fail_fast,never_stop={control_id})
+    partial=observed.get("partial",False)
+    if partial:
+        skipped=[c for c in observed["skippedCases"] if c!=control_id]
+        result.update(partial=True,stoppedAt=observed["stoppedAt"],checkedCases=observed["checkedCases"],skippedCases=skipped)
+        missing.append("Partial --fail-fast run stopped at "+observed["stoppedAt"]+"; rerun without --fail-fast to check "
+                       +str(len(skipped))+" skipped case(s), the displaced control, budgets and view")
+        result["budgets"]=None
+        result["view"]=dict(file=plan["view"],verified=False,skipped="partial --fail-fast run") if plan.get("view") else None
+        if write_view and plan.get("view"):
+            print("[view] Not writing "+plan["view"]+": a partial --fail-fast run cannot produce a credited player",
+                  file=sys.stderr,flush=True)
+    else:
+        if progress:progress("[budgets] start")
+        began=perf_counter()
+        result["budgets"]=budget_review(root,plan,missing)
+        if progress:
+            b=result["budgets"]
+            summary="none" if not b else "mass="+b["massStatus"]+" electrical="+(
+                "fail" if any(r["status"]=="fail" for r in b["electricalCases"]) else "pass")
+            progress(f"[budgets] done {summary} {perf_counter()-began:.2f}s")
+        result["view"]=verify_view(root,plan,sorted(frames,key=lambda f:cycle.index(f["id"]) if f["id"] in cycle else len(cycle)),write_view, observed, result["budgets"])
+        if not result["view"] or not result["view"]["verified"]:
+            missing.append("Generate the matching view of these checked trajectories with --write-view")
     for m in mounts:
         box=observed["mountHostBoundsMm"].get(m["on"])
         if box is None or any(p<box[i]-1e-6 or p>box[i+3]+1e-6 for i,p in enumerate(m["pointMm"])):
@@ -324,7 +348,9 @@ def review(root, file, previous=None, *, write_view=False):
     require(roster==actual,"Package roster differs from the selected STEP and fixtures")
     if observed["nonSolidLeafCount"]:missing.append("Unexamined non-solid geometry in the selected STEP")
     observations=observed["cases"]
-    if control:
+    if control and partial:
+        result["control"]=dict(case=control["case"],displaced=displaced,offsetMm=shift,witness=None,status="skipped")
+    elif control:
         control_row=observations[-1]
         hit=next((r for r in control_row["pairs"] if set(r["pair"])=={moving,displaced} and r["status"]=="fail"),None)
         result["control"]=dict(case=control["case"],displaced=displaced,offsetMm=shift,witness=hit)
@@ -373,12 +399,16 @@ if __name__=="__main__":
     parser.add_argument("--write-view",action="store_true",help="Create the matching local player at the plan view path")
     parser.add_argument("--require-checked",action="store_true")
     parser.add_argument("--previous",help="Project-selected previous checkpoint, relative to the project")
+    parser.add_argument("--fail-fast",action="store_true",
+                        help="Stop at the first nominal case that does not pass and write a partial, never checked receipt")
+    parser.add_argument("--quiet",action="store_true",help="Omit progress lines on stderr")
     args=parser.parse_args()
     try:
         root=args.project.resolve()
-        result=review(root,project_path(root,args.plan),project_path(root,args.previous) if args.previous else None, write_view=args.write_view)
+        result=review(root,project_path(root,args.plan),project_path(root,args.previous) if args.previous else None,
+                      write_view=args.write_view,fail_fast=args.fail_fast,progress=None if args.quiet else stderr_progress)
         print(json.dumps(result,indent=2,allow_nan=False))
-        sys.exit(int(args.require_checked and result["status"]!="layout-checked"))
+        sys.exit(int(args.require_checked and (result.get("partial",False) or result["status"]!="layout-checked")))
     except (KeyError,IndexError,ValueError,TypeError,OSError,RuntimeError) as error:
         print(str(error),file=sys.stderr)
         sys.exit(2)
