@@ -502,7 +502,8 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
             pinned(root,ref)
     for stage in stages.values():
         for spec in stage.get("transportedBy",{}).values():
-            if isinstance(spec.get("evidence"),dict) and named(spec["evidence"].get("sha256")):pinned(root,spec["evidence"])
+            evidence=spec.get("evidence")
+            if isinstance(evidence,dict) and named(evidence.get("file")) and named(evidence.get("sha256")):pinned(root,evidence)
     require(digest(source)==observed["stepSha256"]==plan["step"]["sha256"] and digest(file)==plan_hash,
             "Source or commission changed during review")
     pinned(root,plan["motion"])

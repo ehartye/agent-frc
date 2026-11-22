@@ -71,6 +71,7 @@ class ContactTransport(unittest.TestCase):
         base = dict(mechanisms=["carrier"], drive={"carrier": "Invented powered roller"},
                     basis="The article rolls in on the powered carrier surface")
         cases = (("absent", None, "Pin the contact-transport evidence for carried article in acquire"),
+                 ("no-file", {"sha256": "0" * 64}, "Pin the contact-transport evidence for carried article in acquire"),
                  ("unpinned", {"file": "acquire-trial.json"}, "Pin the contact-transport evidence for carried article in acquire"),
                  ("other-path", self.evidence("short-trial.json", "acquire", ["carrier"], moves={"sample": [dict(kind="translation", travelMm=[0, 4, 0])]}),
                   "Contact-transport evidence for carried article in acquire does not record this payload path"),
@@ -97,6 +98,36 @@ class ContactTransport(unittest.TestCase):
                         basis="Invented")
             with self.assertRaisesRegex(ValueError, "Only mechanism groups can transport a payload"):
                 self.review(self.transport(self.uncarried(), "acquire", spec))
+
+    def test_transport_outside_an_operating_case_does_not_count(self):
+        # A fully evidenced transport in the service withdrawal is not an operating path.
+        spec = dict(mechanisms=["carrier"], evidence=self.evidence("service-trial.json", "remove-carrier", ["carrier"]), basis="Invented")
+        result = self.review(self.transport(self.uncarried(), "remove-carrier", spec))
+        self.assertIn(NO_LOADED, result["missingInputs"])
+        self.assertFalse(any("contact-transport" in m or "transporter" in m for m in result["missingInputs"]))
+
+    def test_malformed_declarations_are_rejected(self):
+        evidence = self.evidence("malformed.json", "acquire", ["carrier"])
+        for tag, spec, message in (
+                ("empty", dict(mechanisms=[], evidence=evidence, basis="Invented"), "Supply unique names"),
+                ("stray-drive", dict(mechanisms=["carrier"], drive={"neighbor": "Invented"}, evidence=evidence, basis="Invented"),
+                 "Declare each transporter drive"),
+                ("no-basis", dict(mechanisms=["carrier"], drive={"carrier": "Invented"}, evidence=evidence), "Describe how contact")):
+            with self.assertRaisesRegex(ValueError, message, msg=tag):
+                self.review(self.transport(self.uncarried(), "acquire", spec))
+        # The payload must move in the transported case.
+        plan = self.uncarried()
+        plan["stages"]["loaded-turn"]["transportedBy"] = {"carried article": dict(mechanisms=["carrier"], evidence=evidence, basis="Invented")}
+        plan["stages"]["park-loaded"]["transportedBy"] = plan["stages"]["loaded-turn"].pop("transportedBy")
+        plan["stages"]["park-loaded"]["transportedBy"]["carried article"]["drive"] = {"carrier": "Invented"}
+        with self.assertRaisesRegex(ValueError, "Identify the moving payload transported by contact"):
+            self.review(plan)
+
+    def test_changed_trial_is_refused(self):
+        evidence = self.evidence("changed.json", "acquire", ["carrier"])
+        spec = dict(mechanisms=["carrier"], drive={"carrier": "Invented"}, evidence=dict(evidence, sha256="f" * 64), basis="Invented")
+        with self.assertRaisesRegex(ValueError, "Changed evidence"):
+            self.review(self.transport(self.uncarried(), "acquire", spec))
 
     def test_payload_cannot_be_both_carried_and_transported(self):
         spec = dict(mechanisms=["carrier"], evidence=self.evidence("both.json", "loaded-turn", ["carrier"]), basis="Invented")
