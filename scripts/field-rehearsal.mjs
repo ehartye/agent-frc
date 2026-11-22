@@ -10,8 +10,9 @@ export function createFieldRehearsal(profile) {
   const L=profile.field.length,W=profile.field.width,dt=0.05;
   const game=supported ? createRehearsalGame(profile,geom,createFieldPieceMotion(profile,geom)) : null;
   const terminal=supported ? createTerminalRehearsal(profile) : null;
-  // A robot-to-robot wait cycle that persists this long without any member moving triggers one deterministic yield.
-  const yieldAfterS=1;
+  // A robot-to-robot wait cycle that holds this long without any member moving is reported. With
+  // rehearsal.waitCycles "yield" it also triggers one deterministic yield; otherwise motion is unchanged.
+  const waitCycleS=1, yieldCycles=model?.waitCycles==='yield';
   const behaviors=Object.fromEntries(Object.entries(model?.programs || {}).map(([key,p])=>[key,p.label]));
   const phases=model?.periods || [];
   const duration=name=>Math.round((phases.find(p=>p.name===name)?.seconds || 0)/dt);
@@ -81,7 +82,7 @@ export function createFieldRehearsal(profile) {
     }
     else if(robots.some(r=>r.endgame!==undefined) || atRestAfterS!==undefined)throw Error('Supply an endgame model before scheduling a terminal action.');
     const sim={robots,setup,game:ledger,phase:phases[0].name,phaseIndex:0,ticks:0,paused:true,ended:false,resources:reservations(),hotspots:[],
-      log:[], carry:0,phaseHistory:[],deadlocks:[],waitCycles:{}};
+      log:[], carry:0,phaseHistory:[],deadlocks:[],waitCycles:{},waitCycleLog:[]};
     if(model.scoreAssessment){
       const sameExecution=match && roster.length===6 && setup===match.setup &&
         tieWinner===(match.tieWinner??model.defaultTieWinner) && atRestAfterS===match.endgameAtRestAfterS &&
@@ -228,8 +229,14 @@ export function createFieldRehearsal(profile) {
     terminal?.observe(sim,begins,sim.ticks*dt,(sim.ticks+1)*dt);
   }
   // Robots blocked only by each other in a closed cycle never move again: each next proposal is unchanged.
-  // After the cycle has held for yieldAfterS, the member latest in roster order replans around the others'
-  // current footprints. Earlier members keep their route. If no member can detour, the cycle is reported unresolved.
+  // A cycle that holds for waitCycleS is logged with its start and duration. When yielding is enabled, the
+  // member latest in roster order that can detour replans around the others' current footprints. Earlier
+  // members keep their route. If no member can detour, the yield is recorded as unresolved.
+  function closeWaitCycle(sim,key,state,ended) {
+    const ms=x=>Math.round(x*1000)/1000,durationS=ms((sim.ticks-state.since)*dt);
+    if(durationS+1e-9>=waitCycleS)sim.waitCycleLog.push({phase:sim.phase,cycle:state.cycle,startS:ms(state.since*dt),durationS,ended,
+      ...(yieldCycles?{yielded:state.yielded ?? null}:{})});
+  }
   function resolveWaitCycles(sim) {
     const byId=Object.fromEntries(sim.robots.map(r=>[r.id,r])),active={};
     for(const start of sim.robots){
@@ -239,10 +246,9 @@ export function createFieldRehearsal(profile) {
       const order=sim.robots.map(x=>x.id).filter(id=>path.includes(id));
       if(r!==start || order[0]!==start.id)continue;
       const key=path.join('>');
-      const since=sim.waitCycles[key]?.since ?? sim.ticks;
-      const state=sim.waitCycles[key] ?? {since,handled:false};
+      const state=sim.waitCycles[key] ?? {since:sim.ticks,cycle:path,handled:false};
       active[key]=state;
-      if(state.handled || (sim.ticks+1-since)*dt+1e-9<yieldAfterS)continue;
+      if(!yieldCycles || state.handled || (sim.ticks+1-state.since)*dt+1e-9<waitCycleS)continue;
       state.handled=true;
       let yielded=null;
       for(const id of [...order].reverse()){
@@ -251,10 +257,11 @@ export function createFieldRehearsal(profile) {
         const route=geom.planAround(r.p,goal,r,sim.setup,order.filter(o=>o!==id).map(o=>byId[o]));
         if(route.length){r.waypoints=route;r.target=1;yielded=id;break;}
       }
-      const entry={phase:sim.phase,timeS:(sim.ticks+1)*dt,sinceS:since*dt,cycle:path,yielded};
-      sim.deadlocks.push(entry);
+      state.yielded=yielded;
+      sim.deadlocks.push({phase:sim.phase,timeS:(sim.ticks+1)*dt,sinceS:state.since*dt,cycle:path,yielded});
       event(sim,'Wait cycle '+[...path,path[0]].join(' -> ')+(yielded?'; '+yielded+' yields':'; no member can detour'));
     }
+    for(const [key,state] of Object.entries(sim.waitCycles))if(!active[key])closeWaitCycle(sim,key,state,'cleared');
     sim.waitCycles=active;
   }
   function step(sim) {
@@ -270,6 +277,8 @@ export function createFieldRehearsal(profile) {
       if(elapsed+1e-9>=endgame.assessmentTimeS)terminal.assess(sim);
     }
     if(sim.ticks>=wallDuration(sim.phase)){
+      for(const [key,state] of Object.entries(sim.waitCycles))closeWaitCycle(sim,key,state,'period-end');
+      sim.waitCycles={};
       if(!model.scoreAssessment)terminal?.assess(sim);
       sim.paused=true;sim.ended=true;sim.carry=0;
       sim.phaseHistory.push({phase:sim.phase,seconds:duration(sim.phase)*dt,

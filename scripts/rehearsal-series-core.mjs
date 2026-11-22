@@ -15,7 +15,7 @@ export function createMatchSeries(engine, matches) {
     return {...match,roster:engine.completeRoster(roster)};
   });
   let index=0, sim, remainingS=0;
-  const results=[];
+  const results=[], waitCycles=[];
   function begin() {
     const match=configs[index];
     sim=engine.create(match.roster,match.setup,match.tieWinner,match.endgameAtRestAfterS,matches[index]);
@@ -36,11 +36,13 @@ export function createMatchSeries(engine, matches) {
       } else {
         const match=configs[index];
         results.push({id:match.id,basis:match.basis,setup:sim.setup,roster:match.roster,periods:sim.phaseHistory,game:sim.game});
+        // Diagnostics stay outside the saved result so its bytes do not depend on them.
+        waitCycles.push({match:match.id,cycles:sim.waitCycleLog ?? []});
         if (index+1<configs.length) {index++;begin();}
       }
     }
   }
-  return {get sim(){return sim;},get match(){return configs[index];},get done(){return results.length===configs.length;},results,advance};
+  return {get sim(){return sim;},get match(){return configs[index];},get done(){return results.length===configs.length;},results,waitCycles,advance};
 }
 
 /** Keep the student's editable starting configuration independent of match playback. */

@@ -6,51 +6,85 @@ import {mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {validateProfile} from '../scripts/kickoff.mjs';
 
 const example = fileURLToPath(new URL('../examples/kickoff/training-field.json', import.meta.url));
 const series = fileURLToPath(new URL('../scripts/rehearsal-series.mjs', import.meta.url));
 
-// Full saved result of the unmodified invented training field before deadlock handling existed.
+// Full saved results produced before wait-cycle handling existed, for the unmodified invented training
+// field and for its first match with the blue slot-1 and slot-2 duties exchanged.
 const EXAMPLE_RESULT_SHA256 = '000ac2e2c9a4f9a394c6545412b399956d00f6cd66a9285f7eecef1fc652bba1';
+const SWAPPED_RESULT_SHA256 = '39018fb79e1b0edfdf8e2144009fbb287ea52d0912e53664447c34c1cf0e460e';
 
-function swapped(t) {
-  // Exchange the duties of two adjacent blue start slots. Their routes now meet head-on.
-  const root = mkdtempSync(path.join(tmpdir(), 'lane-deadlock-'));
+const sha = bytes => createHash('sha256').update(bytes).digest('hex');
+
+function profileFile(t, {swap = false, waitCycles} = {}) {
+  const root = mkdtempSync(path.join(tmpdir(), 'wait-cycle-'));
   t.after(() => rmSync(root, {force: true, recursive: true}));
   const profile = JSON.parse(readFileSync(example));
-  const [match] = profile.rehearsal.series.matches;
-  const a = match.roster.find(r => r.side === 'blue' && r.slot === 1), b = match.roster.find(r => r.side === 'blue' && r.slot === 2);
-  [a.plans, b.plans] = [b.plans, a.plans];
-  profile.rehearsal.series.matches = [match];
-  const file = path.join(root, 'swapped.json');
+  if (swap) {
+    // Exchange the duties of two adjacent blue start slots. Their routes now meet head-on.
+    const [match] = profile.rehearsal.series.matches;
+    const a = match.roster.find(r => r.side === 'blue' && r.slot === 1), b = match.roster.find(r => r.side === 'blue' && r.slot === 2);
+    [a.plans, b.plans] = [b.plans, a.plans];
+    profile.rehearsal.series.matches = [match];
+  }
+  if (waitCycles) profile.rehearsal.waitCycles = waitCycles;
+  const file = path.join(root, 'profile.json');
   writeFileSync(file, JSON.stringify(profile, null, 2));
   return file;
 }
 
-test('non-deadlocked series results are byte-identical to their earlier saved result', () => {
+const run = (...args) => spawnSync(process.execPath, [series, ...args], {encoding: 'utf8'});
+const robots = period => Object.fromEntries(period.robots.map(r => [r.id, r]));
+
+test('the unmodified training field reproduces its earlier saved result and reports no wait cycle', () => {
   const bytes = execFileSync(process.execPath, [series, example]);
-  assert.equal(createHash('sha256').update(bytes).digest('hex'), EXAMPLE_RESULT_SHA256);
-  const result = JSON.parse(bytes);
-  assert.ok(result.matches.every(m => m.periods.every(p => !('deadlocks' in p))));
+  assert.equal(sha(bytes), EXAMPLE_RESULT_SHA256);
+  const report = JSON.parse(execFileSync(process.execPath, [series, example, '--report-deadlocks']));
+  assert.deepEqual([report.cycleCount, report.resultSha256, report.waitCycles], [0, EXAMPLE_RESULT_SHA256, 'report']);
 });
 
-test('a head-on wait cycle between swapped adjacent robots yields deterministically and reports the cycle', t => {
-  const file = swapped(t);
-  const run = spawnSync(process.execPath, [series, file], {encoding: 'utf8'});
-  assert.equal(run.status, 0, run.stderr);
-  const [match] = JSON.parse(run.stdout).matches;
+test('by default a permanent wait cycle is reported without changing the saved bytes', t => {
+  const file = profileFile(t, {swap: true});
+  const plain = run(file);
+  assert.equal(plain.status, 0, plain.stderr);
+  assert.equal(sha(plain.stdout), SWAPPED_RESULT_SHA256);
+  const [match] = JSON.parse(plain.stdout).matches;
+  assert.ok(match.periods.every(p => robots(p).B1.visits === 0 && robots(p).B2.visits === 0 && !('deadlocks' in p)));
+  assert.match(plain.stderr, /\[rehearsal\] trial-1 Opening wait cycle B1 -> B2 -> B1 from 0\.40 s for 9\.60 s \(held to period end\)/);
+  assert.match(plain.stderr, /\[rehearsal\] trial-1 Main play wait cycle B1 -> B2 -> B1 from 0\.00 s for 45\.00 s \(held to period end\)/);
+  const reported = run(file, '--report-deadlocks');
+  const report = JSON.parse(reported.stdout);
+  assert.equal(report.resultSha256, SWAPPED_RESULT_SHA256);
+  assert.deepEqual([report.cycleCount, report.permanentCount, report.matchesWithCycles], [2, 2, ['trial-1']]);
+  assert.deepEqual(report.cycles[0], {match: 'trial-1', phase: 'Opening', cycle: ['B1', 'B2'], startS: 0.4, durationS: 9.6, ended: 'period-end'});
+});
+
+test('opting in to yield resolves the swapped cycle deterministically', t => {
+  const file = profileFile(t, {swap: true, waitCycles: 'yield'});
+  const first = run(file);
+  assert.equal(first.status, 0, first.stderr);
+  const [match] = JSON.parse(first.stdout).matches;
   for (const period of match.periods) {
-    const robots = Object.fromEntries(period.robots.map(r => [r.id, r]));
-    assert.ok(robots.B1.visits > 0 && robots.B2.visits > 0, period.phase + ' ' + JSON.stringify([robots.B1, robots.B2]));
-    assert.ok(robots.B1.waitSeconds < 5 && robots.B2.waitSeconds < 5, period.phase);
+    const {B1, B2} = robots(period);
+    assert.ok(B1.visits > 0 && B2.visits > 0 && B1.waitSeconds < 5 && B2.waitSeconds < 5, period.phase);
   }
-  const [first] = match.periods[0].deadlocks;
-  assert.deepEqual(first.cycle, ['B1', 'B2']);
   // B2 is latest in roster order and tries first, but its supply stop lies inside B1's footprint, so B1 detours.
-  assert.equal(first.yielded, 'B1');
-  assert.equal(first.phase, 'Opening');
-  assert.ok(first.timeS > 0 && first.sinceS < first.timeS);
-  assert.match(run.stderr, /\[rehearsal\] trial-1 Opening .*wait cycle B1 -> B2 -> B1; B1 yields/);
-  // The same profile yields identically on every run.
-  assert.equal(execFileSync(process.execPath, [series, file], {encoding: 'utf8'}), run.stdout);
+  assert.deepEqual(match.periods[0].deadlocks, [{phase: 'Opening', timeS: 1.4000000000000001, sinceS: 0.4, cycle: ['B1', 'B2'], yielded: 'B1'}]);
+  assert.match(first.stderr, /trial-1 Opening wait cycle B1 -> B2 -> B1 from 0\.40 s for 1\.0\d s \(cleared\); B1 yielded/);
+  assert.equal(run(file).stdout, first.stdout);
+});
+
+test('opting in leaves a series without wait cycles unchanged apart from its profile hash', t => {
+  const strip = text => ({...JSON.parse(text), profileSha256: null});
+  const optedIn = run(profileFile(t, {waitCycles: 'yield'}));
+  assert.equal(optedIn.status, 0, optedIn.stderr);
+  assert.deepEqual(strip(optedIn.stdout), strip(execFileSync(process.execPath, [series, example], {encoding: 'utf8'})));
+});
+
+test('only the yield setting is accepted', () => {
+  const profile = JSON.parse(readFileSync(example));
+  profile.rehearsal.waitCycles = 'priority';
+  assert.throws(() => validateProfile(profile), /Set rehearsal.waitCycles to "yield" or omit it/);
 });

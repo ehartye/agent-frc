@@ -99,7 +99,7 @@ The package checker repeats the affected package cases. For a held field premise
 
 ### Resume a held delivery position
 
-When the held premise is the distance the robot delivers from, move that scoring step in the field profile, then re-run the match series with `scripts/rehearsal-series.mjs`. Register the premise in inches (`"unit": "in"`) and name the step in `fieldInput`, identically in the original and repeated decisions:
+When the held premise is the distance the robot delivers from, move that scoring step in the field profile, then re-run the match series with `scripts/rehearsal-series.mjs`. Check the run for [permanent robot wait cycles](match-series.md#find-and-resolve-robot-wait-cycles) before relying on its result. Register the premise in inches (`"unit": "in"`) and name the step in `fieldInput`, identically in the original and repeated decisions:
 
 ```json
 {"match": "trial-1", "actor": "B1", "input": "stepPosition", "period": "Main play",

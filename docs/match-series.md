@@ -24,3 +24,19 @@ In the project's `rehearsal` model:
 | Match series | `series.matches[]` lists `id`, behavior `basis`, obstacle `setup` and `roster`. Each robot has a `side`, `slot` and `plans` keyed by every configured period name. Optional `capacity` (default one) and `preload:{station,quantity}` define its opening load. |
 
 The JSON receipt includes every match, period cutoff, robot position/waits, station events with piece IDs, pending returns, remaining stock and modeled alliance scores. One robot cannot take pieces already acquired by another. Existing profiles without stations retain their unscored traffic rehearsal. To use an old profile in a complete student series, declare the periods, likely behaviors, game stock and stations that the project can support. A missed shot, inactive target and unresolved outcome are recorded separately. No projectile, grip-force or sensor model is inferred from a prescribed action.
+
+## Find and resolve robot wait cycles
+
+Two robots can block each other permanently. A move that would touch another robot is rejected for that tick, and the route planner steers around walls and obstacles but not around robots. When two routes meet head-on, or several robots each wait on the next, every member's next move is rejected again, and the cycle holds until the period ends. **Existing rehearsal results can contain these permanent cycles.** A result containing one understates what those robots would do, because a driver would steer around the other robot. Exchanging the duties of two adjacent start slots is a common cause.
+
+Every run reports each robot-to-robot wait cycle that holds for at least 1 s. It names the match, period, robots, start time, duration and whether the cycle cleared or held to the period end. The report goes to standard error, so the saved result bytes do not change. To count the cycles behind a held series result without replacing it, run:
+
+```sh
+node <plugin>/scripts/rehearsal-series.mjs <project>/kickoff/rules-model.json --report-deadlocks
+```
+
+The `agent-frc/rehearsal-wait-cycles@1` report lists `cycleCount`, `permanentCount`, `matchesWithCycles` and each cycle. It also gives the `resultSha256` of the series result it describes, so you can match it to a saved file. With an `OUTPUT.json` argument the result is still written there.
+
+To let the rehearsal resolve cycles, set `"waitCycles": "yield"` in the `rehearsal` model. After a cycle has held for 1 s, the member latest in roster order (blue before red, then by slot) replans around the other members' current footprints. If it cannot reach its destination, the next member tries. Earlier members keep their routes. Each period that yields records `deadlocks` entries with the cycle, its start, the yield time and the robot that yielded (`null` when no member could detour). The yield is a planning convention, not a model of driver negotiation.
+
+Opting in changes the profile bytes and the series result for any match with a cycle. Re-run the series, review the new outcome and re-accept any held field premise that depends on it. A held receipt pinned to the earlier result will no longer reproduce. A series without cycles produces the same matches with only its profile hash changed.
