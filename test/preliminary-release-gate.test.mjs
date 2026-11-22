@@ -332,6 +332,20 @@ test('unlisted, mismatched, unpinned or misdirected field players are rejected',
   assert.deepEqual((await auditStaged(transported.approved,transported.site,transported.policy)).preliminary.added,['layout-002']);
 });
 
+// Tokenizer regressions: markup a browser reads that a naive scanner skips. Each must be found and refused.
+const scannerCases={
+ "empty-comment": "<!--><a href=\"https://e.example\">x</a><!-- -->",
+ "bang-close": "<!-- --!><a href=\"https://e.example\">x</a><!-- -->",
+ "svg-style": "<svg><style><a href=\"https://e.example\">x</a></style></svg>",
+ "svg-refresh": "<svg><title><meta http-equiv=\"refresh\" content=\"0;url=https://e.example\"></title></svg>",
+ "dotted-I": "<script>\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130\u0130</script><a href=https://e.example/>x</a>",
+ "svg-breakout-comment": "<svg><p><style>/*<!--*/</style><a href=\"https://e.example\">x</a>--></svg>",
+ "svg-cdata-comment": "<svg><![CDATA[ > <!-- ]]><a href=\"https://e.example\">x</a>--></svg>",
+ "svg-script-link": "<svg><script>1</script><a href=\"https://e.example\">x</a></svg>",
+ "math": "<math><mi>x</mi></math>",
+ "foreign-object": "<svg><foreignObject><div>x</div></foreignObject></svg>",
+ "uppercase-close": "<SCRIPT>1</SCRIPT ><a href=\"https://e.example\">x</a>"
+};
 test('a field player must be self-contained', async t=>{
   const policy='<meta http-equiv="Content-Security-Policy" content="'+fieldPlayerPolicy+'">';
   const pages=[
@@ -356,13 +370,15 @@ test('a field player must be self-contained', async t=>{
     fieldPage.replace('<canvas>','<a href="&#104;ttps://example.invalid/">x</a><canvas>'),
     fieldPage.replace('<canvas>','<meta http-equiv="&#114;efresh" content="0;url=https://example.invalid"><canvas>'),
     fieldPage.replace('<p>Work-in-progress preliminary design</p>',''),
-    String.fromCharCode(0xfeff,0xfeff)+fieldPage];
+    String.fromCharCode(0xfeff,0xfeff)+fieldPage,
+    ...Object.values(scannerCases).map(body=>fieldPage.replace('<canvas>',body+'<canvas>'))];
   for(const page of pages){
     const f=fixture(t);next(f.site,'layout-002',{field:{page}});
     await assert.rejects(auditStaged(f.approved,f.site,f.policy),/self-contained/,page.slice(0,200));
   }
   // Ordinary script and in-page fragments stay usable. Script-driven top-level navigation is out of scope for the static check.
-  for(const page of [String.fromCharCode(0xfeff)+fieldPage,fieldPage.replace('frames.length','(()=>{let data=frames;const src=1;return data.length+src})()'),
+  for(const page of [String.fromCharCode(0xfeff)+fieldPage,
+    fieldPage.replace('<canvas>','<svg viewBox="0 0 10 10"><style>circle{fill:gold}</style><title>Lane</title><circle r="2"/></svg><svg/><canvas>'),fieldPage.replace('frames.length','(()=>{let data=frames;const src=1;return data.length+src})()'),
     fieldPage.replace('<canvas>','<a href="#trace">Trace</a><p>Robot location at release</p><script>const t="</div>";</script><canvas>')]){
     const f=fixture(t);next(f.site,'layout-002',{field:{page}});
     assert.deepEqual((await auditStaged(f.approved,f.site,f.policy)).preliminary.added,['layout-002'],page.slice(0,40));
@@ -410,6 +426,7 @@ test('stage.py --check-index applies the same field player rules', async t=>{
     [{page:fieldPage.replace("default-src 'none'","default-src"+String.fromCharCode(0x1c)+"'none'")},/not self-contained/],
     [{page:fieldPage.replace('<canvas>','<a title=">" href="https://example.invalid/">x</a><canvas>')},/not self-contained/],
     [{page:String.fromCharCode(0xfeff,0xfeff)+fieldPage},/not self-contained/],
+    ...Object.values(scannerCases).map(body=>[{page:fieldPage.replace('<canvas>',body+'<canvas>')},/not self-contained/]),
     [{page:fieldPage.replace('<p>Work-in-progress preliminary design</p>','')},/not self-contained/],
     [{page:String.fromCharCode(0xfeff)+fieldPage},0],
     [{rows:[{title:'Lane',href:'field%2flane.html',objective:laneObjective,evidence:'x'}]},/listed field player/]];
