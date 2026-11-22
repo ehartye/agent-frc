@@ -82,6 +82,44 @@ export function checkPhysics(receipt,id){
     'Receipt '+id+' needs every loaded-voltage case to pass');
 }
 
+const solidBodies=new Set(['MANIFOLD_SOLID_BREP','BREP_WITH_VOIDS','FACETED_BREP']);
+// Shape carriers a body count would miss: surface, wireframe and tessellated models, and instanced assemblies.
+const refusedShapes=/^(?:SHELL_BASED_SURFACE_MODEL|FACE_BASED_SURFACE_MODEL|GEOMETRIC_CURVE_SET|GEOMETRIC_SET|TESSELLATED_\w+|TRIANGULATED_\w+|COMPLEX_TRIANGULATED_\w+|MANIFOLD_SURFACE_SHAPE_REPRESENTATION|GEOMETRICALLY_BOUNDED_\w+|MAPPED_ITEM|REPRESENTATION_MAP|NEXT_ASSEMBLY_USAGE_OCCURRENCE|CONTEXT_DEPENDENT_SHAPE_REPRESENTATION)$/;
+/**
+ * Products and solid bodies in a STEP file, read per instance with comments removed and strings respected.
+ * A product name with a STEP escape, a product inside a complex instance or a refused shape carrier is reported.
+ */
+export function stepProducts(bytes){
+  const text=bytes.toString('latin1'),instances=[];
+  let current='';
+  for(let i=0;i<text.length;){
+    if(text[i]==="'"){
+      let j=i+1;
+      while(j<text.length&&!(text[j]==="'"&&text[j+1]!=="'"))j+=text[j]==="'"?2:1;
+      current+=text.slice(i,j+1);i=j+1;continue;
+    }
+    if(text.startsWith('/*',i)){const e=text.indexOf('*/',i+2);i=e<0?text.length:e+2;current+=' ';continue;}
+    if(text[i]===';'){instances.push(current);current='';i++;continue;}
+    current+=text[i++];
+  }
+  const products=[];let bodies=0,refused=null;
+  for(const instance of instances){
+    const blank=instance.replace(/'(?:[^']|'')*'/g,"''");
+    const keywords=[...blank.matchAll(/([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)].map(m=>m[1].toUpperCase());
+    for(const k of keywords){
+      if(solidBodies.has(k))bodies++;
+      if(refusedShapes.test(k))refused??=k;
+    }
+    if(!keywords.includes('PRODUCT'))continue;
+    const simple=/^\s*#\d+\s*=\s*PRODUCT\s*\(\s*'((?:[^']|'')*)'/i.exec(instance);
+    if(!simple||keywords.filter(k=>k==='PRODUCT').length!==1){refused??='complex PRODUCT';continue;}
+    const name=simple[1].replace(/''/g,"'");
+    if(name.includes('\\'))refused??='escaped product name';
+    products.push(name);
+  }
+  return {products,bodies,refused};
+}
+
 /**
  * A new source-side release input directory, as a map of directory-relative name to bytes. Its layout and
  * every input the receipt pins, including the STEP, must match their digests in a layout-checked receipt.
@@ -109,29 +147,35 @@ export function checkSourceInputs(id,files){
     check(entry.sha256===f.file.sha256,'Field fixture source '+id+'/'+name+' is pinned with two digests');
     entry.ids.add(f.id);entry.solids.add(f.solid);sources.set(name,entry);
   }
+  const fixtures=[];
+  if(!sources.size)return {step:receipt.step.file,fixtures};
   const fixtureIds=new Set([...sources.values()].flatMap(e=>[...e.ids]));
-  const robotRoles=['structure','bumper','drive','battery','mechanism','payload','service'];
-  for(const g of Object.values(object(receipt.groups)?receipt.groups:{})){
+  const fixtureSolids=new Set([...sources.values()].flatMap(e=>[...e.solids]));
+  check(object(receipt.groups),'Register the field fixtures in the receipt groups: '+id);
+  const grouped=new Set(),robotMembers=new Set();
+  for(const g of Object.values(receipt.groups)){
     const members=Array.isArray(g?.members)?g.members:[];
-    if(members.some(m=>fixtureIds.has(m)))check(!robotRoles.includes(g.role)&&members.every(m=>fixtureIds.has(m)),
-      'A field fixture is registered as a robot member: '+id);
+    if(!members.some(m=>fixtureIds.has(m))){members.forEach(m=>robotMembers.add(m));continue;}
+    check(g.role==='other'&&members.every(m=>fixtureIds.has(m)),'A field fixture is registered as a robot member: '+id);
+    members.forEach(m=>grouped.add(m));
   }
+  check([...fixtureIds].every(m=>grouped.has(m)),'Register every field fixture in an other-role fixture group: '+id);
+  const packageProducts=new Set(stepProducts(files.get(receipt.step.file)).products);
+  check(![...fixtureIds,...fixtureSolids].some(n=>robotMembers.has(n)||packageProducts.has(n)),
+    'A field fixture names a robot member or package solid: '+id);
   const ledger=parse(files.get(receipt.budgets.source.file),'budgets: '+id);
   for(const line of Array.isArray(ledger?.masses)?ledger.masses:[]){
     const members=Array.isArray(line?.members)?line.members:[];
     if(members.some(m=>fixtureIds.has(m)))check(members.every(m=>fixtureIds.has(m))&&same(line.kg,[0,0]),
       'A field fixture carries robot mass: '+id);
   }
-  const fixtures=[];
   for(const [name,{sha256:digest,solids}] of sources){
     check(name!==receipt.step.file&&!name.includes('/')&&/\.(?:step|stp)$/i.test(name)&&files.has(name)&&hex.test(digest??'')&&
       sha(files.get(name))===digest,'Field fixture source '+id+'/'+name+' differs from the motion study the receipt pins');
     // The checker's loader names each solid by its STEP product; every product and body must be a registered fixture.
-    const text=files.get(name).toString('latin1');
-    const products=[...text.matchAll(/\bPRODUCT\s*\(\s*'((?:[^']|'')*)'/gi)].map(m=>m[1].replace(/''/g,"'"));
-    const bodies=(text.match(/\b(?:MANIFOLD_SOLID_BREP|BREP_WITH_VOIDS|FACETED_BREP)\s*\(/gi)||[]).length;
-    check(products.length&&new Set(products).size===products.length&&products.every(p=>solids.has(p))&&bodies===products.length,
-      'Every solid in '+id+'/'+name+' must be a registered fixture');
+    const {products,bodies,refused}=stepProducts(files.get(name));
+    check(!refused&&products.length&&new Set(products).size===products.length&&products.every(n=>solids.has(n))&&bodies===products.length,
+      'Every solid in '+id+'/'+name+' must be a registered fixture'+(refused?' ('+refused+')':''));
     fixtures.push(name);
   }
   return {step:receipt.step.file,fixtures};

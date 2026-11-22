@@ -237,6 +237,40 @@ test('unpinned, mispinned, robot-registered, massed or duplicate fixture STEPs a
   await assert.rejects(run(repo,base),/registered fixture/);
 });
 
+test('fixture STEPs cannot hide robot solids from the product and body count', async t=>{
+  const hidden=[
+    ["comment-hidden product and body","\n#900=PRODUCT/**/('intake','intake','',(#90));\n#901=MANIFOLD_SOLID_BREP/* x */('',#91);"],
+    ["surface model","\n#900=SHELL_BASED_SURFACE_MODEL('',(#91));"],
+    ["tessellated shell","\n#900=TESSELLATED_SHELL('',(#91),$);"],
+    ["instanced assembly","\n#900=MAPPED_ITEM('',#91,#92);"],
+    ["complex product","\n#900=(PRODUCT('arm','arm','',(#90)) PRODUCT_CONTEXT('',#1,''));"]];
+  for(const [label,extra] of hidden){
+    const {repo,base}=sourceRepo(t);
+    issueInputs(repo,'layout-002',{fixtures:['hub body'],fixtureBody:fixtureStep(['hub body'],extra)});
+    await assert.rejects(run(repo,base),/registered fixture/,label);
+  }
+  // A comment or string that only mentions an entity is not one.
+  const {repo,base}=sourceRepo(t);
+  issueInputs(repo,'layout-002',{fixtures:['hub body'],fixtureBody:fixtureStep(['hub body'],"\n/* MANIFOLD_SOLID_BREP('',#1); */\n#900=DESCRIPTIVE_REPRESENTATION_ITEM('note','PRODUCT(x) MAPPED_ITEM(');")});
+  assert.deepEqual((await run(repo,base)).preliminaryInputs,['layout-002']);
+});
+
+test('fixture IDs and solids are checked against robot groups and package solids', async t=>{
+  const cases=[
+    [{edit:r=>{const {groups,...rest}=r;return rest;}},/receipt groups/],
+    [{fixtureRole:'Structure'},/robot member/],
+    [{edit:r=>({...r,groups:{...r.groups,field:{members:r.groups.field.members}}})},/robot member/],
+    [{edit:r=>({...r,groups:{carrier:r.groups.carrier}})},/other-role fixture group/],
+    [{edit:r=>({...r,groups:{...r.groups,carrier:{role:'mechanism',members:['head','tower base']}}})},/robot member|package solid/],
+    [{step:fixtureStep(['hub body'])},/package solid/],
+    [{fixtureBody:fixtureStep(['hub b\\X\\6Fdy'])},/registered fixture/]];
+  for(const [options,pattern] of cases){
+    const {repo,base}=sourceRepo(t);
+    issueInputs(repo,'layout-002',{fixtures:['hub body','tower base'],fixtureBody:fixtureStep(['hub body','tower base']),...options});
+    await assert.rejects(run(repo,base),pattern,JSON.stringify(options).slice(0,80));
+  }
+});
+
 test('an issued fixture STEP is immutable', async t=>{
   const {repo}=sourceRepo(t);
   issueInputs(repo,'layout-002',{fixtures:['hub body']});git(repo,'add','.');git(repo,'commit','-qm','Issued');
