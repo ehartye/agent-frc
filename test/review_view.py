@@ -169,17 +169,17 @@ class CompressedScene(unittest.TestCase):
             folder = Path(tmp) / "layout"
             plan = runpy.run_path(str(build))["create"](folder, release_id="layout-test")
             file = folder / "layout.json"
-            good = review(folder, file)
+            good = review(folder.parent, file)
             self.assertEqual(good["status"], "layout-checked")
             self.assertEqual(good["decision"], dict(status="layout-checked", firstUnmet=None))
             self.assertEqual(good["parked"], dict(screenedPairs=21, positive=[], unresolved=[]), "pairs examined with both bodies still in some case")
             scene = good["view"]["scene"]
-            served = folder / scene["file"]
-            self.assertEqual(scene["file"], "review-scene.json.gz")
+            served = folder.parent / scene["file"]
+            self.assertEqual(scene["file"], "layout/review-scene.json.gz")
             self.assertEqual(hashlib.sha256(served.read_bytes()).hexdigest(), scene["sha256"])
             content = gzip.decompress(served.read_bytes())
             self.assertEqual((hashlib.sha256(content).hexdigest(), len(content)), (scene["contentSha256"], scene["bytes"]))
-            self.assertEqual((folder / plan["view"]).read_bytes(), PAGE.read_bytes().replace(b"\r\n", b"\n"),
+            self.assertEqual((folder.parent / plan["view"]).read_bytes(), PAGE.read_bytes().replace(b"\r\n", b"\n"),
                              "the page is the stock template; every value comes from the scene")
             data = json.loads(content)
             self.assertEqual(data["schema"], "agent-frc/preliminary-review-scene@1")
@@ -204,18 +204,18 @@ class CompressedScene(unittest.TestCase):
             self.assertEqual(json.loads(checked.stdout)["errors"], [])
             original = served.read_bytes()
             served.write_bytes(gzip.compress(content, compresslevel=1, mtime=7))
-            recompressed = review(folder, file)
+            recompressed = review(folder.parent, file)
             self.assertTrue(recompressed["view"]["verified"], "the same content under another compression still verifies")
             self.assertNotEqual(recompressed["view"]["scene"]["sha256"], scene["sha256"], "the digest follows the served bytes")
             served.write_bytes(gzip.compress(content.replace(b'"stage"', b'"stagE"', 1), mtime=0))
-            tampered = review(folder, file)
+            tampered = review(folder.parent, file)
             self.assertFalse(tampered["view"]["verified"])
             self.assertEqual(tampered["status"], "provisional")
             served.write_bytes(original[:-9] + b"corrupted")
-            self.assertFalse(review(folder, file)["view"]["verified"], "a corrupt stream fails verification instead of crashing")
+            self.assertFalse(review(folder.parent, file)["view"]["verified"], "a corrupt stream fails verification instead of crashing")
             served.unlink()
-            self.assertFalse(review(folder, file)["view"]["verified"])
-            review(folder, file, write_view=True)
+            self.assertFalse(review(folder.parent, file)["view"]["verified"])
+            review(folder.parent, file, write_view=True)
             self.assertEqual(served.read_bytes(), original, "a missing scene regenerates byte for byte")
 
 

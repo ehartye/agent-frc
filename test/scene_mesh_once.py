@@ -44,12 +44,12 @@ class SceneMeshOnce(unittest.TestCase):
         cls.folder = TemporaryDirectory()
         cls.root = Path(cls.folder.name) / "layout"
         cls.plan = runpy.run_path(str(SCRIPTS.parent / "examples/preliminary-design/create.py"))["create"](cls.root)
-        cls.study = json.loads((cls.root / cls.plan["motion"]["file"]).read_text())
+        cls.study = json.loads((cls.root.parent / cls.plan["motion"]["file"]).read_text())
         cls.before, cls.after, cache = [], [], {}
         def both(case, scene):
             cls.before.append(posed_capture(case, scene))
             cls.after.append(capture(case, scene, cache))
-        evaluate(cls.root, cls.study, package_scene=both)
+        evaluate(cls.root.parent, cls.study, package_scene=both)
         cls.old, cls.new = scene_payload(cls.before), scene_payload(cls.after)
 
     @classmethod
@@ -106,7 +106,7 @@ class SceneMeshOnce(unittest.TestCase):
             calls.append(1)
             return real(solid)
         with patch.object(package_mesh, "surface_mesh", counted):
-            evaluate(self.root, self.study, package_scene=lambda case, scene: capture(case, scene, cache))
+            evaluate(self.root.parent, self.study, package_scene=lambda case, scene: capture(case, scene, cache))
         bodies = {name for case in self.new["cases"] for name in case["bodies"]}
         self.assertEqual(len(calls), len(bodies))
 
@@ -132,7 +132,7 @@ class SceneMeshOnce(unittest.TestCase):
     def test_the_generated_scene_still_validates_and_the_check_still_passes(self):
         from preliminary_design import review
         (self.root / package_view.SCENE_FILE).unlink()
-        result = review(self.root, self.root / "layout.json", write_view=True)
+        result = review(self.root.parent, self.root / "layout.json", write_view=True)
         self.assertEqual(result["status"], "layout-checked", result["missingInputs"])
         scene = json.loads(gzip.decompress((self.root / package_view.SCENE_FILE).read_bytes()))
         bodies = {name for case in scene["cases"] for name in case["bodies"]}

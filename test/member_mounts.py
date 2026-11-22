@@ -7,7 +7,7 @@ from tempfile import TemporaryDirectory
 from pathlib import Path
 import unittest
 
-from mechanical_fixture import SCRIPTS, write
+from mechanical_fixture import SCRIPTS, package_write as write
 
 
 class MemberMounts(unittest.TestCase):
@@ -29,7 +29,7 @@ class MemberMounts(unittest.TestCase):
         write(self.root, "layout.json", plan)
         if fresh:
             self.scene_file.unlink(missing_ok=True)
-        return review(self.root, self.root / "layout.json", write_view=fresh)
+        return review(self.root.parent, self.root / "layout.json", write_view=fresh)
 
     def bodies(self):
         return json.loads(gzip.decompress(self.scene_file.read_bytes()))["bodies"]

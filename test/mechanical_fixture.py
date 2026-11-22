@@ -200,3 +200,13 @@ if __name__=="__main__":
     source=sys.argv[2]
     archive=sys.argv[3]
     fixture(root,source,sys.argv[4:],archive)
+
+
+def package_pin(package,name):
+    """Pin a file of a release folder from the folder's parent, which stands for the repository root."""
+    return {"file":package.name+"/"+name,"sha256":digest(package/name)}
+
+
+def package_write(package,name,data):
+    write(package,name,data)
+    return package_pin(package,name)

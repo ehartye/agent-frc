@@ -94,6 +94,15 @@ def save_index(record, site):
     replace_index(out.name, site)
 
 
+def project_root(season, inputs, view):
+    """The folder a release's pins are written from: the season repository when its view names the release folder
+    from there, else the release folder itself, for a package that was checked in its own folder."""
+    season, inputs = season.resolve(), inputs.resolve()
+    if isinstance(view, str) and view and (season / view).resolve().parent == inputs != season:
+        return season
+    return inputs
+
+
 def stage(season, inputs, release):
     """Copy one release's checked files into the site and list it in the index as in progress."""
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,63}", release):
@@ -111,14 +120,17 @@ def stage(season, inputs, release):
     missions = read(inputs / "missions.json").get("missionCases") if (inputs / "missions.json").exists() else None
     if not missions:
         raise ValueError("Declare a passing mission-task case for a represented objective in missions.json")
-    viewer = inside(inputs, plan["view"])
+    root = project_root(season, inputs, plan["view"])
+    viewer = inside(root, plan["view"])
+    if viewer.parent != inputs:
+        raise ValueError("Keep the review view in the release folder beside its layout plan")
     scene_file = viewer.with_name(SCENE)
     if not scene_file.is_file():
         raise ValueError("Generate the review with --write-view: a release publishes the review page and its scene")
-    ledger = inside(inputs, plan["budgets"]["file"])
+    ledger = inside(root, plan["budgets"]["file"])
     files = {"index.html": viewer, SCENE: scene_file, "receipt.json": inputs / "receipt.json",
-             "motion.json": inside(inputs, plan["motion"]["file"]), "budgets.json": ledger,
-             "limits.json": inside(inputs, read(ledger)["requirements"]["file"])}
+             "motion.json": inside(root, plan["motion"]["file"]), "budgets.json": ledger,
+             "limits.json": inside(root, read(ledger)["requirements"]["file"])}
 
     def publish(name, source):
         if files.setdefault(name, source) != source:
@@ -132,7 +144,7 @@ def stage(season, inputs, release):
         name = href[2:] if href.startswith("./") else href
         if not FIELD.fullmatch(name) or not isinstance(row.get("evidence"), dict):
             raise ValueError("Link each field interaction to a page at field/NAME.html beside the view, with its trial evidence: " + str(href))
-        trial = inside(inputs, row["evidence"]["file"])
+        trial = inside(root, row["evidence"]["file"])
         publish(name, inside(viewer.parent, name))
         publish(trial.name, trial)
         if all(p["file"] != name for p in players):
@@ -141,7 +153,7 @@ def stage(season, inputs, release):
     for mission in missions:
         mission = dict(mission)
         if mission.get("trial"):
-            trial = inside(inputs, mission["trial"]["file"])
+            trial = inside(root, mission["trial"]["file"])
             publish(trial.name, trial)
             mission["trial"] = dict(file=trial.name)
         published.append(mission)
@@ -173,15 +185,22 @@ def stage(season, inputs, release):
     print(("Replaced" if replaced else "Staged") + " preliminary release " + release + " (" + status_of(index, release) + ")")
 
 
-def readiness_report(inputs, reporter=None):
+def readiness_report(inputs, reporter=None, season=None):
     """Show the reviewer the plugin's effective-readiness report for a release's inputs. It never stops a status change."""
-    command = "node PLUGIN/scripts/design.mjs effective-readiness " + inputs.as_posix()
+    where = [inputs.as_posix()]
+    try:
+        # A release checked from the repository root resolves its trial pins from there.
+        if season is not None and project_root(season, inputs, read(inputs / "layout.json").get("view")) == season.resolve():
+            where = [season.as_posix(), "--release", inputs.resolve().relative_to(season.resolve()).as_posix()]
+    except (OSError, ValueError):
+        pass
+    command = "node PLUGIN/scripts/design.mjs effective-readiness " + " ".join(where)
     if reporter is None:
         print("Exit criteria for an effective preliminary design: run `" + command + "`, or pass --readiness "
               "PLUGIN/scripts/effective-readiness.mjs to print the report here.")
         return
     try:
-        run = subprocess.run(["node", str(reporter), str(inputs)], capture_output=True)
+        run = subprocess.run(["node", str(reporter), *where], capture_output=True)
         report = run.stdout.decode("utf-8", errors="replace").rstrip()
         if run.returncode != 0 or not report:
             raise ValueError("no report")
@@ -253,7 +272,7 @@ if __name__ == "__main__":
             set_status(base.parents[1] / "docs/preliminary-design", *args.set_status, reason=args.reason)
             if args.set_status[1] == "effective":
                 # Informational: the index is already updated, and the reviewer of the pull request judges the report.
-                readiness_report(base / "releases" / args.set_status[0], args.readiness)
+                readiness_report(base / "releases" / args.set_status[0], args.readiness, base.parents[1])
         else:
             stage(base.parents[1], base / "releases" / args.release, args.release)
     except (KeyError, ValueError, OSError) as error:

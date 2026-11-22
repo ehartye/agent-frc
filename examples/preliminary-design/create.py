@@ -19,12 +19,25 @@ from OCP.XCAFDoc import XCAFDoc_DocumentTool
 from OCP.gp import gp_Pnt
 
 
-def create(root, release_id=None):
+RELEASES = "cad/preliminary-design/releases"
+
+
+def create(root, release_id=None, project=None):
+    """Write the package into the release folder `root`, with every pin written from `project`.
+
+    The project is the repository: the layout plan, its inputs, the review page and the scene sit together in the
+    release folder inside it, and nothing is generated at the project root. Without `project`, the release folder's
+    parent stands for the repository."""
+    root = Path(root).resolve()
+    project = root.parent if project is None else Path(project).resolve()
+    prefix = root.relative_to(project).as_posix() + "/"
+    if root == project:
+        raise ValueError("Keep the release folder inside the project, not at its root")
     root.mkdir(parents=True,exist_ok=False)
     cli=Path(__file__).resolve().parents[2]/"scripts/design.mjs"
     subprocess.run(["node",str(cli),"new",str(root/"design.json")],check=True)
     def pin(name):
-        return {"file":name,"sha256":hashlib.sha256((root/name).read_bytes()).hexdigest()}
+        return {"file":prefix+name,"sha256":hashlib.sha256((root/name).read_bytes()).hexdigest()}
     def write(name,obj):
         (root/name).write_text(json.dumps(obj,indent=2)+"\n",encoding="utf-8")
         return pin(name)
@@ -74,7 +87,7 @@ def create(root, release_id=None):
               datum=datum,groups=groups,mounts=mounts,stages=stages,missingInputs=[],
               control=dict(case="loaded-turn",displaced="rail",moving="head",offsetMm=[0,-50,0],
                            basis="Move the fixed rail into the arc between the same clear endpoints"))
-    plan.update(cycle=["acquire","loaded-turn","release","park-loaded"], view="package-motion.html")
+    plan.update(cycle=["acquire","loaded-turn","release","park-loaded"], view=prefix+"package-motion.html")
     (root/"narrative.md").write_text(
         "Acquire a sample from the front and turn it past the gate for release. "
         "At the finish, park the carrier. If the gate stays closed, stop before the turn.\n",
@@ -165,7 +178,7 @@ def create(root, release_id=None):
             href="field/release-lane.html", objective="Acquire, turn and release",
             evidence=trial, embed=True)]
     write("layout.json",plan)
-    result = subprocess.run(["node", str(cli), "preliminary-check", str(root), "layout.json",
+    result = subprocess.run(["node", str(cli), "preliminary-check", str(project), prefix + "layout.json",
                              "--write-view", "--require-checked"], capture_output=True)
     if result.returncode:
         raise RuntimeError(result.stderr.decode(errors="replace") + result.stdout.decode(errors="replace"))
@@ -183,12 +196,12 @@ if __name__=="__main__":
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("new_directory",type=Path)
     parser.add_argument("--project-review", action="store_true", help="Include a season-local review bundle and launcher")
-    parser.add_argument("--release", default="layout-001", help="Release ID within the season project")
+    parser.add_argument("--release", default="layout-001", help="Release ID: the package folder is cad/preliminary-design/releases/ID")
     args = parser.parse_args()
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,63}", args.release):
+        parser.error("Use a lowercase release ID with letters, digits and hyphens")
     if args.project_review:
         season = args.new_directory.resolve()
-        if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,63}", args.release):
-            parser.error("Use a lowercase release ID with letters, digits and hyphens")
         author = season / "cad/preliminary-design"
         site = season / "docs/preliminary-design"
         site.mkdir(parents=True, exist_ok=True)
@@ -205,7 +218,8 @@ if __name__=="__main__":
             if not dest.exists():
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(templates / source, dest)
-        create(author / "releases" / args.release, release_id=args.release)
+        create(author / "releases" / args.release, release_id=args.release, project=season)
         subprocess.run([sys.executable, str(author / "stage.py"), args.release], check=True)
     else:
-        create(args.new_directory)
+        # The new directory stands for a repository: the package sits in a release folder inside it.
+        create(args.new_directory.resolve() / RELEASES / args.release, project=args.new_directory.resolve())

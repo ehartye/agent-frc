@@ -6,7 +6,7 @@ import subprocess
 from tempfile import TemporaryDirectory
 import unittest
 
-from mechanical_fixture import SCRIPTS, pin, write
+from mechanical_fixture import SCRIPTS, package_pin as pin, package_write as write
 from constant_pose_pairs import named_step
 
 WARNING = "[view] warning: field interactions are linked but no case registers a field fixture"
@@ -27,7 +27,7 @@ class FixtureWarning(unittest.TestCase):
 
     def check(self, plan, *flags):
         write(self.layout, "trial.json", plan)
-        return subprocess.run(["node", str(SCRIPTS / "design.mjs"), "preliminary-check", str(self.layout), "trial.json", *flags],
+        return subprocess.run(["node", str(SCRIPTS / "design.mjs"), "preliminary-check", str(self.layout.parent), self.layout.name + "/trial.json", *flags],
                               capture_output=True, text=True)
 
     def linked(self):

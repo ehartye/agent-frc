@@ -6,7 +6,7 @@ from tempfile import TemporaryDirectory
 from pathlib import Path
 import unittest
 
-from mechanical_fixture import SCRIPTS, write
+from mechanical_fixture import SCRIPTS, package_write as write
 
 NO_LOADED = "No operating path includes the moving mechanism and finite payload"
 
@@ -17,7 +17,7 @@ class ContactTransport(unittest.TestCase):
         cls.folder = TemporaryDirectory()
         cls.root = Path(cls.folder.name) / "layout"
         cls.plan = runpy.run_path(str(SCRIPTS.parent / "examples/preliminary-design/create.py"))["create"](cls.root)
-        cls.paths = json.loads((cls.root / cls.plan["motion"]["file"]).read_text())
+        cls.paths = json.loads((cls.root.parent / cls.plan["motion"]["file"]).read_text())
 
     @classmethod
     def tearDownClass(cls):
@@ -26,7 +26,7 @@ class ContactTransport(unittest.TestCase):
     def review(self, plan):
         from preliminary_design import review
         write(self.root, "layout.json", plan)
-        return review(self.root, self.root / "layout.json")
+        return review(self.root.parent, self.root / "layout.json")
 
     def uncarried(self):
         """The example without any rigid carry declaration: no operating case covers the loaded path."""

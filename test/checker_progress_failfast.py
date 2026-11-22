@@ -9,7 +9,7 @@ import sys
 from tempfile import TemporaryDirectory
 import unittest
 
-from mechanical_fixture import SCRIPTS, pin, write
+from mechanical_fixture import SCRIPTS, package_write, pin, write
 from constant_pose_pairs import named_step
 
 PROGRESS = re.compile(r"^\[motion\] (\d+)/(\d+) (\S+) status=(\w+) failing=(\d+) open=(\d+) bounded=(\d+) "
@@ -53,14 +53,14 @@ class CheckerProgressFailFast(unittest.TestCase):
 
     def package(self, plan, *flags):
         write(self.layout, "trial.json", plan)
-        return subprocess.run(["node", str(SCRIPTS / "design.mjs"), "preliminary-check", str(self.layout), "trial.json", *flags],
+        return subprocess.run(["node", str(SCRIPTS / "design.mjs"), "preliminary-check", str(self.root), "layout/trial.json", *flags],
                               capture_output=True, text=True)
 
     def variant(self, name, edit):
         """Register an edited copy of the example motion study under a new pinned file."""
         study = json.loads((self.layout / "paths.json").read_text())
         edit(study["cases"])
-        return dict(deepcopy(self.plan), motion=write(self.layout, name, study))
+        return dict(deepcopy(self.plan), motion=package_write(self.layout, name, study))
 
     def test_motion_progress_is_stderr_only_and_in_case_order(self):
         loud, quiet = self.motion("clear.json"), self.motion("clear.json", "--quiet")
@@ -156,18 +156,18 @@ class CheckerProgressFailFast(unittest.TestCase):
         def collide(cases):
             cases[1]["initialPose"] = {**cases[1]["initialPose"], "rail": [dict(kind="translation", travelMm=[-21, -72, -18])]}
         plan = self.variant("partial-view.json", collide)
-        plan["view"] = "partial-motion.html"
+        plan["view"] = "layout/partial-motion.html"
         run = self.package(plan, "--fail-fast", "--write-view")
         self.assertEqual(run.returncode, 0, run.stderr)
         result = json.loads(run.stdout)
         self.assertTrue(result["partial"])
         self.assertFalse((self.layout / "partial-motion.html").exists())
-        self.assertEqual(result["view"], dict(file="partial-motion.html", verified=False, skipped="partial --fail-fast run"))
-        self.assertIn("Not writing partial-motion.html", run.stderr)
+        self.assertEqual(result["view"], dict(file="layout/partial-motion.html", verified=False, skipped="partial --fail-fast run"))
+        self.assertIn("Not writing layout/partial-motion.html", run.stderr)
         # An existing, otherwise matching player is still not credited by a partial run.
-        clean = dict(deepcopy(self.plan), view="package-motion.html")
+        clean = dict(deepcopy(self.plan), view="layout/package-motion.html")
         self.assertTrue(json.loads(self.package(clean, "--quiet").stdout)["view"]["verified"])
-        plan["view"] = "package-motion.html"
+        plan["view"] = "layout/package-motion.html"
         self.assertFalse(json.loads(self.package(plan, "--fail-fast", "--quiet").stdout)["view"]["verified"])
 
 

@@ -8,7 +8,7 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
-from mechanical_fixture import SCRIPTS, write
+from mechanical_fixture import SCRIPTS, package_write as write
 import atomic_file
 
 
@@ -20,7 +20,7 @@ class SceneReplace(unittest.TestCase):
         cls.plan = runpy.run_path(str(SCRIPTS.parent / "examples/preliminary-design/create.py"))["create"](cls.root)
         from package_view import SCENE_FILE
         cls.scene = cls.root / SCENE_FILE
-        cls.page = cls.root / cls.plan["view"]
+        cls.page = cls.root.parent / cls.plan["view"]
         cls.stock_scene, cls.stock_page = cls.scene.read_bytes(), cls.page.read_bytes()
 
     @classmethod
@@ -34,7 +34,7 @@ class SceneReplace(unittest.TestCase):
     def review(self, plan=None, **options):
         from preliminary_design import review
         write(self.root, "layout.json", plan or self.plan)
-        return review(self.root, self.root / "layout.json", **options)
+        return review(self.root.parent, self.root / "layout.json", **options)
 
     def stale(self):
         content = gzip.decompress(self.stock_scene).replace(b'"stage"', b'"stagE"', 1)

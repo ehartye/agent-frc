@@ -6,7 +6,7 @@ from tempfile import TemporaryDirectory
 from pathlib import Path
 import unittest
 
-from mechanical_fixture import SCRIPTS, write
+from mechanical_fixture import SCRIPTS, package_write as write
 
 NO_LOADED = "No operating path includes the moving mechanism and finite payload"
 PIN = "Pin the free-path evidence for carried article in release"
@@ -19,7 +19,7 @@ class FreePath(unittest.TestCase):
         cls.folder = TemporaryDirectory()
         cls.root = Path(cls.folder.name) / "layout"
         cls.plan = runpy.run_path(str(SCRIPTS.parent / "examples/preliminary-design/create.py"))["create"](cls.root)
-        cls.paths = json.loads((cls.root / cls.plan["motion"]["file"]).read_text())
+        cls.paths = json.loads((cls.root.parent / cls.plan["motion"]["file"]).read_text())
 
     @classmethod
     def tearDownClass(cls):
@@ -31,7 +31,7 @@ class FreePath(unittest.TestCase):
         from preliminary_design import review
         write(self.root, "layout.json", plan)
         (self.root / SCENE_FILE).unlink(missing_ok=True)
-        return review(self.root, self.root / "layout.json", write_view=True)
+        return review(self.root.parent, self.root / "layout.json", write_view=True)
 
     def evidence(self, name, case="release", **change):
         """An invented release trial that records the free path it established."""
@@ -110,7 +110,7 @@ class FreePath(unittest.TestCase):
         rows = {r["case"]: r for r in scene["motionEvidence"]}
         self.assertEqual(rows["release"]["freePath"], [dict(payload="carried article", basis=spec["basis"],
                                                              evidence=spec["evidence"], bound=True)])
-        self.assertIn("Free path of carried article from pinned trial scene-trial.json", rows["release"]["method"])
+        self.assertIn("Free path of carried article from pinned trial layout/scene-trial.json", rows["release"]["method"])
         self.assertNotIn("freePath", rows["loaded-turn"])
         unbound = self.review(self.free(dict(basis=spec["basis"])))
         self.assertFalse(unbound["view"]["verified"] and unbound["status"] == "layout-checked")

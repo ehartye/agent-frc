@@ -28,8 +28,10 @@ With the pluginâ€™s geometry Python environment selected, create a new exam
 
 ```sh
 python examples/preliminary-design/create.py layout-trial
-node scripts/design.mjs preliminary-check layout-trial layout.json --require-checked
+node scripts/design.mjs preliminary-check layout-trial cad/preliminary-design/releases/layout-001/layout.json --require-checked
 ```
+
+`layout-trial` stands for a repository. The package sits in the release folder `cad/preliminary-design/releases/layout-001/` inside it, with every pin written from `layout-trial`, and nothing is generated at its top level.
 
 The carrier rotates 90Â° with a finite article while a neighboring slide travels 12 mm. A separate park case returns the carrier and slide. The service case withdraws the group 80 mm. Each case reserves 1 mm between unrelated bodies. The proposed layout clears acquisition, the loaded turn, release, parking and service withdrawal. As a control, moving a fixed rail 50 mm into the arc leaves both operating endpoints clear and produces about 52.04 mmÂ³ shared material at half travel. Read the actual pair and path fraction in the receipt. The example uses invented figures and simple shapes.
 
@@ -112,7 +114,7 @@ The [exit criteria](design-phase-detail.md#exit-criteria-for-an-effective-prelim
 node scripts/design.mjs effective-readiness PROJECT
 ```
 
-`PROJECT` is the folder that holds `layout.json`, its saved `receipt.json`, `missions.json` and the pinned trial files. Name other files with `--plan`, `--receipt` and `--missions`, relative to that folder. Add `--json` for the machine-readable report. The command writes nothing, never changes a receipt and exits 0 whatever it finds. Only an unusable project folder is an error.
+`PROJECT` is the folder that holds `layout.json`, its saved `receipt.json`, `missions.json` and the pinned trial files. Name other files with `--plan`, `--receipt` and `--missions`, relative to that folder. When the project is the repository and the three files sit in a release folder, name it once: `effective-readiness REPOSITORY --release cad/preliminary-design/releases/layout-002`. Trial pins still resolve from the project. Add `--json` for the machine-readable report. The command writes nothing, never changes a receipt and exits 0 whatever it finds. Only an unusable project folder is an error.
 
 ```text
 Effective-readiness report for synthetic-package-layout-002
@@ -159,10 +161,35 @@ A season pins a plugin revision and holds copies of some plugin files. After mov
 | 0.112.0 | `stage.py` again (`--readiness` prints the effective-readiness report). |
 | 0.116.0 | `stage.py`, the release index page and the detailed design catalog, then follow the [migration guide](design-publication-migration.md): one workflow, no policy files, signatures or repository variables. |
 | 0.114.0 | The local review scene: rerun the check with `--write-view`, which replaces the stale scene. A plan whose cases set a start pose now stores each body once, so its scene content and digest change; an issued release keeps its scene. |
+| 0.117.0 | `stage.py`. The project is now the repository. A new check keeps the layout plan, its inputs and its `view` together in a release folder such as `cad/preliminary-design/releases/ID/`, names the view from the repository root, as in `cad/preliminary-design/releases/ID/package-motion.html`, and writes every pin from the repository root. `--write-view` refuses a view at the project root; an issued release whose view sits there still verifies. See [Keep the view in its release folder](#keep-the-view-in-its-release-folder). `effective-readiness` takes `--release FOLDER`. |
 
 An issued release never changes; a new release carries the new page.
 
 ## Examine the moving blocks and budgets
+
+### Keep the view in its release folder
+
+The project is the repository. A release keeps its layout plan, its inputs, the review page and the scene together in one folder inside it, `cad/preliminary-design/releases/ID/` in the stock layout. The plan's `view` names the page from the repository root, in the plan's own folder, and the scene is written beside it:
+
+```sh
+node scripts/design.mjs preliminary-check REPOSITORY cad/preliminary-design/releases/layout-002/layout.json --write-view --output cad/preliminary-design/releases/layout-002/receipt.json
+```
+
+with `"view": "cad/preliminary-design/releases/layout-002/package-motion.html"` and every pin in the plan and its records written from the repository root. Save the receipt beside the page with `--output`, because the page reads `receipt.json` from its own folder. Held-receipt pins, evidence and field files then resolve from one root, and a file that a held receipt pins needs no copy into the package or `relocations` entry just to be found. Keep the held receipt passed with `--previous` in the release folder, where the [publication check](design-publication.md#which-designs-are-checked) looks for it.
+
+Two paths are refused, each with the expected path in the message:
+
+- A view outside the plan's folder.
+- With `--write-view`, a view at the project root. This is the case when a package folder is passed as `PROJECT`. Nothing generated lands at the top of a project.
+
+An issued release that was checked in its own folder keeps verifying: a check without `--write-view` still reads a page and scene at the project root, the publication check reruns it in its folder, and staged releases do not change. The stock `stage.py` stages both forms and tells them apart by the view path in the receipt.
+
+To move a package that was checked in its own folder to the repository root for its next release:
+
+1. Prefix every `file` in `layout.json` and in the records it pins (the motion study, budgets, premises, evidence and trials) with the release folder, and refresh the digests of the records that changed.
+2. Set `view` to the release folder path of the page.
+3. Drop any `relocations` entry and copied-in held file that existed only so a path resolved inside the package; pin the held file where it lives in the repository. The held receipt itself stays in the release folder.
+4. Run the check from the repository root with `--write-view` and `--output`, then stage.
 
 Serve the generated `package-motion.html` and its `review-scene.json.gz` over HTTP, for example with `python -m http.server` in that directory, and open the page. The page is the plugin's stock review page; it fetches and decompresses the scene, which holds every value it shows. The scene stores one tessellation per body in its placed STEP pose; each case carries only its frame placements, with the case's start pose folded into them, so the scene grows with the number of bodies and frames and not with the number of cases that pose a body differently. Opened from `file://` it cannot load the scene. Check the scene with `node PLUGIN/scripts/review-scene.mjs validate review-scene.json.gz --receipt RECEIPT.json`. Select a case, orbit and pan around its solid volumes, then play or scrub the position on path. Cylinders, spheres, swept profiles and solids with bores or cutouts can preserve the occupied space that determines fit. The viewer tessellates the placed STEP faces for display. The player uses the same starting poses and ordered rigid transformations as the interval checker, including simultaneous motion. The frames illustrate the stroke. The separate clearance receipt gives the numerical bound, obstruction or open interval. Stationary pairs are checked in each retained scene. Pairs whose relative pose stays constant, including members carried by the same motion, are cleared without an exact query when their bounding boxes are more than `minGapMm` plus 0.001 mm apart. The receipt omits these rows and counts them in the case's `counts.constantPoseBroadPhase`. An exact constant-pose result is reused across cases only when both bodies have the same source solid and initial pose, and `counts.constantPoseReused` records each reuse. A `package-motion.html` saved before version 0.100.0 is the retired player rather than the stock review page; to regenerate it, delete it and any `*.geometry.json.gz` and run `--write-view` again. A qualified intended interface must name its exact pair, stage and separately pinned evidence.
 

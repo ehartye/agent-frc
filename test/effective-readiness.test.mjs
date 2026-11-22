@@ -197,6 +197,21 @@ test('the command is informational: it prints the report, exits 0 and writes not
   assert.equal(run().status,2);
 });
 
+test('a release folder under the project root holds the three files while pins resolve from the root',t=>{
+  const root=project(t),folder='cad/preliminary-design/releases/layout-002';
+  mkdirSync(path.join(root,folder),{recursive:true});
+  for(const name of ['layout.json','receipt.json','missions.json'])
+    {writeFileSync(path.join(root,folder,name),readFileSync(path.join(root,name)));rmSync(path.join(root,name));}
+  assert.equal(effectiveReadiness(root).met,0,'the files are no longer at the project root');
+  const report=effectiveReadiness(root,{release:folder});
+  assert.equal(report.met,3,report.criteria.flatMap(c=>c.reasons).join(' | '));
+  assert.equal(effectiveReadiness(root,{release:folder,missions:'absent.json'}).met,0,'a named file overrides the release folder');
+  const run=spawnSync(process.execPath,[path.join(plugin,'scripts','design.mjs'),'effective-readiness',root,'--release',folder],{encoding:'utf8'});
+  assert.equal(run.status,0,run.stderr);
+  assert.match(run.stdout,/Result: 3 of 3 criteria met\./);
+  assert.equal(effectiveReadiness(root,{release:'../outside'}).met,0);
+});
+
 test('stage.py prints the report when a release is marked effective',t=>{
   const python=process.env.PYTHON||(process.platform==='win32'?'python':'python3');
   const season=mkdtempSync(path.join(tmpdir(),'readiness-season-'));t.after(()=>rmSync(season,{recursive:true,force:true}));

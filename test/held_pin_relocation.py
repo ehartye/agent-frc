@@ -7,6 +7,9 @@ import unittest
 import held_position_replay as base
 from held_position_replay import DELIVERY, BAY
 
+# Pins are written from the folder above the package, which stands for the repository root.
+P = "layout/"
+
 
 class HeldPinRelocation(base.HeldPositionReplay):
     """Reuse the delivery stand-off hold fixture, then move the held acceptance before resubmitting."""
@@ -19,8 +22,8 @@ class HeldPinRelocation(base.HeldPositionReplay):
         shutil.move(old, new)
         if edit_bytes:
             new.write_text(new.read_text() + " ", encoding="utf-8")
-        relocations = {old.name: "archive/" + old.name} if relocate else {}
-        return held, relocations, old.name
+        relocations = {P + old.name: P + "archive/" + old.name} if relocate else {}
+        return held, relocations, P + old.name
 
     def resubmit_with(self, tag, held, relocations):
         """Resubmit with the relocations declared on the revised plan."""
@@ -38,7 +41,7 @@ class HeldPinRelocation(base.HeldPositionReplay):
         self.assertTrue(prior["repeatVerified"], result["missingInputs"])
         self.assertEqual(result["status"], "layout-checked")
         sha = [p for p in held["premises"] if p["id"] == "delivery-standoff"][0]["accepted"]["sha256"]
-        followed = dict(fromFile=old, toFile="archive/" + old, sha256=sha)
+        followed = dict(fromFile=old, toFile=P + "archive/" + old[len(P):], sha256=sha)
         self.assertEqual(prior["relocated"], [followed])
         self.assertEqual(result["heldRelocations"], [followed])
 
@@ -47,7 +50,7 @@ class HeldPinRelocation(base.HeldPositionReplay):
         result = self.resubmit_with("altered", held, relocations)
         self.assertFalse(self.prior(result)["repeatVerified"])
         self.assertEqual(result["status"], "reopen")
-        self.assertIn("Relocated held file " + old + " -> archive/" + old + " does not match its pinned SHA-256",
+        self.assertIn("Relocated held file " + old + " -> " + P + "archive/" + old[len(P):] + " does not match its pinned SHA-256",
                       result["missingInputs"])
         self.assertNotIn("heldRelocations", result)
 
@@ -60,14 +63,14 @@ class HeldPinRelocation(base.HeldPositionReplay):
         held, _ = self.hold("current", DELIVERY)
         design = self.plan["design"]["file"]
         with self.assertRaisesRegex(ValueError, "A relocation cannot redirect a current-issue pin: " + design):
-            self.resubmit_with("current", held, {design: "archive/" + design})
+            self.resubmit_with("current", held, {design: P + "archive/" + design[len(P):]})
 
     def test_relocations_need_a_held_receipt(self):
         from preliminary_design import review
         plan = dict(self.plan, relocations={"anything.json": "archive/anything.json"})
         (self.root / "layout.json").write_text(json.dumps(plan, indent=2) + "\n", encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "Relocations apply only to a held receipt passed with --previous"):
-            review(self.root, self.root / "layout.json")
+            review(self.root.parent, self.root / "layout.json")
 
     def test_followed_relocation_is_recorded_when_the_hold_stays_open(self):
         held, relocations, old = self.moved("moved-open", True)
@@ -79,7 +82,7 @@ class HeldPinRelocation(base.HeldPositionReplay):
         finally:
             self.plan = original
         self.assertFalse(self.prior(result)["repeatVerified"])
-        self.assertEqual([r["toFile"] for r in result["heldRelocations"]], ["archive/" + old])
+        self.assertEqual([r["toFile"] for r in result["heldRelocations"]], [P + "archive/" + old[len(P):]])
 
     def test_relocated_legacy_evidence_is_followed_to_identical_bytes(self):
         step = {k: v for k, v in DELIVERY.items() if k != "input"}
@@ -88,14 +91,14 @@ class HeldPinRelocation(base.HeldPositionReplay):
         archived = self.root / "archive" / "legacy-moved-evidence.json"
         archived.parent.mkdir(exist_ok=True)
         shutil.move(self.root / "legacy-moved-evidence.json", archived)
-        result = self.resubmit_with("legacy-moved", held, {"legacy-moved-evidence.json": "archive/legacy-moved-evidence.json"})
+        result = self.resubmit_with("legacy-moved", held, {P + "legacy-moved-evidence.json": P + "archive/legacy-moved-evidence.json"})
         self.assertTrue(self.prior(result)["repeatVerified"], result["missingInputs"])
-        self.assertEqual(result["heldRelocations"][0]["fromFile"], "legacy-moved-evidence.json")
+        self.assertEqual(result["heldRelocations"][0]["fromFile"], P + "legacy-moved-evidence.json")
 
     def test_relocation_cannot_leave_the_project(self):
         held, _, old = self.moved("outside", False)
         with self.assertRaisesRegex(ValueError, "Unresolved project file"):
-            self.resubmit_with("outside", held, {old: "../" + old})
+            self.resubmit_with("outside", held, {old: "../../" + old[len(P):]})
 
     def test_no_relocation_is_unchanged(self):
         held, _ = self.hold("plain", DELIVERY)

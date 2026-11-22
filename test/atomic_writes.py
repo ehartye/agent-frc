@@ -32,7 +32,7 @@ class AtomicWrites(unittest.TestCase):
         return sorted(p.name for p in folder.iterdir() if p.name.endswith(".tmp"))
 
     def check(self, *flags, plan="layout.json"):
-        return subprocess.run(["node", str(SCRIPTS / "design.mjs"), "preliminary-check", str(self.layout), plan, "--quiet", *flags],
+        return subprocess.run(["node", str(SCRIPTS / "design.mjs"), "preliminary-check", str(self.root), "layout/" + plan, "--quiet", *flags],
                               capture_output=True, text=True)
 
     def test_a_reader_never_finds_a_gap_or_a_partial_file(self):
@@ -99,17 +99,17 @@ class AtomicWrites(unittest.TestCase):
         plain = self.check()
         self.assertEqual(plain.returncode, 0, plain.stderr)
         receipt = self.layout / "check-receipt.json"
-        saved = self.check("--output", "check-receipt.json")
+        saved = self.check("--output", "layout/check-receipt.json")
         self.assertEqual(saved.returncode, 0, saved.stderr)
         self.assertEqual(saved.stdout, "")
         self.assertEqual(json.loads(receipt.read_text(encoding="utf-8")), json.loads(plain.stdout))
         self.assertEqual(receipt.read_bytes(), (json.dumps(json.loads(plain.stdout), indent=2) + "\n").encode())
         before = receipt.read_bytes()
         write(self.layout, "broken.json", dict(self.plan, issue=""))
-        failed = self.check("--output", "check-receipt.json", plan="broken.json")
+        failed = self.check("--output", "layout/check-receipt.json", plan="broken.json")
         self.assertEqual(failed.returncode, 2)
-        self.assertEqual(self.check("--output", str(self.root / "outside.json")).returncode, 2)
-        self.assertFalse((self.root / "outside.json").exists())
+        self.assertEqual(self.check("--output", str(self.root.parent / "outside.json")).returncode, 2)
+        self.assertFalse((self.root.parent / "outside.json").exists())
         self.assertEqual(receipt.read_bytes(), before)
         self.assertEqual(self.leftovers(self.layout), [])
 
