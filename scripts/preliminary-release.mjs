@@ -29,7 +29,7 @@ const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const object=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
 const named=v=>typeof v==='string'&&v.trim().length>0;
 function parse(bytes,what){
-  try{return JSON.parse(bytes.toString('utf8').replace(/^﻿/,''));}catch{throw Error('Unreadable '+what);}
+  try{return JSON.parse(bytes.toString('utf8').replace(/^\uFEFF/,''));}catch{throw Error('Unreadable '+what);}
 }
 function pinMatches(pin,file,bytes){return object(pin)&&pin.file===file&&hex.test(pin.sha256)&&pin.sha256===sha(bytes);}
 
@@ -108,10 +108,12 @@ export function checkSourceInputs(id,files){
  * network, frame and navigation source, and no external script, embedded resource or network API in the page.
  */
 export function checkSelfContained(bytes,where){
-  const html=lf(bytes);
+  const html=lf(bytes).replace(/^\uFEFF/,'');
   const fail=why=>{throw Error('Field player '+where+' is not self-contained: '+why);};
-  const lead=/^\s*(?:<!doctype html>\s*)?(?:<html\b[^>]*>\s*)?(?:<head>\s*)?(?:(?:<meta\s+charset=[^>]*>|<meta\s+name=["']?viewport["']?[^>]*>|<title>[^<]*<\/title>)\s*)*/i.exec(html)[0];
-  const meta=/^<meta\s+http-equiv=["']content-security-policy["']\s+content="([^"]*)"\s*\/?>/i.exec(html.slice(lead.length));
+  // Only plain, quote-free lead elements may precede the policy, so no attribute can swallow it.
+  const lead=new RegExp('^[ \\t\\n]*(?:<!doctype html>[ \\t\\n]*)?(?:<html(?: lang="[A-Za-z-]{1,16}")?>[ \\t\\n]*)?(?:<head>[ \\t\\n]*)?'+
+    '(?:(?:<meta charset="?utf-8"?>|<meta name="viewport" content="[A-Za-z0-9=,. -]{1,80}">|<title>[^<>&]{0,120}</title>)[ \\t\\n]*)*','i').exec(html)[0];
+  const meta=/^<meta http-equiv="content-security-policy" content="([^"<>&]*)">/i.exec(html.slice(lead.length));
   if(!meta)fail('declare a Content-Security-Policy meta element before any script, style or content');
   const none=["'none'"],inline=["'none'","'unsafe-inline'","'unsafe-eval'","'wasm-unsafe-eval'"],local=[...inline,'data:','blob:'];
   const allowed={'default-src':none,'script-src':inline,'style-src':inline,'img-src':local,'font-src':local,'media-src':local,
@@ -124,14 +126,17 @@ export function checkSelfContained(bytes,where){
     policy.set(name,sources);
   }
   if(!same(policy.get('default-src'),none))fail("set default-src 'none'");
+  if((html.match(/http-equiv/gi)||[]).length!==1)fail('declare exactly one http-equiv element, the policy');
+  // CSP blocks fetches, frames and workers. These static bans also refuse resources and navigation it cannot stop.
   const banned=[
     [/<script\b[^>]*\bsrc\s*=/i,'an external script'],
-    [/<(?:iframe|frame|frameset|object|embed|portal|base|link|applet)\b/i,'an embedded or linked resource'],
-    [/<meta\b[^>]*http-equiv\s*=\s*["']?refresh/i,'a refresh'],
-    [/\b(?:src|srcset|poster|background|data|action|formaction|ping|xlink:href)\s*=\s*["']?\s*(?!data:|blob:|#)[^\s"'>]/i,'a resource URL'],
-    [/\b(?:fetch|importScripts|sendBeacon)\s*\(|\b(?:XMLHttpRequest|WebSocket|EventSource|RTCPeerConnection|SharedWorker)\b|\bimport\s*\(|\bimport\s+[\w{*][^;]*?\bfrom\b|@import\b|\bnew\s+Worker\b|\bwindow\.open\s*\(|\blocation\s*(?:\.href)?\s*=[^=]/,'a network or navigation API'],
+    [/<(?:iframe|frame|frameset|object|embed|portal|base|link|applet|form|area)\b/i,'an embedded, linked or submitted resource'],
+    [/<[a-z][^>]*?\s(?:src|srcset|poster|background|data|action|formaction|ping|xlink:href)\s*=\s*["']?\s*(?!data:|blob:|#)[^\s"'>]/i,'a resource URL'],
+    [/<[a-z][^>]*?\shref\s*=\s*["']?\s*(?!#)[^\s"'>]/i,'a link away from the page'],
+    [/\b(?:fetch|importScripts|sendBeacon)\s*\(|\b(?:XMLHttpRequest|WebSocket|EventSource|RTCPeerConnection|SharedWorker)\b|\bimport\s*\(|\bimport\s+[\w{*][^;]*?\bfrom\b|@import\b|\bnew\s+Worker\b|\bopen\s*\(|\b(?:location|history)\s*[.=[]|['"`](?:location|history)['"`]/,'a network or navigation API'],
     [/url\(\s*["']?\s*(?!data:|blob:|#)[^)\s"']/i,'a stylesheet URL']];
   for(const [pattern,why] of banned)if(pattern.test(html))fail(why);
+  if(!html.includes(releaseLabel))fail('label the page "'+releaseLabel+'"');
 }
 
 /**
@@ -221,12 +226,10 @@ export function checkRelease(id,files){
 
   // Field players: every view link resolves to a listed page, and every listed page is linked, pinned and self-contained.
   const rows=Array.isArray(data.fieldInteractions)?data.fieldInteractions:[];
-  const base=new URL('https://release.invalid/r/index.html');
+  // A view link names the page exactly as it is served: field/NAME.html, optionally after ./.
   const target=href=>{
-    try{
-      const u=new URL(href,base);
-      return u.origin===base.origin&&!u.search&&!u.hash&&u.pathname.startsWith('/r/')?decodeURIComponent(u.pathname.slice(3)):null;
-    }catch{return null;}
+    const name=href.startsWith('./')?href.slice(2):href;
+    return fieldName.test(name)?name:null;
   };
   const linked=new Map();
   for(const r of rows){
@@ -266,6 +269,9 @@ export function checkRelease(id,files){
     if(m.kind==='field-interaction-trial'&&m.player!==undefined){
       const p=players.find(x=>x.file===m.player);
       check(m.trial===undefined&&p&&p.objective===m.objective,'The field-interaction player for the '+where+' must be a listed field player for its objective');
+      // The player's trial must be the trial of this mission case.
+      const trialCase=evidence(files.get(p.trial.file),'trial: '+id);
+      check((trialCase.case??trialCase.transport?.case)===m.case,'The field player trial for the '+where+' records a different case');
     }else if(m.kind==='field-interaction-trial'){
       const t=m.trial;
       check(object(t)&&trialName.test(t.file??'')&&files.has(t.file)&&pinMatches(t,t.file,files.get(t.file)),

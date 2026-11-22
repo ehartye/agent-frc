@@ -27,7 +27,7 @@ const objectives=[
 
 const fieldPage='<!doctype html><html lang="en"><head><meta charset="utf-8">'+
   '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'unsafe-inline\'; style-src \'unsafe-inline\'; img-src data: blob:">'+
-  '<title>Invented lane trial</title><style>body{margin:0}</style></head><body><canvas></canvas>'+
+  '<title>Invented lane trial</title><style>body{margin:0}</style></head><body><p>Work-in-progress preliminary design</p><canvas></canvas>'+
   '<script>const frames=[0,0.1,0.2];requestAnimationFrame(()=>frames.length);</script></body></html>';
 const laneTrial=JSON.stringify({case:'loaded-turn',outcome:'The invented sample leaves the carrier toward the lane'});
 const laneObjective='Carry the sample to the bin';
@@ -345,10 +345,44 @@ test('a field player must be self-contained', async t=>{
     fieldPage.replace('img-src data: blob:','img-src data: blob:; connect-src https:'),
     fieldPage.replace("default-src 'none'",'default-src *'),
     fieldPage.replace('<meta charset="utf-8">','<meta charset="utf-8"><script>top.x=1</script>')];
+  pages.push(
+    fieldPage.replace('<html lang="en">','<html lang="en" data-x=\'>').replace('<title>','\'><title>'),
+    '<!doctype html><html data-x=\'><meta http-equiv="content-security-policy" content="default-src \'none\'; script-src \'unsafe-inline\'">\'><body><script>1</script></html>',
+    fieldPage.replace('frames.length','location.assign("https://example.invalid/")'),
+    fieldPage.replace('frames.length','globalThis["location"].href'),
+    fieldPage.replace('frames.length','open("https://example.invalid/")'),
+    fieldPage.replace('<canvas>','<a href="https://example.invalid/">Source</a><canvas>'),
+    fieldPage.replace('<canvas>','<meta http-equiv="&#114;efresh" content="0;url=https://example.invalid"><canvas>'),
+    fieldPage.replace('<p>Work-in-progress preliminary design</p>',''));
   for(const page of pages){
     const f=fixture(t);next(f.site,'layout-002',{field:{page}});
     await assert.rejects(auditStaged(f.approved,f.site,f.policy),/self-contained/,page.slice(60,220));
   }
+  for(const page of [String.fromCharCode(0xfeff)+fieldPage,fieldPage.replace('frames.length','(()=>{let data=frames;const src=1;return data.length+src})()'),
+    fieldPage.replace('<canvas>','<a href="#trace">Trace</a><p>Robot location at release</p><canvas>')]){
+    const f=fixture(t);next(f.site,'layout-002',{field:{page}});
+    assert.deepEqual((await auditStaged(f.approved,f.site,f.policy)).preliminary.added,['layout-002'],page.slice(0,40));
+  }
+});
+
+test('field player links name the served page and player missions bind their own case', async t=>{
+  const row=href=>({title:'Lane',href,objective:laneObjective,evidence:{file:'lane-trial.json',sha256:sha(laneTrial)}});
+  for(const href of ['field%2flane.html','field\\lane.html','field/LANE.html','field//lane.html','/field/lane.html']){
+    const f=fixture(t);next(f.site,'layout-002',{field:{rows:[row(href)]}});
+    await assert.rejects(auditStaged(f.approved,f.site,f.policy),/listed field player/,href);
+  }
+  let f=fixture(t);next(f.site,'layout-002',{field:{rows:[row('./field/lane.html')]}});
+  assert.deepEqual((await auditStaged(f.approved,f.site,f.policy)).preliminary.added,['layout-002']);
+  f=fixture(t);
+  next(f.site,'layout-002',{field:{},missions:[{case:'park',kind:'field-interaction-trial',accomplishes:'delivered',
+    objective:laneObjective,player:'field/lane.html'}]});
+  await assert.rejects(auditStaged(f.approved,f.site,f.policy),/operating case|different case/);
+  f=fixture(t);
+  const {dir}=next(f.site,'layout-002',{field:{},missions:[{case:'loaded-turn',kind:'field-interaction-trial',accomplishes:'delivered',
+    objective:laneObjective,player:'field/lane.html'}]});
+  const other=JSON.stringify({case:'park'});write(dir,'lane-trial.json',other);
+  const record=JSON.parse(readFileSync(path.join(dir,'release.json'),'utf8'));record.fieldPlayers[0].trial.sha256=sha(other);write(dir,'release.json',record);
+  await assert.rejects(auditStaged(f.approved,f.site,f.policy),/receipt pins|different case/);
 });
 
 test('stage.py --check-index applies the same field player rules', async t=>{
@@ -358,7 +392,12 @@ test('stage.py --check-index applies the same field player rules', async t=>{
     [{page:fieldPage.replace('<canvas>','<script src="https://cdn.example.invalid/x.js"></script><canvas>')},/not self-contained/],
     [{page:fieldPage.replace('frames.length','fetch("https://example.invalid/")')},/not self-contained/],
     [{rows:[{title:'Lane',href:'field/missing.html',objective:laneObjective,evidence:'x'}]},/listed field player/],
-    [{rows:[{title:'Lane',href:'field/lane.html',objective:laneObjective,evidence:'unpinned'}]},/receipt pins/]];
+    [{rows:[{title:'Lane',href:'field/lane.html',objective:laneObjective,evidence:'unpinned'}]},/receipt pins/],
+    [{page:fieldPage.replace('<html lang="en">','<html lang="en" data-x=\'>').replace('<title>','\'><title>')},/not self-contained/],
+    [{page:fieldPage.replace('frames.length','location.assign("https://example.invalid/")')},/not self-contained/],
+    [{page:fieldPage.replace('<p>Work-in-progress preliminary design</p>','')},/not self-contained/],
+    [{page:String.fromCharCode(0xfeff)+fieldPage},0],
+    [{rows:[{title:'Lane',href:'field%2flane.html',objective:laneObjective,evidence:'x'}]},/listed field player/]];
   for(const [field,expected] of cases){
     const temp=mkdtempSync(path.join(os.tmpdir(),'prelim-index-'));
     t.after(()=>rmSync(temp,{recursive:true,force:true}));

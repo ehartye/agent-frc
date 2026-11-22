@@ -8,7 +8,6 @@ from pathlib import Path
 import re
 import shutil
 import tempfile
-from urllib.parse import unquote, urljoin, urlsplit
 import zlib
 
 
@@ -105,22 +104,25 @@ for _name in ("img-src", "font-src", "media-src"):
 for _name in ("connect-src", "frame-src", "child-src", "worker-src", "object-src", "base-uri", "form-action", "manifest-src"):
     CSP_ALLOWED[_name] = {"'none'"}
 BANNED = [
-    (r"<script\b[^>]*\bsrc\s*=", "an external script"),
-    (r"<(?:iframe|frame|frameset|object|embed|portal|base|link|applet)\b", "an embedded or linked resource"),
-    (r"<meta\b[^>]*http-equiv\s*=\s*[\"']?refresh", "a refresh"),
-    (r"\b(?:src|srcset|poster|background|data|action|formaction|ping|xlink:href)\s*=\s*[\"']?\s*(?!data:|blob:|#)[^\s\"'>]", "a resource URL"),
+    (r"<script\b[^>]*\bsrc\s*=", "an external script", re.I),
+    (r"<(?:iframe|frame|frameset|object|embed|portal|base|link|applet|form|area)\b", "an embedded, linked or submitted resource", re.I),
+    (r"<[a-z][^>]*?\s(?:src|srcset|poster|background|data|action|formaction|ping|xlink:href)\s*=\s*[\"']?\s*(?!data:|blob:|#)[^\s\"'>]",
+     "a resource URL", re.I),
+    (r"<[a-z][^>]*?\shref\s*=\s*[\"']?\s*(?!#)[^\s\"'>]", "a link away from the page", re.I),
     (r"\b(?:fetch|importScripts|sendBeacon)\s*\(|\b(?:XMLHttpRequest|WebSocket|EventSource|RTCPeerConnection|SharedWorker)\b|\bimport\s*\("
-     r"|\bimport\s+[\w{*][^;]*?\bfrom\b|@import\b|\bnew\s+Worker\b|\bwindow\.open\s*\(|\blocation\s*(?:\.href)?\s*=[^=]",
-     "a network or navigation API"),
-    (r"url\(\s*[\"']?\s*(?!data:|blob:|#)[^)\s\"']", "a stylesheet URL")]
+     r"|\bimport\s+[\w{*][^;]*?\bfrom\b|@import\b|\bnew\s+Worker\b|\bopen\s*\(|\b(?:location|history)\s*[.=\[]"
+     r"|['\"`](?:location|history)['\"`]", "a network or navigation API", 0),
+    (r"url\(\s*[\"']?\s*(?!data:|blob:|#)[^)\s\"']", "a stylesheet URL", re.I)]
+LEAD = re.compile(r"[ \t\n]*(?:<!doctype html>[ \t\n]*)?(?:<html(?: lang=\"[A-Za-z-]{1,16}\")?>[ \t\n]*)?(?:<head>[ \t\n]*)?"
+                  r"(?:(?:<meta charset=\"?utf-8\"?>|<meta name=\"viewport\" content=\"[A-Za-z0-9=,. -]{1,80}\">"
+                  r"|<title>[^<>&]{0,120}</title>)[ \t\n]*)*", re.I)
 
 
 def self_contained(html):
-    """Mirror the gate: a leading restrictive Content-Security-Policy and no external resource or network API."""
-    html = html.replace("\r\n", "\n")
-    lead = re.match(r"\s*(?:<!doctype html>\s*)?(?:<html\b[^>]*>\s*)?(?:<head>\s*)?(?:(?:<meta\s+charset=[^>]*>"
-                    r"|<meta\s+name=[\"']?viewport[\"']?[^>]*>|<title>[^<]*</title>)\s*)*", html, re.I).end()
-    meta = re.match(r"<meta\s+http-equiv=[\"']content-security-policy[\"']\s+content=\"([^\"]*)\"\s*/?>", html[lead:], re.I)
+    """Mirror the gate: a leading restrictive Content-Security-Policy and no external resource, network or navigation API."""
+    html = html.replace("\r\n", "\n").lstrip("\ufeff")
+    lead = LEAD.match(html).end()
+    meta = re.match(r"<meta http-equiv=\"content-security-policy\" content=\"([^\"<>&]*)\">", html[lead:], re.I)
     if not meta:
         return "declare a Content-Security-Policy meta element before any script, style or content"
     policy = {}
@@ -131,9 +133,13 @@ def self_contained(html):
         policy[name] = sources
     if policy.get("default-src") != ["'none'"]:
         return "set default-src 'none'"
-    for pattern, why in BANNED:
-        if re.search(pattern, html, re.I if "XMLHttpRequest" not in pattern else 0):
+    if len(re.findall("http-equiv", html, re.I)) != 1:
+        return "declare exactly one http-equiv element, the policy"
+    for pattern, why, flags in BANNED:
+        if re.search(pattern, html, flags):
             return why
+    if LABEL not in html:
+        return 'label the page "' + LABEL + '"'
     return None
 
 
@@ -145,13 +151,11 @@ def view_data(page):
 
 
 def player_target(href):
-    """The release-relative file a view link opens, or None when it leaves the release or carries a query."""
-    base = "https://release.invalid/r/index.html"
-    parts = urlsplit(urljoin(base, href)) if isinstance(href, str) else None
-    if not parts or parts.scheme != "https" or parts.netloc != "release.invalid" or parts.query or parts.fragment \
-            or not parts.path.startswith("/r/"):
+    """The served page a view link names: field/NAME.html, optionally after ./."""
+    if not isinstance(href, str):
         return None
-    return unquote(parts.path[3:])
+    name = href[2:] if href.startswith("./") else href
+    return name if FIELD.fullmatch(name) else None
 
 
 def check_release(release):
@@ -217,7 +221,7 @@ def check_release(release):
         if not TRIAL.fullmatch(trial) or trial in RESERVED or not (release / trial).is_file() or sha(trial) != t.get("sha256"):
             fail("Publish the pinned trial for field player " + name)
         trials.add(trial)
-        if q.get("objective") not in represented:
+        if not isinstance(q.get("objective"), str) or not q["objective"].strip() or q["objective"] not in represented:
             fail("Field player " + name + " must show a represented narrative objective")
         links = linked.get(name)
         if not links:
@@ -238,8 +242,11 @@ def check_release(release):
               and m.get("case") in passed and stage_.get("purpose") == "operating"
               and m.get("case") in (receipt.get("cycle") or []))
         if m.get("kind") == "field-interaction-trial" and "player" in m:
-            ok = ok and "trial" not in m and any(q.get("file") == m["player"] and q.get("objective") == m.get("objective")
-                                                 for q in players)
+            q = next((q for q in players if q.get("file") == m["player"]), None)
+            ok = ok and "trial" not in m and q is not None and q.get("objective") == m.get("objective")
+            if ok:
+                trial = read(release / q["trial"]["file"])
+                ok = (trial.get("case") if "case" in trial else (trial.get("transport") or {}).get("case")) == m.get("case")
         elif m.get("kind") == "field-interaction-trial":
             t = m.get("trial") or {}
             name = t.get("file") or ""
