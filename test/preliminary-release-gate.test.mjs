@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {auditStaged} from '../scripts/public-model-release.mjs';
-import {verifyRelease} from '../scripts/preliminary-release.mjs';
+import {verifyRelease,verifyCatalog} from '../scripts/preliminary-release.mjs';
 
 // Synthetic teaching fixtures: invented groups, cases and objectives with no relation to any game.
 const plugin=fileURLToPath(new URL('..',import.meta.url));
@@ -72,6 +72,37 @@ function fixture(t) {
   return {temp,approved,site,policy};
 }
 function next(site,id,options) {const r=issueRelease(site,id,options);listing(site,id,['layout-001',id]);return r;}
+
+test('approved historical replay and project player preserve the current physics gate',async t=>{
+  const {approved,site,policy}=fixture(t);
+  const {dir,record}=issueRelease(site,'new-layout');
+  const old='past-layout',note='The carrier animation omitted its stop.';
+  const historyPage='<aside role="note"><strong>Historical preliminary review</strong> '+note+'</aside>';
+  const history={schema:record.schema,release:old,label:'Historical preliminary review',status:'historical-review',
+    knownIssue:note,supersededBy:'new-layout'};
+  const historyDir=path.join(site,tree,'releases',old);
+  write(historyDir,'index.html',historyPage);write(historyDir,'release.json',history);
+  const checked=readFileSync(path.join(dir,'index.html'));
+  const projectPage='<h1>Work-in-progress preliminary design</h1>';
+  write(dir,'package-motion.html',checked);write(dir,'index.html',projectPage);
+  record.view.file='package-motion.html';write(dir,'release.json',record);
+  listing(site,'new-layout',['layout-001',old,'new-layout']);
+  const spec=policy.preliminaryReleases;
+  spec.presentations={
+    [old]:{historicalRecord:sha(readFileSync(path.join(historyDir,'release.json'))),files:{'index.html':sha(historyPage)}},
+    'new-layout':{files:{'index.html':sha(projectPage)}}
+  };
+  assert.equal((await auditStaged(approved,site,policy)).preliminary.current,'new-layout');
+  listing(site,old,['layout-001',old,'new-layout']);
+  await assert.rejects(auditStaged(approved,site,policy),/cannot be current/);
+  listing(site,'new-layout',['layout-001',old,'new-layout']);
+  write(dir,'index.html',projectPage+'changed');
+  await assert.rejects(auditStaged(approved,site,policy),/approved assets/);
+  write(dir,'index.html',projectPage);
+  write(dir,'package-motion.html','unverified');
+  await assert.rejects(auditStaged(approved,site,policy),/Published view differs/);
+  assert.throws(()=>verifyCatalog(path.join(site,tree),spec));
+});
 
 test('a layout-checked preliminary release with a mission case deploys without a signature', async t=>{
   const {approved,site,policy}=fixture(t);

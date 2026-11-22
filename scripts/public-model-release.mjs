@@ -258,6 +258,13 @@ export async function audit(root,base,policyName,packetPath,pubKey,sourceCommit)
     let old;
     try{old=git(root,['rev-parse','--verify',base+':'+n]).toString().trim();}catch{old=null;}
     const actual=git(root,['hash-object','--no-filters',current]).toString().trim();
+    if(n==='README.md'&&old&&actual!==old&&policy.preliminaryReadmeLink){
+      const url=new URL(policy.preliminaryReadmeLink);
+      check(url.protocol==='https:'&&url.href===policy.preliminaryReadmeLink&&!/[\s()<>]/.test(url.href),'Invalid preliminary README URL');
+      const before=git(root,['cat-file','blob',old]);
+      const suffix=Buffer.from('\n[Work-in-progress preliminary design]('+url.href+')\n');
+      if(Buffer.concat([before,suffix]).equals(readFileSync(current)))continue;
+    }
     if(old===null && prelimAuthorized.has(n))continue;
     if(old!==actual && reviewed.has(n)){
       if(!authorized)await verifyCurrent(root,packet.body,policy.project);
@@ -327,7 +334,7 @@ export async function auditStaged(approved,candidate,policyPath,packetPath,pubKe
       throw Error('The approved primary entry point changed without a signed detailed-model issue: '+name);
     }
     const tree=(folder,names)=>new Map([...names].filter(n=>prelim.inside(n)).map(n=>[n.slice(prelim.root.length+1),readFileSync(file(folder,n))]));
-    preliminary=auditTree(tree(base,old),tree(root,next));
+    preliminary=auditTree(tree(base,old),tree(root,next),prelim);
   }
   for(const name of Object.keys(fieldData))check(old.has(name)&&next.has(name),'Registered field data disappeared: '+name);
   for(const name of fixed)check(old.has(name)&&next.has(name),'Registered model output disappeared: '+name);
