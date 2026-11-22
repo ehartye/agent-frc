@@ -33,6 +33,8 @@ Before fixing a mechanism footprint, choose its [attachment stock, pattern and t
 
 At a meaningful CAD change or saved revision, [check the intended seats, loaded mass and CG, remaining reserve and worst concurrent voltage](../../docs/fusion-design-checkpoints.md). Record the controlling case and rerun the timed route if the change consumes its margin.
 
+Select one architecture for the review handoff. Animate every mission-critical interaction on that same revision with the project’s dimensioned field fixtures, finite game pieces and applicable rule observer. Derive the motion that decides the outcome from a phase-appropriate physical model. Show the actual result and the first failed requirement. [Field interactions and physics playback](references/presentation.md#field-interactions-and-physics-playback)
+
 Once a candidate is selected, [freeze its required articles and current functions](../../docs/article-functions.md) before opening a donor assembly. Give reused parts and fasteners a current interface and a planned physical site. Hand the approved roster to CAD with the architecture decision.
 
 Run the [whole-robot comparison](../../docs/whole-robot-comparison.md) against common nominal and adverse conditions. Inspect integrated execution records and score the same external outcome. Reject an infeasible resource schedule even when its independent subsystems pass. Keep unresolved constraints visible and carry the most discriminating next experiment forward. Hand the selected assembly, rejected alternative, interface datums and measured margins to mechanism CAD and controls.
