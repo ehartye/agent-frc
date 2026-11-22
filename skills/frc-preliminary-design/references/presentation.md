@@ -1,0 +1,29 @@
+# Present a preliminary design review
+
+Give the reviewer an interactive whole-robot blockout and a decision they can inspect. Link the review from the project handoff. Put the selected concept, revision, robot datum, units and current disposition on the opening view. Use the project's Agent FRC presentation theme and [component palette](../../../docs/cad-color-convention.md).
+
+## What the reviewer can do
+
+- Orbit through a full revolution and underneath the robot, pan in the view plane, zoom and reset to a fitted view. Provide pointer and keyboard controls and a visible control legend. Keep the camera where the reviewer puts it when scrubbing motion.
+- Display depth-tested, closed solid volumes. Preserve cavities, holes, independent moving members and the finite game piece. Include fixed and moving neighbors, bumpers, service stock and withdrawal envelopes. Show/hide labels independently of geometry. Provide a textual category legend and component list.
+- Play, pause and scrub operating, loaded, disabled/park and service cases. Identify the pose or fraction, operating stage, simultaneously moving groups and independent piece path. Make a collision selectable by pair and case. Hidden components still count in validation and budgets.
+- Select components by stable identity and assemble a named subsystem from any selection. Keep category (what an article is), subsystem (which function it serves) and motion group (what it moves with) separate. Preserve custom selections locally or in an export. A shared component appears once in the whole-robot total.
+
+## Inventory and budgets
+
+For every component show its category color, role, source or estimate basis, preliminary material, installed quantity, occupied volume and estimated mass or range. Mark placeholders and missing allocations. Use STEP or a closed oriented mesh to measure volume. Distinguish physical material volume from a package envelope and the sum of envelope volumes from their geometric union. A clearance gauge adds no robot weight. Appearance alone cannot establish material or density.
+
+Let reviewers group the inventory by category and by their own subsystem membership. Roll up unique mass lines and volumes. If a mass estimate covers several members and a selection splits that allocation, report the shared range separately until it is apportioned. Show the inspection basis, running configuration, excluded equipment, reserve and mass limits.
+
+For each duty and battery condition, show the selected group's battery-side current range and contribution to voltage sag, alongside the whole-robot minimum bus voltage and its requirement. Components on the same parallel bus share voltage. Sum coincident currents, apply the pack model, and calculate branch drop separately if measured. When only independent current bounds exist, label the result a conservative bound. Expose combined loads that cannot be attributed to one category or subsystem. Never distribute them by volume, silently count missing loads as zero or sum nominal device voltages. [Shared electrical loads](../../../docs/shared-power-review.md)
+
+## Evidence behind the picture
+
+1. Bind the view to the reviewed geometry, motion definition and result by revision and digest. Check that every displayed mesh is closed, that the roster matches and that mesh volumes agree with source solids at a declared tolerance.
+2. Check the parked assembly for positive-volume intersections. Account for all unique pairs, including broad-phase separations. Identify intended interfaces individually with allowed geometry and allowance. Keep unresolved measurements visible.
+3. Check clearance throughout each prescribed path, including its endpoints, simultaneous motions, payload and withdrawal tools. Give the method, tolerance and interval coverage. Sampled poses alone establish clearance only at those samples.
+4. List the limiting pair, clearance or overlap, and pose/time for each failure. Preserve a displaced control that the same check catches. A blocked or incomplete review still gets a view. Reopen the owning design phase before committing affected hardware. [Layout checker and decision](../../../docs/preliminary-design.md)
+
+## Hand off a LAN review
+
+Serve a dedicated directory containing only the review and its local assets. Bind the server to the selected LAN interface on an available port. Include the LAN URL, revision, launch/stop instructions and expected scope. Open the URL on the host, then on a second device when available. Verify reset, full orbit, pan, label toggle, playback, grouping and a known failed case. Preserve the static bundle for viewing after the host shuts down. Private CAD and unrelated workspace files stay outside the serving directory.

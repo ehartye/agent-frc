@@ -7,6 +7,8 @@ description: "Use for preliminary design of the whole robot: compare architectur
 
 During preliminary design, use a top-down assembly layout. Share one moving layout, its checked clearance, complete weight estimate and loaded-voltage range before distributing detailed CAD. [Engineering detail and exit criteria for the three phases](../../docs/design-phase-detail.md)
 
+Present the selected layout as an inspectable solid model with motion evidence, inventory and resource budgets. Follow the [preliminary design presentation reference](references/presentation.md) when preparing the review or handing it to another designer.
+
 Start with the alliance role, scored event, reserve time and fallback. Walk one identifiable piece through approach, capture, retention, transfer, placement and reset. Include the robot's position, occupied volume, time, controls and energy. Mark the operations that can overlap and the shared resources that prevent overlap.
 
 Before detailed CAD or purchase, name the premise most likely to invalidate the role. Set a modest work budget and a measurable stop condition for one nominal and one adverse test. Record the result, make a continue, revise or start-over decision, and commit the evidence. Mark common interfaces as provisional or verified with the loads, tolerances and changed conditions that reopen them. [Worked loaded-drivetrain decision](../../docs/whole-robot-comparison.md#decide-what-to-fix-before-detailing)
