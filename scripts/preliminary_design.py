@@ -538,6 +538,9 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
     by_id={c["id"]:c for c in cases}
     stages=plan["stages"]
     require(set(by_id)==set(stages) and len(by_id)==len(cases),"Commission every selected motion case exactly once")
+    # Named before any case runs: left until the review scene is built, the same mistake reads as an unknown scene body.
+    ungrouped=sorted({f.get("id") for c in cases for f in c.get("fixtures",[]) if isinstance(f,dict) and named(f.get("id"))}-roster)
+    require(not ungrouped,"List each case fixture in a plan group. No group lists: "+", ".join(ungrouped))
     covered=set()
     loaded_operating=False
     free_bound={}
@@ -683,7 +686,9 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
         if {f["id"] for f in c.get("fixtures",[])} != fixtures:
             missing.append("Fixture roster changes without a common package scene in "+c["id"])
     actual=set(observed["occurrences"])|fixtures
-    require(roster==actual,"Package roster differs from the selected STEP and fixtures")
+    require(roster==actual,"Package roster differs from the selected STEP and fixtures"
+            +("; no group lists: "+", ".join(sorted(actual-roster)) if actual-roster else "")
+            +("; grouped but absent from the STEP and fixtures: "+", ".join(sorted(roster-actual)) if roster-actual else ""))
     if observed["nonSolidLeafCount"]:missing.append("Unexamined non-solid geometry in the selected STEP")
     for links in plan.get("premises",[]):
         for ref in (links["accepted"],links.get("current")):

@@ -55,6 +55,22 @@ class FixtureWarning(unittest.TestCase):
         self.assertEqual(run.returncode, 0, run.stderr)
         self.assertIn("[budgets] done", run.stderr)
 
+    def test_a_case_fixture_that_no_group_lists_is_named_before_any_case_runs(self):
+        named_step(self.layout / "gate-post.step", dict(post=dict(box=([400, 440, 0], [420, 460, 20]))))
+        study = json.loads((self.layout / "paths.json").read_text())
+        study["cases"][0]["fixtures"] = [dict(id="post", solid="post", file=pin(self.layout, "gate-post.step"), basis="Invented field post")]
+        plan = json.loads(json.dumps(self.plan))
+        plan["motion"] = write(self.layout, "paths-with-post.json", study)
+        run = self.check(plan)
+        self.assertEqual(run.returncode, 2, run.stderr)
+        self.assertIn("List each case fixture in a plan group. No group lists: post", run.stderr)
+        self.assertNotIn("review scene", run.stderr)
+        self.assertNotIn("[motion]", run.stderr, "the plan error is reported before the motion cases run")
+        self.assertEqual(run.stdout, "")
+        # Grouping the fixture clears it.
+        plan["groups"]["field post"] = dict(role="other", members=["post"])
+        self.assertNotIn("No group lists", self.check(plan).stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
