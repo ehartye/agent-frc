@@ -20,7 +20,7 @@ Use whatever shape captures the fit decision. A cylinder preserves a wheel radiu
 
 ## Review interface
 
-Use the Agent FRC blue-and-gold interface with a large, expandable canvas. Keep functional category colors stable in the model, its legend and inventory. Picking a visible surface should identify the frontmost component and reveal its name, material, subsystem, volume and mass basis. Give reviewers a way to focus on an internal part and then restore the full assembly.
+Use the Agent FRC blue-and-gold interface with a large, expandable canvas. Put the component inspector beside the canvas in one row on a wide screen, stacking below it only on narrow pages, as the [page order](review-layout-template.md#page-order) specifies. Keep functional category colors stable in the model, its legend and inventory. Picking a visible surface should identify the frontmost component and reveal its name, material, subsystem, volume and mass basis. Give reviewers a way to focus on an internal part and then restore the full assembly.
 
 For the opening pose, show the real supports and the finite piece in its intended seat. Verify the pose before sharing it. If a coarse box appears to penetrate a piece, compare it with the shaped part in the same pose, retain the original control and check the whole path again. Mark unmounted allowances and unresolved supports. Do not move the piece to improve a picture.
 
