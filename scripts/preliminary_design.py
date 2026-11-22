@@ -125,11 +125,12 @@ def repeated_step_position(profile_path, saved, match, robot, repeat, value, uni
     pose=json.loads(process.stdout)
     # The step resolves on the same profile bytes that produced the saved result.
     if pose["profileSha256"]!=saved["profileSha256"]:return False
-    completed=any(row["id"]==robot["id"] and row["visits"]>=1
-                  for period in match["periods"] if period["phase"]==repeat["period"] for row in period["robots"])
+    # The game records carried pieces on an attempt only from an eligible position at the station.
+    delivered=any(e.get("phase")==repeat["period"] and e.get("robot")==robot["id"] and e.get("station")==repeat["station"]
+                  and e.get("operation")=="attempt" and e.get("pieces") for e in match["game"]["events"])
     return (unit=="in" and number(value) and pose["label"]==repeat["stepLabel"] and pose["operation"]=="attempt"
             and pose["station"]==repeat["station"] and pose["stationKind"]=="scoring"
-            and pose["footprint"]["status"]=="clear" and completed
+            and pose["footprint"]["status"]=="clear" and delivered
             and abs(pose["standoffIn"]-value)<=STANDOFF_TOLERANCE_IN)
 
 

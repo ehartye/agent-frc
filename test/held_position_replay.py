@@ -80,20 +80,29 @@ class HeldPositionReplay(unittest.TestCase):
 
     def test_replayed_legal_standoff_clears_the_hold(self):
         held, _ = self.hold("clear", DELIVERY)
-        result = self.resubmit("clear", held, DELIVERY, [BAY[0], BAY[1] - 20], 20.)
+        result = self.resubmit("clear", held, DELIVERY, [BAY[0], BAY[1] - 10], 10.)
         self.assertTrue(self.prior(result)["repeatVerified"])
         self.assertEqual(result["status"], "layout-checked")
 
     def test_displaced_standoff_stays_open(self):
         held, _ = self.hold("displaced", DELIVERY)
-        # The project reports 25 in while the replayed program delivers from 20 in.
-        result = self.resubmit("displaced", held, DELIVERY, [BAY[0], BAY[1] - 20], 25.)
+        # The project reports 12 in while the replayed program delivers from 10 in.
+        result = self.resubmit("displaced", held, DELIVERY, [BAY[0], BAY[1] - 10], 12.)
+        self.assertFalse(self.prior(result)["repeatVerified"])
+        self.assertEqual(result["status"], "reopen")
+
+    def test_out_of_station_standoff_stays_open(self):
+        held, _ = self.hold("outside", DELIVERY)
+        # 20 in from the bay the footprint is legal and the program completes,
+        # but the station's 16 in release radius makes every attempt ineligible.
+        result = self.resubmit("outside", held, DELIVERY, [BAY[0], BAY[1] - 20], 20.)
         self.assertFalse(self.prior(result)["repeatVerified"])
         self.assertEqual(result["status"], "reopen")
 
     def test_illegal_standoff_stays_open(self):
         held, _ = self.hold("illegal", DELIVERY)
         # 60 in north of the bay the robot footprint crosses the field boundary.
+        # The footprint screen refuses it, and the planner never reaches it to deliver.
         result = self.resubmit("illegal", held, DELIVERY, [BAY[0], BAY[1] + 60], 60.)
         self.assertFalse(self.prior(result)["repeatVerified"])
         self.assertEqual(result["status"], "reopen")
@@ -102,13 +111,13 @@ class HeldPositionReplay(unittest.TestCase):
         for tag, change in (("station", dict(station="blue-supply")), ("label", dict(stepLabel="Pick up tile"))):
             field_input = dict(DELIVERY, **change)
             held, _ = self.hold(tag, field_input)
-            result = self.resubmit(tag, held, field_input, [BAY[0], BAY[1] - 20], 20.)
+            result = self.resubmit(tag, held, field_input, [BAY[0], BAY[1] - 10], 10.)
             self.assertFalse(self.prior(result)["repeatVerified"], tag)
 
     def test_unsupported_input_stays_open(self):
         field_input = dict(DELIVERY, input="stepRoute")
         held, _ = self.hold("unsupported", field_input)
-        result = self.resubmit("unsupported", held, field_input, [BAY[0], BAY[1] - 20], 20.)
+        result = self.resubmit("unsupported", held, field_input, [BAY[0], BAY[1] - 10], 10.)
         self.assertFalse(self.prior(result)["repeatVerified"])
         self.assertEqual(result["status"], "reopen")
 
