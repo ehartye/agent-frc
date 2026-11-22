@@ -4,6 +4,10 @@
 
 **The whole-robot designer owns the preliminary design checkpoint.** The shared layout establishes the top-down assembly layout for detailed design. Establish one robot datum and one revision of the proposed arrangement. Share the editable blockout with subsystem designers. On a common placed STEP, represent fixed structure and bumpers, mounts, moving members, a finite payload, adjacent moving mechanisms and the service envelope. Simple conservative solids are suitable for an early decision. Record what they bound and what geometry is missing. A saved issue identifies the geometry. Its endpoints alone leave the intervening path untested.
 
+## Rehearse the field interaction
+
+Hand off one selected architecture. Play each mission-critical duty in its registered, full-scale field area and inspect the finite article or robot through the applicable outcome and assessment time. Use the project’s rules edition and fixture dimensions. Preserve failed trials alongside successful ones. The [presentation reference](../skills/frc-preliminary-design/references/presentation.md#field-interactions-and-physics-playback) describes the required physics playback and controls. The geometric clearance command checks a different question and can be reviewed alongside those trials.
+
 ## Work a synthetic package
 
 With the plugin’s geometry Python environment selected, create a new example folder and run the normal design command.

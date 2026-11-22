@@ -52,3 +52,11 @@ Label imposed payload motion as prescribed. For a tipping holder, show the revie
 ## Hand off a LAN review
 
 Serve a dedicated directory containing only the review and its local assets. Bind the server to the selected LAN interface on an available port. Include the LAN URL, revision, launch/stop instructions and expected scope. Open the URL on the host, then on a second device when available. Verify reset, full orbit, pan, label toggle, playback, grouping and a known failed case. Preserve the static bundle for viewing after the host shuts down. Private CAD and unrelated workspace files stay outside the serving directory.
+
+## Field interactions and physics playback
+
+Make the selected architecture the opening view. Provide a named, playable case for each mission-critical interaction. Keep rejected concepts in the decision record. A failed duty holds or revises the selected design.
+
+- **Build the interacting field area at scale.** Use project-owned official geometry or dimensioned drawings at the selected rules cutoff. Register floor, approach, contact surfaces, nearby obstructions, target and any rule-relevant sensors in the same datum as the robot. Record source, units, transform and dimensions. Identify each simplification and the outcome it could change.
+- **Drive playback from the physical trial.** Commands may prescribe actuator inputs. Integrate the free payload or supported robot responses that decide the mission. For delivery, continue the same released article with its measured position, orientation and velocity through field contact and the applicable scoring observation. For elevation, resolve fixture compliance or its justified bounds, gravity, unilateral floor contact, actuator capacity, load transfer and the disabled hold through assessment.
+- **Expose the evidence in the player.** Use timestamps from the run, allow scrubbing and show the interaction area, event and decision metric together. Link the exact layout, scenario, solver settings and trace. Replay a disabled or adverse control and check timestep or geometric sensitivity where it can change the decision. Report estimated contact properties, missing physical measurements and the first unmet condition. Mark any commanded illustration separately.
