@@ -37,7 +37,7 @@ Keep the project’s [frame and bumper outline](../../docs/frame-profile.md) wit
 
 Use the [Fusion authority and revision handoff](../../docs/fusion-authority.md) to establish the one current saved native design, the STEP exported from that design and the identity of the engineering evidence. When resuming in another checkout or before replacing a published view, verify the selected register and lineage with `fusion_authority.py`. For a mechanical review, use `fusion_issue_inventory.capture` in Fusion for missing commissioned poses. [Resume a registered master](../../docs/fusion-authority.md#resume-a-registered-master)
 
-Before pushing a workflow change, [check the committed caller and its local reusable workflows](../../docs/project-ci.md#check-the-workflows-before-pushing) with the approved actionlint executable.
+Add the [branch scan](../../docs/project-ci.md#scan-every-pushed-branch) so every pushed branch is checked for personal machine paths and credentials. Before pushing a workflow change, [check the committed caller and its local reusable workflows](../../docs/project-ci.md#check-the-workflows-before-pushing) with the approved actionlint executable.
 
 Register the project’s changed and full test commands, verify the actual default branch and run the same commands locally and in CI. Choose branch-served or generated Pages when the team publishes CAD. [Set up project checks and release gates](../../docs/project-ci.md)
 

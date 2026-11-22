@@ -68,7 +68,7 @@ function fixture(t) {
     assert.ok(path.basename(dir).startsWith('agent-frc-skills-'));
     fs.rmSync(dir, { recursive: true, force: true });
   });
-  for (const file of ['scripts/validate.mjs', 'scripts/skill-validation.mjs', 'scripts/check-design-references.mjs', 'scripts/install-manifests.mjs', 'package.json', 'plugin.json',
+  for (const file of ['scripts/validate.mjs', 'scripts/skill-validation.mjs', 'scripts/check-design-references.mjs', 'scripts/install-manifests.mjs', 'scripts/season-terms.mjs', 'scripts/season-terms.json', 'scripts/branch-scan.mjs', 'package.json', 'plugin.json',
     '.claude-plugin/plugin.json', '.codex-plugin/plugin.json', '.claude-plugin/marketplace.json', '.agents/plugins/marketplace.json']) {
     fs.mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
     fs.copyFileSync(path.join(root, file), path.join(dir, file));
