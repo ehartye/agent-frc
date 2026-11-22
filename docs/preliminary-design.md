@@ -102,6 +102,62 @@ The displaced control is expected to collide, so it never stops a run. It runs l
 
 Give every downstream designer the issue name, design and STEP hashes, host and mount points, motion study, status and open inputs. If one interface changes, identify its neighbors through the group roster. Recheck the affected loaded, park and withdrawal paths on the revised package, repeat the adverse control and issue the updated receipt before another designer takes the old clearance as available. The executable rechecks every commissioned case. Detailed seat geometry, loads, tolerances, retention, actuator dynamics and physical performance require their own commissioned evidence.
 
+## Judge readiness to be marked effective
+
+The [exit criteria](design-phase-detail.md#exit-criteria-for-an-effective-preliminary-design) say what an effective preliminary design must show. The report judges them from the files of one release's inputs:
+
+```sh
+node scripts/design.mjs effective-readiness PROJECT
+```
+
+`PROJECT` is the folder that holds `layout.json`, its saved `receipt.json`, `missions.json` and the pinned trial files. Name other files with `--plan`, `--receipt` and `--missions`, relative to that folder. Add `--json` for the machine-readable report. The command writes nothing, never changes a receipt and exits 0 whatever it finds. Only an unusable project folder is an error.
+
+```text
+Effective-readiness report for synthetic-package-layout-002
+Informational: marking a design effective stays a project decision in a reviewed pull request.
+[not met] 1. Whole mission cycle checked for clearance, mass and voltage
+            - Narrative stage endgame has no case
+[met]     2. Every mission-critical interaction driven by a qualified physics trial
+            · acquire: intake-trial.json
+[not met] 3. Every open risk closed by a design change or carried as a bench test with numbers
+            - Risk belt-slip has neither a closing design change (closedBy) nor a bench test with a measure, a pass value and a fail value
+Bench tests to carry as verification items (results are not required to mark the design effective): none listed
+Result: 1 of 3 criteria met.
+```
+
+Declare what the report reads:
+
+- **Cycle map.** In `missions.json`, map each narrative stage to its checked cases: `"cycle": {"acquire": {"cases": ["acquire"]}, "retain": {"cases": ["loaded-turn"]}, ...}` for `acquire`, `retain`, `transfer`, `deliver`, `reset`, `endgame`, `park` and `service`. Each case must pass in a whole `layout-checked` receipt of this exact plan, with no missing inputs, a passing inspection weight and passing loaded-voltage cases, so commission the budgets. The `service` stage needs a case checked as `service`, `park` a case checked as `park`, and every other stage an `operating` case. When the game has no such stage, state it alone: `{"notApplicable": "reason"}`. The report shows the reason.
+- **Trials.** A mission case is trial-driven when its stage pins a trial through `transportedBy` or `freePath`, when the mission case carries a `trial` pin, or when a linked field interaction's pinned trial records that case. A case that only follows its carrier is a prescribed path. Stage pins count only from a `layout-checked` receipt of this plan, and each trial record must name the mission case it ran (`case`, or the `case` inside its `transport` or `freePath` record). Each pinned trial record carries its qualification:
+
+  ```json
+  "qualification": {
+    "result": "pass",
+    "control": {"condition": "Roller unpowered", "rejected": true},
+    "brackets": [{"input": "roller speed", "unit": "rev/s", "passing": 20, "failing": 8}],
+    "timestep": {"coarseS": 0.002, "fineS": 0.001, "sameOutcome": true}
+  }
+  ```
+
+  The control is an adverse or disabled condition that the trial rejects. Each bracket names an input, its unit, a value that passes and a value that fails. The timestep check repeats the trial at a finer step with the same outcome.
+- **Risk register.** In `missions.json`, list every open risk under `risks`, each with an `id` and the `risk`. Give `closedBy` for a design change that closes it, or `benchTest` with a `measure`, a `pass` value, a `fail` value and optionally a `unit`. An empty list states that no risk remains. Every `presentation.uncoveredCases` ID needs an entry, and a narrative objective still marked `open` keeps the criterion unmet.
+
+The report trusts the declarations it reads and checks that each pinned trial file has its pinned SHA-256. It does not rerun a trial. `python cad/preliminary-design/stage.py --set-status RELEASE effective --readiness PLUGIN/scripts/effective-readiness.mjs` prints the report for the release's inputs after the status change, so the pull request reviewer sees it; without `--readiness` it prints the command to run. Attach the report to the pull request that marks the release effective. Staging ignores the `cycle` and `risks` keys.
+
+## Carry plugin updates into a season project
+
+A season pins a plugin revision and holds copies of some plugin files. After moving the pin, re-copy what changed:
+
+| Plugin version | Re-copy or regenerate in the season project |
+| --- | --- |
+| 0.103.0 | `cad/preliminary-design/stage.py` from `templates/stage-preliminary-review.py` (index rename waits for a reader). |
+| 0.105.0 | `stage.py` again (`--check-index` accepts a mission trial pinned through `freePath`). |
+| 0.107.0, 0.108.0 | The local review page: delete `package-motion.html` and rerun the check with `--write-view` (field-fit reason; member mounts in the inspector). A stale scene is replaced without deleting it from 0.110.0. |
+| 0.111.1 | The committed detailed design catalog `index.html` from `templates/detailed-design-index.html`. |
+| 0.112.0 | `stage.py` again (`--readiness` prints the effective-readiness report). |
+
+An issued release never changes; a new release carries the new page.
+
 ## Examine the moving blocks and budgets
 
 Serve the generated `package-motion.html` and its `review-scene.json.gz` over HTTP, for example with `python -m http.server` in that directory, and open the page. The page is the plugin's stock review page; it fetches and decompresses the scene, which holds every value it shows. Opened from `file://` it cannot load the scene. Check the scene with `node PLUGIN/scripts/review-scene.mjs validate review-scene.json.gz --receipt RECEIPT.json`. Select a case, orbit and pan around its solid volumes, then play or scrub the position on path. Cylinders, spheres, swept profiles and solids with bores or cutouts can preserve the occupied space that determines fit. The viewer tessellates the placed STEP faces for display. The player uses the same starting poses and ordered rigid transformations as the interval checker, including simultaneous motion. The frames illustrate the stroke. The separate clearance receipt gives the numerical bound, obstruction or open interval. Stationary pairs are checked in each retained scene. Pairs whose relative pose stays constant, including members carried by the same motion, are cleared without an exact query when their bounding boxes are more than `minGapMm` plus 0.001 mm apart. The receipt omits these rows and counts them in the case's `counts.constantPoseBroadPhase`. An exact constant-pose result is reused across cases only when both bodies have the same source solid and initial pose, and `counts.constantPoseReused` records each reuse. A `package-motion.html` saved before version 0.100.0 is the retired player rather than the stock review page; to regenerate it, delete it and any `*.geometry.json.gz` and run `--write-view` again. A qualified intended interface must name its exact pair, stage and separately pinned evidence.

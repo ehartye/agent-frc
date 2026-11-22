@@ -49,3 +49,13 @@ Every design phase uses the same four statuses for a published design. They appl
 | `withdrawn` | Pulled with no replacement. It stays in the archive listing labelled withdrawn and is never shown as current. |
 
 A new release enters `in-progress`. Allowed changes are in-progress to effective, effective to superseded (automatic) and any status to withdrawn. Nothing returns from superseded or withdrawn to effective without a new release. The status lives in the release index, never in an issued release, so changing it never rewrites published evidence. Marking a release effective is a deliberate index change made in a reviewed pull request.
+
+### Exit criteria for an effective preliminary design
+
+A preliminary design is ready to be marked effective when all three hold:
+
+1. **Whole mission cycle.** Every stage of the narrative cycle has a passing case in a layout-checked receipt, so clearance, mass and loaded voltage are checked for the whole cycle: acquire, retain, transfer, deliver, reset, endgame, park and service. A fragment of the cycle does not qualify.
+2. **Trial-driven interactions.** Every mission-critical interaction passes a physics trial with a control, sensitivity brackets (a passing and a failing value) and a timestep check. The mission animation is driven by that pinned trial, not by a prescribed path.
+3. **Risks resolved.** Every open risk is closed by a design change or recorded as a bench test with pass and fail numbers.
+
+Physical bench results are not required. They are listed as verification items for the build. The [effective-readiness report](preliminary-design.md#judge-readiness-to-be-marked-effective) lists each criterion as met or not met with the reason. It is informational: it adds no gate rule, and the decision stays with the reviewed pull request.
