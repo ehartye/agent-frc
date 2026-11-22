@@ -3,6 +3,7 @@ node_modules/
 .env.*
 *.local.json
 coverage/
+.playwright-mcp/
 artifacts/
 vault/
 
