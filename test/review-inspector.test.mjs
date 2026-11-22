@@ -79,4 +79,9 @@ test('the page digest falls back to a pure-JS SHA-256 where crypto.subtle is una
     assert.equal(await digestHex(bytes.buffer, undefined), expected, 'an ArrayBuffer is accepted');
     assert.equal(await digestHex(bytes, globalThis.crypto.subtle), expected, 'digest with crypto.subtle');
   }
+  const big = new Uint8Array(3 * 1024 * 1024 + 77).map((_, k) => (k * 31) & 255);
+  const view = big.subarray(13, big.length - 5);
+  assert.equal(await digestHex(view, undefined), createHash('sha256').update(view).digest('hex'), 'a multi-megabyte offset view hashes in place');
+  assert.equal(sha256Pure(new DataView(view.buffer, view.byteOffset, view.byteLength)), createHash('sha256').update(view).digest('hex'), 'any ArrayBuffer view');
+  for (const n of [55, 56, 63, 64, 119, 120]) { const b = new Uint8Array(n).fill(97); assert.equal(sha256Pure(b), createHash('sha256').update(b).digest('hex'), n + ' bytes'); }
 });

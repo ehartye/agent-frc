@@ -12,7 +12,9 @@
 <script type="module">
 // The season link resolves only when the review is published under a season site; a local serve.py run has no parent.
 const parent=new URL('../',location.href);
-if(parent.href!==new URL('./',location.href).href)fetch(parent,{method:'HEAD',cache:'no-store'}).then(r=>{if(r.ok)document.querySelector('#season').hidden=false}).catch(()=>{});
+const season=document.querySelector('#season');
+(parent.href===new URL('./',location.href).href?Promise.resolve(null):fetch(parent,{cache:'no-store'}).then(async r=>r.ok&&(r.headers.get('content-type')||'').startsWith('text/html')?r.text():null))
+ .then(page=>{if(page&&!/<title>Directory listing/i.test(page))season.hidden=false}).catch(()=>{}).finally(()=>{season.dataset.probed='true'});
 const select=document.querySelector('select'),frame=document.querySelector('iframe'),message=document.querySelector('#message');
 function show(id){
  const url=new URL(location.href);url.searchParams.set('release',id);location.assign(url);

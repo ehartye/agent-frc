@@ -7,7 +7,9 @@ import { browser, probePage } from './headless-browser.mjs';
 
 // A synthetic, season-neutral review: one invented part and no geometry file. Layout depends only on the page.
 const data = {issue: 'synthetic-layout', step: {file: 'package.step', sha256: 'a'.repeat(64)}, motion: {file: 'paths.json', sha256: 'b'.repeat(64)},
-  groups: {arm: {role: 'mechanism', members: ['arm']}}, palette: {mechanism: '#00897b', reference: '#8a8f94'},
+  groups: {'an-invented-very-long-subsystem-group-name-for-layout': {role: 'mechanism', members: ['arm']}},
+  power: [{case: 'an-invented-very-long-concurrent-duty-and-pack-name', duty: 'Invented duty', batteryCondition: 'weak', batterySideA: [1, 2],
+    loadedBusV: [11, 12], requiredMinV: 9, marginV: 2, status: 'pass', loads: {}, resistance: [0.02, 0.03], openCircuit: [12, 12.5]}], palette: {mechanism: '#00897b', reference: '#8a8f94'},
   components: {arm: {purpose: 'Invented arm.', rationale: 'Invented reason.'}}, required: {}, evidence: {},
   cases: [{id: 'package-displacement-control-with-an-invented-long-name', stage: 'operating'}],
   inspector: {arm: {id: 'arm', name: 'arm', category: 'mechanism', role: 'mechanism', motionGroup: 'arm', mass: [], loads: [], movesIn: [], missing: []}},
@@ -51,9 +53,11 @@ test('the inspector sits beside the model above 60rem and directly below it at 6
   // Headless windows have a minimum width, so a phone-width page is measured inside a 390 px frame.
   writeFileSync(path.join(dir, 'phone.html'), '<!doctype html><body style="margin:0"><iframe src="index.html" style="width:390px;height:900px;border:0"></iframe>');
   const phone = await probePage(dir, 'phone.html', `const w=document.querySelector('iframe').contentWindow;await new Promise(r=>setTimeout(r,300));
-   return {width:w.innerWidth,scroll:w.document.documentElement.scrollWidth,cases:w.document.querySelector('#cases').getBoundingClientRect().right}`);
+   const box=s=>w.document.querySelector(s).getBoundingClientRect();
+   return {width:w.innerWidth,scroll:w.document.documentElement.scrollWidth,selects:['#cases','#scope','#duty'].map(s=>({right:box(s).right,width:box(s).width}))}`);
   assert.equal(phone.width, 390);
-  assert.ok(phone.scroll <= 390 && phone.cases <= 390, '390 px: nothing, including the motion case selector, scrolls sideways (' + JSON.stringify(phone) + ')');
+  assert.ok(phone.scroll <= 390, '390 px: nothing scrolls sideways (' + JSON.stringify(phone) + ')');
+  for (const s of phone.selects) assert.ok(s.right <= 390 && s.width >= 120, '390 px: each selector fits and stays usable (' + JSON.stringify(s) + ')');
   const label = await probePage(dir, 'index.html', `const i=document.querySelector('#frame');return {text:i.closest('label').textContent.trim(),name:i.labels[0].textContent.trim()}`);
   assert.deepEqual(label, {text: 'Position on path', name: 'Position on path', viewportWidth: 1280}, 'the scrubber names what it moves');
 });
@@ -68,10 +72,13 @@ test('the stable index links the season site only when one is published above it
     writeFileSync(path.join(folder, 'index.html'), index);
     writeFileSync(path.join(folder, 'releases.json'), JSON.stringify({current: 'missing', releases: ['missing']}));
   }
-  const season = `await new Promise(r=>setTimeout(r,500));const s=document.querySelector('#season');return {shown:!!s&&!s.hidden&&getComputedStyle(s).display!=='none'}`;
-  assert.equal((await probePage(dir, 'index.html', season)).shown, false, 'served at the root (serve.py): no parent season link');
+  const season = `const s=document.querySelector('#season');for(let i=0;i<60&&!s.dataset.probed;i++)await new Promise(r=>setTimeout(r,50));
+   return {settled:s.dataset.probed==='true',shown:!s.hidden&&getComputedStyle(s).display!=='none'}`;
+  assert.deepEqual(await probePage(dir, 'index.html', season), {settled: true, shown: false, viewportWidth: 1280}, 'served at the root (serve.py): no parent season link');
   writeFileSync(path.join(dir, 'index.html'), '<!doctype html><title>Season</title><h1>Season site</h1>');
-  assert.equal((await probePage(dir, 'preliminary-design/index.html', season)).shown, true, 'under a published season site: linked');
+  assert.deepEqual(await probePage(dir, 'preliminary-design/index.html', season), {settled: true, shown: true, viewportWidth: 1280}, 'under a published season site: linked');
+  writeFileSync(path.join(dir, 'index.html'), '<!doctype html><title>Directory listing for /</title><ul><li>preliminary-design/</li></ul>');
+  assert.deepEqual(await probePage(dir, 'preliminary-design/index.html', season), {settled: true, shown: false, viewportWidth: 1280}, 'a directory listing is not a season site');
   rmSync(path.join(dir, 'index.html'));
-  assert.equal((await probePage(dir, 'preliminary-design/index.html', season)).shown, false, 'no parent page: no link');
+  assert.deepEqual(await probePage(dir, 'preliminary-design/index.html', season), {settled: true, shown: false, viewportWidth: 1280}, 'no parent page: no link');
 });
