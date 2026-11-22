@@ -132,6 +132,36 @@ To recheck the physics of a layout whose review is already written, add `--physi
 
 Give every downstream designer the issue name, design and STEP hashes, host and mount points, motion study, status and open inputs. If one interface changes, identify its neighbors through the group roster. Recheck the affected loaded, park and withdrawal paths on the revised package, repeat the adverse control and issue the updated receipt before another designer takes the old clearance as available. The executable rechecks every commissioned case. Detailed seat geometry, loads, tolerances, retention, actuator dynamics and physical performance require their own commissioned evidence.
 
+## Size the checks to the risk
+
+Preliminary design is fast iteration. A revised layout should be checked and back in front of a reviewer in minutes, so decide how much checking a question deserves before running anything. A slow loop hides design problems behind queue time.
+
+**Set a time budget first.** Aim for a whole-cycle layout check of about ten minutes and a trial campaign of about ten minutes on the machine in use. Let the budget set the case and trial counts. When a run would exceed it, cut the plan before starting. Report the budget and the actual time with the result.
+
+**Rank the risks and test the top few.** List the premises that could change the architecture, a mechanism or an interface, each with its likelihood and its consequence. Before a trial runs, write down the decision it could change and the result that would change it. Skip a trial when no result would change the design. A question about the field or its instruments, or one the owner has already decided, becomes a bench test with pass and fail numbers.
+
+**Check the whole cycle coarsely, then refine where the margin is thin.** Split the recorded or planned path into as few cases as follow it within a stated tolerance, starting near 40 mm. The checker sweeps each case continuously, so a coarse case still covers its whole move. Treat any pair whose clearance is smaller than the tolerance as unresolved. Rerun only the phase that holds that pair at a finer tolerance. Leave phases with ample margin coarse and record the tolerance each phase was checked at.
+
+**Size a trial to the question.**
+
+| Question | Smallest sound test |
+| --- | --- |
+| Does the nominal interaction work? | One run at the operating point, repeated at a finer timestep |
+| Does the model reject a broken design? | One control with the feature removed or the input far out of range |
+| Where is the edge? | Step one input outward from the operating point until the first failure on each side, then stop |
+| Is the margin real under variation? | A few starts chosen to span the variation, not every recorded start at every value |
+| How often does it succeed? | Only when a rate is the requirement; choose the sample size from the rate and confidence needed and stop early once the rate cannot be met |
+
+Change one input at a time from the operating point. A full grid of every input against every start costs the product of their counts and rarely changes the decision.
+
+**Stop when the decision is made.** A bracket is complete at its first failing value. A rate requirement is failed at the first result that puts it out of reach. Do not keep sampling a settled result to tighten an interval nobody will act on.
+
+**Keep presentation separate from physics.** Names, colours, explanations and grouping do not change a clearance. `--write-view` checks every case before it writes the scene, so collect presentation edits and make them in one run, and use `--physics-only` while only the layout or motion is changing. A change to the release list or a status needs no check run at all.
+
+**Share the machine.** Cap worker processes below the core count when other work is running. Commit results as each stage finishes so an interrupted campaign keeps what it found.
+
+**Publish the increment.** An in-progress design goes to the project's site as soon as it passes its coarse check, with open risks listed. Later results revise that same release.
+
 ## Judge readiness to be marked effective
 
 The [exit criteria](design-phase-detail.md#exit-criteria-for-an-effective-preliminary-design) say what an effective preliminary design must show. The report judges them from the files of one release's inputs:
