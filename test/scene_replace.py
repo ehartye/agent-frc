@@ -71,7 +71,7 @@ class SceneReplace(unittest.TestCase):
         result = self.review(write_view=True)
         self.assertEqual(self.page.read_bytes(), custom)
         self.assertEqual(self.scene.read_bytes(), self.stock_scene, "the scene is still brought up to date")
-        self.assertFalse(result["view"]["verified"], "a page other than the stock page is not credited")
+        self.assertTrue(result["view"]["verified"], "a project's own page is kept, and the check is of the scene")
 
     def test_a_failed_run_leaves_the_previous_scene(self):
         previous = self.stale()

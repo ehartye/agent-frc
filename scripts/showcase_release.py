@@ -2,29 +2,23 @@
 from pathlib import Path
 import json
 import os
-import subprocess
+import sys
 
 from mechanical_readiness import digest, pinned, project_path, read, require, review, scan, verify_delivery
 
 
 def verify_candidate(root, study_path, source, derivatives, native=None, receipt=None, distribute_source=False):
     root=Path(root).resolve()
-    if isinstance(study_path,dict) and "signedPacket" in study_path:
-        key=os.environ.get("FRC_MODEL_REVIEW_PUBLIC_KEY")
-        project=os.environ.get("FRC_MODEL_PROJECT")
-        require(key and project and not Path(key).resolve().is_relative_to(root),"Supply the independently trusted project and reviewer key outside the candidate")
-        packet_file=project_path(root,study_path["signedPacket"])
-        verifier=Path(__file__).with_name("public-model-release.mjs")
-        result=subprocess.run(["node",str(verifier),"verify",str(root),str(packet_file),key,project],capture_output=True,text=True)
-        require(result.returncode==0,"Signed release did not verify: "+result.stderr.strip())
-        body=read(packet_file)["body"]
-        require(not source or body["stepSha256"]==digest(project_path(root,source)),"Displayed STEP differs from signed issue")
+    if isinstance(study_path,dict) and "reviewResult" in study_path:
+        # The committed result of the mechanical-readiness review, as a design marked effective carries it.
+        # A review that does not pass publishes nothing; this build binds the shown files to the reviewed ones.
+        result=read(project_path(root,study_path["reviewResult"]))
+        require(result.get("schema")=="agent-frc/mechanical-readiness-result@1","Supply a mechanical-readiness review result")
+        require(not source or result["stepSha256"]==digest(project_path(root,source)),"Displayed STEP differs from the reviewed one")
         if receipt:
-            require(isinstance(body.get("solids"),int) and body["solids"]==receipt.get("solids"),"Signed native census differs from the actual display receipt")
-        require(not native or body["archiveSha256"]==digest(project_path(root,native)),"Published native archive differs from signed issue")
-        approved={r["path"] for r in body["files"]}
-        files=[*derivatives,*([native] if native else []),*([source] if source and distribute_source else [])]
-        require(all(Path(n).as_posix() in approved for n in files),"An actual derivative is absent from the signed issue")
+            require(isinstance(result.get("solids"),int) and result["solids"]==receipt.get("solids"),"Reviewed solid count differs from the display receipt")
+        require(not native or result["archiveSha256"]==digest(project_path(root,native)),"Published native archive differs from the reviewed one")
+        require(result.get("showcaseEligibility")=="pass","Mechanical readiness "+str(result.get("showcaseEligibility"))+": "+str((result.get("findings") or [])[:3]))
         return
     if not study_path:
         # Retain the exact original public static teaching plate. It has no native download.
@@ -48,15 +42,6 @@ def verify_candidate(root, study_path, source, derivatives, native=None, receipt
     if receipt is not None:
         require(receipt.get("solids")==result["solids"],"Published mesh source census differs from reviewed STEP")
     require(result["showcaseEligibility"]=="pass","Mechanical readiness "+result["showcaseEligibility"]+": "+str(result["findings"][:3]))
-    if os.environ.get("FRC_ACTIVE_MODEL_SELECTION") or os.environ.get("FRC_REQUIRE_ACTIVE_MODEL_SELECTION")=="true":
-        current=result.get("iteration")
-        summary={k:result[k] for k in ("configuration","archiveSha256","stepSha256","solids")}
-        summary.update(schema="agent-frc/signed-model-release@10" if current else "agent-frc/signed-model-release@9",
-                       iteration=current,scope=current["kind"] if current else None,studySha256=digest(project_path(root,study_path)))
-        project=os.environ.get("FRC_MODEL_PROJECT") or json.loads(os.environ.get("FRC_ACTIVE_MODEL_SELECTION","{}")).get("project","")
-        checked=subprocess.run(["node",str(Path(__file__).with_name("public-model-release.mjs")),"check-selection",str(root),project],
-                               input=json.dumps(summary),text=True,capture_output=True)
-        require(checked.returncode==0,"Active publication selection: "+checked.stderr.strip())
     if study.get("externalIssues"):
         from mechanical_methods import run
         fresh=run(root,read(pinned(root,study["issueRegister"])))
@@ -65,7 +50,6 @@ def verify_candidate(root, study_path, source, derivatives, native=None, receipt
 
 
 if __name__=="__main__":
-    import sys
     try:
         root=Path(sys.argv[1]).resolve()
         req=json.loads(sys.argv[2])

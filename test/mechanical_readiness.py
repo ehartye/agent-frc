@@ -1100,8 +1100,9 @@ class Readiness(unittest.TestCase):
         self.assertTrue(all(r["loadedBusV"][0]==10 for r in weak))
         player=folder/plan["view"]
         original=player.read_bytes()
-        player.write_bytes(original+b"stale")
-        self.assertEqual(review(folder,file)["status"],"provisional")
+        # The review page is a starting place: a project's edit to its copy does not unsettle the checked layout.
+        player.write_bytes(original+b"<!-- an invented project edit -->")
+        self.assertEqual(review(folder,file)["status"],"layout-checked")
         player.write_bytes(original)
         budget=json.loads((folder/"budgets.json").read_text())
         budget["electricalCases"]["loaded-turn-weak"]["batterySideA"]["drive"]=[20,80]

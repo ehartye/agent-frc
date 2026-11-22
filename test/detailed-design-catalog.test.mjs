@@ -34,8 +34,10 @@ const base={schema:'agent-frc/detailed-design-index@1',preliminaryIndex:'../prel
 
 test('the catalog loads when no detailed design is current and links the preliminary design',async()=>{
   const ids=await render({...base,designs:['draft-001'],designStatus:{'draft-001':'withdrawn'},current:null,beside:null,
-    reason:{'draft-001':'Invented reason.'}},{designStatus:{'layout-001':'effective'}});
+    reason:{'draft-001':'Invented reason.'},lastCommit:{'draft-001':'0123456789abcdef0123456789abcdef01234567'}},{designStatus:{'layout-001':'effective'}});
   assert.doesNotMatch(text(ids.current),/could not be loaded/);
+  assert.match(text(ids.archive),/Withdrawn: Invented reason\. Its files are in the repository history at commit 0123456789ab\./);
+  assert.doesNotMatch(text(ids.archive),/archive\//,'a withdrawn design has no on-site archive');
   assert.match(text(ids.current),/No detailed design is published/);
   const links=find(ids.current,n=>n.tag==='a');
   assert.equal(links.length,1);

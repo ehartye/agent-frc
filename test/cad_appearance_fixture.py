@@ -83,12 +83,9 @@ def fixture(root):
     )
     run(root, "export-showcase-cad.py")
     helper=Path(__file__).with_name("authorize-render-fixture.mjs")
-    trust=json.loads(subprocess.check_output(["node",str(helper),str(root)]))
-    os.environ["FRC_MODEL_PROJECT"]=trust["project"]
-    os.environ["FRC_MODEL_REVIEW_PUBLIC_KEY"]=trust["pub"]
+    subprocess.check_output(["node",str(helper),str(root)])
     run(root, "cad-readmes.py", "--update")
     run(root, "cad-readmes.py")
-    shutil.rmtree(Path(trust["pub"]).parent)
     folder = root / "docs/robot/cad"
     record = json.loads((folder / "receipt.json").read_bytes())
     groups = record["appearances"]["groups"]

@@ -10,8 +10,11 @@
  *   4. An in-progress detailed design names an effective preliminary release and its receipt is on the Fusion export.
  *   5. One status index per phase, with at most one effective design and the primary view computed from it.
  *
- * A design becomes effective by a status change in the index, in a reviewed pull request. This check prints the
- * readiness report for the reviewer; it does not judge it.
+ * A design becomes effective by a status change in the index, in a reviewed pull request, and this check prints the
+ * readiness report for its reviewer. A detailed design whose mechanical-readiness review does not pass cannot be
+ * effective. A change to the files of a design that was already effective is reported as a warning. A withdrawn
+ * design is a status with a reason; its files may leave the site. The check reads data only: it never inspects page
+ * markup.
  */
 import {createHash} from 'node:crypto';
 import {execFileSync, spawnSync} from 'node:child_process';
@@ -90,7 +93,7 @@ export function checkEvidence(where, files, record) {
   check(files.has(sceneFile), where + ' has no ' + sceneFile + '; regenerate the review with --write-view');
   let read;
   try { read = readScene(files.get(sceneFile)); } catch { throw Error(where + ': unreadable ' + sceneFile); }
-  const differ = compareWithReceipt(read, receipt, {pins: false});
+  const differ = compareWithReceipt(read, receipt);
   check(!differ.length, where + ': the review scene shows results that differ from the receipt: ' + differ.join('; '));
   const shown = new Map(list(read.scene.cases).map(c => [c.id, c.status]));
   const represented = new Set(list(receipt.narrativeReview?.objectives).filter(o => o?.disposition === 'represented').map(o => o.objective));
@@ -113,6 +116,14 @@ export function checkEvidence(where, files, record) {
       mission + ': the published trial is not one the receipt names');
   }
   return receipt;
+}
+
+/** What a reviewer needs from a mechanical-readiness review result: its verdicts and the findings that do not pass. */
+export function readinessSummary(review) {
+  const open = list(review.findings).filter(f => f?.status !== 'pass' && f?.status !== 'closed');
+  return ['Mechanical-readiness review of ' + (review.configuration ?? 'the design'), 'Build readiness: ' + review.buildReadiness,
+    'Showcase eligibility: ' + review.showcaseEligibility, 'Findings not passing: ' + open.length,
+    ...open.slice(0, 20).map(f => '  - ' + [f.domain, f.subject, f.status, f.reason].filter(named).join(': '))].join('\n') + '\n';
 }
 
 /** The primary view of the detailed designs: the effective design, else the newest in-progress one, which otherwise shows beside it. */
@@ -177,6 +188,17 @@ export function checkProject(root, options = {}) {
   const attempt = (what, body) => { try { return body(); } catch (error) { errors.push(error.message); return undefined; } };
   const changed = changedPaths(root, o.base);
   const rel = full => path.relative(root, full).split(path.sep).join('/');
+  // A design that was already effective at the base commit was accepted in review with the files it had then.
+  const warnIfChanged = (where, indexFile, id, places) => {
+    if (!changed) return;
+    let before;
+    try { before = parse(Buffer.from(changed.at(rel(indexFile))), 'index at the base commit')?.designStatus?.[id]; } catch { return; }
+    const touched = before === 'effective' ? places.map(rel).filter(p => changed.touches(p)) : [];
+    if (touched.length) warnings.push(where + ' is effective and this change edits ' + touched.join(' and ') +
+      '. It was accepted with the earlier files: have the change reviewed as a revision of the effective design, or publish it as a new design.');
+  };
+  // A withdrawn design keeps its reason in the index. Its files may be gone; Git has them at the recorded commit.
+  const withdrawnNote = (where, index, id) => { if (!named(index.reason?.[id])) warnings.push(where + ' is withdrawn without a reason in the index'); };
   // Where a design's check inputs are committed: the folder its record names under check.project, else the folder for its ID.
   const inputsOf = (where, record, fallback) => inside(root, record.check?.project ?? fallback, where + ': check.project');
 
@@ -204,7 +226,11 @@ export function checkProject(root, options = {}) {
     for (const id of ids) {
       const entry = {release: id, status: status(id)};
       preliminary.releases.push(entry);
-      if (!['in-progress', 'effective'].includes(entry.status)) { attempt(id, () => check(entry.status === 'withdrawn' || dirs.includes(id), 'Release ' + id + ' is listed but has no directory')); continue; }
+      if (!['in-progress', 'effective'].includes(entry.status)) {
+        attempt(id, () => check(entry.status === 'withdrawn' || dirs.includes(id), 'Release ' + id + ' is listed but has no directory'));
+        if (entry.status === 'withdrawn') withdrawnNote('Preliminary release ' + id, index, id);
+        continue;
+      }
       attempt(id, () => {
         const where = 'Preliminary release ' + id, dir = path.join(prelimTree, 'releases', id), record = records.get(id);
         check(record?.schema === 'agent-frc/preliminary-release@1' && record.release === id, where + ' needs its release record (release.json)');
@@ -212,8 +238,11 @@ export function checkProject(root, options = {}) {
         const inputs = inputsOf(where, record, path.join(o.inputs, id));
         pending.push({where, entry, receipt, record, inputs, siteDir: dir, index: prelimIndexFile, required: true});
         // Effective is the project's decision in a reviewed pull request. The report is for its reviewer.
-        if (entry.status === 'effective') reports.push({title: where + ' (effective)',
-          text: existsSync(inputs) ? readinessText(effectiveReadiness(inputs)) : 'No readiness report: the check inputs are not committed.\n'});
+        if (entry.status === 'effective') {
+          reports.push({title: where + ' (effective)',
+            text: existsSync(inputs) ? readinessText(effectiveReadiness(inputs)) : 'No readiness report: the check inputs are not committed.\n'});
+          warnIfChanged(where, prelimIndexFile, id, [inputs, dir]);
+        }
       });
     }
   });
@@ -234,6 +263,7 @@ export function checkProject(root, options = {}) {
     for (const id of ids) {
       const entry = {design: id, status: index.designStatus[id]};
       detailed.designs.push(entry);
+      if (entry.status === 'withdrawn') withdrawnNote('Detailed design ' + id, index, id);
       if (!['in-progress', 'effective'].includes(entry.status)) continue;
       attempt(id, () => {
         const where = 'Detailed design ' + id, dir = path.join(detailTree, 'designs', id), files = filesUnder(dir);
@@ -241,16 +271,16 @@ export function checkProject(root, options = {}) {
         const record = parse(files.get('design.json'), 'design record: ' + id);
         check(record?.schema === 'agent-frc/detailed-design@1' && record.design === id, where + ': the design record names a different schema or design');
         if (entry.status === 'effective') {
-          // Effective is the project's decision in a reviewed pull request. The readiness review is the evidence it carries.
+          // Effective is the project's decision in a reviewed pull request. The readiness review is the evidence it
+          // carries, and a review that does not pass cannot carry it.
           check(files.has('readiness.json'), where + ' is effective: commit its mechanical-readiness review result as designs/' + id + '/readiness.json');
           const review = parse(files.get('readiness.json'), 'readiness review: ' + id);
           check(review?.schema === readinessSchema && named(review.stepSha256), where + ': readiness.json is not a mechanical-readiness review result');
           check(review.stepSha256 === record.fusion?.stepSha256, where + ': the readiness review is of a different STEP than the design record names');
-          const open = list(review.findings).filter(f => f?.status !== 'pass' && f?.status !== 'closed');
-          reports.push({title: where + ' (effective)', text: 'Mechanical-readiness review of ' + (review.configuration ?? 'the design') + '\nBuild readiness: ' + review.buildReadiness +
-            '\nShowcase eligibility: ' + review.showcaseEligibility + '\nFindings not passing: ' + open.length + '\n' +
-            open.slice(0, 20).map(f => '  - ' + [f.domain, f.subject, f.status, f.reason].filter(named).join(': ')).join('\n') + (open.length ? '\n' : '')});
-          if (review.showcaseEligibility !== 'pass') warnings.push(where + ' is effective while its readiness review reports ' + review.showcaseEligibility);
+          reports.push({title: where + ' (effective)', text: readinessSummary(review)});
+          check(review.showcaseEligibility === 'pass', where + ' cannot be effective: its mechanical-readiness review reports ' + review.showcaseEligibility +
+            '. Resolve the findings and commit the passing review, or keep the design in progress.');
+          warnIfChanged(where, detailIndexFile, id, [inside(root, record.check?.project ?? path.join(o.detailedInputs, id), where + ': check.project'), dir]);
           if (!files.has('receipt.json')) return;
         }
         const receipt = checkEvidence(where, files, record);
@@ -290,7 +320,7 @@ export function checkProject(root, options = {}) {
     const key = o.cache && sha(inputsDigest(project) + '\n' + planName + '\n' + pluginVersion), cached = o.cache && path.join(o.cache, key + '.json');
     let fresh;
     if (cached && existsSync(cached)) { fresh = parse(readFileSync(cached), 'cached rerun'); entry.rerun = 'cached'; }
-    else if (changed && ![project, item.siteDir, item.index].some(p => changed.touches(rel(p)))) { entry.rerun = 'unchanged'; return; }
+    else if (changed && !changed.all && ![project, item.siteDir, item.index].some(p => changed.touches(rel(p)))) { entry.rerun = 'unchanged'; return; }
     else {
       const previous = receipt.previousCheckpointSha256 ? record.check?.previous ?? findByDigest(project, receipt.previousCheckpointSha256) : null;
       check(!receipt.previousCheckpointSha256 || previous, where + ': commit the held receipt it was checked against (SHA-256 ' + receipt.previousCheckpointSha256 + ') under ' + rel(project));
@@ -307,16 +337,20 @@ export function checkProject(root, options = {}) {
   return {plugin: pluginVersion, preliminary, detailed, warnings, reports, errors};
 }
 
-/** The paths changed since a base commit, or null to treat every design as changed. A workflow change selects every design. */
+/**
+ * The paths changed since a base commit, or null when there is no usable base. `all` is set by a workflow change,
+ * which selects every design for the rerun; `at` reads a project file as it was at the base commit.
+ */
 function changedPaths(root, base) {
   if (!base) return null;
   try {
     const diff = (...args) => execFileSync('git', ['-C', root, 'diff', '--name-only', '-z', ...args, base, 'HEAD'],
       {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 256 * 1024 * 1024}).split('\0').filter(Boolean);
     // Workflows sit at the top of the repository; the designs are named relative to the project folder.
-    if (diff().some(n => n.startsWith('.github/workflows/'))) return null;
-    const names = diff('--relative');
-    return {touches: p => names.some(n => n === p || n.startsWith(p + '/'))};
+    const all = diff().some(n => n.startsWith('.github/workflows/')), names = diff('--relative');
+    const git = (...args) => execFileSync('git', ['-C', root, ...args], {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64 * 1024 * 1024});
+    const prefix = git('rev-parse', '--show-prefix').trim();
+    return {all, touches: p => names.some(n => n === p || n.startsWith(p + '/')), at: p => git('show', base + ':' + prefix + p)};
   } catch { return null; }
 }
 

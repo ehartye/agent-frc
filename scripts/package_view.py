@@ -533,7 +533,10 @@ def _validate(content):
 
 
 def verify_view(root, plan, scenes, write, observed, budgets, review=None, deferred=None):
-    """Write or check the stock review page and its scene. The page is the plugin template byte for byte; the scene is pinned.
+    """Write or check the review scene, and create the stock review page when the project has none.
+
+    The page is a starting place: a project may change its copy, and it is never compared or replaced. `verified` says
+    that the scene on disk is the one this check produced.
 
     With a `deferred` list, nothing is written here: each write is appended as a callable and the result describes
     the files as they will be once the caller runs them, after its last check that can still stop the run."""
@@ -551,11 +554,9 @@ def verify_view(root, plan, scenes, write, observed, budgets, review=None, defer
     scene_file = path.with_name(SCENE_FILE)
     # Each file is written whole through a temporary file and a rename, so a reader never finds a partial one.
     actions = []
-    page_ok = path.is_file() and path.read_bytes() == page
     if write and not os.path.lexists(path):
         # The page is only ever created: a project may keep its own copy, which is never replaced.
         actions.append(lambda: write_atomic(path, page, exclusive=True))
-        page_ok = True
     compressed = gzip.compress(content, compresslevel=9, mtime=0)
     try:
         stored = scene_file.read_bytes()
@@ -579,6 +580,6 @@ def verify_view(root, plan, scenes, write, observed, budgets, review=None, defer
         deferred.extend(actions)
     served = stored if stored is not None else compressed
     return dict(file=name, sha256=hashlib.sha256(page).hexdigest(),
-                verified=page_ok and scene_ok,
+                verified=scene_ok and (write or path.is_file()),
                 scene=dict(file=scene_file.relative_to(root).as_posix(), sha256=hashlib.sha256(served).hexdigest(),
                            contentSha256=hashlib.sha256(content).hexdigest(), bytes=len(content)))

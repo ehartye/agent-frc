@@ -27,7 +27,7 @@ Enter **detailed design** when the shared issue includes the labeled layout, vie
 
 Use the current editable Fusion assembly. Use manufacturer CAD for purchased components in the selected revision and configuration wherever available. Identify any dimensional substitute, its source and uncertainty. Model fabricated parts with their actual material, joints, fasteners, tolerances and fabrication features. Resolve critical interfaces that a substitute cannot establish.
 
-A detailed design can publish as `in-progress` once it links the effective preliminary design, the STEP exported from the registered Fusion design passes the layout check on that design's motion cases, and a mission animation plays on the detailed geometry. It becomes `effective` only through the signed mechanical-readiness review. [Design statuses and the two publication gates](private-model-release.md#publish-detailed-designs-by-status)
+A detailed design can publish as `in-progress` once it links the effective preliminary design, the STEP exported from the registered Fusion design passes the layout check on that design's motion cases, and a mission animation plays on the detailed geometry. It becomes `effective` in a reviewed pull request that carries a passing mechanical-readiness review. [Publish a detailed design](design-publication.md#publish-a-detailed-design)
 
 Animate the installed Fusion mechanisms using their actual joints and limits. Recheck the complete loaded cycle and service motions against the saved, reopened assembly. Update the mass and electrical budgets from the selected components and actual load cases.
 
@@ -39,16 +39,16 @@ If detailed design violates a reserved volume, path, mass allowance or loaded-vo
 
 ## Design status
 
-Every design phase uses the same four statuses for a published design. They apply to [preliminary design releases](private-model-release.md#publish-preliminary-design-releases) and to [detailed designs](private-model-release.md#publish-detailed-designs-by-status).
+Every design phase uses the same four statuses for a published design. They apply to [preliminary design releases](design-publication.md#publish-a-preliminary-design-release) and to [detailed designs](design-publication.md#publish-a-detailed-design).
 
 | Status | Meaning |
 | --- | --- |
 | `in-progress` | Passes the phase's automated checks and may be shown, labelled as in progress. |
 | `effective` | The project has accepted it as the current design for that phase. At most one design per phase is effective; marking a new one effective marks the previous one `superseded` automatically. For preliminary design, an effective release is the handoff detailed design builds on. |
 | `superseded` | Replaced by a newer effective design. It stays viewable as history. |
-| `withdrawn` | Pulled with no replacement. It stays in the archive listing labelled withdrawn and is never shown as current. |
+| `withdrawn` | Pulled with no replacement. The index keeps its reason and the last commit that held its files. The files leave the site and stay in Git. It is never shown as current. |
 
-A new release enters `in-progress`. Allowed changes are in-progress to effective, effective to superseded (automatic) and any status to withdrawn. Nothing returns from superseded or withdrawn to effective without a new release. The status lives in the release index, never in an issued release, so changing it never rewrites published evidence. Marking a release effective is a deliberate index change made in a reviewed pull request.
+A new release enters `in-progress`. The usual changes are in-progress to effective, effective to superseded (automatic) and any status to withdrawn. The status lives in the release index, never in a design's own record, so changing it never rewrites published evidence. Every status change is an index edit in a reviewed pull request, and Git history records it. [One check covers every published design](design-publication.md)
 
 ### Exit criteria for an effective preliminary design
 
@@ -58,4 +58,4 @@ A preliminary design is ready to be marked effective when all three hold:
 2. **Trial-driven interactions.** Every mission-critical interaction passes a physics trial with a control, sensitivity brackets (a passing and a failing value) and a timestep check. The mission animation is driven by that pinned trial, not by a prescribed path.
 3. **Risks resolved.** Every open risk is closed by a design change or recorded as a bench test with pass and fail numbers.
 
-Physical bench results are not required. They are listed as verification items for the build. The [effective-readiness report](preliminary-design.md#judge-readiness-to-be-marked-effective) lists each criterion as met or not met with the reason. It is informational: it adds no gate rule, and the decision stays with the reviewed pull request.
+Physical bench results are not required. They are listed as verification items for the build. The [effective-readiness report](preliminary-design.md#judge-readiness-to-be-marked-effective) lists each criterion as met or not met with the reason. It is informational: the publication check prints it and does not fail on it, and the decision stays with the reviewed pull request.
