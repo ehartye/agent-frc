@@ -127,8 +127,8 @@ Result: 1 of 3 criteria met.
 
 Declare what the report reads:
 
-- **Cycle map.** In `missions.json`, map each narrative stage to its checked cases: `"cycle": {"acquire": {"cases": ["acquire"]}, "retain": {"cases": ["loaded-turn"]}, ...}` for `acquire`, `retain`, `transfer`, `deliver`, `reset`, `endgame`, `park` and `service`. Each case must pass in a `layout-checked` receipt of this exact plan. When the game has no such stage, state it: `{"notApplicable": "reason"}`. The report shows the reason.
-- **Trials.** A mission case is trial-driven when its stage pins a trial through `transportedBy` or `freePath`, when the mission case carries a `trial` pin, or when a linked field interaction's pinned trial records that case. A case that only follows its carrier is a prescribed path. Each pinned trial record carries its qualification:
+- **Cycle map.** In `missions.json`, map each narrative stage to its checked cases: `"cycle": {"acquire": {"cases": ["acquire"]}, "retain": {"cases": ["loaded-turn"]}, ...}` for `acquire`, `retain`, `transfer`, `deliver`, `reset`, `endgame`, `park` and `service`. Each case must pass in a whole `layout-checked` receipt of this exact plan, with no missing inputs, a passing inspection weight and passing loaded-voltage cases, so commission the budgets. The `service` stage needs a case checked as `service`, `park` a case checked as `park`, and every other stage an `operating` case. When the game has no such stage, state it alone: `{"notApplicable": "reason"}`. The report shows the reason.
+- **Trials.** A mission case is trial-driven when its stage pins a trial through `transportedBy` or `freePath`, when the mission case carries a `trial` pin, or when a linked field interaction's pinned trial records that case. A case that only follows its carrier is a prescribed path. Stage pins count only from a `layout-checked` receipt of this plan, and each trial record must name the mission case it ran (`case`, or the `case` inside its `transport` or `freePath` record). Each pinned trial record carries its qualification:
 
   ```json
   "qualification": {
@@ -142,7 +142,7 @@ Declare what the report reads:
   The control is an adverse or disabled condition that the trial rejects. Each bracket names an input, its unit, a value that passes and a value that fails. The timestep check repeats the trial at a finer step with the same outcome.
 - **Risk register.** In `missions.json`, list every open risk under `risks`, each with an `id` and the `risk`. Give `closedBy` for a design change that closes it, or `benchTest` with a `measure`, a `pass` value, a `fail` value and optionally a `unit`. An empty list states that no risk remains. Every `presentation.uncoveredCases` ID needs an entry, and a narrative objective still marked `open` keeps the criterion unmet.
 
-The report trusts the declarations it reads and checks that each pinned trial file has its pinned SHA-256. It does not rerun a trial. `python cad/preliminary-design/stage.py --set-status RELEASE effective --readiness PLUGIN/scripts/effective-readiness.mjs` prints the report for the release's inputs after the status change, so the pull request reviewer sees it. Staging ignores the `cycle` and `risks` keys.
+The report trusts the declarations it reads and checks that each pinned trial file has its pinned SHA-256. It does not rerun a trial. `python cad/preliminary-design/stage.py --set-status RELEASE effective --readiness PLUGIN/scripts/effective-readiness.mjs` prints the report for the release's inputs after the status change, so the pull request reviewer sees it; without `--readiness` it prints the command to run. Attach the report to the pull request that marks the release effective. Staging ignores the `cycle` and `risks` keys.
 
 ## Carry plugin updates into a season project
 

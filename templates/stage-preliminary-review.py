@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 import zlib
@@ -618,11 +619,15 @@ def readiness_report(inputs, reporter=None):
               "PLUGIN/scripts/effective-readiness.mjs to print the report here.")
         return
     try:
-        run = subprocess.run(["node", str(reporter), str(inputs)], capture_output=True, text=True)
-        print(run.stdout.rstrip() if run.returncode == 0 and run.stdout.strip()
-              else "Effective-readiness report unavailable for " + inputs.as_posix() + "; run `" + command + "`.")
-    except OSError:
-        print("Effective-readiness report unavailable; run `" + command + "`.")
+        run = subprocess.run(["node", str(reporter), str(inputs)], capture_output=True)
+        report = run.stdout.decode("utf-8", errors="replace").rstrip()
+        if run.returncode != 0 or not report:
+            raise ValueError("no report")
+        # The console may not hold every character of the report; the status change is already made.
+        encoding = sys.stdout.encoding or "utf-8"
+        print(report.encode(encoding, errors="replace").decode(encoding))
+    except Exception:
+        print("Effective-readiness report unavailable for " + inputs.as_posix() + "; run `" + command + "`.")
 
 
 def set_status(site, release, status, verifier=None, policy=None):

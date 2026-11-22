@@ -26,6 +26,7 @@ function project(t,edit=x=>x){
       narrativeReview:{objectives:[{objective:'Invented cycle',disposition:'represented',basis:'Invented'}]},
       presentation:{uncoveredCases:[{id:'gate-closes-mid-turn',condition:'Invented',reason:'Invented'}]}},
     receipt:{schema:'agent-frc/preliminary-layout-result@1',issue:'synthetic-issue',status:'layout-checked',missingInputs:[],
+      budgets:{massStatus:'pass',electricalCases:[{case:'invented weak traverse',status:'pass'}]},
       cases:stageIds.map(id=>({case:id,status:'pass'})),cycle:stageIds.slice(0,7),
       stages:Object.fromEntries(stageIds.map(id=>[id,{purpose:id==='remove-carrier'?'service':id==='park'?'park':'operating'}]))},
     missions:{missionCases:[{case:'acquire',kind:'operating-case',accomplishes:'acquired',objective:'Invented cycle'},
@@ -72,6 +73,16 @@ test('the whole cycle needs a passing case for every narrative stage in a layout
     [d=>{d.receipt.partial=true;},/The layout check is partial/],
     [d=>{d.receipt.planSha256='0'.repeat(64);},/belongs to another layout plan/],
     [d=>{d.receipt=null;},/Receipt: missing file receipt\.json/],
+    [d=>{d.receipt.missingInputs=['Invented cable loop radius'];},/lists missing inputs: Invented cable loop radius/],
+    [d=>{d.receipt.budgets=null;},/inspection weight is not checked/],
+    [d=>{d.receipt.budgets.massStatus='fail';},/inspection weight is not checked/],
+    [d=>{d.receipt.budgets.electricalCases=[];},/loaded voltage is not checked/],
+    [d=>{d.receipt.budgets.electricalCases[0].status='fail';},/loaded voltage is not checked/],
+    [d=>{d.missions.cycle.endgame={notApplicable:'Invented',cases:['hang']};},/marked not applicable and also lists cases/],
+    [d=>{d.missions.cycle.service={cases:['park']};},/Narrative stage service: case park is checked as park, not as a service case/],
+    [d=>{d.missions.cycle.acquire={cases:['remove-carrier']};},/case remove-carrier is checked as service, not as an operating case/],
+    [d=>{d.receipt.cases.push({case:'hold',status:'fail'});},/Narrative stage retain: case hold is fail/],
+    [d=>{d.receipt.cases.unshift(null);d.missions.cycle.retain={cases:[null]};},/names null, which is not a checked case/],
   ];
   for(const [edit,reason] of cases){
     const c=judged(t,'whole-cycle',edit);
@@ -100,6 +111,15 @@ test('each mission case needs a pinned trial with a pass, a control, brackets an
     [d=>{d.pins={release:{file:'gone.json',sha256:'0'.repeat(64)}};},/missing file gone\.json/],
     [d=>{d.pins={release:{file:'../outside.json',sha256:'0'.repeat(64)}};},/not a project-relative file/],
     [d=>{d.missions.missionCases=[];},/No mission case/],
+    [d=>{d.missions.missionCases[1]={kind:'operating-case'};},/A mission case names no case/],
+    [d=>q(d,{brackets:[{input:'speed',unit:'rev/s',passing:'20',failing:20}]}),/lacks sensitivity brackets/],
+    // A trial pinned for one case does not qualify another, through a stage pin or a mission trial pin.
+    [d=>{d.files['release-trial.json'].freePath.case='acquire';},/Mission case deliver \(delivered\): trial release-trial\.json records another case/],
+    [d=>{const text=JSON.stringify(d.files['intake-trial.json']);delete d.files['release-trial.json'];
+      d.missions.missionCases[1].trial={file:'intake-trial.json',sha256:sha(text)};},/trial intake-trial\.json records another case/],
+    // Stage pins are read only from a layout-checked receipt of this plan.
+    [d=>{d.receipt.status='provisional';},/Mission case deliver \(delivered\): the motion is prescribed.*layout-checked receipt/],
+    [d=>{d.receipt.planSha256='0'.repeat(64);},/Mission case acquire \(acquired\): the motion is prescribed/],
   ];
   for(const [edit,reason] of cases){
     const c=judged(t,'trial-driven',edit);
@@ -137,6 +157,23 @@ test('every open risk needs a closing design change or a bench test with pass an
   assert.equal(none.met,true,'an empty register is a deliberate statement that no risk remains');
 });
 
+test('malformed inputs are findings: nothing is judged met and nothing throws',t=>{
+  for(const text of ['[]','null','5','"plan"','{not json']){
+    const root=project(t);writeFileSync(path.join(root,'layout.json'),text);
+    const report=effectiveReadiness(root);
+    assert.equal(report.met,0,text);
+    assert.ok(report.criteria.every(c=>c.reasons.some(r=>/^Layout plan: layout\.json is not/.test(r))),text);
+  }
+  const odd=effectiveReadiness(project(t,d=>{d.plan.presentation={fieldInteractions:5,uncoveredCases:'x'};d.plan.narrativeReview={objectives:{}};
+    d.receipt.stages.acquire.transportedBy=7;d.missions.risks=[null,3,{id:'r',risk:'Invented',benchTest:{id:'other',measure:'pull',pass:1}}];}));
+  assert.equal(criterion(odd,'risks-resolved').met,false);
+  assert.deepEqual(odd.verificationItems,[],'an incomplete bench test is not a verification item');
+  const missions=effectiveReadiness(project(t,d=>{d.missions=null;}));
+  assert.ok(missions.criteria.every(c=>!c.met&&c.reasons.includes('Missions: missing file missions.json')));
+  const bom=project(t);writeFileSync(path.join(bom,'missions.json'),'\uFEFF'+readFileSync(path.join(bom,'missions.json'),'utf8'));
+  assert.equal(effectiveReadiness(bom).met,3,'a byte-order mark is not a JSON error');
+});
+
 test('the command is informational: it prints the report, exits 0 and writes nothing',t=>{
   const root=project(t,d=>{delete d.missions.cycle.endgame;delete d.missions.risks;});
   const before=readFileSync(path.join(root,'receipt.json'));
@@ -163,7 +200,7 @@ test('the command is informational: it prints the report, exits 0 and writes not
 test('stage.py prints the report when a release is marked effective',t=>{
   const python=process.env.PYTHON||(process.platform==='win32'?'python':'python3');
   const season=mkdtempSync(path.join(tmpdir(),'readiness-season-'));t.after(()=>rmSync(season,{recursive:true,force:true}));
-  const author=path.join(season,'cad','preliminary-design'),inputs=project(t);
+  const author=path.join(season,'cad','preliminary-design'),inputs=project(t,d=>{d.missions.risks[0].closedBy='Invented “interlock” — holds the turn';});
   mkdirSync(path.join(author,'releases'),{recursive:true});
   writeFileSync(path.join(author,'stage.py'),readFileSync(path.join(plugin,'templates','stage-preliminary-review.py')));
   const script=String.raw`
@@ -184,4 +221,8 @@ stage.readiness_report(Path(sys.argv[2]), Path(sys.argv[3]) if len(sys.argv) > 3
   assert.doesNotMatch(hint.stdout,/Result:/);
   const absent=run(path.join(inputs,'absent'),path.join(plugin,'scripts','effective-readiness.mjs'));
   assert.equal(absent.status,0,'a missing inputs folder never stops a status change');
+  assert.match(absent.stdout,/report unavailable/);
+  const broken=run(inputs,path.join(inputs,'no-such-reporter.mjs'));
+  assert.equal(broken.status,0,'a reporter that cannot run never stops a status change');
+  assert.match(broken.stdout,/report unavailable/);
 });
