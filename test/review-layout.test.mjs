@@ -167,3 +167,18 @@ test('the stable index links the season site only when one is published above it
   rmSync(path.join(dir, 'index.html'));
   assert.deepEqual(await probePage(dir, 'preliminary-design/index.html', season), {settled: true, shown: false, viewportWidth: 1280}, 'no parent page: no link');
 });
+
+test('the stable index explains a withdrawn release instead of loading its removed files', {skip}, async t => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'review-index-withdrawn-'));
+  t.after(() => rmSync(dir, {recursive: true, force: true}));
+  writeFileSync(path.join(dir, 'index.html'), readFileSync(new URL('../templates/preliminary-review-index.html', import.meta.url), 'utf8'));
+  // Synthetic index: the withdrawn release has no folder on the site.
+  writeFileSync(path.join(dir, 'releases.json'), JSON.stringify({current: 'layout-001', releases: ['layout-001'], designStatus: {'layout-001': 'withdrawn'},
+    reason: {'layout-001': 'Invented reason: the lane moved.'}, lastCommit: {'layout-001': '0123456789abcdef0123456789abcdef01234567'}}));
+  const shown = `const m=document.querySelector('#message');for(let i=0;i<60&&/Loading/.test(m.textContent);i++)await new Promise(r=>setTimeout(r,50));
+   return {message:m.textContent,frameHidden:document.querySelector('iframe').hidden,status:document.querySelector('#designStatus').textContent,
+     option:document.querySelector('select').selectedOptions[0].textContent}`;
+  assert.deepEqual(await probePage(dir, 'index.html', shown), {
+    message: 'Release layout-001 was withdrawn: Invented reason: the lane moved. Its files are in the repository history at commit 0123456789ab.',
+    frameHidden: true, status: ' · withdrawn (withdrawn: not a current design)', option: 'layout-001 · withdrawn · current', viewportWidth: 1280});
+});

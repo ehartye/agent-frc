@@ -183,7 +183,7 @@ if __name__=="__main__":
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("new_directory",type=Path)
     parser.add_argument("--project-review", action="store_true", help="Include a season-local review bundle and launcher")
-    parser.add_argument("--release", default="layout-001", help="Immutable release ID within the season project")
+    parser.add_argument("--release", default="layout-001", help="Release ID within the season project")
     args = parser.parse_args()
     if args.project_review:
         season = args.new_directory.resolve()
@@ -200,8 +200,10 @@ if __name__=="__main__":
                              ("preliminary-review-gitignore", author / ".gitignore"),
                              ("stage-preliminary-review.py", author / "stage.py"),
                              ("preliminary-review-index.html", site / "index.html"),
-                             ("preliminary-review-pages.yml", author / "pages-workflow.yml")]:
+                             # The one workflow a project runs: scan, publication check, registered checks and deploy.
+                             ("design-publication.yml", season / ".github/workflows/design-publication.yml")]:
             if not dest.exists():
+                dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(templates / source, dest)
         create(author / "releases" / args.release, release_id=args.release)
         subprocess.run([sys.executable, str(author / "stage.py"), args.release], check=True)

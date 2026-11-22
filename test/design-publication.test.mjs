@@ -81,6 +81,10 @@ test('a live release needs committed inputs; history is neither rerun nor requir
   assert.deepEqual(result.preliminary.releases.map(r => r.rerun), [undefined, undefined, 'pass', 'pass']);
   assert.equal(result.reports.length, 1, 'the effective release prints its readiness report');
   assert.match(result.reports[0].title, /layout-003 \(effective\)/);
+  // A withdrawal is a status with a reason. The index also keeps the last commit that held the files.
+  assert.deepEqual(result.warnings, ['Preliminary release layout-001 is withdrawn without a reason in the index']);
+  editJson(path.join(p.root, prelim, 'releases.json'), i => ({...i, reason: {'layout-001': 'Invented reason: the carrier changed.'}, lastCommit: {'layout-001': 'a'.repeat(40)}}));
+  assert.deepEqual(p.check().warnings, []);
   rmSync(path.join(p.root, 'cad/preliminary-design/releases/layout-004'), {recursive: true});
   result = p.check();
   assert.match(errorsOf(result), /layout-004: commit its check inputs at cad\/preliminary-design\/releases\/layout-004/);
@@ -95,7 +99,7 @@ test('the index holds at most one effective release, a computed current release 
   assert.match(errorsOf(p.check()), /set current to layout-001/);
   editJson(path.join(p.root, prelim, 'releases.json'), i => ({...i, current: 'layout-001', designStatus: {'layout-001': 'effective', 'layout-002': 'paused'}}));
   assert.match(errorsOf(p.check()), /designStatus maps listed release IDs to in-progress, effective, superseded, withdrawn/);
-  editJson(path.join(p.root, prelim, 'releases.json'), i => ({current: 'layout-001', releases: ['layout-001'], effectiveHistory: ['layout-001']}));
+  editJson(path.join(p.root, prelim, 'releases.json'), i => ({current: 'layout-001', releases: ['layout-001']}));
   assert.match(errorsOf(p.check()), /Release directory layout-002 is not in the preliminary release index/);
   // Listing a release as legacy, or calling its record a historical review, exempts nothing while its status is live.
   editJson(path.join(p.root, prelim, 'releases.json'), i => ({current: 'layout-002', releases: ['layout-001', 'layout-002'], legacy: ['layout-001'],
@@ -159,6 +163,38 @@ test('with a base commit only a changed design is rerun, and a workflow change r
   write(p.root, '.github/workflows/design-publication.yml', 'name: changed');
   git('add', '-A'); git('commit', '-q', '-m', 'workflow');
   assert.deepEqual(p.check({base}).preliminary.releases.map(r => r.rerun), ['pass', 'pass']);
+});
+
+test('a change to the files of a release that was already effective is a warning, not a failure', t => {
+  const p = project(t, {'layout-001': {}, 'layout-002': {}}, {'layout-001': 'effective', 'layout-002': 'in-progress'});
+  editJson(path.join(p.root, prelim, 'releases.json'), i => ({...i, current: 'layout-001'}));
+  const git = (...args) => execFileSync('git', ['-C', p.root, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', ...args], {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']}).trim();
+  const commit = message => { git('add', '-A'); git('commit', '-q', '-m', message); return git('rev-parse', 'HEAD'); };
+  git('init', '-q');
+  const base = commit('base');
+  write(p.root, 'cad/preliminary-design/releases/layout-002/notes.md', 'an in-progress design may change');
+  commit('in-progress input');
+  assert.deepEqual(p.check({base}).warnings, []);
+  write(p.root, 'cad/preliminary-design/releases/layout-001/notes.md', 'changed input');
+  commit('effective input');
+  let result = p.check({base});
+  assert.deepEqual(result.errors, []);
+  assert.deepEqual(result.warnings.length, 1);
+  assert.match(result.warnings[0], /Preliminary release layout-001 is effective and this change edits cad\/preliminary-design\/releases\/layout-001\. It was accepted with the earlier files/);
+  // The warning survives a workflow change in the same branch, and names the published folder too.
+  write(p.root, '.github/workflows/design-publication.yml', 'name: changed');
+  write(p.root, prelim + '/releases/layout-001/index.html', '<html>Edited page</html>');
+  commit('workflow and page');
+  assert.match(p.check({base}).warnings.join('\n'), /edits cad\/preliminary-design\/releases\/layout-001 and docs\/preliminary-design\/releases\/layout-001\./);
+  // The change that makes a release effective is the review of its files: no warning.
+  const before = git('rev-parse', 'HEAD');
+  editJson(path.join(p.root, prelim, 'releases.json'), i => ({...i, current: 'layout-002', designStatus: {'layout-001': 'superseded', 'layout-002': 'effective'}}));
+  write(p.root, 'cad/preliminary-design/releases/layout-002/notes.md', 'final input');
+  commit('promote');
+  result = p.check({base: before});
+  assert.deepEqual([result.errors, result.warnings], [[], []]);
+  // Without a base, as on the default branch, there is nothing to compare.
+  assert.deepEqual(p.check().warnings, []);
 });
 
 test('a project in a subfolder of its repository is compared by its own paths', t => {
@@ -229,12 +265,15 @@ test('an effective detailed design is a status change that carries its readiness
   assert.deepEqual(result.errors, []);
   assert.deepEqual(result.warnings, []);
   assert.match(result.reports.find(r => /detail-001/.test(r.title)).text, /Showcase eligibility: pass\nFindings not passing: 0/);
-  // The verdict is printed for the reviewer, not judged here.
+  // A review that does not pass blocks the status. Its findings are printed for the reviewer.
   write(p.root, detail + '/designs/detail-001/readiness.json', review('open')(read(p.receiptFile('layout-001'))));
   result = p.check();
-  assert.deepEqual(result.errors, []);
-  assert.match(result.warnings.join('\n'), /detail-001 is effective while its readiness review reports open/);
+  assert.match(errorsOf(result), /detail-001 cannot be effective: its mechanical-readiness review reports open/);
   assert.match(result.reports.find(r => /detail-001/.test(r.title)).text, /service: invented cover: open: removal path not shown/);
+  // The same review beside an in-progress design blocks nothing.
+  editJson(path.join(p.root, detail, 'designs.json'), i => ({...i, designStatus: {'detail-001': 'in-progress'}}));
+  assert.deepEqual(p.check().errors, []);
+  editJson(path.join(p.root, detail, 'designs.json'), i => ({...i, designStatus: {'detail-001': 'effective'}}));
   editJson(path.join(p.root, detail, 'designs/detail-001/readiness.json'), r => ({...r, stepSha256: sha('another step')}));
   assert.match(errorsOf(p.check()), /readiness review is of a different STEP/);
 });
@@ -245,6 +284,9 @@ test('the detailed primary view is computed: the effective design, with the newe
   design(p.root, 'detail-002', 'in-progress');
   rmSync(path.join(p.root, detail, 'designs/detail-001'), {recursive: true});
   assert.deepEqual(p.check().errors, []);
+  assert.deepEqual(p.check().warnings, ['Detailed design detail-001 is withdrawn without a reason in the index']);
+  editJson(path.join(p.root, detail, 'designs.json'), i => ({...i, reason: {'detail-001': 'Invented reason.'}}));
+  assert.deepEqual(p.check().warnings, []);
   editJson(path.join(p.root, detail, 'designs.json'), i => ({...i, current: 'detail-001'}));
   assert.match(errorsOf(p.check()), /set current to detail-002 and beside to null/);
   editJson(path.join(p.root, detail, 'designs.json'), i => ({...i, current: 'detail-002', designStatus: {'detail-001': 'effective', 'detail-002': 'effective'}}));

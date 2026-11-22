@@ -1,7 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { gzipSync } from 'node:zlib';
-import { createHash } from 'node:crypto';
 import { checkSchema, validateScene, readScene, compareWithReceipt, compareWithLedger } from '../scripts/review-scene.mjs';
 import { reviewScene } from './fixtures/review-scene.mjs';
 
@@ -68,7 +67,7 @@ test('missing project-authored fields validate with a warning naming where to su
   assert.ok(!validateScene(optional).warnings.some(w => /cutaway|time|measure/.test(w)), 'absent optional features are not warnings');
 });
 
-test('the receipt must pin the served scene bytes and repeat its results', () => {
+test('the scene must repeat the receipt results, however it was compressed', () => {
   const scene = reviewScene();
   const content = Buffer.from(JSON.stringify(scene));
   const served = gzipSync(content);
@@ -76,23 +75,20 @@ test('the receipt must pin the served scene bytes and repeat its results', () =>
     cases: [{case: 'raise', status: 'pass'}], control: {witness: {pair: ['arm', 'battery'], status: 'fail'}},
     budgets: {inspectionKg: scene.mass.inspectionKg, remainingKg: scene.mass.remainingKg, runningKg: scene.mass.runningKg,
       electricalCases: scene.power.map(({case: c, status, batteryCondition, requiredMinV, marginV, loadedBusV, batterySideA}) => ({case: c, status, batteryCondition, requiredMinV, marginV, loadedBusV, batterySideA}))},
-    parked: scene.parked,
-    view: {scene: {file: 'review-scene.json.gz', sha256: sha(served), contentSha256: sha(content), bytes: content.length}}};
+    parked: scene.parked};
   const read = readScene(served);
   assert.deepEqual(compareWithReceipt(read, receipt), []);
+  assert.deepEqual(compareWithReceipt(readScene(gzipSync(content, {level: 1})), receipt), [], 'the comparison is of content, not of compressed bytes');
   assert.deepEqual(compareWithReceipt(read, {...receipt, cases: [{case: 'raise', status: 'fail'}]}), ['Scene case results differ from the receipt']);
   assert.deepEqual(compareWithReceipt(read, {...receipt, parked: {...scene.parked, screenedPairs: 7}}), ['Scene parked-assembly result differs from the receipt']);
   assert.deepEqual(compareWithReceipt(read, {...receipt, budgets: {...receipt.budgets, electricalCases: [{...receipt.budgets.electricalCases[0], marginV: 0.2}]}}),
     ['Scene duties differ from the receipt'], 'the figures the page draws are the receipt figures');
-  const claim = {...scene, decision: {status: 'layout-checked', firstUnmet: null}}, claimContent = Buffer.from(JSON.stringify(claim)), claimServed = gzipSync(claimContent);
-  assert.ok(compareWithReceipt(readScene(claimServed), {...receipt, view: {scene: {sha256: sha(claimServed), contentSha256: sha(claimContent), bytes: claimContent.length}}})
-    .includes('Scene decision may not claim a checked result'));
-  assert.deepEqual(compareWithReceipt(readScene(gzipSync(Buffer.from(JSON.stringify({...scene, issue: 'other'})))), receipt).slice(0, 2),
-    ['The receipt does not pin these scene bytes', 'Scene issue differs from the receipt']);
+  const claim = {...scene, decision: {status: 'layout-checked', firstUnmet: null}};
+  assert.ok(compareWithReceipt(readScene(gzipSync(Buffer.from(JSON.stringify(claim)))), receipt).includes('Scene decision may not claim a checked result'));
+  assert.deepEqual(compareWithReceipt(readScene(gzipSync(Buffer.from(JSON.stringify({...scene, issue: 'other'})))), receipt), ['Scene issue differs from the receipt']);
   assert.throws(() => readScene(gzipSync(Buffer.alloc(2048, 32)), 1024), /Cannot create a Buffer larger|maxOutputLength|larger than/i, 'decompression is bounded');
 });
 
-function sha(bytes) { return createHash('sha256').update(bytes).digest('hex'); }
 
 test('links, extra fields and a misnamed or second displaced control are refused', () => {
   for (const href of ['javascript:alert(1)', 'data:text/html,x', '//host/x', '/root', 'http://plain', ' ../x', '..\\x']) {

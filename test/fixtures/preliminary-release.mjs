@@ -1,17 +1,14 @@
 import {createHash} from 'node:crypto';
-import {cpSync,mkdirSync,mkdtempSync,readFileSync,rmSync,writeFileSync} from 'node:fs';
-import os from 'node:os';
+import {mkdirSync,readFileSync,writeFileSync} from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {gzipSync} from 'node:zlib';
-import {fieldPlayerPolicy} from '../../scripts/preliminary-release.mjs';
 import {reviewScene} from './review-scene.mjs';
 
 // Synthetic teaching fixtures: invented groups, cases and objectives with no relation to any game.
 export const plugin=fileURLToPath(new URL('../..',import.meta.url));
 export const sha=value=>createHash('sha256').update(value).digest('hex');
 export const stockPage=readFileSync(path.join(plugin,'templates','preliminary-review','review.html'),'utf8');
-export const stableViewer=readFileSync(path.join(plugin,'templates','preliminary-review-index.html'));
 export function write(root,file,data) {
   const target=path.join(root,file);
   mkdirSync(path.dirname(target),{recursive:true});
@@ -24,7 +21,7 @@ export const objectives=[
   {objective:'Return to the start box',disposition:'out-of-scope',basis:'Handled by the drive team'}];
 
 export const fieldPage='<!doctype html><html lang="en"><head>'+
-  '<meta http-equiv="Content-Security-Policy" content="'+fieldPlayerPolicy+'"><meta charset="utf-8">'+
+  '<meta charset="utf-8">'+
   '<title>Invented lane trial</title><style>body{margin:0}</style></head><body><p>Preliminary design release</p><canvas></canvas>'+
   '<script>const frames=[0,0.1,0.2];requestAnimationFrame(()=>frames.length);</script></body></html>';
 export const laneTrial=JSON.stringify({case:'loaded-turn',outcome:'The invented sample leaves the carrier toward the lane'});
@@ -75,20 +72,4 @@ export function issueRelease(site,id,{status='layout-checked',edit=r=>r,missions
   write(dir,'release.json',record);
   return {dir,record};
 }
-export function listing(site,current,releases,designStatus,effectiveHistory){write(site,tree+'/releases.json',{current,releases,...(designStatus?{designStatus}:{}),...(effectiveHistory?{effectiveHistory}:{})});}
-
-export function fixture(t) {
-  const temp=mkdtempSync(path.join(os.tmpdir(),'prelim-gate-'));
-  t.after(()=>rmSync(temp,{recursive:true,force:true}));
-  const approved=path.join(temp,'approved'),site=path.join(temp,'site');
-  write(approved,'index.html','<a href="preliminary-design/">Preliminary design (work in progress)</a> detailed robot');
-  write(approved,'models/robot.glb','approved detailed model');
-  write(approved,'media/robot-still.png','approved still');
-  write(approved,tree+'/index.html',stableViewer);
-  issueRelease(approved,'layout-001');listing(approved,'layout-001',['layout-001']);
-  cpSync(approved,site,{recursive:true});
-  const policy={schema:'agent-frc/staged-model-policy@1',project:'Teaching project',modelFiles:['models/robot.glb'],mutableFieldPages:[],
-    preliminaryReleases:{root:tree,primaryEntryPoints:['index.html','media/robot-still.png']}};
-  return {temp,approved,site,policy};
-}
-export function next(site,id,options) {const r=issueRelease(site,id,options);listing(site,id,['layout-001',id]);return r;}
+export function listing(site,current,releases,designStatus){write(site,tree+'/releases.json',{current,releases,...(designStatus?{designStatus}:{})});}
