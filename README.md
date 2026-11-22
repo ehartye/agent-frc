@@ -17,10 +17,10 @@ Agent FRC helps students turn a new game manual into robot design decisions. Ope
 
 ```sh
 claude plugin marketplace add ehartye/agent-frc
-claude plugin install agent-frc@agent-frc-local
+claude plugin install agent-frc@agent-frc-marketplace
 
 codex plugin marketplace add ehartye/agent-frc
-codex plugin add agent-frc@agent-frc-local
+codex plugin add agent-frc@agent-frc-marketplace
 ```
 
 In a Claude Code session, `/plugin install agent-frc --marketplace ehartye/agent-frc` does the same. The [install guide](docs/local-plugin.md) covers updates, running plugin commands from an installed copy and loading a development checkout with `claude --plugin-dir`.

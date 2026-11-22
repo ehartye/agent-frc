@@ -7,7 +7,7 @@ Run the [runtime resolver](../scripts/resolve-plugin-runtime.mjs) from a stable 
 For an active marketplace installation, request a fresh host inventory immediately before launching the project check. The resolver checks the installed cache manifest for the selected identity, marketplace and version. It prints the root and version as JSON.
 
 ```sh
-codex plugin list --marketplace agent-frc-local --json | node scripts/resolve-plugin-runtime.mjs active agent-frc-local
+codex plugin list --marketplace agent-frc-marketplace --json | node scripts/resolve-plugin-runtime.mjs active agent-frc-marketplace
 ```
 
 In a Codex session, the plugin root is two directories above the `SKILL.md` file that Codex opened. Run the resolver from that root when no separate checkout exists.

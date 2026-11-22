@@ -73,7 +73,7 @@ test('a version or field that differs from plugin.json is reported in the file t
     `${INSTALL_FILES.claudeManifest}: manifest-drift`,
     `${INSTALL_FILES.codexManifest}: manifest-drift`,
     `${INSTALL_FILES.claudeMarketplace}: manifest-drift`,
-    `${INSTALL_FILES.codexMarketplace}: manifest-drift`,
+    `${INSTALL_FILES.codexMarketplace}: invalid-marketplace`,
   ]);
 });
 
@@ -106,6 +106,7 @@ test('a marketplace source must be a committed plugin directory inside the repos
     [claude, document => { delete document.owner; }, 'invalid-marketplace'],
     [codex, document => { delete document.plugins[0].policy; }, 'invalid-marketplace'],
     [codex, document => { document.plugins[0].name = 'renamed'; }, 'invalid-marketplace'],
+    [claude, document => { document.name = 'agent-frc-other'; }, 'invalid-marketplace'],
   ];
   for (const [file, change, code] of cases) {
     const {root, tracked} = fixture(t);

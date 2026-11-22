@@ -1,7 +1,7 @@
 {
-  "name": "agent-frc-local",
+  "name": "agent-frc-marketplace",
   "interface": {
-    "displayName": "Agent FRC Repository"
+    "displayName": "Agent FRC Marketplace"
   },
   "plugins": [
     {
