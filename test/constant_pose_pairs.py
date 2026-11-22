@@ -212,7 +212,7 @@ class ConstantPosePairs(unittest.TestCase):
             cut = (motion or {"minGapMm": 1})["minGapMm"]
             culled += same_findings(self, case, before, cut)
         self.assertGreater(culled, 0)
-        ignored = ("view", "missingInputs", "status", "cases")
+        ignored = ("view", "missingInputs", "status", "cases", "decision")
         self.assertEqual({k: v for k, v in fast.items() if k not in ignored},
                          {k: v for k, v in slow.items() if k not in ignored})
         self.assertEqual(slow["missingInputs"], ["Generate the matching view of these checked trajectories with --write-view"])

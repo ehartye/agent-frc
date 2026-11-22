@@ -4,3 +4,4 @@
 examples/highlights/mounting-plate.step -text whitespace=-blank-at-eol
 *.png binary
 *.gz binary
+*.woff2 binary

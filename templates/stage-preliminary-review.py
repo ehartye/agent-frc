@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import shutil
 import tempfile
+import zlib
 
 
 def read(path):
@@ -51,9 +52,11 @@ def index(site, recovering=None):
         raise ValueError("Release index and immutable directories disagree. Reconcile every release before publishing.")
     for name in names:
         release = site / "releases" / name
-        expected = read(release / "receipt.json")["view"]["sha256"]
-        if hashlib.sha256((release / "index.html").read_bytes()).hexdigest() != expected:
+        view = read(release / "receipt.json")["view"]
+        if hashlib.sha256((release / "index.html").read_bytes()).hexdigest() != view["sha256"]:
             raise ValueError("Indexed view differs from receipt: " + name)
+        if view.get("geometry") and not geometry_matches(release, view):
+            raise ValueError("Indexed geometry differs from receipt: " + name)
         # A release deployed before release records existed stays as published; list it once under "legacy".
         if name not in record.get("legacy", []) or (release / "release.json").exists():
             check_release(release)
@@ -63,6 +66,32 @@ def index(site, recovering=None):
 LABEL = "Work-in-progress preliminary design"
 RESERVED = {"index.html", "receipt.json", "motion.json", "release.json", "budgets.json", "limits.json"}
 TRIAL = re.compile(r"[a-z0-9][a-z0-9._-]{0,127}\.json")
+GEOMETRY = re.compile(r"[a-z0-9][a-z0-9._-]{0,110}\.geometry\.json\.gz")
+
+
+def geometry_matches(release, view):
+    """The page, the receipt and the served compressed geometry name and pin the same content."""
+    pin = view.get("geometry") or {}
+    name = pin.get("file") or ""
+    path = release / Path(name).name
+    if not GEOMETRY.fullmatch(Path(name).name) or Path(name).name in RESERVED or not path.is_file():
+        return False
+    page = (release / "index.html").read_text(encoding="utf-8")
+    try:
+        shown = json.loads(page.split('id="data">', 1)[1].split("</script>", 1)[0])["geometry"]
+    except (IndexError, KeyError, ValueError):
+        return False
+    served = path.read_bytes()
+    if (shown.get("file") != path.name or shown.get("contentSha256") != pin.get("contentSha256")
+            or hashlib.sha256(served).hexdigest() != pin.get("sha256")):
+        return False
+    try:
+        stream = zlib.decompressobj(16 + zlib.MAX_WBITS)
+        content = stream.decompress(served, shown["bytes"] + 1)
+    except (zlib.error, KeyError, TypeError):
+        return False
+    return (len(content) == shown["bytes"] and stream.eof
+            and hashlib.sha256(content).hexdigest() == pin["contentSha256"])
 KINDS = {"operating-case", "field-interaction-trial"}
 OUTCOMES = {"acquired", "delivered", "scored", "climb-held"}
 
@@ -123,8 +152,13 @@ def check_release(release):
         if not ok:
             fail("Mission case " + str(m.get("case")) + " must be a passing operating case in the checked cycle, "
                  "with a known accomplishment, for a represented narrative objective")
-    if present - RESERVED - trials:
-        fail("Unrecognized release files " + ", ".join(sorted(present - RESERVED - trials)))
+    geometry = set()
+    if (receipt.get("view") or {}).get("geometry"):
+        if not geometry_matches(release, receipt["view"]):
+            fail("Published geometry differs from the page and receipt")
+        geometry.add(Path(receipt["view"]["geometry"]["file"]).name)
+    if present - RESERVED - trials - geometry:
+        fail("Unrecognized release files " + ", ".join(sorted(present - RESERVED - trials - geometry)))
 
 
 def stage(season, inputs, release):
@@ -157,6 +191,15 @@ def stage(season, inputs, release):
         if release in record["releases"]:
             raise FileExistsError("Release already exists: " + release)
         files = {"index.html": viewer, "receipt.json": receipt_file, "motion.json": pinned(inputs, plan["motion"])}
+        if result["view"].get("geometry"):
+            try:
+                geometry = pinned(inputs, result["view"]["geometry"])
+            except ValueError as error:
+                # Another zlib can compress the same content differently; the receipt pins the bytes it checked.
+                raise ValueError(str(error) + ". Regenerate it with --write-view and save that run's receipt") from None
+            if geometry.parent != viewer.parent or not GEOMETRY.fullmatch(geometry.name):
+                raise ValueError("Keep the compressed geometry beside its view, named VIEW.geometry.json.gz")
+            files[geometry.name] = geometry
         ledger = pinned(inputs, plan["budgets"])
         files.update({"budgets.json": ledger, "limits.json": pinned(inputs, read(ledger)["requirements"])})
         published = []

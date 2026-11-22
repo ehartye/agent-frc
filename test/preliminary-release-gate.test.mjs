@@ -245,3 +245,32 @@ test('an author can check one release directory before committing it', async t=>
   const bad=issueRelease(site,'layout-003',{status:'provisional'});
   await assert.rejects(verifyRelease(bad.dir),/layout-checked/);
 });
+
+test('a release publishes only the compressed geometry its page and receipt pin, and the bundled fonts', async t=>{
+  const {gzipSync}=await import('node:zlib');
+  const {approved,site,policy}=fixture(t);
+  const content=Buffer.from(JSON.stringify({schema:'agent-frc/package-geometry@1',meshes:[],cases:[]}));
+  const compressed=gzipSync(content),file='package-motion.geometry.json.gz';
+  const shown={file,contentSha256:sha(content),bytes:content.length};
+  const pin={file,sha256:sha(compressed),contentSha256:sha(content)};
+  const {dir}=next(site,'layout-002',{display:d=>({...d,geometry:shown}),edit:r=>({...r,view:{...r.view,geometry:pin}})});
+  write(dir,file,compressed);
+  const fonts=fileURLToPath(new URL('../templates/preliminary-review-fonts/',import.meta.url));
+  cpSync(fonts,path.join(site,tree,'fonts'),{recursive:true});
+  assert.deepEqual((await verifyRelease(dir)).missionCases,['loaded-turn']);
+  assert.deepEqual((await auditStaged(approved,site,policy)).preliminary.added,['layout-002']);
+  write(dir,file,gzipSync(Buffer.from('{"meshes":["unchecked"]}')));
+  await assert.rejects(verifyRelease(dir),/Published geometry differs from the view and receipt/);
+  write(dir,file,compressed);
+  write(dir,'other.geometry.json.gz',compressed);
+  await assert.rejects(verifyRelease(dir),/Unrecognized preliminary output: releases\/layout-002\/other.geometry.json.gz/);
+  rmSync(path.join(dir,'other.geometry.json.gz'));
+  rmSync(path.join(dir,file));
+  await assert.rejects(verifyRelease(dir),/Published geometry differs/,'a page that fetches geometry needs the pinned file');
+  write(dir,file,compressed);
+  write(path.join(site,tree,'fonts'),'barlow-condensed-latin-600-normal.woff2','not the bundled font');
+  await assert.rejects(auditStaged(approved,site,policy),/Unrecognized preliminary output: fonts\/barlow-condensed-latin-600-normal.woff2/);
+  rmSync(path.join(site,tree,'fonts'),{recursive:true});
+  write(path.join(site,tree,'fonts'),'robot.glb','model');
+  await assert.rejects(auditStaged(approved,site,policy),/Unrecognized preliminary output: fonts\/robot.glb/);
+});

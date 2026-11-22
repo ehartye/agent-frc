@@ -1,52 +1,172 @@
 <!doctype html>
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Preliminary assembly motion</title>
+<title>Preliminary design review</title><link rel="icon" href="data:,">
+<link rel="stylesheet" href="../../fonts/fonts.css">
 <style>
-*{box-sizing:border-box}body{font:1rem system-ui;color:#193746;background:#f3f6f7;max-width:88rem;margin:2rem auto;padding:0 1rem}h1{letter-spacing:-.035em}fieldset{display:flex;flex-wrap:wrap;align-items:center;gap:.65rem;border:0;padding:0}button,select{font:inherit;padding:.35rem}#stage{position:relative;margin:1rem 0;background:#101e28;overflow:hidden}canvas{width:100%;height:min(62vh,48rem);display:block;touch-action:none;cursor:grab}#labels{position:absolute;inset:0;pointer-events:none}.tag{position:absolute;background:#142833d9;color:white;padding:0 3px;font:11px system-ui;white-space:nowrap}output{font-variant-numeric:tabular-nums}small{display:block}
-body{font-family:"Source Sans 3","Segoe UI",sans-serif;background:#f7faf8;color:#182e49}h1,h2,h3{font-family:"Barlow Condensed","Arial Narrow",sans-serif}h1{border-bottom:4px solid #ffd078;color:#142f63}h2{color:#142f63}button,select{border:1px solid #516677;border-radius:.25rem;background:white;color:#142f63}button:focus-visible,select:focus-visible,input:focus-visible,canvas:focus-visible{outline:3px solid #194fb0}#metrics{display:flex;flex-wrap:wrap;gap:.5rem 2rem;padding:1rem;background:#142f63;color:white;border-top:3px solid #ffd078}#metrics dl{margin:0}#metrics dd{margin:0;font-size:1.25rem;font-weight:700;font-variant-numeric:tabular-nums}section{margin:1rem 0}table{border-collapse:collapse;width:100%;background:white}th,td{padding:.4rem .55rem;text-align:left;border-bottom:1px solid #b7c9d0;vertical-align:top;font-variant-numeric:tabular-nums}th{background:#e2eef2}.scroll{overflow-x:auto}#memberSet{display:flex;gap:.65rem;flex-wrap:wrap}#summary{font-weight:600}
+:root{--navy:#142f63;--blue:#194fb0;--paper:#f7faf8;--ink:#182e49;--gold:#ffd078;--edge:#b7c9d0;--steel:#516677;--display:"Barlow Condensed","Franklin Gothic Medium","Arial Narrow",sans-serif;--body:"Source Sans 3","Segoe UI",system-ui,sans-serif}
+*{box-sizing:border-box}body{margin:0;font:1rem/1.45 var(--body);color:var(--ink);background:var(--paper)}main{max-width:88rem;margin:0 auto;padding:0 1rem 2rem}
+h1,h2,h3{font-family:var(--display);font-weight:700;letter-spacing:.01em;color:var(--navy)}h1{margin:0;color:white;font-size:clamp(1.6rem,3vw,2.3rem)}h2{border-bottom:3px solid var(--gold);padding-bottom:.15rem;margin-top:2rem}
+#review-header{background:var(--navy);color:white;border-bottom:4px solid var(--gold);padding:1rem clamp(1rem,4vw,3rem)}#review-header dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));gap:.4rem 1.5rem;margin:.75rem 0 0}#review-header dt{font:600 .8rem var(--display);text-transform:uppercase;letter-spacing:.06em;color:var(--gold)}#review-header dd{margin:0;overflow-wrap:anywhere}#review-header .decision{grid-column:1/-1}#review-header details{margin-top:.6rem}#review-header a{color:var(--gold)}
+.wip{margin:.5rem 0 0;font-weight:600}.status{display:inline-block;padding:0 .45rem;border-radius:.2rem;font-weight:700;background:var(--gold);color:var(--navy)}.status.blocked,.status.reopen{background:#ffb3a8}.status.layout-checked{background:#bfe6c8}
+fieldset{display:flex;flex-wrap:wrap;align-items:center;gap:.65rem;border:0;padding:0;margin:0}legend{font:700 1rem var(--display);color:var(--navy)}button,select{font:inherit;padding:.3rem .55rem;border:1px solid var(--steel);border-radius:.25rem;background:white;color:var(--navy)}button.primary{background:var(--blue);border-color:var(--blue);color:white}button:disabled{opacity:.5}
+button:focus-visible,select:focus-visible,input:focus-visible,canvas:focus-visible,a:focus-visible{outline:3px solid var(--blue);outline-offset:1px}
+#stage{position:relative;margin:.75rem 0;background:#101e28;overflow:hidden;border-radius:.25rem}canvas{width:100%;height:min(66vh,50rem);display:block;touch-action:none;cursor:grab}#labels{position:absolute;inset:0;pointer-events:none}.tag{position:absolute;background:#142833d9;color:white;padding:0 3px;font:11px var(--body);white-space:nowrap}#sceneStatus{position:absolute;left:.75rem;bottom:.6rem;color:white;font-size:.85rem;background:#142833cc;padding:.1rem .4rem}
+output,td,dd,#metrics{font-variant-numeric:tabular-nums}small{display:block;color:var(--steel)}
+#metrics{display:flex;flex-wrap:wrap;gap:.5rem 2rem;padding:1rem;background:var(--navy);color:white;border-top:3px solid var(--gold)}#metrics dl{margin:0}#metrics dt{font-size:.85rem}#metrics dd{margin:0;font-size:1.25rem;font-weight:700}
+section{margin:1rem 0}table{border-collapse:collapse;width:100%;background:white}th,td{padding:.4rem .55rem;text-align:left;border-bottom:1px solid var(--edge);vertical-align:top}th{background:#e2eef2;font-family:var(--display);font-size:1rem}.scroll{overflow-x:auto}#memberSet{display:flex;gap:.65rem;flex-wrap:wrap}#summary{font-weight:600}
+tr.control td{background:#fff6dd}tr.uncovered td{color:var(--steel);font-style:italic}td .actions{display:flex;flex-wrap:wrap;gap:.3rem}#pairInspect{background:white;border-left:4px solid var(--gold);padding:.5rem .75rem}#pairInspect:empty{display:none}
+.interaction{background:white;border:1px solid var(--edge);border-radius:.25rem;padding:.6rem .8rem;margin:.5rem 0}.interaction iframe{width:100%;height:min(60vh,36rem);border:1px solid var(--edge);margin-top:.5rem}
 </style>
-<h1>Preliminary assembly motion</h1><p role="note"><strong>Work-in-progress preliminary design.</strong> This is not a released detailed model. The review receipt gives its status.</p><p id="issue"></p>
-<details><summary>Strategic narrative review</summary><p id="narrativeSource"></p><ul id="objectives"></ul></details>
+<header id="review-header" aria-label="Review header">
+<h1>Preliminary design review</h1>
+<p class="wip" role="note">Work-in-progress preliminary design. This is not a released detailed model. The review receipt gives its status.</p>
+<dl>
+ <div><dt>Selected architecture</dt><dd id="architecture"></dd></div>
+ <div><dt>Issue</dt><dd id="issue"></dd></div>
+ <div><dt>Datum</dt><dd id="datum"></dd></div>
+ <div><dt>Units</dt><dd id="units"></dd></div>
+ <div><dt>Strategic narrative</dt><dd id="narrativeSource"></dd></div>
+ <div class="decision"><dt>Current decision</dt><dd><span id="decision" class="status"></span> <span id="decisionSource"></span></dd></div>
+ <div class="decision"><dt>First unmet requirement</dt><dd id="firstUnmet"></dd></div>
+</dl>
+<details><summary>Narrative objectives and dispositions</summary><ul id="objectives"></ul></details>
+</header>
+<main>
+<section id="model" aria-label="Model and controls">
 <fieldset><legend>Trajectory</legend><label>Case <select id="cases"></select></label>
-<button id="play">Play</button><label>Stroke <input type="range" id="frame" min="0" max="24" value="0"></label><output id="position"></output>
-<label><input id="showLabels" type="checkbox"> Labels</label><label><input id="floor" type="checkbox" checked> Floor</label><button id="fit">Fit model</button></fieldset>
-<div id="stage"><canvas tabindex="0" aria-label="Orbitable solid package assembly"></canvas><div id="labels"></div></div>
-<section id="metrics" aria-label="Whole-robot resource figures"></section>
+<button id="play" class="primary">Play</button><label>Stroke <input type="range" id="frame" min="0" max="24" value="0"></label><output id="position"></output><output id="outcome"></output>
+<label><input id="showLabels" type="checkbox"> Labels</label><label><input id="floor" type="checkbox" checked> Floor</label>
+<button id="fit">Fit robot</button><button id="fitField">Fit field interaction</button></fieldset>
+<div id="stage"><canvas tabindex="0" aria-label="Orbitable solid package assembly"></canvas><div id="labels"></div><div id="sceneStatus" role="status">Loading scene…</div></div>
 <section aria-label="Component inspector"><label>Inspect a component <select id="component"></select></label>
-<p id="material"></p><dl aria-live="polite"><dt>Purpose</dt><dd id="purpose"></dd><dt>Why it is included</dt><dd id="rationale"></dd></dl></section>
+<p id="material"></p><dl aria-live="polite"><dt>Purpose</dt><dd id="purpose"></dd><dt>Why it is included</dt><dd id="rationale"></dd></dl><div id="pairInspect" aria-live="polite"></div></section>
 <small>Carried-piece motion in this player is prescribed. Verify retention under gravity, including loss of grip, before accepting a loaded lift.</small>
-<small>Drag to orbit, Shift-drag or right-drag to pan, and scroll to zoom. Arrow keys rotate, Shift and arrow keys pan, and Home fits the model. The grid lies at datum Z = 0. The clearance receipt bounds the paths between displayed frames.</small>
-<section><h2>Component and resource ledgers</h2>
+<small>Drag to orbit, Shift-drag or right-drag to pan, and scroll to zoom. Arrow keys rotate, Shift and arrow keys pan, and Home fits the robot. The grid lies at datum Z = 0 with <span id="gridScale"></span> mm squares. The clearance receipt bounds the paths between displayed frames.</small>
+</section>
+<section id="metrics" aria-label="Whole-robot resource figures"></section>
+<section aria-label="Component and resource ledgers"><h2>Component and resource ledgers</h2>
 <label>Group <select id="scope"></select></label> <label>Concurrent duty and pack <select id="duty"></select></label>
 <fieldset id="memberSet" hidden><legend>Custom subsystem members</legend></fieldset><p id="summary"></p>
 <h3>Weight</h3><div id="weight" class="scroll"></div>
 <h3>Electrical demand</h3><div id="electric" class="scroll"></div><p id="pack"></p>
 <h3>Coverage</h3><ul id="warnings"></ul></section>
+<section id="motion-evidence" aria-label="Motion evidence and decision"><h2>Motion evidence and decision</h2>
+<div class="scroll"><table id="evidenceTable"></table></div>
+<p>Pinned evidence: <a id="receiptLink" href="receipt.json">review receipt</a> <span id="receiptPin"></span></p>
+<h3>Return to an earlier phase</h3>
+<p>Return to <strong>preliminary design</strong> when:</p><ul id="returnPreliminary"></ul>
+<p>Return to <strong>conceptual design</strong> when:</p><ul id="returnConceptual"></ul>
+<p>Currently triggered:</p><ul id="triggered"></ul>
+<h3>Season-owned field interactions</h3><div id="fieldInteractions"></div>
+</section>
+</main>
 <script type="application/json" id="data">PACKAGE_DATA</script><script>
 const data=JSON.parse(document.querySelector('#data').textContent);
 const get=id=>document.getElementById(id),canvas=document.querySelector('canvas'),gl=canvas.getContext('webgl',{antialias:true});
-get('issue').textContent=data.issue+' · STEP '+data.step.sha256.slice(0,12)+' · motion '+data.motion.sha256.slice(0,12);
-const narrative=data.narrativeReview;
-get('narrativeSource').textContent=narrative.source ? narrative.source.file+' · '+narrative.source.sha256.slice(0,12) : 'Narrative pre-read missing';
-for(const row of narrative.objectives||[]){
- const item=document.createElement('li');
- item.textContent=row.objective+' — '+row.disposition+'. '+row.basis;
- get('objectives').append(item);
-}
-const component=get('component');
-for(const name of [...new Set(Object.values(data.groups).flatMap(g=>g.members))].sort())component.add(new Option(name,name));
-function explain(){
- const row=data.components[component.value]||{};
- const body=data.cases[0]?.bodies[component.value];
- get('material').textContent=(row.category||Object.values(data.groups).find(g=>g.members.includes(component.value))?.role||'Unclassified')+' · '+(row.material||'Material pending')+(body?' · '+(body.volumeMm3/1000).toFixed(2)+' cm³ solid volume':'');
- for(const key of ['purpose','rationale'])get(key).textContent=row[key]?.trim()||'Missing from this review';
-}
-component.onchange=()=>{explain();draw()};
-explain();
 function element(tag,value){const el=document.createElement(tag);el.textContent=value;return el}
 const format=(n,d=2)=>Number(n).toFixed(d);
 const interval=(r,u)=>r.map(v=>format(v)).join('–')+' '+u;
 const signed=(n,u)=>(n>=0?'+':'')+format(n)+' '+u;
+const short=sha=>sha?sha.slice(0,12):'';
+// Region 1: review header
+const header=data.header||{};
+get('architecture').textContent=header.architecture||'Not named in presentation.architecture';
+get('issue').textContent=data.issue+' · STEP '+short(data.step.sha256)+' · motion '+short(data.motion.sha256);
+get('datum').textContent=header.datum||'Datum missing';
+get('units').textContent=header.units||'';
+const narrative=data.narrativeReview;
+get('narrativeSource').textContent=narrative.source?narrative.source.file+' · '+short(narrative.source.sha256):'Narrative pre-read missing';
+for(const row of narrative.objectives||[])get('objectives').append(element('li',row.objective+' — '+row.disposition+'. '+row.basis));
+function decide(status,unmet,source){
+ const d=get('decision');d.textContent=status;d.className='status '+status;get('decisionSource').textContent=source;
+ get('firstUnmet').textContent=unmet?unmet.text:'None. Every commissioned check passes.';
+}
+decide(header.status||'pending receipt',header.firstUnmet,'(at view generation; awaiting the review receipt)');
+const evidenceRows=data.motionEvidence||[];
+function triggered(list){get('triggered').replaceChildren(...(list.length?list:['None recorded']).map(v=>element('li',typeof v==='string'?v:v.phase+': '+v.reason+(v.affected?' ('+v.affected.join(', ')+')':''))))}
+triggered((header.status==='blocked'&&header.firstUnmet)?[header.firstUnmet.text]:[]);
+async function pageDigest(){
+ if(!globalThis.crypto?.subtle)return null;
+ const bytes=await (await fetch(location.href.split('#')[0],{cache:'no-store'})).arrayBuffer();
+ return [...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+// The receipt pins this page; a stale or foreign receipt never sets the decision.
+Promise.all([fetch('receipt.json',{cache:'no-store'}).then(r=>r.ok?r.json():null),pageDigest().catch(()=>null)]).then(([receipt,own])=>{
+ if(!receipt)return;
+ if(receipt.issue!==data.issue||receipt.view?.geometry?.contentSha256!==data.geometry.contentSha256||own!==null&&receipt.view?.sha256!==own){get('decisionSource').textContent='(receipt.json does not pin this view; showing view-time findings)';return}
+ const d=receipt.decision||{status:receipt.status,firstUnmet:null};
+ // Only a receipt that pins these exact page bytes sets the decision.
+ if(own===null){get('decisionSource').textContent='(this browser context cannot verify the page digest; receipt.json reports '+d.status+')';return}
+ decide(d.status,d.firstUnmet,'(from the review receipt that pins this page)');
+ get('receiptPin').textContent='· plan '+short(receipt.planSha256)+(receipt.view?' · view '+short(receipt.view.sha256):'')+(receipt.view?.geometry?' · geometry '+short(receipt.view.geometry.sha256):'');
+ triggered(receipt.reopen||[]);
+ const premises=(receipt.premises||[]).filter(p=>p.phase==='conceptual-design');
+ get('returnConceptual').append(...premises.map(p=>element('li','Premise '+p.id+' ('+p.unit+') leaves '+JSON.stringify(p.criterion)+' · now '+p.status)));
+}).catch(()=>{});
+// Region 6: motion evidence and decision
+for(const [id,key] of [['returnPreliminary','preliminary'],['returnConceptual','conceptual']])get(id).replaceChildren(...(data.returnCriteria?.[key]||[]).map(v=>element('li',v)));
+function limitText(row){
+ if(!row.limitingPair)return row.kind==='uncovered'?'—':'No moving pair within broad-phase range';
+ const v=row.limitingValue||{},bits=[];
+ if('gapMm' in v)bits.push('gap '+format(v.gapMm,3)+' mm');if(v.volumeMm3>0)bits.push('overlap '+format(v.volumeMm3,1)+' mm³');if('lowerBoundMm' in v)bits.push('≥ '+format(v.lowerBoundMm,3)+' mm');
+ return row.limitingPair.join(' / ')+' · '+bits.join(', ')+(row.limitingTime==null?' · bounded over the stroke':' · t = '+format(row.limitingTime,3));
+}
+function renderEvidence(){
+ const t=get('evidenceTable'),head=t.createTHead().insertRow();
+ for(const h of ['Path','Kind','Starting pose','Participating groups','Environment','Metric and units','Limiting pair and time','Clearance allowance','Evidence method','Result','Review'])head.append(element('th',h));
+ const body=t.createTBody();
+ for(const row of evidenceRows){
+  const r=body.insertRow();r.className=row.kind==='displaced control'?'control':row.kind;r.dataset.case=row.case;
+  const cells=[row.case+(row.basis?' — '+row.basis:''),row.kind,row.start||'—',(row.groups||[]).join(', ')||'—',row.environment||'—',row.metric?row.metric+' ('+row.units+')':'—',limitText(row),
+   row.allowanceMm==null?'—':format(row.allowanceMm)+' mm · '+(row.allowanceBasis||'basis missing'),row.method||row.note||'—',row.result+(row.expected?' (expected '+row.expected+')':'')];
+  for(const c of cells)r.insertCell().textContent=c;
+  const actions=document.createElement('div');actions.className='actions';r.insertCell().append(actions);
+  if(row.playable&&caseIndex(row.case)>=0){
+   const play=element('button','Play');play.onclick=()=>{selectCase(row.case);frame.value=0;start()};actions.append(play);
+   if(row.limitingPair){
+    const jump=element('button','Jump to limiting pose');jump.disabled=row.limitingTime==null;if(jump.disabled)jump.title='Interval bound; no single limiting pose';
+    jump.onclick=()=>{selectCase(row.case);frame.value=Math.round((row.limitingTime||0)*24);inspectPair(row);draw()};
+    const both=element('button','Inspect both bodies');both.onclick=()=>{selectCase(row.case);inspectPair(row);draw()};
+    actions.append(jump,both);
+   }
+  }else if(row.note)actions.append(element('span',row.note));
+ }
+}
+const fields=get('fieldInteractions');
+if(!(data.fieldInteractions||[]).length)fields.append(element('p','No season-owned field-interaction or physics player is linked to this release. Add presentation.fieldInteractions in the layout to link one.'));
+function playerUrl(href){
+ try{const u=new URL(href,location.href);return u.protocol==='https:'||u.origin===location.origin?u:null}catch{return null}
+}
+for(const f of data.fieldInteractions||[]){
+ const url=playerUrl(f.href);if(!url)continue;
+ const box=document.createElement('div');box.className='interaction';
+ const title=element('h4',f.title),link=document.createElement('a');link.href=url.href;link.textContent='Open player';link.target='_blank';link.rel='noopener noreferrer';
+ const ev=typeof f.evidence==='string'?f.evidence:f.evidence.file+' · '+short(f.evidence.sha256);
+ box.append(title,element('p','Mission objective: '+f.objective+(f.objectiveKnown?'':' (not in the reviewed narrative)')),element('p','Evidence: '+ev),link);
+ if(f.embed){const show=element('button','Show here');show.style.marginLeft='.6rem';show.onclick=()=>{const frame=document.createElement('iframe');frame.setAttribute('sandbox',url.origin===location.origin?'allow-scripts allow-same-origin':'allow-scripts');frame.referrerPolicy='no-referrer';frame.src=url.href;frame.title=f.title;box.append(frame);show.remove()};box.append(show)}
+ fields.append(box);
+}
+// Regions 2-5: inspector and ledgers
+const component=get('component');
+for(const name of [...new Set(Object.values(data.groups).flatMap(g=>g.members))].sort())component.add(new Option(name,name));
+let cases=[];
+const highlight=new Set();
+function describe(name){
+ const row=data.components[name]||{},body=cases[0]?.bodies[name];
+ return (row.category||Object.values(data.groups).find(g=>g.members.includes(name))?.role||'Unclassified')+' · '+(row.material||'Material pending')+(body?' · '+(body.volumeMm3/1000).toFixed(2)+' cm³ solid volume':'');
+}
+function explain(){
+ const row=data.components[component.value]||{};
+ get('material').textContent=describe(component.value);
+ for(const key of ['purpose','rationale'])get(key).textContent=row[key]?.trim()||'Missing from this review';
+}
+function inspectPair(row){
+ highlight.clear();for(const n of row.limitingPair)highlight.add(n);component.value=row.limitingPair[0];explain();
+ const box=get('pairInspect');box.replaceChildren(element('strong','Limiting pair in '+row.case+': '+limitText(row)));
+ for(const n of row.limitingPair){const c=data.components[n]||{};box.append(element('p',n+' — '+describe(n)+'. '+(c.purpose||'Purpose missing')+' '+(c.rationale||'')))}
+}
+component.onchange=()=>{highlight.clear();get('pairInspect').replaceChildren();explain();draw()};
+explain();
 const categories=new Map();
 for(const [groupName,g] of Object.entries(data.groups)){
  for(const id of g.members){
@@ -121,38 +241,38 @@ function budgets(){
  get('warnings').replaceChildren(...(warnings.length?warnings:['Commissioned roster and budget checks have no flagged rows.']).map(v=>element('li',v)));
 }
 scope.onchange=duty.onchange=budgets;budgets();
-if(!gl){get('issue').textContent+=' · Enable WebGL to view the assembly.';throw Error('WebGL unavailable')}
-const program=gl.createProgram();
-function shader(type,source){const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));gl.attachShader(program,s)}
-shader(gl.VERTEX_SHADER,'attribute vec3 position;attribute vec3 tint;varying vec3 color;void main(){gl_Position=vec4(position,1.);color=tint;}');
-shader(gl.FRAGMENT_SHADER,'precision mediump float;varying vec3 color;void main(){gl_FragColor=vec4(color,1.);}');
-gl.linkProgram(program);gl.useProgram(program);gl.enable(gl.DEPTH_TEST);
-gl.bindBuffer(gl.ARRAY_BUFFER,gl.createBuffer());
-for(const [name,offset] of [['position',0],['tint',12]]){const a=gl.getAttribLocation(program,name);gl.enableVertexAttribArray(a);gl.vertexAttribPointer(a,3,gl.FLOAT,false,24,offset)}
-function paint(mode,vertices){gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(vertices),gl.DYNAMIC_DRAW);gl.drawArrays(mode,0,vertices.length/6)}
-const view=get('cases'),frame=get('frame');data.cases.forEach((c,i)=>view.add(new Option(c.id+' ('+c.stage+')',i)));
+// Region 2: model
+const view=get('cases'),frame=get('frame');
+const kindOf=Object.fromEntries(evidenceRows.map(r=>[r.case,r]));
+data.cases.forEach((c,i)=>view.add(new Option(c.id+' ('+(kindOf[c.id]?.kind==='displaced control'?'displaced control':c.stage)+')',i)));
+function caseIndex(id){return data.cases.findIndex(c=>c.id===id)}
+function selectCase(id){const i=caseIndex(id);if(i>=0&&view.selectedIndex!==i){stop();view.selectedIndex=i;frame.value=0}outcome()}
+function outcome(){const row=kindOf[data.cases[view.selectedIndex]?.id];get('outcome').textContent=row?' · '+row.kind+': '+row.result:''}
+renderEvidence();outcome();
+const fitField=get('fitField');fitField.disabled=!data.fit?.field;if(fitField.disabled)fitField.title='This release places no field fixtures';
 const roles={};for(const g of Object.values(data.groups))for(const n of g.members)roles[n]=g.role;
 const aliases={drive:'mechanism',payload:'game-piece',battery:'electrical',other:'reference'};
 const rgb=hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255);
 function placed(m,p){return [0,4,8].map(k=>m[k+3]+m[k]*p[0]+m[k+1]*p[1]+m[k+2]*p[2])}
-let center,extent,az,el,scale,panX,panY,timer,drag;
-let pickSurfaces=[],pointerStart;
-function fit(){
- const low=[Infinity,Infinity,Infinity],high=low.map(()=>-Infinity);
- for(const b of Object.values(data.cases[view.selectedIndex].bodies))for(const v of b.vertices){const p=placed(b.matrices[+frame.value]||b.matrices[0],v);p.forEach((x,i)=>{low[i]=Math.min(low[i],x);high[i]=Math.max(high[i],x)})}
- center=low.map((v,i)=>(v+high[i])/2);extent=Math.max(1,Math.hypot(...high.map((v,i)=>v-low[i])));az=-.8;el=.48;scale=1.8;panX=panY=0;draw()
+let center=[0,0,0],extent=1,az=-.8,el=.48,scale=1.8,panX=0,panY=0,timer,drag;
+let pickSurfaces=[],pointerStart,program;
+function fit(kind='robot'){
+ const target=(data.fit&&data.fit[kind])||data.fit?.robot;
+ if(target){center=target.center.slice();extent=target.extent}
+ az=-.8;el=.48;scale=1.8;panX=panY=0;draw()
 }
 function draw(){
+ if(!program||!cases.length)return;
  const width=canvas.clientWidth,height=canvas.clientHeight,ratio=Math.min(devicePixelRatio||1,2);
  canvas.width=Math.round(width*ratio);canvas.height=Math.round(height*ratio);gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(.063,.118,.157,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
  const ca=Math.cos(az),sa=Math.sin(az),ce=Math.cos(el),se=Math.sin(el),k=scale/extent;
  function proj(p){const [x,y,z]=p.map((v,i)=>v-center[i]);return [((-sa*x+ca*y)*k+panX)*Math.min(1,height/width),((ce*z-se*(ca*x+sa*y))*k+panY)*Math.min(1,width/height),-(ce*(ca*x+sa*y)+se*z)/(extent*30)]}
- const surfaces=[],lines=[],labels=[];const grid=extent/12;pickSurfaces=[];
+ const surfaces=[],lines=[],labels=[];const grid=extent/12;pickSurfaces=[];get('gridScale').textContent=format(grid,1);
  if(get('floor').checked){for(let i=-12;i<=12;i++){const x=Math.round(center[0]/grid)*grid,y=Math.round(center[1]/grid)*grid;for(const [a,b] of [[[x+i*grid,y-extent,0],[x+i*grid,y+extent,0]],[[x-extent,y+i*grid,0],[x+extent,y+i*grid,0]]])lines.push(...proj(a),.23,.32,.35,...proj(b),.23,.32,.35)}}
- for(const [name,b] of Object.entries(data.cases[view.selectedIndex].bodies)){
+ for(const [name,b] of Object.entries(cases[view.selectedIndex].bodies)){
   const m=b.matrices[+frame.value]||b.matrices[0],world=b.vertices.map(p=>placed(m,p)),clip=world.map(proj);
   pickSurfaces.push({name,points:clip,triangles:b.triangles});
-  const col=name===component.value?[1,.76,.23]:rgb(data.palette[roles[name]]||data.palette[aliases[roles[name]]]||data.palette.reference);
+  const col=name===component.value||highlight.has(name)?[1,.76,.23]:rgb(data.palette[roles[name]]||data.palette[aliases[roles[name]]]||data.palette.reference);
   for(const [a,j,h] of b.triangles){
    const u=world[j].map((x,i)=>x-world[a][i]),v=world[h].map((x,i)=>x-world[a][i]),normal=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];
    const light=.75+.3*(.4*normal[0]-.45*normal[1]+.8*normal[2])/(Math.hypot(...normal)||1);
@@ -162,10 +282,39 @@ function draw(){
  }
  paint(gl.TRIANGLES,surfaces);paint(gl.LINES,lines);get('labels').replaceChildren(...labels);get('position').textContent=Math.round(+frame.value/24*100)+'%'
 }
+function paint(mode,vertices){gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(vertices),gl.DYNAMIC_DRAW);gl.drawArrays(mode,0,vertices.length/6)}
 function stop(){clearInterval(timer);timer=null;get('play').textContent='Play'}
-get('play').onclick=()=>{if(timer)return stop();if(+frame.value===24)frame.value=0;get('play').textContent='Pause';timer=setInterval(()=>{frame.value=+frame.value+1;draw();if(+frame.value===24)stop()},100)};
-view.onchange=()=>{stop();frame.value=0;draw()};frame.oninput=()=>{stop();draw()};
-get('fit').onclick=fit;get('showLabels').onchange=get('floor').onchange=draw;
+function start(){if(timer)stop();if(+frame.value===24)frame.value=0;get('play').textContent='Pause';timer=setInterval(()=>{frame.value=+frame.value+1;draw();if(+frame.value===24)stop()},100)}
+get('play').onclick=()=>{if(timer)return stop();start()};
+view.onchange=()=>{stop();frame.value=0;outcome();draw()};frame.oninput=()=>{stop();draw()};
+get('fit').onclick=()=>fit('robot');fitField.onclick=()=>fit('field');get('showLabels').onchange=get('floor').onchange=draw;
+async function loadScene(){
+ const response=await fetch(data.geometry.file);
+ if(!response.ok)throw Error('Geometry '+data.geometry.file+' unavailable ('+response.status+')');
+ let bytes=new Uint8Array(await response.arrayBuffer());
+ if(bytes[0]===0x1f&&bytes[1]===0x8b){
+  if(typeof DecompressionStream==='undefined')throw Error('This browser cannot decompress the geometry');
+  bytes=new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
+ }
+ let note='';
+ if(globalThis.crypto?.subtle){
+  const hex=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(b=>b.toString(16).padStart(2,'0')).join('');
+  if(hex!==data.geometry.contentSha256)throw Error('Geometry differs from this view’s pinned digest');
+  note='Geometry digest verified';
+ }else note='Geometry loaded; this browser context cannot verify its digest';
+ const scene=JSON.parse(new TextDecoder().decode(bytes));
+ cases=scene.cases.map(c=>({...c,bodies:Object.fromEntries(Object.entries(c.bodies).map(([n,b])=>[n,{...scene.meshes[b.mesh],matrices:b.matrices}]))}));
+ return note;
+}
+function setupGL(){
+ program=gl.createProgram();
+ function shader(type,source){const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));gl.attachShader(program,s)}
+ shader(gl.VERTEX_SHADER,'attribute vec3 position;attribute vec3 tint;varying vec3 color;void main(){gl_Position=vec4(position,1.);color=tint;}');
+ shader(gl.FRAGMENT_SHADER,'precision mediump float;varying vec3 color;void main(){gl_FragColor=vec4(color,1.);}');
+ gl.linkProgram(program);gl.useProgram(program);gl.enable(gl.DEPTH_TEST);
+ gl.bindBuffer(gl.ARRAY_BUFFER,gl.createBuffer());
+ for(const [name,offset] of [['position',0],['tint',12]]){const a=gl.getAttribLocation(program,name);gl.enableVertexAttribArray(a);gl.vertexAttribPointer(a,3,gl.FLOAT,false,24,offset)}
+}
 canvas.oncontextmenu=e=>e.preventDefault();canvas.onpointerdown=e=>{canvas.setPointerCapture(e.pointerId);drag=[e.clientX,e.clientY,e.shiftKey||e.button===2||e.button===1];canvas.focus()};
 canvas.onpointermove=e=>{if(!drag)return;const dx=e.clientX-drag[0],dy=e.clientY-drag[1];if(drag[2]){const unit=2/Math.min(canvas.clientWidth,canvas.clientHeight);panX+=dx*unit;panY-=dy*unit}else{az-=dx*.01;el+=dy*.01}drag[0]=e.clientX;drag[1]=e.clientY;draw()};
 canvas.addEventListener('pointerdown',e=>{pointerStart=e.button===0&&!e.shiftKey?[e.clientX,e.clientY]:null});
@@ -184,9 +333,11 @@ canvas.onpointerup=e=>{
   const depth=u*a[2]+v*b[2]+w*c[2];
   if(depth<closest){closest=depth;hit=name}
  }
- if(hit){component.value=hit;explain();draw()}
+ if(hit){component.value=hit;highlight.clear();get('pairInspect').replaceChildren();explain();draw()}
 };
 canvas.addEventListener('wheel',e=>{e.preventDefault();scale=Math.min(100,Math.max(.05,scale*Math.exp(-e.deltaY*.0015)));draw()},{passive:false});
-canvas.onkeydown=e=>{const v={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,1],ArrowDown:[0,-1]}[e.key];if(v){if(e.shiftKey){panX+=v[0]*.08;panY+=v[1]*.08}else{az+=v[0]*.15;el+=v[1]*.15}}else if(e.key==='Home'){fit()}else if(e.key==='+'||e.key==='-'){scale*=e.key==='+'?1.2:1/1.2}else return;e.preventDefault();draw()};
-fit();new ResizeObserver(draw).observe(canvas);
+canvas.onkeydown=e=>{const v={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,1],ArrowDown:[0,-1]}[e.key];if(v){if(e.shiftKey){panX+=v[0]*.08;panY+=v[1]*.08}else{az+=v[0]*.15;el+=v[1]*.15}}else if(e.key==='Home'){fit('robot')}else if(e.key==='+'||e.key==='-'){scale*=e.key==='+'?1.2:1/1.2}else return;e.preventDefault();draw()};
+if(!gl)get('sceneStatus').textContent='Enable WebGL to view the assembly.';
+else loadScene().then(note=>{setupGL();get('sceneStatus').textContent=note;explain();fit('robot');new ResizeObserver(draw).observe(canvas)})
+ .catch(e=>{get('sceneStatus').textContent=e.message+(location.protocol==='file:'?' Serve this directory over HTTP (for a release, run serve.py) to load the geometry.':'')});
 </script></html>
