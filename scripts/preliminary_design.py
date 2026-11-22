@@ -398,8 +398,12 @@ def verify_reopens(root, plan, prior, decisions, observations, missing, budget):
     return history
 
 
-def review(root, file, previous=None, *, write_view=False, fail_fast=False, progress=None, heartbeat_seconds=HEARTBEAT_SECONDS):
-    """Check one package issue. progress receives stderr-only lines; fail_fast stops at the first non-passing nominal case."""
+def review(root, file, previous=None, *, write_view=False, fail_fast=False, progress=None, heartbeat_seconds=HEARTBEAT_SECONDS,
+           physics_only=False):
+    """Check one package issue. progress receives stderr-only lines; fail_fast stops at the first non-passing nominal case.
+
+    physics_only checks clearance, the displaced control and the budgets without reading or writing the review view.
+    A project's CI uses it to rerun a committed layout; its receipt is marked and is not one to publish."""
     plan_hash=digest(file)
     plan=read(file)
     require(plan["schema"]=="agent-frc/preliminary-layout@1" and named(plan["issue"]), "Select a package issue")
@@ -579,7 +583,8 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
     # One display tessellation per body for the whole study; each case folds its start pose into its frame matrices.
     tessellations={}
     def inspect_scene(case,scene):
-        frames.append(capture(case,scene,tessellations))
+        # A physics-only run shows nothing, so it needs no display mesh.
+        if not physics_only:frames.append(capture(case,scene,tessellations))
     # The displaced control is expected to fail, so it never stops a fail-fast run. It runs last and
     # only after every nominal case passed; otherwise it is skipped and the receipt cannot be checked.
     observed=evaluate(root,study,mount_hosts={m["on"] for m in mounts},package_scene=inspect_scene,
@@ -618,12 +623,16 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
             progress("[view] warning: field interactions are linked but no case registers a field fixture, so the review's "
                      "Fit field interaction stays off. If a field part is modeled as a package member it counts as robot; "
                      "register it under the case fixtures in the motion study")
-        result["view"]=verify_view(root,plan,sorted(frames,key=lambda f:cycle.index(f["id"]) if f["id"] in cycle else len(cycle)),
-                                   write_view,observed,result["budgets"],
-                                   dict(control=result.get("control"),missing=missing,
-                                        studyCases=cases,fixtures=fixture_ids,freePaths=free_bound),deferred=view_writes)
-        if not result["view"] or not result["view"]["verified"]:
-            missing.append("Generate the matching view of these checked trajectories with --write-view")
+        if physics_only:
+            result["physicsOnly"]=True
+            result["view"]=dict(file=plan["view"],verified=False,skipped="--physics-only run") if plan.get("view") else None
+        else:
+            result["view"]=verify_view(root,plan,sorted(frames,key=lambda f:cycle.index(f["id"]) if f["id"] in cycle else len(cycle)),
+                                       write_view,observed,result["budgets"],
+                                       dict(control=result.get("control"),missing=missing,
+                                            studyCases=cases,fixtures=fixture_ids,freePaths=free_bound),deferred=view_writes)
+            if not result["view"] or not result["view"]["verified"]:
+                missing.append("Generate the matching view of these checked trajectories with --write-view")
     for m in mounts:
         box=observed["mountHostBoundsMm"].get(m["on"])
         if box is None or any(p<box[i]-1e-6 or p>box[i+3]+1e-6 for i,p in enumerate(m["pointMm"])):
@@ -697,6 +706,8 @@ if __name__=="__main__":
     parser.add_argument("--previous",help="Project-selected previous checkpoint, relative to the project")
     parser.add_argument("--fail-fast",action="store_true",
                         help="Stop at the first nominal case that does not pass and write a partial, never checked receipt")
+    parser.add_argument("--physics-only",action="store_true",
+                        help="Check clearance, the displaced control and the budgets without the review view; the receipt is marked and is not one to publish")
     parser.add_argument("--output",metavar="FILE",
                         help="Write the receipt to the project-relative FILE through a temporary file and a rename instead of stdout; "
                              "a run that ends in an error leaves the previous FILE intact")
@@ -707,11 +718,12 @@ if __name__=="__main__":
     try:
         root=args.project.resolve()
         output=(root/args.output).resolve() if args.output else None
+        require(not (args.physics_only and args.write_view),"Choose --physics-only or --write-view")
         require(output is None or not Path(args.output).is_absolute() and output.is_relative_to(root) and output.parent.is_dir()
                 and not output.is_dir(),"Save the receipt to a project-relative file in an existing folder")
         result=review(root,project_path(root,args.plan),project_path(root,args.previous) if args.previous else None,
                       write_view=args.write_view,fail_fast=args.fail_fast,progress=None if args.quiet else stderr_progress,
-                      heartbeat_seconds=args.heartbeat)
+                      heartbeat_seconds=args.heartbeat,physics_only=args.physics_only)
         receipt=json.dumps(result,indent=2,allow_nan=False)+"\n"
         if args.output:write_atomic(output,receipt.encode("utf-8"))
         else:sys.stdout.write(receipt)

@@ -35,6 +35,10 @@ The scan reads every tracked text file as it stands at the pushed commit; it doe
 
 A fixture that shows a path or key on purpose can be listed in `.branch-scan.json` at the project root, as `{"ignore": ["tests/fixtures/paths/", "docs/example.log"]}`. A folder entry ends in `/`. The list is reviewed in the pull request like any other file. Run the same command before the first push of a new branch.
 
+## Check published designs in CI
+
+A project that publishes design reviews runs one workflow, [design publication](../templates/design-publication.yml). On every push it scans the branch, reruns the layout check for each published design from its committed inputs and checks the status index. [What the check verifies and how it stays fast](design-publication.md)
+
 ## Check the workflows before pushing
 
 After committing a workflow change, check the exact commit you intend to push. Use an approved local [actionlint release](https://github.com/rhysd/actionlint/releases) and verify its published checksum. The plugin CI exercises v1.7.12.

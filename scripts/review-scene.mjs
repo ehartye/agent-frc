@@ -117,12 +117,12 @@ export function readScene(bytes, maxBytes = maxSceneBytes) {
     contentSha256: createHash('sha256').update(content).digest('hex'), bytes: content.length};
 }
 
-/** The receipt fields the scene must repeat exactly. */
-export function compareWithReceipt(read, receipt) {
+/** The receipt fields the scene must repeat exactly. With `pins: false` the receipt need not pin the scene's bytes. */
+export function compareWithReceipt(read, receipt, {pins = true} = {}) {
   const errors = [], pin = receipt?.view?.scene;
   const canonical = v => JSON.stringify(v, (k, x) => x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.keys(x).sort().map(n => [n, x[n]])) : x);
   const same = (a, b) => canonical(a) === canonical(b);
-  if (!pin || pin.sha256 !== read.sha256 || pin.contentSha256 !== read.contentSha256 || pin.bytes !== read.bytes) errors.push('The receipt does not pin these scene bytes');
+  if (pins && (!pin || pin.sha256 !== read.sha256 || pin.contentSha256 !== read.contentSha256 || pin.bytes !== read.bytes)) errors.push('The receipt does not pin these scene bytes');
   const s = read.scene;
   if (s.issue !== receipt.issue) errors.push('Scene issue differs from the receipt');
   if (!same(s.sources?.step, receipt.step) || !same(s.sources?.motion, receipt.motion)) errors.push('Scene STEP or motion pin differs from the receipt');
