@@ -12,7 +12,7 @@ test('a file is replaced whole and a failed write keeps the previous bytes',t=>{
   assert.equal(readFileSync(file,'utf8'),'second');
   // A target that cannot be replaced: the rename fails, the previous content stays and no temporary file remains.
   const blocked=path.join(root,'blocked');mkdirSync(blocked);writeFileSync(path.join(blocked,'kept'),'previous');
-  assert.throws(()=>writeFileAtomic(blocked,'next'));
+  assert.throws(()=>writeFileAtomic(blocked,'next',{busyMs:0}));
   assert.equal(readFileSync(path.join(blocked,'kept'),'utf8'),'previous');
   assert.deepEqual(readdirSync(root).sort(),['blocked','index.json']);
 });

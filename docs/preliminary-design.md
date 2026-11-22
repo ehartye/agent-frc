@@ -60,7 +60,7 @@ Each transporter must be a `mechanism` group. A transporter that does not move i
 
 ### Save the receipt while others read the package
 
-Add `--output receipt.json` to save the receipt instead of printing it. The checker writes a temporary file beside the target and renames it over the target, so a reviewer or another agent reading the package finds the previous receipt or the new one, never an empty or partial file. A run that ends in an error leaves the previous receipt in place. A shell redirect such as `> receipt.json` empties the file as the run starts. `--write-view` writes the page and its scene the same way: each appears whole. On Windows a reader that opens a file during the rename itself can get a brief sharing error; it should retry.
+Add `--output receipt.json`, a path relative to the project, to save the receipt instead of printing it. The checker writes a temporary file beside the target and renames it over the target, so a reviewer or another agent reading the package finds the previous receipt or the new one, never an empty or partial file. A run that ends in an error leaves the previous receipt in place. A shell redirect such as `> receipt.json` empties the file as the run starts. `--write-view` writes the page and its scene the same way: each appears whole. On Windows a reader that opens a file during the rename itself can get a brief sharing error; it should retry.
 
 The checker never replaces an existing page or scene. A project that deletes and regenerates them, or that rewrites other package files with its own scripts, opens a gap for concurrent readers. Regenerate into a new issue folder, or pause readers, when that matters.
 

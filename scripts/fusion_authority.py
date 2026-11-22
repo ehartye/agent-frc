@@ -181,8 +181,7 @@ def export_issue(app,root,register,issue):
             "id":spec["id"],"configuration":spec["configuration"],"nativeConfiguration":config,"revision":spec["revision"],
             "dirty":False,"archive":ref(root,archive),"step":ref(root,step),"inspectedAt":datetime.now(timezone.utc).isoformat()}
         out=issue/"lineage.json"
-        from atomic_file import write_atomic
-        write_atomic(out,(json.dumps(result,indent=2)+"\n").encode("utf-8"))
+        out.write_text(json.dumps(result,indent=2)+"\n",encoding="utf-8")
         return verify(root,register,out)
     finally:
         if temporary:

@@ -9,6 +9,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import time
 import zlib
 
 
@@ -21,6 +22,20 @@ def pinned(root, row):
     if not path.is_relative_to(root) or hashlib.sha256(path.read_bytes()).hexdigest() != row["sha256"]:
         raise ValueError("Missing or changed release input: " + row["file"])
     return path
+
+
+def replace_index(temporary, site):
+    """Rename the complete new index over the old one, so a reader finds one or the other.
+
+    Windows refuses the rename while a reader holds the index open; the reader finishes shortly."""
+    for attempt in range(500):
+        try:
+            Path(temporary).replace(site / "releases.json")
+            return
+        except PermissionError:
+            if attempt == 499:
+                raise
+            time.sleep(0.02)
 
 
 @contextmanager
@@ -585,7 +600,7 @@ def stage(season, inputs, release, verifier=None, policy=None):
         record["current"] = current_for(record, historical_ids(site, record))
         new_index = Path(tmp) / "releases.json"
         new_index.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
-        new_index.replace(site / "releases.json")
+        replace_index(new_index, site)
 
 
 def set_status(site, release, status, verifier=None, policy=None):
@@ -629,7 +644,7 @@ def set_status(site, release, status, verifier=None, policy=None):
         check_statuses(record, site)
         with tempfile.NamedTemporaryFile("w", dir=site, delete=False, encoding="utf-8", suffix=".json") as out:
             out.write(json.dumps(record, indent=2) + "\n")
-        Path(out.name).replace(site / "releases.json")
+        replace_index(out.name, site)
 
 
 def template_report(site, verifier=None):

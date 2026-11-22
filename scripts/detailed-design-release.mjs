@@ -436,7 +436,8 @@ export function markEffective({site,policyFile,design,packetFile}){
     const record={schema:designSchema,design,label:labels.effective,
       fusion:{stepSha256:body.stepSha256,archiveSha256:body.archiveSha256,configuration:body.configuration}};
     mkdirSync(path.join(tree,'designs',design),{recursive:true});
-    writeFileSync(path.join(tree,'designs',design,'design.json'),JSON.stringify(record,null,2)+'\n',{flag:'wx'});
+    check(!existsSync(path.join(tree,'designs',design,'design.json')),'Design record already exists: '+design);
+    writeFileAtomic(path.join(tree,'designs',design,'design.json'),JSON.stringify(record,null,2)+'\n');
     entry={design,status:'in-progress'};index.designs.push(entry);
   }
   check(entry.status==='in-progress','Only a new or in-progress design can become effective: '+design);

@@ -7,6 +7,7 @@ import subprocess
 import sys
 from tempfile import TemporaryDirectory
 import threading
+import time
 import unittest
 from unittest.mock import patch
 
@@ -50,6 +51,7 @@ class AtomicWrites(unittest.TestCase):
                     continue
                 else:
                     reads[0] += 1
+                    time.sleep(0.001)
                     if data not in versions:
                         bad.append(len(data))
         thread = threading.Thread(target=reader)
@@ -79,21 +81,35 @@ class AtomicWrites(unittest.TestCase):
         with self.assertRaises(FileExistsError):
             write_atomic(target, b"second", exclusive=True)
         self.assertEqual(target.read_bytes(), b"first")
+        # Two writers that both saw no target: the loser is refused at the rename, not only at the first look.
+        raced = self.root / "raced.html"
+        real = atomic_file.os.path.lexists
+        def late(path):
+            if not raced.exists() and Path(path) == raced:
+                raced.write_bytes(b"winner")
+                return False
+            return real(path)
+        with patch.object(atomic_file.os.path, "lexists", side_effect=late):
+            with self.assertRaises(FileExistsError):
+                write_atomic(raced, b"loser", exclusive=True)
+        self.assertEqual(raced.read_bytes(), b"winner")
         self.assertEqual(self.leftovers(self.root), [])
 
     def test_output_receipt_matches_stdout_and_survives_a_failed_run(self):
         plain = self.check()
         self.assertEqual(plain.returncode, 0, plain.stderr)
         receipt = self.layout / "check-receipt.json"
-        saved = self.check("--output", str(receipt))
+        saved = self.check("--output", "check-receipt.json")
         self.assertEqual(saved.returncode, 0, saved.stderr)
         self.assertEqual(saved.stdout, "")
         self.assertEqual(json.loads(receipt.read_text(encoding="utf-8")), json.loads(plain.stdout))
         self.assertEqual(receipt.read_bytes(), (json.dumps(json.loads(plain.stdout), indent=2) + "\n").encode())
         before = receipt.read_bytes()
         write(self.layout, "broken.json", dict(self.plan, issue=""))
-        failed = self.check("--output", str(receipt), plan="broken.json")
+        failed = self.check("--output", "check-receipt.json", plan="broken.json")
         self.assertEqual(failed.returncode, 2)
+        self.assertEqual(self.check("--output", str(self.root / "outside.json")).returncode, 2)
+        self.assertFalse((self.root / "outside.json").exists())
         self.assertEqual(receipt.read_bytes(), before)
         self.assertEqual(self.leftovers(self.layout), [])
 
@@ -103,7 +119,7 @@ class AtomicWrites(unittest.TestCase):
         self.assertEqual(self.leftovers(self.layout), [])
         folder = self.root / "interrupted"
         folder.mkdir()
-        with patch.object(atomic_file.os, "replace", side_effect=OSError("interrupted")):
+        with patch.object(atomic_file.os, "rename", side_effect=OSError("interrupted")),                 patch.object(atomic_file.os, "link", side_effect=OSError("interrupted")):
             with self.assertRaises(OSError):
                 package_view.write_atomic(folder / "package-motion.html", b"<html>", exclusive=True)
         self.assertEqual(list(folder.iterdir()), [])
