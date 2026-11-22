@@ -241,7 +241,7 @@ function fit(ids){
  if(!ids.length)return;
  const mid=lo.map((q,i)=>(q+hi[i])/2),depth=[ca*ce,sa*ce,se],along=depth.reduce((s,d,i)=>s+d*mid[i],0),midU=(b[0]+b[1])/2,midV=(b[2]+b[3])/2;
  // Centre the projected bounds; the depth component only orders surfaces.
- const center=u.map((q,i)=>midU*q+midV*v[i]+along*depth[i]),scale=.88*Math.min((w-rail-24)/Math.max(1e-6,b[1]-b[0]),h/Math.max(1e-6,b[3]-b[2]));
+ const center=u.map((q,i)=>midU*q+midV*v[i]+along*depth[i]),scale=.8*Math.min((w-rail-24)/Math.max(1e-6,b[1]-b[0]),h/Math.max(1e-6,b[3]-b[2]));
  cam={az,el,x:0,y:0,center,scale};draw()
 }
 const robotIds=()=>presentIds(current()).filter(id=>!scene.bodies[id].fixture);

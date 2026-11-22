@@ -67,6 +67,14 @@ test('the stock page keeps the reference region order, control placement, labels
   assert.ok(top.canvasTop < 1000, 'the model starts within the first screen at 1680 x 1000 (' + top.canvasTop + ')');
   assert.deepEqual(top.idle, {actions: true, hint: 'Click a solid or choose a part in the inventory.', search: true}, 'the idle inspector shows its hint and search only');
   assert.equal(top.csp, true, 'the stock page ships its policy as the first element in <head>, and still loads its scene and fonts');
+  // The opening view fits the robot, not the field: every robot body inside the canvas at a sensible share of its width.
+  const fitted = await probePage(dir, url, ready + `await new Promise(r=>setTimeout(r,300));const cs=current(),box=[1/0,-1/0,1/0,-1/0],field=[1/0,-1/0];
+   for(const id of presentIds(cs)){const m=poseAt(cs,id,0);for(const v of scene.meshes[cs.bodies[id].mesh].v){const p=lastProjection(flat(m,v));
+    if(scene.bodies[id].fixture){field[0]=Math.min(field[0],p[0]);field[1]=Math.max(field[1],p[0]);continue}
+    box[0]=Math.min(box[0],p[0]);box[1]=Math.max(box[1],p[0]);box[2]=Math.min(box[2],p[1]);box[3]=Math.max(box[3],p[1])}}
+   return {share:(box[1]-box[0])/2,inside:box.every(x=>x>=-1&&x<=1),fieldOutside:field[1]>1}`, {width: 1680, height: 1000});
+  assert.ok(fitted.inside && fitted.share >= 0.35 && fitted.share <= 0.85, 'robot framed on load: ' + JSON.stringify(fitted));
+  assert.equal(fitted.fieldOutside, true, 'the fit excludes the field fixture, which lies beyond the robot');
   for (const width of [1280, 1600, 1920, 961]) {
     const g = await probePage(dir, url, structure, {width, height: 1000});
     assert.ok(!g.probeError, g.probeError);
