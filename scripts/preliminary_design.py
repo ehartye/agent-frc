@@ -102,6 +102,23 @@ def same_scenario(a, b):
     return a.get("scenario")==b.get("scenario")
 
 
+def mount_notes(groups, mounts):
+    """Advisory stderr lines about members left out of a partly per-member mount registration. Never in the receipt."""
+    lines=[]
+    for key,g in groups.items():
+        own=[m for m in mounts if m["group"]==key]
+        named_members={m["member"] for m in own if "member" in m}
+        bare=[n for n in g["members"] if n not in named_members]
+        if not named_members or not bare or any("member" not in m for m in own):continue
+        if g["role"]=="mechanism":
+            lines+=["[mounts] note: "+n+" in "+key+" has no mount of its own; the group's mounts name only "
+                    +", ".join(sorted(named_members)) for n in bare]
+        elif g["role"]=="structure":
+            lines.append("[mounts] note: structure members without a registered joint: "+", ".join(bare)
+                         +" (a root frame member needs none)")
+    return lines
+
+
 def compare_premises(root, rows, plan, missing):
     require(isinstance(rows,list),"List the accepted upstream premises")
     decisions=[]
@@ -476,6 +493,8 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
     for key,g in groups.items():
         if g["role"]=="mechanism" and not any(m["group"]==key for m in mounts):
             missing.append("Missing mount datum for "+key)
+    if progress:
+        for line in mount_notes(groups,mounts):progress(line)
     cases=study["cases"]
     by_id={c["id"]:c for c in cases}
     stages=plan["stages"]

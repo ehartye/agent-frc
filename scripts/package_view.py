@@ -518,14 +518,19 @@ def verify_view(root, plan, scenes, write, observed, budgets, review=None):
     # Each file appears complete or not at all, so a reader never finds a partly written page or scene.
     if write and not path.exists():
         write_atomic(path, page, exclusive=True)
-    if write and not scene_file.exists():
-        write_atomic(scene_file, gzip.compress(content, compresslevel=9, mtime=0), exclusive=True)
-    try:
-        stored = scene_file.read_bytes()
-        stream = zlib.decompressobj(16 + zlib.MAX_WBITS)
-        scene_ok = stream.decompress(stored, len(content) + 1) == content and stream.eof
-    except (OSError, zlib.error):
-        stored, scene_ok = None, False
+    def stored_scene():
+        try:
+            stored = scene_file.read_bytes()
+            stream = zlib.decompressobj(16 + zlib.MAX_WBITS)
+            return stored, stream.decompress(stored, len(content) + 1) == content and stream.eof
+        except (OSError, zlib.error):
+            return None, False
+    stored, scene_ok = stored_scene()
+    # The scene is generated data: a missing or stale one is replaced whole. The page is never replaced,
+    # because a project may keep its own copy.
+    if write and not scene_ok:
+        write_atomic(scene_file, gzip.compress(content, compresslevel=9, mtime=0))
+        stored, scene_ok = stored_scene()
     served = stored if stored is not None else gzip.compress(content, compresslevel=9, mtime=0)
     return dict(file=name, sha256=hashlib.sha256(page).hexdigest(),
                 verified=path.is_file() and path.read_bytes() == page and scene_ok,
