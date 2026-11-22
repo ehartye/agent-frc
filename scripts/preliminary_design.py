@@ -7,6 +7,7 @@ import subprocess
 import sys
 from time import perf_counter
 
+from atomic_file import write_atomic
 from component_shape import proper_rotation
 from mechanical_motion import HEARTBEAT_SECONDS, evaluate, stderr_progress, transforms, vec
 from package_budgets import budget_review
@@ -607,16 +608,24 @@ if __name__=="__main__":
     parser.add_argument("--previous",help="Project-selected previous checkpoint, relative to the project")
     parser.add_argument("--fail-fast",action="store_true",
                         help="Stop at the first nominal case that does not pass and write a partial, never checked receipt")
+    parser.add_argument("--output",metavar="FILE",
+                        help="Write the receipt to the project-relative FILE through a temporary file and a rename instead of stdout; "
+                             "a run that ends in an error leaves the previous FILE intact")
     parser.add_argument("--quiet",action="store_true",help="Omit progress, heartbeat and warning lines on stderr")
     parser.add_argument("--heartbeat",type=float,default=HEARTBEAT_SECONDS,metavar="SECONDS",
                         help="Seconds inside a motion case before a stderr line names the active pair (default 30)")
     args=parser.parse_args()
     try:
         root=args.project.resolve()
+        output=(root/args.output).resolve() if args.output else None
+        require(output is None or not Path(args.output).is_absolute() and output.is_relative_to(root) and output.parent.is_dir()
+                and not output.is_dir(),"Save the receipt to a project-relative file in an existing folder")
         result=review(root,project_path(root,args.plan),project_path(root,args.previous) if args.previous else None,
                       write_view=args.write_view,fail_fast=args.fail_fast,progress=None if args.quiet else stderr_progress,
                       heartbeat_seconds=args.heartbeat)
-        print(json.dumps(result,indent=2,allow_nan=False))
+        receipt=json.dumps(result,indent=2,allow_nan=False)+"\n"
+        if args.output:write_atomic(output,receipt.encode("utf-8"))
+        else:sys.stdout.write(receipt)
         sys.exit(int(args.require_checked and (result.get("partial",False) or result["status"]!="layout-checked")))
     except (KeyError,IndexError,ValueError,TypeError,OSError,RuntimeError) as error:
         print(str(error),file=sys.stderr)
