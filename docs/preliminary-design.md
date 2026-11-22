@@ -31,9 +31,26 @@ The carrier rotates 90° with a finite article while a neighboring slide travels
 
 1. Pin the editable `design.json` produced by the design CLI, the selected millimetre STEP and the project motion study. Use project-relative files and SHA-256 throughout. The study repeats the design digest as `layoutDesignSha256` and the exact `layoutDatum`. Give the datum a physical name and a proper row-major `robotToStepMm` transform with translations in millimetres. Express all mount points, rotation axes, starting poses, fixtures, travel and offsets in the same STEP world frame. The transform records the project’s registration. Validate it against the mounting datums on the first Fusion issue.
 2. Assign every selected solid and fixture to one group. Record the proposed mounting host and point for each mechanism. The checker compares that point with the host’s parked bounding box. Surface seating, hole alignment and strength need separate checks. Include complete stock and protection, the moving head and payload, neighboring mechanisms and a service tool wherever it occupies the path. Reserve wiring, tolerance, deflection or dressing with conservative geometry or a sourced minimum gap. List missing inputs explicitly.
-3. Give each operating, park and service case its own signed start and travel. Use the existing mechanical-motion format for rotations, translations, fixtures and staged extractions. Declare all simultaneously moving groups. Use `carriedWith` for a payload that follows its carrier. Independent moving groups retain their own motion. Tie `minGapMm` to each case’s `allowanceBasis`. Make the service case withdraw the complete group from the installed scene. A case that relies on a previous removal must name that proved extraction in the same history. [Motion and service evidence](mechanical-methods.md)
+3. Give each operating, park and service case its own signed start and travel. Use the existing mechanical-motion format for rotations, translations, fixtures and staged extractions. Declare all simultaneously moving groups. Use `carriedWith` for a payload that follows its carrier. Use `transportedBy` for a payload moved by contact, such as rollers or a lip, when no mechanism shares its motion. Independent moving groups retain their own motion. Tie `minGapMm` to each case’s `allowanceBasis`. Make the service case withdraw the complete group from the installed scene. A case that relies on a previous removal must name that proved extraction in the same history. [Motion and service evidence](mechanical-methods.md)
 4. Select a matched displaced control. Move one named stationary article by a measured world offset, replay the same nominal moving group and check the specified pair. An unrelated collision cannot validate the control. The checker tests endpoints and bounds the path between them. It retains a collision witness or an unresolved interval when clearance cannot be established within the subdivision budget.
 5. Save the checkpoint receipt with the issue. `layout-checked` applies to the represented package, cases and reserves. `blocked` identifies a nominal violation. `reopen` identifies an upstream premise outside its accepted condition. `provisional` keeps partial layouts useful and identifies missing evidence. Use `--require-checked` for an accepted handoff. A malformed or stale registration exits with a diagnostic. For an early concept, omit the STEP or motion reference, identify the missing input and retain the provisional receipt.
+
+### Move a payload by contact transport
+
+A fixed pocket, powered rollers or a deployable lip can move the article while no mechanism moves rigidly with it. Give the payload its own signed start and travel in the case and declare the transport in the stage:
+
+```json
+"transportedBy": {
+  "carried article": {
+    "mechanisms": ["carrier"],
+    "drive": {"carrier": "Roller surface held at a fixed powered speed"},
+    "evidence": {"file": "acquire-trial.json", "sha256": "..."},
+    "basis": "The article rolls in on the powered carrier surface"
+  }
+}
+```
+
+Each transporter must be a `mechanism` group. A transporter that does not move in the case needs a named `drive`. Pin the field-interaction or contact trial that established the path. Its `transport` record must equal the case ID, payload group, sorted transporters and the payload members' exact `moves` and `initialPose`, with `[]` for a member that has no start pose. When every condition holds, an operating case satisfies the loaded-operating requirement. A missing or unpinned trial, a trial for another path or an undeclared stationary drive is listed in `missingInputs`, and the case does not count. The review stops with an error for a transporter that is not a mechanism, an empty transporter list, a drive for a group that is not transporting, a payload that does not move in the case, or a payload that is both `carriedWith` and `transportedBy` in one stage. A changed trial file is refused like other pinned evidence. The checker binds the declared path to its trial. It does not re-run the trial or evaluate contact forces, slip or drive capacity; [isolate the cause of the transfer](#isolate-the-cause-of-a-successful-transfer) separately.
 
 ### Follow progress and stop at the first blocking case
 
