@@ -106,27 +106,58 @@ export function checkSourceInputs(id,files){
 /** The one Content-Security-Policy a season field player declares, compared byte for byte. */
 export const fieldPlayerPolicy="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; base-uri 'none'; form-action 'none'";
 const rawText=new Set(['script','style','textarea','title','xmp','iframe','noembed','noframes','noscript','plaintext']);
-const bannedTags=new Set(['iframe','frame','frameset','object','embed','portal','base','link','applet','form','area']);
+const bannedTags=new Set(['iframe','frame','frameset','object','embed','portal','base','link','applet','form','area','math','foreignobject']);
 const resourceAttrs=new Set(['src','srcset','poster','background','data','action','formaction','ping','xlink:href']);
 
-/** Start tags as a browser tokenizes them: comments, bogus markup and raw-text bodies are skipped. */
+// Start tags that leave SVG foreign content and return the parser to HTML (the HTML standard's breakout list).
+const breakout=new Set(['b','big','blockquote','body','br','center','code','dd','div','dl','dt','em','embed','h1','h2','h3','h4','h5','h6',
+  'head','hr','i','img','li','listing','menu','meta','nobr','ol','p','pre','ruby','s','small','span','strong','strike','sub','sup','table',
+  'tt','u','ul','var']);
+const asciiLower=s=>s.replace(/[A-Z]/g,c=>c.toLowerCase());
+
+/**
+ * Start tags as a browser tokenizes them. Comments end at -->, --!> or immediately for <!--> and <!--->.
+ * Raw-text bodies are skipped only in HTML content; inside <svg> they are markup, and CDATA ends at ]]>.
+ * Closing tags are matched case-insensitively on the original text.
+ */
 export function startTags(html){
-  const tags=[],space=c=>c===' '||c==='\t'||c==='\n'||c==='\f'||c==='\r';
-  let i=0;
+  const tags=[],space=c=>c===' '||c==='\t'||c==='\n'||c==='\f'||c==='\r',letter=c=>/^[A-Za-z]$/.test(c??'');
+  let i=0,svg=0;
+  const close=(name,from)=>{
+    for(let p=html.indexOf('</',from);p>=0;p=html.indexOf('</',p+2))
+      if(asciiLower(html.slice(p+2,p+2+name.length))===name)return p;
+    return html.length;
+  };
   while(i<html.length){
     if(html[i]!=='<'){i++;continue;}
-    if(html.startsWith('<!--',i)){const e=html.indexOf('-->',i+4);i=e<0?html.length:e+3;continue;}
+    if(html.startsWith('<!--',i)){
+      if(html.startsWith('<!-->',i)){i+=5;continue;}
+      if(html.startsWith('<!--->',i)){i+=6;continue;}
+      const a=html.indexOf('-->',i+4),b=html.indexOf('--!>',i+4);
+      const end=[a<0?Infinity:a+3,b<0?Infinity:b+4].reduce((x,y)=>Math.min(x,y));
+      i=end===Infinity?html.length:end;continue;
+    }
+    if(svg&&html.startsWith('<![CDATA[',i)){const e=html.indexOf(']]>',i+9);i=e<0?html.length:e+3;continue;}
     const next=html[i+1]??'';
+    if(next==='/'&&letter(html[i+2])){
+      let j=i+2;
+      while(j<html.length&&!space(html[j])&&html[j]!=='/'&&html[j]!=='>')j++;
+      const name=asciiLower(html.slice(i+2,j));
+      if(svg&&name==='svg')svg--;
+      else if(svg&&(name==='p'||name==='br'))svg=0;
+      const e=html.indexOf('>',j);i=e<0?html.length:e+1;continue;
+    }
     if(next==='!'||next==='?'||next==='/'){const e=html.indexOf('>',i+1);i=e<0?html.length:e+1;continue;}
-    if(!/[A-Za-z]/.test(next)){i++;continue;}
-    let j=i+1;
+    if(!letter(next)){i++;continue;}
+    let j=i+1,selfClosing=false;
     while(j<html.length&&!space(html[j])&&html[j]!=='/'&&html[j]!=='>')j++;
-    const name=html.slice(i+1,j).toLowerCase(),attrs=[];
+    const name=asciiLower(html.slice(i+1,j)),attrs=[];
     while(j<html.length&&html[j]!=='>'){
-      if(space(html[j])||html[j]==='/'){j++;continue;}
+      if(space(html[j])){j++;continue;}
+      if(html[j]==='/'){selfClosing=html[j+1]==='>';j++;continue;}
       let k=j+1;
       while(k<html.length&&!space(html[k])&&html[k]!=='/'&&html[k]!=='>'&&html[k]!=='=')k++;
-      const attr=html.slice(j,k).toLowerCase();
+      const attr=asciiLower(html.slice(j,k));
       while(k<html.length&&space(html[k]))k++;
       let value='';
       if(html[k]==='='){
@@ -145,10 +176,9 @@ export function startTags(html){
     }
     tags.push({name,attrs});
     i=j+1;
-    if(rawText.has(name)){
-      const close=html.toLowerCase().indexOf('</'+name,i);
-      i=close<0?html.length:close;
-    }
+    if(svg&&(breakout.has(name)||name==='font'&&attrs.some(([a])=>['color','face','size'].includes(a))))svg=0;
+    if(name==='svg'&&!selfClosing){svg++;continue;}
+    if(!svg&&rawText.has(name))i=close(name,i);
   }
   return tags;
 }
