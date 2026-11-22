@@ -8,6 +8,14 @@
 
 Hand off one selected architecture. Play each mission-critical duty in its registered, full-scale field area and inspect the finite article or robot through the applicable outcome and assessment time. Use the project’s rules edition and fixture dimensions. Preserve failed trials alongside successful ones. The [presentation reference](../skills/frc-preliminary-design/references/presentation.md#field-interactions-and-physics-playback) describes the required physics playback and controls. The geometric clearance command checks a different question and can be reviewed alongside those trials.
 
+## Isolate the cause of a successful transfer
+
+When deciding whether a contact or actuator earns its place, first record what the model commands and what it solves. A free article can reach its seat while a drive maintains an imposed surface speed. That trial establishes transport at the stated speed. Predicting whether the drive can sustain it calls for loaded speed or force measurements, or a model that feeds contact reaction back into motor speed, current and bus voltage.
+
+Repeat the same approach from the same initial state, changing only the proposed cause. For a removable guide, compare it installed and removed. For a drive, state whether its surface is locked, free to coast with inertia and drag, or powered. Preserve the other contact surfaces, timing and endpoint criterion. Trace first contact, subsequent support or powered contact, and whether the article stays at its destination for the required interval. First touch alone cannot identify which member completed the transfer.
+
+Repeat the comparison at a plausible adverse value of the uncertain input that could change the selection. Two trials with opposite outcomes bound a transition only if the response is monotonic over that interval. Otherwise report the tested cases individually. If the selection changes, carry the default geometry forward provisionally and identify the physical measurement that would decide it. For interchangeable candidates, use the same mount and drive settings on the bench so the changed contact profile remains the variable under test.
+
 ## Work a synthetic package
 
 With the plugin’s geometry Python environment selected, create a new example folder and run the normal design command.
