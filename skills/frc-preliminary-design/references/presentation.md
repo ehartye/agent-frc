@@ -2,6 +2,8 @@
 
 Give the reviewer an interactive whole-robot blockout and a decision they can inspect. Link the review from the project handoff. Put the selected concept, revision, robot datum, units and current disposition on the opening view. Use the project's Agent FRC presentation theme and [component palette](../../../docs/cad-color-convention.md).
 
+Start with the [copyable full page layout, budget examples and project-local launcher](review-layout-template.md). Its page order puts the viewer first and the resource figures immediately below it.
+
 ## What the reviewer can do
 
 Show the reviewed strategic narrative revision and the disposition of each match objective and fallback. Provide a component selector and direct surface picking. Display two separate, project-authored explanations for every placed ID: **Purpose** describes what it does, and **Why it is included** identifies the need or tradeoff that justifies this piece in this architecture. A service gauge, for example, can represent a socket and justify its volume by the required removal sequence. Keep missing explanations visible.

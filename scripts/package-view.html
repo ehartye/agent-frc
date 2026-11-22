@@ -3,6 +3,7 @@
 <title>Preliminary assembly motion</title>
 <style>
 *{box-sizing:border-box}body{font:1rem system-ui;color:#193746;background:#f3f6f7;max-width:88rem;margin:2rem auto;padding:0 1rem}h1{letter-spacing:-.035em}fieldset{display:flex;flex-wrap:wrap;align-items:center;gap:.65rem;border:0;padding:0}button,select{font:inherit;padding:.35rem}#stage{position:relative;margin:1rem 0;background:#101e28;overflow:hidden}canvas{width:100%;height:min(62vh,48rem);display:block;touch-action:none;cursor:grab}#labels{position:absolute;inset:0;pointer-events:none}.tag{position:absolute;background:#142833d9;color:white;padding:0 3px;font:11px system-ui;white-space:nowrap}output{font-variant-numeric:tabular-nums}small{display:block}
+body{font-family:"Source Sans 3","Segoe UI",sans-serif;background:#f7faf8;color:#182e49}h1,h2,h3{font-family:"Barlow Condensed","Arial Narrow",sans-serif}h1{border-bottom:4px solid #ffd078;color:#142f63}h2{color:#142f63}button,select{border:1px solid #516677;border-radius:.25rem;background:white;color:#142f63}button:focus-visible,select:focus-visible,input:focus-visible,canvas:focus-visible{outline:3px solid #194fb0}#metrics{display:flex;flex-wrap:wrap;gap:.5rem 2rem;padding:1rem;background:#142f63;color:white;border-top:3px solid #ffd078}#metrics dl{margin:0}#metrics dd{margin:0;font-size:1.25rem;font-weight:700;font-variant-numeric:tabular-nums}section{margin:1rem 0}table{border-collapse:collapse;width:100%;background:white}th,td{padding:.4rem .55rem;text-align:left;border-bottom:1px solid #b7c9d0;vertical-align:top;font-variant-numeric:tabular-nums}th{background:#e2eef2}.scroll{overflow-x:auto}#memberSet{display:flex;gap:.65rem;flex-wrap:wrap}#summary{font-weight:600}
 </style>
 <h1>Preliminary assembly motion</h1><p id="issue"></p>
 <details><summary>Strategic narrative review</summary><p id="narrativeSource"></p><ul id="objectives"></ul></details>
@@ -10,10 +11,17 @@
 <button id="play">Play</button><label>Stroke <input type="range" id="frame" min="0" max="24" value="0"></label><output id="position"></output>
 <label><input id="showLabels" type="checkbox"> Labels</label><label><input id="floor" type="checkbox" checked> Floor</label><button id="fit">Fit model</button></fieldset>
 <div id="stage"><canvas tabindex="0" aria-label="Orbitable solid package assembly"></canvas><div id="labels"></div></div>
+<section id="metrics" aria-label="Whole-robot resource figures"></section>
 <section aria-label="Component inspector"><label>Inspect a component <select id="component"></select></label>
-<dl aria-live="polite"><dt>Purpose</dt><dd id="purpose"></dd><dt>Why it is included</dt><dd id="rationale"></dd></dl></section>
+<p id="material"></p><dl aria-live="polite"><dt>Purpose</dt><dd id="purpose"></dd><dt>Why it is included</dt><dd id="rationale"></dd></dl></section>
 <small>Carried-piece motion in this player is prescribed. Verify retention under gravity, including loss of grip, before accepting a loaded lift.</small>
 <small>Drag to orbit, Shift-drag or right-drag to pan, and scroll to zoom. Arrow keys rotate, Shift and arrow keys pan, and Home fits the model. The grid lies at datum Z = 0. The clearance receipt bounds the paths between displayed frames.</small>
+<section><h2>Component and resource ledgers</h2>
+<label>Group <select id="scope"></select></label> <label>Concurrent duty and pack <select id="duty"></select></label>
+<fieldset id="memberSet" hidden><legend>Custom subsystem members</legend></fieldset><p id="summary"></p>
+<h3>Weight</h3><div id="weight" class="scroll"></div>
+<h3>Electrical demand</h3><div id="electric" class="scroll"></div><p id="pack"></p>
+<h3>Coverage</h3><ul id="warnings"></ul></section>
 <script type="application/json" id="data">PACKAGE_DATA</script><script>
 const data=JSON.parse(document.querySelector('#data').textContent);
 const get=id=>document.getElementById(id),canvas=document.querySelector('canvas'),gl=canvas.getContext('webgl',{antialias:true});
@@ -29,10 +37,90 @@ const component=get('component');
 for(const name of [...new Set(Object.values(data.groups).flatMap(g=>g.members))].sort())component.add(new Option(name,name));
 function explain(){
  const row=data.components[component.value]||{};
+ const body=data.cases[0]?.bodies[component.value];
+ get('material').textContent=(row.category||Object.values(data.groups).find(g=>g.members.includes(component.value))?.role||'Unclassified')+' · '+(row.material||'Material pending')+(body?' · '+(body.volumeMm3/1000).toFixed(2)+' cm³ solid volume':'');
  for(const key of ['purpose','rationale'])get(key).textContent=row[key]?.trim()||'Missing from this review';
 }
 component.onchange=()=>{explain();draw()};
 explain();
+function element(tag,value){const el=document.createElement(tag);el.textContent=value;return el}
+const format=(n,d=2)=>Number(n).toFixed(d);
+const interval=(r,u)=>r.map(v=>format(v)).join('–')+' '+u;
+const signed=(n,u)=>(n>=0?'+':'')+format(n)+' '+u;
+const categories=new Map();
+for(const [groupName,g] of Object.entries(data.groups)){
+ for(const id of g.members){
+  const name=data.components[id]?.category||g.role;
+  if(!categories.has(name))categories.set(name,new Set());
+  categories.get(name).add(id);
+ }
+}
+const scope=get('scope'),duty=get('duty'),custom=new Set();
+scope.add(new Option('Whole robot','all'));
+for(const name of categories.keys())scope.add(new Option(name,'category:'+name));
+for(const name of Object.keys(data.groups))scope.add(new Option(name+' subsystem','group:'+name));
+scope.add(new Option('Custom subsystem','custom'));
+for(const option of component.options){
+ const id=option.value,label=document.createElement('label'),check=document.createElement('input');
+ check.type='checkbox';check.onchange=()=>{if(check.checked)custom.add(id);else custom.delete(id);budgets()};
+ label.append(check,document.createTextNode(id));get('memberSet').append(label);
+}
+for(const row of data.power||[])duty.add(new Option(row.case,row.case));
+if(data.power?.length)duty.value=data.power.reduce((a,b)=>b.marginV<a.marginV?b:a).case;
+function table(id,headers,rows){
+ const t=document.createElement('table'),tr=t.createTHead().insertRow();
+ for(const h of headers)tr.append(element('th',h));
+ const body=t.createTBody();for(const row of rows){const r=body.insertRow();for(const value of row)r.insertCell().textContent=value}
+ get(id).replaceChildren(t);
+}
+function budgets(){
+ const all=scope.value==='all',members=scope.value==='custom'?custom:scope.value.startsWith('category:')?categories.get(scope.value.slice(9)):new Set(data.groups[scope.value.slice(6)]?.members||[]);
+ get('memberSet').hidden=scope.value!=='custom';get('memberSet').style.display=scope.value==='custom'?'flex':'none';
+ function allocation(ids){
+  if(all)return 'Included';
+  if(!ids.length)return 'Unallocated';
+  if(ids.every(id=>members.has(id)))return 'Included';
+  return ids.some(id=>members.has(id))?'Shared':'Outside';
+ }
+ const mass=data.mass,power=data.power?.find(v=>v.case===duty.value);
+ const metrics=get('metrics');metrics.replaceChildren();
+ function metric(label,value){const dl=document.createElement('dl');dl.append(element('dt',label),element('dd',value));metrics.append(dl)}
+ const kg=[0,0],amps=[0,0];let unresolved=0;
+ if(mass){
+  metric('Inspection limit',format(mass.limit)+' kg');metric('Inspection estimate',interval(mass.range,'kg'));
+  metric('Weight headroom',signed(mass.remaining,'kg'));metric('Running weight',interval(mass.running,'kg'));
+  const rows=[];
+  for(const line of mass.lines){const share=allocation(line.members);if(share==='Outside')continue;
+   if(share==='Included')line.kg.forEach((v,i)=>kg[i]+=v);else unresolved++;
+   rows.push([line.id,line.members.join(', ')||'Allowance',interval(line.kg,'kg'),share,line.basis]);
+  }table('weight',['Allocation','Members','Mass','Scope','Basis'],rows);
+ }else get('weight').textContent='Weight ledger missing.';
+ if(power){
+  const bus=power.loadedBusV[0],r=power.resistance[1],floor=power.requiredMinV;
+  metric('Concurrent battery current',interval(power.batterySideA,'A'));metric('Minimum loaded bus',format(bus)+' V');
+  metric('Required voltage',format(floor)+' V');metric('Voltage headroom',signed(power.marginV,'V'));
+  const rows=[];for(const [id,a] of Object.entries(power.loads)){
+   const ids=data.loadMembers?.[id]||[],share=allocation(ids);
+   if(share==='Outside')continue;
+   if(share==='Included')a.forEach((v,i)=>amps[i]+=v);else unresolved++;
+   rows.push([id,ids.join(', ')||'Unallocated',interval(a,'A'),format(a[1]*r)+' V',bus>=0?format(a[1]*bus,1)+' W':'Unresolved',share]);
+  }table('electric',['Load','Consumers','Battery current','Sag at high load','Bus input at high load','Scope'],rows);
+  const limit=r>0?Math.max(0,(power.openCircuit[0]-floor)/r):null;
+  get('pack').textContent=power.duty+' · '+power.batteryCondition+' pack · '+format(power.openCircuit[0])+' V open circuit · '+format(r*1000,1)+' mΩ. '+(limit===null?'Current at the voltage floor is undefined for zero resistance.':format(limit,1)+' A / '+format(limit*floor,1)+' W at the voltage floor (pack model only).');
+ }else get('electric').textContent='Concurrent electrical ledger missing.';
+ get('summary').textContent=[mass&&interval(kg,'kg'),power&&interval(amps,'A')].filter(Boolean).join(' · ')+' assigned to this selection.'+(unresolved?' Shared and unallocated lines appear separately.':'');
+ const warnings=[];if(!Object.keys(data.required||{}).length)warnings.push('Expected component roster has not been commissioned.');
+ for(const [role,ids] of Object.entries(data.required||{})){
+  const missing=ids.filter(id=>!Object.values(data.groups).some(g=>g.members.includes(id)));
+  if(missing.length)warnings.push('Missing '+role+': '+missing.join(', '));
+ }
+ if(!mass||mass.remaining<0)warnings.push(mass?'Inspection weight exceeds the project limit.':'Inspection budget unavailable.');
+ if(!power)warnings.push('Electrical duty coverage unavailable.');
+ for(const row of data.power||[])if(row.marginV<0)warnings.push(row.case+' is below its voltage requirement.');
+ for(const id of Object.keys(power?.loads||{}))if(!data.loadMembers?.[id]?.length)warnings.push('Consumer allocation open: '+id);
+ get('warnings').replaceChildren(...(warnings.length?warnings:['Commissioned roster and budget checks have no flagged rows.']).map(v=>element('li',v)));
+}
+scope.onchange=duty.onchange=budgets;budgets();
 if(!gl){get('issue').textContent+=' · Enable WebGL to view the assembly.';throw Error('WebGL unavailable')}
 const program=gl.createProgram();
 function shader(type,source){const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));gl.attachShader(program,s)}

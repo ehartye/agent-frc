@@ -16,6 +16,10 @@ Repeat the same approach from the same initial state, changing only the proposed
 
 Repeat the comparison at a plausible adverse value of the uncertain input that could change the selection. Report the passing and failing values with units and the conditions held fixed. For a repeatable, monotonic response, they bracket a limiting value. With intermittent or nonmonotonic behavior, retain the individual outcomes and avoid extrapolating a single operating limit. If the selection changes, carry the default geometry forward provisionally and identify the physical measurement that would decide it. For interchangeable candidates, use the same mount and drive settings on the bench so the changed contact profile remains the variable under test.
 
+## Launch and share the season review
+
+Use the [whole-robot review layout template](../skills/frc-preliminary-design/references/review-layout-template.md) to place the viewer, resource figures, component ledgers and checked paths. Keep the UI, scene and evidence in the season project. From the season root run `python PLUGIN/examples/preliminary-design/create.py . --project-review --release layout-001`. Launch with `python cad/preliminary-design/serve.py` and open `http://127.0.0.1:8000/`. For a LAN review, supply the host address with `--bind`. The season-owned site under `docs/preliminary-design/` opens the latest issue. Select an archived issue with `?release=layout-001`. The starter includes a main-branch GitHub Pages workflow.
+
 ## Work a synthetic package
 
 With the plugin’s geometry Python environment selected, create a new example folder and run the normal design command.
