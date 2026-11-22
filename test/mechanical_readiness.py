@@ -26,6 +26,7 @@ from free_path import FreePath
 from fixture_warning import FixtureWarning
 from member_mounts import MemberMounts
 from scene_replace import SceneReplace
+from compression_trial_pin import CompressionTrialPin
 from held_position_replay import HeldPositionReplay
 from contact_transport import ContactTransport
 from held_pin_relocation import HeldPinRelocation
