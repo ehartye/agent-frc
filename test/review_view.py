@@ -4,13 +4,14 @@ import hashlib
 import json
 from pathlib import Path
 import runpy
+import subprocess
 import sys
 import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from package_view import (CONTROL_ID, component_inspector, field_interactions, first_unmet, fit_views, motion_evidence,  # noqa: E402
-                          review_header, scene_payload)
+from package_view import (CONTROL_ID, PAGE, component_inspector, field_interactions, first_unmet, motion_evidence,  # noqa: E402
+                          parked_assembly, review_header, scene_payload)
 
 IDENTITY = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0]
 
@@ -45,18 +46,16 @@ HIT = dict(pair=["arm", "post"], status="fail", witness=dict(t=.5, gapMm=0.0, vo
 
 
 class Regions(unittest.TestCase):
-    def test_default_fit_frames_the_robot_on_the_floor_and_the_field_separately(self):
-        scenes = [dict(id="turn", stage="operating", bodies={"arm": box([0, 0, 10], [10, 10, 20]),
-                                                             "target": box([500, 0, 0], [520, 20, 40])})]
-        fits = fit_views(scenes, {"target"})
-        self.assertEqual(fits["robot"]["center"], [5, 5, 10], "the floor at Z = 0 is part of the robot fit")
-        self.assertLess(fits["robot"]["extent"], 30)
-        self.assertGreater(fits["field"]["extent"], 500)
-        self.assertIsNone(fit_views([dict(scenes[0], bodies={"arm": scenes[0]["bodies"]["arm"]})], set())["field"])
-        parked = dict(id="park", stage="park", bodies={"arm": box([0, 0, 10], [10, 10, 20])})
-        later = fit_views([parked, scenes[0]], {"target"})
-        self.assertEqual(later["robot"]["center"], [5, 5, 10])
-        self.assertGreater(later["field"]["extent"], 500, "a fixture placed only in a later case still has a field fit")
+    def test_parked_assembly_lists_positive_and_unresolved_pairs_at_the_step_pose(self):
+        cases = study()
+        observed = [dict(case="turn", pairs=[dict(pair=["post", "base"], status="fail", witness=dict(t=0, gapMm=0, volumeMm3=12.5)),
+                                             dict(pair=["arm", "post"], status="fail", witness=dict(t=.5, gapMm=0, volumeMm3=40)),
+                                             dict(pair=["base", "rail"], status="open", witness=[0, 1])]),
+                    dict(case="hold", pairs=[dict(pair=["base", "post"], status="fail", witness=dict(t=0, gapMm=0, volumeMm3=13.0))])]
+        parked = parked_assembly(observed, cases, {"arm", "base", "post", "rail"})
+        self.assertEqual(parked["screenedPairs"], 6)
+        self.assertEqual(parked["positive"], [dict(pair=["base", "post"], volumeMm3=13.0)], "a moving pair is not a parked finding")
+        self.assertEqual(parked["unresolved"], [["base", "rail"]])
 
     def test_motion_rows_include_a_playable_displaced_control_and_uncovered_cases(self):
         layout = plan(caseKinds={"hold": "inhibited"}, uncoveredCases=[dict(id="late-close", condition="Gate closes mid-turn", reason="Not modeled")])
@@ -158,6 +157,7 @@ class Regions(unittest.TestCase):
         arm = box([0, 0, 0], [1, 1, 1])
         scene = scene_payload([dict(id=k, stage="operating", bodies={"arm": arm, "twin": dict(arm)}) for k in ("a", "b")])
         self.assertEqual(len(scene["meshes"]), 1)
+        self.assertEqual(set(scene["meshes"][0]), {"v", "f"})
         self.assertEqual({b["mesh"] for c in scene["cases"] for b in c["bodies"].values()}, {0})
 
 
@@ -172,29 +172,41 @@ class CompressedScene(unittest.TestCase):
             good = review(folder, file)
             self.assertEqual(good["status"], "layout-checked")
             self.assertEqual(good["decision"], dict(status="layout-checked", firstUnmet=None))
-            scene = good["view"]["geometry"]
+            self.assertEqual(good["parked"], dict(screenedPairs=28, positive=[], unresolved=[]))
+            scene = good["view"]["scene"]
             served = folder / scene["file"]
-            self.assertEqual(scene["file"], "package-motion.geometry.json.gz")
+            self.assertEqual(scene["file"], "review-scene.json.gz")
             self.assertEqual(hashlib.sha256(served.read_bytes()).hexdigest(), scene["sha256"])
             content = gzip.decompress(served.read_bytes())
-            self.assertEqual(hashlib.sha256(content).hexdigest(), scene["contentSha256"])
-            html = (folder / plan["view"]).read_text(encoding="utf-8")
-            embedded = json.loads(html.split('id="data">', 1)[1].split("</script>", 1)[0])
-            self.assertEqual(embedded["geometry"]["contentSha256"], scene["contentSha256"])
-            self.assertNotIn("vertices", json.dumps(embedded), "geometry lives only in the compressed scene")
-            self.assertIn(CONTROL_ID, [c["id"] for c in embedded["cases"]], "the displaced control is playable")
-            self.assertEqual(embedded["header"]["architecture"], plan["presentation"]["architecture"])
-            self.assertEqual([r["kind"] for r in embedded["motionEvidence"]].count("displaced control"), 1)
-            self.assertEqual(embedded["fieldInteractions"][0]["title"], "Synthetic release-lane interaction")
-            self.assertIsNotNone(embedded["fit"]["robot"])
-            head = embedded["inspector"]["head"]
-            self.assertEqual((head["subsystem"], head["motionGroup"], head["loads"], head["missing"]), ("Carrier", "carrier", ["carrier"], []))
-            self.assertIn("loaded-turn", head["movesIn"])
+            self.assertEqual((hashlib.sha256(content).hexdigest(), len(content)), (scene["contentSha256"], scene["bytes"]))
+            self.assertEqual((folder / plan["view"]).read_bytes(), PAGE.read_bytes().replace(b"\r\n", b"\n"),
+                             "the page is the stock template; every value comes from the scene")
+            data = json.loads(content)
+            self.assertEqual(data["schema"], "agent-frc/preliminary-review-scene@1")
+            control = next(c for c in data["cases"] if c["id"] == CONTROL_ID)
+            self.assertEqual((control["kind"], control["status"]), ("displaced control", "fail"), "the displaced control is playable")
+            self.assertEqual(data["architecture"], plan["presentation"]["architecture"])
+            self.assertEqual([r["kind"] for r in data["motionEvidence"]].count("displaced control"), 1)
+            self.assertEqual(data["fieldInteractions"][0]["title"], "Synthetic release-lane interaction")
+            self.assertEqual(data["mass"]["runningAdditions"], [dict(name="carried sample", kg=[0.2, 0.5], members=["sample"])])
+            self.assertEqual(data["required"], [dict(role="propulsion", ids=["drive"]), dict(role="supply", ids=["battery"])])
+            head = data["bodies"]["head"]
+            self.assertEqual((head["subsystem"], head["motionGroup"], head["missing"]), ("Carrier", "carrier", []))
+            self.assertIn("Pivot on the mount block", head["support"])
+            turn = next(c for c in data["cases"] if c["id"] == "loaded-turn")
+            self.assertEqual((len(turn["time"]), turn["measure"][-1]), (25, "Head at 90° of the turn"))
+            duty = data["power"][0]
+            self.assertEqual({l["name"]: l["members"] for l in duty["lines"]}["carrier"], ["head"])
+            checked = subprocess.run(["node", str(Path(__file__).resolve().parents[1] / "scripts/review-scene.mjs"), "validate",
+                                      str(served), "--receipt", str(folder / "receipt.json")], capture_output=True, text=True)
+            # The receipt on disk is the create() run's; this review() run must produce the same scene.
+            self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
+            self.assertEqual(json.loads(checked.stdout)["errors"], [])
             original = served.read_bytes()
             served.write_bytes(gzip.compress(content, compresslevel=1, mtime=7))
             recompressed = review(folder, file)
             self.assertTrue(recompressed["view"]["verified"], "the same content under another compression still verifies")
-            self.assertNotEqual(recompressed["view"]["geometry"]["sha256"], scene["sha256"], "the digest follows the served bytes")
+            self.assertNotEqual(recompressed["view"]["scene"]["sha256"], scene["sha256"], "the digest follows the served bytes")
             served.write_bytes(gzip.compress(content.replace(b'"stage"', b'"stagE"', 1), mtime=0))
             tampered = review(folder, file)
             self.assertFalse(tampered["view"]["verified"])

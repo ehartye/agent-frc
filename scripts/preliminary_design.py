@@ -10,7 +10,7 @@ from time import perf_counter
 from component_shape import proper_rotation
 from mechanical_motion import evaluate, stderr_progress, transforms, vec
 from package_budgets import budget_review
-from package_view import CONTROL_ID, capture, first_unmet, verify_view
+from package_view import CONTROL_ID, capture, first_unmet, parked_assembly, verify_view
 from mechanical_readiness import digest, named, number, pinned, project_path, read, require
 
 
@@ -593,6 +593,7 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
         for key in failures:
             reopen.append(dict(phase="preliminary-design",reason=key,affected=sorted(groups)))
         if failures:result["status"]="blocked"
+    result["parked"]=parked_assembly(result.get("cases",[]),cases,roster-fixtures)
     result["decision"]=dict(status=result["status"],firstUnmet=first_unmet(result))
     return result
 

@@ -136,6 +136,20 @@ def create(root, release_id=None):
         for part, subsystem in subsystems.items():
             plan["presentation"]["components"][part].update(subsystem=subsystem, volumeType="material")
         plan["presentation"]["architecture"] = "Synthetic pivoting carrier beside a sliding gate (invented teaching layout)"
+        plan["presentation"]["context"] = "Synthetic teaching project　/　Release " + release_id
+        plan["presentation"]["focus"] = "Check the loaded head against the sliding gate, then play the displaced control."
+        plan["presentation"]["notes"] = [
+            "Invented teaching layout. Boxes stand in for the carrier, gate, rail and running gear.",
+            "Carried-article motion is prescribed. Retention under gravity is not modeled."]
+        plan["presentation"]["runningAdditions"] = [dict(name="carried sample", kg=[0.2, 0.5], members=["sample"])]
+        plan["presentation"]["runningBasis"] = "the carried sample"
+        plan["presentation"]["loadPaths"] = {
+            "head": "Pivot on the mount block; the mount bolts to the synthetic frame plate.",
+            "gate": "Slides on the rail; the rail bolts to the frame plate."}
+        frames = 25
+        plan["presentation"]["caseTimelines"] = {"loaded-turn": dict(
+            time=[round(0.1 * k, 2) for k in range(frames)],
+            measure=["Head at " + str(round(90 * k / (frames - 1))) + "° of the turn" for k in range(frames)])}
         plan["presentation"]["caseKinds"] = {"park-loaded": "inhibited"}
         plan["presentation"]["uncoveredCases"] = [dict(id="gate-closes-mid-turn",
             condition="The gate closes while the loaded head is turning",

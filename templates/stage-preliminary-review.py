@@ -66,6 +66,8 @@ def index(site, recovering=None, verifier=None, policy=None):
             raise ValueError("Indexed view differs from receipt: " + name)
         if view.get("geometry") and not geometry_matches(release, view):
             raise ValueError("Indexed geometry differs from receipt: " + name)
+        if view.get("scene") and scene_content(release, view) is None:
+            raise ValueError("Indexed review scene differs from receipt: " + name)
         # A release deployed before release records existed stays as published; list it once under "legacy".
         if name not in record.get("legacy", []) or (release / "release.json").exists():
             check_release(release)
@@ -76,6 +78,29 @@ LABEL = "Work-in-progress preliminary design"
 RESERVED = {"index.html", "receipt.json", "motion.json", "release.json", "budgets.json", "limits.json"}
 TRIAL = re.compile(r"[a-z0-9][a-z0-9._-]{0,127}\.json")
 GEOMETRY = re.compile(r"[a-z0-9][a-z0-9._-]{0,110}\.geometry\.json\.gz")
+SCENE = "review-scene.json.gz"
+SCENE_SCHEMA = "agent-frc/preliminary-review-scene@1"
+
+
+def scene_content(release, view):
+    """The served review scene when the receipt pins its exact bytes and content, else None."""
+    pin = view.get("scene") or {}
+    path = release / SCENE
+    if Path(pin.get("file") or "").name != SCENE or not path.is_file() or not isinstance(pin.get("bytes"), int):
+        return None
+    served = path.read_bytes()
+    if hashlib.sha256(served).hexdigest() != pin.get("sha256"):
+        return None
+    try:
+        stream = zlib.decompressobj(16 + zlib.MAX_WBITS)
+        content = stream.decompress(served, pin["bytes"] + 1)
+        scene = json.loads(content)
+    except (zlib.error, ValueError):
+        return None
+    if (len(content) != pin["bytes"] or not stream.eof or hashlib.sha256(content).hexdigest() != pin.get("contentSha256")
+            or not isinstance(scene, dict) or scene.get("schema") != SCENE_SCHEMA):
+        return None
+    return scene
 
 
 def geometry_matches(release, view):
@@ -250,8 +275,23 @@ def self_contained(html):
     return None
 
 
-def view_data(page):
-    """The checked player's embedded data; the plugin gate separately proves the page is its own player."""
+def view_data(directory, view=None):
+    """The checked review's data: its pinned scene, or the data a legacy player embedded in the page.
+
+    The plugin gate separately proves the page is its own stock page."""
+    if view and view.get("scene"):
+        scene = scene_content(directory, view)
+        if scene is None:
+            raise ValueError("Review scene differs from its receipt pin")
+        return scene
+    page = (directory / "index.html").read_text(encoding="utf-8") if (directory / "index.html").is_file() else ""
+    if 'id="data">' not in page:
+        return {}
+    return json.loads(page.split('id="data">', 1)[1].split("</script>", 1)[0])
+
+
+def view_data_page(page):
+    """A legacy player's embedded data."""
     if 'id="data">' not in page:
         return {}
     return json.loads(page.split('id="data">', 1)[1].split("</script>", 1)[0])
@@ -311,7 +351,7 @@ def check_release(release):
     files = [q.get("file") for q in players if isinstance(q, dict)]
     if len(files) != len(players) or len(set(files)) != len(files) or not all(FIELD.fullmatch(f or "") for f in files):
         fail("Each field player needs a unique field/NAME.html file")
-    rows = view_data((release / "index.html").read_text(encoding="utf-8")).get("fieldInteractions") or []
+    rows = view_data(release, receipt.get("view")).get("fieldInteractions") or []
     linked = {}
     for row in rows:
         name = player_target(row.get("href"))
@@ -367,6 +407,10 @@ def check_release(release):
             fail("Mission case " + str(m.get("case")) + " must be a passing operating case in the checked cycle, "
                  "with a known accomplishment, for a represented narrative objective")
     geometry = set()
+    if (receipt.get("view") or {}).get("scene"):
+        if scene_content(release, receipt["view"]) is None:
+            fail("Published review scene differs from its receipt pin")
+        geometry.add(SCENE)
     if (receipt.get("view") or {}).get("geometry"):
         if not geometry_matches(release, receipt["view"]):
             fail("Published geometry differs from the page and receipt")
@@ -406,7 +450,16 @@ def stage(season, inputs, release, verifier=None, policy=None):
         if release in record["releases"]:
             raise FileExistsError("Release already exists: " + release)
         files = {"index.html": viewer, "receipt.json": receipt_file, "motion.json": pinned(inputs, plan["motion"])}
-        if result["view"].get("geometry"):
+        if result["view"].get("scene"):
+            try:
+                scene = pinned(inputs, result["view"]["scene"])
+            except ValueError as error:
+                # Another zlib can compress the same content differently; the receipt pins the bytes it checked.
+                raise ValueError(str(error) + ". Regenerate it with --write-view and save that run's receipt") from None
+            if scene.parent != viewer.parent or scene.name != SCENE:
+                raise ValueError("Keep the review scene beside its view, named " + SCENE)
+            files[SCENE] = scene
+        elif result["view"].get("geometry"):
             try:
                 geometry = pinned(inputs, result["view"]["geometry"])
             except ValueError as error:
@@ -418,7 +471,10 @@ def stage(season, inputs, release, verifier=None, policy=None):
         ledger = pinned(inputs, plan["budgets"])
         files.update({"budgets.json": ledger, "limits.json": pinned(inputs, read(ledger)["requirements"])})
         players = []
-        for row in view_data(viewer.read_text(encoding="utf-8")).get("fieldInteractions") or []:
+        source = viewer.parent if result["view"].get("scene") else None
+        data = view_data(viewer.parent, result["view"]) if source else (
+            view_data_page(viewer.read_text(encoding="utf-8")))
+        for row in data.get("fieldInteractions") or []:
             name = player_target(row.get("href"))
             if not name or not FIELD.fullmatch(name):
                 raise ValueError("Link each field interaction to a season player at field/NAME.html beside the view: "

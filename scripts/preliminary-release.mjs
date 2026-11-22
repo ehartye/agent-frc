@@ -3,7 +3,7 @@ import {createHash} from 'node:crypto';
 import {lstatSync,readFileSync,readdirSync,realpathSync} from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
-import {gunzipSync} from 'node:zlib';
+import {compareWithReceipt,readScene,sceneSchemaId,validateScene} from './review-scene.mjs';
 
 export const releaseSchema='agent-frc/preliminary-release@1';
 export const releaseLabel='Work-in-progress preliminary design';
@@ -11,13 +11,13 @@ const receiptSchema='agent-frc/preliminary-layout-result@1';
 const releaseId=/^[a-z0-9][a-z0-9-]{0,63}$/;
 const trialName=/^[a-z0-9][a-z0-9._-]{0,127}\.json$/;
 const fieldName=/^field\/[a-z0-9][a-z0-9._-]{0,110}\.html$/;
-const geometryName=/^[a-z0-9][a-z0-9._-]{0,110}\.geometry\.json\.gz$/;
+const sceneFile='review-scene.json.gz';
 const hex=/^[0-9a-f]{64}$/;
 const reserved=['index.html','receipt.json','motion.json','release.json','budgets.json','limits.json'];
 const accomplishments=['acquired','delivered','scored','climb-held'];
 const kinds=['operating-case','field-interaction-trial'];
 const controlCase='package-displacement-control';
-const player=new URL('./package-view.html',import.meta.url);
+const page=new URL('../templates/preliminary-review/review.html',import.meta.url);
 const stableViewer=new URL('../templates/preliminary-review-index.html',import.meta.url);
 const fontDirectory=new URL('../templates/preliminary-review-fonts/',import.meta.url);
 /** The bundled theme fonts and their licenses, as distributed with this plugin. */
@@ -33,15 +33,25 @@ function parse(bytes,what){
 }
 function pinMatches(pin,file,bytes){return object(pin)&&pin.file===file&&hex.test(pin.sha256)&&pin.sha256===sha(bytes);}
 
-/** The embedded data of a genuine player built by this plugin's checker, or null. */
-function playerData(html){
-  const [before,after]=lf(readFileSync(player)).split('PACKAGE_DATA');
-  const text=html.toString('utf8');
-  if(!text.startsWith(before)||!text.endsWith(after)||text.length<before.length+after.length)return null;
-  const middle=text.slice(before.length,text.length-after.length);
-  // The checker escapes every '<' so the embedded data can never close its script element.
-  if(middle.includes('<'))return null;
-  try{return JSON.parse(middle);}catch{return null;}
+/** True when the release page is this plugin's stock review page, byte for byte apart from line endings. */
+function stockPage(html){return lf(html)===lf(readFileSync(page))}
+/**
+ * The review scene the page reads, when the receipt pins its exact served bytes and content and it is a valid
+ * scene that repeats the receipt's results; otherwise the reason it is refused.
+ */
+function pinnedScene(bytes,receipt){
+  const pin=receipt?.view?.scene;
+  if(!object(pin)||pin.file!==sceneFile||!hex.test(pin.sha256??'')||!hex.test(pin.contentSha256??'')||!Number.isSafeInteger(pin.bytes))
+    return {error:'The receipt does not pin '+sceneFile};
+  if(!bytes||sha(bytes)!==pin.sha256)return {error:'Published review scene differs from its receipt pin'};
+  let read;
+  try{read=readScene(bytes,pin.bytes+1);}catch{return {error:'Published review scene does not decompress within its pinned size'};}
+  if(read.bytes!==pin.bytes||read.contentSha256!==pin.contentSha256)return {error:'Published review scene content differs from its receipt pin'};
+  const {errors}=validateScene(read.scene);
+  if(errors.length)return {error:'Published review scene is not a valid '+sceneSchemaId+': '+errors.slice(0,3).join('; ')};
+  const differ=compareWithReceipt(read,receipt);
+  if(differ.length)return {error:'Published review scene shows results that differ from the receipt: '+differ.join('; ')};
+  return {scene:read.scene};
 }
 const canonical=v=>JSON.stringify(v,(k,x)=>object(x)?Object.fromEntries(Object.keys(x).sort().map(n=>[n,x[n]])):x);
 const same=(a,b)=>canonical(a)===canonical(b);
@@ -364,12 +374,9 @@ export function checkRelease(id,files,policy={}){
     if(object(m)&&m.kind==='field-interaction-trial'&&object(m.trial))trials.add(m.trial.file);
     else check(!object(m)||m.trial===undefined,'Only a field-interaction-trial mission case can publish a trial: '+id);
   }
-  // The player fetches its compressed display geometry; the receipt names and pins it.
-  const peek=files.has('receipt.json')?parse(files.get('receipt.json'),'receipt: '+id):null;
-  const geometryPin=object(peek?.view?.geometry)?peek.view.geometry:null;
-  const geometryFile=geometryPin&&geometryName.test(geometryPin.file??'')?geometryPin.file:null;
+  // The stock page fetches its review scene; the receipt names and pins it.
   for(const name of files.keys()){
-    check(reserved.includes(name)||name===checkedView||approved&&Object.hasOwn(approved.files,name)||name===geometryFile||playerFiles.has(name)||trials.has(name)&&trialName.test(name)&&!reserved.includes(name),
+    check(reserved.includes(name)||name===checkedView||approved&&Object.hasOwn(approved.files,name)||name===sceneFile||playerFiles.has(name)||trials.has(name)&&trialName.test(name)&&!reserved.includes(name),
       'Unrecognized preliminary output: releases/'+id+'/'+name);
   }
   for(const name of ['index.html','receipt.json','motion.json','budgets.json','limits.json'])
@@ -396,28 +403,13 @@ export function checkRelease(id,files,policy={}){
     'Published scene differs from the receipt and release record: '+id);
   check(pinMatches(record.view,checkedView,view)&&object(receipt.view)&&receipt.view.verified===true&&receipt.view.sha256===record.view.sha256,
     'Published view differs from the receipt and release record: '+id);
-  const data=playerData(view);
-  check(data&&data.issue===receipt.issue&&JSON.stringify(data.step)===JSON.stringify(receipt.step)&&
-    JSON.stringify(data.motion)===JSON.stringify(receipt.motion)&&object(data.evidence),
-    'Published view is not this plugin\'s checked player for the receipt: '+id+'. Regenerate it with --write-view');
-  if(data.geometry!==undefined||geometryPin){
-    const shown=data.geometry,bytes=geometryFile&&files.get(geometryFile);
-    let content=null;
-    try{content=bytes&&gunzipSync(bytes,{maxOutputLength:shown.bytes+1});}catch{content=null;}
-    check(object(shown)&&geometryFile&&shown.file===geometryFile&&hex.test(geometryPin.contentSha256??'')&&
-      shown.contentSha256===geometryPin.contentSha256&&bytes&&sha(bytes)===geometryPin.sha256&&
-      content&&content.length===shown.bytes&&sha(content)===shown.contentSha256,
-      'Published geometry differs from the view and receipt: '+id);
-  }
-  // Everything the player displays as a result must be the receipt's result.
-  // The player also shows the displaced control, which the receipt reports separately as rejected.
-  const shown=Object.keys(data.evidence).filter(k=>k!==controlCase);
-  check(same(shown.sort(),cases.map(c=>c.case).sort())&&cases.every(c=>data.evidence[c.case]?.status===c.status)&&
-    (!Object.hasOwn(data.evidence,controlCase)||data.evidence[controlCase]?.status==='fail')&&
-    same(data.narrativeReview?.objectives??[],receipt.narrativeReview?.objectives??[])&&
-    Array.isArray(data.power)&&same(data.power.map(r=>[r?.case,r?.status]),budgets.electricalCases.map(r=>[r.case,r.status]))&&
-    object(data.mass)&&same(data.mass.range,budgets.inspectionKg)&&same(data.mass.remaining,budgets.remainingKg),
-    'Published view shows results that differ from the receipt: '+id);
+  check(stockPage(view),'Published view is not this plugin\'s stock review page: '+id+'. Regenerate it with --write-view');
+  // Everything the page displays as a result comes from the pinned scene, which must repeat the receipt's result,
+  // including the displaced control the receipt reports separately as rejected.
+  const pinned=pinnedScene(files.get(sceneFile),receipt);
+  check(!pinned.error,(pinned.error||'')+': '+id+'. Regenerate it with --write-view');
+  const data=pinned.scene;
+  const shownStatus=new Map(data.cases.map(c=>[c.id,c.status]));
 
   const objectives=Array.isArray(receipt.narrativeReview?.objectives)?receipt.narrativeReview.objectives:[];
   const represented=objective=>objectives.some(o=>o?.objective===objective&&o.disposition==='represented');
@@ -454,7 +446,7 @@ export function checkRelease(id,files,policy={}){
 
   // Mission gate.
   check(Array.isArray(missions)&&missions.length,'Release '+id+' declares no mission-task case');
-  const played=new Set((Array.isArray(data.cases)?data.cases:[]).map(c=>c?.id));
+  const played=new Set(data.cases.map(c=>c.id));
   for(const m of missions){
     check(object(m)&&named(m.case)&&kinds.includes(m.kind)&&accomplishments.includes(m.accomplishes)&&named(m.objective),
       'Each mission case needs a case, kind ('+kinds.join(', ')+'), accomplishment ('+accomplishments.join(', ')+') and objective: '+id);
@@ -462,7 +454,7 @@ export function checkRelease(id,files,policy={}){
     check(represented(m.objective),'The '+where+' must accomplish a represented narrative objective');
     check(receipt.stages?.[m.case]?.purpose==='operating'&&Array.isArray(receipt.cycle)&&receipt.cycle.includes(m.case),
       'The '+where+' must be an operating case in the checked cycle');
-    check(cases.some(c=>c.case===m.case&&c.status==='pass')&&data.evidence[m.case]?.status==='pass'&&played.has(m.case),
+    check(cases.some(c=>c.case===m.case&&c.status==='pass')&&shownStatus.get(m.case)==='pass'&&played.has(m.case),
       'The '+where+' needs passing evidence played in the checked view');
     if(m.kind==='field-interaction-trial'&&m.player!==undefined){
       const p=players.find(x=>x.file===m.player);

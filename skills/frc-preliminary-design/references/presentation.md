@@ -2,7 +2,7 @@
 
 Give the reviewer an interactive whole-robot blockout and a decision they can inspect. Link the review from the project handoff. Put the selected concept, revision, robot datum, units and current disposition on the opening view. Use the project's Agent FRC presentation theme and [component palette](../../../docs/cad-color-convention.md).
 
-Start with the [copyable full page layout, budget examples and project-local launcher](review-layout-template.md). Its page order puts the viewer first and the resource figures immediately below it.
+Use the plugin's [stock preliminary design review](review-layout-template.md). One page serves every season and reads only a standardized review scene (`agent-frc/preliminary-review-scene@1`); the project supplies data in `layout.json`, not markup. The stock page and [its scene schema](../../../templates/preliminary-review/scene.schema.json) are the source of truth for layout, controls and theme.
 
 ## What the reviewer can do
 
@@ -20,7 +20,7 @@ Use whatever shape captures the fit decision. A cylinder preserves a wheel radiu
 
 ## Review interface
 
-Use the Agent FRC blue-and-gold interface with a large, expandable canvas. Put the component inspector beside the canvas in one row on a wide screen, stacking below it only on narrow pages, as the [page order](review-layout-template.md#page-order) specifies. Keep functional category colors stable in the model, its legend and inventory. Picking a visible surface should identify the frontmost component and reveal its name, material, subsystem, volume and mass basis. Give reviewers a way to focus on an internal part and then restore the full assembly.
+The stock page provides the Agent FRC navy-and-gold interface with a large, expandable canvas. View controls sit above the model and playback controls (case, Play, speed, slider, readout) directly below it. The inspector column sits beside the viewer column in one row on a wide screen, stacking below it only on narrow pages, as the [page order](review-layout-template.md#page-order) specifies. Keep functional category colors stable in the model, its legend and inventory. Picking a visible surface should identify the frontmost component and reveal its name, material, subsystem, volume and mass basis. Give reviewers a way to focus on an internal part and then restore the full assembly.
 
 For the opening pose, show the real supports and the finite piece in its intended seat. Verify the pose before sharing it. If a coarse box appears to penetrate a piece, compare it with the shaped part in the same pose, retain the original control and check the whole path again. Mark unmounted allowances and unresolved supports. Do not move the piece to improve a picture.
 
@@ -40,7 +40,7 @@ Lead the weight ledger with the inspection limit, low/high estimate and signed h
 
 Commission expected counts for the selected architecture, including its wheels, propulsion and steering actuators, control computer, power distribution, main disconnect, supply and communications. Compare expected IDs with the unfiltered placed roster. Display missing roles, counts, unallocated loads, voltage violations, overweight estimates and components awaiting a support or connection. Reviewers need to distinguish a missing representation from a missing physical design. Test a deliberately incomplete roster and a failing power case.
 
-The local package player reads project-authored `presentation.components` keyed by placed ID (required `purpose` and `rationale`, optional `name`, `category`, `subsystem`, `material` and `volumeType`), `presentation.required` mapping roles to expected placed IDs, and `presentation.loadMembers` mapping each budget source name to its consuming IDs. The header and motion-evidence regions also read `presentation.architecture`, `caseKinds`, `uncoveredCases` and `fieldInteractions`; see the [layout template](review-layout-template.md#fill-the-review-header-and-motion-evidence). Supply these from the architecture and component register. A grouping or camera change preserves the commissioned checks.
+The stock page reads every value from the review scene. The checker builds the scene from project-authored `presentation` fields: `components` keyed by placed ID (required `purpose` and `rationale`; optional `name`, `category`, `subsystem`, `material` and `volumeType`), `required` mapping roles to expected placed IDs, `loadMembers` mapping each budget source to its consuming IDs, `loadPaths`, `runningAdditions`, `context`, `architecture`, `focus`, `notes`, `caseKinds` and `uncoveredCases`, and the optional `caseTimelines`, `cutaway`, `openingCase`, `links` and `fieldInteractions`. The [scene data table](review-layout-template.md#scene-data-and-who-supplies-it) says who supplies each field. A missing project field renders as "Not supplied in this review"; a grouping or camera change preserves the commissioned checks.
 
 ## Evidence behind the picture
 

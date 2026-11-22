@@ -12,7 +12,11 @@ from mechanical_readiness import named, pinned, read, require
 
 CONTROL_ID = "package-displacement-control"
 CASE_KINDS = ("nominal", "inhibited", "adverse")
-SCENE_SCHEMA = "agent-frc/package-geometry@1"
+SCENE_SCHEMA = "agent-frc/preliminary-review-scene@1"
+PAGE = Path(__file__).resolve().parents[1] / "templates/preliminary-review/review.html"
+SCENE_FILE = "review-scene.json.gz"
+UNITS = "Millimetres in the registered STEP world; kg, A, V"
+ROLE_COLOURS = {"drive": "mechanism", "payload": "game-piece", "battery": "electrical", "other": "reference", "service": "reserved-space"}
 
 
 def capture(case, scene):
@@ -44,55 +48,14 @@ def scene_payload(scenes):
     for case in scenes:
         bodies = {}
         for name, body in sorted(case["bodies"].items()):
-            mesh = dict(vertices=[_round(p, 4) for p in body["vertices"]],
-                        triangles=[list(t) for t in body["triangles"]], volumeMm3=round(body["volumeMm3"], 3))
+            mesh = dict(v=[_round(p, 4) for p in body["vertices"]], f=[list(t) for t in body["triangles"]])
             key = json.dumps(mesh, sort_keys=True, separators=(",", ":"))
             if key not in index:
                 index[key] = len(meshes)
                 meshes.append(mesh)
             bodies[name] = dict(mesh=index[key], matrices=[_round(m, 7) for m in body["matrices"]])
         cases.append(dict(id=case["id"], stage=case["stage"], bodies=bodies))
-    return dict(schema=SCENE_SCHEMA, meshes=meshes, cases=cases)
-
-
-def _placed(m, p):
-    return [m[k + 3] + m[k] * p[0] + m[k + 1] * p[1] + m[k + 2] * p[2] for k in (0, 4, 8)]
-
-
-def _frame(bounds):
-    low, high = bounds
-    return dict(center=[round((a + b) / 2, 4) for a, b in zip(low, high)],
-                extent=round(max(1.0, sum((b - a) ** 2 for a, b in zip(low, high)) ** .5), 4))
-
-
-def fit_views(scenes, fixtures):
-    """Fit the robot at its opening pose on the floor; fit the field interaction separately."""
-    if not scenes:
-        return dict(robot=None, field=None)
-    opening = scenes[0]["bodies"]
-
-    def bounds(names, floor):
-        low, high = [float("inf")] * 3, [float("-inf")] * 3
-        for name in names:
-            body = opening[name]
-            for v in body["vertices"]:
-                for i, x in enumerate(_placed(body["matrices"][0], v)):
-                    low[i], high[i] = min(low[i], x), max(high[i], x)
-        if floor and names:
-            low[2], high[2] = min(low[2], 0.0), max(high[2], 0.0)
-        return (low, high) if names else None
-
-    robot = [n for n in opening if n not in fixtures]
-    robot_box = bounds(robot or list(opening), True)
-    field_box = None
-    for case in scenes:
-        if not fixtures.intersection(case["bodies"]):
-            continue
-        opening = case["bodies"]
-        low, high = bounds(list(opening), True)
-        field_box = (low, high) if field_box is None else ([min(a, b) for a, b in zip(field_box[0], low)],
-                                                           [max(a, b) for a, b in zip(field_box[1], high)])
-    return dict(robot=_frame(robot_box), field=_frame(field_box) if field_box else None)
+    return dict(meshes=meshes, cases=cases)
 
 
 def _pair_gap(row):
@@ -355,11 +318,152 @@ def review_header(plan, snapshot):
                 firstUnmet=decision)
 
 
-def geometry_name(view):
-    return Path(view).stem + ".geometry.json.gz"
+
+
+def parked_assembly(observed_cases, study_cases, roster):
+    """The checker's parked-assembly result: every pair of installed bodies at the STEP pose.
+
+    A pair counts as parked in a case when neither body moves there and neither starts displaced. The
+    union over cases gives the positive-volume pairs and the pairs the checker left unresolved."""
+    by_id = {c["id"]: c for c in study_cases}
+    installed = sorted(roster)
+    positive, unresolved = {}, set()
+    for observed in observed_cases:
+        case = by_id.get(observed["case"], {})
+        still = set(installed) - set(case.get("moves", {})) - set(case.get("initialPose", {}))
+        for row in observed.get("pairs", []):
+            pair = tuple(sorted(row["pair"]))
+            if not set(pair) <= still:
+                continue
+            witness = row.get("witness")
+            if row["status"] == "fail" and isinstance(witness, dict) and witness.get("volumeMm3", 0) > 0:
+                positive[pair] = max(positive.get(pair, 0), round(witness["volumeMm3"], 3))
+            elif row["status"] == "open":
+                unresolved.add(pair)
+    n = len(installed)
+    return dict(screenedPairs=n * (n - 1) // 2, positive=[dict(pair=list(p), volumeMm3=v) for p, v in sorted(positive.items())],
+                unresolved=[list(p) for p in sorted(unresolved)])
+
+
+def _colour(palette, category, role):
+    return palette.get(category) or palette.get(role) or palette.get(ROLE_COLOURS.get(role, "")) or palette.get("reference") or "#8a9199"
+
+
+def _timeline(plan, case_id, frames):
+    """Optional per-frame time, readout and field position from presentation.caseTimelines."""
+    line = plan.get("presentation", {}).get("caseTimelines", {}).get(case_id) or {}
+    require(isinstance(line, dict) and set(line) <= {"time", "measure", "positions"}, "caseTimelines entries hold time, measure and positions")
+    out = {}
+    for key, value in line.items():
+        require(isinstance(value, list) and len(value) == frames,
+                "caseTimelines." + case_id + "." + key + " needs one entry per frame (" + str(frames) + ")")
+        out[key] = value
+    return out
+
+
+def _running_additions(presentation, roster):
+    additions = presentation.get("runningAdditions")
+    if additions is None:
+        return None
+    require(isinstance(additions, list) and all(
+        isinstance(a, dict) and named(a.get("name")) and isinstance(a.get("kg"), list) and len(a["kg"]) == 2
+        and set(a.get("members", [])) <= roster for a in additions),
+        "presentation.runningAdditions lists {name, kg: [low, high], members} with placed IDs")
+    return [dict(name=a["name"], kg=a["kg"], members=list(a.get("members", []))) for a in additions]
+
+
+def build_scene(root, plan, scenes, observed, budgets, review):
+    """The standardized scene the stock review page reads (agent-frc/preliminary-review-scene@1)."""
+    from component_palette import resolve_palette
+    presentation = plan.get("presentation", {})
+    palette = {k: v.lower() for k, v in resolve_palette(root).items()}
+    fixtures = set(review.get("fixtures", set()))
+    study_cases = review.get("studyCases", [])
+    payload = scene_payload(scenes)
+    ledger = read(pinned(root, budgets["source"])) if budgets else None
+    lines = [{k: row[k] for k in ("id", "kg", "members", "basis")} for row in ledger["masses"]] if ledger else None
+    inspector = component_inspector(plan, scenes, study_cases, lines, presentation.get("loadMembers", {}), fixtures)
+    roster = {m for g in plan.get("groups", {}).values() for m in g.get("members", [])}
+    support = presentation.get("loadPaths", {})
+    require(isinstance(support, dict) and set(support) <= roster, "presentation.loadPaths maps placed IDs to support text")
+    bodies = {}
+    for member, row in inspector.items():
+        bodies[member] = dict(name=row["name"], category=row["category"], role=row["role"],
+                              color=_colour(palette, row["category"], row["role"]), subsystem=row["subsystem"],
+                              motionGroup=row["motionGroup"], material=row["material"], volumeMm3=row["volumeMm3"],
+                              volumeType=row["volumeType"], closed=row["volumeMm3"] is not None, fixture=member in fixtures,
+                              purpose=row["purpose"], rationale=row["rationale"], support=support.get(member),
+                              massExcluded=row["massExcluded"], missing=row["missing"])
+    by_id = {c["id"]: c for c in study_cases}
+    observed_by_id = {c["case"]: c for c in observed["cases"]}
+    kinds = presentation.get("caseKinds", {})
+    control = plan.get("control") or {}
+    witness = (review.get("control") or {}).get("witness")
+    cases = []
+    for captured, placed in zip(scenes, payload["cases"]):
+        cid = captured["id"]
+        is_control = cid == CONTROL_ID
+        study = by_id.get(control.get("case") if is_control else cid, {})
+        frames = max(len(b["matrices"]) for b in placed["bodies"].values())
+        row = observed_by_id.get(cid, {})
+        results = ([witness] if witness else row.get("pairs", [])) if is_control else row.get("pairs", [])
+        case = dict(id=cid, label=cid + " (" + ("displaced control" if is_control else captured["stage"]) + ")",
+                    kind="displaced control" if is_control else kinds.get(cid, "nominal"), stage=captured["stage"],
+                    basis=(control.get("basis") if is_control else study.get("basis")) or "",
+                    status=row.get("status", "not run"), allowanceMm=study.get("minGapMm"),
+                    bodies=placed["bodies"], removed=[], results=[r for r in results if r])
+        if not is_control:
+            case.update(_timeline(plan, cid, frames))
+        cases.append(case)
+    snapshot = dict(cases=[c for c in observed["cases"] if c["case"] != CONTROL_ID], budgets=budgets,
+                    control=review.get("control"), missingInputs=list(review.get("missing", [])))
+    header = review_header(plan, snapshot)
+    control_case = next((c for c in observed["cases"] if c["case"] == CONTROL_ID), None)
+    mass, power = None, []
+    if budgets:
+        limits = read(pinned(root, budgets["limits"]))
+        mass = dict(limitKg=limits["inspectionLimitKg"], inspectionKg=budgets["inspectionKg"], remainingKg=budgets["remainingKg"],
+                    runningKg=budgets["runningKg"], lines=lines, runningAdditions=_running_additions(presentation, roster),
+                    runningBasis=presentation.get("runningBasis"))
+        members = presentation.get("loadMembers", {})
+        for row in budgets["electricalCases"]:
+            duty = ledger["electricalCases"][row["case"]]
+            # The checker's lower bus bound uses the low open-circuit voltage and the high resistance.
+            power.append(dict(case=row["case"], duty=row["duty"], stage=row.get("stage", ""), batteryCondition=row["batteryCondition"],
+                              openCircuitV=duty["openCircuitV"][0], resistanceOhm=duty["resistanceOhm"][1],
+                              requiredMinV=row["requiredMinV"], loadedBusV=row["loadedBusV"], batterySideA=row["batterySideA"],
+                              marginV=row["marginV"], status=row["status"],
+                              lines=[dict(name=k, amps=v, members=list(members.get(k, []))) for k, v in duty["batterySideA"].items()]))
+    narrative = plan.get("narrativeReview") or {}
+    cycle = plan.get("cycle") or []
+    nominal = [c for c in observed["cases"] if c["case"] != CONTROL_ID]
+    scene = dict(schema=SCENE_SCHEMA, issue=plan["issue"], context=presentation.get("context"),
+                 architecture=presentation.get("architecture"), datum=(plan.get("datum") or {}).get("name"), units=UNITS,
+                 links=presentation.get("links", []),
+                 sources=dict(design=plan.get("design"), step=plan["step"], motion=plan["motion"], narrative=narrative.get("source")),
+                 decision=dict(status=header["status"], firstUnmet=header["firstUnmet"]), palette=palette,
+                 meshes=payload["meshes"], bodies=bodies, cases=cases,
+                 openingCase=presentation.get("openingCase") or (cycle[0] if cycle else cases[0]["id"]),
+                 parked=parked_assembly(nominal, study_cases, roster - fixtures), mass=mass, power=power,
+                 required=[dict(role=k, ids=list(v)) for k, v in presentation.get("required", {}).items()],
+                 narrativeReview=dict(source=narrative.get("source"), objectives=narrative.get("objectives", [])),
+                 motionEvidence=motion_evidence(plan, study_cases, nominal, review.get("control"), control_case),
+                 returnCriteria=return_criteria(), fieldInteractions=field_interactions(root, plan),
+                 focus=presentation.get("focus"), notes=presentation.get("notes"), cutaway=presentation.get("cutaway"))
+    require(scene["openingCase"] in {c["id"] for c in cases}, "presentation.openingCase names a commissioned case")
+    cut = scene["cutaway"]
+    if cut is not None:
+        require(isinstance(cut, dict) and named(cut.get("label")) and isinstance(cut.get("hides"), list)
+                and set(cut["hides"]) <= fixtures, "presentation.cutaway needs a label and the fixture IDs it hides")
+    for link in scene["links"]:
+        require(isinstance(link, dict) and named(link.get("label")) and named(link.get("href"))
+                and not re.search(r"[\x00-\x20\x7f\\]", link["href"]) and urlsplit(link["href"]).scheme in ("", "https"),
+                "presentation.links holds {label, href} with relative or https links")
+    return scene
 
 
 def verify_view(root, plan, scenes, write, observed, budgets, review=None):
+    """Write or check the stock review page and its scene. The page is the plugin template byte for byte; the scene is pinned."""
     name = plan.get("view")
     if not name:
         return None
@@ -367,61 +471,24 @@ def verify_view(root, plan, scenes, write, observed, budgets, review=None):
     path = (root / name).resolve()
     require(not Path(name).is_absolute() and path.is_relative_to(root) and path.suffix.lower() == ".html",
             "Select a project-relative HTML view")
-    template = Path(__file__).with_name("package-view.html").read_text(encoding="utf-8")
-    scene = json.dumps(scene_payload(scenes), allow_nan=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    scene_file = path.with_name(geometry_name(name))
-    fixtures = review.get("fixtures", set())
-    series = dict(issue=plan["issue"], step=plan["step"], motion=plan["motion"], groups=plan["groups"],
-                  cases=[dict(id=s["id"], stage=s["stage"]) for s in scenes],
-                  geometry=dict(file=scene_file.name, contentSha256=hashlib.sha256(scene).hexdigest(), bytes=len(scene)),
-                  fit=fit_views(scenes, fixtures), fixtures=sorted(fixtures))
-    from component_palette import resolve_palette
-    series["palette"] = resolve_palette(root)
-    presentation = plan.get("presentation", {})
-    series["components"] = presentation.get("components", {})
-    series["narrativeReview"] = plan.get("narrativeReview") or {}
-    series["required"] = presentation.get("required", {})
-    series["evidence"] = {c["case"]: {"status": c["status"], "pairs": c["pairs"]} for c in observed["cases"]}
-    snapshot = dict(cases=[c for c in observed["cases"] if c["case"] != CONTROL_ID], budgets=budgets,
-                    control=review.get("control"), missingInputs=list(review.get("missing", [])))
-    series["header"] = review_header(plan, snapshot)
-    control_case = next((c for c in observed["cases"] if c["case"] == CONTROL_ID), None)
-    series["motionEvidence"] = motion_evidence(plan, review.get("studyCases", []),
-                                               [c for c in observed["cases"] if c["case"] != CONTROL_ID],
-                                               review.get("control"), control_case)
-    series["returnCriteria"] = return_criteria()
-    series["fieldInteractions"] = field_interactions(root, plan)
-    if budgets:
-        ledger = read(pinned(root, budgets["source"]))
-        limits = read(pinned(root, budgets["limits"]))
-        series["mass"] = {"range": budgets["inspectionKg"], "remaining": budgets["remainingKg"],
-                          "limit": limits["inspectionLimitKg"], "running": budgets["runningKg"],
-                          "lines": [{k: row[k] for k in ("id", "kg", "members", "basis")} for row in ledger["masses"]]}
-        series["power"] = []
-        for row in budgets["electricalCases"]:
-            duty = ledger["electricalCases"][row["case"]]
-            series["power"].append({**row, "loads": duty["batterySideA"], "resistance": duty["resistanceOhm"],
-                                    "openCircuit": duty["openCircuitV"]})
-        series["loadMembers"] = presentation.get("loadMembers", {})
-    series["inspector"] = component_inspector(plan, scenes, review.get("studyCases", []),
-                                              series["mass"]["lines"] if budgets else None,
-                                              presentation.get("loadMembers", {}), fixtures)
-    data = json.dumps(series, allow_nan=False, sort_keys=True, separators=(",", ":")).replace("<", "\\u003c")
-    expected = template.replace("PACKAGE_DATA", data).encode("utf-8")
+    page = PAGE.read_bytes().replace(b"\r\n", b"\n")
+    content = json.dumps(build_scene(root, plan, scenes, observed, budgets, review), allow_nan=False, sort_keys=True,
+                         separators=(",", ":")).encode("utf-8")
+    scene_file = path.with_name(SCENE_FILE)
     if write and not path.exists():
         with path.open("xb") as output:
-            output.write(expected)
+            output.write(page)
     if write and not scene_file.exists():
         with scene_file.open("xb") as output:
-            output.write(gzip.compress(scene, compresslevel=9, mtime=0))
+            output.write(gzip.compress(content, compresslevel=9, mtime=0))
     try:
         stored = scene_file.read_bytes()
         stream = zlib.decompressobj(16 + zlib.MAX_WBITS)
-        scene_ok = stream.decompress(stored, len(scene) + 1) == scene and stream.eof
+        scene_ok = stream.decompress(stored, len(content) + 1) == content and stream.eof
     except (OSError, zlib.error):
         stored, scene_ok = None, False
-    served = stored if stored is not None else gzip.compress(scene, compresslevel=9, mtime=0)
-    return dict(file=name, sha256=hashlib.sha256(expected).hexdigest(),
-                verified=path.is_file() and path.read_bytes() == expected and scene_ok,
-                geometry=dict(file=scene_file.relative_to(root).as_posix(), sha256=hashlib.sha256(served).hexdigest(),
-                           contentSha256=hashlib.sha256(scene).hexdigest()))
+    served = stored if stored is not None else gzip.compress(content, compresslevel=9, mtime=0)
+    return dict(file=name, sha256=hashlib.sha256(page).hexdigest(),
+                verified=path.is_file() and path.read_bytes() == page and scene_ok,
+                scene=dict(file=scene_file.relative_to(root).as_posix(), sha256=hashlib.sha256(served).hexdigest(),
+                           contentSha256=hashlib.sha256(content).hexdigest(), bytes=len(content)))
