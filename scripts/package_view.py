@@ -7,6 +7,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 import zlib
 
+from atomic_file import write_atomic
 from mechanical_motion import transforms
 from mechanical_readiness import named, pinned, read, require
 
@@ -500,12 +501,11 @@ def verify_view(root, plan, scenes, write, observed, budgets, review=None):
                          separators=(",", ":")).encode("utf-8")
     _validate(content)
     scene_file = path.with_name(SCENE_FILE)
+    # Each file appears complete or not at all, so a reader never finds a partly written page or scene.
     if write and not path.exists():
-        with path.open("xb") as output:
-            output.write(page)
+        write_atomic(path, page, exclusive=True)
     if write and not scene_file.exists():
-        with scene_file.open("xb") as output:
-            output.write(gzip.compress(content, compresslevel=9, mtime=0))
+        write_atomic(scene_file, gzip.compress(content, compresslevel=9, mtime=0), exclusive=True)
     try:
         stored = scene_file.read_bytes()
         stream = zlib.decompressobj(16 + zlib.MAX_WBITS)

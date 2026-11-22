@@ -5,6 +5,7 @@ import {cpSync,existsSync,mkdirSync,readFileSync,readdirSync,rmSync,writeFileSyn
 import path from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 
+import {writeDirectoryAtomic,writeFileAtomic} from './atomic-write.mjs';
 import {designStatuses,statusOf} from './design-status.mjs';
 import {checkRelease,releasePhase,releaseSchema} from './preliminary-release.mjs';
 
@@ -373,8 +374,8 @@ function treeFiles(dir){
 function saveIndex(site,policy,index,prelimRoot){
   const tree=path.join(site,policy.root),state=preliminaryState(treeFiles(path.join(site,prelimRoot)));
   mkdirSync(tree,{recursive:true});
-  writeFileSync(path.join(tree,'designs.json'),writeIndex(index.designs,policy.preliminaryIndex));
-  if(!existsSync(path.join(tree,'index.html')))writeFileSync(path.join(tree,'index.html'),readFileSync(catalog));
+  writeFileAtomic(path.join(tree,'designs.json'),writeIndex(index.designs,policy.preliminaryIndex));
+  if(!existsSync(path.join(tree,'index.html')))writeFileAtomic(path.join(tree,'index.html'),readFileSync(catalog));
   return {...index,...primaryView(index.designs),warnings:relinkWarnings(index.designs,state)};
 }
 function sitePolicy(file){
@@ -419,7 +420,9 @@ export function stageInProgress({site,policyFile,design,inputs,release,project,a
   checkInProgress(design,out,preliminaryState(prelimTree));
   const tree=path.join(site,policy.root),dir=path.join(tree,'designs',design),index=loadIndex(tree,policy);
   check(!existsSync(dir)&&!index.designs.some(e=>e.design===design),'Design '+design+' is already issued; choose a new ID');
-  for(const [name,bytes] of out){mkdirSync(path.dirname(path.join(dir,name)),{recursive:true});writeFileSync(path.join(dir,name),bytes);}
+  mkdirSync(path.dirname(dir),{recursive:true});
+  // The design directory appears complete or not at all; a failed stage leaves nothing to clear before a retry.
+  writeDirectoryAtomic(dir,temp=>{for(const [name,bytes] of out){mkdirSync(path.dirname(path.join(temp,name)),{recursive:true});writeFileSync(path.join(temp,name),bytes);}});
   index.designs.push({design,status:'in-progress',preliminary:release});
   return saveIndex(site,policy,index,prelimRoot);
 }

@@ -5,6 +5,7 @@ import hashlib
 import json
 import subprocess
 import shutil
+import os
 import re
 import sys
 
@@ -170,7 +171,10 @@ def create(root, release_id=None):
     if result.returncode:
         raise RuntimeError(result.stderr.decode(errors="replace") + result.stdout.decode(errors="replace"))
     if release_id:
-        (root / "receipt.json").write_bytes(result.stdout)
+        # The receipt arrives last and whole: a reader that finds it has a complete package.
+        temporary = root / ".receipt.json.tmp"
+        temporary.write_bytes(result.stdout)
+        os.replace(temporary, root / "receipt.json")
         # The synthetic mission task: the released article leaves the turned carrier.
         write("missions.json", dict(missionCases=[dict(case="release", kind="operating-case", accomplishes="delivered",
                                                        objective="Acquire, turn and release")]))

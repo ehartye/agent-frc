@@ -10,6 +10,8 @@ import subprocess
 from pathlib import Path
 from urllib.parse import quote
 
+from atomic_file import write_atomic
+
 START = "<!-- cad-still -->"
 END = "<!-- /cad-still -->"
 
@@ -27,7 +29,7 @@ def output(file, data, update):
         return
     if not update:
         raise ValueError(f"Stale or missing: {file}")
-    file.write_bytes(data)
+    write_atomic(file, data)
 
 
 def run(root, update, template):
