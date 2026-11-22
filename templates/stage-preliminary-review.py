@@ -108,7 +108,9 @@ BANNED = [
     (r"<(?:iframe|frame|frameset|object|embed|portal|base|link|applet|form|area)\b", "an embedded, linked or submitted resource", re.I),
     (r"<[a-z][^>]*?\s(?:src|srcset|poster|background|data|action|formaction|ping|xlink:href)\s*=\s*[\"']?\s*(?!data:|blob:|#)[^\s\"'>]",
      "a resource URL", re.I),
-    (r"<[a-z][^>]*?\shref\s*=\s*[\"']?\s*(?!#)[^\s\"'>]", "a link away from the page", re.I),
+    (r"(?<![\w-])href\s*=\s*(?![\"']?\s*#)", "a link away from the page", re.I),
+    (r"\.(?:href|action|src)\b|\.(?:click|submit|requestSubmit)\s*\(|\bsetAttribute(?:NS)?\s*\(|\bcreateElement(?:NS)?\s*\(",
+     "scripted navigation or element creation", 0),
     (r"\b(?:fetch|importScripts|sendBeacon)\s*\(|\b(?:XMLHttpRequest|WebSocket|EventSource|RTCPeerConnection|SharedWorker)\b|\bimport\s*\("
      r"|\bimport\s+[\w{*][^;]*?\bfrom\b|@import\b|\bnew\s+Worker\b|\bopen\s*\(|\b(?:location|history)\s*[.=\[]"
      r"|['\"`](?:location|history)['\"`]", "a network or navigation API", 0),
@@ -120,14 +122,15 @@ LEAD = re.compile(r"[ \t\n]*(?:<!doctype html>[ \t\n]*)?(?:<html(?: lang=\"[A-Za
 
 def self_contained(html):
     """Mirror the gate: a leading restrictive Content-Security-Policy and no external resource, network or navigation API."""
-    html = html.replace("\r\n", "\n").lstrip("\ufeff")
+    html = html.replace("\r\n", "\n")
+    html = html[1:] if html.startswith("\ufeff") else html
     lead = LEAD.match(html).end()
-    meta = re.match(r"<meta http-equiv=\"content-security-policy\" content=\"([^\"<>&]*)\">", html[lead:], re.I)
+    meta = re.match(r"<meta http-equiv=\"content-security-policy\" content=\"([A-Za-z0-9 ;'\-:]*)\">", html[lead:], re.I)
     if not meta:
         return "declare a Content-Security-Policy meta element before any script, style or content"
     policy = {}
     for part in [x.strip() for x in meta.group(1).split(";") if x.strip()]:
-        name, *sources = part.lower().split()
+        name, *sources = [x for x in part.lower().split(" ") if x]
         if name in policy or name not in CSP_ALLOWED or not sources or not set(sources) <= CSP_ALLOWED[name]:
             return "the policy may only allow inline code and data or blob media (" + name + ")"
         policy[name] = sources

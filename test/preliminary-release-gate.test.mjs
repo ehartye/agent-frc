@@ -353,7 +353,15 @@ test('a field player must be self-contained', async t=>{
     fieldPage.replace('frames.length','open("https://example.invalid/")'),
     fieldPage.replace('<canvas>','<a href="https://example.invalid/">Source</a><canvas>'),
     fieldPage.replace('<canvas>','<meta http-equiv="&#114;efresh" content="0;url=https://example.invalid"><canvas>'),
-    fieldPage.replace('<p>Work-in-progress preliminary design</p>',''));
+    fieldPage.replace('<p>Work-in-progress preliminary design</p>',''),
+    fieldPage.replace("default-src 'none'","default-src"+String.fromCharCode(0xa0)+"'none'"),
+    fieldPage.replace("default-src 'none'","default-src"+String.fromCharCode(0x1c)+"'none'"),
+    fieldPage.replace("default-src 'none'","default-src\t'none'"),
+    fieldPage.replace('<canvas>','<a/href="https://example.invalid/">x</a><canvas>'),
+    fieldPage.replace('<canvas>','<a title=">" href="https://example.invalid/">x</a><canvas>'),
+    fieldPage.replace('<canvas>','<a id=a href="#"></a><canvas>').replace('frames.length',"a.href='https://example.invalid/';a.click()"),
+    fieldPage.replace('frames.length',"document.body.setAttribute('onload','x')"),
+    fieldPage.replace('frames.length',"document.createElement('a')"));
   for(const page of pages){
     const f=fixture(t);next(f.site,'layout-002',{field:{page}});
     await assert.rejects(auditStaged(f.approved,f.site,f.policy),/self-contained/,page.slice(60,220));
@@ -395,6 +403,11 @@ test('stage.py --check-index applies the same field player rules', async t=>{
     [{rows:[{title:'Lane',href:'field/lane.html',objective:laneObjective,evidence:'unpinned'}]},/receipt pins/],
     [{page:fieldPage.replace('<html lang="en">','<html lang="en" data-x=\'>').replace('<title>','\'><title>')},/not self-contained/],
     [{page:fieldPage.replace('frames.length','location.assign("https://example.invalid/")')},/not self-contained/],
+    [{page:fieldPage.replace("default-src 'none'","default-src"+String.fromCharCode(0xa0)+"'none'")},/not self-contained/],
+    [{page:fieldPage.replace("default-src 'none'","default-src"+String.fromCharCode(0x1c)+"'none'")},/not self-contained/],
+    [{page:fieldPage.replace('<canvas>','<a title=">" href="https://example.invalid/">x</a><canvas>')},/not self-contained/],
+    [{page:fieldPage.replace('frames.length',"document.createElement('a')")},/not self-contained/],
+    [{page:String.fromCharCode(0xfeff,0xfeff)+fieldPage},/not self-contained/],
     [{page:fieldPage.replace('<p>Work-in-progress preliminary design</p>','')},/not self-contained/],
     [{page:String.fromCharCode(0xfeff)+fieldPage},0],
     [{rows:[{title:'Lane',href:'field%2flane.html',objective:laneObjective,evidence:'x'}]},/listed field player/]];

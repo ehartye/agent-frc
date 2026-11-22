@@ -113,14 +113,15 @@ export function checkSelfContained(bytes,where){
   // Only plain, quote-free lead elements may precede the policy, so no attribute can swallow it.
   const lead=new RegExp('^[ \\t\\n]*(?:<!doctype html>[ \\t\\n]*)?(?:<html(?: lang="[A-Za-z-]{1,16}")?>[ \\t\\n]*)?(?:<head>[ \\t\\n]*)?'+
     '(?:(?:<meta charset="?utf-8"?>|<meta name="viewport" content="[A-Za-z0-9=,. -]{1,80}">|<title>[^<>&]{0,120}</title>)[ \\t\\n]*)*','i').exec(html)[0];
-  const meta=/^<meta http-equiv="content-security-policy" content="([^"<>&]*)">/i.exec(html.slice(lead.length));
+  // Browsers split a policy on ASCII whitespace only; allow plain spaces and a small alphabet so both agree.
+  const meta=/^<meta http-equiv="content-security-policy" content="([A-Za-z0-9 ;'\-:]*)">/i.exec(html.slice(lead.length));
   if(!meta)fail('declare a Content-Security-Policy meta element before any script, style or content');
   const none=["'none'"],inline=["'none'","'unsafe-inline'","'unsafe-eval'","'wasm-unsafe-eval'"],local=[...inline,'data:','blob:'];
   const allowed={'default-src':none,'script-src':inline,'style-src':inline,'img-src':local,'font-src':local,'media-src':local,
     'connect-src':none,'frame-src':none,'child-src':none,'worker-src':none,'object-src':none,'base-uri':none,'form-action':none,'manifest-src':none};
   const policy=new Map();
   for(const part of meta[1].split(';').map(x=>x.trim()).filter(Boolean)){
-    const [name,...sources]=part.toLowerCase().split(/\s+/);
+    const [name,...sources]=part.toLowerCase().split(/ +/);
     if(policy.has(name)||!Object.hasOwn(allowed,name)||!sources.length||!sources.every(x=>allowed[name].includes(x)))
       fail('the policy may only allow inline code and data or blob media ('+name+')');
     policy.set(name,sources);
@@ -132,7 +133,8 @@ export function checkSelfContained(bytes,where){
     [/<script\b[^>]*\bsrc\s*=/i,'an external script'],
     [/<(?:iframe|frame|frameset|object|embed|portal|base|link|applet|form|area)\b/i,'an embedded, linked or submitted resource'],
     [/<[a-z][^>]*?\s(?:src|srcset|poster|background|data|action|formaction|ping|xlink:href)\s*=\s*["']?\s*(?!data:|blob:|#)[^\s"'>]/i,'a resource URL'],
-    [/<[a-z][^>]*?\shref\s*=\s*["']?\s*(?!#)[^\s"'>]/i,'a link away from the page'],
+    [/(?<![\w-])href\s*=\s*(?!["']?\s*#)/i,'a link away from the page'],
+    [/\.(?:href|action|src)\b|\.(?:click|submit|requestSubmit)\s*\(|\bsetAttribute(?:NS)?\s*\(|\bcreateElement(?:NS)?\s*\(/,'scripted navigation or element creation'],
     [/\b(?:fetch|importScripts|sendBeacon)\s*\(|\b(?:XMLHttpRequest|WebSocket|EventSource|RTCPeerConnection|SharedWorker)\b|\bimport\s*\(|\bimport\s+[\w{*][^;]*?\bfrom\b|@import\b|\bnew\s+Worker\b|\bopen\s*\(|\b(?:location|history)\s*[.=[]|['"`](?:location|history)['"`]/,'a network or navigation API'],
     [/url\(\s*["']?\s*(?!data:|blob:|#)[^)\s"']/i,'a stylesheet URL']];
   for(const [pattern,why] of banned)if(pattern.test(html))fail(why);
