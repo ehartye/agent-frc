@@ -213,6 +213,17 @@ class HeldPositionReplay(unittest.TestCase):
                   if e["robot"] == "B1" and e["station"] == "blue-bay" and e["operation"] == "attempt"]
         self.assertIn("no-compatible-cargo", {e["outcome"] for e in events})
 
+    def test_generic_premise_clears_when_one_match_has_no_attempt(self):
+        def elsewhere(profile):
+            # In one match B1 never visits the bay, so that match imposes no delivery requirement.
+            roster = profile["rehearsal"]["series"]["matches"][2]["roster"]
+            next(r for r in roster if r["side"] == "blue" and r["slot"] == 1)["plans"] = {"Opening": "hold", "Main play": "hold"}
+        result = self.generic("generic-idle", STATION, (0., 15.), extra=elsewhere)
+        self.assertFalse(any(e["robot"] == "B1" and e["operation"] == "attempt"
+                             for e in self.replays["generic-idle"]["matches"][2]["game"]["events"]))
+        self.assertTrue(self.prior(result)["repeatVerified"], result["missingInputs"])
+        self.assertEqual(result["status"], "layout-checked")
+
     def test_generic_premise_with_one_attempt_out_of_range_stays_open(self):
         result = self.generic("generic-range", STATION, (0., 12.))
         self.assertFalse(self.prior(result)["repeatVerified"])
