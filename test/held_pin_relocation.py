@@ -69,6 +69,34 @@ class HeldPinRelocation(base.HeldPositionReplay):
         with self.assertRaisesRegex(ValueError, "Relocations apply only to a held receipt passed with --previous"):
             review(self.root, self.root / "layout.json")
 
+    def test_followed_relocation_is_recorded_when_the_hold_stays_open(self):
+        held, relocations, old = self.moved("moved-open", True)
+        original = self.plan
+        self.plan = dict(original, relocations=relocations)
+        try:
+            # The relocation is sound, but the reported stand-off differs from the replayed program.
+            result = self.resubmit("moved-open", held, DELIVERY, [BAY[0], BAY[1] - 10], 12.)
+        finally:
+            self.plan = original
+        self.assertFalse(self.prior(result)["repeatVerified"])
+        self.assertEqual([r["toFile"] for r in result["heldRelocations"]], ["archive/" + old])
+
+    def test_relocated_legacy_evidence_is_followed_to_identical_bytes(self):
+        step = {k: v for k, v in DELIVERY.items() if k != "input"}
+        source = base.write(self.root, "legacy-moved-evidence.json", dict(fieldReplay=step))
+        held, _ = self.hold("legacy-moved", None, source=source)
+        archived = self.root / "archive" / "legacy-moved-evidence.json"
+        archived.parent.mkdir(exist_ok=True)
+        shutil.move(self.root / "legacy-moved-evidence.json", archived)
+        result = self.resubmit_with("legacy-moved", held, {"legacy-moved-evidence.json": "archive/legacy-moved-evidence.json"})
+        self.assertTrue(self.prior(result)["repeatVerified"], result["missingInputs"])
+        self.assertEqual(result["heldRelocations"][0]["fromFile"], "legacy-moved-evidence.json")
+
+    def test_relocation_cannot_leave_the_project(self):
+        held, _, old = self.moved("outside", False)
+        with self.assertRaisesRegex(ValueError, "Unresolved project file"):
+            self.resubmit_with("outside", held, {old: "../" + old})
+
     def test_no_relocation_is_unchanged(self):
         held, _ = self.hold("plain", DELIVERY)
         result = self.resubmit_with("plain", held, {})

@@ -322,7 +322,7 @@ def verify_reopens(root, plan, prior, decisions, observations, missing, budget):
                          and phase=="conceptual-design" and isinstance(evidence.get("fieldReplay"),dict)
                          and repeated_field_input(root,evidence["fieldReplay"],current[key]["value"],accepted["unit"],replayed,
                                                   accepted["criterion"],missing))
-        history.append(dict(**hold,repeatVerified=checked,**({"relocated":followed} if followed and checked else {})))
+        history.append(dict(**hold,repeatVerified=checked,**({"relocated":followed} if followed else {})))
         if not checked:missing.append("Repeat "+phase+" on this issue before resuming "+key)
     return history
 
