@@ -210,6 +210,14 @@ class HeldPositionReplay(unittest.TestCase):
         self.assertEqual(result["status"], "reopen")
         self.assertIn("Held premise delivery-standoff has scenarioId delivery-cycle; the revised premise has defended-cycle",
                       result["missingInputs"])
+        # A hold that records its field input replays without comparing descriptions; two different IDs still keep it open.
+        held, _ = self.hold("other-id-input", DELIVERY, scenario_id="delivery-cycle")
+        result = self.resubmit("other-id-input", held, DELIVERY, [BAY[0], BAY[1] - 10], 10., scenario_id="defended-cycle")
+        self.assertFalse(self.prior(result)["repeatVerified"])
+        self.assertEqual(result["status"], "reopen")
+        held, _ = self.hold("same-id-input", DELIVERY, scenario_id="delivery-cycle")
+        same = self.resubmit("same-id-input", held, DELIVERY, [BAY[0], BAY[1] - 10], 10., scenario=self.NEAR, scenario_id="delivery-cycle")
+        self.assertTrue(self.prior(same)["repeatVerified"], same["missingInputs"])
         # The same wording does not override two different IDs.
         result = self.reworded("other-id-same-text", "delivery-cycle", "defended-cycle", revised=self.FAR)
         self.assertFalse(self.prior(result)["repeatVerified"])
@@ -243,8 +251,12 @@ class HeldPositionReplay(unittest.TestCase):
             self.premise(tag, 10., DELIVERY, scenario=self.NEAR, scenario_id="delivery-cycle", observed=observed)
             with self.assertRaisesRegex(ValueError, "Premise observation differs in scope", msg=tag):
                 self.review()
-        self.premise("bad-id", 10., DELIVERY, scenario_id="")
-        with self.assertRaisesRegex(ValueError, "Bind each premise"):
+        for bad in ("", " ", 0, False, 5, []):
+            self.premise("bad-id", 10., DELIVERY, scenario_id=bad)
+            with self.assertRaisesRegex(ValueError, "Bind each premise", msg=repr(bad)):
+                self.review()
+        self.premise("bad-wording", 10., DELIVERY, scenario_id="delivery-cycle", observed=dict(scenario={"x": 1}))
+        with self.assertRaisesRegex(ValueError, "Premise observation differs in scope"):
             self.review()
 
     def test_preliminary_design_field_premise_stays_open(self):

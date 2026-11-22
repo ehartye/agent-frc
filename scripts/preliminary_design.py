@@ -132,8 +132,8 @@ def compare_premises(root, rows, plan, missing):
             missing.append("Missing current observation for "+key)
             continue
         current=read(pinned(root,links["current"]))
-        require(all(current.get(k)==accepted[k] for k in ("id","unit")) and same_scenario(current,accepted),
-                "Premise observation differs in scope")
+        require(all(current.get(k)==accepted[k] for k in ("id","unit")) and same_scenario(current,accepted)
+                and named(current.get("scenario")),"Premise observation differs in scope")
         # A matching scenarioId lets the observer word the scenario differently; the receipt keeps both wordings.
         if current.get("scenario")!=accepted["scenario"]:decision["observedScenario"]=current.get("scenario")
         source=read(pinned(root,current["source"]))
@@ -369,6 +369,8 @@ def verify_reopens(root, plan, prior, decisions, observations, missing, budget):
         if isinstance(before,dict) and isinstance(repeat,dict):
             ids=(before.get("scenarioId"),accepted.get("scenarioId"))
             if None not in ids and ids[0]!=ids[1]:
+                # Two declared IDs that differ name two scenarios, whichever way the hold was otherwise replayed.
+                checked=False
                 missing.append("Held premise "+key+" has scenarioId "+str(ids[0])+"; the revised premise has "+str(ids[1]))
             elif None not in ids and before.get("scenario")!=accepted["scenario"]:
                 reworded=dict(scenarioRevised=dict(held=before.get("scenario"),current=accepted["scenario"]))
