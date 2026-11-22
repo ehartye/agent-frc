@@ -34,7 +34,7 @@ class CompressionTrialPin(unittest.TestCase):
         cls.folder = TemporaryDirectory()
         cls.root = Path(cls.folder.name)
         ball_step(cls.root / "scene.step")
-        cls.trial = write(cls.root, "squeeze-trial.json", dict(basis="Invented squeeze trial", squeezeMm=1.5, cycles=20, label="soft"))
+        cls.trial = write(cls.root, "indentation-trial.json", dict(basis="Invented squeeze trial", radialIndentationMm=1.5, cycles=20, label="soft"))
 
     @classmethod
     def tearDownClass(cls):
@@ -56,7 +56,7 @@ class CompressionTrialPin(unittest.TestCase):
         self.assertNotIn("evidence", self.row(case))
 
     def test_a_pinned_trial_binds_the_allowance(self):
-        evidence = dict(self.trial, field="squeezeMm")
+        evidence = dict(self.trial, field="radialIndentationMm")
         case = self.run_rule(evidence=evidence)
         self.assertEqual(case["status"], "pass")
         self.assertEqual(self.row(case)["evidence"], evidence)
@@ -64,29 +64,37 @@ class CompressionTrialPin(unittest.TestCase):
         self.assertEqual({k: v for k, v in self.row(case).items() if k != "evidence"}, plain)
 
     def test_an_allowance_that_differs_from_its_trial_is_refused(self):
-        evidence = dict(self.trial, field="squeezeMm")
-        with self.assertRaisesRegex(ValueError, "Compression allowance for ball on pad differs from squeezeMm in its pinned trial"):
+        evidence = dict(self.trial, field="radialIndentationMm")
+        with self.assertRaisesRegex(ValueError, "Compression allowance for ball on pad differs from radialIndentationMm in its pinned trial"):
             self.run_rule(evidence=evidence, maxDepthMm=1.4)
 
     def test_a_missing_or_non_numeric_field_is_refused(self):
         for field in ("absent", "label", "basis"):
             with self.assertRaisesRegex(ValueError, "differs from " + field + " in its pinned trial", msg=field):
                 self.run_rule(evidence=dict(self.trial, field=field))
-        flags = write(self.root, "flag-trial.json", dict(squeezeMm=True))
-        with self.assertRaisesRegex(ValueError, "differs from squeezeMm"):
-            self.run_rule(evidence=dict(flags, field="squeezeMm"), maxDepthMm=1)
+        flags = write(self.root, "flag-trial.json", dict(radialIndentationMm=True))
+        with self.assertRaisesRegex(ValueError, "differs from radialIndentationMm"):
+            self.run_rule(evidence=dict(flags, field="radialIndentationMm"), maxDepthMm=1)
         listed = write(self.root, "list-trial.json", [1.5])
-        with self.assertRaisesRegex(ValueError, "differs from squeezeMm"):
-            self.run_rule(evidence=dict(listed, field="squeezeMm"))
+        with self.assertRaisesRegex(ValueError, "differs from radialIndentationMm"):
+            self.run_rule(evidence=dict(listed, field="radialIndentationMm"))
 
     def test_a_malformed_or_changed_pin_is_refused(self):
-        for tag, evidence in (("no-field", dict(self.trial)), ("no-digest", dict(file=self.trial["file"], field="squeezeMm")),
-                              ("extra", dict(self.trial, field="squeezeMm", note="x")), ("text", "squeeze-trial.json"),
+        for tag, evidence in (("no-field", dict(self.trial)), ("no-digest", dict(file=self.trial["file"], field="radialIndentationMm")),
+                              ("extra", dict(self.trial, field="radialIndentationMm", note="x")), ("text", "indentation-trial.json"),
                               ("blank-field", dict(self.trial, field=" "))):
             with self.assertRaisesRegex(ValueError, "Pin a compression trial by file, sha256 and field", msg=tag):
                 self.run_rule(evidence=evidence)
+        with self.assertRaisesRegex(ValueError, "Changed evidence"):
+            self.run_rule(evidence=dict(self.trial, field="radialIndentationMm", sha256="f" * 64))
+        outside = write(self.root.parent, "outside-" + self.root.name + ".json", dict(radialIndentationMm=1.5))
         with self.assertRaises(ValueError):
-            self.run_rule(evidence=dict(self.trial, field="squeezeMm", sha256="f" * 64))
+            self.run_rule(evidence=dict(file="../" + outside["file"], sha256=outside["sha256"], field="radialIndentationMm"))
+        (self.root.parent / outside["file"]).unlink()
+        # Without a project root the pin cannot be checked, so the rule is refused, not skipped.
+        from payload_compression import trial_pin
+        with self.assertRaisesRegex(ValueError, "Pin a compression trial"):
+            trial_pin(None, dict(payload="ball", contact="pad", maxDepthMm=1.5, evidence=dict(self.trial, field="radialIndentationMm")))
 
 
 if __name__ == "__main__":

@@ -643,7 +643,8 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
             if ref:pinned(root,read(pinned(root,ref))["source"])
     for c in cases:
         for ref in [*(f["file"] for f in c.get("fixtures",[])),*(e["qualifiedBy"] for e in c.get("intendedInterfaces",[])),
-                    *(dict(file=r["evidence"]["file"],sha256=r["evidence"]["sha256"]) for r in c.get("payloadCompression",[]) if r.get("evidence"))]:
+                    *(dict(file=r["evidence"]["file"],sha256=r["evidence"]["sha256"]) for r in c.get("payloadCompression",[])
+                      if isinstance(r.get("evidence"),dict) and named(r["evidence"].get("file")) and named(r["evidence"].get("sha256")))]:
             pinned(root,ref)
     for stage in stages.values():
         for spec in [*stage.get("transportedBy",{}).values(),*stage.get("freePath",{}).values()]:
