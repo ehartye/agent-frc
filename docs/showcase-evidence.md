@@ -1,6 +1,6 @@
 # Publish what students can inspect
 
-A new whole-robot or subsystem model needs a passing mechanical-readiness review for its exact native issue and its selected still, orbit and download. Keep the previously issued model available until its verified replacement passes. Analysis-only field labs and strategy reports can publish independently. [Mechanical review and promotion](mechanical-readiness.md)
+A new detailed whole-robot or subsystem model needs a passing mechanical-readiness review for its exact native issue and its selected still, orbit and download. Keep the previously issued model available until its verified replacement passes. A [work-in-progress preliminary release](private-model-release.md#publish-work-in-progress-preliminary-releases) can publish beside it once its layout check passes and a mission-task case plays; it stays secondary and labelled. Analysis-only field labs and strategy reports can publish independently. [Mechanical review and promotion](mechanical-readiness.md)
 
 
 A kickoff project can publish a rules analysis, strategic narrative and untested scoring opportunities immediately. Set `stage` to `analysis` in the highlights manifest. Keep the revision, sources and results. The build sheet and the model are optional at this stage. Existing design manifests retain their build sheet.

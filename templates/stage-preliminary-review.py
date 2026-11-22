@@ -1,4 +1,4 @@
-"""Append a checked season release, or audit the index before deploying the season site."""
+"""Append a checked work-in-progress release, or audit the index before deploying the season site."""
 import argparse
 from contextlib import contextmanager
 import hashlib
@@ -72,6 +72,13 @@ def stage(season, inputs, release):
     viewer = pinned(inputs, result["view"])
     if viewer != (inputs / plan["view"]).resolve():
         raise ValueError("The checked view differs from the layout's selected view")
+    if result.get("status") != "layout-checked" or result.get("missingInputs"):
+        raise ValueError("A preliminary release needs a layout-checked receipt with no missing inputs")
+    missions = read(inputs / "missions.json")["missionCases"] if (inputs / "missions.json").exists() else []
+    represented = {o["objective"] for o in result["narrativeReview"]["objectives"] if o["disposition"] == "represented"}
+    passed = {c["case"] for c in result["cases"] if c["status"] == "pass"}
+    if not missions or any(m["objective"] not in represented or m["case"] not in passed for m in missions):
+        raise ValueError("Declare a passing mission-task case for a represented objective in missions.json")
     with update_index(site), tempfile.TemporaryDirectory(dir=site.parent, prefix=".stage-") as tmp:
         record = index(site, recovering=release)
         if release in record["releases"]:
@@ -80,6 +87,25 @@ def stage(season, inputs, release):
         if plan.get("budgets"):
             ledger = pinned(inputs, plan["budgets"])
             files.update({"budgets.json": ledger, "limits.json": pinned(inputs, read(ledger)["requirements"])})
+        published = []
+        for mission in missions:
+            mission = dict(mission)
+            if mission.get("trial"):
+                trial = pinned(inputs, mission["trial"])
+                if trial.name in files or trial.name == "release.json":
+                    raise ValueError("A trial file name collides with a release file: " + trial.name)
+                files[trial.name] = trial
+                mission["trial"] = dict(file=trial.name, sha256=mission["trial"]["sha256"])
+            published.append(mission)
+        digest = lambda name: hashlib.sha256(files[name].read_bytes()).hexdigest()
+        files["release.json"] = Path(tmp) / "release.json"
+        files["release.json"].write_text(json.dumps(dict(
+            schema="agent-frc/preliminary-release@1", release=release, issue=result["issue"],
+            label="Work-in-progress preliminary design", status=result["status"],
+            receipt=dict(file="receipt.json", sha256=digest("receipt.json")),
+            view=dict(file="index.html", sha256=digest("index.html")),
+            scene=dict(file="motion.json", sha256=digest("motion.json"), stepSha256=result["step"]["sha256"]),
+            missionCases=published), indent=2) + "\n", encoding="utf-8")
         staged = Path(tmp) / release
         staged.mkdir()
         for name, src in files.items():

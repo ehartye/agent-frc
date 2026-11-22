@@ -25,12 +25,22 @@ test('season review appends immutable releases and refuses a changed source', as
     const motion = await pin('paths.json', '{"cases":[]}');
     const view = await pin('viewer.html', '<html>'+id+'</html>');
     const plan = await pin('layout.json', JSON.stringify({motion, view: view.file}));
-    await pin('receipt.json', JSON.stringify({planSha256: plan.sha256, view: {...view, verified: true}}));
+    await pin('receipt.json', JSON.stringify({planSha256: plan.sha256, view: {...view, verified: true}, issue: 'synthetic-' + id,
+      status: 'layout-checked', missingInputs: [], step: {file: 'package.step', sha256: 'a'.repeat(64)},
+      cases: [{case: 'turn', status: 'pass'}], narrativeReview: {objectives: [{objective: 'Move the sample', disposition: 'represented'}]}}));
+    await pin('missions.json', JSON.stringify({missionCases: [{case: 'turn', kind: 'operating-case', accomplishes: 'delivered', objective: 'Move the sample'}]}));
     return dir;
   }
   const stage = id => spawnSync(process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3'), [script, id], {encoding: 'utf8'});
+  const a = await fixture('a');
+  await writeFile(path.join(a, 'missions.json'), JSON.stringify({missionCases: []}));
+  assert.match(stage('a').stderr, /mission-task case/);
   await fixture('a');
   assert.equal(stage('a').status, 0);
+  const record = JSON.parse(await readFile(path.join(site, 'releases', 'a', 'release.json')));
+  assert.equal(record.label, 'Work-in-progress preliminary design');
+  assert.equal(record.view.sha256, createHash('sha256').update('<html>a</html>').digest('hex'));
+  assert.deepEqual(record.missionCases.map(m => m.case), ['turn']);
   const b = await fixture('b');
   await writeFile(path.join(b, 'paths.json'), 'changed');
   assert.match(stage('b').stderr, /Missing or changed release input/);

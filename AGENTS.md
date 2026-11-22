@@ -16,7 +16,7 @@ Start new robot frame and bumper designs with two rear plan-view chamfers. Prese
 
 When a design study or independent reviewer finds a defect outside the plugin, record the detection method in the FRC wiki. Implement or identify the equivalent first-party skill and callable check. Use an executable comparison for a calculable property and a source-bound native Fusion inspection when expert judgment is required. Preserve a controlled failing case, then run the released plugin from a clean installed copy on the actual successor. Link the candidate inputs, released revision, regression and resulting receipt in the project. Keep open findings visible in private engineering records until the issued evidence satisfies the criterion.
 
-A future showcase model requires the full mechanical-readiness gate. Protect each deployed model, still, selector and download. On failure retain the current release. Bring a repeatedly failing mechanism or role back to whole-robot design when a fair alternative could better meet the same requirements.
+A future detailed showcase model requires the full mechanical-readiness gate. A work-in-progress preliminary release requires a layout-checked physics receipt and a playable mission-task case instead. It stays secondary and labelled, and the latest detailed design remains front and center. Protect each deployed detailed model, still, selector and download, and each issued preliminary release. On failure retain the current release. Bring a repeatedly failing mechanism or role back to whole-robot design when a fair alternative could better meet the same requirements.
 
 ## Maintain the public workflow guide
 

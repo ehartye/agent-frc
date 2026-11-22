@@ -7,6 +7,8 @@ description: "Create or refresh a student robot showcase with explorable CAD mod
 
 Before promoting a new whole robot or subsystem model, use `frc-mechanical-readiness` on the exact Fusion configuration and every distributed derivative. Require a negative-control and candidate receipt from an installed first-party method for externally discovered defects. Require a passing, scoped mechanical review before replacing the live model, its README image or the native download. On an open or failed candidate, preserve the deployed revision and continue private engineering work. [Model promotion and evidence](../../docs/mechanical-readiness.md)
 
+A work-in-progress preliminary design can deploy beside the live model without that review. Each [preliminary release](../../docs/private-model-release.md#publish-work-in-progress-preliminary-releases) needs a layout-checked receipt and a playable mission-task case for a represented narrative objective. Link it as a secondary, labelled page. It never replaces the primary view, README still or model selector, which keep showing the latest approved detailed design.
+
 
 ## Let students explore the model
 
@@ -49,7 +51,7 @@ To use a two-color studio backdrop, add `"backdrop": {"center":"#536980","edge":
 
 When the team wants a public site, keep `highlights.json`, its CAD receipt and its approved source files in the project repository. For a repository with an existing Pages site, build the showcase into a subdirectory of its existing publication artifact and link it from the site's navigation. GitHub Pages serves one site per repository.
 
-For either branch-served or generated Pages, use the [project CI and local release instructions](../../docs/project-ci.md). Run the signed source and final-site gate on the directory students will see, including every post-build copy. The local release receipt identifies its exact bytes.
+For either branch-served or generated Pages, use the [project CI and local release instructions](../../docs/project-ci.md). Run the signed source and final-site gate on the directory students will see, including every post-build copy. A registered preliminary review tree passes the same gate through its receipt-bound class. The local release receipt identifies its exact bytes.
 
 After the first successful deployment, open the URL reported by the deploy job. Verify the full-screen model, still image and film playback on the hosted page. Add the live URL to the project README. Refresh evidence in the project and merge to the default branch to update the site. Local and offline builds use the same manifest.
 
