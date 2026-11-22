@@ -10,6 +10,7 @@ export const releaseLabel='Work-in-progress preliminary design';
 const receiptSchema='agent-frc/preliminary-layout-result@1';
 const releaseId=/^[a-z0-9][a-z0-9-]{0,63}$/;
 const trialName=/^[a-z0-9][a-z0-9._-]{0,127}\.json$/;
+const fieldName=/^field\/[a-z0-9][a-z0-9._-]{0,110}\.html$/;
 const geometryName=/^[a-z0-9][a-z0-9._-]{0,110}\.geometry\.json\.gz$/;
 const hex=/^[0-9a-f]{64}$/;
 const reserved=['index.html','receipt.json','motion.json','release.json','budgets.json','limits.json'];
@@ -28,7 +29,7 @@ const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const object=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
 const named=v=>typeof v==='string'&&v.trim().length>0;
 function parse(bytes,what){
-  try{return JSON.parse(bytes.toString('utf8').replace(/^﻿/,''));}catch{throw Error('Unreadable '+what);}
+  try{return JSON.parse(bytes.toString('utf8').replace(/^\uFEFF/,''));}catch{throw Error('Unreadable '+what);}
 }
 function pinMatches(pin,file,bytes){return object(pin)&&pin.file===file&&hex.test(pin.sha256)&&pin.sha256===sha(bytes);}
 
@@ -102,6 +103,88 @@ export function checkSourceInputs(id,files){
   return {step:receipt.step.file};
 }
 
+/** The one Content-Security-Policy a season field player declares, compared byte for byte. */
+export const fieldPlayerPolicy="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; base-uri 'none'; form-action 'none'";
+const rawText=new Set(['script','style','textarea','title','xmp','iframe','noembed','noframes','noscript','plaintext']);
+const bannedTags=new Set(['iframe','frame','frameset','object','embed','portal','base','link','applet','form','area']);
+const resourceAttrs=new Set(['src','srcset','poster','background','data','action','formaction','ping','xlink:href']);
+
+/** Start tags as a browser tokenizes them: comments, bogus markup and raw-text bodies are skipped. */
+export function startTags(html){
+  const tags=[],space=c=>c===' '||c==='\t'||c==='\n'||c==='\f'||c==='\r';
+  let i=0;
+  while(i<html.length){
+    if(html[i]!=='<'){i++;continue;}
+    if(html.startsWith('<!--',i)){const e=html.indexOf('-->',i+4);i=e<0?html.length:e+3;continue;}
+    const next=html[i+1]??'';
+    if(next==='!'||next==='?'||next==='/'){const e=html.indexOf('>',i+1);i=e<0?html.length:e+1;continue;}
+    if(!/[A-Za-z]/.test(next)){i++;continue;}
+    let j=i+1;
+    while(j<html.length&&!space(html[j])&&html[j]!=='/'&&html[j]!=='>')j++;
+    const name=html.slice(i+1,j).toLowerCase(),attrs=[];
+    while(j<html.length&&html[j]!=='>'){
+      if(space(html[j])||html[j]==='/'){j++;continue;}
+      let k=j+1;
+      while(k<html.length&&!space(html[k])&&html[k]!=='/'&&html[k]!=='>'&&html[k]!=='=')k++;
+      const attr=html.slice(j,k).toLowerCase();
+      while(k<html.length&&space(html[k]))k++;
+      let value='';
+      if(html[k]==='='){
+        k++;
+        while(k<html.length&&space(html[k]))k++;
+        if(html[k]==='"'||html[k]==="'"){
+          const q=html[k],e=html.indexOf(q,k+1);
+          value=html.slice(k+1,e<0?html.length:e);k=e<0?html.length:e+1;
+        }else{
+          let e=k;
+          while(e<html.length&&!space(html[e])&&html[e]!=='>')e++;
+          value=html.slice(k,e);k=e;
+        }
+      }
+      attrs.push([attr,value]);j=k;
+    }
+    tags.push({name,attrs});
+    i=j+1;
+    if(rawText.has(name)){
+      const close=html.toLowerCase().indexOf('</'+name,i);
+      i=close<0?html.length:close;
+    }
+  }
+  return tags;
+}
+
+/**
+ * A season field-interaction player must run on its own. Its first element in <head> is the plugin's exact
+ * policy, which makes the browser refuse every network, frame and form request. Static checks also refuse
+ * external scripts, embedded resources, links away from the page and the obvious network APIs. Script-driven
+ * top-level navigation is outside this check; the season reviews its own player in the pull request.
+ */
+export function checkSelfContained(bytes,where){
+  let html=lf(bytes);
+  if(html.startsWith('﻿'))html=html.slice(1);
+  const fail=why=>{throw Error('Field player '+where+' is not self-contained: '+why);};
+  const meta='<meta http-equiv="Content-Security-Policy" content="'+fieldPlayerPolicy+'">';
+  const head=/^(?:<!doctype html>[ \t\n\r\f]*)?(?:<html(?: lang="[A-Za-z-]{1,16}")?>[ \t\n\r\f]*)?<head>[ \t\n\r\f]*/i.exec(html);
+  if(!head||!html.startsWith(meta,head[0].length))
+    fail('make <meta http-equiv="Content-Security-Policy" content="'+fieldPlayerPolicy+'"> the first element in <head>');
+  let policies=0;
+  for(const {name,attrs} of startTags(html)){
+    if(bannedTags.has(name))fail('an embedded, linked or submitted resource (<'+name+'>)');
+    for(const [attr,value] of attrs){
+      // A browser strips C0 controls and spaces around a URL.
+      const v=value.replace(/^[\x00-\x20]+|[\x00-\x20]+$/g,'').toLowerCase();
+      if(attr==='http-equiv')policies++;
+      if(name==='script'&&attr==='src')fail('an external script');
+      if(attr==='href'&&!v.startsWith('#'))fail('a link away from the page');
+      if(resourceAttrs.has(attr)&&!/^(?:data:|blob:|#)/.test(v))fail('a resource URL ('+attr+')');
+    }
+  }
+  if(policies!==1)fail('declare exactly one http-equiv element, the policy');
+  if(/\b(?:fetch|importScripts|sendBeacon)\s*\(|\b(?:XMLHttpRequest|WebSocket|EventSource|RTCPeerConnection)\b/.test(html))
+    fail('a network API');
+  if(!html.includes(releaseLabel))fail('label the page "'+releaseLabel+'"');
+}
+
 /**
  * Check one release directory, given as a map of file name to bytes.
  * Physics: the receipt is layout-checked with nominal clearance, mass and voltage passing, the displaced
@@ -116,6 +199,15 @@ export function checkRelease(id,files){
   check(record.label===releaseLabel,'Label release '+id+' "'+releaseLabel+'"');
   const trials=new Set();
   const missions=record.missionCases;
+  // Season field-interaction players, listed and pinned by the release record.
+  const players=record.fieldPlayers??[];
+  check(Array.isArray(players),'List field players in fieldPlayers: '+id);
+  const playerFiles=new Set();
+  for(const p of players){
+    check(object(p)&&fieldName.test(p.file??'')&&!playerFiles.has(p.file),'Each field player needs a unique field/NAME.html file: '+id);
+    playerFiles.add(p.file);
+    if(object(p.trial)&&trialName.test(p.trial.file??'')&&!reserved.includes(p.trial.file))trials.add(p.trial.file);
+  }
   for(const m of Array.isArray(missions)?missions:[]){
     if(object(m)&&m.kind==='field-interaction-trial'&&object(m.trial))trials.add(m.trial.file);
     else check(!object(m)||m.trial===undefined,'Only a field-interaction-trial mission case can publish a trial: '+id);
@@ -125,7 +217,7 @@ export function checkRelease(id,files){
   const geometryPin=object(peek?.view?.geometry)?peek.view.geometry:null;
   const geometryFile=geometryPin&&geometryName.test(geometryPin.file??'')?geometryPin.file:null;
   for(const name of files.keys()){
-    check(reserved.includes(name)||name===geometryFile||trials.has(name)&&trialName.test(name)&&!reserved.includes(name),
+    check(reserved.includes(name)||name===geometryFile||playerFiles.has(name)||trials.has(name)&&trialName.test(name)&&!reserved.includes(name),
       'Unrecognized preliminary output: releases/'+id+'/'+name);
   }
   for(const name of ['index.html','receipt.json','motion.json','budgets.json','limits.json'])
@@ -175,21 +267,58 @@ export function checkRelease(id,files){
     object(data.mass)&&same(data.mass.range,budgets.inspectionKg)&&same(data.mass.remaining,budgets.remainingKg),
     'Published view shows results that differ from the receipt: '+id);
 
+  const objectives=Array.isArray(receipt.narrativeReview?.objectives)?receipt.narrativeReview.objectives:[];
+  const represented=objective=>objectives.some(o=>o?.objective===objective&&o.disposition==='represented');
+
+  // Field players: every view link resolves to a listed page, and every listed page is linked, pinned and self-contained.
+  const rows=Array.isArray(data.fieldInteractions)?data.fieldInteractions:[];
+  // A view link names the page exactly as it is served: field/NAME.html, optionally after ./.
+  const target=href=>{
+    const name=href.startsWith('./')?href.slice(2):href;
+    return fieldName.test(name)?name:null;
+  };
+  const linked=new Map();
+  for(const r of rows){
+    const name=typeof r?.href==='string'?target(r.href):null;
+    check(name&&playerFiles.has(name),'A field interaction must link a listed field player: '+id+' '+String(r?.href));
+    if(!linked.has(name))linked.set(name,[]);
+    linked.get(name).push(r);
+  }
+  const stagePins=new Set(Object.values(receipt.stages??{}).flatMap(s=>Object.values(s?.transportedBy??{}).map(x=>x?.evidence?.sha256)).filter(Boolean));
+  for(const p of players){
+    const page=files.get(p.file),t=p.trial;
+    check(page&&hex.test(p.sha256??'')&&sha(page)===p.sha256,'Published field player differs from its pin: '+id+'/'+p.file);
+    check(object(t)&&trials.has(t.file)&&files.has(t.file)&&pinMatches(t,t.file,files.get(t.file)),
+      'Publish the pinned trial for field player '+id+'/'+p.file);
+    evidence(files.get(t.file),'trial: '+id);
+    check(named(p.objective)&&represented(p.objective),'Field player '+p.file+' must show a represented narrative objective: '+id);
+    const links=linked.get(p.file);
+    check(links,'Each listed field player must be linked from the checked view: '+id+'/'+p.file);
+    check(links.every(r=>r.objective===p.objective),'Field player '+p.file+' objective differs from the checked view: '+id);
+    check(links.some(r=>object(r.evidence)&&r.evidence.sha256===t.sha256)||stagePins.has(t.sha256),
+      'The trial for field player '+p.file+' is not one the receipt pins: '+id);
+    checkSelfContained(page,id+'/'+p.file);
+  }
+
   // Mission gate.
   check(Array.isArray(missions)&&missions.length,'Release '+id+' declares no mission-task case');
-  const objectives=Array.isArray(receipt.narrativeReview?.objectives)?receipt.narrativeReview.objectives:[];
   const played=new Set((Array.isArray(data.cases)?data.cases:[]).map(c=>c?.id));
   for(const m of missions){
     check(object(m)&&named(m.case)&&kinds.includes(m.kind)&&accomplishments.includes(m.accomplishes)&&named(m.objective),
       'Each mission case needs a case, kind ('+kinds.join(', ')+'), accomplishment ('+accomplishments.join(', ')+') and objective: '+id);
     const where='mission case '+m.case+' in '+id;
-    check(objectives.some(o=>o?.objective===m.objective&&o.disposition==='represented'),
-      'The '+where+' must accomplish a represented narrative objective');
+    check(represented(m.objective),'The '+where+' must accomplish a represented narrative objective');
     check(receipt.stages?.[m.case]?.purpose==='operating'&&Array.isArray(receipt.cycle)&&receipt.cycle.includes(m.case),
       'The '+where+' must be an operating case in the checked cycle');
     check(cases.some(c=>c.case===m.case&&c.status==='pass')&&data.evidence[m.case]?.status==='pass'&&played.has(m.case),
       'The '+where+' needs passing evidence played in the checked view');
-    if(m.kind==='field-interaction-trial'){
+    if(m.kind==='field-interaction-trial'&&m.player!==undefined){
+      const p=players.find(x=>x.file===m.player);
+      check(m.trial===undefined&&p&&p.objective===m.objective,'The field-interaction player for the '+where+' must be a listed field player for its objective');
+      // The player's trial must be the trial of this mission case.
+      const trialCase=evidence(files.get(p.trial.file),'trial: '+id);
+      check((trialCase.case??trialCase.transport?.case)===m.case,'The field player trial for the '+where+' records a different case');
+    }else if(m.kind==='field-interaction-trial'){
       const t=m.trial;
       check(object(t)&&trialName.test(t.file??'')&&files.has(t.file)&&pinMatches(t,t.file,files.get(t.file)),
         'Publish the pinned field-interaction trial for the '+where);
@@ -198,12 +327,19 @@ export function checkRelease(id,files){
         'The field-interaction trial for the '+where+' is not the one the receipt pins');
     }
   }
-  return {release:id,issue:receipt.issue,status:receipt.status,missionCases:missions.map(m=>m.case)};
+  return {release:id,issue:receipt.issue,status:receipt.status,missionCases:missions.map(m=>m.case),fieldPlayers:[...playerFiles]};
 }
 
 function readTree(dir){
   const files=new Map();
   for(const d of readdirSync(dir,{withFileTypes:true})){
+    if(d.isDirectory()&&!d.isSymbolicLink()&&d.name==='field'){
+      for(const e of readdirSync(path.join(dir,'field'),{withFileTypes:true})){
+        check(e.isFile()&&!e.isSymbolicLink(),'Unrecognized preliminary output: field/'+e.name);
+        files.set('field/'+e.name,readFileSync(path.join(dir,'field',e.name)));
+      }
+      continue;
+    }
     check(d.isFile()&&!d.isSymbolicLink(),'Unrecognized preliminary output: '+d.name);
     files.set(d.name,readFileSync(path.join(dir,d.name)));
   }
@@ -310,9 +446,11 @@ export function auditTree(oldFiles,newFiles){
         check(want&&(Buffer.compare(want,bytes)===0||!parts[1].endsWith('.woff2')&&lf(want)===lf(bytes)),
           'Unrecognized preliminary output: '+name);
       }else{
-        check(parts.length===3&&parts[0]==='releases'&&releaseId.test(parts[1]),'Unrecognized preliminary output: '+name);
+        // A release holds its own files plus season field players directly under field/.
+        check(parts[0]==='releases'&&releaseId.test(parts[1])&&(parts.length===3||parts.length===4&&parts[2]==='field'),
+          'Unrecognized preliminary output: '+name);
         if(!releases.has(parts[1]))releases.set(parts[1],new Map());
-        releases.get(parts[1]).set(parts[2],bytes);
+        releases.get(parts[1]).set(parts.slice(2).join('/'),bytes);
       }
     }
     return {top,releases};
