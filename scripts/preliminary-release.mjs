@@ -103,18 +103,18 @@ export function stepProducts(bytes){
     current+=text[i++];
   }
   const products=[];let bodies=0,refused=null;
-  // Every shape representation must be owned by a product's shape definition; the loader transfers an orphan as a free shape.
-  const representations=new Set(),owned=new Set();let definitions=0;
+  // Every shape representation must be reached from a product through PRODUCT_DEFINITION_FORMATION,
+  // PRODUCT_DEFINITION, PRODUCT_DEFINITION_SHAPE and SHAPE_DEFINITION_REPRESENTATION; the loader transfers
+  // any other representation as an unnamed free shape.
+  const representations=new Set(),entities=new Map(),productRefs=[];
   for(const instance of instances){
     const blank=instance.replace(/'(?:[^']|'')*'/g,"''");
     const keywords=[...blank.matchAll(/([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)].map(m=>m[1].toUpperCase());
-    const ref=/^\s*(#\d+)\s*=/.exec(blank)?.[1];
-    if(keywords.some(k=>k!=='SHAPE_DEFINITION_REPRESENTATION'&&/SHAPE_REPRESENTATION$/.test(k)))representations.add(ref??'unnumbered');
-    if(keywords[0]==='SHAPE_DEFINITION_REPRESENTATION'){
-      definitions++;
-      const target=/SHAPE_DEFINITION_REPRESENTATION\s*\(\s*#\d+\s*,\s*(#\d+)\s*\)/i.exec(blank)?.[1];
-      if(target)owned.add(target);
-    }
+    const ref=/^\s*(#\d+)\s*=/.exec(blank)?.[1]??'unnumbered';
+    const args=blank.slice(blank.indexOf('=')+1);
+    entities.set(ref,{type:keywords[0],refs:[...args.matchAll(/#\d+/g)].map(m=>m[0])});
+    if(keywords.some(k=>k!=='SHAPE_DEFINITION_REPRESENTATION'&&/SHAPE_REPRESENTATION$/.test(k)))representations.add(ref);
+    if(keywords[0]==='PRODUCT')productRefs.push(ref);
     for(const k of keywords){
       if(solidBodies.has(k))bodies++;
       if(refusedShapes.test(k))refused??=k;
@@ -126,7 +126,17 @@ export function stepProducts(bytes){
     if(name.includes('\\'))refused??='escaped product name';
     products.push(name);
   }
-  if([...representations].some(r=>!owned.has(r))||definitions!==products.length)refused??='a shape representation no product owns';
+  const referrers=(targets,test)=>new Set([...entities].filter(([,e])=>test(e.type)&&e.refs.some(r=>targets.has(r))).map(([id])=>id));
+  const reached=new Set();
+  for(const product of productRefs){
+    const formations=referrers(new Set([product]),t=>/^PRODUCT_DEFINITION_FORMATION/.test(t??''));
+    const definitions=referrers(formations,t=>/^PRODUCT_DEFINITION(?:_WITH_ASSOCIATED_DOCUMENTS)?$/.test(t??''));
+    const shapes=referrers(definitions,t=>t==='PRODUCT_DEFINITION_SHAPE');
+    let own=0;
+    for(const [,e] of entities)if(e.type==='SHAPE_DEFINITION_REPRESENTATION'&&shapes.has(e.refs[0])&&representations.has(e.refs[1])){reached.add(e.refs[1]);own++;}
+    if(own!==1)refused??='a fixture product without exactly one shape representation';
+  }
+  if([...representations].some(r=>!reached.has(r)))refused??='a shape representation no fixture product reaches';
   return {products,bodies,refused};
 }
 
