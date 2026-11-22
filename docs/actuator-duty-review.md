@@ -43,6 +43,33 @@ Use the input as a template. Register each pivot origin in metres, a right-hand 
 
 The fixture uses 2 kg at 0.5 m in an assumed 10 m/s² field. Its initial holding moment is +10 N·m and reaches −10 N·m when the flap turns over. The fixed frame contributes zero. A catch rated in only one direction cannot hold the modeled flap across this interval. The evaluator finds the extrema between endpoints analytically with the other joints held. A collection of discrete poses covers those configurations and the individual rigid sweeps registered at each.
 
-For a proposed 0.10 rad downward release and another 0.02 rad of compression, gravity releases 0.998 J before contact and 1.197 J through compression. Dividing the latter by 0.02 rad gives a mean resisting torque of 59.86 N·m if the flap starts and ends at rest and the catch absorbs all that work. Move the catch farther away and rerun the same case. A mean is reported only when gravity drives the joint throughout the supplied travel. Record the implied direction opposite travel when sizing the restraint.
+For a proposed 0.10 rad downward release and another 0.02 rad of compression, gravity releases 0.998 J before contact and 1.197 J through compression. Dividing the latter by 0.02 rad gives a mean resisting torque of 59.86 N·m if the flap starts and ends at rest and the catch absorbs all that work. Move the catch farther away and rerun the same case. A mean is reported only when gravity, together with any declared preload, drives the joint toward the stop throughout the supplied travel. Record the implied direction opposite travel when sizing the restraint.
+
+### Check a seated, preloaded stop and its recorded duty
+
+A stop the joint already rests on at the registered pose uses `freeRad: 0`. The sign of `compressionRad` is the direction the joint moves into the stop. A one-way stop can only push the opposite way. Free travel and compression must share that sign, so a missing or reversed stop still fails. Do not invent a small gap to make the calculation run. A gap changes the support you are trying to check.
+
+Generate the synthetic, nearly balanced flap and run it:
+
+```sh
+node examples/design-methods/make-seated-stop-fixture.mjs artifacts/seated-stop
+npm run mechanism:review -- rotary artifacts/seated-stop/study.json
+```
+
+The stop record can add three optional elements:
+
+| Field | What to record | What the reviewer reports |
+| --- | --- | --- |
+| `preload` | `law` (`constant`, or `linear` with `zeroAtRad` on the opening side of contact), positive `torqueNm` toward the stop at contact, and its `basis` | `preloadAtContactNm` and `preloadWorkToEndJ`. The from-rest mean adds the preload's work to the gravity work. |
+| `compliance` | Lumped `stiffnessNmPerRad`, `dampingNmSPerRad` and their `basis` | `staticCompressionRad` when the stop carries load at rest |
+| `history` | A pinned `source` (path, SHA-256, JSON pointer) and the sustained `windowsS`. With a recorded angle, also give `contactToleranceRad` and `settle: {targetRad, toleranceRad}`. | Peak and largest sustained mean in each torque direction, contact duration, separations, largest rebound and settling time |
+
+`restingReactionNm` is the preload at contact minus the gravity holding demand in the stop direction. A positive value means the stop carries the joint at rest (`custodyAtRest: "stop"`). A negative value is the torque that must come from something else to keep the joint seated (`unresolvedAwayFromStopNm`). `restingMarginNm.reversedGravity` repeats the check with the gravity moment reversed. Read it when a nearly balanced group's center of mass is uncertain enough to change the sign.
+
+In the fixture, gravity pulls the flap 0.3 N·m away from its seat. Without a preload the stop does not hold it. A 1 N·m linear closing spring leaves 0.7 N·m on the stop. Released 0.05 rad open, the high-loss pad seats without separating. Its 10 ms sustained mean is well below its impact peak and its 500 ms mean approaches the static reaction. The low-loss pad separates several times and does not settle within the record. The unpreloaded flap never reaches the stop.
+
+The history record contains `units: {time: "s", torque: "N·m", angle: "rad"}`, strictly increasing `timeS` and a signed `restraintTorqueNm`. Add `angleRad` when it is recorded. The restraint torque is what the support must apply to the moving group about the signed axis. A locked-joint demand and a measured stop reaction both qualify. The reviewer treats the series as piecewise linear between samples and finds each window's largest mean exactly. A window longer than the record reports `null`. A demand in the direction a one-way stop cannot push sets `unresolvedByStop`. Name the other element that carries it.
+
+The duty summarizes only the supplied history. The pad and spring ratings, repeated impact capacity, solver step and the physical load path need their own evidence.
 
 For a moving disable, preserve the actual signed incoming speed, inertia, delay, coupled motion and energy dissipated by each element. Sweep the occupied mechanism over the resulting signed travel against the installed obstacles. Verify peak stop loads, load path, hardware rating, retention and observed powerless clearance with the duty review. Those decisions remain open after a gravity calculation alone.
