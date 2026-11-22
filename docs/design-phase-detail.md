@@ -34,3 +34,16 @@ The mechanical-readiness review can accept the fabrication package as **build-re
 ## When to return to an earlier phase
 
 If detailed design violates a reserved volume, path, mass allowance or loaded-voltage range, reopen the affected preliminary assembly layout and repeat its checks. If the revised layout changes a field assumption beyond its accepted range, repeat the conceptual trade study with the new height, approach, rate or speed. Pause the downstream decisions that rely on the failed assumption. Resume them when the revised shared issue passes and its consumers have adopted it.
+
+## Design status
+
+Every design phase uses the same four statuses for a published design. They apply to [preliminary design releases](private-model-release.md#publish-preliminary-design-releases) now.
+
+| Status | Meaning |
+| --- | --- |
+| `in-progress` | Passes the phase's automated checks and may be shown, labelled as in progress. |
+| `effective` | The project has accepted it as the current design for that phase. At most one design per phase is effective; marking a new one effective marks the previous one `superseded` automatically. For preliminary design, an effective release is the handoff detailed design builds on. |
+| `superseded` | Replaced by a newer effective design. It stays viewable as history. |
+| `withdrawn` | Pulled with no replacement. It stays in the archive listing labelled withdrawn and is never shown as current. |
+
+A new release enters `in-progress`. Allowed changes are in-progress to effective, effective to superseded (automatic) and any status to withdrawn. Nothing returns from superseded or withdrawn to effective without a new release. The status lives in the release index, never in an issued release, so changing it never rewrites published evidence. Marking a release effective is a deliberate index change made in a reviewed pull request.

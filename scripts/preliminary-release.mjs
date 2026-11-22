@@ -1,23 +1,28 @@
-/** Audit work-in-progress preliminary review releases: physically checked, mission-bearing and secondary to the detailed model. */
+/** Audit preliminary design releases: physically checked, mission-bearing and secondary to the detailed model. */
 import {createHash} from 'node:crypto';
 import {lstatSync,readFileSync,readdirSync,realpathSync} from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
-import {gunzipSync} from 'node:zlib';
+import {statusOf,currentFor,transitionAllowed,designStatuses} from './design-status.mjs';
+import {compareWithLedger,compareWithReceipt,maxSceneBytes,readScene,sceneSchemaId,validateScene} from './review-scene.mjs';
 
 export const releaseSchema='agent-frc/preliminary-release@1';
-export const releaseLabel='Work-in-progress preliminary design';
+export const releasePhase='preliminary-design';
+/** Text the stock page and viewer display; shown to readers and reported for information, never checked by the gate. */
+export const phaseText='Preliminary design';
+// The design-status vocabulary and transition table, shared with every design phase's gate.
+export {designStatuses,statusOf,currentFor,transitions,transitionAllowed} from './design-status.mjs';
 const receiptSchema='agent-frc/preliminary-layout-result@1';
 const releaseId=/^[a-z0-9][a-z0-9-]{0,63}$/;
 const trialName=/^[a-z0-9][a-z0-9._-]{0,127}\.json$/;
 const fieldName=/^field\/[a-z0-9][a-z0-9._-]{0,110}\.html$/;
-const geometryName=/^[a-z0-9][a-z0-9._-]{0,110}\.geometry\.json\.gz$/;
+const sceneFile='review-scene.json.gz';
 const hex=/^[0-9a-f]{64}$/;
 const reserved=['index.html','receipt.json','motion.json','release.json','budgets.json','limits.json'];
 const accomplishments=['acquired','delivered','scored','climb-held'];
 const kinds=['operating-case','field-interaction-trial'];
 const controlCase='package-displacement-control';
-const player=new URL('./package-view.html',import.meta.url);
+const page=new URL('../templates/preliminary-review/review.html',import.meta.url);
 const stableViewer=new URL('../templates/preliminary-review-index.html',import.meta.url);
 const fontDirectory=new URL('../templates/preliminary-review-fonts/',import.meta.url);
 /** The bundled theme fonts and their licenses, as distributed with this plugin. */
@@ -33,15 +38,81 @@ function parse(bytes,what){
 }
 function pinMatches(pin,file,bytes){return object(pin)&&pin.file===file&&hex.test(pin.sha256)&&pin.sha256===sha(bytes);}
 
-/** The embedded data of a genuine player built by this plugin's checker, or null. */
-function playerData(html){
-  const [before,after]=lf(readFileSync(player)).split('PACKAGE_DATA');
-  const text=html.toString('utf8');
-  if(!text.startsWith(before)||!text.endsWith(after)||text.length<before.length+after.length)return null;
-  const middle=text.slice(before.length,text.length-after.length);
-  // The checker escapes every '<' so the embedded data can never close its script element.
-  if(middle.includes('<'))return null;
-  try{return JSON.parse(middle);}catch{return null;}
+/**
+ * Information only: how a release page compares with this plugin's stock review page. Seasons may change their
+ * copy; the gate never compares page markup or script, which the season's own pull request review covers.
+ */
+export function compareTemplate(html){
+  const own=lf(html),stock=lf(readFileSync(page));
+  const csp=/<meta http-equiv="Content-Security-Policy"/i.test(own);
+  if(own===stock)return {stock:true,csp,differences:[]};
+  const a=own.split('\n'),b=stock.split('\n'),differences=[];
+  for(let i=0;i<Math.max(a.length,b.length)&&differences.length<20;i++)if(a[i]!==b[i])differences.push({line:i+1,page:a[i]??null,stock:b[i]??null});
+  return {stock:false,csp,differences};
+}
+/** A record issued before releases named their phase carried this label; it still identifies the phase. */
+export const issuedLabel='Work-in-progress preliminary design';
+
+/**
+ * The release index's design statuses and each change against the approved index. Allowed: in-progress to effective,
+ * the previous effective to superseded (required when another becomes effective), any to withdrawn. Nothing returns
+ * from superseded or withdrawn. A release made effective after an earlier effective one must have been checked
+ * against it: its receipt's previousCheckpointSha256 is the earlier release's receipt digest.
+ */
+export function checkStatusChange(before,after,receipts,{historical=new Set(),legacy=[]}={}){
+  const ids=after.releases,map=after.designStatus,st=(index,i)=>statusOf(index,i,historical);
+  check(map===undefined||object(map)&&Object.entries(map).every(([id,v])=>ids.includes(id)&&designStatuses.includes(v)),
+    'designStatus maps listed release IDs to '+designStatuses.join(', '));
+  // Every release ever made effective, in order. It only grows, so withdrawing an effective release first cannot
+  // skip the predecessor check for the next one.
+  const history=after.effectiveHistory??[],priorHistory=before?.effectiveHistory??[];
+  check(Array.isArray(history)&&history.every(i=>ids.includes(i))&&new Set(history).size===history.length&&
+    priorHistory.every((i,n)=>history[n]===i),'effectiveHistory lists each release made effective once, in order, and only grows');
+  const effective=ids.filter(i=>st(after,i)==='effective');
+  check(effective.length<=1,'At most one preliminary design release is effective');
+  check(effective.every(i=>history.at(-1)===i),'The effective release must be the last entry in effectiveHistory');
+  check(after.current===currentFor(after,historical),'current must open the effective release, else the newest in-progress one: expected '+currentFor(after,historical));
+  const was=id=>before?.releases?.includes(id)?st(before,id):null;
+  const promoted=ids.filter(i=>st(after,i)==='effective'&&was(i)!=='effective');
+  for(const id of ids){
+    const from=was(id),to=st(after,id);
+    check(transitionAllowed(from,to,{promoted:promoted.length>0})||from===null&&historical.has(id)&&to==='superseded',
+      from===null?'A new preliminary release enters in progress or effective: '+id:'Preliminary release '+id+' cannot move from '+from+' to '+to);
+    if(to==='effective'&&from!=='effective'){
+      check(!legacy.includes(id)&&!historical.has(id),'A legacy or historical release cannot become effective: '+id);
+      const r=receipts.get(id);
+      check(r&&parse(r,'receipt: '+id).status==='layout-checked','An effective preliminary release needs a layout-checked receipt: '+id);
+      check(!priorHistory.includes(id),'A release cannot become effective again: '+id);
+      const predecessor=priorHistory.at(-1);
+      if(predecessor){
+        check(st(after,predecessor)!=='effective','Mark the previous effective release '+predecessor+' superseded when '+id+' becomes effective');
+        const prior=receipts.get(predecessor),mine=parse(r,'receipt: '+id);
+        check(prior&&mine.previousCheckpointSha256===sha(prior)&&Array.isArray(mine.priorDecisions)&&mine.priorDecisions.every(d=>d?.repeatVerified===true),
+          'An effective release must be checked against the previous effective one, '+predecessor+' (--previous its receipt, every held decision repeat-verified): '+id);
+      }
+      check(history.at(-1)===id&&history.length===priorHistory.length+1,'Append '+id+' to effectiveHistory when it becomes effective');
+    }
+  }
+  check(promoted.length||history.length===priorHistory.length,'effectiveHistory grows only when a release becomes effective');
+  return {effective:effective[0]??null,current:after.current};
+}
+/**
+ * The review scene the page reads, when the receipt pins its exact served bytes and content and it is a valid
+ * scene that repeats the receipt's results; otherwise the reason it is refused.
+ */
+function pinnedScene(bytes,receipt){
+  const pin=receipt?.view?.scene;
+  if(!object(pin)||pin.file!==sceneFile||!hex.test(pin.sha256??'')||!hex.test(pin.contentSha256??'')||!Number.isSafeInteger(pin.bytes)||pin.bytes<1||pin.bytes>maxSceneBytes)
+    return {error:'The receipt does not pin '+sceneFile};
+  if(!bytes||sha(bytes)!==pin.sha256)return {error:'Published review scene differs from its receipt pin'};
+  let read;
+  try{read=readScene(bytes,pin.bytes+1);}catch{return {error:'Published review scene does not decompress within its pinned size'};}
+  if(read.bytes!==pin.bytes||read.contentSha256!==pin.contentSha256)return {error:'Published review scene content differs from its receipt pin'};
+  const {errors}=validateScene(read.scene);
+  if(errors.length)return {error:'Published review scene is not a valid '+sceneSchemaId+': '+errors.slice(0,3).join('; ')};
+  const differ=compareWithReceipt(read,receipt);
+  if(differ.length)return {error:'Published review scene shows results that differ from the receipt: '+differ.join('; ')};
+  return {scene:read.scene};
 }
 const canonical=v=>JSON.stringify(v,(k,x)=>object(x)?Object.fromEntries(Object.keys(x).sort().map(n=>[n,x[n]])):x);
 const same=(a,b)=>canonical(a)===canonical(b);
@@ -310,7 +381,6 @@ export function checkSelfContained(bytes,where){
   if(policies!==1)fail('declare exactly one http-equiv element, the policy');
   if(/\b(?:fetch|importScripts|sendBeacon)\s*\(|\b(?:XMLHttpRequest|WebSocket|EventSource|RTCPeerConnection)\b/.test(html))
     fail('a network API');
-  if(!html.includes(releaseLabel))fail('label the page "'+releaseLabel+'"');
 }
 
 /**
@@ -319,7 +389,7 @@ export function checkSelfContained(bytes,where){
  * control rejected and no missing inputs. Mission: at least one passing, playable operating case or
  * receipt-bound field-interaction trial accomplishes a represented narrative objective.
  */
-export function checkRelease(id,files,policy={}){
+export function checkRelease(id,files,policy={},{added=false}={}){
   check(releaseId.test(id),'Invalid preliminary release ID: '+id);
   check(files.has('release.json'),'Preliminary release '+id+' has no release record (release.json)');
   const record=parse(files.get('release.json'),'release record: '+id);
@@ -348,7 +418,8 @@ export function checkRelease(id,files,policy={}){
     check(record.view?.file==='package-motion.html'&&files.has('package-motion.html'),'Missing checked player: '+id);
   }
   const checkedView=approved?'package-motion.html':'index.html';
-  check(record.label===releaseLabel,'Label release '+id+' "'+releaseLabel+'"');
+  // A newly added release names its phase; a release issued earlier may carry the label it was issued with.
+  check(record.phase===releasePhase||!added&&record.label===issuedLabel,'Release '+id+' must identify its phase: "phase": "'+releasePhase+'"');
   const trials=new Set();
   const missions=record.missionCases;
   // Season field-interaction players, listed and pinned by the release record.
@@ -364,12 +435,9 @@ export function checkRelease(id,files,policy={}){
     if(object(m)&&m.kind==='field-interaction-trial'&&object(m.trial))trials.add(m.trial.file);
     else check(!object(m)||m.trial===undefined,'Only a field-interaction-trial mission case can publish a trial: '+id);
   }
-  // The player fetches its compressed display geometry; the receipt names and pins it.
-  const peek=files.has('receipt.json')?parse(files.get('receipt.json'),'receipt: '+id):null;
-  const geometryPin=object(peek?.view?.geometry)?peek.view.geometry:null;
-  const geometryFile=geometryPin&&geometryName.test(geometryPin.file??'')?geometryPin.file:null;
+  // The stock page fetches its review scene; the receipt names and pins it.
   for(const name of files.keys()){
-    check(reserved.includes(name)||name===checkedView||approved&&Object.hasOwn(approved.files,name)||name===geometryFile||playerFiles.has(name)||trials.has(name)&&trialName.test(name)&&!reserved.includes(name),
+    check(reserved.includes(name)||name===checkedView||approved&&Object.hasOwn(approved.files,name)||name===sceneFile||playerFiles.has(name)||trials.has(name)&&trialName.test(name)&&!reserved.includes(name),
       'Unrecognized preliminary output: releases/'+id+'/'+name);
   }
   for(const name of ['index.html','receipt.json','motion.json','budgets.json','limits.json'])
@@ -396,28 +464,15 @@ export function checkRelease(id,files,policy={}){
     'Published scene differs from the receipt and release record: '+id);
   check(pinMatches(record.view,checkedView,view)&&object(receipt.view)&&receipt.view.verified===true&&receipt.view.sha256===record.view.sha256,
     'Published view differs from the receipt and release record: '+id);
-  const data=playerData(view);
-  check(data&&data.issue===receipt.issue&&JSON.stringify(data.step)===JSON.stringify(receipt.step)&&
-    JSON.stringify(data.motion)===JSON.stringify(receipt.motion)&&object(data.evidence),
-    'Published view is not this plugin\'s checked player for the receipt: '+id+'. Regenerate it with --write-view');
-  if(data.geometry!==undefined||geometryPin){
-    const shown=data.geometry,bytes=geometryFile&&files.get(geometryFile);
-    let content=null;
-    try{content=bytes&&gunzipSync(bytes,{maxOutputLength:shown.bytes+1});}catch{content=null;}
-    check(object(shown)&&geometryFile&&shown.file===geometryFile&&hex.test(geometryPin.contentSha256??'')&&
-      shown.contentSha256===geometryPin.contentSha256&&bytes&&sha(bytes)===geometryPin.sha256&&
-      content&&content.length===shown.bytes&&sha(content)===shown.contentSha256,
-      'Published geometry differs from the view and receipt: '+id);
-  }
-  // Everything the player displays as a result must be the receipt's result.
-  // The player also shows the displaced control, which the receipt reports separately as rejected.
-  const shown=Object.keys(data.evidence).filter(k=>k!==controlCase);
-  check(same(shown.sort(),cases.map(c=>c.case).sort())&&cases.every(c=>data.evidence[c.case]?.status===c.status)&&
-    (!Object.hasOwn(data.evidence,controlCase)||data.evidence[controlCase]?.status==='fail')&&
-    same(data.narrativeReview?.objectives??[],receipt.narrativeReview?.objectives??[])&&
-    Array.isArray(data.power)&&same(data.power.map(r=>[r?.case,r?.status]),budgets.electricalCases.map(r=>[r.case,r.status]))&&
-    object(data.mass)&&same(data.mass.range,budgets.inspectionKg)&&same(data.mass.remaining,budgets.remainingKg),
-    'Published view shows results that differ from the receipt: '+id);
+  // The page is the season's own copy of the stock page; the gate checks its data, not its markup or script.
+  // Everything the page displays as a result comes from the pinned scene, which must repeat the receipt's result,
+  // including the displaced control the receipt reports separately as rejected.
+  const pinned=pinnedScene(files.get(sceneFile),receipt);
+  check(!pinned.error,(pinned.error||'')+': '+id+'. Regenerate it with --write-view');
+  const data=pinned.scene;
+  const ledgerDiffers=compareWithLedger(data,parse(files.get('budgets.json'),'budget ledger: '+id),parse(files.get('limits.json'),'limits: '+id));
+  check(!ledgerDiffers.length,'Published review scene shows figures that differ from the published budgets: '+ledgerDiffers.join('; ')+': '+id);
+  const shownStatus=new Map(data.cases.map(c=>[c.id,c.status]));
 
   const objectives=Array.isArray(receipt.narrativeReview?.objectives)?receipt.narrativeReview.objectives:[];
   const represented=objective=>objectives.some(o=>o?.objective===objective&&o.disposition==='represented');
@@ -454,7 +509,7 @@ export function checkRelease(id,files,policy={}){
 
   // Mission gate.
   check(Array.isArray(missions)&&missions.length,'Release '+id+' declares no mission-task case');
-  const played=new Set((Array.isArray(data.cases)?data.cases:[]).map(c=>c?.id));
+  const played=new Set(data.cases.map(c=>c.id));
   for(const m of missions){
     check(object(m)&&named(m.case)&&kinds.includes(m.kind)&&accomplishments.includes(m.accomplishes)&&named(m.objective),
       'Each mission case needs a case, kind ('+kinds.join(', ')+'), accomplishment ('+accomplishments.join(', ')+') and objective: '+id);
@@ -462,7 +517,7 @@ export function checkRelease(id,files,policy={}){
     check(represented(m.objective),'The '+where+' must accomplish a represented narrative objective');
     check(receipt.stages?.[m.case]?.purpose==='operating'&&Array.isArray(receipt.cycle)&&receipt.cycle.includes(m.case),
       'The '+where+' must be an operating case in the checked cycle');
-    check(cases.some(c=>c.case===m.case&&c.status==='pass')&&data.evidence[m.case]?.status==='pass'&&played.has(m.case),
+    check(cases.some(c=>c.case===m.case&&c.status==='pass')&&shownStatus.get(m.case)==='pass'&&played.has(m.case),
       'The '+where+' needs passing evidence played in the checked view');
     if(m.kind==='field-interaction-trial'&&m.player!==undefined){
       const p=players.find(x=>x.file===m.player);
@@ -519,7 +574,7 @@ export function verifyCatalog(dir,policy){
   }
   check(!lstatSync(dir).isSymbolicLink(),'Redirected preliminary catalog');
   visit(dir,'');
-  return auditTree(new Map(),files,policy);
+  return auditTree(new Map(),files,policy,{issued:true});
 }
 
 /** Validate the trusted policy field. Paths are relative to the deployed site. */
@@ -606,7 +661,7 @@ function elementContentAt(html){
  * Compare the preliminary tree of an approved and candidate site.
  * read(folder,name) returns bytes; oldNames and newNames are the tree-relative inventories.
  */
-export function auditTree(oldFiles,newFiles,policy={}){
+export function auditTree(oldFiles,newFiles,policy={},{issued=false}={}){
   const group=files=>{
     const top=new Map(),releases=new Map();
     for(const [name,bytes] of files){
@@ -646,20 +701,22 @@ export function auditTree(oldFiles,newFiles,policy={}){
   check(after.top.has('releases.json'),'Publish the preliminary release index (releases.json)');
   const index=parse(after.top.get('releases.json'),'preliminary release index');
   const ids=index?.releases;
-  check(object(index)&&['current,releases','current,legacy,releases'].includes(Object.keys(index).sort().join())&&Array.isArray(ids)&&ids.length&&
+  check(object(index)&&Object.keys(index).every(k=>['current','releases','legacy','designStatus','effectiveHistory'].includes(k))&&Array.isArray(ids)&&ids.length&&
     ids.every(i=>typeof i==='string'&&releaseId.test(i))&&new Set(ids).size===ids.length&&ids.includes(index.current),
     'The preliminary release index needs unique release IDs and a listed current release');
   // Releases deployed before release records existed may be named as legacy, but only if already approved.
   check(index.legacy===undefined||Array.isArray(index.legacy)&&index.legacy.every((i,n)=>ids[n]===i&&before.releases.has(i)),
     'Only releases already in the approved site can be listed as legacy');
-  if(before.top.has('releases.json')){
-    const prior=parse(before.top.get('releases.json'),'approved preliminary release index').releases;
+  const priorIndex=before.top.has('releases.json')?parse(before.top.get('releases.json'),'approved preliminary release index'):null;
+  if(priorIndex){
+    const prior=priorIndex.releases;
     check(Array.isArray(prior)&&prior.every((p,i)=>ids[i]===p),'Preliminary releases may only append; keep every earlier entry in order');
   }
   check(ids.length===after.releases.size&&ids.every(i=>after.releases.has(i)),'The preliminary release index and release directories disagree');
   const added=ids.filter(i=>!before.releases.has(i));
-  check(!added.length||lf(viewer).includes('id="wip"')&&lf(viewer).includes(releaseLabel),
-    'Update the stable preliminary viewer to this plugin\'s template so new releases show the work-in-progress label');
+  const receipts=new Map(ids.map(i=>[i,after.releases.get(i)?.get('receipt.json')]).filter(([,r])=>r));
+  const historical=new Set(ids.filter(i=>{const r=after.releases.get(i)?.get('release.json');return r&&parse(r,'release record: '+i).status==='historical-review';}));
+  const status=checkStatusChange(priorIndex,index,receipts,{historical,legacy:index.legacy??[]});
   for(const id of ids){
     const files=after.releases.get(id);
     if(files.has('release.json')){
@@ -668,18 +725,32 @@ export function auditTree(oldFiles,newFiles,policy={}){
         'A historical review needs a later indexed successor and cannot be current: '+id);
     }
   }
-  for(const id of added)checkRelease(id,after.releases.get(id),policy);
-  return {releases:ids,added,current:index.current};
+  // A catalog check reads releases already issued, which may carry the label they were issued with.
+  for(const id of added)checkRelease(id,after.releases.get(id),policy,{added:!issued});
+  return {releases:ids,added,current:index.current,effective:status.effective};
+}
+
+/** A one-line, information-only summary of a release page against the stock page. */
+export function templateReport(dir){
+  const file=lstatSync(dir).isDirectory()?path.join(dir,'index.html'):dir;
+  const report=compareTemplate(readFileSync(file));
+  return {page:file,stockPage:report.stock,contentSecurityPolicy:report.csp,
+    note:(report.stock?'Page is the plugin stock review page':'Page differs from the plugin stock review page in '+report.differences.length+(report.differences.length===20?'+':'')+' line(s)')+
+      (report.csp?'':'; it has no Content-Security-Policy')+'. Information only: the gate does not compare page markup.',
+    differences:report.differences};
 }
 
 if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href){
+  const args=process.argv.slice(2),compare=args.includes('--compare-template'),[mode,dir,...rest]=args.filter(a=>a!=='--compare-template');
   try{
-    const [mode,dir,...rest]=process.argv.slice(2);
-    if(['verify','verify-catalog'].includes(mode)&&dir&&(!rest.length||rest.length===2&&rest[0]==='--policy')){
+    if(mode==='compare-template'&&dir&&!rest.length){console.log(JSON.stringify(templateReport(dir),null,2));}
+    else if(['verify','verify-catalog'].includes(mode)&&dir&&(!rest.length||rest.length===2&&rest[0]==='--policy')&&!(compare&&mode==='verify-catalog')){
       const policy=rest.length?preliminaryPolicy(parse(readFileSync(rest[1]),'site policy').preliminaryReleases,[]):{};
       const result=mode==='verify'?await verifyRelease(dir,policy??{}):verifyCatalog(dir,policy??{});
       console.log(JSON.stringify(result,null,2));
     }
-    else throw Error('Usage: preliminary-release.mjs verify RELEASE_DIRECTORY | verify-catalog SITE_DIRECTORY [--policy SERVED_POLICY]');
+    else throw Error('Usage: preliminary-release.mjs verify RELEASE_DIRECTORY [--compare-template] | verify-catalog SITE_DIRECTORY [--policy SERVED_POLICY] | compare-template RELEASE_DIRECTORY_OR_PAGE');
   }catch(error){console.error(error.message);process.exitCode=1;}
+  // Information only; it never changes the exit status.
+  if(compare&&mode==='verify'&&dir){try{console.log(JSON.stringify({template:templateReport(dir)},null,2));}catch(error){console.log(JSON.stringify({template:{note:'Template comparison unavailable: '+error.message}}));}}
 }

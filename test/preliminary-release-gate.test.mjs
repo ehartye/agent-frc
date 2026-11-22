@@ -8,11 +8,13 @@ import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
 import {auditStaged} from '../scripts/public-model-release.mjs';
 import {fieldPlayerPolicy,verifyRelease,verifyCatalog} from '../scripts/preliminary-release.mjs';
+import {gzipSync} from 'node:zlib';
+import {reviewScene} from './fixtures/review-scene.mjs';
 
 // Synthetic teaching fixtures: invented groups, cases and objectives with no relation to any game.
 const plugin=fileURLToPath(new URL('..',import.meta.url));
 const sha=value=>createHash('sha256').update(value).digest('hex');
-const player=readFileSync(path.join(plugin,'scripts','package-view.html'),'utf8');
+const stockPage=readFileSync(path.join(plugin,'templates','preliminary-review','review.html'),'utf8');
 const stableViewer=readFileSync(path.join(plugin,'templates','preliminary-review-index.html'));
 function write(root,file,data) {
   const target=path.join(root,file);
@@ -27,36 +29,42 @@ const objectives=[
 
 const fieldPage='<!doctype html><html lang="en"><head>'+
   '<meta http-equiv="Content-Security-Policy" content="'+fieldPlayerPolicy+'"><meta charset="utf-8">'+
-  '<title>Invented lane trial</title><style>body{margin:0}</style></head><body><p>Work-in-progress preliminary design</p><canvas></canvas>'+
+  '<title>Invented lane trial</title><style>body{margin:0}</style></head><body><p>Preliminary design release</p><canvas></canvas>'+
   '<script>const frames=[0,0.1,0.2];requestAnimationFrame(()=>frames.length);</script></body></html>';
 const laneTrial=JSON.stringify({case:'loaded-turn',outcome:'The invented sample leaves the carrier toward the lane'});
 const laneObjective='Carry the sample to the bin';
 function issueRelease(site,id,{status='layout-checked',edit=r=>r,missions,trial,display=d=>d,field}={}) {
   const dir=path.join(site,tree,'releases',id);
   const motion=JSON.stringify({cases:[{id:'loaded-turn'},{id:'park'}],issue:id});
-  const budgets=JSON.stringify({masses:[],electricalCases:{}}),limits=JSON.stringify({inspectionLimitKg:14});
+  // One invented robot: the scene, ledger files and receipt below all carry the same figures.
+  const base=reviewScene(),[turn,control]=base.cases,duty={...base.power[0],case:'weak traverse',status:'pass'};
+  const budgets=JSON.stringify({masses:base.mass.lines,electricalCases:{'weak traverse':{openCircuitV:[duty.openCircuitV,12],resistanceOhm:[0.02,duty.resistanceOhm],
+    batterySideA:Object.fromEntries(duty.lines.map(l=>[l.name,l.amps]))}}}),limits=JSON.stringify({inspectionLimitKg:base.mass.limitKg});
   const step={file:'package.step',sha256:sha('step '+id)},motionPin={file:'paths.json',sha256:sha(motion)};
-  const evidence={'loaded-turn':{status:'pass',pairs:[]},park:{status:'pass',pairs:[]},'package-displacement-control':{status:'fail',pairs:[]}};
-  const series={issue:'synthetic-'+id,step,motion:motionPin,cases:[{id:'loaded-turn',stage:'operating',bodies:{}},
-    {id:'park',stage:'park',bodies:{}}],evidence,narrativeReview:{objectives},mass:{range:[11,12],remaining:2},
-    power:[{case:'weak traverse',status:'pass'}]};
-  if(field)series.fieldInteractions=field.rows??[{title:'Invented lane',href:'field/lane.html',objective:laneObjective,
-    evidence:{file:'lane-trial.json',sha256:sha(laneTrial)},embed:true,objectiveKnown:true}];
-  const view=player.replace('PACKAGE_DATA',JSON.stringify(display(series)).replace(/</g,'\\u003c'));
+  // The scene the stock page reads repeats the receipt below: cases, control, objectives, mass and duties.
+  const scene=display({...base,issue:'synthetic-'+id,sources:{step,motion:motionPin},
+    cases:[{...turn,id:'loaded-turn',label:'loaded-turn (operating)'},{...turn,id:'park',label:'park (park)',stage:'park'},control],openingCase:'loaded-turn',
+    narrativeReview:{source:null,objectives},mass:{...base.mass,inspectionKg:[11,12],remainingKg:2},
+    power:[duty],
+    fieldInteractions:field?field.rows??[{title:'Invented lane',href:'field/lane.html',objective:laneObjective,
+      evidence:{file:'lane-trial.json',sha256:sha(laneTrial)},embed:true,objectiveKnown:true}]:[]});
+  const content=Buffer.from(JSON.stringify(scene)),served=gzipSync(content),view=stockPage;
   const stages={'loaded-turn':{purpose:'operating'},park:{purpose:'park'}};
   if(trial)stages['loaded-turn'].transportedBy={sample:{mechanisms:['carrier'],evidence:{file:'acquire-trial.json',sha256:sha(trial)}}};
   let receipt={schema:'agent-frc/preliminary-layout-result@1',issue:'synthetic-'+id,planSha256:sha('plan '+id),status,
     missingInputs:[],reopen:[],step,motion:motionPin,narrativeReview:{source:{file:'narrative.md',sha256:sha('narrative')},objectives},
     stages,cycle:['loaded-turn','park'],cases:[{case:'loaded-turn',status:'pass',pairs:[]},{case:'park',status:'pass',pairs:[]}],
     control:{case:'loaded-turn',displaced:'rail',offsetMm:[0,-50,0],witness:{pair:['head','rail'],status:'fail'}},
-    budgets:{source:{file:'budgets.json',sha256:sha(budgets)},limits:{file:'limits.json',sha256:sha(limits)},massStatus:'pass',inspectionKg:[11,12],remainingKg:2,
-      electricalCases:[{case:'weak traverse',status:'pass'}]},
-    view:{file:'package-motion.html',sha256:sha(view),verified:true}};
+    budgets:{source:{file:'budgets.json',sha256:sha(budgets)},limits:{file:'limits.json',sha256:sha(limits)},massStatus:'pass',inspectionKg:[11,12],remainingKg:2,runningKg:base.mass.runningKg,
+      electricalCases:[{case:'weak traverse',status:'pass',batteryCondition:duty.batteryCondition,requiredMinV:duty.requiredMinV,marginV:duty.marginV,
+        loadedBusV:duty.loadedBusV,batterySideA:duty.batterySideA}]},parked:base.parked,
+    view:{file:'package-motion.html',sha256:sha(view),verified:true,
+      scene:{file:'review-scene.json.gz',sha256:sha(served),contentSha256:sha(content),bytes:content.length}}};
   receipt=edit(receipt);
   const receiptBytes=JSON.stringify(receipt,null,2);
-  write(dir,'index.html',view);write(dir,'motion.json',motion);write(dir,'budgets.json',budgets);write(dir,'limits.json',limits);
+  write(dir,'index.html',view);write(dir,'review-scene.json.gz',served);write(dir,'motion.json',motion);write(dir,'budgets.json',budgets);write(dir,'limits.json',limits);
   write(dir,'receipt.json',receiptBytes);
-  const record={schema:'agent-frc/preliminary-release@1',release:id,issue:receipt.issue,label:'Work-in-progress preliminary design',
+  const record={schema:'agent-frc/preliminary-release@1',release:id,issue:receipt.issue,phase:'preliminary-design',
     status:receipt.status,receipt:{file:'receipt.json',sha256:sha(receiptBytes)},view:{file:'index.html',sha256:sha(view)},
     scene:{file:'motion.json',sha256:sha(motion),stepSha256:step.sha256},
     missionCases:missions??[{case:'loaded-turn',kind:'operating-case',accomplishes:'delivered',objective:'Carry the sample to the bin'}]};
@@ -70,7 +78,7 @@ function issueRelease(site,id,{status='layout-checked',edit=r=>r,missions,trial,
   write(dir,'release.json',record);
   return {dir,record};
 }
-function listing(site,current,releases){write(site,tree+'/releases.json',{current,releases});}
+function listing(site,current,releases,designStatus,effectiveHistory){write(site,tree+'/releases.json',{current,releases,...(designStatus?{designStatus}:{}),...(effectiveHistory?{effectiveHistory}:{})});}
 
 function fixture(t) {
   const temp=mkdtempSync(path.join(os.tmpdir(),'prelim-gate-'));
@@ -98,7 +106,7 @@ test('approved historical replay and project player preserve the current physics
   const historyDir=path.join(site,tree,'releases',old);
   write(historyDir,'index.html',historyPage);write(historyDir,'release.json',history);
   const checked=readFileSync(path.join(dir,'index.html'));
-  const projectPage='<h1>Work-in-progress preliminary design</h1>';
+  const projectPage='<h1>Preliminary design review</h1>';
   write(dir,'package-motion.html',checked);write(dir,'index.html',projectPage);
   record.view.file='package-motion.html';write(dir,'release.json',record);
   listing(site,'new-layout',['layout-001',old,'new-layout']);
@@ -109,7 +117,7 @@ test('approved historical replay and project player preserve the current physics
   };
   assert.equal((await auditStaged(approved,site,policy)).preliminary.current,'new-layout');
   listing(site,old,['layout-001',old,'new-layout']);
-  await assert.rejects(auditStaged(approved,site,policy),/cannot be current/);
+  await assert.rejects(auditStaged(approved,site,policy),/cannot be current|current must open/);
   listing(site,'new-layout',['layout-001',old,'new-layout']);
   write(dir,'index.html',projectPage+'changed');
   await assert.rejects(auditStaged(approved,site,policy),/approved assets/);
@@ -127,7 +135,9 @@ test('a layout-checked preliminary release with a mission case deploys without a
   assert.equal(result.preliminary.current,'layout-002');
   assert.equal(result.signed,0);
   listing(site,'layout-001',['layout-001','layout-002']);
-  assert.equal((await auditStaged(approved,site,policy)).preliminary.current,'layout-001','the latest pointer may move');
+  await assert.rejects(auditStaged(approved,site,policy),/current must open the effective release, else the newest in-progress one: expected layout-002/);
+  listing(site,'layout-001',['layout-001','layout-002'],{'layout-001':'effective'},['layout-001']);
+  assert.equal((await auditStaged(approved,site,policy)).preliminary.current,'layout-001','the stable URL opens the effective release');
 });
 
 test('a field-interaction trial bound by the receipt can carry the mission task', async t=>{
@@ -241,11 +251,7 @@ function repin(dir){rewrite(dir,'release.json',r=>{r.receipt.sha256=sha(readFile
 test('a release cannot smuggle script, geometry or unpinned files into the tree', async t=>{
   let f=fixture(t);
   let {dir}=next(f.site,'layout-002');
-  const html=readFileSync(path.join(dir,'index.html'),'utf8').replace('"issue":','"x":"</script><script>alert(1)</script>","issue":');
-  write(dir,'index.html',html);
-  rewrite(dir,'receipt.json',r=>{r.view.sha256=sha(html);});
-  rewrite(dir,'release.json',r=>{r.view.sha256=sha(html);});repin(dir);
-  await assert.rejects(auditStaged(f.approved,f.site,f.policy),/checked player/);
+  // The page is the season's to change; the gate guards the data files instead.
   for(const [file,bytes] of [['budgets.json','glTF\u0002 binary'],['limits.json','<html><script></script></html>'],
     ['budgets.json',JSON.stringify({asset:{version:'2.0'},meshes:[],masses:[],electricalCases:{}})]]){
     f=fixture(t);({dir}=next(f.site,'layout-002'));write(dir,file,bytes);
@@ -267,19 +273,19 @@ test('a release cannot smuggle script, geometry or unpinned files into the tree'
 });
 
 test('the player must display the receipt results and the viewer must carry the label', async t=>{
-  for(const display of [d=>({...d,evidence:{...d.evidence,park:{status:'fail',pairs:[]}}}),
-    d=>({...d,evidence:{...d.evidence,'package-displacement-control':{status:'pass',pairs:[]}}}),
-    d=>({...d,narrativeReview:{objectives:[]}}),d=>({...d,mass:{range:[9,10],remaining:4}}),
-    d=>({...d,power:[{case:'weak traverse',status:'fail'}]})]){
+  const recase=(d,id,status)=>({...d,cases:d.cases.map(c=>c.id===id?{...c,status}:c)});
+  for(const display of [d=>recase(d,'park','fail'),d=>recase(d,'package-displacement-control','pass'),
+    d=>({...d,narrativeReview:{source:null,objectives:[]}}),d=>({...d,mass:{...d.mass,inspectionKg:[9,10],remainingKg:4}}),
+    d=>({...d,power:[{...d.power[0],status:'fail'}]}),d=>({...d,cases:d.cases.filter(c=>c.id!=='park')})]){
     const {approved,site,policy}=fixture(t);
     next(site,'layout-002',{display});
     await assert.rejects(auditStaged(approved,site,policy),/differ from the receipt/);
   }
   const {approved,site,policy}=fixture(t);
-  const legacy='<!doctype html><title>Preliminary design releases</title>';
+  const legacy='<!doctype html><title>Robot releases</title>';
   write(approved,tree+'/index.html',legacy);write(site,tree+'/index.html',legacy);
   next(site,'layout-002');
-  await assert.rejects(auditStaged(approved,site,policy),/work-in-progress label/);
+  assert.deepEqual((await auditStaged(approved,site,policy)).preliminary.added,['layout-002'],'an approved stable viewer needs no particular wording');
   listing(site,'layout-001',['layout-001']);rmSync(path.join(site,tree,'releases','layout-002'),{recursive:true});
   assert.deepEqual((await auditStaged(approved,site,policy)).preliminary.added,[],'unchanged history still deploys');
 });
@@ -292,28 +298,41 @@ test('an author can check one release directory before committing it', async t=>
   await assert.rejects(verifyRelease(bad.dir),/layout-checked/);
 });
 
-test('a release publishes only the compressed geometry its page and receipt pin, and the bundled fonts', async t=>{
-  const {gzipSync}=await import('node:zlib');
+test('a scene cannot carry a scripted link, a second control or figures that differ from its published budgets', async t=>{
+  for(const [display,pattern] of [[d=>({...d,links:[{label:'Season',href:'javascript:alert(1)'}]}),/links\/0\/href must match/],
+    [d=>({...d,cases:[...d.cases,{...d.cases[2],id:'second-control',status:'pass'}]}),/one displaced control/],
+    [d=>({...d,mass:{...d.mass,limitKg:99}}),/differ from the published budgets: Scene inspection limit differs from limits.json/],
+    [d=>({...d,decision:{status:'layout-checked',firstUnmet:null}}),/decision/]]){
+    const {approved,site,policy}=fixture(t);
+    next(site,'layout-002',{display});
+    await assert.rejects(auditStaged(approved,site,policy),pattern);
+  }
+});
+
+test('a release publishes only the review scene its receipt pins, and the bundled fonts', async t=>{
   const {approved,site,policy}=fixture(t);
-  const content=Buffer.from(JSON.stringify({schema:'agent-frc/package-geometry@1',meshes:[],cases:[]}));
-  const compressed=gzipSync(content),file='package-motion.geometry.json.gz';
-  const shown={file,contentSha256:sha(content),bytes:content.length};
-  const pin={file,sha256:sha(compressed),contentSha256:sha(content)};
-  const {dir}=next(site,'layout-002',{display:d=>({...d,geometry:shown}),edit:r=>({...r,view:{...r.view,geometry:pin}})});
-  write(dir,file,compressed);
+  const {dir}=next(site,'layout-002');
   const fonts=fileURLToPath(new URL('../templates/preliminary-review-fonts/',import.meta.url));
   cpSync(fonts,path.join(site,tree,'fonts'),{recursive:true});
   assert.deepEqual((await verifyRelease(dir)).missionCases,['loaded-turn']);
   assert.deepEqual((await auditStaged(approved,site,policy)).preliminary.added,['layout-002']);
-  write(dir,file,gzipSync(Buffer.from('{"meshes":["unchecked"]}')));
-  await assert.rejects(verifyRelease(dir),/Published geometry differs from the view and receipt/);
-  write(dir,file,compressed);
-  write(dir,'other.geometry.json.gz',compressed);
-  await assert.rejects(verifyRelease(dir),/Unrecognized preliminary output: releases\/layout-002\/other.geometry.json.gz/);
-  rmSync(path.join(dir,'other.geometry.json.gz'));
-  rmSync(path.join(dir,file));
-  await assert.rejects(verifyRelease(dir),/Published geometry differs/,'a page that fetches geometry needs the pinned file');
-  write(dir,file,compressed);
+  const scene=readFileSync(path.join(dir,'review-scene.json.gz'));
+  write(dir,'review-scene.json.gz',gzipSync(Buffer.from('{"schema":"agent-frc/preliminary-review-scene@1"}')));
+  await assert.rejects(verifyRelease(dir),/Published review scene differs from its receipt pin/);
+  write(dir,'review-scene.json.gz',scene);
+  write(dir,'other.json.gz',scene);
+  await assert.rejects(verifyRelease(dir),/Unrecognized preliminary output: releases\/layout-002\/other.json.gz/);
+  rmSync(path.join(dir,'other.json.gz'));
+  rmSync(path.join(dir,'review-scene.json.gz'));
+  await assert.rejects(verifyRelease(dir),/Published review scene differs from its receipt pin/,'the stock page needs its pinned scene');
+  write(dir,'review-scene.json.gz',scene);
+  // A scene the receipt pins but that is not a valid scene, or that would decompress past its pinned size, is refused.
+  for(const [content,pattern] of [[Buffer.from('{"schema":"agent-frc/preliminary-review-scene@1","issue":"x"}'),/not a valid agent-frc\/preliminary-review-scene@1/],
+    [Buffer.alloc(4096,32),/within its pinned size|content differs/]]){
+    const served=gzipSync(content);write(dir,'review-scene.json.gz',served);
+    rewrite(dir,'receipt.json',r=>{r.view.scene={file:'review-scene.json.gz',sha256:sha(served),contentSha256:sha(content),bytes:content.length>1000?16:content.length};});repin(dir);
+    await assert.rejects(verifyRelease(dir),pattern);
+  }
   write(path.join(site,tree,'fonts'),'barlow-condensed-latin-600-normal.woff2','not the bundled font');
   await assert.rejects(auditStaged(approved,site,policy),/Unrecognized preliminary output: fonts\/barlow-condensed-latin-600-normal.woff2/);
   rmSync(path.join(site,tree,'fonts'),{recursive:true});
@@ -394,13 +413,12 @@ test('a field player must be self-contained', async t=>{
     fieldPage.replace('<head>'+policy,'<head><meta charset="utf-8">'+policy),
     fieldPage.replace('<head>','<head><script>top.x=1</script>'),
     fieldPage.replace('<html lang="en">','<html lang="en" data-x=\'>').replace('<title>','\'><title>'),
-    '<!doctype html><html data-x=\'><head>'+policy+'\'><body><script>1</script><p>Work-in-progress preliminary design</p></html>',
+    '<!doctype html><html data-x=\'><head>'+policy+'\'><body><script>1</script><p>Preliminary design release</p></html>',
     fieldPage.replace('<canvas>','<a href="https://example.invalid/">Source</a><canvas>'),
     fieldPage.replace('<canvas>','<a/href="https://example.invalid/">x</a><canvas>'),
     fieldPage.replace('<canvas>','<a title=">" href="https://example.invalid/">x</a><canvas>'),
     fieldPage.replace('<canvas>','<a href="&#104;ttps://example.invalid/">x</a><canvas>'),
     fieldPage.replace('<canvas>','<meta http-equiv="&#114;efresh" content="0;url=https://example.invalid"><canvas>'),
-    fieldPage.replace('<p>Work-in-progress preliminary design</p>',''),
     String.fromCharCode(0xfeff,0xfeff)+fieldPage,
     ...Object.values(scannerCases).map(body=>fieldPage.replace('<canvas>',body+'<canvas>'))];
   for(const page of pages){
@@ -428,7 +446,8 @@ test('field player links name the served page and player missions bind their own
   const row=href=>({title:'Lane',href,objective:laneObjective,evidence:{file:'lane-trial.json',sha256:sha(laneTrial)}});
   for(const href of ['field%2flane.html','field\\lane.html','field/LANE.html','field//lane.html','/field/lane.html']){
     const f=fixture(t);next(f.site,'layout-002',{field:{rows:[row(href)]}});
-    await assert.rejects(auditStaged(f.approved,f.site,f.policy),/listed field player/,href);
+    // A backslash or root-relative link is refused by the scene schema before the player check.
+    await assert.rejects(auditStaged(f.approved,f.site,f.policy),/listed field player|fieldInteractions\/0\/href must match/,href);
   }
   let f=fixture(t);next(f.site,'layout-002',{field:{rows:[row('./field/lane.html')]}});
   assert.deepEqual((await auditStaged(f.approved,f.site,f.policy)).preliminary.added,['layout-002']);
@@ -458,7 +477,6 @@ test('stage.py --check-index applies the same field player rules', async t=>{
     [{page:fieldPage.replace('<canvas>','<a title=">" href="https://example.invalid/">x</a><canvas>')},/not self-contained/],
     [{page:String.fromCharCode(0xfeff,0xfeff)+fieldPage},/not self-contained/],
     ...Object.values(scannerCases).map(body=>[{page:fieldPage.replace('<canvas>',body+'<canvas>')},/not self-contained/]),
-    [{page:fieldPage.replace('<p>Work-in-progress preliminary design</p>','')},/not self-contained/],
     [{page:String.fromCharCode(0xfeff)+fieldPage},0],
     [{rows:[{title:'Lane',href:'field%2flane.html',objective:laneObjective,evidence:'x'}]},/listed field player/]];
   for(const [field,expected] of cases){
@@ -480,4 +498,106 @@ test('an issued field player is immutable', async t=>{
   assert.deepEqual((await auditStaged(f.approved,f.site,f.policy)).preliminary.added,[]);
   write(path.join(f.site,tree,'releases','layout-002'),'field/lane.html',fieldPage.replace('0.2','0.3'));
   await assert.rejects(auditStaged(f.approved,f.site,f.policy),/earlier preliminary release/);
+});
+
+test('design status lives in the index: effective, superseded and withdrawn without touching an issued release', async t=>{
+  const {approved,site,policy}=fixture(t);
+  next(site,'layout-002');
+  cpSync(site,approved,{recursive:true,force:true});
+  const audit=()=>auditStaged(approved,site,policy),ids=['layout-001','layout-002'];
+  listing(site,'layout-001',ids,{'layout-001':'effective'},['layout-001']);
+  const flipped=await audit();
+  assert.deepEqual([flipped.preliminary.effective,flipped.preliminary.added],['layout-001',[]],'an index change alone marks a release effective');
+  for(const [statuses,history,current,pattern] of [
+    [{'layout-001':'final'},[],'layout-002',/designStatus maps listed release IDs/],
+    [{'layout-009':'effective'},[],'layout-002',/designStatus maps listed release IDs/],
+    [{'layout-001':'effective','layout-002':'effective'},['layout-001','layout-002'],'layout-001',/At most one/],
+    [{'layout-001':'effective'},[],'layout-001',/last entry in effectiveHistory/],
+    [{'layout-001':'superseded'},[],'layout-002',/cannot move from in-progress to superseded/]]){
+    listing(site,current,ids,statuses,history);
+    await assert.rejects(audit(),pattern,JSON.stringify(statuses));
+  }
+  // Approve layout-001 as effective. A successor cannot supersede it without its checkpoint, and nothing is superseded alone.
+  listing(site,'layout-001',ids,{'layout-001':'effective'},['layout-001']);
+  cpSync(site,approved,{recursive:true,force:true});
+  listing(site,'layout-002',ids,{'layout-001':'superseded'},['layout-001']);
+  await assert.rejects(audit(),/cannot move from effective to superseded/,'superseded needs a successor');
+  listing(site,'layout-002',ids,{'layout-001':'superseded','layout-002':'effective'},['layout-001','layout-002']);
+  await assert.rejects(audit(),/checked against the previous effective one, layout-001/);
+  // Withdrawing the effective release first does not skip the check: the history remembers it.
+  listing(site,'layout-002',ids,{'layout-001':'withdrawn'},['layout-001']);
+  assert.equal((await audit()).preliminary.current,'layout-002','a withdrawn release is never current');
+  cpSync(site,approved,{recursive:true,force:true});
+  listing(site,'layout-002',ids,{'layout-001':'withdrawn','layout-002':'effective'},['layout-001','layout-002']);
+  await assert.rejects(audit(),/checked against the previous effective one, layout-001/);
+  listing(site,'layout-001',ids,{'layout-001':'effective'},['layout-001']);
+  await assert.rejects(audit(),/cannot move from withdrawn to effective/,'nothing returns from withdrawn');
+  const issued=readFileSync(path.join(site,tree,'releases','layout-002','receipt.json'));
+  write(path.join(site,tree,'releases','layout-002'),'receipt.json',Buffer.concat([issued,Buffer.from(' ')]));
+  listing(site,'layout-002',ids,{'layout-001':'withdrawn'},['layout-001']);
+  await assert.rejects(audit(),/An earlier preliminary release changed/,'an issued release stays byte-immutable');
+});
+
+test('a successor checked against the effective release can supersede it', async t=>{
+  const {approved,site,policy}=fixture(t);
+  listing(site,'layout-001',['layout-001'],{'layout-001':'effective'},['layout-001']);
+  cpSync(site,approved,{recursive:true,force:true});
+  const prior=readFileSync(path.join(site,tree,'releases','layout-001','receipt.json'));
+  const checked=r=>({...r,previousCheckpointSha256:sha(prior),priorDecisions:[{id:'acquire-time',repeatVerified:true}]});
+  // Added directly as effective, without its predecessor checkpoint: refused.
+  issueRelease(site,'layout-002');
+  listing(site,'layout-002',['layout-001','layout-002'],{'layout-001':'superseded','layout-002':'effective'},['layout-001','layout-002']);
+  await assert.rejects(auditStaged(approved,site,policy),/checked against the previous effective one, layout-001/);
+  issueRelease(site,'layout-002',{edit:r=>({...checked(r),priorDecisions:[{id:'acquire-time',repeatVerified:false}]})});
+  await assert.rejects(auditStaged(approved,site,policy),/every held decision repeat-verified/,'a hold the successor did not repeat is not a check against the predecessor');
+  // Added directly as effective with the checkpoint: the default path is in progress, this one is effective at once.
+  issueRelease(site,'layout-002',{edit:checked});
+  const result=await auditStaged(approved,site,policy);
+  assert.deepEqual([result.preliminary.added,result.preliminary.effective,result.preliminary.current],[['layout-002'],'layout-002','layout-002'],
+    'a new release can enter effective when checked against its predecessor');
+  listing(site,'layout-002',['layout-001','layout-002'],{'layout-001':'effective','layout-002':'effective'},['layout-001','layout-002']);
+  await assert.rejects(auditStaged(approved,site,policy),/At most one/);
+});
+
+test('a catalog of releases issued with the earlier label still verifies', async t=>{
+  const {site}=fixture(t);
+  const {dir}=issueRelease(site,'layout-002',{field:{page:fieldPage.replace('<p>Preliminary design release</p>','<p>Work-in-progress preliminary design</p>')}});
+  rewrite(dir,'release.json',r=>{delete r.phase;r.label='Work-in-progress preliminary design';});
+  assert.equal((await verifyRelease(dir)).release,'layout-002','an issued record keeps its label');
+  listing(site,'layout-002',['layout-001','layout-002']);
+  assert.deepEqual(verifyCatalog(path.join(site,tree),{}).releases,['layout-001','layout-002']);
+});
+
+test('a release identifies itself only by the phase in its record', async t=>{
+  for(const [change,pattern] of [[r=>{delete r.phase;},/identify its phase/],[r=>{r.phase='detailed-design';},/identify its phase/],
+    [r=>{delete r.phase;r.label='Work-in-progress preliminary design';},/identify its phase/]]){
+    const {approved,site,policy}=fixture(t);
+    const {dir}=next(site,'layout-002');
+    rewrite(dir,'release.json',change);
+    await assert.rejects(auditStaged(approved,site,policy),pattern,'a newly added release names its phase');
+  }
+  const {approved,site,policy}=fixture(t);
+  const {dir}=next(site,'layout-002');
+  const page=readFileSync(path.join(dir,'index.html'),'utf8').replaceAll('Preliminary design','Robot design');
+  write(dir,'index.html',page);
+  rewrite(dir,'receipt.json',r=>{r.view.sha256=sha(page);});
+  rewrite(dir,'release.json',r=>{r.view.sha256=sha(page);});repin(dir);
+  assert.deepEqual((await auditStaged(approved,site,policy)).preliminary.added,['layout-002'],'page wording is the season\'s; the gate reads the record');
+});
+
+test('a season may change its copy of the stock page; the template comparison is information only', async t=>{
+  const {approved,site,policy}=fixture(t);
+  const {dir}=next(site,'layout-002');
+  const page=readFileSync(path.join(dir,'index.html'),'utf8').replace('</main>','<section><h2>Season panel</h2></section></main>');
+  write(dir,'index.html',page);
+  rewrite(dir,'receipt.json',r=>{r.view.sha256=sha(page);});
+  rewrite(dir,'release.json',r=>{r.view.sha256=sha(page);});repin(dir);
+  assert.deepEqual((await auditStaged(approved,site,policy)).preliminary.added,['layout-002'],'a customized page still deploys');
+  const {templateReport}=await import('../scripts/preliminary-release.mjs');
+  const report=templateReport(dir);
+  assert.equal(report.stockPage,false);
+  assert.equal(report.contentSecurityPolicy,true);
+  assert.ok(report.differences.length>=1&&/Information only/.test(report.note));
+  write(dir,'index.html',stockPage);
+  assert.equal(templateReport(dir).stockPage,true);
 });
