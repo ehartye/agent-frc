@@ -14,7 +14,7 @@ For core artifact/trace work, Python physics libraries are not required. For a s
 
 Before a project run that loads plugin scripts, [resolve its runtime identity](../../docs/setup-health.md#resolve-the-plugin-used-by-this-check). Use a fresh active install lookup for a compatible-current run, or a verified historical checkout for a pinned replay.
 
-In Claude Code, when this plugin skill opens, run the command below. Claude Code inserts this skill's plugin directory in the command. Use the reported root for the rest of the check. If the placeholder is unresolved, report the missing host selection. In Codex, use the inventory procedure linked above.
+In Claude Code, when this plugin skill opens, run the command below. Claude Code inserts this skill's plugin directory in the command. Use the reported root for the rest of the check. If the placeholder is unresolved, report the missing host selection. In Codex, the plugin root is two directories above this file. Use the inventory procedure linked above to confirm it.
 
 ```sh
 node "${CLAUDE_PLUGIN_ROOT}/scripts/resolve-plugin-runtime.mjs" claude
@@ -28,4 +28,4 @@ For Java simulation work, use `setup:check -- --task java --jdk ABSOLUTE_JDK_PAT
 
 Run the selected project’s offline checks with its declared prerequisites. Record the command, revision, versions and outcome. Keep an unavailable prerequisite visible.
 
-Use npm test and npm run validate from the plugin checkout for its portable checks.
+Use npm run validate from the plugin root to check an installed copy or a checkout. Use npm test from a plugin checkout for the portable test suite.

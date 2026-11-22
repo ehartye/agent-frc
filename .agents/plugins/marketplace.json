@@ -1,14 +1,14 @@
 {
   "name": "agent-frc-local",
   "interface": {
-    "displayName": "Agent FRC Local Checkout"
+    "displayName": "Agent FRC Repository"
   },
   "plugins": [
     {
       "name": "agent-frc",
       "source": {
         "source": "local",
-        "path": "./artifacts/local-plugin"
+        "path": "./"
       },
       "policy": {
         "installation": "AVAILABLE",

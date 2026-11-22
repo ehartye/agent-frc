@@ -1,0 +1,29 @@
+{
+  "name": "agent-frc-local",
+  "owner": {
+    "name": "ehartye"
+  },
+  "metadata": {
+    "description": "Installs the Agent FRC plugin from this repository."
+  },
+  "plugins": [
+    {
+      "name": "agent-frc",
+      "source": "./",
+      "description": "Season-aware high-school FRC engineering guidance with explicit evidence and optional local vault grounding.",
+      "author": {
+        "name": "ehartye"
+      },
+      "repository": "https://github.com/ehartye/agent-frc",
+      "license": "MIT",
+      "category": "education",
+      "keywords": [
+        "frc",
+        "wpilib",
+        "java",
+        "robotics",
+        "education"
+      ]
+    }
+  ]
+}

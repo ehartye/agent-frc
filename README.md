@@ -13,6 +13,18 @@ Agent FRC helps students turn a new game manual into robot design decisions. Ope
 5. **Share robot evidence.** Build a project-owned [robot highlights page](skills/frc-robot-highlights/SKILL.md) with explorable CAD, mechanism animations, the current configuration and sourced results.
 6. **Resume the investigation.** Recover the owner's decision, current candidate and most recent test with the [continuation guide](docs/strategy-first-continuation.md).
 
+## Install the plugin
+
+```sh
+claude plugin marketplace add ehartye/agent-frc
+claude plugin install agent-frc@agent-frc-local
+
+codex plugin marketplace add ehartye/agent-frc
+codex plugin add agent-frc@agent-frc-local
+```
+
+In a Claude Code session, `/plugin install agent-frc --marketplace ehartye/agent-frc` does the same. The [install guide](docs/local-plugin.md) covers updates, running plugin commands from an installed copy and loading a development checkout with `claude --plugin-dir`.
+
 ## Run from a checkout
 
 Compare the voltage available to a device when two loads overlap or run at different times. Try the [shared electrical supply exercise](docs/shared-power-review.md), then compare regulator settings against the loaded floor and settled connector ceiling in the [two-trim example](examples/power/regulator/comparison.json).
@@ -23,7 +35,7 @@ To check repeatability across several starts, use the [frozen mission cohort gui
 
 To repeat a geometric check on a saved Fusion assembly, use the [native study replay procedure](docs/native-study-replay.md). It verifies the document and geometry before testing the chosen poses.
 
-Use Node.js and npm. See the [local marketplace guide](docs/local-plugin.md) to stage and install this checkout. The plugin works with project files and has no required vault or robot connection.
+Use Node.js and npm. The same commands run from an installed copy. The plugin works with project files and has no required vault or robot connection.
 
 ```sh
 npm test

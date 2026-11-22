@@ -4,11 +4,13 @@
 
 Run the [runtime resolver](../scripts/resolve-plugin-runtime.mjs) from a stable Agent FRC checkout. Determine whether the project accepts a compatible active installation or requires the source revision named in a historical experiment.
 
-For an active local marketplace installation, request a fresh host inventory immediately before launching the project check. The resolver checks the installed cache manifest for the selected identity, marketplace and version. It prints the root and version as JSON.
+For an active marketplace installation, request a fresh host inventory immediately before launching the project check. The resolver checks the installed cache manifest for the selected identity, marketplace and version. It prints the root and version as JSON.
 
 ```sh
 codex plugin list --marketplace agent-frc-local --json | node scripts/resolve-plugin-runtime.mjs active agent-frc-local
 ```
+
+In a Codex session, the plugin root is two directories above the `SKILL.md` file that Codex opened. Run the resolver from that root when no separate checkout exists.
 
 Pass the returned root to the project runner and record the version with its results. Use the configured marketplace name if different. For a custom cache parent, supply the directory containing the marketplace subdirectories as the last argument. The marketplace source checkout can advance independently. If an update removes the resolved directory, discard the incomplete run, resolve again and rerun the full check. The project tests establish compatibility.
 
