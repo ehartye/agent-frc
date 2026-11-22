@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { reviewScene } from './fixtures/review-scene.mjs';
+import { validateScene } from '../scripts/review-scene.mjs';
 
 // The stock page's pure helpers, loaded from the shipped template.
 const html = readFileSync(new URL('../templates/preliminary-review/review.html', import.meta.url), 'utf8');
@@ -98,4 +99,22 @@ test('the field-interaction fit says why it is unavailable', () => {
   assert.match(html, /aria-describedby="fieldWhy"/);
   assert.doesNotMatch(html, /fieldFitState\(presentIds/, 'the cutaway does not change whether the case places a fixture');
   assert.match(html, /id="fieldWhy"/, 'the reason has a visible place on the page');
+});
+
+test('a mount registered against a member leads its support and load path', () => {
+  const scene = reviewScene();
+  scene.bodies.arm.mounts = [{on: 'frame', pointMm: [10, -20.25, 30], basis: 'Invented right-hand pivot datum'}];
+  const withText = field(logic.inspectorFields('arm', scene), 'Support and load path');
+  assert.deepEqual(withText.slice(1, 3), [['Mounted on ' + scene.bodies.frame.name + ' at (10.0, -20.3, 30.0) mm · Invented right-hand pivot datum',
+    'Pivot shaft into the frame plate.'], false]);
+  scene.bodies.arm.support = null;
+  const alone = field(logic.inspectorFields('arm', scene), 'Support and load path');
+  assert.equal(alone[1].length, 1);
+  assert.equal(alone[2], false, 'a registered mount is a supplied support');
+  const {errors} = validateScene(scene);
+  assert.deepEqual(errors, []);
+  scene.bodies.arm.mounts = [{on: 'frame', pointMm: [10, 20], basis: 'Invented'}];
+  assert.ok(validateScene(scene).errors.length, 'a mount point needs three coordinates');
+  scene.bodies.arm.mounts = [{on: 'absent', pointMm: [10, 20, 30], basis: 'Invented'}];
+  assert.deepEqual(validateScene(scene).errors, ['/bodies/arm/mounts names an unknown body: absent']);
 });

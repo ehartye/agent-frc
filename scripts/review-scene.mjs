@@ -57,6 +57,7 @@ export function validateScene(scene) {
   const bodies = scene.bodies, ids = new Set(Object.keys(bodies));
   const known = (list, where) => { for (const id of list) if (!ids.has(id)) errors.push(where + ' names an unknown body: ' + id); };
   for (const [id, body] of Object.entries(bodies)) if (body.mesh !== undefined && !(body.mesh < scene.meshes.length)) errors.push('/bodies/' + id + ' mesh out of range');
+  for (const [id, body] of Object.entries(bodies)) known((body.mounts || []).map(m => m.on), '/bodies/' + id + '/mounts');
   scene.meshes.forEach((m, i) => { if (m.f.some(face => face.some(k => k >= m.v.length))) errors.push('/meshes/' + i + ' face indexes a missing vertex'); });
   const controls = scene.cases.filter(c => c.kind === 'displaced control');
   if (controls.length > 1 || controls.some(c => c.id !== controlCase)) errors.push('/cases may hold one displaced control, with id ' + controlCase);

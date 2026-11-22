@@ -104,9 +104,11 @@ function inspectorFields(id,scene){
  const mass=lines.length?[lines,false]:b.massExcluded?[b.massExcluded,false]:scene.mass?['No mass line includes this component',true]:['Budget ledger not supplied',true];
  const loads=[...new Set(scene.power.flatMap(d=>d.lines.filter(l=>l.members.includes(id)).map(l=>l.name)))];
  const moves=scene.cases.filter(c=>c.bodies[id]?.matrices.length>1).map(c=>c.id);
+ // Mounts the plan registers against this member, ahead of the project's load-path text.
+ const mounts=(b.mounts||[]).map(m=>'Mounted on '+(scene.bodies[m.on]?.name||m.on)+' at ('+m.pointMm.map(v=>fmt(v,1)).join(', ')+') mm · '+m.basis);
  return [['Category',b.category+(b.category!==b.role?' (colour of role '+b.role+')':''),false,'swatch'],['Subsystem',...val('subsystem',b.subsystem)],['Motion group',b.motionGroup,false],
   ['Material',...val('material',b.material)],['Occupied volume',...volume],['Mass line and basis',...mass],
-  ['Support and load path',...(b.fixture?['Field fixture',false]:b.support?[b.support,false]:[NOT_SUPPLIED,true])],
+  ['Support and load path',...(b.fixture?['Field fixture',false]:mounts.length?[[...mounts,...(b.support?[b.support]:[])],false]:b.support?[b.support,false]:[NOT_SUPPLIED,true])],
   ['Purpose',...val('purpose',b.purpose)],['Why it is included',...val('rationale',b.rationale)],
   ['Electrical load lines',loads.length?loads:'None assigned to this component',false],['Moves in',moves.length?moves:'Stationary in every commissioned case',false]];
 }

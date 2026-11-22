@@ -24,6 +24,7 @@ from motion_heartbeat import MotionHeartbeat
 from atomic_writes import AtomicWrites
 from free_path import FreePath
 from fixture_warning import FixtureWarning
+from member_mounts import MemberMounts
 from held_position_replay import HeldPositionReplay
 from contact_transport import ContactTransport
 from held_pin_relocation import HeldPinRelocation

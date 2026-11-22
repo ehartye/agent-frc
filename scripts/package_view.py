@@ -418,6 +418,10 @@ def build_scene(root, plan, scenes, observed, budgets, review):
                               volumeType=row["volumeType"], closed=row["volumeMm3"] is not None, fixture=member in fixtures,
                               purpose=row["purpose"], rationale=row["rationale"], support=support.get(member),
                               massExcluded=row["massExcluded"], missing=row["missing"])
+        # Only a mount that names this member is attributed to it; a group-level mount belongs to no single member.
+        own = [dict(on=m["on"], pointMm=m["pointMm"], basis=m["basis"]) for m in plan.get("mounts", []) if m.get("member") == member]
+        if own:
+            bodies[member]["mounts"] = own
     by_id = {c["id"]: c for c in study_cases}
     observed_by_id = {c["case"]: c for c in observed["cases"]}
     kinds = presentation.get("caseKinds", {})
