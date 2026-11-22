@@ -89,7 +89,7 @@ export function checkInstallManifests(root, {tracked = null} = {}) {
   }
 
   const single = (file, marketplace) => {
-    if (!NAME.test(marketplace.name ?? '')) issue(file, 'invalid-marketplace', 'Use a lowercase hyphenated marketplace name.');
+    if (marketplace.name !== reference.name + '-marketplace') issue(file, 'invalid-marketplace', `Name the marketplace ${reference.name}-marketplace.`);
     const plugins = marketplace.plugins;
     if (!Array.isArray(plugins) || plugins.length !== 1 || plugins[0]?.name !== reference.name) {
       issue(file, 'invalid-marketplace', `List exactly one plugin named ${reference.name}.`);
@@ -129,9 +129,6 @@ export function checkInstallManifests(root, {tracked = null} = {}) {
       }
       if (openai && entry.category !== openai.category) issue(file, 'manifest-drift', 'Entry category must equal the interface category.');
     }
-  }
-  if (claudeMarketplace && codexMarketplace && claudeMarketplace.name !== codexMarketplace.name) {
-    issue(INSTALL_FILES.codexMarketplace, 'manifest-drift', 'Both marketplace files must use the same marketplace name.');
   }
   return result();
 }
