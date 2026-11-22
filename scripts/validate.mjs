@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 import { validateSkills } from './skill-validation.mjs';
+import {scanSeasonTree} from './season-terms.mjs';
 const root=path.resolve(import.meta.dirname,'..');
 // A missing or unreadable plugin.json is reported by the install check below.
 let manifest=null;
@@ -30,9 +31,12 @@ const tracked = committed();
 const ignoredTracked = tracked ? committed('-ci', '--exclude-standard') ?? [] : [];
 const install = checkInstallManifests(root, {tracked});
 const packaged = checkPackagedReferences(root, {tracked, ignoredTracked});
-const issues = [...schemaIssues, ...checked.issues, ...install.issues, ...packaged.issues];
+// Season-neutral text: a game name, field term, season year or team number belongs in the owning season project.
+const season = scanSeasonTree(root);
+const seasonIssues = season.findings.map(f => ({path: f.file + ':' + f.line, code: f.kind, reason: 'Keep season-specific language in the owning season project: ' + f.text}));
+const issues = [...schemaIssues, ...checked.issues, ...install.issues, ...packaged.issues, ...seasonIssues];
 if (issues.length) {
   for (const issue of issues) console.error(`${issue.path}: ${issue.code}: ${issue.reason}`);
   process.exit(1);
 }
-console.log(JSON.stringify({manifest:'valid',designReferences:checkDesignReferences(root),skills:checked.skills.length,compatibilityManifests:2,marketplaces:2,marketplaceName:install.marketplace,packagedSkillLinks:packaged.links,cleanCloneChecked:tracked!==null,hostInstallationTested:false}));
+console.log(JSON.stringify({manifest:'valid',designReferences:checkDesignReferences(root),seasonNeutralFiles:season.files,skills:checked.skills.length,compatibilityManifests:2,marketplaces:2,marketplaceName:install.marketplace,packagedSkillLinks:packaged.links,cleanCloneChecked:tracked!==null,hostInstallationTested:false}));

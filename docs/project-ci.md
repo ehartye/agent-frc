@@ -23,6 +23,18 @@ node PLUGIN/scripts/project-checks.mjs PROJECT full
 
 Both run the project layout check first in the default `robot-project` layout. A software-only project can use its existing layout. Use an actual ancestor of the candidate as the base. Changes to the check manifest or a workflow select all registered checks. The changed mode includes staged, unstaged and untracked non-ignored inputs in the working checkout. Full mode runs every registered command, including expensive historical replays. Install the project’s pinned runtime dependencies before either command. A private Fusion reissue remains a separate qualified-station operation.
 
+## Scan every pushed branch
+
+A personal machine path or a credential is public as soon as its branch is pushed, with or without a pull request. Copy [the branch scan workflow](../templates/branch-scan.yml) to `.github/workflows/branch-scan.yml` and set `AGENT_FRC_REF` to the plugin release the project uses. It runs on every push to every branch.
+
+```sh
+node PLUGIN/scripts/branch-scan.mjs PROJECT
+```
+
+The scan reads every tracked text file as it stands at the pushed commit; it does not read earlier commits. It reports a home directory that names its owner, in Windows, macOS, Linux and shell spellings, and it reports private keys, common service tokens and a quoted password, secret, key or token assignment. It names the file, line and kind. It prints a machine path so the builder that wrote it can be found, and it never prints a credential. Placeholders such as `C:/Users/name/`, the robot controller's service account and hosted-runner homes pass. Write paths relative to the repository so a clone on another machine reproduces them. Rotate a reported credential; removing it from the branch does not remove it from history.
+
+A fixture that shows a path or key on purpose can be listed in `.branch-scan.json` at the project root, as `{"ignore": ["tests/fixtures/paths/", "docs/example.log"]}`. A folder entry ends in `/`. The list is reviewed in the pull request like any other file. Run the same command before the first push of a new branch.
+
 ## Check the workflows before pushing
 
 After committing a workflow change, check the exact commit you intend to push. Use an approved local [actionlint release](https://github.com/rhysd/actionlint/releases) and verify its published checksum. The plugin CI exercises v1.7.12.

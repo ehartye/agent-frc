@@ -5,7 +5,7 @@ export const stages = [
     objective: 'Turn the release-day manual into a model of the game before drawing a robot. Count the pieces, locate them, identify scoring targets and split the match into useful time windows.',
     activity: 'Identify the governing manual and its edition before tracing a route from a starting location through a piece source to a scoring zone. Compare that route with the paths available to partners and opponents.',
     handoff: 'A dated game model with citations, piece inventory, field coordinates, phase lengths and a list of unknowns.',
-    skills: ['frc-project-setup','frc-season','frc-case-study'], docs: [['Prepare a project rules model','docs/project-rules-model.md'],['Invented training profile','examples/kickoff/training-field.json']]
+    skills: ['frc-project-setup','frc-season','frc-case-study'], docs: [['Prepare a project rules model','docs/project-rules-model.md'],['Scan every pushed branch for machine paths and credentials','docs/project-ci.md#scan-every-pushed-branch'],['Invented training profile','examples/kickoff/training-field.json']]
   },
   {
     id: 'field', milestone: 'Field trade study', name: 'Conceptual design', question: 'What changes when the robot changes shape?',
