@@ -17,6 +17,22 @@ function write(root,file,data){
 const git=(root,...args)=>execFileSync('git',['-C',root,...args],{encoding:'utf8'}).trim();
 const inputs='cad/preliminary-design/releases';
 
+test('feature a preliminary still only with the exact previous README preserved',async t=>{
+  const {repo}=sourceRepo(t,{field:false});
+  const before='Archived model',after='Preliminary design',image='synthetic picture';
+  write(repo,'README.md',before);
+  write(repo,'.github/source-policy.json',{schema:'agent-frc/public-model-policy@1',project:'Fixture',
+    publicRoots:['cad'],modelFiles:['README.md','cad/robot.step'],preliminaryReadmeArchive:{
+      archive:'rough-draft.md',archivedSha256:sha(before),readmeSha256:sha(after),
+      image:'cad/review.png',imageSha256:sha(image)}});
+  git(repo,'add','.');git(repo,'commit','-qm','Approve README handoff');
+  const base=git(repo,'rev-parse','HEAD');
+  write(repo,'README.md',after);write(repo,'rough-draft.md',before);write(repo,'cad/review.png',image);
+  await run(repo,base);
+  write(repo,'rough-draft.md','abridged archive');
+  await assert.rejects(run(repo,base),/archive or preliminary still/);
+});
+
 /** Write one release input directory as the checker leaves it, with a receipt that pins every input. */
 function issueInputs(repo,id,{status='layout-checked',step='solid '+id,edit=r=>r}={}){
   const dir=path.join(repo,inputs,id),pin=(file,body)=>{write(dir,file,body);return {file,sha256:sha(body)};};
