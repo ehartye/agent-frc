@@ -17,6 +17,7 @@ from articulated_mass_test import ArticulatedMass
 from pilot_alignment_test import SeatedPilot
 from mission_boundaries import MissionBoundaries
 from spatial_operating_cases import SpatialOperatingCases
+from constant_pose_pairs import ConstantPosePairs
 
 
 class Readiness(unittest.TestCase):

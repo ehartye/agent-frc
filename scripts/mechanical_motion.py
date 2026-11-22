@@ -191,6 +191,20 @@ def bearing_area(a,b,load_direction=None):
         and sum(i*j for i,j in zip(n,m))<-.999999999 and distance(f,g)<=1e-7)
 
 
+# Each optimal axis-aligned box encloses its solid. Past this margin, box separation certifies the gap.
+BOX_MARGIN_MM=1e-3
+
+
+def constant_pose_separated(a,b,cut):
+    """A pair with constant relative pose whose boxes are farther apart than the cut cannot fail."""
+    return box_gap(a,b)>cut+BOX_MARGIN_MM
+
+
+def pose_key(source,ops):
+    """Identify one body's exact placed geometry: its source solid and ordered initial pose."""
+    return None if source is None else (source,json.dumps(ops,sort_keys=True,allow_nan=False))
+
+
 def evaluate(root,study,*,mount_hosts=(),package_scene=None):
     require(study.get("schema")=="agent-frc/mechanical-motion@1","Unknown motion study")
     original=pinned(root,study["step"])
@@ -198,15 +212,19 @@ def evaluate(root,study,*,mount_hosts=(),package_scene=None):
     shapes,non_solids=load_solids(original,identities)
     host_bounds={n:bounds(shapes[n]) for n in sorted(mount_hosts) if n in shapes}
     case_ids=set();results=[];extraction_states=[]
+    # Exact (gap, volume) of constant-relative-pose pairs, reused only for identical sources and poses.
+    measured={}
     for case in study["cases"]:
         id=case["id"]
         require(named(id) and id not in case_ids and named(case.get("basis")),"Unique case ID and physical basis required")
         case_ids.add(id)
         scene=dict(shapes)
+        sources={n:("installed",n) for n in shapes}
         for ext in case.get("fixtures",[]):
             source,_=load_solids(pinned(root,ext["file"]))
             require(ext["id"] not in scene and named(ext.get("basis")),"Duplicate or unjustified tool/piece/field fixture")
             scene[ext["id"]]=source[ext["solid"]]
+            sources[ext["id"]]=("fixture",ext["file"]["file"],ext["file"]["sha256"],ext["solid"])
         removed=case.get("removed",{})
         require(isinstance(removed,dict),"Service removals must map installed bodies to extraction case IDs")
         if removed:
@@ -219,8 +237,11 @@ def evaluate(root,study,*,mount_hosts=(),package_scene=None):
         for name,ops in case.get("initialPose",{}).items():
             require(name in scene,"Initial pose names absent body")
             scene[name]=transform(scene[name],ops,1)
+        built=dict(scene)
         if package_scene is not None:
             package_scene(case, scene)
+        # A body the callback replaced has no reusable identity.
+        keys={n:pose_key(sources.get(n),case.get("initialPose",{}).get(n,[])) if scene[n] is built.get(n) else None for n in scene}
         boxes={n:bounds(s) for n,s in scene.items()}
         rates={n:travel_bound(boxes[n],ops) for n,ops in moves.items()}
         cut=case["minGapMm"];depth=case.get("maxDepth",9)
@@ -235,13 +256,20 @@ def evaluate(root,study,*,mount_hosts=(),package_scene=None):
             require(record.get("stepSha256")==study["step"]["sha256"] and record.get("case")==id and
                     set(record.get("pair",[]))=={a,b} and record.get("status")=="pass","Interface qualification is stale or incomplete")
             excluded[tuple(sorted((a,b)))]=ex["basis"]
-        rows=[];counts={"broadPhase":0,"bounded":0}
+        rows=[];counts={"broadPhase":0,"bounded":0,"constantPoseBroadPhase":0,"constantPoseReused":0}
         for a,b in combinations(sorted(scene),2):
             stationary = a not in moves and b not in moves
             if (stationary and package_scene is None) or (a,b) in excluded:continue
             if stationary or (a in moves and b in moves and moves[a]==moves[b]):
                 # Their relative pose is constant. Fixtures and initial offsets are not necessarily in the original assembly.
-                g=distance(scene[a],scene[b]);v=common(scene[a],scene[b]) if g<=1e-7 else 0
+                if constant_pose_separated(boxes[a],boxes[b],cut):
+                    counts["constantPoseBroadPhase"]+=1;continue
+                key=None if keys[a] is None or keys[b] is None else (keys[a],keys[b])
+                if key in measured:
+                    g,v=measured[key];counts["constantPoseReused"]+=1
+                else:
+                    g=distance(scene[a],scene[b]);v=common(scene[a],scene[b]) if g<=1e-7 else 0
+                    if key is not None:measured[key]=(g,v)
                 hit=v>0 or g<cut
                 rows.append(dict(pair=[a,b],status="fail" if hit else "pass",witness=dict(t=0,gapMm=g,volumeMm3=v)))
                 continue
@@ -318,7 +346,7 @@ def evaluate(root,study,*,mount_hosts=(),package_scene=None):
         from mechanical_visibility import observe
         visibility=[observe(root,v,scene,moves,transform) for v in case.get("visibility",[])]
         observed=[r["status"] for r in [*rows,*seats,*goals,*visibility]]
-        status="fail" if "fail" in observed else "open" if "open" in observed or not rows and not seats and not goals and not visibility and not counts["broadPhase"] else "pass"
+        status="fail" if "fail" in observed else "open" if "open" in observed or not rows and not seats and not goals and not visibility and not counts["broadPhase"] and not counts["constantPoseBroadPhase"] else "pass"
         extracted=[]
         if case.get("extract"):
             require(case.get("stage")=="service" and not case.get("initialPose") and not excluded and
