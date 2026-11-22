@@ -155,7 +155,7 @@ A season pins a plugin revision and holds copies of some plugin files. After mov
 | 0.107.0, 0.108.0 | The local review page: delete `package-motion.html` and rerun the check with `--write-view` (field-fit reason; member mounts in the inspector). A stale scene is replaced without deleting it from 0.110.0. |
 | 0.111.1 | The committed detailed design catalog `index.html` from `templates/detailed-design-index.html`. |
 | 0.112.0 | `stage.py` again (`--readiness` prints the effective-readiness report). |
-| 0.113.0 | The local review scene: rerun the check with `--write-view`, which replaces the stale scene. A plan whose cases set a start pose now stores each body once, so its scene content and digest change; an issued release keeps its scene. |
+| 0.114.0 | The local review scene: rerun the check with `--write-view`, which replaces the stale scene. A plan whose cases set a start pose now stores each body once, so its scene content and digest change; an issued release keeps its scene. |
 
 An issued release never changes; a new release carries the new page.
 
