@@ -44,15 +44,19 @@ async function renderedFonts(folder, page, selectors) {
   try {
     const url = 'http://127.0.0.1:' + server.address().port + '/' + page;
     const profileDir = mkdtempSync(path.join(tmpdir(), 'font-browser-'));
-    const child = spawn(browser(), [...(process.platform === 'linux' ? ['--no-sandbox'] : []), '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
-      '--user-data-dir=' + profileDir, '--virtual-time-budget=15000', '--dump-dom', url]);
     let dom = '';
+    try {
+    const child = spawn(browser(), [...(process.platform === 'linux' ? ['--no-sandbox'] : []), '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+      '--user-data-dir=' + profileDir, '--virtual-time-budget=15000', '--dump-dom', url], { timeout: 60_000, killSignal: 'SIGKILL' });
     child.stdout.on('data', d => { dom += d; });
-    await new Promise(r => child.on('close', r));
-    rmSync(profileDir, { recursive: true, force: true, maxRetries: 3 });
+    await new Promise((resolve, reject) => { child.on('error', reject); child.on('close', resolve); });
+    } finally {
+      // Browser helpers can briefly hold profile files on Windows.
+      try { rmSync(profileDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }); } catch {}
+    }
     const match = /<pre id="font-probe">([^<]*)<\/pre>/.exec(dom);
     assert.ok(match, 'the page reported its fonts');
-    return JSON.parse(match[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&'));
+    return JSON.parse(match[1].replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&'));
   } finally { server.close(); }
 }
 
@@ -67,10 +71,11 @@ function assertThemed(result, display, body) {
 }
 
 /** Every embedded face decodes to a bundled file, byte for byte, and the OFL notices travel with the page. */
-function assertEmbedded(html) {
+function assertEmbedded(html, families = ['Barlow Condensed', 'Source Sans 3']) {
   const faces = [...html.matchAll(/url\("data:font\/woff2;base64,([A-Za-z0-9+/=]+)"\)/g)].map(m => Buffer.from(m[1], 'base64'));
-  assert.equal(faces.length, woff2.length, 'each bundled face is embedded once');
-  for (const name of woff2) assert.ok(faces.some(f => f.equals(readFileSync(path.join(fonts, name)))), name + ' embedded unmodified');
+  const wanted = woff2.filter(n => families.some(f => n.startsWith(f.toLowerCase().replace(/ /g, '-'))));
+  assert.equal(faces.length, wanted.length, 'each used bundled face is embedded once');
+  for (const name of wanted) assert.ok(faces.some(f => f.equals(readFileSync(path.join(fonts, name)))), name + ' embedded unmodified');
   assert.match(html, /SIL OPEN FONT LICENSE Version 1\.1/);
   assert.match(html, /Copyright 2017 The Barlow Project Authors/);
   assert.match(html, /Copyright 2010-2020 Adobe/);
@@ -82,7 +87,13 @@ test('kickoff lab and robot highlights embed the bundled OFL theme fonts', async
   await buildLab(profile, path.join(out, 'lab.html'));
   assertEmbedded(readFileSync(path.join(out, 'lab.html'), 'utf8'));
   await buildHighlights(path.join(root, 'examples/highlights/project.json'), path.join(out, 'robot'));
-  assertEmbedded(readFileSync(path.join(out, 'robot', 'index.html'), 'utf8'));
+  assertEmbedded(readFileSync(path.join(out, 'robot', 'index.html'), 'utf8'), ['Source Sans 3']);
+  const guide = path.join(out, 'guide');
+  const built = spawnSync(process.execPath, [path.join(root, '.github/pages/build.mjs'), guide], { encoding: 'utf8' });
+  assert.equal(built.status, 0, built.stderr);
+  for (const name of woff2) assert.ok(readFileSync(path.join(guide, 'fonts', name)).equals(readFileSync(path.join(fonts, name))));
+  for (const name of ['OFL-BarlowCondensed.txt', 'OFL-SourceSans3.txt', 'NOTICE.md', 'fonts.css']) assert.ok(existsSync(path.join(guide, 'fonts', name)), name);
+  assert.match(readFileSync(path.join(guide, 'guide.css'), 'utf8'), /^@import url\("fonts\/fonts.css"\);/);
 });
 
 test('themed pages render Barlow Condensed and Source Sans 3 from loaded faces', {skip: !browser() && 'No Chrome or Edge found; set CHROME_PATH'}, async t => {
@@ -95,7 +106,5 @@ test('themed pages render Barlow Condensed and Source Sans 3 from loaded faces',
   const guide = path.join(out, 'guide');
   const built = spawnSync(process.execPath, [path.join(root, '.github/pages/build.mjs'), guide], { encoding: 'utf8' });
   assert.equal(built.status, 0, built.stderr);
-  for (const name of woff2) assert.ok(readFileSync(path.join(guide, 'fonts', name)).equals(readFileSync(path.join(fonts, name))));
-  assert.ok(existsSync(path.join(guide, 'fonts', 'OFL-BarlowCondensed.txt')) && existsSync(path.join(guide, 'fonts', 'OFL-SourceSans3.txt')));
   assertThemed(await renderedFonts(guide, 'index.html', ['h1', 'body']), 'h1', 'body');
 });

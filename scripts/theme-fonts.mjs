@@ -9,18 +9,23 @@ export const fontLicenseFiles = ['OFL-BarlowCondensed.txt', 'OFL-SourceSans3.txt
 /** The bundled faces, from the @font-face rules in fonts.css: [{family, weight, file}]. */
 export function themeFaces() {
   const css = readFileSync(new URL('fonts.css', directory), 'utf8');
-  return [...css.matchAll(/font-family:"([^"]+)";font-style:normal;font-weight:(\d+);[^}]*url\("([^"]+\.woff2)"\)/g)]
+  const faces = [...css.matchAll(/font-family:"([^"]+)";font-style:normal;font-weight:(\d+);[^}]*url\("([^"]+\.woff2)"\)/g)]
     .map(([, family, weight, file]) => ({family, weight: Number(weight), file}));
+  // A format change must not silently drop a face and leave pages on system fonts.
+  const bundled = readdirSync(directory).filter(name => name.endsWith('.woff2'));
+  if (faces.length !== bundled.length || !bundled.every(name => faces.some(f => f.file === name)))
+    throw Error('fonts.css does not declare every bundled theme face');
+  return faces;
 }
 
 /**
  * A self-contained stylesheet for a single-file page: each face as a base64 data URI, preceded by the
  * fonts' copyright notices and full license texts, so the page renders the theme offline and on any host.
  */
-export function inlineThemeFonts() {
+export function inlineThemeFonts({families} = {}) {
   const licenses = fontLicenseFiles.map(name => readFileSync(new URL(name, directory), 'utf8').replace(/\r\n/g, '\n').trim());
   if (licenses.some(text => text.includes('*/'))) throw Error('A font license cannot be embedded in a CSS comment');
-  const faces = themeFaces().map(({family, weight, file}) =>
+  const faces = themeFaces().filter(f => !families || families.includes(f.family)).map(({family, weight, file}) =>
     '@font-face{font-family:"' + family + '";font-style:normal;font-weight:' + weight + ';font-display:swap;src:url("data:font/woff2;base64,' +
     readFileSync(new URL(file, directory)).toString('base64') + '") format("woff2")}');
   return '/* Theme fonts embedded from Agent FRC. Latin subsets as distributed by Fontsource 5.2.5.\n\n' +
