@@ -42,7 +42,7 @@ function card(index,id,primary){
   const link=index.preliminary?.[id];
   if(status==='in-progress'){
     const a=el('a','','Open the checked motion and mission cases');a.href='designs/'+encodeURIComponent(id)+'/';
-    box.append(el('p','note')).append(a);
+    const line=el('p','note');line.append(a);box.append(line);
   }
   if(status==='effective')box.append(el('p','note','Shown on the project entry page, README still and model selector.'));
   if(link)box.append(el('p','note','Built on preliminary release '+link+'.'));
@@ -66,7 +66,7 @@ json('designs.json').then(async index=>{
     box.append(el('h3','','No detailed design is published'));
     const a=el('a','','Open the current preliminary design');
     a.href=String(index.preliminaryIndex||'').replace(/releases\.json$/,'');
-    box.append(el('p','note')).append(a);
+    const line=el('p','note');line.append(a);box.append(line);
     current.append(box);
   }
   const shown=new Set([index.current,index.beside]);
