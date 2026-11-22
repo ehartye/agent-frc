@@ -6,6 +6,8 @@ The selected section contains the canonical `authorityId`, `configuration`, `mod
 
 The station collects the occurrences, owning component counts, joints, rigid groups, suppressed states, solver health and motion links when the selected archive reopens. Hidden parts remain in scope. Every installed occurrence needs a native constraint path to the declared anchor. A mounted contact and a loose removable piece can have identical saved geometry. Test a truly fixed assembly with a real rigid constraint and test removal under its own operating duty. For sliders and revolute axes connected by motion links, measure the drive and its followers under the installed coupling. Other unresolved constraints stay open. Keep access, retention and contact qualifications scoped to the actual loads and positions.
 
+A `motionRanges` endpoint is a travel limit. It does not say whether a physical stop or a commanded limit enforces it. When a passive stop or a preload spring holds a saved pose, record the stop, its preload and its compliance in the [rotary stop study](actuator-duty-review.md#check-a-seated-preloaded-stop-and-its-recorded-duty). Roster the stop and spring as required articles. The readiness review does not yet check that the saved pose is on the stop.
+
 [Freeze the required physical articles](article-functions.md) before opening an earlier assembly. Pin their roster in the same commissioning plan.
 
 ## Commission a mechanically coupled drive
