@@ -53,6 +53,11 @@ const structure = ready + box + `
 
 test('the stock page keeps the reference region order, control placement, labels and fonts', {skip}, async t => {
   const dir = site(t), url = release(dir, 'a', reviewScene());
+  writeFileSync(path.join(dir, 'releases.json'), JSON.stringify({current: 'a', releases: ['a'], designStatus: {a: 'effective'}}));
+  const banner = await probePage(dir, url, ready + `for(let i=0;i<40&&!document.querySelector('#designStatus').textContent;i++)await new Promise(r=>setTimeout(r,50));
+   return {phase:document.querySelector('.phase').textContent,csp:!!document.querySelector('head>meta[http-equiv="Content-Security-Policy"]:first-child')}`);
+  assert.equal(banner.phase, 'Preliminary design · effective. Not the released detailed model; the review receipt gives its checked result.');
+  assert.equal(banner.csp, true, 'the stock page ships its policy as the first element in <head>, and still loads its scene and fonts');
   for (const width of [1280, 1600, 1920, 961]) {
     const g = await probePage(dir, url, structure, {width, height: 1000});
     assert.ok(!g.probeError, g.probeError);

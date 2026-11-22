@@ -196,7 +196,7 @@ export async function audit(root,base,policyName,packetPath,pubKey,sourceCommit)
       names.delete('README.md');
     }
   }
-  // Work-in-progress preliminary inputs: opt-in, receipt-bound, immutable once issued and never a registered model.
+  // Preliminary design release inputs: opt-in, receipt-bound, immutable once issued and never a registered model.
   const spec=policy.preliminaryInputs;
   check(spec===undefined||spec&&typeof spec==='object'&&Object.keys(spec).join()==='root'&&typeof spec.root==='string',
     'preliminaryInputs needs exactly a root');
@@ -286,8 +286,9 @@ export async function audit(root,base,policyName,packetPath,pubKey,sourceCommit)
       const url=new URL(policy.preliminaryReadmeLink);
       check(url.protocol==='https:'&&url.href===policy.preliminaryReadmeLink&&!/[\s()<>]/.test(url.href),'Invalid preliminary README URL');
       const before=git(root,['cat-file','blob',old]);
-      const suffix=Buffer.from('\n[Work-in-progress preliminary design]('+url.href+')\n');
-      if(Buffer.concat([before,suffix]).equals(readFileSync(current)))continue;
+      // The one README line a preliminary design release may add; the earlier wording is still accepted.
+      const added=['Preliminary design release','Work-in-progress preliminary design'].map(t=>Buffer.from('\n['+t+']('+url.href+')\n'));
+      if(added.some(suffix=>Buffer.concat([before,suffix]).equals(readFileSync(current))))continue;
     }
     if(old===null && prelimAuthorized.has(n))continue;
     if(old!==actual && reviewed.has(n)){
@@ -343,7 +344,7 @@ export async function auditStaged(approved,candidate,policyPath,packetPath,pubKe
     walk(folder);return entries;
   }
   const old=inventory(base),next=inventory(root);
-  // Work-in-progress preliminary releases are a separate, opt-in class: receipt-checked, never signed, never primary.
+  // Preliminary design releases are a separate, opt-in class: receipt-checked, never signed, never primary.
   const prelim=preliminaryPolicy(policy.preliminaryReleases,[...fixed,...mutable,...Object.keys(fieldData)]);
   let preliminary=null,secondaryLink=null;
   if(prelim){

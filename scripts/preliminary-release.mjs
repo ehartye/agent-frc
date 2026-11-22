@@ -1,4 +1,4 @@
-/** Audit work-in-progress preliminary review releases: physically checked, mission-bearing and secondary to the detailed model. */
+/** Audit preliminary design releases: physically checked, mission-bearing and secondary to the detailed model. */
 import {createHash} from 'node:crypto';
 import {lstatSync,readFileSync,readdirSync,realpathSync} from 'node:fs';
 import path from 'node:path';
@@ -6,7 +6,11 @@ import {pathToFileURL} from 'node:url';
 import {compareWithLedger,compareWithReceipt,maxSceneBytes,readScene,sceneSchemaId,validateScene} from './review-scene.mjs';
 
 export const releaseSchema='agent-frc/preliminary-release@1';
-export const releaseLabel='Work-in-progress preliminary design';
+export const releasePhase='preliminary-design';
+/** Text every preliminary page carries, so it cannot be mistaken for the released detailed model. A presence check, not a visibility check. */
+export const phaseText='Preliminary design';
+/** Design statuses, the same for every design phase. They live in the mutable release index, never in an issued release. */
+export const designStatuses=['in-progress','effective','superseded','withdrawn'];
 const receiptSchema='agent-frc/preliminary-layout-result@1';
 const releaseId=/^[a-z0-9][a-z0-9-]{0,63}$/;
 const trialName=/^[a-z0-9][a-z0-9._-]{0,127}\.json$/;
@@ -33,8 +37,60 @@ function parse(bytes,what){
 }
 function pinMatches(pin,file,bytes){return object(pin)&&pin.file===file&&hex.test(pin.sha256)&&pin.sha256===sha(bytes);}
 
-/** True when the release page is this plugin's stock review page, byte for byte apart from line endings. */
-function stockPage(html){return lf(html)===lf(readFileSync(page))}
+/**
+ * Information only: how a release page compares with this plugin's stock review page. Seasons may change their
+ * copy; the gate never compares page markup or script, which the season's own pull request review covers.
+ */
+export function compareTemplate(html){
+  const own=lf(html),stock=lf(readFileSync(page));
+  const csp=/<meta http-equiv="Content-Security-Policy"/i.test(own);
+  if(own===stock)return {stock:true,csp,differences:[]};
+  const a=own.split('\n'),b=stock.split('\n'),differences=[];
+  for(let i=0;i<Math.max(a.length,b.length)&&differences.length<20;i++)if(a[i]!==b[i])differences.push({line:i+1,page:a[i]??null,stock:b[i]??null});
+  return {stock:false,csp,differences};
+}
+/** The status a release has in an index: listed releases without an entry are in progress. */
+export const statusOf=(index,id)=>index?.designStatus?.[id]??'in-progress';
+/** The release the stable URL opens: the effective release, else the newest in-progress one, else the newest not withdrawn. */
+export function currentFor(index){
+  const ids=index.releases;
+  return ids.find(i=>statusOf(index,i)==='effective')??[...ids].reverse().find(i=>statusOf(index,i)==='in-progress')
+    ??[...ids].reverse().find(i=>statusOf(index,i)!=='withdrawn')??ids.at(-1);
+}
+/**
+ * The release index's design statuses and each change against the approved index. Allowed: in-progress to effective,
+ * the previous effective to superseded (required when another becomes effective), any to withdrawn. Nothing returns
+ * from superseded or withdrawn. A release made effective after an earlier effective one must have been checked
+ * against it: its receipt's previousCheckpointSha256 is the earlier release's receipt digest.
+ */
+export function checkStatusChange(before,after,receipts){
+  const ids=after.releases,map=after.designStatus;
+  check(map===undefined||object(map)&&Object.entries(map).every(([id,v])=>ids.includes(id)&&designStatuses.includes(v)),
+    'designStatus maps listed release IDs to '+designStatuses.join(', '));
+  const effective=ids.filter(i=>statusOf(after,i)==='effective');
+  check(effective.length<=1,'At most one preliminary design release is effective');
+  check(after.current===currentFor(after),'current must open the effective release, else the newest in-progress one: expected '+currentFor(after));
+  const was=id=>before?.releases?.includes(id)?statusOf(before,id):null;
+  const priorEffective=(before?.releases??[]).find(i=>statusOf(before,i)==='effective')??null;
+  for(const id of ids){
+    const from=was(id),to=statusOf(after,id);
+    if(from===null){check(['in-progress','effective'].includes(to),'A new preliminary release enters in progress or effective: '+id);}
+    else if(from!==to)check(to==='withdrawn'&&from!=='withdrawn'||from==='in-progress'&&to==='effective'||from==='effective'&&to==='superseded',
+      'Preliminary release '+id+' cannot move from '+from+' to '+to);
+    if(to==='effective'&&from!=='effective'&&priorEffective&&priorEffective!==id){
+      check(statusOf(after,priorEffective)==='superseded'||statusOf(after,priorEffective)==='withdrawn',
+        'Mark the previous effective release '+priorEffective+' superseded when '+id+' becomes effective');
+      const prior=receipts.get(priorEffective),mine=receipts.get(id);
+      check(prior&&mine&&parse(mine,'receipt: '+id).previousCheckpointSha256===sha(prior),
+        'An effective release must be checked against the previous effective one (--previous its receipt): '+id);
+    }
+    if(to==='effective'&&from!=='effective'){
+      const r=receipts.get(id);
+      check(r&&parse(r,'receipt: '+id).status==='layout-checked','An effective preliminary release needs a layout-checked receipt: '+id);
+    }
+  }
+  return {effective:effective[0]??null,current:after.current};
+}
 /**
  * The review scene the page reads, when the receipt pins its exact served bytes and content and it is a valid
  * scene that repeats the receipt's results; otherwise the reason it is refused.
@@ -320,7 +376,7 @@ export function checkSelfContained(bytes,where){
   if(policies!==1)fail('declare exactly one http-equiv element, the policy');
   if(/\b(?:fetch|importScripts|sendBeacon)\s*\(|\b(?:XMLHttpRequest|WebSocket|EventSource|RTCPeerConnection)\b/.test(html))
     fail('a network API');
-  if(!html.includes(releaseLabel))fail('label the page "'+releaseLabel+'"');
+  if(!html.includes(phaseText))fail('say on the page that it is a "'+phaseText+'" release');
 }
 
 /**
@@ -358,7 +414,7 @@ export function checkRelease(id,files,policy={}){
     check(record.view?.file==='package-motion.html'&&files.has('package-motion.html'),'Missing checked player: '+id);
   }
   const checkedView=approved?'package-motion.html':'index.html';
-  check(record.label===releaseLabel,'Label release '+id+' "'+releaseLabel+'"');
+  check(record.phase===releasePhase,'Release '+id+' must identify its phase: "phase": "'+releasePhase+'"');
   const trials=new Set();
   const missions=record.missionCases;
   // Season field-interaction players, listed and pinned by the release record.
@@ -403,7 +459,8 @@ export function checkRelease(id,files,policy={}){
     'Published scene differs from the receipt and release record: '+id);
   check(pinMatches(record.view,checkedView,view)&&object(receipt.view)&&receipt.view.verified===true&&receipt.view.sha256===record.view.sha256,
     'Published view differs from the receipt and release record: '+id);
-  check(stockPage(view),'Published view is not this plugin\'s stock review page: '+id+'. Regenerate it with --write-view');
+  // The page is the season's own copy of the stock page: only its preliminary-design identity is checked.
+  check(lf(view).includes(phaseText),'The release page must say it is a "'+phaseText+'" release: '+id);
   // Everything the page displays as a result comes from the pinned scene, which must repeat the receipt's result,
   // including the displaced control the receipt reports separately as rejected.
   const pinned=pinnedScene(files.get(sceneFile),receipt);
@@ -640,20 +697,22 @@ export function auditTree(oldFiles,newFiles,policy={}){
   check(after.top.has('releases.json'),'Publish the preliminary release index (releases.json)');
   const index=parse(after.top.get('releases.json'),'preliminary release index');
   const ids=index?.releases;
-  check(object(index)&&['current,releases','current,legacy,releases'].includes(Object.keys(index).sort().join())&&Array.isArray(ids)&&ids.length&&
+  check(object(index)&&Object.keys(index).every(k=>['current','releases','legacy','designStatus'].includes(k))&&Array.isArray(ids)&&ids.length&&
     ids.every(i=>typeof i==='string'&&releaseId.test(i))&&new Set(ids).size===ids.length&&ids.includes(index.current),
     'The preliminary release index needs unique release IDs and a listed current release');
   // Releases deployed before release records existed may be named as legacy, but only if already approved.
   check(index.legacy===undefined||Array.isArray(index.legacy)&&index.legacy.every((i,n)=>ids[n]===i&&before.releases.has(i)),
     'Only releases already in the approved site can be listed as legacy');
-  if(before.top.has('releases.json')){
-    const prior=parse(before.top.get('releases.json'),'approved preliminary release index').releases;
+  const priorIndex=before.top.has('releases.json')?parse(before.top.get('releases.json'),'approved preliminary release index'):null;
+  if(priorIndex){
+    const prior=priorIndex.releases;
     check(Array.isArray(prior)&&prior.every((p,i)=>ids[i]===p),'Preliminary releases may only append; keep every earlier entry in order');
   }
   check(ids.length===after.releases.size&&ids.every(i=>after.releases.has(i)),'The preliminary release index and release directories disagree');
   const added=ids.filter(i=>!before.releases.has(i));
-  check(!added.length||lf(viewer).includes('id="wip"')&&lf(viewer).includes(releaseLabel),
-    'Update the stable preliminary viewer to this plugin\'s template so new releases show the work-in-progress label');
+  check(!added.length||lf(viewer).includes(phaseText),'The stable preliminary viewer must say it lists "'+phaseText+'" releases');
+  const receipts=new Map(ids.map(i=>[i,after.releases.get(i)?.get('receipt.json')]).filter(([,r])=>r));
+  const status=checkStatusChange(priorIndex,index,receipts);
   for(const id of ids){
     const files=after.releases.get(id);
     if(files.has('release.json')){
@@ -663,17 +722,30 @@ export function auditTree(oldFiles,newFiles,policy={}){
     }
   }
   for(const id of added)checkRelease(id,after.releases.get(id),policy);
-  return {releases:ids,added,current:index.current};
+  return {releases:ids,added,current:index.current,effective:status.effective};
+}
+
+/** A one-line, information-only summary of a release page against the stock page. */
+export function templateReport(dir){
+  const file=lstatSync(dir).isDirectory()?path.join(dir,'index.html'):dir;
+  const report=compareTemplate(readFileSync(file));
+  return {page:file,stockPage:report.stock,contentSecurityPolicy:report.csp,
+    note:(report.stock?'Page is the plugin stock review page':'Page differs from the plugin stock review page in '+report.differences.length+(report.differences.length===20?'+':'')+' line(s)')+
+      (report.csp?'':'; it has no Content-Security-Policy')+'. Information only: the gate does not compare page markup.',
+    differences:report.differences};
 }
 
 if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href){
+  const args=process.argv.slice(2),compare=args.includes('--compare-template'),[mode,dir,...rest]=args.filter(a=>a!=='--compare-template');
   try{
-    const [mode,dir,...rest]=process.argv.slice(2);
-    if(['verify','verify-catalog'].includes(mode)&&dir&&(!rest.length||rest.length===2&&rest[0]==='--policy')){
+    if(mode==='compare-template'&&dir&&!rest.length){console.log(JSON.stringify(templateReport(dir),null,2));}
+    else if(['verify','verify-catalog'].includes(mode)&&dir&&(!rest.length||rest.length===2&&rest[0]==='--policy')){
       const policy=rest.length?preliminaryPolicy(parse(readFileSync(rest[1]),'site policy').preliminaryReleases,[]):{};
       const result=mode==='verify'?await verifyRelease(dir,policy??{}):verifyCatalog(dir,policy??{});
       console.log(JSON.stringify(result,null,2));
     }
-    else throw Error('Usage: preliminary-release.mjs verify RELEASE_DIRECTORY | verify-catalog SITE_DIRECTORY [--policy SERVED_POLICY]');
+    else throw Error('Usage: preliminary-release.mjs verify RELEASE_DIRECTORY [--compare-template] | verify-catalog SITE_DIRECTORY [--policy SERVED_POLICY] | compare-template RELEASE_DIRECTORY_OR_PAGE');
   }catch(error){console.error(error.message);process.exitCode=1;}
+  // Information only; it never changes the exit status.
+  if(compare&&mode==='verify'&&dir){try{console.log(JSON.stringify({template:templateReport(dir)},null,2));}catch(error){console.log(JSON.stringify({template:{note:'Template comparison unavailable: '+error.message}}));}}
 }

@@ -7,7 +7,7 @@ description: "Create or refresh a student robot showcase with explorable CAD mod
 
 Before promoting a new whole robot or subsystem model, use `frc-mechanical-readiness` on the exact Fusion configuration and every distributed derivative. Require a negative-control and candidate receipt from an installed first-party method for externally discovered defects. Require a passing, scoped mechanical review before replacing the live model, its README image or the native download. On an open or failed candidate, preserve the deployed revision and continue private engineering work. [Model promotion and evidence](../../docs/mechanical-readiness.md)
 
-A work-in-progress preliminary design can deploy beside the live model without that review. Each [preliminary release](../../docs/private-model-release.md#publish-work-in-progress-preliminary-releases) needs a layout-checked receipt and a playable mission-task case for a represented narrative objective. Link it as a secondary, labelled page. It never replaces the primary view, README still or model selector, which keep showing the latest approved detailed design.
+A preliminary design release, in progress or effective, can deploy beside the live model without that review. Each [preliminary release](../../docs/private-model-release.md#publish-preliminary-design-releases) needs a layout-checked receipt and a playable mission-task case for a represented narrative objective. Link it as a secondary page that identifies itself as preliminary design. It never replaces the primary view, README still or model selector, which keep showing the latest approved detailed design.
 
 
 ## Let students explore the model

@@ -1,4 +1,4 @@
-"""Append a checked work-in-progress release, or audit the index before deploying the season site."""
+"""Append a checked preliminary design release, set its design status, or audit the index before deploying."""
 import argparse
 from contextlib import contextmanager
 import hashlib
@@ -51,6 +51,9 @@ def index(site, recovering=None, verifier=None, policy=None):
     dirs = {p.name for p in (site / "releases").iterdir() if p.is_dir() and not p.name.startswith(".")}
     if set(names) - dirs or dirs - set(names) - {recovering}:
         raise ValueError("Release index and immutable directories disagree. Reconcile every release before publishing.")
+    if set(record) - {"current", "releases", "legacy", "designStatus"}:
+        raise ValueError("Unknown release index field")
+    check_statuses(record)
     for name in names:
         release = site / "releases" / name
         if policy and name in read(policy).get("preliminaryReleases", {}).get("presentations", {}):
@@ -74,7 +77,37 @@ def index(site, recovering=None, verifier=None, policy=None):
     return record
 
 
-LABEL = "Work-in-progress preliminary design"
+PHASE = "preliminary-design"
+PHASE_TEXT = "Preliminary design"
+# A record issued before releases named their phase carried this label instead; it still identifies the phase.
+ISSUED_LABEL = "Work-in-progress preliminary design"
+STATUSES = ("in-progress", "effective", "superseded", "withdrawn")
+
+
+def status_of(record, release):
+    """A listed release without a designStatus entry is in progress."""
+    return (record.get("designStatus") or {}).get(release, "in-progress")
+
+
+def current_for(record):
+    """The release the stable URL opens: the effective one, else the newest in-progress one, else the newest not withdrawn."""
+    names = record["releases"]
+    return (next((n for n in names if status_of(record, n) == "effective"), None)
+            or next((n for n in reversed(names) if status_of(record, n) == "in-progress"), None)
+            or next((n for n in reversed(names) if status_of(record, n) != "withdrawn"), None)
+            or (names[-1] if names else None))
+
+
+def check_statuses(record):
+    statuses = record.get("designStatus")
+    if statuses is not None and (not isinstance(statuses, dict) or any(
+            k not in record["releases"] or v not in STATUSES for k, v in statuses.items())):
+        raise ValueError("designStatus maps listed release IDs to " + ", ".join(STATUSES))
+    if sum(status_of(record, n) == "effective" for n in record["releases"]) > 1:
+        raise ValueError("At most one preliminary design release is effective")
+    if record["releases"] and record.get("current") != current_for(record):
+        raise ValueError("current must open the effective release, else the newest in-progress one: expected "
+                         + str(current_for(record)))
 RESERVED = {"index.html", "receipt.json", "motion.json", "release.json", "budgets.json", "limits.json"}
 TRIAL = re.compile(r"[a-z0-9][a-z0-9._-]{0,127}\.json")
 GEOMETRY = re.compile(r"[a-z0-9][a-z0-9._-]{0,110}\.geometry\.json\.gz")
@@ -272,8 +305,8 @@ def self_contained(html):
         return "declare exactly one http-equiv element, the policy"
     if NETWORK.search(html):
         return "a network API"
-    if LABEL not in html:
-        return 'label the page "' + LABEL + '"'
+    if PHASE_TEXT not in html:
+        return 'say on the page that it is a "' + PHASE_TEXT + '" release'
     return None
 
 
@@ -322,8 +355,11 @@ def check_release(release):
     record, receipt = read(release / "release.json"), read(release / "receipt.json")
     sha = lambda name: hashlib.sha256((release / name).read_bytes()).hexdigest()
     if (record.get("schema") != "agent-frc/preliminary-release@1" or record.get("release") != release.name
-            or record.get("label") != LABEL or record.get("issue") != receipt.get("issue")):
-        fail("Release record names a different schema, release, label or issue")
+            or not (record.get("phase") == PHASE or record.get("label") == ISSUED_LABEL)
+            or record.get("issue") != receipt.get("issue")):
+        fail("Release record names a different schema, release, phase or issue")
+    if PHASE_TEXT not in (release / "index.html").read_text(encoding="utf-8", errors="replace"):
+        fail('The release page must say it is a "' + PHASE_TEXT + '" release')
     pins = [(record.get("receipt") or {}, "receipt.json"), (record.get("view") or {}, "index.html"),
             (record.get("scene") or {}, "motion.json")]
     if (any(pin.get("file") != name or pin.get("sha256") != sha(name) for pin, name in pins)
@@ -497,7 +533,7 @@ def stage(season, inputs, release, verifier=None, policy=None):
         files["release.json"] = Path(tmp) / "release.json"
         files["release.json"].write_text(json.dumps(dict(
             schema="agent-frc/preliminary-release@1", release=release, issue=result["issue"],
-            label="Work-in-progress preliminary design", status=result["status"],
+            phase=PHASE, status=result["status"],
             receipt=dict(file="receipt.json", sha256=digest("receipt.json")),
             view=dict(file="index.html", sha256=digest("index.html")),
             scene=dict(file="motion.json", sha256=digest("motion.json"), stepSha256=result["step"]["sha256"]),
@@ -515,11 +551,63 @@ def stage(season, inputs, release, verifier=None, policy=None):
                 raise ValueError("Existing release bytes differ: " + release)
         else:
             staged.rename(destination)
-        record["current"] = release
         record["releases"].append(release)
+        # A new release enters in progress; the stable URL keeps opening the effective release when there is one.
+        record.setdefault("designStatus", {})[release] = "in-progress"
+        record["current"] = current_for(record)
         new_index = Path(tmp) / "releases.json"
         new_index.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
         new_index.replace(site / "releases.json")
+
+
+def set_status(site, release, status):
+    """Mark a release effective or withdrawn in the index; the issued directory never changes.
+
+    Making a release effective supersedes the previous effective release. When one existed, the new release must
+    have been checked against it: its receipt's previousCheckpointSha256 is the previous release's receipt digest."""
+    if status not in ("effective", "withdrawn"):
+        raise ValueError("Set a release effective or withdrawn; superseded follows automatically")
+    with update_index(site):
+        record = index(site)
+        if release not in record["releases"]:
+            raise ValueError("Unknown release: " + release)
+        before = status_of(record, release)
+        if before in ("superseded", "withdrawn") or before == status:
+            raise ValueError("Preliminary release " + release + " cannot move from " + before + " to " + status)
+        statuses = record.setdefault("designStatus", {})
+        if status == "effective":
+            receipt_bytes = (site / "releases" / release / "receipt.json").read_bytes()
+            receipt = json.loads(receipt_bytes)
+            if receipt.get("status") != "layout-checked":
+                raise ValueError("An effective preliminary release needs a layout-checked receipt: " + release)
+            previous = next((n for n in record["releases"] if status_of(record, n) == "effective"), None)
+            if previous:
+                prior = hashlib.sha256((site / "releases" / previous / "receipt.json").read_bytes()).hexdigest()
+                if receipt.get("previousCheckpointSha256") != prior:
+                    raise ValueError("Check " + release + " against the effective release " + previous
+                                     + " (--previous its receipt.json) before making it effective")
+                statuses[previous] = "superseded"
+        statuses[release] = status
+        record["current"] = current_for(record)
+        check_statuses(record)
+        with tempfile.NamedTemporaryFile("w", dir=site, delete=False, encoding="utf-8", suffix=".json") as out:
+            out.write(json.dumps(record, indent=2) + "\n")
+        Path(out.name).replace(site / "releases.json")
+
+
+def template_report(site, verifier=None):
+    """Information only: how each release page compares with the plugin's stock review page."""
+    for name in read(site / "releases.json")["releases"]:
+        page = site / "releases" / name / "index.html"
+        if verifier:
+            run = subprocess.run(["node", str(verifier), "compare-template", str(page)], capture_output=True, text=True)
+            try:
+                note = json.loads(run.stdout)["note"]
+            except (ValueError, KeyError):
+                note = "template comparison unavailable"
+        else:
+            note = "page sha256 " + hashlib.sha256(page.read_bytes()).hexdigest()[:12] + "; pass --verifier to compare it with the stock page"
+        print(name + ": " + note)
 
 
 if __name__ == "__main__":
@@ -527,6 +615,7 @@ if __name__ == "__main__":
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("release", nargs="?")
     mode.add_argument("--check-index", action="store_true")
+    mode.add_argument("--set-status", nargs=2, metavar=("RELEASE", "STATUS"), help="Mark a release effective or withdrawn")
     parser.add_argument("--policy", type=Path, help="Approved staged policy for project presentations")
     parser.add_argument("--verifier", type=Path, help="Pinned plugin scripts/preliminary-release.mjs")
     args = parser.parse_args()
@@ -535,5 +624,8 @@ if __name__ == "__main__":
     base = Path(__file__).resolve().parent
     if args.check_index:
         index(base.parents[1] / "docs/preliminary-design", verifier=args.verifier, policy=args.policy)
+        template_report(base.parents[1] / "docs/preliminary-design", args.verifier)
+    elif args.set_status:
+        set_status(base.parents[1] / "docs/preliminary-design", *args.set_status)
     else:
         stage(base.parents[1], base / "releases" / args.release, args.release, args.verifier, args.policy)

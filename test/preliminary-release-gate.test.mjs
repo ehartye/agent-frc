@@ -29,7 +29,7 @@ const objectives=[
 
 const fieldPage='<!doctype html><html lang="en"><head>'+
   '<meta http-equiv="Content-Security-Policy" content="'+fieldPlayerPolicy+'"><meta charset="utf-8">'+
-  '<title>Invented lane trial</title><style>body{margin:0}</style></head><body><p>Work-in-progress preliminary design</p><canvas></canvas>'+
+  '<title>Invented lane trial</title><style>body{margin:0}</style></head><body><p>Preliminary design release</p><canvas></canvas>'+
   '<script>const frames=[0,0.1,0.2];requestAnimationFrame(()=>frames.length);</script></body></html>';
 const laneTrial=JSON.stringify({case:'loaded-turn',outcome:'The invented sample leaves the carrier toward the lane'});
 const laneObjective='Carry the sample to the bin';
@@ -64,7 +64,7 @@ function issueRelease(site,id,{status='layout-checked',edit=r=>r,missions,trial,
   const receiptBytes=JSON.stringify(receipt,null,2);
   write(dir,'index.html',view);write(dir,'review-scene.json.gz',served);write(dir,'motion.json',motion);write(dir,'budgets.json',budgets);write(dir,'limits.json',limits);
   write(dir,'receipt.json',receiptBytes);
-  const record={schema:'agent-frc/preliminary-release@1',release:id,issue:receipt.issue,label:'Work-in-progress preliminary design',
+  const record={schema:'agent-frc/preliminary-release@1',release:id,issue:receipt.issue,phase:'preliminary-design',
     status:receipt.status,receipt:{file:'receipt.json',sha256:sha(receiptBytes)},view:{file:'index.html',sha256:sha(view)},
     scene:{file:'motion.json',sha256:sha(motion),stepSha256:step.sha256},
     missionCases:missions??[{case:'loaded-turn',kind:'operating-case',accomplishes:'delivered',objective:'Carry the sample to the bin'}]};
@@ -78,7 +78,7 @@ function issueRelease(site,id,{status='layout-checked',edit=r=>r,missions,trial,
   write(dir,'release.json',record);
   return {dir,record};
 }
-function listing(site,current,releases){write(site,tree+'/releases.json',{current,releases});}
+function listing(site,current,releases,designStatus){write(site,tree+'/releases.json',{current,releases,...(designStatus?{designStatus}:{})});}
 
 function fixture(t) {
   const temp=mkdtempSync(path.join(os.tmpdir(),'prelim-gate-'));
@@ -106,7 +106,7 @@ test('approved historical replay and project player preserve the current physics
   const historyDir=path.join(site,tree,'releases',old);
   write(historyDir,'index.html',historyPage);write(historyDir,'release.json',history);
   const checked=readFileSync(path.join(dir,'index.html'));
-  const projectPage='<h1>Work-in-progress preliminary design</h1>';
+  const projectPage='<h1>Preliminary design review</h1>';
   write(dir,'package-motion.html',checked);write(dir,'index.html',projectPage);
   record.view.file='package-motion.html';write(dir,'release.json',record);
   listing(site,'new-layout',['layout-001',old,'new-layout']);
@@ -117,7 +117,7 @@ test('approved historical replay and project player preserve the current physics
   };
   assert.equal((await auditStaged(approved,site,policy)).preliminary.current,'new-layout');
   listing(site,old,['layout-001',old,'new-layout']);
-  await assert.rejects(auditStaged(approved,site,policy),/cannot be current/);
+  await assert.rejects(auditStaged(approved,site,policy),/cannot be current|current must open/);
   listing(site,'new-layout',['layout-001',old,'new-layout']);
   write(dir,'index.html',projectPage+'changed');
   await assert.rejects(auditStaged(approved,site,policy),/approved assets/);
@@ -135,7 +135,9 @@ test('a layout-checked preliminary release with a mission case deploys without a
   assert.equal(result.preliminary.current,'layout-002');
   assert.equal(result.signed,0);
   listing(site,'layout-001',['layout-001','layout-002']);
-  assert.equal((await auditStaged(approved,site,policy)).preliminary.current,'layout-001','the latest pointer may move');
+  await assert.rejects(auditStaged(approved,site,policy),/current must open the effective release, else the newest in-progress one: expected layout-002/);
+  listing(site,'layout-001',['layout-001','layout-002'],{'layout-001':'effective'});
+  assert.equal((await auditStaged(approved,site,policy)).preliminary.current,'layout-001','the stable URL opens the effective release');
 });
 
 test('a field-interaction trial bound by the receipt can carry the mission task', async t=>{
@@ -249,11 +251,7 @@ function repin(dir){rewrite(dir,'release.json',r=>{r.receipt.sha256=sha(readFile
 test('a release cannot smuggle script, geometry or unpinned files into the tree', async t=>{
   let f=fixture(t);
   let {dir}=next(f.site,'layout-002');
-  const html=readFileSync(path.join(dir,'index.html'),'utf8').replace('</main>','</main><script>alert(1)</script>');
-  write(dir,'index.html',html);
-  rewrite(dir,'receipt.json',r=>{r.view.sha256=sha(html);});
-  rewrite(dir,'release.json',r=>{r.view.sha256=sha(html);});repin(dir);
-  await assert.rejects(auditStaged(f.approved,f.site,f.policy),/stock review page/);
+  // The page is the season's to change; the gate guards the data files instead.
   for(const [file,bytes] of [['budgets.json','glTF\u0002 binary'],['limits.json','<html><script></script></html>'],
     ['budgets.json',JSON.stringify({asset:{version:'2.0'},meshes:[],masses:[],electricalCases:{}})]]){
     f=fixture(t);({dir}=next(f.site,'layout-002'));write(dir,file,bytes);
@@ -284,10 +282,10 @@ test('the player must display the receipt results and the viewer must carry the 
     await assert.rejects(auditStaged(approved,site,policy),/differ from the receipt/);
   }
   const {approved,site,policy}=fixture(t);
-  const legacy='<!doctype html><title>Preliminary design releases</title>';
+  const legacy='<!doctype html><title>Robot releases</title>';
   write(approved,tree+'/index.html',legacy);write(site,tree+'/index.html',legacy);
   next(site,'layout-002');
-  await assert.rejects(auditStaged(approved,site,policy),/work-in-progress label/);
+  await assert.rejects(auditStaged(approved,site,policy),/must say it lists "Preliminary design" releases/);
   listing(site,'layout-001',['layout-001']);rmSync(path.join(site,tree,'releases','layout-002'),{recursive:true});
   assert.deepEqual((await auditStaged(approved,site,policy)).preliminary.added,[],'unchanged history still deploys');
 });
@@ -415,13 +413,13 @@ test('a field player must be self-contained', async t=>{
     fieldPage.replace('<head>'+policy,'<head><meta charset="utf-8">'+policy),
     fieldPage.replace('<head>','<head><script>top.x=1</script>'),
     fieldPage.replace('<html lang="en">','<html lang="en" data-x=\'>').replace('<title>','\'><title>'),
-    '<!doctype html><html data-x=\'><head>'+policy+'\'><body><script>1</script><p>Work-in-progress preliminary design</p></html>',
+    '<!doctype html><html data-x=\'><head>'+policy+'\'><body><script>1</script><p>Preliminary design release</p></html>',
     fieldPage.replace('<canvas>','<a href="https://example.invalid/">Source</a><canvas>'),
     fieldPage.replace('<canvas>','<a/href="https://example.invalid/">x</a><canvas>'),
     fieldPage.replace('<canvas>','<a title=">" href="https://example.invalid/">x</a><canvas>'),
     fieldPage.replace('<canvas>','<a href="&#104;ttps://example.invalid/">x</a><canvas>'),
     fieldPage.replace('<canvas>','<meta http-equiv="&#114;efresh" content="0;url=https://example.invalid"><canvas>'),
-    fieldPage.replace('<p>Work-in-progress preliminary design</p>',''),
+    fieldPage.replace('<p>Preliminary design release</p>',''),
     String.fromCharCode(0xfeff,0xfeff)+fieldPage,
     ...Object.values(scannerCases).map(body=>fieldPage.replace('<canvas>',body+'<canvas>'))];
   for(const page of pages){
@@ -480,7 +478,7 @@ test('stage.py --check-index applies the same field player rules', async t=>{
     [{page:fieldPage.replace('<canvas>','<a title=">" href="https://example.invalid/">x</a><canvas>')},/not self-contained/],
     [{page:String.fromCharCode(0xfeff,0xfeff)+fieldPage},/not self-contained/],
     ...Object.values(scannerCases).map(body=>[{page:fieldPage.replace('<canvas>',body+'<canvas>')},/not self-contained/]),
-    [{page:fieldPage.replace('<p>Work-in-progress preliminary design</p>','')},/not self-contained/],
+    [{page:fieldPage.replace('<p>Preliminary design release</p>','')},/not self-contained/],
     [{page:String.fromCharCode(0xfeff)+fieldPage},0],
     [{rows:[{title:'Lane',href:'field%2flane.html',objective:laneObjective,evidence:'x'}]},/listed field player/]];
   for(const [field,expected] of cases){
@@ -502,4 +500,73 @@ test('an issued field player is immutable', async t=>{
   assert.deepEqual((await auditStaged(f.approved,f.site,f.policy)).preliminary.added,[]);
   write(path.join(f.site,tree,'releases','layout-002'),'field/lane.html',fieldPage.replace('0.2','0.3'));
   await assert.rejects(auditStaged(f.approved,f.site,f.policy),/earlier preliminary release/);
+});
+
+test('design status lives in the index: effective, superseded and withdrawn without touching an issued release', async t=>{
+  const {approved,site,policy}=fixture(t);
+  next(site,'layout-002');
+  // The approved site now holds both releases, each in progress.
+  cpSync(site,approved,{recursive:true,force:true});
+  const audit=()=>auditStaged(approved,site,policy);
+  listing(site,'layout-001',['layout-001','layout-002'],{'layout-001':'effective'});
+  const flipped=await audit();
+  assert.deepEqual([flipped.preliminary.effective,flipped.preliminary.added],['layout-001',[]],'an index change alone marks a release effective');
+  for(const [statuses,current,pattern] of [
+    [{'layout-001':'final'},'layout-002',/designStatus maps listed release IDs/],
+    [{'layout-009':'effective'},'layout-002',/designStatus maps listed release IDs/],
+    [{'layout-001':'effective','layout-002':'effective'},'layout-001',/At most one/],
+    [{'layout-001':'superseded'},'layout-002',/cannot move from in-progress to superseded/]]){
+    listing(site,current,['layout-001','layout-002'],statuses);
+    await assert.rejects(audit(),pattern,JSON.stringify(statuses));
+  }
+  // Approve layout-001 as effective, then make layout-002 effective: it must have been checked against layout-001.
+  listing(site,'layout-001',['layout-001','layout-002'],{'layout-001':'effective'});
+  cpSync(site,approved,{recursive:true,force:true});
+  listing(site,'layout-002',['layout-001','layout-002'],{'layout-001':'effective','layout-002':'effective'});
+  await assert.rejects(audit(),/At most one/);
+  listing(site,'layout-002',['layout-001','layout-002'],{'layout-001':'superseded','layout-002':'effective'});
+  await assert.rejects(audit(),/checked against the previous effective one/);
+  const dir=path.join(site,tree,'releases','layout-002'),prior=readFileSync(path.join(site,tree,'releases','layout-001','receipt.json'));
+  const receipt=JSON.parse(readFileSync(path.join(dir,'receipt.json'),'utf8'));
+  write(dir,'receipt.json',JSON.stringify({...receipt,previousCheckpointSha256:sha(prior)},null,2));
+  await assert.rejects(audit(),/An earlier preliminary release changed/,'an issued release stays byte-immutable');
+  write(dir,'receipt.json',JSON.stringify(receipt,null,2));
+  listing(site,'layout-002',['layout-001','layout-002'],{'layout-001':'withdrawn'});
+  assert.equal((await audit()).preliminary.current,'layout-002','a withdrawn release is never current');
+  cpSync(site,approved,{recursive:true,force:true});
+  listing(site,'layout-001',['layout-001','layout-002'],{'layout-001':'effective'});
+  await assert.rejects(audit(),/cannot move from withdrawn to effective/,'nothing returns from withdrawn');
+});
+
+test('a release must name its phase and the page must say it is a preliminary design', async t=>{
+  for(const [change,pattern] of [[r=>{delete r.phase;},/identify its phase/],[r=>{r.phase='detailed-design';},/identify its phase/]]){
+    const {approved,site,policy}=fixture(t);
+    const {dir}=next(site,'layout-002');
+    rewrite(dir,'release.json',change);
+    await assert.rejects(auditStaged(approved,site,policy),pattern);
+  }
+  const {approved,site,policy}=fixture(t);
+  const {dir}=next(site,'layout-002');
+  const page=readFileSync(path.join(dir,'index.html'),'utf8').replaceAll('Preliminary design','Robot design');
+  write(dir,'index.html',page);
+  rewrite(dir,'receipt.json',r=>{r.view.sha256=sha(page);});
+  rewrite(dir,'release.json',r=>{r.view.sha256=sha(page);});repin(dir);
+  await assert.rejects(auditStaged(approved,site,policy),/must say it is a "Preliminary design" release/);
+});
+
+test('a season may change its copy of the stock page; the template comparison is information only', async t=>{
+  const {approved,site,policy}=fixture(t);
+  const {dir}=next(site,'layout-002');
+  const page=readFileSync(path.join(dir,'index.html'),'utf8').replace('</main>','<section><h2>Season panel</h2></section></main>');
+  write(dir,'index.html',page);
+  rewrite(dir,'receipt.json',r=>{r.view.sha256=sha(page);});
+  rewrite(dir,'release.json',r=>{r.view.sha256=sha(page);});repin(dir);
+  assert.deepEqual((await auditStaged(approved,site,policy)).preliminary.added,['layout-002'],'a customized page still deploys');
+  const {templateReport}=await import('../scripts/preliminary-release.mjs');
+  const report=templateReport(dir);
+  assert.equal(report.stockPage,false);
+  assert.equal(report.contentSecurityPolicy,true);
+  assert.ok(report.differences.length>=1&&/Information only/.test(report.note));
+  write(dir,'index.html',stockPage);
+  assert.equal(templateReport(dir).stockPage,true);
 });

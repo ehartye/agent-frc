@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en"><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-src 'self' https:; base-uri 'none'; form-action 'none'"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Preliminary design review</title><link rel="icon" href="data:,"><link rel="stylesheet" href="../../fonts/fonts.css">
 <style>
 :root{--navy:#102746;--royal:#184e98;--blue:#194fb0;--gold:#f4c44d;--paper:#f3f6fb;--ink:#132b48;--line:#b8c8d7;--steel:#48616a;--display:"Barlow Condensed","Franklin Gothic Medium","Arial Narrow",sans-serif;--body:"Source Sans 3","Segoe UI",Arial,sans-serif;--mono:"IBM Plex Mono",Consolas,monospace}
 *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.45 var(--body)}main{max-width:1920px;margin:auto;padding:0 2vw 3rem}
 a{color:#1b528b}h1,h2,h3,p{margin:0}h2{font:600 20px var(--display);margin:0 0 10px;color:var(--navy)}h3{font:600 15px var(--display);margin:10px 0 2px;color:var(--navy)}
 nav{padding:6px 0;font-size:13px}header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:0 -2vw;padding:10px 2vw;background:var(--navy);border-bottom:3px solid var(--gold);color:white;font:600 14px var(--display);letter-spacing:.045em}header>span:first-child{margin-right:auto}header a{color:#ffda76;font:13px var(--body);letter-spacing:0}
-.wip{margin:8px 0 0;font-weight:600;font-size:13px;color:#684100}
+.phase{margin:8px 0 0;font-weight:600;font-size:13px;color:#684100}
 .title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:14px 0 8px}.title p{color:var(--royal);font:600 12px var(--mono);margin-bottom:4px}.title h1{font:600 clamp(25px,2.4vw,38px)/1.05 var(--display);letter-spacing:-.025em}
 .chip{display:inline-block;padding:6px 12px;border-radius:4px;color:#684100;background:#fff0bf;border:1px solid #e5c56b;font-weight:700}.chip.layout-checked{color:#0f5130;background:#dff3e6;border-color:#8cc8a2}.chip.blocked,.chip.reopen{color:#7a1d10;background:#fde0da;border-color:#e3a093}
 #review-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));gap:4px 18px;margin:0 0 12px;padding:8px 12px;background:white;border:1px solid var(--line);border-radius:6px}#review-summary dt{font:600 11px var(--display);text-transform:uppercase;letter-spacing:.07em;color:var(--steel)}#review-summary dd{margin:0;font-size:13px;overflow-wrap:anywhere}#review-summary .wide{grid-column:1/-1}
@@ -40,11 +40,11 @@ aside{padding:16px;align-self:start}aside label{display:block;margin-bottom:5px}
 @media(max-width:60rem){.grid{grid-template-columns:1fr}#stage{height:65vh;min-height:340px}}
 @media(max-width:800px){.lower,.power-ledger{grid-template-columns:1fr}#resources{display:flex;flex-wrap:wrap}.budget-meter{flex:1 1 185px}.title{align-items:start;flex-direction:column}.bar{gap:6px}}
 @media(max-width:560px){#resources{display:grid;grid-template-columns:1fr}}
-</style>
+</style></head>
 <main>
 <nav aria-label="Review releases"><a href="../../">All preliminary releases</a></nav>
 <header><span>Agent FRC　/　Engineering review</span><span id="links"></span></header>
-<p class="wip" role="note">Work-in-progress preliminary design. This is not a released detailed model. The review receipt gives its status.</p>
+<p class="phase" role="note">Preliminary design<span id="designStatus"></span>. Not the released detailed model; the review receipt gives its checked result.</p>
 <div class="title"><div><p id="context">Preliminary design</p><h1 id="heading">Preliminary design review</h1></div><strong id="state" class="chip">Loading geometry…</strong></div>
 <dl id="review-summary" aria-label="Review header">
  <div><dt>Selected architecture</dt><dd id="architecture"></dd></div><div><dt>Datum</dt><dd id="datum"></dd></div><div><dt>Units</dt><dd id="units"></dd></div><div><dt>Strategic narrative</dt><dd id="narrativeSource"></dd></div>
@@ -188,6 +188,12 @@ function decide(status,unmet,source){
  $('decisionSource').textContent=source;$('firstUnmet').textContent=unmet?unmet.text:'None. Every commissioned check passes.';
 }
 function triggered(list){$('triggered').replaceChildren(...(list.length?list:['None recorded']).map(v=>text('li',typeof v==='string'?v:v.phase+': '+v.reason+(v.affected?' ('+v.affected.join(', ')+')':''))))}
+// The release index beside the releases says this release's design status; it is display only.
+async function showDesignStatus(){
+ const id=location.pathname.split('/').filter(Boolean).at(-2);
+ try{const r=await fetch('../../releases.json',{cache:'no-store'});if(!r.ok)return;const index=await r.json();if(!index.releases?.includes(id))return;
+  const s=index.designStatus?.[id]??'in-progress';$('designStatus').textContent=' · '+s.replace('-',' ')+(s==='withdrawn'?' (withdrawn: not a current design)':'')}catch{}
+}
 async function bindReceipt(contentSha){
  let receipt=null;try{const r=await fetch('receipt.json',{cache:'no-store'});receipt=r.ok?await r.json():null}catch{}
  if(!receipt)return;
@@ -496,7 +502,7 @@ async function init(){
  entries=Object.entries(scene.bodies);custom=readGroups();
  for(const m of scene.meshes){const c=[0,1,2].map(i=>m.v.reduce((s,p)=>s+p[i],0)/m.v.length);let best=1/0;for(const p of m.v){const d=p.reduce((s,x,i)=>s+(x-c[i])**2,0);if(d<best){best=d;m.anchor=p}}}
  for(const [,b] of entries){b.tint=rgb(b.color);b.dim=b.tint.map((x,i)=>.20*x+.80*[.64,.73,.83][i])}
- header();
+ header();showDesignStatus();
  $('motion').replaceChildren(...scene.cases.map(c=>new Option(c.label,c.id)));
  const deep=new URLSearchParams(location.search).get('case');$('motion').selectedIndex=Math.max(0,scene.cases.findIndex(c=>c.id===(deep||scene.openingCase)));
  $('duty').replaceChildren(...scene.power.map(e=>new Option(e.case,e.case)));$('duty').disabled=!scene.power.length;

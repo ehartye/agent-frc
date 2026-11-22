@@ -57,7 +57,7 @@ test('staging publishes the pinned review scene and the index check refuses a ta
   const content = Buffer.from('{"schema":"agent-frc/preliminary-review-scene@1","issue":"synthetic-a","fieldInteractions":[]}');
   const scene = { ...(await pin('review-scene.json.gz', gzipSync(content))), contentSha256: sha(content), bytes: content.length };
   const motion = await pin('paths.json', '{"cases":[]}');
-  const view = await pin('viewer.html', '<html>stock page</html>');
+  const view = await pin('viewer.html', '<html>Preliminary design stock page</html>');
   const limits = await pin('package-limits.json', '{"inspectionLimitKg":14}');
   const budgets = await pin('budgets.json', JSON.stringify({ requirements: limits, masses: [], electricalCases: {} }));
   const plan = await pin('layout.json', JSON.stringify({ motion, budgets, view: view.file }));
