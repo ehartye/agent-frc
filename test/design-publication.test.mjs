@@ -337,6 +337,16 @@ test('the real layout check reruns a committed synthetic release and rejects a f
     assert.match(report, /trial cad\/preliminary-design\/releases\/layout-001\/release-lane-trial\.json has no qualification record/);
     assert.doesNotMatch(report, /the motion is prescribed/);
     editJson(path.join(season, prelim, 'releases.json'), i => ({...i, designStatus: {'layout-001': 'in-progress'}}));
+    // An edit to the in-progress design is staged under the same ID: one entry, a counted revision, and the rerun on the revised inputs.
+    const folder = 'cad/preliminary-design/releases/layout-001';
+    editJson(path.join(season, folder, 'layout.json'), l => ({...l, presentation: {...l.presentation, focus: 'Invented revised focus.'}}));
+    execFileSync(process.execPath, [fileURLToPath(new URL('../scripts/design.mjs', import.meta.url)), 'preliminary-check', season, folder + '/layout.json',
+      '--write-view', '--require-checked', '--quiet', '--output', folder + '/receipt.json'], {stdio: 'pipe'});
+    assert.match(execFileSync(py, ['-B', path.join(season, 'cad/preliminary-design/stage.py'), 'layout-001'], {encoding: 'utf8'}), /Revised preliminary release layout-001 in place \(in-progress, revision 2\)/);
+    const revised = checkProject(season, {budgetMinutes: 5});
+    assert.deepEqual(revised.errors, []);
+    assert.deepEqual(revised.preliminary.releases, [{release: 'layout-001', status: 'in-progress', rerun: 'pass'}]);
+    assert.equal(JSON.parse(readFileSync(path.join(season, prelim, 'releases.json'))).revision['layout-001'].number, 2);
     // Move the displaced control so it no longer collides, then forge the receipt's plan digest by hand.
     const plan = path.join(season, 'cad/preliminary-design/releases/layout-001/layout.json');
     editJson(plan, l => ({...l, control: {...l.control, offsetMm: [0, 50, 0]}}));
