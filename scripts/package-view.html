@@ -8,12 +8,19 @@
 h1,h2,h3{font-family:var(--display);font-weight:700;letter-spacing:.01em;color:var(--navy)}h1{margin:0;color:white;font-size:clamp(1.6rem,3vw,2.3rem)}h2{border-bottom:3px solid var(--gold);padding-bottom:.15rem;margin-top:2rem}
 #review-header{background:var(--navy);color:white;border-bottom:4px solid var(--gold);padding:1rem clamp(1rem,4vw,3rem)}#review-header dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));gap:.4rem 1.5rem;margin:.75rem 0 0}#review-header dt{font:600 .8rem var(--display);text-transform:uppercase;letter-spacing:.06em;color:var(--gold)}#review-header dd{margin:0;overflow-wrap:anywhere}#review-header .decision{grid-column:1/-1}#review-header details{margin-top:.6rem}#review-header a{color:var(--gold)}
 .wip{margin:.5rem 0 0;font-weight:600}.status{display:inline-block;padding:0 .45rem;border-radius:.2rem;font-weight:700;background:var(--gold);color:var(--navy)}.status.blocked,.status.reopen{background:#ffb3a8}.status.layout-checked{background:#bfe6c8}
-fieldset{display:flex;flex-wrap:wrap;align-items:center;gap:.65rem;border:0;padding:0;margin:0}legend{font:700 1rem var(--display);color:var(--navy)}button,select{font:inherit;padding:.3rem .55rem;border:1px solid var(--steel);border-radius:.25rem;background:white;color:var(--navy)}button.primary{background:var(--blue);border-color:var(--blue);color:white}button:disabled{opacity:.5}
+fieldset{display:flex;flex-wrap:wrap;align-items:center;gap:.65rem;border:0;padding:0;margin:0}legend{font:700 1rem var(--display);color:var(--navy)}button,select,input[type=search]{font:inherit;padding:.3rem .6rem;border:1px solid #8199b9;border-radius:6px;background:white;color:var(--navy)}button{font-weight:600;cursor:pointer}button.primary{background:var(--blue);border-color:var(--blue);color:white}button:disabled{opacity:.5}
 button:focus-visible,select:focus-visible,input:focus-visible,canvas:focus-visible,a:focus-visible{outline:3px solid var(--blue);outline-offset:1px}
-#stage{position:relative;margin:.75rem 0;background:#101e28;overflow:hidden;border-radius:.25rem}canvas{width:100%;height:min(66vh,50rem);display:block;touch-action:none;cursor:grab}#labels{position:absolute;inset:0;pointer-events:none}.tag{position:absolute;background:#142833d9;color:white;padding:0 3px;font:11px var(--body);white-space:nowrap}#sceneStatus{position:absolute;left:.75rem;bottom:.6rem;color:white;font-size:.85rem;background:#142833cc;padding:.1rem .4rem}
+.viewer-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(17rem,23rem);gap:1rem;align-items:start;margin:.75rem 0}
+#stage{position:relative;background:#101e28;overflow:hidden;border-radius:12px}canvas{width:100%;height:min(66vh,50rem);display:block;touch-action:none;cursor:grab}#labels{position:absolute;inset:0;pointer-events:none}.tag{position:absolute;background:#142833d9;color:white;padding:0 3px;font:11px var(--body);white-space:nowrap}#sceneStatus{position:absolute;left:.75rem;bottom:.6rem;color:white;font-size:.85rem;background:#142833cc;padding:.1rem .4rem}
 output,td,dd,#metrics{font-variant-numeric:tabular-nums}small{display:block;color:var(--steel)}
 #metrics{display:flex;flex-wrap:wrap;gap:.5rem 2rem;padding:1rem;background:var(--navy);color:white;border-top:3px solid var(--gold)}#metrics dl{margin:0}#metrics dt{font-size:.85rem}#metrics dd{margin:0;font-size:1.25rem;font-weight:700}
 section{margin:1rem 0}table{border-collapse:collapse;width:100%;background:white}th,td{padding:.4rem .55rem;text-align:left;border-bottom:1px solid var(--edge);vertical-align:top}th{background:#e2eef2;font-family:var(--display);font-size:1rem}.scroll{overflow-x:auto}#memberSet{display:flex;gap:.65rem;flex-wrap:wrap}#summary{font-weight:600}
+#inspector{background:white;border:1px solid var(--edge);border-top:4px solid var(--gold);border-radius:12px;padding:.75rem 1rem;max-height:min(66vh,50rem);overflow:auto}
+#inspector h2{margin:0 0 .4rem;border:0;font-size:1.35rem}#inspector label{display:block;font-weight:600;font-size:.9rem}#inspector input,#inspector select{width:100%;margin:.2rem 0 .5rem}
+#inspector h3{margin:.2rem 0 0;font-size:1.4rem}#inspector .inspector-actions{margin:.4rem 0}#componentList{margin-top:.6rem;border-top:1px solid var(--edge);padding-top:.4rem}#componentList summary{cursor:pointer;font-weight:600}.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}#inspId{margin:0;color:var(--steel);font-size:.9rem}#inspFields{margin:.4rem 0}#inspFields dt{font:600 .8rem var(--display);text-transform:uppercase;letter-spacing:.06em;color:var(--steel);margin-top:.45rem}#inspFields dd{margin:0}#inspFields ul{margin:0;padding-left:1.1rem}
+.inspector-actions{display:flex;flex-wrap:wrap;gap:.35rem}.swatch{display:inline-block;width:.85em;height:.85em;margin-right:.35em;border:1px solid var(--ink);vertical-align:-.05em}.missing{color:#a3361f;font-style:italic}#isolation{font-size:.85rem;color:var(--steel)}
+tr[data-members]{cursor:pointer}tr[data-members]:hover td{background:#eef5fb}tr.located td{background:#fff1cc;box-shadow:inset 0 0 0 9999px #ffd07833}
+@media(max-width:60rem){.viewer-row{grid-template-columns:1fr}#inspector{max-height:none}}
 tr.control td{background:#fff6dd}tr.uncovered td{color:var(--steel);font-style:italic}td .actions{display:flex;flex-wrap:wrap;gap:.3rem}#pairInspect{background:white;border-left:4px solid var(--gold);padding:.5rem .75rem}#pairInspect:empty{display:none}
 .interaction{background:white;border:1px solid var(--edge);border-radius:.25rem;padding:.6rem .8rem;margin:.5rem 0}.interaction iframe{width:100%;height:min(60vh,36rem);border:1px solid var(--edge);margin-top:.5rem}
 </style>
@@ -37,9 +44,19 @@ tr.control td{background:#fff6dd}tr.uncovered td{color:var(--steel);font-style:i
 <button id="play" class="primary">Play</button><label>Stroke <input type="range" id="frame" min="0" max="24" value="0"></label><output id="position"></output><output id="outcome"></output>
 <label><input id="showLabels" type="checkbox"> Labels</label><label><input id="floor" type="checkbox" checked> Floor</label>
 <button id="fit">Fit robot</button><button id="fitField">Fit field interaction</button></fieldset>
-<div id="stage"><canvas tabindex="0" aria-label="Orbitable solid package assembly"></canvas><div id="labels"></div><div id="sceneStatus" role="status">Loading scene…</div></div>
-<section aria-label="Component inspector"><label>Inspect a component <select id="component"></select></label>
-<p id="material"></p><dl aria-live="polite"><dt>Purpose</dt><dd id="purpose"></dd><dt>Why it is included</dt><dd id="rationale"></dd></dl><div id="pairInspect" aria-live="polite"></div></section>
+<div class="viewer-row">
+<div id="stage"><canvas tabindex="0" aria-label="Orbitable solid package assembly. Click a surface to inspect its component."></canvas><div id="labels"></div><div id="sceneStatus" role="status">Loading scene…</div></div>
+<aside id="inspector" aria-label="Component inspector">
+<h2>Component inspector</h2>
+<label for="componentSearch">Find by name or ID</label><input id="componentSearch" type="search" list="componentNames" autocomplete="off" placeholder="Type a name, then Enter"><datalist id="componentNames"></datalist>
+<h3 id="inspName"></h3><p id="inspId"></p>
+<div class="inspector-actions"><button id="isolate" type="button">Isolate</button><button id="restore" type="button" disabled>Restore full assembly</button><button id="locate" type="button">Locate in ledger</button></div>
+<p id="isolation" role="status"></p>
+<div id="pairInspect" aria-live="polite"></div>
+<dl id="inspFields" aria-live="polite"></dl>
+<details id="componentList"><summary>All components</summary><label for="component" class="visually-hidden">Components</label><select id="component" size="8"></select></details>
+</aside>
+</div>
 <small>Carried-piece motion in this player is prescribed. Verify retention under gravity, including loss of grip, before accepting a loaded lift.</small>
 <small>Drag to orbit, Shift-drag or right-drag to pan, and scroll to zoom. Arrow keys rotate, Shift and arrow keys pan, and Home fits the robot. The grid lies at datum Z = 0 with <span id="gridScale"></span> mm squares. The clearance receipt bounds the paths between displayed frames.</small>
 </section>
@@ -60,8 +77,39 @@ tr.control td{background:#fff6dd}tr.uncovered td{color:var(--steel);font-style:i
 <h3>Season-owned field interactions</h3><div id="fieldInteractions"></div>
 </section>
 </main>
-<script type="application/json" id="data">PACKAGE_DATA</script><script>
+<script type="application/json" id="data">PACKAGE_DATA</script>
+<script id="review-logic">
+// Pure helpers for the component inspector; tested outside the browser.
+const MISSING='Missing from this review';
+function massText(line){return line.id+': '+line.kg.map(v=>Number(v).toFixed(2)).join('–')+' kg · '+(line.basis||'basis '+MISSING.toLowerCase())+' · '+line.note}
+function inspectorFields(entry){
+ if(!entry)return [['Component',MISSING,true]];
+ const miss=new Set(entry.missing||[]),val=(key,v)=>miss.has(key)||v==null||v===''?[MISSING,true]:[v,false];
+ const volume=entry.volumeMm3==null?[MISSING,true]:[(entry.volumeMm3/1000).toFixed(2)+' cm³ · '+(entry.volumeType?entry.volumeType+' volume':'volume type '+MISSING.toLowerCase()),!entry.volumeType];
+ const mass=entry.mass?.length?[entry.mass.map(massText),false]:entry.massExcluded?[entry.massExcluded,false]:miss.has('mass line')?['No mass line includes this component',true]:['Budget ledger not supplied',true];
+ return [
+  ['Category',entry.category||MISSING,!entry.category,'swatch'],
+  ['Subsystem',...val('subsystem',entry.subsystem)],
+  ['Motion group',entry.motionGroup||MISSING,!entry.motionGroup],
+  ['Material',...val('material',entry.material)],
+  ['Occupied volume',...volume],
+  ['Mass line and basis',...mass],
+  ['Purpose',...val('purpose',entry.purpose)],
+  ['Why it is included',...val('rationale',entry.rationale)],
+  ['Electrical load lines',entry.loads?.length?entry.loads:'None assigned to this component',false],
+  ['Moves in',entry.movesIn?.length?entry.movesIn:'Stationary in every commissioned case',false]];
+}
+function visibleBodies(names,isolated){return isolated&&isolated.size?names.filter(n=>isolated.has(n)):names.slice()}
+function findComponent(query,inspector){
+ const q=String(query||'').trim().toLowerCase();if(!q)return null;
+ const rows=Object.values(inspector||{});
+ return (rows.find(r=>r.id.toLowerCase()===q||String(r.name).toLowerCase()===q)||rows.find(r=>r.id.toLowerCase().includes(q)||String(r.name).toLowerCase().includes(q)))?.id??null;
+}
+</script>
+<script>
 const data=JSON.parse(document.querySelector('#data').textContent);
+const inspector=data.inspector||{};
+let isolated=null;
 const get=id=>document.getElementById(id),canvas=document.querySelector('canvas'),gl=canvas.getContext('webgl',{antialias:true});
 function element(tag,value){const el=document.createElement(tag);el.textContent=value;return el}
 const format=(n,d=2)=>Number(n).toFixed(d);
@@ -148,24 +196,60 @@ for(const f of data.fieldInteractions||[]){
 }
 // Regions 2-5: inspector and ledgers
 const component=get('component');
-for(const name of [...new Set(Object.values(data.groups).flatMap(g=>g.members))].sort())component.add(new Option(name,name));
+for(const name of [...new Set(Object.values(data.groups).flatMap(g=>g.members))].sort()){
+ const label=inspector[name]&&inspector[name].name!==name?inspector[name].name+' ('+name+')':name;
+ component.add(new Option(label,name));get('componentNames').append(new Option(label,name));
+}
+if(component.options.length)component.selectedIndex=0;
 let cases=[];
 const highlight=new Set();
 function describe(name){
- const row=data.components[name]||{},body=cases[0]?.bodies[name];
- return (row.category||Object.values(data.groups).find(g=>g.members.includes(name))?.role||'Unclassified')+' · '+(row.material||'Material pending')+(body?' · '+(body.volumeMm3/1000).toFixed(2)+' cm³ solid volume':'');
+ const row=inspector[name]||{};
+ return (row.category||'Unclassified')+' · '+(row.material||'material missing')+(row.volumeMm3!=null?' · '+(row.volumeMm3/1000).toFixed(2)+' cm³':'');
 }
+function roleColor(role){const alias={drive:'mechanism',payload:'game-piece',battery:'electrical',other:'reference'}[role];return data.palette[role]||data.palette[alias]||data.palette.reference}
 function explain(){
- const row=data.components[component.value]||{};
- get('material').textContent=describe(component.value);
- for(const key of ['purpose','rationale'])get(key).textContent=row[key]?.trim()||'Missing from this review';
+ const entry=inspector[component.value];
+ get('inspName').textContent=entry?.name||component.value||'No component selected';
+ get('inspId').textContent=entry?'Stable ID: '+entry.id:'';
+ const list=get('inspFields');list.replaceChildren();
+ for(const [label,value,missing,kind] of inspectorFields(entry)){
+  const dd=document.createElement('dd');
+  if(kind==='swatch'&&entry){const sw=document.createElement('span');sw.className='swatch';sw.style.background=roleColor(entry.role);sw.setAttribute('aria-hidden','true');dd.append(sw)}
+  if(Array.isArray(value)){const ul=document.createElement('ul');for(const v of value)ul.append(element('li',v));dd.append(ul)}else dd.append(document.createTextNode(value));
+  if(missing)dd.classList.add('missing');
+  list.append(element('dt',label),dd);
+ }
+}
+function selectComponent(id){
+ if(!id||!inspector[id]&&![...component.options].some(o=>o.value===id))return;
+ component.value=id;highlight.clear();get('pairInspect').replaceChildren();explain();draw();
+}
+function setIsolation(names){
+ isolated=names&&names.size?new Set(names):null;
+ get('restore').disabled=!isolated;
+ get('isolation').textContent=isolated?'Showing only '+[...isolated].join(', ')+'. Hidden components still count in every check and budget.':'';
+ draw();
+}
+function locate(){
+ const id=component.value;if(scope.value!=='all'){scope.value='all';budgets()}
+ const rows=[...document.querySelectorAll('tr[data-members]')];rows.forEach(r=>r.classList.remove('located'));
+ const hits=rows.filter(r=>JSON.parse(r.dataset.members).includes(id));hits.forEach(r=>r.classList.add('located'));
+ if(hits.length){hits[0].scrollIntoView({block:'center',behavior:'smooth'});hits[0].focus({preventScroll:true})}
+ get('isolation').textContent=hits.length?id+' appears in '+hits.length+' ledger row'+(hits.length>1?'s':'')+'.':id+' has no weight or electrical ledger row.';
 }
 function inspectPair(row){
  highlight.clear();for(const n of row.limitingPair)highlight.add(n);component.value=row.limitingPair[0];explain();
  const box=get('pairInspect');box.replaceChildren(element('strong','Limiting pair in '+row.case+': '+limitText(row)));
  for(const n of row.limitingPair){const c=data.components[n]||{};box.append(element('p',n+' — '+describe(n)+'. '+(c.purpose||'Purpose missing')+' '+(c.rationale||'')))}
 }
-component.onchange=()=>{highlight.clear();get('pairInspect').replaceChildren();explain();draw()};
+component.onchange=()=>selectComponent(component.value);
+const search=get('componentSearch');
+search.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const id=findComponent(search.value,inspector);if(id){selectComponent(id);search.value=''}else get('isolation').textContent='No component matches “'+search.value+'”.'}};
+search.onchange=()=>{const id=findComponent(search.value,inspector);if(id){selectComponent(id);search.value=''}};
+get('isolate').onclick=()=>setIsolation(highlight.size?new Set(highlight):new Set([component.value]));
+get('restore').onclick=()=>setIsolation(null);
+get('locate').onclick=locate;
 explain();
 const categories=new Map();
 for(const [groupName,g] of Object.entries(data.groups)){
@@ -187,10 +271,19 @@ for(const option of component.options){
 }
 for(const row of data.power||[])duty.add(new Option(row.case,row.case));
 if(data.power?.length)duty.value=data.power.reduce((a,b)=>b.marginV<a.marginV?b:a).case;
-function table(id,headers,rows){
+function table(id,headers,rows,members=[]){
  const t=document.createElement('table'),tr=t.createTHead().insertRow();
  for(const h of headers)tr.append(element('th',h));
- const body=t.createTBody();for(const row of rows){const r=body.insertRow();for(const value of row)r.insertCell().textContent=value}
+ const body=t.createTBody();
+ rows.forEach((row,i)=>{
+  const r=body.insertRow();for(const value of row)r.insertCell().textContent=value;
+  const ids=members[i]||[];
+  if(ids.length){
+   r.dataset.members=JSON.stringify(ids);r.tabIndex=0;r.title='Inspect '+ids.join(', ');
+   const pick=()=>{selectComponent(ids.includes(component.value)?component.value:ids[0]);highlight.clear();for(const n of ids)highlight.add(n);draw()};
+   r.onclick=pick;r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pick()}};
+  }
+ });
  get(id).replaceChildren(t);
 }
 function budgets(){
@@ -209,22 +302,22 @@ function budgets(){
  if(mass){
   metric('Inspection limit',format(mass.limit)+' kg');metric('Inspection estimate',interval(mass.range,'kg'));
   metric('Weight headroom',signed(mass.remaining,'kg'));metric('Running weight',interval(mass.running,'kg'));
-  const rows=[];
+  const rows=[],ids=[];
   for(const line of mass.lines){const share=allocation(line.members);if(share==='Outside')continue;
    if(share==='Included')line.kg.forEach((v,i)=>kg[i]+=v);else unresolved++;
-   rows.push([line.id,line.members.join(', ')||'Allowance',interval(line.kg,'kg'),share,line.basis]);
-  }table('weight',['Allocation','Members','Mass','Scope','Basis'],rows);
+   rows.push([line.id,line.members.join(', ')||'Allowance',interval(line.kg,'kg'),share,line.basis]);ids.push(line.members);
+  }table('weight',['Allocation','Members','Mass','Scope','Basis'],rows,ids);
  }else get('weight').textContent='Weight ledger missing.';
  if(power){
   const bus=power.loadedBusV[0],r=power.resistance[1],floor=power.requiredMinV;
   metric('Concurrent battery current',interval(power.batterySideA,'A'));metric('Minimum loaded bus',format(bus)+' V');
   metric('Required voltage',format(floor)+' V');metric('Voltage headroom',signed(power.marginV,'V'));
-  const rows=[];for(const [id,a] of Object.entries(power.loads)){
+  const rows=[],consumers=[];for(const [id,a] of Object.entries(power.loads)){
    const ids=data.loadMembers?.[id]||[],share=allocation(ids);
    if(share==='Outside')continue;
    if(share==='Included')a.forEach((v,i)=>amps[i]+=v);else unresolved++;
-   rows.push([id,ids.join(', ')||'Unallocated',interval(a,'A'),format(a[1]*r)+' V',bus>=0?format(a[1]*bus,1)+' W':'Unresolved',share]);
-  }table('electric',['Load','Consumers','Battery current','Sag at high load','Bus input at high load','Scope'],rows);
+   rows.push([id,ids.join(', ')||'Unallocated',interval(a,'A'),format(a[1]*r)+' V',bus>=0?format(a[1]*bus,1)+' W':'Unresolved',share]);consumers.push(ids);
+  }table('electric',['Load','Consumers','Battery current','Sag at high load','Bus input at high load','Scope'],rows,consumers);
   const limit=r>0?Math.max(0,(power.openCircuit[0]-floor)/r):null;
   get('pack').textContent=power.duty+' · '+power.batteryCondition+' pack · '+format(power.openCircuit[0])+' V open circuit · '+format(r*1000,1)+' mΩ. '+(limit===null?'Current at the voltage floor is undefined for zero resistance.':format(limit,1)+' A / '+format(limit*floor,1)+' W at the voltage floor (pack model only).');
  }else get('electric').textContent='Concurrent electrical ledger missing.';
@@ -269,7 +362,8 @@ function draw(){
  function proj(p){const [x,y,z]=p.map((v,i)=>v-center[i]);return [((-sa*x+ca*y)*k+panX)*Math.min(1,height/width),((ce*z-se*(ca*x+sa*y))*k+panY)*Math.min(1,width/height),-(ce*(ca*x+sa*y)+se*z)/(extent*30)]}
  const surfaces=[],lines=[],labels=[];const grid=extent/12;pickSurfaces=[];get('gridScale').textContent=format(grid,1);
  if(get('floor').checked){for(let i=-12;i<=12;i++){const x=Math.round(center[0]/grid)*grid,y=Math.round(center[1]/grid)*grid;for(const [a,b] of [[[x+i*grid,y-extent,0],[x+i*grid,y+extent,0]],[[x-extent,y+i*grid,0],[x+extent,y+i*grid,0]]])lines.push(...proj(a),.23,.32,.35,...proj(b),.23,.32,.35)}}
- for(const [name,b] of Object.entries(cases[view.selectedIndex].bodies)){
+ const bodies=cases[view.selectedIndex].bodies;
+ for(const name of visibleBodies(Object.keys(bodies),isolated)){const b=bodies[name];
   const m=b.matrices[+frame.value]||b.matrices[0],world=b.vertices.map(p=>placed(m,p)),clip=world.map(proj);
   pickSurfaces.push({name,points:clip,triangles:b.triangles});
   const col=name===component.value||highlight.has(name)?[1,.76,.23]:rgb(data.palette[roles[name]]||data.palette[aliases[roles[name]]]||data.palette.reference);
@@ -333,7 +427,7 @@ canvas.onpointerup=e=>{
   const depth=u*a[2]+v*b[2]+w*c[2];
   if(depth<closest){closest=depth;hit=name}
  }
- if(hit){component.value=hit;highlight.clear();get('pairInspect').replaceChildren();explain();draw()}
+ if(hit)selectComponent(hit);
 };
 canvas.addEventListener('wheel',e=>{e.preventDefault();scale=Math.min(100,Math.max(.05,scale*Math.exp(-e.deltaY*.0015)));draw()},{passive:false});
 canvas.onkeydown=e=>{const v={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,1],ArrowDown:[0,-1]}[e.key];if(v){if(e.shiftKey){panX+=v[0]*.08;panY+=v[1]*.08}else{az+=v[0]*.15;el+=v[1]*.15}}else if(e.key==='Home'){fit('robot')}else if(e.key==='+'||e.key==='-'){scale*=e.key==='+'?1.2:1/1.2}else return;e.preventDefault();draw()};

@@ -9,7 +9,7 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from package_view import (CONTROL_ID, field_interactions, first_unmet, fit_views, motion_evidence,  # noqa: E402
+from package_view import (CONTROL_ID, component_inspector, field_interactions, first_unmet, fit_views, motion_evidence,  # noqa: E402
                           review_header, scene_payload)
 
 IDENTITY = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0]
@@ -119,6 +119,33 @@ class Regions(unittest.TestCase):
             with self.assertRaises(ValueError):
                 field_interactions(root, layout)
 
+    def test_inspector_fields_come_from_presentation_and_budgets(self):
+        layout = plan(components={
+            "arm": dict(name="Pivot arm", category="mechanism", subsystem="Transfer", material="Aluminum", volumeType="material",
+                        purpose="Carry the article.", rationale="One pivot reaches both stations."),
+            "post": dict(rationale="Supports the gate.", material="Steel")})
+        layout["groups"] = {"arm group": dict(role="mechanism", members=["arm"]), "frame": dict(role="structure", members=["post", "base"]),
+                            "article": dict(role="payload", members=["piece"])}
+        scenes = [dict(id="turn", stage="operating", bodies={"arm": box([0, 0, 0], [1, 1, 1]), "post": box([5, 0, 0], [6, 1, 1])})]
+        lines = [dict(id="mechanisms", members=["arm", "post"], kg=[1, 1.2], basis="Invented subtotal")]
+        rows = component_inspector(layout, scenes, study(), lines, {"pivot motor": ["arm"]}, set())
+        arm = rows["arm"]
+        self.assertEqual((arm["name"], arm["category"], arm["subsystem"], arm["motionGroup"]), ("Pivot arm", "mechanism", "Transfer", "arm group"))
+        self.assertEqual((arm["material"], arm["volumeMm3"], arm["volumeType"]), ("Aluminum", 1.0, "material"))
+        self.assertEqual(arm["mass"][0]["sharedWith"], ["post"])
+        self.assertIn("unallocated until the line is split", arm["mass"][0]["note"])
+        self.assertEqual((arm["loads"], arm["movesIn"], arm["missing"]), (["pivot motor"], ["turn", "hold"], []))
+        post = rows["post"]
+        self.assertEqual(post["motionGroup"], "frame")
+        self.assertEqual(post["movesIn"], [])
+        self.assertEqual(set(post["missing"]), {"purpose", "subsystem", "volume type"}, "missing purpose is reported, not hidden")
+        self.assertIn("mass line", rows["base"]["missing"])
+        self.assertIsNone(rows["base"]["volumeMm3"])
+        self.assertIn("payload", rows["piece"]["massExcluded"])
+        self.assertNotIn("mass line", rows["piece"]["missing"])
+        with self.assertRaises(ValueError):
+            component_inspector(dict(layout, presentation={"components": {"arm": dict(volumeType="solid-ish")}}), scenes, study())
+
     def test_scene_stores_each_mesh_once(self):
         arm = box([0, 0, 0], [1, 1, 1])
         scene = scene_payload([dict(id=k, stage="operating", bodies={"arm": arm, "twin": dict(arm)}) for k in ("a", "b")])
@@ -152,6 +179,9 @@ class CompressedScene(unittest.TestCase):
             self.assertEqual([r["kind"] for r in embedded["motionEvidence"]].count("displaced control"), 1)
             self.assertEqual(embedded["fieldInteractions"][0]["title"], "Synthetic release-lane interaction")
             self.assertIsNotNone(embedded["fit"]["robot"])
+            head = embedded["inspector"]["head"]
+            self.assertEqual((head["subsystem"], head["motionGroup"], head["loads"], head["missing"]), ("Carrier", "carrier", ["carrier"], []))
+            self.assertIn("loaded-turn", head["movesIn"])
             original = served.read_bytes()
             served.write_bytes(gzip.compress(content, compresslevel=1, mtime=7))
             recompressed = review(folder, file)
