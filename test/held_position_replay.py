@@ -6,7 +6,7 @@ from tempfile import TemporaryDirectory
 from pathlib import Path
 import unittest
 
-from mechanical_fixture import SCRIPTS, write
+from mechanical_fixture import SCRIPTS, package_write as write
 
 # The invented training field's blue bay and the robot's delivery step.
 BAY = [175, 194]
@@ -30,13 +30,13 @@ class HeldPositionReplay(unittest.TestCase):
 
     def review(self, previous=None):
         from preliminary_design import review
-        return review(self.root, self.root / "layout.json", previous)
+        return review(self.root.parent, self.root / "layout.json", previous)
 
     def premise(self, tag, value, field_input, accepted_extra=None, criterion=(0., 80.), source=None, phase="conceptual-design", scenario="selected cycle", unit="in",
                 scenario_id=None, observed=None):
         """Register a delivery stand-off premise alongside the example premises."""
         plan = self.plan
-        role = source or json.loads((self.root / plan["premises"][0]["accepted"]["file"]).read_text())["source"]
+        role = source or json.loads((self.root.parent / plan["premises"][0]["accepted"]["file"]).read_text())["source"]
         identity = dict(id="delivery-standoff", unit=unit, scenario=scenario, **({} if scenario_id is None else {"scenarioId": scenario_id}))
         accepted = dict(**identity, criterion={"range": list(criterion)}, phase=phase,
                         interfaces=["carrier", "carried article"], source=role,
@@ -68,7 +68,7 @@ class HeldPositionReplay(unittest.TestCase):
         if edit:
             edit(profile)
         run_input = write(self.root, tag + "-field.json", profile)
-        replay = json.loads(subprocess.check_output(["node", str(SCRIPTS / "rehearsal-series.mjs"), str(self.root / run_input["file"])]))
+        replay = json.loads(subprocess.check_output(["node", str(SCRIPTS / "rehearsal-series.mjs"), str(self.root.parent / run_input["file"])]))
         self.replays[tag] = replay
         field = dict(profile=run_input, result=write(self.root, tag + "-replayed.json", replay), **field_input)
         plan = self.plan

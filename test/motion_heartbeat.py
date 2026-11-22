@@ -122,7 +122,7 @@ class MotionHeartbeat(unittest.TestCase):
         plan = runpy.run_path(str(SCRIPTS.parent / "examples/preliminary-design/create.py"))["create"](layout)
         write(layout, "trial.json", plan)
         def run(*flags):
-            return subprocess.run(["node", str(SCRIPTS / "design.mjs"), "preliminary-check", str(layout), "trial.json", *flags],
+            return subprocess.run(["node", str(SCRIPTS / "design.mjs"), "preliminary-check", str(self.root), "layout/trial.json", *flags],
                                   capture_output=True, text=True)
         loud, quiet = run("--heartbeat", "0"), run("--quiet")
         self.assertEqual(loud.returncode, 0, loud.stderr)

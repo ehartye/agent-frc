@@ -160,7 +160,10 @@ function risksResolved(plan,missions){
  * Evaluate the three exit criteria for one project folder. Paths are relative to the folder.
  * Returns {issue, criteria:[{id,title,met,reasons,notes}], verificationItems, met, of}.
  */
-export function effectiveReadiness(root,{plan:planName='layout.json',receipt:receiptName='receipt.json',missions:missionsName='missions.json'}={}){
+export function effectiveReadiness(root,{release='',plan:planName,receipt:receiptName,missions:missionsName}={}){
+  // A release folder inside the project holds the three files; pins still resolve from the project root.
+  const within=name=>named(release)?path.posix.join(String(release).replace(/\\/g,'/'),name):name;
+  planName??=within('layout.json');receiptName??=within('receipt.json');missionsName??=within('missions.json');
   const plan=record(root,planName),receipt=record(root,receiptName),missions=record(root,missionsName);
   const unreadable=[plan.reason&&'Layout plan: '+plan.reason,receipt.reason&&'Receipt: '+receipt.reason,missions.reason&&'Missions: '+missions.reason].filter(Boolean);
   const p=plan.reason?null:plan.json,r=receipt.reason?null:receipt.json,m=missions.reason?null:missions.json;
@@ -202,12 +205,12 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   let root,json=false,usage=false;
   for(let i=0;i<args.length;i++){
     if(args[i]==='--json')json=true;
-    else if(['--plan','--receipt','--missions'].includes(args[i])&&args[i+1])options[args[i].slice(2)]=args[++i];
+    else if(['--release','--plan','--receipt','--missions'].includes(args[i])&&args[i+1])options[args[i].slice(2)]=args[++i];
     else if(!args[i].startsWith('--')&&root===undefined)root=args[i];
     else usage=true;
   }
   if(usage||root===undefined||!existsSync(root)||!statSync(root).isDirectory()){
-    console.error('Usage: effective-readiness PROJECT [--plan layout.json] [--receipt receipt.json] [--missions missions.json] [--json]');
+    console.error('Usage: effective-readiness PROJECT [--release FOLDER] [--plan layout.json] [--receipt receipt.json] [--missions missions.json] [--json]');
     process.exitCode=2;
   }else{
     const report=effectiveReadiness(path.resolve(root),options);

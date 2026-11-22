@@ -630,7 +630,8 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
             result["view"]=verify_view(root,plan,sorted(frames,key=lambda f:cycle.index(f["id"]) if f["id"] in cycle else len(cycle)),
                                        write_view,observed,result["budgets"],
                                        dict(control=result.get("control"),missing=missing,
-                                            studyCases=cases,fixtures=fixture_ids,freePaths=free_bound),deferred=view_writes)
+                                            studyCases=cases,fixtures=fixture_ids,freePaths=free_bound),deferred=view_writes,
+                                       beside=Path(file).resolve().parent)
             if not result["view"] or not result["view"]["verified"]:
                 missing.append("Generate the matching view of these checked trajectories with --write-view")
     for m in mounts:

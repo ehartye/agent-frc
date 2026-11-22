@@ -197,9 +197,9 @@ class ConstantPosePairs(unittest.TestCase):
             captured.append(original(*args, **kwargs))
             return captured[-1]
         with patch("preliminary_design.evaluate", side_effect=record):
-            fast = preliminary_design.review(folder, folder / "layout.json")
+            fast = preliminary_design.review(self.root, folder / "layout.json")
             with exhaustive():
-                slow = preliminary_design.review(folder, folder / "layout.json")
+                slow = preliminary_design.review(self.root, folder / "layout.json")
         self.assertEqual(fast["status"], "layout-checked")
         self.assertTrue(fast["control"]["witness"]["witness"]["volumeMm3"] > 50)
         self.assertEqual(fast["control"], slow["control"])

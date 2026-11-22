@@ -40,6 +40,8 @@ The check reads these folders. Pass the option to use another.
 | `--inputs` | `cad/preliminary-design/releases` | `ID/layout.json` and every file it pins, for each preliminary release |
 | `--detailed-inputs` | `cad/detailed-design/designs` | The same, for each detailed design |
 
+A release checked from the repository root, whose receipt names its view inside the inputs folder from there, is rerun from the repository root. The rerun cache and the changed-designs test read the inputs folder only, so keep every file the plan pins inside it, or name a wider folder with `check.project`. One checked in its own folder is rerun in that folder.
+
 A record can name its own inputs with `"check": {"project": "cad/robot", "plan": "layout.json"}`, both relative to the repository. `project` is the folder the layout check ran in and `plan` is the layout inside it. The staging commands below write this field.
 
 A preliminary release must have its inputs committed. Without them the check fails, because nothing can be rerun. A detailed design whose Fusion export is not committed passes with a warning that says the layout check was not rerun.

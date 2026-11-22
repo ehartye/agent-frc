@@ -532,11 +532,15 @@ def _validate(content):
     require(not errors, "The review scene is invalid: " + "; ".join(errors[:5]))
 
 
-def verify_view(root, plan, scenes, write, observed, budgets, review=None, deferred=None):
+def verify_view(root, plan, scenes, write, observed, budgets, review=None, deferred=None, beside=None):
     """Write or check the review scene, and create the stock review page when the project has none.
 
     The page is a starting place: a project may change its copy, and it is never compared or replaced. `verified` says
     that the scene on disk is the one this check produced.
+
+    The view sits in `beside`, the folder of the layout plan, so a package checked from its repository root keeps
+    its page and scene in its own sub-folder. Without `beside` the project root is that folder, where an existing
+    view is checked and none is written.
 
     With a `deferred` list, nothing is written here: each write is appended as a callable and the result describes
     the files as they will be once the caller runs them, after its last check that can still stop the run."""
@@ -544,9 +548,22 @@ def verify_view(root, plan, scenes, write, observed, budgets, review=None, defer
     if not name:
         return None
     review = review or {}
+    home = root if beside is None else Path(beside).resolve()
+    require(home == root or home.is_relative_to(root), "Keep the layout plan inside the project")
+    require(isinstance(name, str), "Name the view as a project-relative HTML path")
     path = (root / name).resolve()
+    example = (home.relative_to(root) / ((Path(name).stem or "NAME") + ".html")).as_posix()
     require(not Path(name).is_absolute() and path.is_relative_to(root) and path.suffix.lower() == ".html"
-            and Path(name).parent == Path("."), "Select an HTML view beside the layout plan")
+            and path.parent == home, "Select an HTML view beside the layout plan, such as " + example
+            + ": a project-relative path in the plan's own folder")
+    # A view is never written at the project root. One already there, from a package checked in its own folder, still verifies.
+    require(not write or home != root, "A review view is not written at the project root. Check from the repository root "
+            "and keep the layout plan, its inputs and its view together in a release folder, such as "
+            "cad/preliminary-design/releases/ID/" + path.name)
+    # The receipt records one spelling of a path in a release folder, with forward slashes, whatever the plan typed.
+    # A view at the project root keeps the spelling its issued receipt recorded.
+    if home != root:
+        name = path.relative_to(root).as_posix()
     page = PAGE.read_bytes().replace(b"\r\n", b"\n")
     content = json.dumps(build_scene(root, plan, scenes, observed, budgets, review), allow_nan=False, sort_keys=True,
                          separators=(",", ":")).encode("utf-8")
