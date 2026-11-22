@@ -285,7 +285,7 @@ test('the player must display the receipt results and the viewer must carry the 
   const legacy='<!doctype html><title>Robot releases</title>';
   write(approved,tree+'/index.html',legacy);write(site,tree+'/index.html',legacy);
   next(site,'layout-002');
-  await assert.rejects(auditStaged(approved,site,policy),/must say it lists "Preliminary design" releases/);
+  assert.deepEqual((await auditStaged(approved,site,policy)).preliminary.added,['layout-002'],'an approved stable viewer needs no particular wording');
   listing(site,'layout-001',['layout-001']);rmSync(path.join(site,tree,'releases','layout-002'),{recursive:true});
   assert.deepEqual((await auditStaged(approved,site,policy)).preliminary.added,[],'unchanged history still deploys');
 });
@@ -419,7 +419,6 @@ test('a field player must be self-contained', async t=>{
     fieldPage.replace('<canvas>','<a title=">" href="https://example.invalid/">x</a><canvas>'),
     fieldPage.replace('<canvas>','<a href="&#104;ttps://example.invalid/">x</a><canvas>'),
     fieldPage.replace('<canvas>','<meta http-equiv="&#114;efresh" content="0;url=https://example.invalid"><canvas>'),
-    fieldPage.replace('<p>Preliminary design release</p>',''),
     String.fromCharCode(0xfeff,0xfeff)+fieldPage,
     ...Object.values(scannerCases).map(body=>fieldPage.replace('<canvas>',body+'<canvas>'))];
   for(const page of pages){
@@ -478,7 +477,6 @@ test('stage.py --check-index applies the same field player rules', async t=>{
     [{page:fieldPage.replace('<canvas>','<a title=">" href="https://example.invalid/">x</a><canvas>')},/not self-contained/],
     [{page:String.fromCharCode(0xfeff,0xfeff)+fieldPage},/not self-contained/],
     ...Object.values(scannerCases).map(body=>[{page:fieldPage.replace('<canvas>',body+'<canvas>')},/not self-contained/]),
-    [{page:fieldPage.replace('<p>Preliminary design release</p>','')},/not self-contained/],
     [{page:String.fromCharCode(0xfeff)+fieldPage},0],
     [{rows:[{title:'Lane',href:'field%2flane.html',objective:laneObjective,evidence:'x'}]},/listed field player/]];
   for(const [field,expected] of cases){
@@ -545,8 +543,15 @@ test('a successor checked against the effective release can supersede it', async
   listing(site,'layout-001',['layout-001'],{'layout-001':'effective'},['layout-001']);
   cpSync(site,approved,{recursive:true,force:true});
   const prior=readFileSync(path.join(site,tree,'releases','layout-001','receipt.json'));
-  issueRelease(site,'layout-002',{edit:r=>({...r,previousCheckpointSha256:sha(prior)})});
+  const checked=r=>({...r,previousCheckpointSha256:sha(prior),priorDecisions:[{id:'acquire-time',repeatVerified:true}]});
+  // Added directly as effective, without its predecessor checkpoint: refused.
+  issueRelease(site,'layout-002');
   listing(site,'layout-002',['layout-001','layout-002'],{'layout-001':'superseded','layout-002':'effective'},['layout-001','layout-002']);
+  await assert.rejects(auditStaged(approved,site,policy),/checked against the previous effective one, layout-001/);
+  issueRelease(site,'layout-002',{edit:r=>({...checked(r),priorDecisions:[{id:'acquire-time',repeatVerified:false}]})});
+  await assert.rejects(auditStaged(approved,site,policy),/every held decision repeat-verified/,'a hold the successor did not repeat is not a check against the predecessor');
+  // Added directly as effective with the checkpoint: the default path is in progress, this one is effective at once.
+  issueRelease(site,'layout-002',{edit:checked});
   const result=await auditStaged(approved,site,policy);
   assert.deepEqual([result.preliminary.added,result.preliminary.effective,result.preliminary.current],[['layout-002'],'layout-002','layout-002'],
     'a new release can enter effective when checked against its predecessor');
@@ -563,12 +568,13 @@ test('a catalog of releases issued with the earlier label still verifies', async
   assert.deepEqual(verifyCatalog(path.join(site,tree),{}).releases,['layout-001','layout-002']);
 });
 
-test('a release must name its phase and the page must say it is a preliminary design', async t=>{
-  for(const [change,pattern] of [[r=>{delete r.phase;},/identify its phase/],[r=>{r.phase='detailed-design';},/identify its phase/]]){
+test('a release identifies itself only by the phase in its record', async t=>{
+  for(const [change,pattern] of [[r=>{delete r.phase;},/identify its phase/],[r=>{r.phase='detailed-design';},/identify its phase/],
+    [r=>{delete r.phase;r.label='Work-in-progress preliminary design';},/identify its phase/]]){
     const {approved,site,policy}=fixture(t);
     const {dir}=next(site,'layout-002');
     rewrite(dir,'release.json',change);
-    await assert.rejects(auditStaged(approved,site,policy),pattern);
+    await assert.rejects(auditStaged(approved,site,policy),pattern,'a newly added release names its phase');
   }
   const {approved,site,policy}=fixture(t);
   const {dir}=next(site,'layout-002');
@@ -576,7 +582,7 @@ test('a release must name its phase and the page must say it is a preliminary de
   write(dir,'index.html',page);
   rewrite(dir,'receipt.json',r=>{r.view.sha256=sha(page);});
   rewrite(dir,'release.json',r=>{r.view.sha256=sha(page);});repin(dir);
-  await assert.rejects(auditStaged(approved,site,policy),/must say it is a "Preliminary design" release/);
+  assert.deepEqual((await auditStaged(approved,site,policy)).preliminary.added,['layout-002'],'page wording is the season\'s; the gate reads the record');
 });
 
 test('a season may change its copy of the stock page; the template comparison is information only', async t=>{

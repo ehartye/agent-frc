@@ -34,6 +34,14 @@
       "x-supplier": "plugin",
       "description": "Layout issue identifier; the page heading."
     },
+    "title": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "x-supplier": "project",
+      "description": "presentation.title: the release's human title, shown as the page heading; the issue ID is used when absent."
+    },
     "context": {
       "type": [
         "string",

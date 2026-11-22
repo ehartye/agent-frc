@@ -15,7 +15,7 @@ export function reviewScene(overrides = {}) {
     purpose: 'Invented purpose of ' + name + '.', rationale: 'Invented reason for ' + name + '.', support: role === 'mechanism' ? 'Pivot shaft into the frame plate.' : null,
     massExcluded: role === 'reference' ? 'Field fixture; not robot mass' : null, missing: role === 'reference' ? ['subsystem', 'material'] : [], ...extra});
   const scene = {
-    schema: 'agent-frc/preliminary-review-scene@1', issue: 'synthetic-review-layout', context: 'Synthetic project / Iteration A',
+    schema: 'agent-frc/preliminary-review-scene@1', issue: 'synthetic-review-layout', title: 'Invented arm raise and return', context: 'Synthetic project',
     architecture: 'Invented pivoting arm on a fixed frame', datum: 'Invented frame datum, millimetres', units: 'Millimetres in the registered STEP world; kg, A, V',
     links: [{label: 'Season site', href: '../../'}],
     sources: {step: pin('package.step'), motion: pin('paths.json'), narrative: pin('narrative.md')},

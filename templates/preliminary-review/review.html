@@ -6,10 +6,10 @@
 *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.45 var(--body)}main{max-width:1920px;margin:auto;padding:0 2vw 3rem}
 a{color:#1b528b}h1,h2,h3,p{margin:0}h2{font:600 20px var(--display);margin:0 0 10px;color:var(--navy)}h3{font:600 15px var(--display);margin:10px 0 2px;color:var(--navy)}
 nav{padding:6px 0;font-size:13px}header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:0 -2vw;padding:10px 2vw;background:var(--navy);border-bottom:3px solid var(--gold);color:white;font:600 14px var(--display);letter-spacing:.045em}header>span:first-child{margin-right:auto}header a{color:#ffda76;font:13px var(--body);letter-spacing:0}
-.phase{margin:8px 0 0;font-weight:600;font-size:13px;color:#684100}
+.title-side{display:flex;flex-direction:column;align-items:flex-end;gap:4px;max-width:45%}#unmetInline{margin:0;font-size:13px;color:#7a1d10;text-align:right}
 .title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:14px 0 8px}.title p{color:var(--royal);font:600 12px var(--mono);margin-bottom:4px}.title h1{font:600 clamp(25px,2.4vw,38px)/1.05 var(--display);letter-spacing:-.025em}
 .chip{display:inline-block;padding:6px 12px;border-radius:4px;color:#684100;background:#fff0bf;border:1px solid #e5c56b;font-weight:700}.chip.layout-checked{color:#0f5130;background:#dff3e6;border-color:#8cc8a2}.chip.blocked,.chip.reopen{color:#7a1d10;background:#fde0da;border-color:#e3a093}
-#review-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));gap:4px 18px;margin:0 0 12px;padding:8px 12px;background:white;border:1px solid var(--line);border-radius:6px}#review-summary dt{font:600 11px var(--display);text-transform:uppercase;letter-spacing:.07em;color:var(--steel)}#review-summary dd{margin:0;font-size:13px;overflow-wrap:anywhere}#review-summary .wide{grid-column:1/-1}
+#review-basis{margin:0 0 10px;font-size:13px}#review-basis>summary{color:var(--royal);font-weight:600}#review-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));gap:4px 18px;margin:6px 0 0;padding:8px 12px;background:white;border:1px solid var(--line);border-radius:6px}#review-summary dt{font:600 11px var(--display);text-transform:uppercase;letter-spacing:.07em;color:var(--steel)}#review-summary dd{margin:0;font-size:13px;overflow-wrap:anywhere}#review-summary .wide{grid-column:1/-1}
 .grid{display:grid;grid-template-columns:minmax(0,1fr) clamp(240px,20vw,330px);gap:12px;align-items:start}
 .viewer,aside,.lower>div,.checks,.decision,.notes{border:1px solid var(--line);border-radius:7px;background:white;min-width:0;overflow:hidden}
 .viewer{background:var(--navy);border-color:#213b5a}.bar,#legend{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:9px 12px}.viewer .bar{background:#f8fbff}.viewer .bar:first-child{border-top:3px solid var(--royal)}.bar b{margin-right:auto;font:600 18px var(--display);color:var(--navy)}label{font-size:13px}
@@ -44,12 +44,12 @@ aside{padding:16px;align-self:start}aside label{display:block;margin-bottom:5px}
 <main>
 <nav aria-label="Review releases"><a href="../../">All preliminary releases</a></nav>
 <header><span>Agent FRC　/　Engineering review</span><span id="links"></span></header>
-<p class="phase" role="note">Preliminary design<span id="designStatus"></span>. Not the released detailed model; the review receipt gives its checked result.</p>
-<div class="title"><div><p id="context">Preliminary design</p><h1 id="heading">Preliminary design review</h1></div><strong id="state" class="chip">Loading geometry…</strong></div>
-<dl id="review-summary" aria-label="Review header">
+<div class="title"><div><p id="context">Preliminary design</p><h1 id="heading">Preliminary design review</h1></div><div class="title-side"><strong id="state" class="chip" title="Design status from the release index · checked result from the review receipt">Loading geometry…</strong><p id="unmetInline" hidden></p></div></div>
+<details id="review-basis"><summary>Review basis</summary><p>Preliminary design: not the released detailed model. The review receipt gives the checked result.</p>
+<dl id="review-summary" aria-label="Review basis">
  <div><dt>Selected architecture</dt><dd id="architecture"></dd></div><div><dt>Datum</dt><dd id="datum"></dd></div><div><dt>Units</dt><dd id="units"></dd></div><div><dt>Strategic narrative</dt><dd id="narrativeSource"></dd></div>
  <div class="wide"><dt>Current decision</dt><dd><span id="decision"></span> <span id="decisionSource"></span></dd></div><div class="wide"><dt>First unmet requirement</dt><dd id="firstUnmet"></dd></div>
-</dl>
+</dl></details>
 <div class="grid">
 <section class="viewer" aria-label="Model and controls">
  <div class="bar"><b>Assembly layout</b><label><input id="labels" type="checkbox"> Labels</label><span id="labelPages" hidden><button id="labelPrev" aria-label="Previous callouts">‹</button><output id="labelPageCount"></output><button id="labelNext" aria-label="Next callouts">›</button></span><label><input id="floor" type="checkbox" checked> Floor</label><label id="cutawayToggle" hidden><input type="checkbox" id="cutaway"> <span id="cutawayLabel"></span></label><button id="reset">Fit robot</button><button id="field">Fit field interaction</button><button id="expand" aria-label="Expand model viewer">Expand</button></div>
@@ -60,9 +60,9 @@ aside{padding:16px;align-self:start}aside label{display:block;margin-bottom:5px}
  <div id="legend"></div>
 </section>
 <aside aria-label="Component inspector and selection budget">
- <section id="inspector"><span class="eyebrow">Component inspector</span><h2 id="inspName">Inspect a component</h2><p id="inspId">Click a solid, search, or choose a part in the inventory.</p>
+ <section id="inspector"><span class="eyebrow">Component inspector</span><h2 id="inspName">Inspect a component</h2><p id="inspId">Click a solid or choose a part in the inventory.</p>
   <label for="componentSearch">Find by name or ID</label><input id="componentSearch" type="search" list="componentNames" autocomplete="off" placeholder="Type a name, then Enter"><datalist id="componentNames"></datalist>
-  <dl id="inspFields"></dl><div id="inspActions"><button id="focusPart" disabled>Focus part</button><button id="showAssembly" disabled>Show assembly</button><button id="locate" disabled>Locate in ledger</button></div><p id="inspectStatus" role="status"></p></section>
+  <dl id="inspFields"></dl><div id="inspActions" hidden><button id="focusPart">Focus part</button><button id="showAssembly">Show assembly</button><button id="locate">Locate in ledger</button></div><p id="inspectStatus" role="status"></p></section>
  <h2>Selection budget</h2>
  <label>Group by<select id="group"><option>Whole robot</option><option>Category</option><option>Subsystem</option><option>Custom subsystem</option></select></label>
  <select aria-label="Selected group" id="subset" hidden></select>
@@ -173,9 +173,10 @@ function presentIds(c){return Object.keys(c.bodies).filter(id=>!c.removed.includ
 
 // Region 1
 function header(){
- document.title=scene.issue+' · Preliminary design review';
- $('heading').textContent=scene.issue;
- if(scene.context)$('context').textContent=scene.context+'　/　Preliminary design';
+ const heading=scene.title||scene.issue;
+ document.title=heading+' · Preliminary design review';
+ $('heading').textContent=heading;
+ $('context').textContent=[scene.context,releaseId(),'Preliminary design'].filter(Boolean).join('　/　');
  for(const link of scene.links||[]){const url=followable(link.href,location.href);if(!url)continue;const a=text('a',link.label);a.href=url.href;$('links').append(a)}
  const show=(id,value,what)=>value?($(id).textContent=value):$(id).replaceChildren(notSupplied(what));
  show('architecture',scene.architecture,'presentation.architecture');show('datum',scene.datum);$('units').textContent=scene.units;
@@ -183,16 +184,20 @@ function header(){
  decide(scene.decision.status,scene.decision.firstUnmet,'(at scene generation; awaiting the review receipt)');
  triggered(scene.decision.status==='blocked'&&scene.decision.firstUnmet?[scene.decision.firstUnmet.text]:[]);
 }
+let designStatus=null,decision='pending receipt';
+const releaseId=()=>decodeURIComponent(new URL('.',location.href).pathname.split('/').filter(Boolean).at(-1)||'');
+function chip(){const s=$('state');s.textContent=(designStatus?designStatus[0].toUpperCase()+designStatus.slice(1).replace('-',' ')+' · ':'')+decision;s.className='chip '+decision}
 function decide(status,unmet,source){
- for(const el of [$('decision'),$('state')]){el.textContent=status;el.className='chip '+status}
+ decision=status;$('decision').textContent=status;$('decision').className='chip '+status;chip();
  $('decisionSource').textContent=source;$('firstUnmet').textContent=unmet?unmet.text:'None. Every commissioned check passes.';
+ $('unmetInline').hidden=!unmet;$('unmetInline').textContent=unmet?'First unmet: '+unmet.text:'';
 }
 function triggered(list){$('triggered').replaceChildren(...(list.length?list:['None recorded']).map(v=>text('li',typeof v==='string'?v:v.phase+': '+v.reason+(v.affected?' ('+v.affected.join(', ')+')':''))))}
 // The release index beside the releases says this release's design status; it is display only.
 async function showDesignStatus(){
- const id=new URL('.',location.href).pathname.split('/').filter(Boolean).at(-1);
+ const id=releaseId();
  try{const r=await fetch('../../releases.json',{cache:'no-store'});if(!r.ok)return;const index=await r.json();if(!index.releases?.includes(id))return;
-  const s=index.designStatus?.[id]??'in-progress';$('designStatus').textContent=' · '+s.replace('-',' ')+(s==='withdrawn'?' (withdrawn: not a current design)':'')}catch{}
+  designStatus=index.designStatus?.[id]??'in-progress';chip()}catch{}
 }
 async function bindReceipt(contentSha){
  let receipt=null;try{const r=await fetch('receipt.json',{cache:'no-store'});receipt=r.ok?await r.json():null}catch{}
@@ -318,7 +323,7 @@ function inspect(id,also=[]){
   if(Array.isArray(value)){const ul=document.createElement('ul');for(const v of value)ul.append(text('li',v));dd.append(ul)}else dd.append(document.createTextNode(value));
   if(miss)dd.classList.add('missing');list.append(text('dt',label),dd);
  }
- for(const k of ['focusPart','showAssembly','locate'])$(k).disabled=false;
+ $('inspActions').hidden=false;
  draw();
 }
 function focusPart(){

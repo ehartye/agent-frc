@@ -81,7 +81,7 @@ test('season review appends immutable releases and refuses a changed source', as
   assert.match(stage('--set-status','a','effective').stderr, /cannot move from withdrawn to effective/);
   // A successor staged with --previous the predecessor's receipt can become effective.
   const prior = createHash('sha256').update(await readFile(path.join(site,'releases','a','receipt.json'))).digest('hex');
-  await fixture('c', {previousCheckpointSha256: prior});
+  await fixture('c', {previousCheckpointSha256: prior, priorDecisions: [{id: 'acquire-time', repeatVerified: true}]});
   assert.equal(stage('c').status, 0);
   assert.equal(stage('--set-status','c','effective').status, 0);
   assert.deepEqual(JSON.parse(await readFile(listing)), {current:'c',releases:['a','b','c'],designStatus:{a:'withdrawn',b:'in-progress',c:'effective'},effectiveHistory:['a','c']});

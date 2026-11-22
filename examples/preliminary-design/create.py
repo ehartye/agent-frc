@@ -136,7 +136,8 @@ def create(root, release_id=None):
         for part, subsystem in subsystems.items():
             plan["presentation"]["components"][part].update(subsystem=subsystem, volumeType="material")
         plan["presentation"]["architecture"] = "Synthetic pivoting carrier beside a sliding gate (invented teaching layout)"
-        plan["presentation"]["context"] = "Synthetic teaching project　/　Release " + release_id
+        plan["presentation"]["title"] = "Acquire, turn and release past a sliding gate"
+        plan["presentation"]["context"] = "Synthetic teaching project"
         plan["presentation"]["focus"] = "Check the loaded head against the sliding gate, then play the displaced control."
         plan["presentation"]["notes"] = [
             "Invented teaching layout. Boxes stand in for the carrier, gate, rail and running gear.",

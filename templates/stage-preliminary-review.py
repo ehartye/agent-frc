@@ -78,7 +78,6 @@ def index(site, recovering=None, verifier=None, policy=None):
 
 
 PHASE = "preliminary-design"
-PHASE_TEXT = "Preliminary design"
 # A record issued before releases named their phase carried this label instead; it still identifies the phase.
 ISSUED_LABEL = "Work-in-progress preliminary design"
 STATUSES = ("in-progress", "effective", "superseded", "withdrawn")
@@ -109,6 +108,15 @@ def current_for(record, historical=frozenset()):
             or (names[-1] if names else None))
 
 
+def checked_against(site, release, predecessor):
+    """The release's receipt was checked with --previous the predecessor's published receipt, every hold repeat-verified."""
+    receipt = read(site / "releases" / release / "receipt.json")
+    prior = hashlib.sha256((site / "releases" / predecessor / "receipt.json").read_bytes()).hexdigest()
+    decisions = receipt.get("priorDecisions")
+    return (receipt.get("previousCheckpointSha256") == prior and isinstance(decisions, list)
+            and all(isinstance(d, dict) and d.get("repeatVerified") is True for d in decisions))
+
+
 def check_statuses(record, site=None):
     """The index's own design-status rules; changes against an approved index are the release gate's to check."""
     historical = historical_ids(site, record) if site else set()
@@ -126,6 +134,9 @@ def check_statuses(record, site=None):
         raise ValueError("The effective release must be the last in effectiveHistory and not a legacy or historical release")
     if effective and site and read(site / "releases" / effective[0] / "receipt.json").get("status") != "layout-checked":
         raise ValueError("An effective preliminary release needs a layout-checked receipt: " + effective[0])
+    if effective and site and len(history) > 1 and not checked_against(site, effective[0], history[-2]):
+        raise ValueError("The effective release " + effective[0] + " was not checked against " + history[-2]
+                         + " (--previous its receipt, every held decision repeat-verified)")
     if record["releases"] and record.get("current") != current_for(record, historical):
         raise ValueError("current must open the effective release, else the newest in-progress one: expected "
                          + str(current_for(record, historical)))
@@ -134,7 +145,7 @@ TRIAL = re.compile(r"[a-z0-9][a-z0-9._-]{0,127}\.json")
 GEOMETRY = re.compile(r"[a-z0-9][a-z0-9._-]{0,110}\.geometry\.json\.gz")
 SCENE = "review-scene.json.gz"
 SCENE_SCHEMA = "agent-frc/preliminary-review-scene@1"
-MAX_SCENE_BYTES = 512 * 1024 * 1024
+MAX_SCENE_BYTES = 128 * 1024 * 1024
 
 
 def scene_content(release, view):
@@ -326,8 +337,6 @@ def self_contained(html):
         return "declare exactly one http-equiv element, the policy"
     if NETWORK.search(html):
         return "a network API"
-    if PHASE_TEXT not in html and ISSUED_LABEL not in html:
-        return 'say on the page that it is a "' + PHASE_TEXT + '" release'
     return None
 
 
@@ -379,9 +388,6 @@ def check_release(release):
             or not (record.get("phase") == PHASE or record.get("label") == ISSUED_LABEL)
             or record.get("issue") != receipt.get("issue")):
         fail("Release record names a different schema, release, phase or issue")
-    page = (release / "index.html").read_text(encoding="utf-8", errors="replace")
-    if PHASE_TEXT not in page and not (record.get("label") == ISSUED_LABEL and ISSUED_LABEL in page):
-        fail('The release page must say it is a "' + PHASE_TEXT + '" release')
     pins = [(record.get("receipt") or {}, "receipt.json"), (record.get("view") or {}, "index.html"),
             (record.get("scene") or {}, "motion.json")]
     if (any(pin.get("file") != name or pin.get("sha256") != sha(name) for pin, name in pins)
@@ -612,10 +618,9 @@ def set_status(site, release, status, verifier=None, policy=None):
             # The predecessor is the last release ever made effective, even if it was withdrawn since.
             previous = history[-1] if history else None
             if previous:
-                prior = hashlib.sha256((site / "releases" / previous / "receipt.json").read_bytes()).hexdigest()
-                if receipt.get("previousCheckpointSha256") != prior:
+                if not checked_against(site, release, previous):
                     raise ValueError("Check " + release + " against the effective release " + previous
-                                     + " (--previous its receipt.json) before making it effective")
+                                     + " (--previous its receipt.json, every held decision repeat-verified) before making it effective")
                 if status_of(record, previous, historical) == "effective":
                     statuses[previous] = "superseded"
             history.append(release)

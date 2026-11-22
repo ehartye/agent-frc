@@ -450,7 +450,7 @@ def build_scene(root, plan, scenes, observed, budgets, review):
     narrative = plan.get("narrativeReview") or {}
     cycle = plan.get("cycle") or []
     nominal = [c for c in observed["cases"] if c["case"] != CONTROL_ID]
-    scene = dict(schema=SCENE_SCHEMA, issue=plan["issue"], context=presentation.get("context"),
+    scene = dict(schema=SCENE_SCHEMA, issue=plan["issue"], title=presentation.get("title"), context=presentation.get("context"),
                  architecture=presentation.get("architecture"), datum=(plan.get("datum") or {}).get("name"), units=UNITS,
                  links=presentation.get("links", []),
                  sources=dict(design=plan.get("design"), step=plan["step"], motion=plan["motion"], narrative=narrative.get("source")),

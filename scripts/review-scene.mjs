@@ -8,7 +8,7 @@ import {pathToFileURL} from 'node:url';
 export const sceneSchemaId = 'agent-frc/preliminary-review-scene@1';
 export const controlCase = 'package-displacement-control';
 /** No legitimate scene approaches this; it bounds decompression even when a receipt claims more. */
-export const maxSceneBytes = 512 * 1024 * 1024;
+export const maxSceneBytes = 128 * 1024 * 1024;
 export const schema = JSON.parse(readFileSync(new URL('../templates/preliminary-review/scene.schema.json', import.meta.url), 'utf8'));
 
 const kind = v => v === null ? 'null' : Array.isArray(v) ? 'array' : Number.isInteger(v) ? 'integer' : typeof v;
@@ -45,7 +45,7 @@ export function checkSchema(value, node = schema, at = '', errors = []) {
   return errors;
 }
 
-const PROJECT_FIELDS = {context: 'presentation.context', architecture: 'presentation.architecture', focus: 'presentation.focus', notes: 'presentation.notes'};
+const PROJECT_FIELDS = {title: 'presentation.title', context: 'presentation.context', architecture: 'presentation.architecture', focus: 'presentation.focus', notes: 'presentation.notes'};
 
 /**
  * Schema plus cross-checks. Errors make the scene unusable; warnings name project-authored fields that the

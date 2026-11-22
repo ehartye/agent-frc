@@ -40,7 +40,7 @@ const structure = ready + box + `
  const top=document.querySelector('.viewer .bar'),play=document.querySelector('.playback');
  const words=row=>[...row.querySelectorAll('b,label,button,a')].filter(visible).map(e=>e.textContent.trim()).filter(Boolean);
  return {
-  regions:['#review-summary','.grid','#resources','.power-ledger','.checks','.lower:not(.power-ledger)','#motion-evidence','.notes'].map(s=>box(s).top),
+  regions:['#review-basis','.grid','#resources','.power-ledger','.checks','.lower:not(.power-ledger)','#motion-evidence','.notes'].map(s=>box(s).top),
   column:['.viewer .bar','#stage','.viewer>small','.playback','.mission-readout','#legend'].map(box),
   canvas:box('#stage'),inspector:box('aside'),metrics:box('#resources'),motion:box('#motion'),
   topWords:words(top),playWords:words(play),playLabels:play.querySelectorAll('label').length,
@@ -54,10 +54,19 @@ const structure = ready + box + `
 test('the stock page keeps the reference region order, control placement, labels and fonts', {skip}, async t => {
   const dir = site(t), url = release(dir, 'a', reviewScene());
   writeFileSync(path.join(dir, 'releases.json'), JSON.stringify({current: 'a', releases: ['a'], designStatus: {a: 'effective'}}));
-  const banner = await probePage(dir, url, ready + `for(let i=0;i<40&&!document.querySelector('#designStatus').textContent;i++)await new Promise(r=>setTimeout(r,50));
-   return {phase:document.querySelector('.phase').textContent,csp:!!document.querySelector('head>meta[http-equiv="Content-Security-Policy"]:first-child')}`);
-  assert.equal(banner.phase, 'Preliminary design · effective. Not the released detailed model; the review receipt gives its checked result.');
-  assert.equal(banner.csp, true, 'the stock page ships its policy as the first element in <head>, and still loads its scene and fonts');
+  const top = await probePage(dir, url, ready + `for(let i=0;i<40&&!/·/.test(document.querySelector('#state').textContent);i++)await new Promise(r=>setTimeout(r,50));
+   return {chip:document.querySelector('#state').textContent,context:document.querySelector('#context').textContent,heading:document.querySelector('h1').textContent,
+    basisOpen:document.querySelector('#review-basis').open,unmetShown:!document.querySelector('#unmetInline').hidden,canvasTop:document.querySelector('#stage').getBoundingClientRect().top,
+    idle:{actions:document.querySelector('#inspActions').hidden,hint:document.querySelector('#inspId').textContent,search:!!document.querySelector('#componentSearch')},
+    csp:!!document.querySelector('head>meta[http-equiv="Content-Security-Policy"]:first-child')}`, {width: 1680, height: 1000});
+  assert.equal(top.chip, 'Effective · layout-checked', 'the chip shows the design status from the index and the receipt decision');
+  assert.equal(top.context, 'Synthetic project　/　a　/　Preliminary design');
+  assert.equal(top.heading, 'Invented arm raise and return', 'the heading is the release title');
+  assert.equal(top.basisOpen, false, 'the review basis starts collapsed');
+  assert.equal(top.unmetShown, false, 'no first unmet requirement, so none is shown in the title row');
+  assert.ok(top.canvasTop < 1000, 'the model starts within the first screen at 1680 x 1000 (' + top.canvasTop + ')');
+  assert.deepEqual(top.idle, {actions: true, hint: 'Click a solid or choose a part in the inventory.', search: true}, 'the idle inspector shows its hint and search only');
+  assert.equal(top.csp, true, 'the stock page ships its policy as the first element in <head>, and still loads its scene and fonts');
   for (const width of [1280, 1600, 1920, 961]) {
     const g = await probePage(dir, url, structure, {width, height: 1000});
     assert.ok(!g.probeError, g.probeError);
@@ -77,7 +86,7 @@ test('the stock page keeps the reference region order, control placement, labels
     for (const face of ['Barlow Condensed', 'Source Sans 3']) assert.ok(g.fonts.some(f => f.startsWith(face)), face + ' loaded: ' + g.fonts);
     assert.match(g.h1, /^"?Barlow Condensed/);
     assert.match(g.body, /^"?Source Sans 3/);
-    assert.equal(g.state, 'layout-checked');
+    assert.equal(g.state, 'Effective · layout-checked');
     assert.match(g.source, /^\(from the review receipt that pins this scene/);
   }
   for (const width of [960, 800]) {

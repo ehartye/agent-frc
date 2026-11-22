@@ -3,14 +3,15 @@ import {createHash} from 'node:crypto';
 import {lstatSync,readFileSync,readdirSync,realpathSync} from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
+import {statusOf,currentFor,transitionAllowed,designStatuses} from './design-status.mjs';
 import {compareWithLedger,compareWithReceipt,maxSceneBytes,readScene,sceneSchemaId,validateScene} from './review-scene.mjs';
 
 export const releaseSchema='agent-frc/preliminary-release@1';
 export const releasePhase='preliminary-design';
-/** Text every preliminary page carries, so it cannot be mistaken for the released detailed model. A presence check, not a visibility check. */
+/** Text the stock page and viewer display; shown to readers and reported for information, never checked by the gate. */
 export const phaseText='Preliminary design';
-/** Design statuses, the same for every design phase. They live in the mutable release index, never in an issued release. */
-export const designStatuses=['in-progress','effective','superseded','withdrawn'];
+// The design-status vocabulary and transition table, shared with every design phase's gate.
+export {designStatuses,statusOf,currentFor,transitions,transitionAllowed} from './design-status.mjs';
 const receiptSchema='agent-frc/preliminary-layout-result@1';
 const releaseId=/^[a-z0-9][a-z0-9-]{0,63}$/;
 const trialName=/^[a-z0-9][a-z0-9._-]{0,127}\.json$/;
@@ -51,17 +52,7 @@ export function compareTemplate(html){
 }
 /** A record issued before releases named their phase carried this label; it still identifies the phase. */
 export const issuedLabel='Work-in-progress preliminary design';
-/**
- * The status a release has in an index. A listed release without an entry is in progress, except a historical
- * review, which is superseded by definition.
- */
-export const statusOf=(index,id,historical=new Set())=>index?.designStatus?.[id]??(historical.has(id)?'superseded':'in-progress');
-/** The release the stable URL opens: the effective release, else the newest in-progress one, else the newest not withdrawn. */
-export function currentFor(index,historical=new Set()){
-  const ids=index.releases,st=i=>statusOf(index,i,historical);
-  return ids.find(i=>st(i)==='effective')??[...ids].reverse().find(i=>st(i)==='in-progress')
-    ??[...ids].reverse().find(i=>st(i)!=='withdrawn'&&!historical.has(i))??ids.at(-1);
-}
+
 /**
  * The release index's design statuses and each change against the approved index. Allowed: in-progress to effective,
  * the previous effective to superseded (required when another becomes effective), any to withdrawn. Nothing returns
@@ -85,9 +76,8 @@ export function checkStatusChange(before,after,receipts,{historical=new Set(),le
   const promoted=ids.filter(i=>st(after,i)==='effective'&&was(i)!=='effective');
   for(const id of ids){
     const from=was(id),to=st(after,id);
-    if(from===null)check(['in-progress','effective'].includes(to)||historical.has(id)&&to==='superseded','A new preliminary release enters in progress or effective: '+id);
-    else if(from!==to)check(to==='withdrawn'&&from!=='withdrawn'||from==='in-progress'&&to==='effective'||from==='effective'&&to==='superseded'&&promoted.length,
-      'Preliminary release '+id+' cannot move from '+from+' to '+to);
+    check(transitionAllowed(from,to,{promoted:promoted.length>0})||from===null&&historical.has(id)&&to==='superseded',
+      from===null?'A new preliminary release enters in progress or effective: '+id:'Preliminary release '+id+' cannot move from '+from+' to '+to);
     if(to==='effective'&&from!=='effective'){
       check(!legacy.includes(id)&&!historical.has(id),'A legacy or historical release cannot become effective: '+id);
       const r=receipts.get(id);
@@ -96,9 +86,9 @@ export function checkStatusChange(before,after,receipts,{historical=new Set(),le
       const predecessor=priorHistory.at(-1);
       if(predecessor){
         check(st(after,predecessor)!=='effective','Mark the previous effective release '+predecessor+' superseded when '+id+' becomes effective');
-        const prior=receipts.get(predecessor);
-        check(prior&&parse(r,'receipt: '+id).previousCheckpointSha256===sha(prior),
-          'An effective release must be checked against the previous effective one, '+predecessor+' (--previous its receipt): '+id);
+        const prior=receipts.get(predecessor),mine=parse(r,'receipt: '+id);
+        check(prior&&mine.previousCheckpointSha256===sha(prior)&&Array.isArray(mine.priorDecisions)&&mine.priorDecisions.every(d=>d?.repeatVerified===true),
+          'An effective release must be checked against the previous effective one, '+predecessor+' (--previous its receipt, every held decision repeat-verified): '+id);
       }
       check(history.at(-1)===id&&history.length===priorHistory.length+1,'Append '+id+' to effectiveHistory when it becomes effective');
     }
@@ -391,7 +381,6 @@ export function checkSelfContained(bytes,where){
   if(policies!==1)fail('declare exactly one http-equiv element, the policy');
   if(/\b(?:fetch|importScripts|sendBeacon)\s*\(|\b(?:XMLHttpRequest|WebSocket|EventSource|RTCPeerConnection)\b/.test(html))
     fail('a network API');
-  if(!html.includes(phaseText)&&!html.includes(issuedLabel))fail('say on the page that it is a "'+phaseText+'" release');
 }
 
 /**
@@ -475,8 +464,7 @@ export function checkRelease(id,files,policy={},{added=false}={}){
     'Published scene differs from the receipt and release record: '+id);
   check(pinMatches(record.view,checkedView,view)&&object(receipt.view)&&receipt.view.verified===true&&receipt.view.sha256===record.view.sha256,
     'Published view differs from the receipt and release record: '+id);
-  // The page is the season's own copy of the stock page: only its preliminary-design identity is checked.
-  check(lf(view).includes(phaseText)||!added&&lf(view).includes(issuedLabel),'The release page must say it is a "'+phaseText+'" release: '+id);
+  // The page is the season's own copy of the stock page; the gate checks its data, not its markup or script.
   // Everything the page displays as a result comes from the pinned scene, which must repeat the receipt's result,
   // including the displaced control the receipt reports separately as rejected.
   const pinned=pinnedScene(files.get(sceneFile),receipt);
@@ -726,7 +714,6 @@ export function auditTree(oldFiles,newFiles,policy={},{issued=false}={}){
   }
   check(ids.length===after.releases.size&&ids.every(i=>after.releases.has(i)),'The preliminary release index and release directories disagree');
   const added=ids.filter(i=>!before.releases.has(i));
-  check(!added.length||lf(viewer).includes(phaseText),'The stable preliminary viewer must say it lists "'+phaseText+'" releases');
   const receipts=new Map(ids.map(i=>[i,after.releases.get(i)?.get('receipt.json')]).filter(([,r])=>r));
   const historical=new Set(ids.filter(i=>{const r=after.releases.get(i)?.get('release.json');return r&&parse(r,'release record: '+i).status==='historical-review';}));
   const status=checkStatusChange(priorIndex,index,receipts,{historical,legacy:index.legacy??[]});
