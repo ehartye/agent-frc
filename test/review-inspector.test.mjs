@@ -65,3 +65,23 @@ test('search selects by stable ID or display name', () => {
   const tie = { arm2: { id: 'arm2', name: 'Second arm' }, arm: { id: 'arm', name: 'First arm' } };
   assert.equal(findComponent('arm', tie), 'arm', 'an exact ID beats an earlier substring match');
 });
+
+test('the page digest falls back to a pure-JS SHA-256 where crypto.subtle is unavailable', async () => {
+  const { createHash } = await import('node:crypto');
+  const { sha256Pure, digestHex } = new Function(source + '\nreturn {sha256Pure, digestHex};')();
+  assert.ok(sha256Pure && digestHex, 'the review logic exports the digest helpers');
+  const cases = ['', 'abc', 'abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq', 'é'.repeat(70), 'x'.repeat(1000)];
+  for (const text of cases) {
+    const bytes = new TextEncoder().encode(text);
+    const expected = createHash('sha256').update(bytes).digest('hex');
+    assert.equal(sha256Pure(bytes), expected, 'pure SHA-256 of ' + bytes.length + ' bytes');
+    assert.equal(await digestHex(bytes, undefined), expected, 'digest without crypto.subtle');
+    assert.equal(await digestHex(bytes.buffer, undefined), expected, 'an ArrayBuffer is accepted');
+    assert.equal(await digestHex(bytes, globalThis.crypto.subtle), expected, 'digest with crypto.subtle');
+  }
+  const big = new Uint8Array(3 * 1024 * 1024 + 77).map((_, k) => (k * 31) & 255);
+  const view = big.subarray(13, big.length - 5);
+  assert.equal(await digestHex(view, undefined), createHash('sha256').update(view).digest('hex'), 'a multi-megabyte offset view hashes in place');
+  assert.equal(sha256Pure(new DataView(view.buffer, view.byteOffset, view.byteLength)), createHash('sha256').update(view).digest('hex'), 'any ArrayBuffer view');
+  for (const n of [55, 56, 63, 64, 119, 120]) { const b = new Uint8Array(n).fill(97); assert.equal(sha256Pure(b), createHash('sha256').update(b).digest('hex'), n + ' bytes'); }
+});

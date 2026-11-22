@@ -8,7 +8,7 @@
 h1,h2,h3{font-family:var(--display);font-weight:700;letter-spacing:.01em;color:var(--navy)}h1{margin:0;color:white;font-size:clamp(1.6rem,3vw,2.3rem)}h2{border-bottom:3px solid var(--gold);padding-bottom:.15rem;margin-top:2rem}
 #review-header{background:var(--navy);color:white;border-bottom:4px solid var(--gold);padding:1rem clamp(1rem,4vw,3rem)}#review-header dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));gap:.4rem 1.5rem;margin:.75rem 0 0}#review-header dt{font:600 .8rem var(--display);text-transform:uppercase;letter-spacing:.06em;color:var(--gold)}#review-header dd{margin:0;overflow-wrap:anywhere}#review-header .decision{grid-column:1/-1}#review-header details{margin-top:.6rem}#review-header a{color:var(--gold)}
 .wip{margin:.5rem 0 0;font-weight:600}.status{display:inline-block;padding:0 .45rem;border-radius:.2rem;font-weight:700;background:var(--gold);color:var(--navy)}.status.blocked,.status.reopen{background:#ffb3a8}.status.layout-checked{background:#bfe6c8}
-fieldset{display:flex;flex-wrap:wrap;align-items:center;gap:.65rem;border:0;padding:0;margin:0}legend{font:700 1rem var(--display);color:var(--navy)}button,select,input[type=search]{font:inherit;padding:.3rem .6rem;border:1px solid #8199b9;border-radius:6px;background:white;color:var(--navy)}button{font-weight:600;cursor:pointer}button.primary{background:var(--blue);border-color:var(--blue);color:white}button:disabled{opacity:.5}
+fieldset{display:flex;flex-wrap:wrap;align-items:center;gap:.65rem;border:0;padding:0;margin:0;min-width:0}label:has(>select){display:inline-flex;align-items:center;gap:.3rem;min-width:0;max-width:100%}label>select{min-width:0;max-width:100%;flex:1 1 auto}legend{font:700 1rem var(--display);color:var(--navy)}button,select,input[type=search]{font:inherit;padding:.3rem .6rem;border:1px solid #8199b9;border-radius:6px;background:white;color:var(--navy)}button{font-weight:600;cursor:pointer}button.primary{background:var(--blue);border-color:var(--blue);color:white}button:disabled{opacity:.5}
 button:focus-visible,select:focus-visible,input:focus-visible,canvas:focus-visible,a:focus-visible{outline:3px solid var(--blue);outline-offset:1px}
 .viewer-row{display:grid;grid-template-columns:minmax(0,1fr) 22rem;gap:1rem;align-items:start;margin:.75rem 0}
 #stage{position:relative;background:#101e28;overflow:hidden;border-radius:12px}canvas{width:100%;height:min(66vh,50rem);display:block;touch-action:none;cursor:grab}#labels{position:absolute;inset:0;pointer-events:none}.tag{position:absolute;background:#142833d9;color:white;padding:0 3px;font:11px var(--body);white-space:nowrap}#sceneStatus{position:absolute;left:.75rem;bottom:.6rem;color:white;font-size:.85rem;background:#142833cc;padding:.1rem .4rem}
@@ -41,7 +41,7 @@ tr.control td{background:#fff6dd}tr.uncovered td{color:var(--steel);font-style:i
 <main>
 <section id="model" aria-label="Model and controls">
 <fieldset><legend>Trajectory</legend><label>Case <select id="cases"></select></label>
-<button id="play" class="primary">Play</button><label>Stroke <input type="range" id="frame" min="0" max="24" value="0"></label><output id="position"></output><output id="outcome"></output>
+<button id="play" class="primary">Play</button><label>Position on path <input type="range" id="frame" min="0" max="24" value="0"></label><output id="position"></output><output id="outcome"></output>
 <label><input id="showLabels" type="checkbox"> Labels</label><label><input id="floor" type="checkbox" checked> Floor</label>
 <button id="fit">Fit robot</button><button id="fitField">Fit field interaction</button></fieldset>
 <div class="viewer-row">
@@ -99,6 +99,36 @@ function inspectorFields(entry){
   ['Electrical load lines',entry.loads?.length?entry.loads:'None assigned to this component',false],
   ['Moves in',entry.movesIn?.length?entry.movesIn:'Stationary in every commissioned case',false]];
 }
+// SHA-256 for contexts without crypto.subtle, such as a plain-http LAN review. FIPS 180-4.
+const SHA_K=new Uint32Array([0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2]);
+// Hashes the input in place, padding only the final blocks, and yields about every megabyte.
+function* sha256Steps(input){
+ const bytes=ArrayBuffer.isView(input)?new Uint8Array(input.buffer,input.byteOffset,input.byteLength):new Uint8Array(input);
+ const n=bytes.length,full=n-n%64,tailLength=Math.ceil((n-full+9)/64)*64,tail=new Uint8Array(tailLength);
+ tail.set(bytes.subarray(full));tail[n-full]=0x80;
+ const tailView=new DataView(tail.buffer);tailView.setUint32(tailLength-8,Math.floor(n/0x20000000));tailView.setUint32(tailLength-4,(n<<3)>>>0);
+ const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+ const h=new Uint32Array([0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19]),w=new Uint32Array(64);
+ const rot=(x,k)=>(x>>>k)|(x<<(32-k));
+ function block(source,off){
+  for(let i=0;i<16;i++)w[i]=source.getUint32(off+4*i);
+  for(let i=16;i<64;i++){const a=w[i-15],b=w[i-2];w[i]=(w[i-16]+(rot(a,7)^rot(a,18)^(a>>>3))+w[i-7]+(rot(b,17)^rot(b,19)^(b>>>10)))>>>0}
+  let [a,b,c,d,e,f,g,k]=h;
+  for(let i=0;i<64;i++){
+   const t1=(k+(rot(e,6)^rot(e,11)^rot(e,25))+((e&f)^(~e&g))+SHA_K[i]+w[i])>>>0,t2=((rot(a,2)^rot(a,13)^rot(a,22))+((a&b)^(a&c)^(b&c)))>>>0;
+   k=g;g=f;f=e;e=(d+t1)>>>0;d=c;c=b;b=a;a=(t1+t2)>>>0;
+  }
+  h[0]+=a;h[1]+=b;h[2]+=c;h[3]+=d;h[4]+=e;h[5]+=f;h[6]+=g;h[7]+=k;
+ }
+ for(let off=0;off<full;off+=64){block(view,off);if((off&0xfffff)===0xfffc0)yield}
+ for(let off=0;off<tailLength;off+=64)block(tailView,off);
+ return [...h].map(x=>x.toString(16).padStart(8,'0')).join('');
+}
+function sha256Pure(input){const steps=sha256Steps(input);let r;while(!(r=steps.next()).done);return r.value}
+async function digestHex(bytes,subtle=globalThis.crypto?.subtle){
+ if(!subtle){const steps=sha256Steps(bytes);let r;while(!(r=steps.next()).done)await new Promise(res=>setTimeout(res));return r.value}
+ return [...new Uint8Array(await subtle.digest('SHA-256',bytes))].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
 function visibleBodies(names,isolated){return isolated&&isolated.size?names.filter(n=>isolated.has(n)):names.slice()}
 function findComponent(query,inspector,exact=false){
  const q=String(query||'').trim().toLowerCase();if(!q)return null;
@@ -136,9 +166,8 @@ const evidenceRows=data.motionEvidence||[];
 function triggered(list){get('triggered').replaceChildren(...(list.length?list:['None recorded']).map(v=>element('li',typeof v==='string'?v:v.phase+': '+v.reason+(v.affected?' ('+v.affected.join(', ')+')':''))))}
 triggered((header.status==='blocked'&&header.firstUnmet)?[header.firstUnmet.text]:[]);
 async function pageDigest(){
- if(!globalThis.crypto?.subtle)return null;
  const bytes=await (await fetch(location.href.split('#')[0],{cache:'no-store'})).arrayBuffer();
- return [...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(b=>b.toString(16).padStart(2,'0')).join('');
+ return digestHex(bytes);
 }
 // The receipt pins this page; a stale or foreign receipt never sets the decision.
 Promise.all([fetch('receipt.json',{cache:'no-store'}).then(r=>r.ok?r.json():null),pageDigest().catch(()=>null)]).then(([receipt,own])=>{
@@ -147,7 +176,7 @@ Promise.all([fetch('receipt.json',{cache:'no-store'}).then(r=>r.ok?r.json():null
  const d=receipt.decision||{status:receipt.status,firstUnmet:null};
  // Only a receipt that pins these exact page bytes sets the decision.
  if(own===null){get('decisionSource').textContent='(this browser context cannot verify the page digest; receipt.json reports '+d.status+')';return}
- decide(d.status,d.firstUnmet,'(from the review receipt that pins this page)');
+ decide(d.status,d.firstUnmet,'(from the review receipt that pins this page'+(isSecureContext?')':'; plain HTTP: consistency check only)'));
  get('receiptPin').textContent='· plan '+short(receipt.planSha256)+(receipt.view?' · view '+short(receipt.view.sha256):'')+(receipt.view?.geometry?' · geometry '+short(receipt.view.geometry.sha256):'');
  triggered(receipt.reopen||[]);
  const premises=(receipt.premises||[]).filter(p=>p.phase==='conceptual-design');
@@ -407,12 +436,9 @@ async function loadScene(){
   if(typeof DecompressionStream==='undefined')throw Error('This browser cannot decompress the geometry');
   bytes=new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
  }
- let note='';
- if(globalThis.crypto?.subtle){
-  const hex=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(b=>b.toString(16).padStart(2,'0')).join('');
-  if(hex!==data.geometry.contentSha256)throw Error('Geometry differs from this view’s pinned digest');
-  note='Geometry digest verified';
- }else note='Geometry loaded; this browser context cannot verify its digest';
+ get('sceneStatus').textContent='Verifying geometry…';
+ if(await digestHex(bytes)!==data.geometry.contentSha256)throw Error('Geometry differs from this view’s pinned digest');
+ const note='Geometry digest verified'+(isSecureContext?'':' (plain HTTP: consistency check only)');
  const scene=JSON.parse(new TextDecoder().decode(bytes));
  cases=scene.cases.map(c=>({...c,bodies:Object.fromEntries(Object.entries(c.bodies).map(([n,b])=>[n,{...scene.meshes[b.mesh],matrices:b.matrices}]))}));
  return note;

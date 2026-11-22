@@ -23,7 +23,9 @@ async function render(folder, page, probe, windowWidth, height) {
  const pre=document.createElement('pre');pre.id='headless-probe';pre.textContent=JSON.stringify({viewportWidth:innerWidth,result:out});document.body.append(pre);});</script>`;
   const server = createServer((req, res) => {
     const name = decodeURIComponent(new URL(req.url, 'http://x').pathname).replace(/^\/+/, '');
-    const file = path.resolve(root, name);
+    let file = path.resolve(root, name);
+    // Like a static host, a directory serves its index.html.
+    if ((file + path.sep).startsWith(root) && existsSync(file) && statSync(file).isDirectory()) file = path.join(file, 'index.html');
     if (!file.startsWith(root) || !existsSync(file) || !statSync(file).isFile()) { res.writeHead(404); return res.end(); }
     let body = readFileSync(file);
     if (name === page) body = Buffer.from(body.toString('utf8').replace(/<\/body>|$/i, m => script + m));
