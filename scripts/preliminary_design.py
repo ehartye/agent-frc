@@ -28,6 +28,42 @@ def has_travel(op):
     return op["kind"]=="gravity-drop" and number(op["fallMm"]) and op["fallMm"]>0
 
 
+def contact_transport(root, key, case, stage, groups, moving, missing):
+    """Return the payloads a mechanism moves by contact along their own evidenced path in this case.
+
+    The payload keeps its own signed travel. Each transporter is a mechanism group that moves in the case or
+    whose stationary drive is declared. A pinned trial must record this case, payload, transporters and the
+    payload members' exact start and travel, so the path is not an arbitrary animation."""
+    transported=stage.get("transportedBy",{})
+    require(isinstance(transported,dict),"List contact-transported payloads by group")
+    covered=[]
+    for payload,spec in transported.items():
+        require(payload in moving and groups.get(payload,{}).get("role")=="payload"
+                and payload not in stage.get("carriedWith",{}),"Identify the moving payload transported by contact")
+        require(isinstance(spec,dict) and named(spec.get("basis")),"Describe how contact transports "+payload)
+        transporters=names(spec.get("mechanisms"),"transporting mechanisms")
+        require(all(groups.get(t,{}).get("role")=="mechanism" for t in transporters),
+                "Only mechanism groups can transport a payload")
+        drive=spec.get("drive",{})
+        require(isinstance(drive,dict) and set(drive)<=transporters and all(named(v) for v in drive.values()),
+                "Declare each transporter drive against a named transporting mechanism")
+        complete=True
+        for t in sorted(transporters-moving-set(drive)):
+            missing.append("Declare the drive of stationary transporter "+t+" in "+key);complete=False
+        evidence=spec.get("evidence")
+        if not (isinstance(evidence,dict) and named(evidence.get("file")) and named(evidence.get("sha256"))):
+            missing.append("Pin the contact-transport evidence for "+payload+" in "+key);continue
+        trial=read(pinned(root,evidence))
+        members=groups[payload]["members"]
+        expected=dict(case=key,payload=payload,mechanisms=sorted(transporters),
+                      moves={n:case["moves"][n] for n in members},
+                      initialPose={n:case.get("initialPose",{}).get(n,[]) for n in members})
+        if not isinstance(trial,dict) or trial.get("transport")!=expected:
+            missing.append("Contact-transport evidence for "+payload+" in "+key+" does not record this payload path");continue
+        if complete:covered.append(payload)
+    return covered
+
+
 def compare_premises(root, rows, plan, missing):
     require(isinstance(rows,list),"List the accepted upstream premises")
     decisions=[]
@@ -359,6 +395,7 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
             require(all(c["moves"][n]==c["moves"][reference] and initial.get(n,[])==initial.get(reference,[])
                         for n in attached), "The attached payload diverges from its carrier")
             if stage["purpose"]=="operating":loaded_operating=True
+        if contact_transport(root,key,c,stage,groups,moving,missing) and stage["purpose"]=="operating":loaded_operating=True
         covered.add(stage["purpose"])
     for purpose in sorted({"operating","park","service"}-covered):
         missing.append("Unexamined stage: "+purpose)
@@ -463,6 +500,9 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
     for c in cases:
         for ref in [*(f["file"] for f in c.get("fixtures",[])),*(e["qualifiedBy"] for e in c.get("intendedInterfaces",[]))]:
             pinned(root,ref)
+    for stage in stages.values():
+        for spec in stage.get("transportedBy",{}).values():
+            if isinstance(spec.get("evidence"),dict) and named(spec["evidence"].get("sha256")):pinned(root,spec["evidence"])
     require(digest(source)==observed["stepSha256"]==plan["step"]["sha256"] and digest(file)==plan_hash,
             "Source or commission changed during review")
     pinned(root,plan["motion"])
