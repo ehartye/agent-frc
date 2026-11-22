@@ -403,7 +403,7 @@ def evaluate(root,study,*,mount_hosts=(),package_scene=None,progress=None,fail_f
             require(record.get("stepSha256")==study["step"]["sha256"] and record.get("case")==id and
                     set(record.get("pair",[]))=={a,b} and record.get("status")=="pass","Interface qualification is stale or incomplete")
             excluded[tuple(sorted((a,b)))]=ex["basis"]
-        compliant=payload_compression.interfaces(case,scene,excluded)
+        compliant=payload_compression.interfaces(case,scene,excluded,root)
         rows=[];counts={"broadPhase":0,"bounded":0,"constantPoseBroadPhase":0,"constantPoseReused":0}
         for done,(a,b) in enumerate(combinations(sorted(scene),2)):
             beat(done,a,b,0,0)

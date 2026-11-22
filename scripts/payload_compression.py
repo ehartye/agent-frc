@@ -1,7 +1,7 @@
 """Bound indentation into a spherical or round-section toroidal payload during a rigid motion."""
 import math
 
-from mechanical_readiness import named, number, require
+from mechanical_readiness import named, number, pinned, read, require
 
 
 def section(shape):
@@ -43,7 +43,21 @@ def section(shape):
     return center, radius
 
 
-def interfaces(case, scene, excluded):
+def trial_pin(root, rule):
+    """Check the optional pinned trial behind a rule's allowance: the trial record's named field must hold the depth."""
+    evidence = rule.get("evidence")
+    if evidence is None:
+        return
+    require(root is not None and isinstance(evidence, dict) and set(evidence) == {"file", "sha256", "field"}
+            and named(evidence["field"]), "Pin a compression trial by file, sha256 and field, the record field that holds the depth")
+    record = read(pinned(root, dict(file=evidence["file"], sha256=evidence["sha256"])))
+    value = record.get(evidence["field"]) if isinstance(record, dict) else None
+    require(number(value) and value == rule["maxDepthMm"],
+            "Compression allowance for " + rule["payload"] + " on " + rule["contact"] + " differs from " + evidence["field"]
+            + " in its pinned trial")
+
+
+def interfaces(case, scene, excluded, root=None):
     entries = {}
     sections = {}
     for rule in case.get("payloadCompression", []):
@@ -56,6 +70,7 @@ def interfaces(case, scene, excluded):
         center, radius = sections[payload]
         limit = rule["maxDepthMm"]
         require(number(limit) and 0 < limit < radius, "Compression allowance must be within the piece section radius")
+        trial_pin(root, rule)
         entries[pair] = (rule, center, radius)
     return entries
 
@@ -70,6 +85,8 @@ def sweep(entry, scene, moves, rates, depth, transform, distance):
     limit = rule["maxDepthMm"]
     result = dict(pair=[piece, contact], method="payload section indentation", basis=rule["basis"],
                   limitMm=limit, maxObservedDepthMm=0., status="pass")
+    if rule.get("evidence") is not None:
+        result["evidence"] = dict(rule["evidence"])
     samples = {}
 
     def separation(t):
