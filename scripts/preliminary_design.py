@@ -77,6 +77,10 @@ def compare_premises(root, rows, plan, missing):
     return decisions
 
 
+# A replayed stand-off matches its premise to within numerical noise of the resolved field point.
+STANDOFF_TOLERANCE_IN=1e-6
+
+
 def repeated_field_input(root, repeat, value, unit, replayed):
     """Read the effective actor and program from the repeated finite field rehearsal."""
     profile_path=pinned(root,repeat["profile"])
@@ -84,7 +88,7 @@ def repeated_field_input(root, repeat, value, unit, replayed):
     key=repeat["profile"]["sha256"]
     if key not in replayed:
         process=subprocess.run(["node",str(Path(__file__).with_name("rehearsal-series.mjs")),str(profile_path)],
-                               capture_output=True,text=True)
+                               capture_output=True,text=True,encoding="utf-8")
         require(process.returncode==0,"Field repeat did not finish: "+process.stderr)
         replayed[key]=json.loads(process.stdout)
     require(saved==replayed[key] and saved["profileSha256"]==key,"Prior field result does not reproduce on its selected profile")
@@ -100,12 +104,34 @@ def repeated_field_input(root, repeat, value, unit, replayed):
         require(type(index)==int and 0<=index<len(steps) and named(repeat["stepLabel"]),"Identify the timed step")
         step=steps[index]
         return unit=="s" and step["label"]==repeat["stepLabel"] and step.get("dwell",0)==value
+    if repeat["input"]=="stepPosition":
+        return repeated_step_position(profile_path,saved,matches[0],robot,repeat,value,unit)
     if repeat["input"]=="pickupFace":
         # The directional Field Lab models the front mouth only.
         return unit=="face" and value=="front" and bool(robot.get("intake"))
     if repeat["input"] not in ("speed","height","heading"):return False
     field=repeat["input"]
     return unit=={"speed":"in/s","height":"in","heading":"deg"}[field] and robot.get(field)==value
+
+
+def repeated_step_position(profile_path, saved, match, robot, repeat, value, unit):
+    """Compare a named scoring step's stand-off in the repeated profile and screen the robot footprint there."""
+    index=repeat.get("stepIndex")
+    require(type(index)==int and index>=0 and named(repeat.get("stepLabel")) and named(repeat.get("station"))
+            and named(repeat.get("period")),"Identify the delivery step, its period and its scoring station")
+    process=subprocess.run(["node",str(Path(__file__).with_name("rehearsal-step-pose.mjs")),str(profile_path),
+                            match["id"],robot["id"],repeat["period"],str(index)],capture_output=True,text=True,encoding="utf-8")
+    require(process.returncode==0,"Delivery step did not resolve: "+process.stderr)
+    pose=json.loads(process.stdout)
+    # The step resolves on the same profile bytes that produced the saved result.
+    if pose["profileSha256"]!=saved["profileSha256"]:return False
+    # The game records carried pieces on an attempt only from an eligible position at the station.
+    delivered=any(e.get("phase")==repeat["period"] and e.get("robot")==robot["id"] and e.get("station")==repeat["station"]
+                  and e.get("operation")=="attempt" and e.get("pieces") for e in match["game"]["events"])
+    return (unit=="in" and number(value) and pose["label"]==repeat["stepLabel"] and pose["operation"]=="attempt"
+            and pose["station"]==repeat["station"] and pose["stationKind"]=="scoring"
+            and pose["footprint"]["status"]=="clear" and delivered
+            and abs(pose["standoffIn"]-value)<=STANDOFF_TOLERANCE_IN)
 
 
 def verify_reopens(root, plan, prior, decisions, observations, missing, budget):

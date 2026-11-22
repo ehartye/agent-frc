@@ -90,6 +90,12 @@ export function createFieldRehearsal(profile) {
     return sim;
   }
   function program(r,sim){return model.programs[r.plans[sim.phase]];}
+  // Resolve an authored step to the field point a robot on this side and slot drives to.
+  function waypoint(step,side,slot) {
+    const spec=step.at;
+    const q=Array.isArray(spec)?spec:spec[side] || spec.slots?.[slot] || spec.default;
+    return step.frame==='field'?[...q]:sidePoint(q,side);
+  }
   function itinerary(r,sim) {
     const chosen=program(r,sim);
     const steps=chosen.byPeriod?.[sim.phase] || chosen.steps;
@@ -98,9 +104,7 @@ export function createFieldRehearsal(profile) {
     return steps.map((step,index)=>{
       if(index===first && opening?.approach)return {...step,station:opening.station,action:step.label,point:opening.approach,dwell:Math.round((step.dwell??0)/dt)};
       if(index===first && opening?.yieldPickup)return {action:'Yield opening pickup',point:r.p,dwell:0};
-      const spec=step.at;
-      const q=Array.isArray(spec)?spec:spec[r.side] || spec.slots?.[r.slot] || spec.default;
-      return {...step,action:step.label,point:step.frame==='field'?[...q]:sidePoint(q,r.side),
+      return {...step,action:step.label,point:waypoint(step,r.side,r.slot),
         dwell:Math.round((step.dwell || 0)/dt)};
     });
   }
@@ -254,6 +258,6 @@ export function createFieldRehearsal(profile) {
     game.replenish(sim,0);
     for(const r of sim.robots)Object.assign(r,{pickup:null,leg:0,waypoints:null,target:0,dwell:0,wait:0,travelIn:0,visits:0,blocked:'',action:''});
   }
-  return {supported,behaviors,defaults,startingRoster,completeRoster,create,createProbe,advance,nextPhase,assessRoute,geom,intake:game?.intake,dt,periods:phases,terminal,
+  return {supported,behaviors,defaults,startingRoster,completeRoster,create,createProbe,advance,nextPhase,assessRoute,geom,waypoint,intake:game?.intake,dt,periods:phases,terminal,
     phaseSeconds:name=>duration(name)*dt,elapsedSeconds:name=>wallDuration(name)*dt};
 }
