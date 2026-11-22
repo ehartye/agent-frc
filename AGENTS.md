@@ -20,7 +20,7 @@ Every published design holds a status: in-progress, effective, superseded or wit
 
 ## Maintain the public workflow guide
 
-Update the GitHub Pages guide in the same change whenever a workflow, skill, student objective, artifact contract or user-facing behavior changes. Check the guide against the installed skill inventory, build it, exercise the changed interaction and verify the published result after merge.
+Update the GitHub Pages guide in the same change whenever a workflow, skill, student objective, artifact contract or user-facing behavior changes. Check the guide against the installed skill inventory, build it, exercise the changed interaction and verify the published result after merge. Write browser-check captures to a scratch directory outside the checkout, and remove any `.playwright-mcp/` folder the check leaves before finishing.
 
 ## Keep the plugin season-neutral
 
