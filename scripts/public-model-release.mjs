@@ -198,9 +198,16 @@ export async function audit(root,base,policyName,packetPath,pubKey,sourceCommit)
   }
   const preliminaryInputs=[],prelimAuthorized=new Set();
   if(prelimRoot!==null){
-    const issued=new Map();
+    const issued=new Map(),knownModels=new Set();
+    for(const row of git(root,['ls-tree','-r','-z',base]).toString().split('\0').filter(Boolean)){
+      const tab=row.indexOf('\t');
+      if(geometry.test(row.slice(tab+1))&&!insidePrelim(row.slice(tab+1)))knownModels.add(row.slice(0,tab).split(' ')[2]);
+    }
+    for(const n of [...names,...reviewed])if(!insidePrelim(n)&&lstatSync(path.join(root,n),{throwIfNoEntry:false})?.isFile())
+      knownModels.add(git(root,['hash-object','--no-filters',file(root,n)]).toString().trim());
     for(const n of git(root,['ls-tree','-r','--name-only','-z',base,'--',prelimRoot]).toString().split('\0').filter(Boolean)){
       const [id,...rest]=n.slice(prelimRoot.length+1).split('/');
+      if(!rest.length)continue; // A loose file beside the release directories is not a release; geometry there keeps the full gate.
       if(!issued.has(id))issued.set(id,new Set());
       issued.get(id).add(rest.join('/'));
     }
@@ -232,7 +239,10 @@ export async function audit(root,base,policyName,packetPath,pubKey,sourceCommit)
         if(item.isFile())files.set(item.name,readFileSync(path.join(dir,item.name)));
       }
       const {step}=checkSourceInputs(id,files);
-      prelimAuthorized.add(prelimRoot+'/'+id+'/'+step);
+      // A preliminary STEP can never be a copy of a registered, signed or previously committed model.
+      const stepPath=prelimRoot+'/'+id+'/'+step,stepOid=git(root,['hash-object','--no-filters',file(root,stepPath)]).toString().trim();
+      check(!knownModels.has(stepOid),'A preliminary input duplicates an existing model: '+stepPath);
+      prelimAuthorized.add(stepPath);
       if(sourceCommit)for(const name of files.keys())verifyCommittedFile(root,sourceCommit,prelimRoot+'/'+id+'/'+name);
       preliminaryInputs.push(id);
     }

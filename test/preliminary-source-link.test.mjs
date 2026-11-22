@@ -100,6 +100,19 @@ test('other CAD in the source tree keeps the full gate', async t=>{
   await assert.rejects(run(repo,base),/Unreviewed new public model asset/,'the class is opt-in from the approved policy');
 });
 
+test('a preliminary input cannot copy an existing model, and loose files do not break the audit', async t=>{
+  let {repo,base}=sourceRepo(t);
+  issueInputs(repo,'layout-002',{step:'approved detailed robot'});
+  await assert.rejects(run(repo,base),/duplicates an existing model/);
+  ({repo,base}=sourceRepo(t));
+  issueInputs(repo,'layout-002',{step:'solid layout-001'});
+  assert.deepEqual((await run(repo,base)).preliminaryInputs,['layout-002'],'a revision may reuse an earlier preliminary STEP');
+  ({repo}=sourceRepo(t));
+  write(repo,inputs+'/README.md','Release inputs');git(repo,'add','.');git(repo,'commit','-qm','Readme');
+  base=git(repo,'rev-parse','HEAD');issueInputs(repo,'layout-002');
+  assert.deepEqual((await run(repo,base)).preliminaryInputs,['layout-002']);
+});
+
 test('a preliminary input can never be a registered primary model', async t=>{
   const {repo}=sourceRepo(t);
   write(repo,'.github/source-policy.json',{schema:'agent-frc/public-model-policy@1',project:'Teaching project',publicRoots:['cad'],
@@ -135,6 +148,20 @@ test('the declared index can gain exactly one secondary link to the preliminary 
     const g=siteFixture(t);g.edit(change);
     await assert.rejects(auditStaged(g.approved,g.site,g.policy),/primary entry point/,change.toString());
   }
+  for(const [page,change] of [
+    ['<div title="AB">x</div>',p=>p.replace('AB','A'+link+'B')],
+    ['<div title="a><b">x</div>',p=>p.replace('a><b','a>'+link+'<b')],
+    ['<script>var a=1;\n</script>',p=>p.replace(';\n',';\n'+link+'\n')],
+    ['<!-- note -->\n<p>x</p>',p=>p.replace(' note ',' '+link+' ')],
+    ['<img alt=it\'s><div title="x\' >AB">x</div>',p=>p.replace('AB','A'+link+'B')],
+    ['<!doctype html x=\'><p title="y >AB">x</p>',p=>p.replace('AB','A'+link+'B')],
+    ['<nav></nav>',p=>p.replace('</nav>',"<a href='preliminary-design/'>Preliminary</a></nav>")],
+    ['<nav></nav>',p=>p.replace('</nav>','<a href="preliminary-design/">Pre"liminary</a></nav>')]]){
+    const g=siteFixture(t);write(g.approved,'index.html',page);write(g.site,'index.html',change(page));
+    await assert.rejects(auditStaged(g.approved,g.site,g.policy),/primary entry point/,page);
+  }
+  const spaced=siteFixture(t);spaced.edit(i=>i.replace('</nav>','\n      '+link+'\n    </nav>'));
+  assert.equal((await auditStaged(spaced.approved,spaced.site,spaced.policy)).secondaryLink,'index.html');
   const undeclared=siteFixture(t,false);
   undeclared.edit(i=>i.replace('</nav>',' '+link+'</nav>'));
   await assert.rejects(auditStaged(undeclared.approved,undeclared.site,undeclared.policy),/primary entry point/);

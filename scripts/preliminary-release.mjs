@@ -92,6 +92,8 @@ export function checkSourceInputs(id,files){
       'Preliminary input '+id+'/'+name+' differs from its receipt');
   }
   check(receipt.view.verified===true,'Preliminary input '+id+' needs a verified view');
+  const plan=parse(files.get('layout.json'),'layout: '+id);
+  check(same(plan.step,receipt.step)&&same(plan.motion,receipt.motion),'Preliminary input '+id+'/layout.json differs from its receipt');
   return {step:receipt.step.file};
 }
 
@@ -219,20 +221,57 @@ export function preliminaryPolicy(spec,reserved){
 export function addsOnlySecondaryLink(approved,candidate,root){
   const before=lf(approved),after=lf(candidate);
   const escaped=root.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-  const anchor=new RegExp('<a href=(["\'])'+escaped+'/\\1>[^<>&]{1,80}</a>','g');
+  const anchor=new RegExp('<a href="'+escaped+'/">[A-Za-z0-9 .,()-]{1,80}</a>','g');
   const found=[...after.matchAll(anchor)];
-  if(found.length!==1)return false;
-  // The insertion may bring its own separating whitespace on either side.
+  const delta=after.length-before.length;
+  if(found.length!==1||delta<found[0][0].length||delta>found[0][0].length+32)return false;
+  // The insertion may bring up to 16 whitespace characters of its own on either side.
   const start=found[0].index,end=start+found[0][0].length;
-  const space=/[ \t\r\n]/;
-  for(let lead=start;;lead--){
-    for(let trail=end;;trail++){
-      if(after.slice(0,lead)+after.slice(trail)===before)return true;
-      if(trail>=after.length||!space.test(after[trail]))break;
-    }
-    if(lead===0||!space.test(after[lead-1]))break;
+  for(let lead=start;lead>=Math.max(0,start-16);lead--){
+    const trail=lead+delta;
+    if(trail<end||!/^[ \t\n]*$/.test(after.slice(lead,start))||!/^[ \t\n]*$/.test(after.slice(end,trail)))continue;
+    if(after.slice(0,lead)===before.slice(0,lead)&&after.slice(trail)===before.slice(lead))
+      return elementContentAt(before.slice(0,lead));
   }
   return false;
+}
+
+/** True when the HTML prefix ends in ordinary element content: not in a tag, attribute, comment or raw-text element. */
+function elementContentAt(html){
+  const low=html.toLowerCase();
+  let i=0,raw=null;
+  while(i<html.length){
+    if(raw){
+      const close=low.indexOf('</'+raw,i);
+      if(close<0)return false;
+      i=close;raw=null;continue;
+    }
+    if(html.startsWith('<!--',i)){
+      const close=html.indexOf('-->',i+4);
+      if(close<0)return false;
+      i=close+3;continue;
+    }
+    if(html[i]==='<'&&/[A-Za-z/!?]/.test(html[i+1]??'')){
+      // As a browser does: <! and <? bogus markup ends at the first '>'; a quote delimits only a value after '='.
+      let j=i+1,quote=null,afterEquals=false;
+      const bogus=html[i+1]==='!'||html[i+1]==='?';
+      for(;j<html.length;j++){
+        const c=html[j];
+        if(quote){if(c===quote)quote=null;continue;}
+        if(c==='>')break;
+        if(bogus)continue;
+        if(afterEquals&&(c==='"'||c==="'")){quote=c;afterEquals=false;continue;}
+        if(c==='=')afterEquals=true;
+        else if(!/[ \t\n\f\r]/.test(c))afterEquals=false;
+      }
+      if(j>=html.length)return false;
+      const name=/^<([A-Za-z][\w-]*)/.exec(html.slice(i,j))?.[1]?.toLowerCase();
+      if(['script','style','textarea','title','xmp','iframe','noscript','noembed','noframes','template','plaintext'].includes(name))raw=name;
+      i=j+1;continue;
+    }
+    i++;
+  }
+  return true;
 }
 
 /**
