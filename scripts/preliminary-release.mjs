@@ -55,6 +55,47 @@ function evidence(bytes,what,shape){
 }
 
 /**
+ * The physics gate on a preliminary-check receipt: layout-checked, every nominal clearance case, the mass
+ * budget and every loaded-voltage case pass, the displaced control is rejected and nothing is missing.
+ */
+export function checkPhysics(receipt,id){
+  check(receipt?.schema===receiptSchema&&named(receipt.issue),'Release '+id+' needs an Agent FRC preliminary-check receipt');
+  check(receipt.status==='layout-checked','Preliminary release '+id+' needs a layout-checked receipt; found '+receipt.status);
+  check(receipt.partial!==true,'A partial --fail-fast receipt cannot be released: '+id);
+  check(Array.isArray(receipt.missingInputs)&&receipt.missingInputs.length===0,'Receipt '+id+' lists missing inputs');
+  check(Array.isArray(receipt.reopen)&&receipt.reopen.length===0,'Receipt '+id+' holds a reopened premise');
+  const cases=Array.isArray(receipt.cases)?receipt.cases:[];
+  check(cases.length&&cases.every(c=>object(c)&&named(c.case)&&c.status==='pass'),
+    'Receipt '+id+' needs every nominal clearance case to pass');
+  const control=receipt.control;
+  check(object(control)&&object(control.witness)&&control.witness.status==='fail'&&Array.isArray(control.witness.pair),
+    'Receipt '+id+' needs the displaced control to be rejected');
+  const budgets=receipt.budgets;
+  check(object(budgets)&&budgets.massStatus==='pass','Receipt '+id+' needs a passing inspection mass budget');
+  check(Array.isArray(budgets.electricalCases)&&budgets.electricalCases.length&&budgets.electricalCases.every(r=>r?.status==='pass'),
+    'Receipt '+id+' needs every loaded-voltage case to pass');
+}
+
+/**
+ * A new source-side release input directory, as a map of directory-relative name to bytes. Its layout and
+ * every input the receipt pins, including the STEP, must match their digests in a layout-checked receipt.
+ */
+export function checkSourceInputs(id,files){
+  check(releaseId.test(id),'Invalid preliminary release ID: '+id);
+  const need=name=>{check(files.has(name),'Preliminary input '+id+' is missing '+name);return files.get(name);};
+  const receipt=parse(need('receipt.json'),'receipt: '+id);
+  checkPhysics(receipt,id);
+  const pins=[['layout.json',receipt.planSha256],...[receipt.step,receipt.motion,receipt.view,receipt.budgets.source,receipt.budgets.limits]
+    .map(p=>[p?.file,p?.sha256])];
+  for(const [name,digest] of pins){
+    check(typeof name==='string'&&files.has(name)&&hex.test(digest??'')&&sha(files.get(name))===digest,
+      'Preliminary input '+id+'/'+name+' differs from its receipt');
+  }
+  check(receipt.view.verified===true,'Preliminary input '+id+' needs a verified view');
+  return {step:receipt.step.file};
+}
+
+/**
  * Check one release directory, given as a map of file name to bytes.
  * Physics: the receipt is layout-checked with nominal clearance, mass and voltage passing, the displaced
  * control rejected and no missing inputs. Mission: at least one passing, playable operating case or
@@ -88,21 +129,9 @@ export function checkRelease(id,files){
     'Release '+id+' needs an Agent FRC preliminary-check receipt for its issue');
 
   // Physics gate.
-  check(receipt.status==='layout-checked'&&record.status==='layout-checked',
-    'Preliminary release '+id+' needs a layout-checked receipt; found '+receipt.status);
-  check(receipt.partial!==true,'A partial --fail-fast receipt cannot be released: '+id);
-  check(Array.isArray(receipt.missingInputs)&&receipt.missingInputs.length===0,'Receipt '+id+' lists missing inputs');
-  check(Array.isArray(receipt.reopen)&&receipt.reopen.length===0,'Receipt '+id+' holds a reopened premise');
-  const cases=Array.isArray(receipt.cases)?receipt.cases:[];
-  check(cases.length&&cases.every(c=>object(c)&&named(c.case)&&c.status==='pass'),
-    'Receipt '+id+' needs every nominal clearance case to pass');
-  const control=receipt.control;
-  check(object(control)&&object(control.witness)&&control.witness.status==='fail'&&Array.isArray(control.witness.pair),
-    'Receipt '+id+' needs the displaced control to be rejected');
-  const budgets=receipt.budgets;
-  check(object(budgets)&&budgets.massStatus==='pass','Receipt '+id+' needs a passing inspection mass budget');
-  check(Array.isArray(budgets.electricalCases)&&budgets.electricalCases.length&&budgets.electricalCases.every(r=>r?.status==='pass'),
-    'Receipt '+id+' needs every loaded-voltage case to pass');
+  check(record.status==='layout-checked','Preliminary release '+id+' needs a layout-checked receipt; found '+record.status);
+  checkPhysics(receipt,id);
+  const cases=receipt.cases,budgets=receipt.budgets;
   check(object(budgets.source)&&budgets.source.sha256===sha(files.get('budgets.json'))&&
     object(budgets.limits)&&budgets.limits.sha256===sha(files.get('limits.json')),'Published budgets differ from the receipt: '+id);
 
@@ -174,11 +203,36 @@ export function preliminaryPolicy(spec,reserved){
     n.split('/').every(x=>x&&x!=='.'&&x!=='..'&&x!=='.git');
   check(object(spec)&&safe(spec.root)&&Array.isArray(spec.primaryEntryPoints)&&spec.primaryEntryPoints.length&&
     spec.primaryEntryPoints.every(safe)&&new Set(spec.primaryEntryPoints).size===spec.primaryEntryPoints.length&&
-    Object.keys(spec).every(k=>['root','primaryEntryPoints'].includes(k)),
+    Object.keys(spec).every(k=>['root','primaryEntryPoints','secondaryLink'].includes(k)),
     'preliminaryReleases needs a root and the approved primary entry points');
+  check(spec.secondaryLink===undefined||spec.primaryEntryPoints.includes(spec.secondaryLink)&&/\.html?$/.test(spec.secondaryLink),
+    'preliminaryReleases.secondaryLink must name a primary entry page (HTML)');
   const inside=n=>n===spec.root||n.startsWith(spec.root+'/');
   check(![...spec.primaryEntryPoints,...reserved].some(inside),'Keep primary, model and field outputs outside the preliminary tree');
-  return {root:spec.root,primary:new Set(spec.primaryEntryPoints),inside};
+  return {root:spec.root,primary:new Set(spec.primaryEntryPoints),inside,secondaryLink:spec.secondaryLink};
+}
+
+/**
+ * True when the candidate page equals the approved page plus exactly one plain anchor to the preliminary
+ * tree: <a href="ROOT/">text</a>, relative, no other attributes and text only.
+ */
+export function addsOnlySecondaryLink(approved,candidate,root){
+  const before=lf(approved),after=lf(candidate);
+  const escaped=root.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const anchor=new RegExp('<a href=(["\'])'+escaped+'/\\1>[^<>&]{1,80}</a>','g');
+  const found=[...after.matchAll(anchor)];
+  if(found.length!==1)return false;
+  // The insertion may bring its own separating whitespace on either side.
+  const start=found[0].index,end=start+found[0][0].length;
+  const space=/[ \t\r\n]/;
+  for(let lead=start;;lead--){
+    for(let trail=end;;trail++){
+      if(after.slice(0,lead)+after.slice(trail)===before)return true;
+      if(trail>=after.length||!space.test(after[trail]))break;
+    }
+    if(lead===0||!space.test(after[lead-1]))break;
+  }
+  return false;
 }
 
 /**

@@ -6,7 +6,7 @@ import path from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 
 import {activeDesignFor} from './active-design.mjs';
-import {auditTree,preliminaryPolicy} from './preliminary-release.mjs';
+import {addsOnlySecondaryLink,auditTree,checkSourceInputs,preliminaryPolicy} from './preliminary-release.mjs';
 
 const numberedSchema='agent-frc/signed-model-release@10';
 const schema='agent-frc/signed-model-release@9';
@@ -174,6 +174,13 @@ export async function audit(root,base,policyName,packetPath,pubKey,sourceCommit)
   const packet=packetPath?JSON.parse(readFileSync(packetPath)):null;
   const reviewed=packet?await verifyIssued(root,packet,readFileSync(pubKey),policy.project):new Set();
   const names=new Set(policy.modelFiles.map(relative));
+  // Work-in-progress preliminary inputs: opt-in, receipt-bound, immutable once issued and never a registered model.
+  const spec=policy.preliminaryInputs;
+  check(spec===undefined||spec&&typeof spec==='object'&&Object.keys(spec).join()==='root'&&typeof spec.root==='string',
+    'preliminaryInputs needs exactly a root');
+  const prelimRoot=spec===undefined?null:relative(spec.root);
+  const insidePrelim=n=>prelimRoot!==null&&n.startsWith(prelimRoot+'/');
+  check(![...names,...reviewed].some(insidePrelim),'Keep registered and signed models outside the preliminary input tree');
   for(const dir of publicRoots){
     const location=path.resolve(root,dir);
     check(realpathSync(location)===location,'Public root must be a real project directory');
@@ -189,6 +196,47 @@ export async function audit(root,base,policyName,packetPath,pubKey,sourceCommit)
     const old=git(root,['ls-tree','-r','--name-only','-z',base,'--',dir]).toString().split('\0');
     for(const n of old)if(geometry.test(n))names.add(n);
   }
+  const preliminaryInputs=[],prelimAuthorized=new Set();
+  if(prelimRoot!==null){
+    const issued=new Map();
+    for(const n of git(root,['ls-tree','-r','--name-only','-z',base,'--',prelimRoot]).toString().split('\0').filter(Boolean)){
+      const [id,...rest]=n.slice(prelimRoot.length+1).split('/');
+      if(!issued.has(id))issued.set(id,new Set());
+      issued.get(id).add(rest.join('/'));
+    }
+    const listing=dir=>{
+      const found=new Set();
+      (function walk(d,prefix){
+        for(const item of readdirSync(d,{withFileTypes:true})){
+          check(!item.isSymbolicLink(),'Redirected preliminary input: '+prefix+item.name);
+          if(item.isDirectory())walk(path.join(d,item.name),prefix+item.name+'/');
+          else found.add(prefix+item.name);
+        }
+      })(dir,'');
+      return found;
+    };
+    for(const [id,expected] of issued){
+      const dir=path.join(root,prelimRoot,id),present=lstatSync(dir,{throwIfNoEntry:false})?.isDirectory()?listing(dir):new Set();
+      for(const name of new Set([...expected,...present])){
+        const full=prelimRoot+'/'+id+'/'+name;
+        check(expected.has(name)&&present.has(name)&&
+          git(root,['rev-parse','--verify',base+':'+full]).toString().trim()===git(root,['hash-object','--no-filters',file(root,full)]).toString().trim(),
+          'An issued preliminary input changed, appeared or was removed: '+id+'/'+name);
+      }
+    }
+    const fresh=new Set([...names].filter(n=>insidePrelim(n)&&n.slice(prelimRoot.length+1).split('/').length===2&&!issued.has(n.slice(prelimRoot.length+1).split('/')[0])).map(n=>n.slice(prelimRoot.length+1).split('/')[0]));
+    for(const id of [...fresh].sort()){
+      const dir=path.join(root,prelimRoot,id),files=new Map();
+      for(const item of readdirSync(dir,{withFileTypes:true})){
+        check(!item.isSymbolicLink(),'Redirected preliminary input: '+id+'/'+item.name);
+        if(item.isFile())files.set(item.name,readFileSync(path.join(dir,item.name)));
+      }
+      const {step}=checkSourceInputs(id,files);
+      prelimAuthorized.add(prelimRoot+'/'+id+'/'+step);
+      if(sourceCommit)for(const name of files.keys())verifyCommittedFile(root,sourceCommit,prelimRoot+'/'+id+'/'+name);
+      preliminaryInputs.push(id);
+    }
+  }
   if(sourceCommit) {
     const required=new Set([...names,...reviewed]);
     if(packetPath) required.add(path.relative(root,packetPath).split(path.sep).join('/'));
@@ -200,6 +248,7 @@ export async function audit(root,base,policyName,packetPath,pubKey,sourceCommit)
     let old;
     try{old=git(root,['rev-parse','--verify',base+':'+n]).toString().trim();}catch{old=null;}
     const actual=git(root,['hash-object','--no-filters',current]).toString().trim();
+    if(old===null && prelimAuthorized.has(n))continue;
     if(old!==actual && reviewed.has(n)){
       if(!authorized)await verifyCurrent(root,packet.body,policy.project);
       authorized++;continue;
@@ -207,7 +256,7 @@ export async function audit(root,base,policyName,packetPath,pubKey,sourceCommit)
     check(old!==null,'Unreviewed new public model asset: '+n);
     check(old===actual,'Changed public model asset without matching approved issue: '+n);
   }
-  return {authorizedChanges:authorized,verifiedFiles:names.size,signedFiles:reviewed.size,baseline:base};
+  return {authorizedChanges:authorized,verifiedFiles:names.size,signedFiles:reviewed.size,baseline:base,preliminaryInputs};
 }
 export async function auditStaged(approved,candidate,policyPath,packetPath,pubKey,fieldRoot=process.env.FRC_VERIFIED_FIELD_ROOT,sourceRoot=candidate){
   const base=realpathSync(approved),root=realpathSync(candidate),policy=typeof policyPath==='string'?JSON.parse(readFileSync(policyPath)):policyPath;
@@ -255,13 +304,17 @@ export async function auditStaged(approved,candidate,policyPath,packetPath,pubKe
   const old=inventory(base),next=inventory(root);
   // Work-in-progress preliminary releases are a separate, opt-in class: receipt-checked, never signed, never primary.
   const prelim=preliminaryPolicy(policy.preliminaryReleases,[...fixed,...mutable,...Object.keys(fieldData)]);
-  let preliminary=null;
+  let preliminary=null,secondaryLink=null;
   if(prelim){
     for(const name of inspected)check(!prelim.inside(name),'A signed packet cannot authorize preliminary output: '+name);
     for(const name of prelim.primary){
       check(old.has(name)&&next.has(name),'An approved primary entry point is missing: '+name);
-      check(inspected.has(name)||await hash(file(base,name))===await hash(file(root,name)),
-        'The approved primary entry point changed without a signed detailed-model issue: '+name);
+      if(inspected.has(name)||await hash(file(base,name))===await hash(file(root,name)))continue;
+      // The one declared page may gain exactly one plain relative link to the preliminary tree.
+      if(name===prelim.secondaryLink&&addsOnlySecondaryLink(readFileSync(file(base,name)),readFileSync(file(root,name)),prelim.root)){
+        secondaryLink=name;continue;
+      }
+      throw Error('The approved primary entry point changed without a signed detailed-model issue: '+name);
     }
     const tree=(folder,names)=>new Map([...names].filter(n=>prelim.inside(n)).map(n=>[n.slice(prelim.root.length+1),readFileSync(file(folder,n))]));
     preliminary=auditTree(tree(base,old),tree(root,next));
@@ -269,7 +322,7 @@ export async function auditStaged(approved,candidate,policyPath,packetPath,pubKe
   for(const name of Object.keys(fieldData))check(old.has(name)&&next.has(name),'Registered field data disappeared: '+name);
   for(const name of fixed)check(old.has(name)&&next.has(name),'Registered model output disappeared: '+name);
   for(const name of new Set([...old,...next])){
-    if(prelim?.inside(name))continue;
+    if(prelim?.inside(name)||name===secondaryLink)continue;
     if(mutable.has(name)||Object.hasOwn(fieldData,name)){
       if(Object.hasOwn(fieldData,name)){
         check(old.has(name)&&next.has(name),'Expected the registered field data in both stages: '+name);
@@ -297,7 +350,7 @@ export async function auditStaged(approved,candidate,policyPath,packetPath,pubKe
     check(old.has(name)&&next.has(name),'Unreviewed added or removed output: '+name);
     check(await hash(file(base,name))===await hash(file(root,name)),'Unreviewed changed published output: '+name);
   }
-  return {authorizedChanges:authorized,checked:next.size,mutableFieldPages:[...mutable],mutableFieldData:Object.keys(fieldData),signed:inspected.size,preliminary};
+  return {authorizedChanges:authorized,checked:next.size,mutableFieldPages:[...mutable],mutableFieldData:Object.keys(fieldData),signed:inspected.size,preliminary,secondaryLink};
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href){
   try{
