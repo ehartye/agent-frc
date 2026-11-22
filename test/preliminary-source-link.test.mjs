@@ -38,7 +38,9 @@ test('feature a preliminary still only with the exact previous README preserved'
 const fixtureStep=(names,extra='')=>'ISO-10303-21;\nDATA;\n'+names.map((n,i)=>{
   const b=100+i*10;
   return "#"+b+"=PRODUCT('"+n+"','"+n+"','',(#90));\n#"+(b+1)+"=MANIFOLD_SOLID_BREP('',#91);\n#"+(b+2)+
-    "=ADVANCED_BREP_SHAPE_REPRESENTATION('',(#"+(b+1)+"),#92);\n#"+(b+3)+"=SHAPE_DEFINITION_REPRESENTATION(#"+(b+4)+",#"+(b+2)+");";
+    "=ADVANCED_BREP_SHAPE_REPRESENTATION('',(#"+(b+1)+"),#92);\n#"+(b+3)+"=SHAPE_DEFINITION_REPRESENTATION(#"+(b+4)+",#"+(b+2)+");\n#"+
+    (b+5)+"=PRODUCT_DEFINITION_FORMATION('','',#"+b+");\n#"+(b+6)+"=PRODUCT_DEFINITION('design','',#"+(b+5)+",#93);\n#"+
+    (b+4)+"=PRODUCT_DEFINITION_SHAPE('','',#"+(b+6)+");";
 }).join('\n')+extra+'\nENDSEC;\nEND-ISO-10303-21;\n';
 function issueInputs(repo,id,{status='layout-checked',step='solid '+id,edit=r=>r,fixtures,fixtureBody,fixtureRole='other',fixtureKg=[0,0],
   fixturePin}={}){
@@ -250,7 +252,9 @@ test('fixture STEPs cannot hide robot solids from the product and body count', a
     ["orphan representation","\n#900=SHAPE_REPRESENTATION('',(#901),#92);\n#901=ADVANCED_FACE('',(#91),#93,.T.);"],
     ["orphan brep representation","\n#900=ADVANCED_BREP_SHAPE_REPRESENTATION('',(#101),#92);"],
     ["wireframe","\n#900=EDGE_BASED_WIREFRAME_MODEL('',(#91));"],
-    ["representation relationship","\n#900=SHAPE_REPRESENTATION_RELATIONSHIP('','',#102,#92);"]];
+    ["representation relationship","\n#900=SHAPE_REPRESENTATION_RELATIONSHIP('','',#102,#92);"],
+    ["representation owned through a dangling shape","\n#900=ADVANCED_BREP_SHAPE_REPRESENTATION('',(#101),#92);\n#901=SHAPE_DEFINITION_REPRESENTATION(#902,#900);\n#902=PRODUCT_DEFINITION_SHAPE('','',#999);"],
+    ["representation of another product's definition","\n#900=ADVANCED_BREP_SHAPE_REPRESENTATION('',(#101),#92);\n#901=SHAPE_DEFINITION_REPRESENTATION(#104,#900);"]];
   for(const [label,extra] of hidden){
     const {repo,base}=sourceRepo(t);
     issueInputs(repo,'layout-002',{fixtures:['hub body'],fixtureBody:fixtureStep(['hub body'],extra)});
