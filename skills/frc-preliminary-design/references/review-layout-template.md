@@ -28,15 +28,16 @@ cad/preliminary-design/
     package-motion.html          checked review page: regions, data and interactions
     package-motion.geometry.json.gz compressed geometry the page fetches (ignored; see below)
     release-lane-trial.json      example pinned evidence for a field interaction
+    field/release-lane.html      synthetic, self-contained season field player
 docs/preliminary-design/
   index.html, releases.json      stable viewer and ordered release index
   fonts/                         bundled theme fonts, fonts.css and their OFL licenses
   releases/layout-001/
     index.html                   this revision's review page, data and interactions
     package-motion.geometry.json.gz  the only committed copy of this revision's display geometry
-docs/field-interactions/         season-owned field-interaction or physics players, outside the release tree
     motion.json, receipt.json    checked paths and exact review evidence
-    release.json                 work-in-progress label, status, digests and mission cases
+    release.json                 work-in-progress label, status, digests, mission cases and field players
+    field/release-lane.html      the release's pinned, self-contained field player
     budgets.json, limits.json    this revision's resource accounts
   releases/layout-002/           next reviewed revision, same structure
 ```
@@ -109,7 +110,7 @@ The checker builds regions 1 and 6 from the plan and its own results. Add these 
 
 For each path, the stock view takes the limiting pair from pairs that include a moving body: a failure or open interval first, then the smallest gap or interval lower bound. An interval bound has no single limiting pose, so **Jump to limiting pose** needs a witness time. The receipt's `decision` records the final `status` and `firstUnmet` requirement. Clearance findings come first, then weight, voltage, the displaced control, held reopen decisions and missing inputs. The page shows its view-time findings until it loads a `receipt.json` that pins the page and its scene. The conceptual-design return criteria list each accepted conceptual premise from that receipt.
 
-Keep field-interaction and physics players project-owned. Put them in the season site outside `docs/preliminary-design/`, for example under `docs/field-interactions/`, and pin their trials in the release inputs. A gated site registers them as its field pages; the preliminary tree admits only the stable viewer, its index, the bundled fonts and receipt-checked releases. The page re-checks each link and sandboxes an embedded player from another origin. The starter includes a clearly synthetic placeholder.
+Keep field-interaction and physics players project-owned. Each one is first-class preliminary evidence for its mission task. Put it in the release inputs at `field/NAME.html` beside the review page, link it with `href: "field/NAME.html"` and pin its trial as `evidence: {file, sha256}`. Staging publishes the page and its trial in the release and lists them under `fieldPlayers` in `release.json`. The page must be self-contained. Its first element after the charset, viewport and title is a `Content-Security-Policy` meta with `default-src 'none'` that allows only inline script and style and `data:` or `blob:` media. It may not load an external script, frame, stylesheet, image or font, or use `fetch`, sockets, workers or navigation. Inline everything the playback needs, including its trace. An issued player is immutable; correct it in a new release. The page re-checks each link and sandboxes an embedded player from another origin. The starter includes a clearly synthetic placeholder.
 
 ### Migrate an existing release
 

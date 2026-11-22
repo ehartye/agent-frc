@@ -140,10 +140,14 @@ def create(root, release_id=None):
         plan["presentation"]["uncoveredCases"] = [dict(id="gate-closes-mid-turn",
             condition="The gate closes while the loaded head is turning",
             reason="No interlock timing is modeled; the narrative stops before the turn instead")]
+        # The synthetic, self-contained season player ships inside the release beside its view.
+        (root / "field").mkdir(exist_ok=True)
+        shutil.copyfile(Path(__file__).resolve().parents[2] / "templates/preliminary-review-field-interaction.html",
+                        root / "field/release-lane.html")
         trial = write("release-lane-trial.json", dict(case="release", basis="Synthetic, invented field-interaction trial",
                                                      outcome="Sample leaves the turned carrier toward the lane"))
         plan["presentation"]["fieldInteractions"] = [dict(title="Synthetic release-lane interaction",
-            href="../../../field-interactions/release-lane.html", objective="Acquire, turn and release",
+            href="field/release-lane.html", objective="Acquire, turn and release",
             evidence=trial, embed=True)]
     write("layout.json",plan)
     result = subprocess.run(["node", str(cli), "preliminary-check", str(root), "layout.json",
@@ -175,10 +179,6 @@ if __name__=="__main__":
         templates = Path(__file__).resolve().parents[2] / "templates"
         if not (site / "fonts").exists():
             shutil.copytree(templates / "preliminary-review-fonts", site / "fonts")
-        lane = site.parent / "field-interactions" / "release-lane.html"
-        if not lane.exists():
-            lane.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(templates / "preliminary-review-field-interaction.html", lane)
         for source, dest in [("serve-preliminary-review.py", author / "serve.py"),
                              ("preliminary-review-gitignore", author / ".gitignore"),
                              ("stage-preliminary-review.py", author / "stage.py"),

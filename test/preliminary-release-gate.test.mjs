@@ -5,6 +5,7 @@ import {cpSync,mkdirSync,mkdtempSync,readFileSync,rmSync,writeFileSync} from 'no
 import os from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {spawnSync} from 'node:child_process';
 import {auditStaged} from '../scripts/public-model-release.mjs';
 import {verifyRelease} from '../scripts/preliminary-release.mjs';
 
@@ -24,7 +25,13 @@ const objectives=[
   {objective:'Hang from the bar',disposition:'open',basis:'No hanging mechanism selected yet'},
   {objective:'Return to the start box',disposition:'out-of-scope',basis:'Handled by the drive team'}];
 
-function issueRelease(site,id,{status='layout-checked',edit=r=>r,missions,trial,display=d=>d}={}) {
+const fieldPage='<!doctype html><html lang="en"><head><meta charset="utf-8">'+
+  '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'unsafe-inline\'; style-src \'unsafe-inline\'; img-src data: blob:">'+
+  '<title>Invented lane trial</title><style>body{margin:0}</style></head><body><canvas></canvas>'+
+  '<script>const frames=[0,0.1,0.2];requestAnimationFrame(()=>frames.length);</script></body></html>';
+const laneTrial=JSON.stringify({case:'loaded-turn',outcome:'The invented sample leaves the carrier toward the lane'});
+const laneObjective='Carry the sample to the bin';
+function issueRelease(site,id,{status='layout-checked',edit=r=>r,missions,trial,display=d=>d,field}={}) {
   const dir=path.join(site,tree,'releases',id);
   const motion=JSON.stringify({cases:[{id:'loaded-turn'},{id:'park'}],issue:id});
   const budgets=JSON.stringify({masses:[],electricalCases:{}}),limits=JSON.stringify({inspectionLimitKg:14});
@@ -33,6 +40,8 @@ function issueRelease(site,id,{status='layout-checked',edit=r=>r,missions,trial,
   const series={issue:'synthetic-'+id,step,motion:motionPin,cases:[{id:'loaded-turn',stage:'operating',bodies:{}},
     {id:'park',stage:'park',bodies:{}}],evidence,narrativeReview:{objectives},mass:{range:[11,12],remaining:2},
     power:[{case:'weak traverse',status:'pass'}]};
+  if(field)series.fieldInteractions=field.rows??[{title:'Invented lane',href:'field/lane.html',objective:laneObjective,
+    evidence:{file:'lane-trial.json',sha256:sha(laneTrial)},embed:true,objectiveKnown:true}];
   const view=player.replace('PACKAGE_DATA',JSON.stringify(display(series)).replace(/</g,'\\u003c'));
   const stages={'loaded-turn':{purpose:'operating'},park:{purpose:'park'}};
   if(trial)stages['loaded-turn'].transportedBy={sample:{mechanisms:['carrier'],evidence:{file:'acquire-trial.json',sha256:sha(trial)}}};
@@ -52,6 +61,12 @@ function issueRelease(site,id,{status='layout-checked',edit=r=>r,missions,trial,
     scene:{file:'motion.json',sha256:sha(motion),stepSha256:step.sha256},
     missionCases:missions??[{case:'loaded-turn',kind:'operating-case',accomplishes:'delivered',objective:'Carry the sample to the bin'}]};
   if(trial)write(dir,'acquire-trial.json',trial);
+  if(field){
+    const page=field.page??fieldPage;
+    write(dir,'field/lane.html',page);write(dir,'lane-trial.json',laneTrial);
+    record.fieldPlayers=field.players??[{file:'field/lane.html',sha256:sha(page),trial:{file:'lane-trial.json',sha256:sha(laneTrial)},objective:laneObjective}];
+    for(const [name,bytes] of Object.entries(field.extra??{}))write(dir,name,bytes);
+  }
   write(dir,'release.json',record);
   return {dir,record};
 }
@@ -273,4 +288,94 @@ test('a release publishes only the compressed geometry its page and receipt pin,
   rmSync(path.join(site,tree,'fonts'),{recursive:true});
   write(path.join(site,tree,'fonts'),'robot.glb','model');
   await assert.rejects(auditStaged(approved,site,policy),/Unrecognized preliminary output: fonts\/robot.glb/);
+});
+
+test('a listed, receipt-pinned season field player deploys inside its release', async t=>{
+  let f=fixture(t);
+  next(f.site,'layout-002',{field:{}});
+  assert.deepEqual((await auditStaged(f.approved,f.site,f.policy)).preliminary.added,['layout-002']);
+  f=fixture(t);
+  next(f.site,'layout-002',{field:{},missions:[{case:'loaded-turn',kind:'field-interaction-trial',accomplishes:'delivered',
+    objective:laneObjective,player:'field/lane.html'}]});
+  assert.deepEqual((await auditStaged(f.approved,f.site,f.policy)).preliminary.added,['layout-002'],'a mission case can point to the player');
+  const {dir}=issueRelease(f.site,'layout-003',{field:{}});
+  assert.equal((await verifyRelease(dir)).release,'layout-003');
+  f=fixture(t);
+  next(f.site,'layout-002',{field:{},missions:[{case:'loaded-turn',kind:'field-interaction-trial',accomplishes:'delivered',
+    objective:laneObjective,player:'field/other.html'}]});
+  await assert.rejects(auditStaged(f.approved,f.site,f.policy),/player/);
+});
+
+test('unlisted, mismatched, unpinned or misdirected field players are rejected', async t=>{
+  const row=(href,evidence={file:'lane-trial.json',sha256:sha(laneTrial)},objective=laneObjective)=>({title:'Lane',href,objective,evidence});
+  const cases=[
+    [{extra:{'field/other.html':fieldPage}},/Unrecognized preliminary output/],
+    [{extra:{'field/nested/lane.html':fieldPage}},/Unrecognized preliminary output/],
+    [{players:[{file:'field/lane.html',sha256:sha('another page'),trial:{file:'lane-trial.json',sha256:sha(laneTrial)},objective:laneObjective}]},/field player/],
+    [{players:[{file:'field/lane.html',sha256:sha(fieldPage),trial:{file:'lane-trial.json',sha256:sha('another trial')},objective:laneObjective}]},/field player/],
+    [{rows:[row('field/lane.html',{file:'lane-trial.json',sha256:sha('unpinned')})]},/receipt pins/],
+    [{rows:[row('field/lane.html','described only')]},/receipt pins/],
+    [{rows:[row('field/lane.html',undefined,'Hang from the bar')]},/objective/],
+    [{rows:[row('field/missing.html'),row('field/lane.html')]},/listed field player/],
+    [{rows:[row('https://example.invalid/lane.html','x'),row('field/lane.html')]},/listed field player/],
+    [{rows:[row('../layout-001/index.html','x'),row('field/lane.html')]},/listed field player/],
+    [{rows:[row('field/lane.html?case=x')]},/listed field player/],
+    [{rows:[]},/listed field player/]];
+  for(const [field,pattern] of cases){
+    const f=fixture(t);next(f.site,'layout-002',{field});
+    await assert.rejects(auditStaged(f.approved,f.site,f.policy),pattern,JSON.stringify(field).slice(0,120));
+  }
+  // A trial the receipt pins through transportedBy also binds the player.
+  const transported=fixture(t);
+  next(transported.site,'layout-002',{trial:laneTrial,field:{rows:[row('field/lane.html','Lane trial')]}});
+  rmSync(path.join(transported.site,tree,'releases','layout-002','acquire-trial.json'));
+  assert.deepEqual((await auditStaged(transported.approved,transported.site,transported.policy)).preliminary.added,['layout-002']);
+});
+
+test('a field player must be self-contained', async t=>{
+  const pages=[
+    fieldPage.replace('<canvas>','<script src="https://cdn.example.invalid/physics.js"></script><canvas>'),
+    fieldPage.replace('frames.length','fetch("https://example.invalid/trace.json")'),
+    fieldPage.replace('<canvas>','<iframe src="https://example.invalid/"></iframe><canvas>'),
+    fieldPage.replace('<canvas>','<img src="https://example.invalid/pixel.png"><canvas>'),
+    fieldPage.replace('<canvas>','<link rel="stylesheet" href="../../style.css"><canvas>'),
+    fieldPage.replace('frames.length','new WebSocket("wss://example.invalid")'),
+    fieldPage.replace('body{margin:0}','body{background:url(//example.invalid/x.png)}'),
+    fieldPage.replace(/<meta http-equiv[^>]*>/,''),
+    fieldPage.replace('img-src data: blob:','img-src data: blob:; connect-src https:'),
+    fieldPage.replace("default-src 'none'",'default-src *'),
+    fieldPage.replace('<meta charset="utf-8">','<meta charset="utf-8"><script>top.x=1</script>')];
+  for(const page of pages){
+    const f=fixture(t);next(f.site,'layout-002',{field:{page}});
+    await assert.rejects(auditStaged(f.approved,f.site,f.policy),/self-contained/,page.slice(60,220));
+  }
+});
+
+test('stage.py --check-index applies the same field player rules', async t=>{
+  const python=process.env.PYTHON||(process.platform==='win32'?'python':'python3');
+  const cases=[[{},0],[{extra:{'field/other.html':fieldPage}},/Unrecognized release files/],
+    [{players:[{file:'field/lane.html',sha256:sha('x'),trial:{file:'lane-trial.json',sha256:sha(laneTrial)},objective:laneObjective}]},/differs from its pin/],
+    [{page:fieldPage.replace('<canvas>','<script src="https://cdn.example.invalid/x.js"></script><canvas>')},/not self-contained/],
+    [{page:fieldPage.replace('frames.length','fetch("https://example.invalid/")')},/not self-contained/],
+    [{rows:[{title:'Lane',href:'field/missing.html',objective:laneObjective,evidence:'x'}]},/listed field player/],
+    [{rows:[{title:'Lane',href:'field/lane.html',objective:laneObjective,evidence:'unpinned'}]},/receipt pins/]];
+  for(const [field,expected] of cases){
+    const temp=mkdtempSync(path.join(os.tmpdir(),'prelim-index-'));
+    t.after(()=>rmSync(temp,{recursive:true,force:true}));
+    const docs=path.join(temp,'docs');
+    write(temp,'cad/preliminary-design/stage.py',readFileSync(path.join(plugin,'templates','stage-preliminary-review.py')));
+    issueRelease(docs,'layout-002',{field});listing(docs,'layout-002',['layout-002']);
+    const run=spawnSync(python,[path.join(temp,'cad','preliminary-design','stage.py'),'--check-index'],{encoding:'utf8'});
+    if(expected===0)assert.equal(run.status,0,run.stderr);
+    else assert.match(run.stderr,expected,JSON.stringify(field).slice(0,100));
+  }
+});
+
+test('an issued field player is immutable', async t=>{
+  const f=fixture(t);
+  issueRelease(f.approved,'layout-002',{field:{}});listing(f.approved,'layout-002',['layout-001','layout-002']);
+  cpSync(f.approved,f.site,{recursive:true});
+  assert.deepEqual((await auditStaged(f.approved,f.site,f.policy)).preliminary.added,[]);
+  write(path.join(f.site,tree,'releases','layout-002'),'field/lane.html',fieldPage.replace('0.2','0.3'));
+  await assert.rejects(auditStaged(f.approved,f.site,f.policy),/earlier preliminary release/);
 });

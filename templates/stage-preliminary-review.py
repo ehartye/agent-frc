@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import shutil
 import tempfile
+from urllib.parse import unquote, urljoin, urlsplit
 import zlib
 
 
@@ -96,13 +97,75 @@ KINDS = {"operating-case", "field-interaction-trial"}
 OUTCOMES = {"acquired", "delivered", "scored", "climb-held"}
 
 
+FIELD = re.compile(r"field/[a-z0-9][a-z0-9._-]{0,110}\.html")
+CSP_ALLOWED = {"default-src": {"'none'"}, "script-src": {"'none'", "'unsafe-inline'", "'unsafe-eval'", "'wasm-unsafe-eval'"}}
+CSP_ALLOWED["style-src"] = CSP_ALLOWED["script-src"]
+for _name in ("img-src", "font-src", "media-src"):
+    CSP_ALLOWED[_name] = CSP_ALLOWED["script-src"] | {"data:", "blob:"}
+for _name in ("connect-src", "frame-src", "child-src", "worker-src", "object-src", "base-uri", "form-action", "manifest-src"):
+    CSP_ALLOWED[_name] = {"'none'"}
+BANNED = [
+    (r"<script\b[^>]*\bsrc\s*=", "an external script"),
+    (r"<(?:iframe|frame|frameset|object|embed|portal|base|link|applet)\b", "an embedded or linked resource"),
+    (r"<meta\b[^>]*http-equiv\s*=\s*[\"']?refresh", "a refresh"),
+    (r"\b(?:src|srcset|poster|background|data|action|formaction|ping|xlink:href)\s*=\s*[\"']?\s*(?!data:|blob:|#)[^\s\"'>]", "a resource URL"),
+    (r"\b(?:fetch|importScripts|sendBeacon)\s*\(|\b(?:XMLHttpRequest|WebSocket|EventSource|RTCPeerConnection|SharedWorker)\b|\bimport\s*\("
+     r"|\bimport\s+[\w{*][^;]*?\bfrom\b|@import\b|\bnew\s+Worker\b|\bwindow\.open\s*\(|\blocation\s*(?:\.href)?\s*=[^=]",
+     "a network or navigation API"),
+    (r"url\(\s*[\"']?\s*(?!data:|blob:|#)[^)\s\"']", "a stylesheet URL")]
+
+
+def self_contained(html):
+    """Mirror the gate: a leading restrictive Content-Security-Policy and no external resource or network API."""
+    html = html.replace("\r\n", "\n")
+    lead = re.match(r"\s*(?:<!doctype html>\s*)?(?:<html\b[^>]*>\s*)?(?:<head>\s*)?(?:(?:<meta\s+charset=[^>]*>"
+                    r"|<meta\s+name=[\"']?viewport[\"']?[^>]*>|<title>[^<]*</title>)\s*)*", html, re.I).end()
+    meta = re.match(r"<meta\s+http-equiv=[\"']content-security-policy[\"']\s+content=\"([^\"]*)\"\s*/?>", html[lead:], re.I)
+    if not meta:
+        return "declare a Content-Security-Policy meta element before any script, style or content"
+    policy = {}
+    for part in [x.strip() for x in meta.group(1).split(";") if x.strip()]:
+        name, *sources = part.lower().split()
+        if name in policy or name not in CSP_ALLOWED or not sources or not set(sources) <= CSP_ALLOWED[name]:
+            return "the policy may only allow inline code and data or blob media (" + name + ")"
+        policy[name] = sources
+    if policy.get("default-src") != ["'none'"]:
+        return "set default-src 'none'"
+    for pattern, why in BANNED:
+        if re.search(pattern, html, re.I if "XMLHttpRequest" not in pattern else 0):
+            return why
+    return None
+
+
+def view_data(page):
+    """The checked player's embedded data; the plugin gate separately proves the page is its own player."""
+    if 'id="data">' not in page:
+        return {}
+    return json.loads(page.split('id="data">', 1)[1].split("</script>", 1)[0])
+
+
+def player_target(href):
+    """The release-relative file a view link opens, or None when it leaves the release or carries a query."""
+    base = "https://release.invalid/r/index.html"
+    parts = urlsplit(urljoin(base, href)) if isinstance(href, str) else None
+    if not parts or parts.scheme != "https" or parts.netloc != "release.invalid" or parts.query or parts.fragment \
+            or not parts.path.startswith("/r/"):
+        return None
+    return unquote(parts.path[3:])
+
+
 def check_release(release):
     """Mirror the plugin's preliminary release gate: physics receipt, digests and a mission-task case."""
     def fail(message):
         raise ValueError(message + ": " + release.name)
     if not (release / "release.json").is_file():
         fail("Release has no release record (release.json); stage it with this script")
-    present = {p.name for p in release.iterdir()}
+    present = set()
+    for p in release.iterdir():
+        if p.name == "field" and p.is_dir() and not p.is_symlink():
+            present |= {"field/" + q.name + ("/" if q.is_dir() else "") for q in p.iterdir()}
+        else:
+            present.add(p.name)
     if RESERVED - present:
         fail("Release is missing " + ", ".join(sorted(RESERVED - present)))
     record, receipt = read(release / "release.json"), read(release / "receipt.json")
@@ -133,6 +196,40 @@ def check_release(release):
     represented = {o.get("objective") for o in objectives if o.get("disposition") == "represented"}
     passed = {c.get("case") for c in cases if c.get("status") == "pass"}
     missions, trials = record.get("missionCases") or [], set()
+    players = record.get("fieldPlayers") or []
+    files = [q.get("file") for q in players if isinstance(q, dict)]
+    if len(files) != len(players) or len(set(files)) != len(files) or not all(FIELD.fullmatch(f or "") for f in files):
+        fail("Each field player needs a unique field/NAME.html file")
+    rows = view_data((release / "index.html").read_text(encoding="utf-8")).get("fieldInteractions") or []
+    linked = {}
+    for row in rows:
+        name = player_target(row.get("href"))
+        if name not in files:
+            fail("A field interaction must link a listed field player (" + str(row.get("href")) + ")")
+        linked.setdefault(name, []).append(row)
+    stage_pins = {(s.get("evidence") or {}).get("sha256") for st in (receipt.get("stages") or {}).values()
+                  for s in (st.get("transportedBy") or {}).values()}
+    for q in players:
+        t, name = q.get("trial") or {}, q["file"]
+        trial = t.get("file") or ""
+        if not (release / name).is_file() or sha(name) != q.get("sha256"):
+            fail("Published field player differs from its pin: " + name)
+        if not TRIAL.fullmatch(trial) or trial in RESERVED or not (release / trial).is_file() or sha(trial) != t.get("sha256"):
+            fail("Publish the pinned trial for field player " + name)
+        trials.add(trial)
+        if q.get("objective") not in represented:
+            fail("Field player " + name + " must show a represented narrative objective")
+        links = linked.get(name)
+        if not links:
+            fail("Each listed field player must be linked from the checked view: " + name)
+        if any(r.get("objective") != q["objective"] for r in links):
+            fail("Field player " + name + " objective differs from the checked view")
+        if not (any(isinstance(r.get("evidence"), dict) and r["evidence"].get("sha256") == t["sha256"] for r in links)
+                or t["sha256"] in stage_pins):
+            fail("The trial for field player " + name + " is not one the receipt pins")
+        why = self_contained((release / name).read_text(encoding="utf-8"))
+        if why:
+            fail("Field player " + name + " is not self-contained: " + why)
     if not missions:
         fail("Declare a mission-task case in missions.json")
     for m in missions:
@@ -140,7 +237,10 @@ def check_release(release):
         ok = (m.get("kind") in KINDS and m.get("accomplishes") in OUTCOMES and m.get("objective") in represented
               and m.get("case") in passed and stage_.get("purpose") == "operating"
               and m.get("case") in (receipt.get("cycle") or []))
-        if m.get("kind") == "field-interaction-trial":
+        if m.get("kind") == "field-interaction-trial" and "player" in m:
+            ok = ok and "trial" not in m and any(q.get("file") == m["player"] and q.get("objective") == m.get("objective")
+                                                 for q in players)
+        elif m.get("kind") == "field-interaction-trial":
             t = m.get("trial") or {}
             name = t.get("file") or ""
             ok = (ok and bool(TRIAL.fullmatch(name)) and name not in RESERVED and (release / name).is_file()
@@ -157,8 +257,9 @@ def check_release(release):
         if not geometry_matches(release, receipt["view"]):
             fail("Published geometry differs from the page and receipt")
         geometry.add(Path(receipt["view"]["geometry"]["file"]).name)
-    if present - RESERVED - trials - geometry:
-        fail("Unrecognized release files " + ", ".join(sorted(present - RESERVED - trials - geometry)))
+    extra = present - RESERVED - trials - geometry - set(files)
+    if extra:
+        fail("Unrecognized release files " + ", ".join(sorted(extra)))
 
 
 def stage(season, inputs, release):
@@ -202,6 +303,24 @@ def stage(season, inputs, release):
             files[geometry.name] = geometry
         ledger = pinned(inputs, plan["budgets"])
         files.update({"budgets.json": ledger, "limits.json": pinned(inputs, read(ledger)["requirements"])})
+        players = []
+        for row in view_data(viewer.read_text(encoding="utf-8")).get("fieldInteractions") or []:
+            name = player_target(row.get("href"))
+            if not name or not FIELD.fullmatch(name):
+                raise ValueError("Link each field interaction to a season player at field/NAME.html beside the view: "
+                                 + str(row.get("href")))
+            if not isinstance(row.get("evidence"), dict):
+                raise ValueError("Pin the trial evidence for field player " + name + " in the layout")
+            page, trial = viewer.parent / name, pinned(inputs, row["evidence"])
+            if not page.is_file():
+                raise ValueError("Missing field player beside the view: " + name)
+            if not TRIAL.fullmatch(trial.name) or trial.name in RESERVED or files.get(trial.name, trial) != trial:
+                raise ValueError("Name each trial file in lowercase JSON, distinct from the release files: " + trial.name)
+            files[name], files[trial.name] = page, trial
+            if all(p["file"] != name for p in players):
+                players.append(dict(file=name, sha256=hashlib.sha256(page.read_bytes()).hexdigest(),
+                                    trial=dict(file=trial.name, sha256=row["evidence"]["sha256"]),
+                                    objective=row.get("objective")))
         published = []
         for mission in missions:
             mission = dict(mission)
@@ -222,14 +341,16 @@ def stage(season, inputs, release):
             receipt=dict(file="receipt.json", sha256=digest("receipt.json")),
             view=dict(file="index.html", sha256=digest("index.html")),
             scene=dict(file="motion.json", sha256=digest("motion.json"), stepSha256=result["step"]["sha256"]),
-            missionCases=published), indent=2) + "\n", encoding="utf-8")
+            missionCases=published, **(dict(fieldPlayers=players) if players else {})), indent=2) + "\n", encoding="utf-8")
         staged = Path(tmp) / release
         staged.mkdir()
         for name, src in files.items():
+            (staged / name).parent.mkdir(exist_ok=True)
             shutil.copyfile(src, staged / name)
         check_release(staged)
         if destination.exists():
-            if {p.name for p in destination.iterdir()} != set(files) or any(
+            existing = {str(p.relative_to(destination)).replace(os.sep, "/") for p in destination.rglob("*") if p.is_file()}
+            if existing != set(files) or any(
                     (destination / n).read_bytes() != (staged / n).read_bytes() for n in files):
                 raise ValueError("Existing release bytes differ: " + release)
         else:
