@@ -27,6 +27,8 @@ Enter **detailed design** when the shared issue includes the labeled layout, vie
 
 Use the current editable Fusion assembly. Use manufacturer CAD for purchased components in the selected revision and configuration wherever available. Identify any dimensional substitute, its source and uncertainty. Model fabricated parts with their actual material, joints, fasteners, tolerances and fabrication features. Resolve critical interfaces that a substitute cannot establish.
 
+A detailed design can publish as `in-progress` once it links the effective preliminary design, the STEP exported from the registered Fusion design passes the layout check on that design's motion cases, and a mission animation plays on the detailed geometry. It becomes `effective` only through the signed mechanical-readiness review. [Design statuses and the two publication gates](private-model-release.md#publish-detailed-designs-by-status)
+
 Animate the installed Fusion mechanisms using their actual joints and limits. Recheck the complete loaded cycle and service motions against the saved, reopened assembly. Update the mass and electrical budgets from the selected components and actual load cases.
 
 The mechanical-readiness review can accept the fabrication package as **build-ready** when the project has the drawings or machining definitions, bill of materials and assembly sequence needed to build it. All applicable mechanical-readiness checks have passing evidence on this issue, including attachment and retention, interference and allowed contact, clearances under tolerance and load, strength and stiffness, manufacturability, assembly and service access. Record whether each result came from calculation, simulation, native inspection or a physical test. A failed or unresolved required check keeps the build-ready claim open. [Mechanical-readiness review](mechanical-readiness.md)
@@ -37,7 +39,7 @@ If detailed design violates a reserved volume, path, mass allowance or loaded-vo
 
 ## Design status
 
-Every design phase uses the same four statuses for a published design. They apply to [preliminary design releases](private-model-release.md#publish-preliminary-design-releases) now.
+Every design phase uses the same four statuses for a published design. They apply to [preliminary design releases](private-model-release.md#publish-preliminary-design-releases) and to [detailed designs](private-model-release.md#publish-detailed-designs-by-status).
 
 | Status | Meaning |
 | --- | --- |

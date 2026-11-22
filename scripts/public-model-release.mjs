@@ -7,10 +7,10 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 
 import {activeDesignFor} from './active-design.mjs';
 import {addsOnlySecondaryLink,auditTree,checkSourceInputs,preliminaryPolicy} from './preliminary-release.mjs';
+import {auditDesigns,detailedPolicy,geometry,sourceWithdrawals} from './detailed-design-release.mjs';
 
 const numberedSchema='agent-frc/signed-model-release@10';
 const schema='agent-frc/signed-model-release@9';
-const geometry=/\.(?:f3[dz]|stp|iges|igs|brep|step|gltf|glb|stl(?:\.gz)?|obj|3mf)$/i;
 const hex=/^[0-9a-f]{64}$/;
 function check(ok,message){if(!ok)throw Error(message);}
 function relative(name){
@@ -218,6 +218,25 @@ export async function audit(root,base,policyName,packetPath,pubKey,sourceCommit)
     const old=git(root,['ls-tree','-r','--name-only','-z',base,'--',dir]).toString().split('\0');
     for(const n of old)if(geometry.test(n))names.add(n);
   }
+  // A declared withdrawal: each freed file is archived byte for byte, then may leave or follow the primary view.
+  const present=n=>lstatSync(path.join(root,n),{throwIfNoEntry:false})?.isFile()??false;
+  const blobAt=n=>git(root,['ls-tree','-z',base,'--',':(literal)'+n]).toString().match(/^100(?:644|755) blob ([0-9a-f]+)\t/)?.[1]??null;
+  const freed=sourceWithdrawals(policy.detailedDesigns,n=>present(relative(n))?readFileSync(file(root,n)):null,
+    n=>blobAt(n)?git(root,['cat-file','blob',blobAt(n)]):null);
+  const archived=new Set(),withdrawnFiles=[];
+  if(freed.size&&sourceCommit)verifyCommittedFile(root,sourceCommit,policy.detailedDesigns.index);
+  for(const [from,to] of freed){
+    relative(from);relative(to);
+    check(names.has(from)||geometry.test(from),'A source withdrawal can free only a registered model file: '+from);
+    check(present(to)&&!reviewed.has(to),'Archive the withdrawn file at '+to);
+    const kept=git(root,['hash-object','--no-filters',file(root,to)]).toString().trim();
+    check(kept===(blobAt(to)??blobAt(from)),'The archive of a withdrawn file differs from its approved bytes: '+to);
+    if(sourceCommit)verifyCommittedFile(root,sourceCommit,to);
+    archived.add(to);
+    // A freed model leaves its path; a freed page or still follows the primary view. A signed issue can restore either.
+    check(!present(from)||!geometry.test(from)||reviewed.has(from),'A withdrawn model is still published: '+from);
+    if(!present(from)||!reviewed.has(from)){names.delete(from);withdrawnFiles.push(from);}
+  }
   const preliminaryInputs=[],prelimAuthorized=new Set();
   if(prelimRoot!==null){
     const issued=new Map(),knownModels=new Set();
@@ -291,6 +310,7 @@ export async function audit(root,base,policyName,packetPath,pubKey,sourceCommit)
       if(added.some(suffix=>Buffer.concat([before,suffix]).equals(readFileSync(current))))continue;
     }
     if(old===null && prelimAuthorized.has(n))continue;
+    if(archived.has(n)&&!freed.has(n))continue;
     if(old!==actual && reviewed.has(n)){
       if(!authorized)await verifyCurrent(root,packet.body,policy.project);
       authorized++;continue;
@@ -298,7 +318,23 @@ export async function audit(root,base,policyName,packetPath,pubKey,sourceCommit)
     check(old!==null,'Unreviewed new public model asset: '+n);
     check(old===actual,'Changed public model asset without matching approved issue: '+n);
   }
-  return {authorizedChanges:authorized,verifiedFiles:names.size,signedFiles:reviewed.size,baseline:base,preliminaryInputs};
+  return {authorizedChanges:authorized,verifiedFiles:names.size,signedFiles:reviewed.size,baseline:base,preliminaryInputs,withdrawnFiles};
+}
+/** True when the candidate page equals the approved page plus one plain anchor to each of two trees. */
+function addsBothLinks(approved,candidate,first,second){
+  const after=candidate.toString('utf8');
+  for(const [kept,removed] of [[first,second],[second,first]]){
+    const escaped=removed.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    const found=[...after.matchAll(new RegExp('[ \\t\\n]{0,16}<a href="'+escaped+'/">[A-Za-z0-9 .,()-]{1,80}</a>[ \\t\\n]{0,16}','g'))];
+    if(found.length!==1)continue;
+    const whole=found[0][0],start=found[0].index,lead=whole.length-whole.trimStart().length,tail=whole.length-whole.trimEnd().length;
+    // The removed anchor may have brought its own whitespace on either side.
+    for(const [a,b] of [[lead,tail],[lead,0],[0,tail],[0,0]]){
+      const middle=Buffer.from(after.slice(0,start+lead-a)+after.slice(start+whole.length-tail+b));
+      if(addsOnlySecondaryLink(approved,middle,kept)&&addsOnlySecondaryLink(middle,candidate,removed))return true;
+    }
+  }
+  return false;
 }
 export async function auditStaged(approved,candidate,policyPath,packetPath,pubKey,fieldRoot=process.env.FRC_VERIFIED_FIELD_ROOT,sourceRoot=candidate){
   const base=realpathSync(approved),root=realpathSync(candidate),policy=typeof policyPath==='string'?JSON.parse(readFileSync(policyPath)):policyPath;
@@ -346,12 +382,36 @@ export async function auditStaged(approved,candidate,policyPath,packetPath,pubKe
   const old=inventory(base),next=inventory(root);
   // Preliminary design releases are a separate, opt-in class: receipt-checked, never signed, never primary.
   const prelim=preliminaryPolicy(policy.preliminaryReleases,[...fixed,...mutable,...Object.keys(fieldData)]);
-  let preliminary=null,secondaryLink=null;
+  // Detailed designs carry a declared status: in-progress on automated prerequisites, effective on the signed issue.
+  const detailed=detailedPolicy(policy.detailedDesigns,prelim,[...fixed],[...mutable,...Object.keys(fieldData)]);
+  const subtree=(folder,names,spec)=>new Map([...names].filter(n=>spec.inside(n)).map(n=>[n.slice(spec.root.length+1),readFileSync(file(folder,n))]));
+  let preliminary=null,secondaryLink=null,designs=null;
+  if(detailed){
+    designs=auditDesigns({policy:detailed,before:subtree(base,old,detailed),after:subtree(root,next,detailed),
+      approvedFile:n=>old.has(n)?readFileSync(file(base,n)):null,candidateFile:n=>next.has(n)?readFileSync(file(root,n)):null,candidateNames:[...next].filter(n=>!prelim.inside(n)),
+      signed:inspected,packet:packet?.body??null,preliminary:subtree(root,next,prelim)});
+    if(designs.effectiveTransitions.length){
+      check(packet,'An effective detailed design needs the signed mechanical-readiness issue');
+      await verifyCurrent(sourceRoot,packet.body,policy.project);authorized++;}
+    for(const warning of designs.warnings)console.error('Warning: '+warning);
+    designs.released=[...designs.released];designs.retired=[...designs.retired];
+  }
+  const released=new Set(designs?.released??[]),retired=new Set(designs?.retired??[]);
   if(prelim){
     for(const name of inspected)check(!prelim.inside(name),'A signed packet cannot authorize preliminary output: '+name);
     for(const name of prelim.primary){
       check(old.has(name)&&next.has(name),'An approved primary entry point is missing: '+name);
       if(inspected.has(name)||await hash(file(base,name))===await hash(file(root,name)))continue;
+      // With no effective detailed design and no published model, the entry points follow the declared primary view.
+      if(designs?.entryPointsFree)continue;
+      if(detailed&&name===detailed.secondaryLink&&addsOnlySecondaryLink(readFileSync(file(base,name)),readFileSync(file(root,name)),detailed.root)){
+        secondaryLink=name;continue;
+      }
+      // One page may gain both links in one change: one plain anchor to each tree.
+      if(detailed&&name===detailed.secondaryLink&&name===prelim.secondaryLink&&
+        addsBothLinks(readFileSync(file(base,name)),readFileSync(file(root,name)),prelim.root,detailed.root)){
+        secondaryLink=name;continue;
+      }
       // The one declared page may gain exactly one plain relative link to the preliminary tree.
       if(name===prelim.secondaryLink&&addsOnlySecondaryLink(readFileSync(file(base,name)),readFileSync(file(root,name)),prelim.root)){
         secondaryLink=name;continue;
@@ -362,9 +422,14 @@ export async function auditStaged(approved,candidate,policyPath,packetPath,pubKe
     preliminary=auditTree(tree(base,old),tree(root,next),prelim);
   }
   for(const name of Object.keys(fieldData))check(old.has(name)&&next.has(name),'Registered field data disappeared: '+name);
-  for(const name of fixed)check(old.has(name)&&next.has(name),'Registered model output disappeared: '+name);
+  // A withdrawn path may stay empty, leave while no design is effective, or return under a signed issue.
+  for(const name of fixed)check(old.has(name)&&next.has(name)||released.has(name)&&!next.has(name)||
+    retired.has(name)&&!old.has(name)&&(!next.has(name)||inspected.has(name)),'Registered model output disappeared: '+name);
   for(const name of new Set([...old,...next])){
-    if(prelim?.inside(name)||name===secondaryLink)continue;
+    if(prelim?.inside(name)||detailed?.inside(name)||name===secondaryLink)continue;
+    // A declared withdrawal frees its files: a model leaves its path, and an entry point was checked above.
+    if(released.has(name)&&(!next.has(name)||designs.entryPointsFree&&prelim.primary.has(name)))continue;
+    if(designs?.entryPointsFree&&prelim.primary.has(name)&&old.has(name)&&next.has(name))continue;
     if(mutable.has(name)||Object.hasOwn(fieldData,name)){
       if(Object.hasOwn(fieldData,name)){
         check(old.has(name)&&next.has(name),'Expected the registered field data in both stages: '+name);
@@ -392,7 +457,7 @@ export async function auditStaged(approved,candidate,policyPath,packetPath,pubKe
     check(old.has(name)&&next.has(name),'Unreviewed added or removed output: '+name);
     check(await hash(file(base,name))===await hash(file(root,name)),'Unreviewed changed published output: '+name);
   }
-  return {authorizedChanges:authorized,checked:next.size,mutableFieldPages:[...mutable],mutableFieldData:Object.keys(fieldData),signed:inspected.size,preliminary,secondaryLink};
+  return {authorizedChanges:authorized,checked:next.size,mutableFieldPages:[...mutable],mutableFieldData:Object.keys(fieldData),signed:inspected.size,preliminary,secondaryLink,designs};
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href){
   try{

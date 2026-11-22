@@ -112,7 +112,12 @@ if(process.argv[1] && import.meta.url===pathToFileURL(path.resolve(process.argv[
   try {
     const [mode,...args]=process.argv.slice(2);
     if(mode==='digest' && args.length===1) console.log(fingerprint(await siteFiles(exactPath(args[0]))));
-    else if(mode==='check' && [2,3].includes(args.length)) console.log(JSON.stringify(await checkLocal(...args),null,2));
+    else if(mode==='check' && [2,3].includes(args.length)) {
+      const result=await checkLocal(...args);
+      // A design whose preliminary release was superseded stays published; surface the re-link flag in the workflow run.
+      if(process.env.GITHUB_ACTIONS) for(const warning of result.final.designs?.warnings??[]) console.error('::warning title=Detailed design needs re-linking::'+warning);
+      console.log(JSON.stringify(result,null,2));
+    }
     else throw Error('Usage: local-showcase-release.mjs digest APPROVED_SITE | check TRUSTED_CONFIG PROJECT [FINAL_BUILT_SITE]');
   } catch(error) { console.error(error.message); process.exitCode=1; }
 }

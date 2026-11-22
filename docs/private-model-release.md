@@ -1,6 +1,6 @@
 # Keep the working robot private while checking a public replacement
 
-Run the same source and final-site checks at the release station and in CI. A detailed showcase model needs the signed mechanical issue below. A [preliminary design release](#publish-preliminary-design-releases) needs a layout-checked receipt and a mission-task case instead, and stays secondary to the approved detailed model. For branch-served Pages, require **Mechanical model eligibility** before merging into the served branch. For generated Pages, verify the final build before upload. Read the gate code, baseline revision and verification key from trusted configuration. Preserve the project’s existing admin policy.
+Run the same source and final-site checks at the release station and in CI. Every published design holds a status: `in-progress`, `effective`, `superseded` or `withdrawn`. A detailed design becomes `effective`, and takes the primary view, only through the signed mechanical issue below. An [in-progress detailed design](#publish-detailed-designs-by-status) publishes beside it on automated prerequisites: an effective preliminary link, a passing layout check on the Fusion export and a mission animation. A [preliminary design release](#publish-preliminary-design-releases) needs a layout-checked receipt and a mission-task case, and stays secondary to the detailed designs. For branch-served Pages, require **Mechanical model eligibility** before merging into the served branch. For generated Pages, verify the final build before upload. Read the gate code, baseline revision and verification key from trusted configuration. Preserve the project’s existing admin policy.
 
 
 ## Keep a retired robot online during a numbered restart
@@ -90,7 +90,7 @@ If a field page also emits independently generated JSON, list each exact existin
 
 ## Publish preliminary design releases
 
-Two classes of model output can share one site. A **detailed showcase model** replaces the primary view, README still, selector or download only through the full mechanical-readiness gate and a signed issue above. A **preliminary design release** presents a whole-robot layout revision from the preliminary design phase. It does not need detailed-design readiness. It must obey the checked physics and play a meaningful mission task. It stays secondary: the latest approved detailed design remains front and center, and the release identifies itself as preliminary design with its [design status](design-phase-detail.md#design-status). A preliminary design release may be in progress or effective: an effective one is the project's accepted preliminary design, which detailed design builds on.
+Two classes of model output can share one site. A **detailed showcase model** becomes effective and replaces the primary view, README still, selector or download only through the full mechanical-readiness gate and a signed issue above. An [in-progress detailed design](#publish-detailed-designs-by-status) sits beside it. A **preliminary design release** presents a whole-robot layout revision from the preliminary design phase. It does not need detailed-design readiness. It must obey the checked physics and play a meaningful mission task. It stays secondary: the latest approved detailed design remains front and center, and the release identifies itself as preliminary design with its [design status](design-phase-detail.md#design-status). A preliminary design release may be in progress or effective: an effective one is the project's accepted preliminary design, which detailed design builds on.
 
 Opt in through the approved staged policy. The final-site audit reads it from the approved commit, never from the candidate.
 
@@ -191,3 +191,130 @@ Projects with an existing selector can pin both `index.html` and `releases.js` u
 For a project presentation, assemble the project files and checker outputs in its release directory. Run `node PLUGIN/scripts/preliminary-release.mjs verify-catalog docs/preliminary-design --policy SERVED_POLICY` before the first deployment. For one release use `verify RELEASE_DIRECTORY --policy SERVED_POLICY`. On subsequent deployments run the staged-site audit against the approved site to verify immutable history as well.
 
 To feature a preliminary design on the project README, set `preliminaryReadmeArchive` in the independently approved source policy. Supply `readmeSha256`, `archive` (the project-relative Markdown path), `archivedSha256`, `image` (the project-relative PNG), and `imageSha256`. Archive the complete previous README byte for byte. Review the new README, its still and its link to the archive together. The regular staged Pages checks apply to the linked release.
+
+## Publish detailed designs by status
+
+Every design, in every phase, holds one status in its published index: `in-progress`, `effective`, `superseded` or `withdrawn`. Each phase of a project has at most one `effective` design. Making another design effective marks the previous one `superseded`. `withdrawn` means pulled with no replacement. The detailed design index uses the same list, `designStatus` map and `current` pointer as the preliminary release index.
+
+A detailed design reaches the site at one of two levels:
+
+| Status | Gate | Where it shows |
+| --- | --- | --- |
+| `in-progress` | Automated, no signature: an effective preliminary link, a passing layout check on the Fusion export and a mission animation | Beside the effective design, labelled. It takes the primary view only when no effective design exists |
+| `effective` | The signed mechanical-readiness issue above, unchanged | The primary view: entry page model, README still and selector |
+
+Opt in through the approved staged policy, beside `preliminaryReleases`:
+
+```json
+"detailedDesigns": {
+  "root": "detailed-design",
+  "legacy": {"design": "draft-001"},
+  "secondaryLink": "index.html",
+  "withdrawn": []
+}
+```
+
+`root` is the deployed design tree. `legacy` names the model the site published before this process, or is `null` when it published none. A legacy design holds the primary view under the full gate, exactly as before, until a signed design supersedes it or a declaration withdraws it. `secondaryLink` optionally names one primary entry page that may gain one plain anchor to the tree, such as `<a href="detailed-design/">Detailed designs</a>`, under the same rules as the preliminary link. A page that both policies name may gain both links in one change, one plain anchor to each tree. `catalogSha256` optionally pins a project catalog page in place of the plugin's [stock catalog](../templates/detailed-design-index.html).
+
+The tree holds the catalog `index.html`, the index `designs.json`, one immutable directory per design under `designs/ID/` and the archive of withdrawn files under `archive/ID/`.
+
+```json
+{
+  "schema": "agent-frc/detailed-design-index@1",
+  "preliminaryIndex": "../preliminary-design/releases.json",
+  "current": "detail-002",
+  "beside": "detail-003",
+  "designs": ["draft-001", "detail-002", "detail-003"],
+  "designStatus": {"draft-001": "superseded", "detail-002": "effective", "detail-003": "in-progress"},
+  "supersededBy": {"draft-001": "detail-002"},
+  "preliminary": {"detail-003": "layout-002"}
+}
+```
+
+The final-site audit checks declared state and data. It leaves the markup of the entry page to the season's pull-request review.
+
+- **Index.** Designs only append. A new design enters `in-progress` or `effective`. An `in-progress` design can become `effective` or `withdrawn`. An `effective` design becomes `superseded` when another becomes effective, or `withdrawn`. A `superseded` design can only become `withdrawn`, and `withdrawn` is final. At most one design is `effective`. Several can be `in-progress`; withdraw the ones the project abandons. Issued design directories and archives stay byte-identical.
+- **Primary view.** `current` must be the effective design, else the newest in-progress design, else `null`. `beside` must be the newest in-progress design when an effective one exists. While an effective or legacy design exists, or any registered model file or other model geometry outside the two design trees is still published, every primary entry point keeps its approved bytes unless the signed issue covers it. Register model geometry under `modelFiles`; with `detailedDesigns`, a primary entry point cannot be a geometry file. While no detailed design is effective, the primary entry points are not signature-protected; the season's PR review covers them. With no effective design and no published model, the entry points may change without a signature so the page can show the in-progress design, or say that no detailed design is published and point to the current preliminary design. The signature lock returns in the same change that makes a design effective. A model counts as published in any geometry format, plain, gzipped or zipped, and as any zip archive.
+- **In-progress gate.** A new in-progress design passes three checks. (a) Its record links a preliminary release by ID, by the SHA-256 of that release's `release.json` and by the SHA-256 of its receipt, and the preliminary index gives that release the status `effective`. (b) Its directory holds a `layout-checked` receipt from this plugin's layout check, run on the STEP exported from the registered current Fusion design: every clearance case, the inspection mass and every loaded-voltage case pass and the displaced control is rejected. The receipt covers every motion case, the cycle and the displaced control of the linked release. The record binds the Fusion authority register, export lineage, native archive and exported STEP by digest, and the receipt's STEP digest equals the exported one. (c) At least one mission case plays a `represented` narrative objective on that geometry with passing evidence, as an operating case or a receipt-bound field-interaction trial. The directory holds the same checked files as a preliminary release, with `design.json` in place of `release.json`. The record holds only the fields shown below. A signed packet cannot stand in for these checks.
+- **Effective gate.** A design is `effective` only when the verified signed mechanical-readiness packet lists its `designs/ID/design.json`, and the record's STEP and archive digests equal the packet's. The existing rules for the registered model files, the entry points, the active selection and the paired source and staged packets all still apply. Passing the automated gate never makes a design effective.
+- **Withdraw.** A design becomes `withdrawn` only when the approved policy declares it under `withdrawn` with the same reason. See [withdraw a design](#withdraw-a-design). Removing a model, or dropping a design from the index, without that declaration fails as before.
+- **Re-link warning.** When the preliminary release that a live detailed design links is no longer `effective`, the design stays published and the audit still passes. The audit reports it under `designs.warnings` and as a workflow warning, and the stock catalog reads the preliminary index and shows the warning on that design. Stage a new design on the effective preliminary release to clear it.
+
+The audit trusts the recorded receipt and digests. It does not rerun the layout check or open Fusion, so review the station run that produced them. `stage` replays the register and lineage with `fusion_authority.py` and refuses a receipt on any other STEP.
+
+### Design record
+
+```json
+{
+  "schema": "agent-frc/detailed-design@1",
+  "design": "detail-003",
+  "issue": "synthetic-detail-003",
+  "label": "In-progress detailed design",
+  "preliminary": {"release": "layout-002", "sha256": "<release.json SHA-256>", "receiptSha256": "<receipt SHA-256>"},
+  "fusion": {"authoritySha256": "<register>", "lineageSha256": "<lineage>", "archiveSha256": "<native archive>",
+    "stepSha256": "<exported STEP>", "configuration": "Installed assembly in its stowed pose", "revision": "review-r3"},
+  "receipt": {"file": "receipt.json", "sha256": "<receipt SHA-256>"},
+  "view": {"file": "index.html", "sha256": "<checked view SHA-256>"},
+  "scene": {"file": "motion.json", "sha256": "<motion SHA-256>", "stepSha256": "<exported STEP>"},
+  "missionCases": [
+    {"case": "release", "kind": "operating-case", "accomplishes": "delivered", "objective": "Acquire, turn and release"}
+  ]
+}
+```
+
+A design issued directly as effective carries `schema`, `design`, `label` and a `fusion` object with the signed issue's `stepSha256`, `archiveSha256` and `configuration`.
+
+### Stage, promote and withdraw
+
+Export the STEP from the registered Fusion design, then run the [preliminary layout check](preliminary-design.md) on a layout that names that STEP and repeats the linked release's motion cases, cycle and displaced control. Keep `missions.json` beside the receipt, as for a preliminary release.
+
+```sh
+node PLUGIN/scripts/detailed-design-release.mjs stage SITE --policy STAGED_POLICY --design detail-003 --inputs CHECKED_INPUTS --preliminary layout-002 --project PROJECT_ROOT --authority cad/fusion-authority.json --lineage cad/lineage.json
+node PLUGIN/scripts/detailed-design-release.mjs effective SITE --policy STAGED_POLICY --design detail-003
+node PLUGIN/scripts/detailed-design-release.mjs effective SITE --policy STAGED_POLICY --design detail-004 --packet STAGED_PACKET
+node PLUGIN/scripts/detailed-design-release.mjs withdraw SITE --policy STAGED_POLICY --design draft-001
+node PLUGIN/scripts/detailed-design-release.mjs refresh SITE --policy STAGED_POLICY
+```
+
+`stage` writes the design directory and updates the index. `effective` marks a design effective and supersedes the previous one; with `--packet` it first writes the record of a new design from the signed issue. Issue the staged packet with `designs/ID/design.json` in its delivery list. `refresh` registers the legacy design, recomputes `current` and `beside`, and prints any re-link warning. Each command only edits files. The final-site audit decides.
+
+### Withdraw a design
+
+Withdrawing takes two reviewed changes and no signature.
+
+1. Declare it in the approved staged policy, and merge that change by itself:
+
+   ```json
+   "withdrawn": [
+     {"design": "draft-001", "reason": "Rough draft published before the design-status process.",
+      "files": ["index.html", "media/robot-still.png", "models/selector.json", "models/robot.glb"]}
+   ]
+   ```
+
+   For the design that holds the primary view, `files` must list every registered model file and primary entry point. For any other design it is empty. Then advance the trusted approved commit so the audit reads the declaration.
+2. Run `withdraw`. It copies each listed file to `archive/ID/PATH`, removes the model files and marks the design `withdrawn` with the declared reason. Edit the entry page, still and selector to follow the primary view rule: show the in-progress design, or say that no detailed design is published and link the current preliminary design.
+
+The audit requires every listed file under `archive/ID/` with its approved bytes, the model files gone from their paths, no effective design in the same change and the reason unchanged. To replace the primary design in one change, issue the signed successor instead; it supersedes the earlier design. The design stays in the index and the catalog lists it under the archive, labelled withdrawn. A withdrawn path can stay empty, and a later signed effective design can publish there again. Once a design is effective, an old declaration frees nothing. A bad build cannot withdraw a design: without the declaration, the removal fails.
+
+For a branch-served site, or source models in a public root, add the twin declaration to the approved source policy. The source audit frees each file only while the committed index shows the design `withdrawn` and no design `effective`, and only when the archive path holds the approved bytes. A design that is effective in the approved index must itself be declared and withdrawn. A freed model file must leave its path.
+
+```json
+"detailedDesigns": {
+  "index": "docs/detailed-design/designs.json",
+  "withdrawn": [
+    {"design": "draft-001", "reason": "Rough draft published before the design-status process.",
+     "files": {"docs/models/robot.glb": "docs/detailed-design/archive/draft-001/models/robot.glb",
+               "docs/index.html": "docs/detailed-design/archive/draft-001/index.html"}}
+  ]
+}
+```
+
+To replace a README that features the withdrawn model, use the existing `preliminaryReadmeArchive` handoff: archive the complete previous README byte for byte and pin the new README and its preliminary still.
+
+### Migrate a season repository
+
+1. Pin the plugin release that provides `scripts/detailed-design-release.mjs`. Adopt the [preliminary class](#adopt-the-class-in-a-season-repository) first, and give the release that detailed design builds on the status `effective` in the preliminary index.
+2. In one policy-only change, add `detailedDesigns` to the staged policy. Set `legacy` to an ID for the model the site publishes now, and declare it under `withdrawn` if it is to be pulled. Add the source-policy twin when the served directory or a model file is in a public root. Merge, then advance the trusted approved commit.
+3. In the next change, run `refresh` to publish the catalog and index with the legacy design, then `withdraw` if declared. Update the entry page, README and selector for the new primary view. Run `local-showcase-release.mjs check`.
+4. Stage each new detailed design with `stage`. It publishes beside the effective design, or as the primary view when none exists.
+5. When a design passes the signed mechanical-readiness review, list its `design.json` in the staged delivery, issue the packets and run `effective`.

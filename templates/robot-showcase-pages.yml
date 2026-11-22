@@ -53,6 +53,8 @@ jobs:
         env:
           FRC_REVIEWER_PUBLIC_KEY: ${{ vars.FRC_REVIEWER_PUBLIC_KEY }}
         run: node approved/scripts/prepare-showcase-release.mjs approved project plugin "$RUNNER_TEMP/release"
+      # One check applies every design status gate: an in-progress detailed design on its automated prerequisites,
+      # an effective design on the signed issue, a withdrawal only on its approved declaration. A re-link flag is a warning.
       - name: Verify the final site after all project-specific copies
         env:
           FRC_REQUIRE_ACTIVE_MODEL_SELECTION: ${{ vars.FRC_REQUIRE_ACTIVE_MODEL_SELECTION }}
