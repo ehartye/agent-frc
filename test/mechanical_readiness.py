@@ -20,6 +20,7 @@ from spatial_operating_cases import SpatialOperatingCases
 from constant_pose_pairs import ConstantPosePairs
 from game_piece_compression import GamePieceCompression
 from checker_progress_failfast import CheckerProgressFailFast
+from motion_heartbeat import MotionHeartbeat
 from held_position_replay import HeldPositionReplay
 from contact_transport import ContactTransport
 from held_pin_relocation import HeldPinRelocation

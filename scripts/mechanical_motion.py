@@ -215,15 +215,133 @@ def progress_line(index,total,result,case_seconds,total_seconds):
             f"constantPoseBroadPhase={c['constantPoseBroadPhase']} case={case_seconds:.2f}s total={total_seconds:.2f}s")
 
 
-def evaluate(root,study,*,mount_hosts=(),package_scene=None,progress=None,fail_fast=False,never_stop=()):
+HEARTBEAT_SECONDS=30.
+# The full, half and golden-section fractions of a rotation: no finite rotational symmetry satisfies all three by accident.
+INVARIANCE_FRACTIONS=(1.,.5,(math.sqrt(5)-1)/2)
+INVARIANCE_TOLERANCE_MM=1e-3
+INVARIANCE_FACE_LIMIT=200
+
+
+def boundary_samples(shape,per_face=4):
+    """The boundary faces of a placed solid with points on every face: mesh nodes and the surface points under
+    triangle centers, so a flat or ruled wall is sampled away from its edges. Returns None above the face limit."""
+    from OCP.BRep import BRep_Builder,BRep_Tool
+    from OCP.BRepBuilderAPI import BRepBuilderAPI_Copy
+    from OCP.BRepMesh import BRepMesh_IncrementalMesh
+    from OCP.TopAbs import TopAbs_FACE
+    from OCP.TopExp import TopExp_Explorer
+    from OCP.TopLoc import TopLoc_Location
+    from OCP.TopoDS import TopoDS,TopoDS_Compound
+    face_of=getattr(TopoDS,"Face_s",None) or TopoDS.Face
+    faces=TopoDS_Compound();builder=BRep_Builder();builder.MakeCompound(faces)
+    explorer=TopExp_Explorer(shape,TopAbs_FACE);count=0
+    while explorer.More():
+        builder.Add(faces,explorer.Current());explorer.Next();count+=1
+    if count>INVARIANCE_FACE_LIMIT:return None
+    # Meshing the original would attach a triangulation to a shape other checks and views still use.
+    copy=BRepBuilderAPI_Copy(shape,True,False).Shape()
+    box=bounds(copy)
+    BRepMesh_IncrementalMesh(copy,max(math.dist(box[:3],box[3:])/200,1e-3),False,.3)
+    points=[];explorer=TopExp_Explorer(copy,TopAbs_FACE)
+    def spread(n):
+        return range(1,n+1,max(1,math.ceil(n/per_face)))
+    while explorer.More():
+        face=face_of(explorer.Current());location=TopLoc_Location();mesh=BRep_Tool.Triangulation_s(face,location)
+        if mesh is None:return None
+        points.extend(mesh.Node(i).Transformed(location.Transformation()) for i in spread(mesh.NbNodes()))
+        if not mesh.HasUVNodes():return None
+        surface=BRep_Tool.Surface_s(face)
+        for i in spread(mesh.NbTriangles()):
+            corners=[mesh.UVNode(n) for n in mesh.Triangle(i).Get()]
+            points.append(surface.Value(sum(c.X() for c in corners)/3,sum(c.Y() for c in corners)/3))
+        explorer.Next()
+    return faces,points
+
+
+def rotation_invariant(shape,move):
+    """Whether one rotation leaves a placed solid unchanged at its full, half and golden-section travel.
+
+    True for a solid of revolution about the rotation axis. None when the test cannot judge: the travel is too
+    small to tell, the solid has too many faces or the kernel fails. The test compares the centroid, the
+    bounding box and sampled boundary points, so it supports a warning and never a clearance finding."""
+    try:
+        return _rotation_invariant(shape,move)
+    except Exception:
+        # An advisory check never stops or changes a clearance run.
+        return None
+
+
+def _rotation_invariant(shape,move):
+    from OCP.BRepBuilderAPI import BRepBuilderAPI_MakeVertex
+    from OCP.BRepGProp import BRepGProp
+    from OCP.GProp import GProp_GProps
+    from OCP.gp import gp_Lin,gp_Pnt
+    axis=gp_Lin(axes(move));box=bounds(shape)
+    reach=max(axis.Distance(gp_Pnt(*corner)) for corner in product(*[(box[i],box[i+3]) for i in range(3)]))
+    if abs(math.radians(move["travelDeg"]))*min(INVARIANCE_FRACTIONS)*reach<100*INVARIANCE_TOLERANCE_MM:return None
+    props=GProp_GProps();BRepGProp.VolumeProperties_s(shape,props,True)
+    if not props.Mass()>0:return None
+    if axis.Distance(props.CentreOfMass())>INVARIANCE_TOLERANCE_MM:return False
+    for fraction in INVARIANCE_FRACTIONS:
+        if max(abs(x-y) for x,y in zip(box,bounds(transform(shape,[move],fraction))))>INVARIANCE_TOLERANCE_MM:return False
+    sampled=boundary_samples(shape)
+    if sampled is None or not sampled[1]:return None
+    faces,points=sampled
+    for fraction in INVARIANCE_FRACTIONS:
+        turn=next(transforms([move],fraction))
+        for point in points:
+            if distance(BRepBuilderAPI_MakeVertex(point.Transformed(turn)).Vertex(),faces)>INVARIANCE_TOLERANCE_MM:return False
+    return True
+
+
+def sweep_warnings(case,scene,moves,keys,declared,known,told):
+    """Advisory stderr lines about rotations that cannot change, or fail to preserve, a body's occupied volume.
+
+    Only the rotations before a body's first other move are judged, each against the case's starting pose.
+    A body, pose and move that already drew a warning in an earlier case is not repeated."""
+    lines=[]
+    for name,ops in moves.items():
+        ops=[m for m in ops if not (m["kind"]=="rotation" and m["travelDeg"]==0)]
+        leading=[]
+        for move in ops:
+            if move["kind"]!="rotation":break
+            leading.append(move)
+        invariant=True if leading else None
+        for move in leading:
+            key=None if keys.get(name) is None else (keys[name],json.dumps(move,sort_keys=True,allow_nan=False))
+            if key is None:invariant=rotation_invariant(scene[name],move)
+            else:
+                if key not in known:known[key]=rotation_invariant(scene[name],move)
+                invariant=known[key]
+            if not invariant:break
+        if invariant is True and len(leading)==len(ops):
+            kind="redundant";text=("the body is unchanged by its rotation about its own axis, so the move cannot change its swept volume "
+                "and only adds refinement cost; unless another body shares the move, model it as a static envelope and remove the rotation")
+        elif name in declared and invariant is False:
+            kind="declared";text=("declared full swept envelope, but its rotation changes the occupied volume; "
+                "revolve the geometry about the rotation axis or remove it from sweptEnvelopes")
+        else:continue
+        seen=(kind,name,None if keys.get(name) is None else keys[name],json.dumps(ops,sort_keys=True,allow_nan=False))
+        if seen[2] is not None and seen in told:continue
+        told.add(seen)
+        lines.append(f"[motion] warning {case} {name}: {text}")
+    return lines
+
+
+def evaluate(root,study,*,mount_hosts=(),package_scene=None,progress=None,fail_fast=False,never_stop=(),heartbeat_seconds=HEARTBEAT_SECONDS):
     """Evaluate every case in order.
 
-    progress receives one line per finished case. With fail_fast, the first case whose status is not
+    progress receives one line per finished case, a heartbeat line when heartbeat_seconds have passed
+    inside a case without one, and advisory sweep warnings. None of them enters the result. With fail_fast, the first case whose status is not
     "pass" ends the study. Its cases up to and including that case are returned and the result is
     marked partial with the stopping case, the checked cases and the skipped cases. Cases named in
     never_stop, such as an adverse control that is expected to fail, never end the study.
     """
     require(study.get("schema")=="agent-frc/mechanical-motion@1","Unknown motion study")
+    declared=study.get("sweptEnvelopes",[])
+    require(isinstance(declared,list) and all(named(n) for n in declared),"sweptEnvelopes lists the IDs of bodies modeled as full swept volumes")
+    require(number(heartbeat_seconds) and heartbeat_seconds>=0,"Heartbeat interval must be zero or more seconds")
+    invariance={};told=set();present=set()
     original=pinned(root,study["step"])
     identities={}
     shapes,non_solids=load_solids(original,identities)
@@ -263,6 +381,16 @@ def evaluate(root,study,*,mount_hosts=(),package_scene=None,progress=None,fail_f
         keys={n:pose_key(sources.get(n),case.get("initialPose",{}).get(n,[])) if scene[n] is built.get(n) else None for n in scene}
         boxes={n:bounds(s) for n,s in scene.items()}
         rates={n:travel_bound(boxes[n],ops) for n,ops in moves.items()}
+        pair_total=math.comb(len(scene),2);last_line=[case_started]
+        def beat(done,a,b,d,samples):
+            now=perf_counter()
+            if progress and now-last_line[0]>=heartbeat_seconds:
+                last_line[0]=now
+                progress(f"[heartbeat] motion {index}/{len(study['cases'])} {id} pairs={done}/{pair_total} pair={a}|{b} depth={d} "
+                         f"samples={samples} case={now-case_started:.2f}s total={now-started:.2f}s")
+        if progress:
+            present.update(scene)
+            for line in sweep_warnings(id,scene,moves,keys,declared,invariance,told):progress(line)
         cut=case["minGapMm"];depth=case.get("maxDepth",9)
         require(number(cut) and cut>=0 and type(depth)==int and 0<=depth<=18,"Invalid clearance or subdivision bound")
         excluded={}
@@ -277,7 +405,8 @@ def evaluate(root,study,*,mount_hosts=(),package_scene=None,progress=None,fail_f
             excluded[tuple(sorted((a,b)))]=ex["basis"]
         compliant=payload_compression.interfaces(case,scene,excluded)
         rows=[];counts={"broadPhase":0,"bounded":0,"constantPoseBroadPhase":0,"constantPoseReused":0}
-        for a,b in combinations(sorted(scene),2):
+        for done,(a,b) in enumerate(combinations(sorted(scene),2)):
+            beat(done,a,b,0,0)
             if (a,b) in compliant:
                 rows.append(payload_compression.sweep(compliant[a,b],scene,moves,rates,depth,transform,distance))
                 continue
@@ -320,6 +449,7 @@ def evaluate(root,study,*,mount_hosts=(),package_scene=None,progress=None,fail_f
             while pending and failed is None:
                 lo,hi,d=pending.pop();mid=(lo+hi)/2
                 g,v=sample(mid)
+                beat(done,a,b,d,len(poses))
                 if v>0 or g<cut:failed=dict(t=mid,gapMm=g,volumeMm3=v);break
                 lower=g-speed*(hi-lo)/2
                 if lower>cut:
@@ -341,12 +471,14 @@ def evaluate(root,study,*,mount_hosts=(),package_scene=None,progress=None,fail_f
             pending=[(lo,hi,0)];unresolved=False;reached=None;lower_min=math.inf
             def separation(t):
                 return distance(transform(scene[a],moves.get(a,[]),t),transform(scene[b],moves.get(b,[]),t))
+            visited=2
             for t in (lo,hi):
                 gap=separation(t)
                 if gap<=limit:
                     reached=dict(t=t,gapMm=gap);break
             while pending and reached is None:
                 low,high,d=pending.pop();mid=(low+high)/2;gap=separation(mid)
+                visited+=1;beat(pair_total,a,b,d,visited)
                 if gap<=limit:
                     reached=dict(t=mid,gapMm=gap);break
                 lower=gap-speed*(high-low)/2
@@ -396,6 +528,9 @@ def evaluate(root,study,*,mount_hosts=(),package_scene=None,progress=None,fail_f
         skipped=[c.get("id") for c in study["cases"][len(results):]]
         result.update(partial=True,stoppedAt=stopped,checkedCases=[r["case"] for r in results],skippedCases=skipped)
         if progress:progress(f"[motion] fail-fast stopped at {stopped}; skipped {len(skipped)} case{'' if len(skipped)==1 else 's'}: "+(", ".join(map(str,skipped)) or "none"))
+    elif progress:
+        for name in declared:
+            if name not in present:progress(f"[motion] warning sweptEnvelopes names {name}, which no case contains")
     return result
 
 
@@ -406,11 +541,14 @@ if __name__=="__main__":
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("project",type=Path);parser.add_argument("study");parser.add_argument("--require-pass",action="store_true")
     parser.add_argument("--fail-fast",action="store_true",help="Stop at the first case that does not pass and write a partial receipt")
-    parser.add_argument("--quiet",action="store_true",help="Omit per-case progress lines on stderr")
+    parser.add_argument("--quiet",action="store_true",help="Omit progress, heartbeat and warning lines on stderr")
+    parser.add_argument("--heartbeat",type=float,default=HEARTBEAT_SECONDS,metavar="SECONDS",
+                        help="Seconds inside a case before a stderr line names the active pair (default 30)")
     args=parser.parse_args()
     try:
         root=args.project.resolve()
-        res=evaluate(root,read(project_path(root,args.study)),progress=None if args.quiet else stderr_progress,fail_fast=args.fail_fast)
+        res=evaluate(root,read(project_path(root,args.study)),progress=None if args.quiet else stderr_progress,fail_fast=args.fail_fast,
+                     heartbeat_seconds=args.heartbeat)
         print(json.dumps(res,indent=2,allow_nan=False))
         sys.exit(int(args.require_pass and (res.get("partial",False) or any(c["status"]!="pass" for c in res["cases"]))))
     except (OSError,ValueError,TypeError,KeyError,ImportError) as e:
