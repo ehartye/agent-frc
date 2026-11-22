@@ -21,22 +21,48 @@ UNITS = "Millimetres in the registered STEP world; kg, A, V"
 ROLE_COLOURS = {"drive": "mechanism", "payload": "game-piece", "battery": "electrical", "other": "reference", "service": "reserved-space"}
 
 
-def capture(case, scene):
-    from OCP.BRepCheck import BRepCheck_Analyzer
-    from package_mesh import surface_mesh
+def _composed(operations, t, start=None):
+    """The placement after the ordered operations at stroke fraction t, applied after an optional start placement."""
     from OCP.gp import gp_Trsf
+    combined = gp_Trsf()
+    if start is not None:
+        combined.Multiply(start)
+    for operation in transforms(operations, t):
+        combined.PreMultiply(operation)
+    return combined
+
+
+def _same_placement(a, b):
+    return all(abs(a.Value(r, c) - b.Value(r, c)) < 1e-9 for r in (1, 2, 3) for c in (1, 2, 3, 4))
+
+
+def capture(case, scene, cache=None):
+    """One case's bodies with their display mesh and per-frame placement.
+
+    Each solid is tessellated in its placed STEP pose, before the case's start pose, and the start pose is
+    folded into every frame matrix. A `cache` shared across the cases of one study therefore holds one
+    tessellation per body, however many cases pose it differently."""
+    import package_mesh
+    from OCP.BRepCheck import BRepCheck_Analyzer
+    from OCP.TopLoc import TopLoc_Location
+    cache = {} if cache is None else cache
     bodies = {}
     for name, solid in sorted(scene.items()):
-        require(BRepCheck_Analyzer(solid).IsValid(), "Invalid package solid: " + name)
-        mesh = surface_mesh(solid)
-        matrices = []
+        start = _composed(case.get("initialPose", {}).get(name, []), 1)
+        # The start pose only moved the solid's location, so removing it recovers the placed STEP pose.
+        placed = TopLoc_Location(start.Inverted()).Multiplied(solid.Location())
+        entry = cache.get(name)
+        if entry is None or not entry["solid"].IsPartner(solid) or not _same_placement(
+                entry["solid"].Location().Transformation(), placed.Transformation()):
+            require(BRepCheck_Analyzer(solid).IsValid(), "Invalid package solid: " + name)
+            base = solid.Located(placed)
+            entry = cache[name] = dict(solid=base, mesh=package_mesh.surface_mesh(base))
         moves = case["moves"].get(name, [])
+        matrices = []
         for i in range(25 if moves else 1):
-            combined = gp_Trsf()
-            for operation in transforms(moves, i / 24):
-                combined.PreMultiply(operation)
+            combined = _composed(moves, i / 24, start)
             matrices.append([combined.Value(r, c) for r in (1, 2, 3) for c in (1, 2, 3, 4)])
-        bodies[name] = dict(**mesh, matrices=matrices)
+        bodies[name] = dict(**entry["mesh"], matrices=matrices)
     return dict(id=case["id"], stage=case["stage"], bodies=bodies)
 
 
@@ -46,16 +72,20 @@ def _round(values, places):
 
 def scene_payload(scenes):
     """Store each distinct tessellation once; cases keep only per-frame placements."""
-    meshes, index, cases = [], {}, []
+    meshes, index, known, cases = [], {}, {}, []
     for case in scenes:
         bodies = {}
         for name, body in sorted(case["bodies"].items()):
-            mesh = dict(v=[_round(p, 4) for p in body["vertices"]], f=[list(t) for t in body["triangles"]])
-            key = json.dumps(mesh, sort_keys=True, separators=(",", ":"))
-            if key not in index:
-                index[key] = len(meshes)
-                meshes.append(mesh)
-            bodies[name] = dict(mesh=index[key], matrices=[_round(m, 7) for m in body["matrices"]])
+            # A tessellation shared between cases is the same list; it is rounded and compared once.
+            shared = (id(body["vertices"]), id(body["triangles"]))
+            if shared not in known:
+                mesh = dict(v=[_round(p, 4) for p in body["vertices"]], f=[list(t) for t in body["triangles"]])
+                key = json.dumps(mesh, sort_keys=True, separators=(",", ":"))
+                if key not in index:
+                    index[key] = len(meshes)
+                    meshes.append(mesh)
+                known[shared] = index[key]
+            bodies[name] = dict(mesh=known[shared], matrices=[_round(m, 7) for m in body["matrices"]])
         cases.append(dict(id=case["id"], stage=case["stage"], bodies=bodies))
     return dict(meshes=meshes, cases=cases)
 

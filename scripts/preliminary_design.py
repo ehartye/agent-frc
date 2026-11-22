@@ -576,8 +576,10 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
         study=dict(study,cases=[*cases,adverse])
     else:missing.append("Missing matched displaced control")
     frames = []
+    # One display tessellation per body for the whole study; each case folds its start pose into its frame matrices.
+    tessellations={}
     def inspect_scene(case,scene):
-        frames.append(capture(case,scene))
+        frames.append(capture(case,scene,tessellations))
     # The displaced control is expected to fail, so it never stops a fail-fast run. It runs last and
     # only after every nominal case passed; otherwise it is skipped and the receipt cannot be checked.
     observed=evaluate(root,study,mount_hosts={m["on"] for m in mounts},package_scene=inspect_scene,
