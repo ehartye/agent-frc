@@ -15,6 +15,9 @@ try {
   const matchSeconds=engine.periods.reduce((sum,p)=>sum+engine.elapsedSeconds(p.name),0);
   run.advance(matchSeconds*matches.length);
   if (!run.done) throw Error('The match series did not reach its final cutoff');
+  for(const match of run.results)for(const period of match.periods)for(const d of period.deadlocks ?? [])
+    console.error('[rehearsal] '+match.id+' '+d.phase+' '+d.sinceS.toFixed(2)+'-'+d.timeS.toFixed(2)+' s wait cycle '+
+      [...d.cycle,d.cycle[0]].join(' -> ')+(d.yielded?'; '+d.yielded+' yields':'; no member can detour'));
   const result={schema:'agent-frc/rehearsal-series@1',profileSha256:createHash('sha256').update(bytes).digest('hex'),
     stepS:engine.dt,playbackRate:10,modelSeconds:matchSeconds*matches.length,
     playbackSeconds:matchSeconds*matches.length/10,matches:run.results};
