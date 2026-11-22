@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { browser, probePage } from './headless-browser.mjs';
@@ -8,7 +8,8 @@ import { browser, probePage } from './headless-browser.mjs';
 // A synthetic, season-neutral review: one invented part and no geometry file. Layout depends only on the page.
 const data = {issue: 'synthetic-layout', step: {file: 'package.step', sha256: 'a'.repeat(64)}, motion: {file: 'paths.json', sha256: 'b'.repeat(64)},
   groups: {arm: {role: 'mechanism', members: ['arm']}}, palette: {mechanism: '#00897b', reference: '#8a8f94'},
-  components: {arm: {purpose: 'Invented arm.', rationale: 'Invented reason.'}}, required: {}, evidence: {}, cases: [],
+  components: {arm: {purpose: 'Invented arm.', rationale: 'Invented reason.'}}, required: {}, evidence: {},
+  cases: [{id: 'package-displacement-control-with-an-invented-long-name', stage: 'operating'}],
   inspector: {arm: {id: 'arm', name: 'arm', category: 'mechanism', role: 'mechanism', motionGroup: 'arm', mass: [], loads: [], movesIn: [], missing: []}},
   geometry: {file: 'missing.geometry.json.gz', contentSha256: 'c'.repeat(64), bytes: 0}, fit: {robot: null, field: null}, fixtures: [],
   narrativeReview: {}, header: {}, motionEvidence: [], returnCriteria: {preliminary: [], conceptual: []}, fieldInteractions: []};
@@ -47,4 +48,30 @@ test('the inspector sits beside the model above 60rem and directly below it at 6
   sideBySide(await at(961), 961, false);
   stacked(await at(960), 960);
   stacked(await at(800), 800);
+  // Headless windows have a minimum width, so a phone-width page is measured inside a 390 px frame.
+  writeFileSync(path.join(dir, 'phone.html'), '<!doctype html><body style="margin:0"><iframe src="index.html" style="width:390px;height:900px;border:0"></iframe>');
+  const phone = await probePage(dir, 'phone.html', `const w=document.querySelector('iframe').contentWindow;await new Promise(r=>setTimeout(r,300));
+   return {width:w.innerWidth,scroll:w.document.documentElement.scrollWidth,cases:w.document.querySelector('#cases').getBoundingClientRect().right}`);
+  assert.equal(phone.width, 390);
+  assert.ok(phone.scroll <= 390 && phone.cases <= 390, '390 px: nothing, including the motion case selector, scrolls sideways (' + JSON.stringify(phone) + ')');
+  const label = await probePage(dir, 'index.html', `const i=document.querySelector('#frame');return {text:i.closest('label').textContent.trim(),name:i.labels[0].textContent.trim()}`);
+  assert.deepEqual(label, {text: 'Position on path', name: 'Position on path', viewportWidth: 1280}, 'the scrubber names what it moves');
+});
+
+test('the stable index links the season site only when one is published above it', {skip: !browser() && 'No Chrome or Edge found; set CHROME_PATH'}, async t => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'review-index-'));
+  t.after(() => rmSync(dir, {recursive: true, force: true}));
+  const index = readFileSync(new URL('../templates/preliminary-review-index.html', import.meta.url), 'utf8');
+  const site = path.join(dir, 'preliminary-design');
+  mkdirSync(site);
+  for (const folder of [dir, site]) {
+    writeFileSync(path.join(folder, 'index.html'), index);
+    writeFileSync(path.join(folder, 'releases.json'), JSON.stringify({current: 'missing', releases: ['missing']}));
+  }
+  const season = `await new Promise(r=>setTimeout(r,500));const s=document.querySelector('#season');return {shown:!!s&&!s.hidden&&getComputedStyle(s).display!=='none'}`;
+  assert.equal((await probePage(dir, 'index.html', season)).shown, false, 'served at the root (serve.py): no parent season link');
+  writeFileSync(path.join(dir, 'index.html'), '<!doctype html><title>Season</title><h1>Season site</h1>');
+  assert.equal((await probePage(dir, 'preliminary-design/index.html', season)).shown, true, 'under a published season site: linked');
+  rmSync(path.join(dir, 'index.html'));
+  assert.equal((await probePage(dir, 'preliminary-design/index.html', season)).shown, false, 'no parent page: no link');
 });

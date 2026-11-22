@@ -65,3 +65,18 @@ test('search selects by stable ID or display name', () => {
   const tie = { arm2: { id: 'arm2', name: 'Second arm' }, arm: { id: 'arm', name: 'First arm' } };
   assert.equal(findComponent('arm', tie), 'arm', 'an exact ID beats an earlier substring match');
 });
+
+test('the page digest falls back to a pure-JS SHA-256 where crypto.subtle is unavailable', async () => {
+  const { createHash } = await import('node:crypto');
+  const { sha256Pure, digestHex } = new Function(source + '\nreturn {sha256Pure, digestHex};')();
+  assert.ok(sha256Pure && digestHex, 'the review logic exports the digest helpers');
+  const cases = ['', 'abc', 'abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq', 'é'.repeat(70), 'x'.repeat(1000)];
+  for (const text of cases) {
+    const bytes = new TextEncoder().encode(text);
+    const expected = createHash('sha256').update(bytes).digest('hex');
+    assert.equal(sha256Pure(bytes), expected, 'pure SHA-256 of ' + bytes.length + ' bytes');
+    assert.equal(await digestHex(bytes, undefined), expected, 'digest without crypto.subtle');
+    assert.equal(await digestHex(bytes.buffer, undefined), expected, 'an ArrayBuffer is accepted');
+    assert.equal(await digestHex(bytes, globalThis.crypto.subtle), expected, 'digest with crypto.subtle');
+  }
+});

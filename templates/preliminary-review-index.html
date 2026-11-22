@@ -7,9 +7,12 @@
 </style>
 <header><h1>Preliminary design</h1><label>Release <select id="release" disabled></select></label>
 <a id="standalone" hidden>Open full view</a><a id="evidence" hidden>Review receipt</a></header>
-<p id="wip" role="note">Work-in-progress preliminary design. <span id="status">Status loading.</span> The current detailed design is on the <a href="../" style="color:inherit">main robot page</a>.</p>
+<p id="wip" role="note">Work-in-progress preliminary design. <span id="status">Status loading.</span> <span id="season" hidden>The current detailed design is on the <a href="../" style="color:inherit">main robot page</a>.</span></p>
 <p id="message" role="status">Loading releases…</p><iframe hidden title="Selected preliminary design"></iframe>
 <script type="module">
+// The season link resolves only when the review is published under a season site; a local serve.py run has no parent.
+const parent=new URL('../',location.href);
+if(parent.href!==new URL('./',location.href).href)fetch(parent,{method:'HEAD',cache:'no-store'}).then(r=>{if(r.ok)document.querySelector('#season').hidden=false}).catch(()=>{});
 const select=document.querySelector('select'),frame=document.querySelector('iframe'),message=document.querySelector('#message');
 function show(id){
  const url=new URL(location.href);url.searchParams.set('release',id);location.assign(url);
