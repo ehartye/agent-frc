@@ -143,7 +143,7 @@ for(const f of data.fieldInteractions||[]){
  const title=element('h4',f.title),link=document.createElement('a');link.href=url.href;link.textContent='Open player';link.target='_blank';link.rel='noopener noreferrer';
  const ev=typeof f.evidence==='string'?f.evidence:f.evidence.file+' · '+short(f.evidence.sha256);
  box.append(title,element('p','Mission objective: '+f.objective+(f.objectiveKnown?'':' (not in the reviewed narrative)')),element('p','Evidence: '+ev),link);
- if(f.embed){const show=element('button','Show here');show.style.marginLeft='.6rem';show.onclick=()=>{const frame=document.createElement('iframe');frame.setAttribute('sandbox',url.origin===location.origin?'allow-scripts allow-same-origin':'allow-scripts');frame.referrerPolicy='no-referrer';frame.src=url.href;frame.title=f.title;box.append(frame);show.remove()};box.append(show)}
+ if(f.embed){const show=element('button','Show here');show.style.marginLeft='.6rem';show.onclick=()=>{const frame=document.createElement('iframe');if(url.origin!==location.origin)frame.setAttribute('sandbox','allow-scripts');frame.referrerPolicy='no-referrer';frame.src=url.href;frame.title=f.title;box.append(frame);show.remove()};box.append(show)}
  fields.append(box);
 }
 // Regions 2-5: inspector and ledgers
