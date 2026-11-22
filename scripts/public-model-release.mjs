@@ -260,11 +260,13 @@ export async function audit(root,base,policyName,packetPath,pubKey,sourceCommit)
         check(!item.isSymbolicLink(),'Redirected preliminary input: '+id+'/'+item.name);
         if(item.isFile())files.set(item.name,readFileSync(path.join(dir,item.name)));
       }
-      const {step}=checkSourceInputs(id,files);
-      // A preliminary STEP can never be a copy of a registered, signed or previously committed model.
-      const stepPath=prelimRoot+'/'+id+'/'+step,stepOid=git(root,['hash-object','--no-filters',file(root,stepPath)]).toString().trim();
-      check(!knownModels.has(stepOid),'A preliminary input duplicates an existing model: '+stepPath);
-      prelimAuthorized.add(stepPath);
+      const {step,fixtures}=checkSourceInputs(id,files);
+      // A preliminary package or fixture STEP can never be a copy of a registered, signed or previously committed model.
+      for(const name of [step,...fixtures]){
+        const stepPath=prelimRoot+'/'+id+'/'+name,stepOid=git(root,['hash-object','--no-filters',file(root,stepPath)]).toString().trim();
+        check(!knownModels.has(stepOid),'A preliminary input duplicates an existing model: '+stepPath);
+        prelimAuthorized.add(stepPath);
+      }
       if(sourceCommit)for(const name of files.keys())verifyCommittedFile(root,sourceCommit,prelimRoot+'/'+id+'/'+name);
       preliminaryInputs.push(id);
     }

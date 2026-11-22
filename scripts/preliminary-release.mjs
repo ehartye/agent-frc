@@ -100,7 +100,41 @@ export function checkSourceInputs(id,files){
   check(receipt.view.verified===true,'Preliminary input '+id+' needs a verified view');
   const plan=parse(files.get('layout.json'),'layout: '+id);
   check(same(plan.step,receipt.step)&&same(plan.motion,receipt.motion),'Preliminary input '+id+'/layout.json differs from its receipt');
-  return {step:receipt.step.file};
+  // Field fixture STEPs: named by the motion study the receipt pins, holding only registered fixture solids,
+  // never a robot member and never robot mass.
+  const motion=parse(files.get(receipt.motion.file),'motion study: '+id),sources=new Map();
+  for(const c of Array.isArray(motion?.cases)?motion.cases:[])for(const f of Array.isArray(c?.fixtures)?c.fixtures:[]){
+    check(object(f)&&named(f.id)&&named(f.solid)&&object(f.file)&&named(f.file.file),'Each fixture names an id, a solid and a pinned source: '+id);
+    const name=f.file.file,entry=sources.get(name)??{sha256:f.file.sha256,ids:new Set(),solids:new Set()};
+    check(entry.sha256===f.file.sha256,'Field fixture source '+id+'/'+name+' is pinned with two digests');
+    entry.ids.add(f.id);entry.solids.add(f.solid);sources.set(name,entry);
+  }
+  const fixtureIds=new Set([...sources.values()].flatMap(e=>[...e.ids]));
+  const robotRoles=['structure','bumper','drive','battery','mechanism','payload','service'];
+  for(const g of Object.values(object(receipt.groups)?receipt.groups:{})){
+    const members=Array.isArray(g?.members)?g.members:[];
+    if(members.some(m=>fixtureIds.has(m)))check(!robotRoles.includes(g.role)&&members.every(m=>fixtureIds.has(m)),
+      'A field fixture is registered as a robot member: '+id);
+  }
+  const ledger=parse(files.get(receipt.budgets.source.file),'budgets: '+id);
+  for(const line of Array.isArray(ledger?.masses)?ledger.masses:[]){
+    const members=Array.isArray(line?.members)?line.members:[];
+    if(members.some(m=>fixtureIds.has(m)))check(members.every(m=>fixtureIds.has(m))&&same(line.kg,[0,0]),
+      'A field fixture carries robot mass: '+id);
+  }
+  const fixtures=[];
+  for(const [name,{sha256:digest,solids}] of sources){
+    check(name!==receipt.step.file&&!name.includes('/')&&/\.(?:step|stp)$/i.test(name)&&files.has(name)&&hex.test(digest??'')&&
+      sha(files.get(name))===digest,'Field fixture source '+id+'/'+name+' differs from the motion study the receipt pins');
+    // The checker's loader names each solid by its STEP product; every product and body must be a registered fixture.
+    const text=files.get(name).toString('latin1');
+    const products=[...text.matchAll(/\bPRODUCT\s*\(\s*'((?:[^']|'')*)'/gi)].map(m=>m[1].replace(/''/g,"'"));
+    const bodies=(text.match(/\b(?:MANIFOLD_SOLID_BREP|BREP_WITH_VOIDS|FACETED_BREP)\s*\(/gi)||[]).length;
+    check(products.length&&new Set(products).size===products.length&&products.every(p=>solids.has(p))&&bodies===products.length,
+      'Every solid in '+id+'/'+name+' must be a registered fixture');
+    fixtures.push(name);
+  }
+  return {step:receipt.step.file,fixtures};
 }
 
 /** The one Content-Security-Policy a season field player declares, compared byte for byte. */
