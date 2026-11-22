@@ -39,6 +39,7 @@ def verify_view(root, plan, scenes, write, observed, budgets):
     series["palette"] = resolve_palette(root)
     presentation = plan.get("presentation", {})
     series["components"] = presentation.get("components", {})
+    series["narrativeReview"] = plan.get("narrativeReview") or {}
     series["required"] = presentation.get("required", {})
     series["evidence"] = {c["case"]: {"status": c["status"], "pairs": c["pairs"]} for c in observed["cases"]}
     if budgets:

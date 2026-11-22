@@ -161,6 +161,23 @@ def review(root, file, previous=None, *, write_view=False):
     result=dict(schema="agent-frc/preliminary-layout-result@1",issue=plan["issue"],planSha256=plan_hash,
                 design=plan["design"],designRevision=design["revision"],robotFrame=robot_frame,datum=datum,
                 status="provisional",missingInputs=missing)
+    narrative = plan.get("narrativeReview") or {}
+    require(isinstance(narrative, dict), "Supply a narrative review record")
+    if narrative.get("source"):
+        pinned(root, narrative["source"])
+    else:
+        missing.append("Read and identify the current strategic narrative")
+    objectives = narrative.get("objectives", [])
+    require(isinstance(objectives, list), "List the reviewed narrative objectives")
+    if not objectives:
+        missing.append("Account for the narrative objectives and fallbacks")
+    for row in objectives:
+        require(isinstance(row, dict) and named(row.get("objective")) and named(row.get("basis")) and
+                row.get("disposition") in ("represented", "open", "out-of-scope"),
+                "Record each narrative objective, its disposition and basis")
+        if row["disposition"] == "open":
+            missing.append("Open narrative objective: " + row["objective"])
+    result["narrativeReview"] = narrative
     decisions=compare_premises(root,plan.get("premises",[]),plan,missing)
     result["premises"]=decisions
     reopen=[dict(phase=d["phase"],reason=d["id"],affected=d["interfaces"]) for d in decisions if d["status"]=="reopen"]
@@ -194,6 +211,15 @@ def review(root, file, previous=None, *, write_view=False):
         require(not roster & group,"An article belongs to multiple groups")
         roster.update(group)
     roles={g["role"] for g in groups.values()}
+    components = plan.get("presentation", {}).get("components", {})
+    require(isinstance(components, dict) and not (components.keys() - roster),
+            "Component explanations must use placed member IDs")
+    for member in sorted(roster):
+        entry = components.get(member, {})
+        require(isinstance(entry, dict), "Invalid component explanation: " + member)
+        for field in ("purpose", "rationale"):
+            if not named(entry.get(field)):
+                missing.append("Missing component " + field + ": " + member)
     for role in sorted({"structure","bumper","drive","battery","mechanism","payload"}-roles):
         missing.append("Missing role from loaded layout: "+role)
     mounts=plan["mounts"]

@@ -5,15 +5,33 @@
 *{box-sizing:border-box}body{font:1rem system-ui;color:#193746;background:#f3f6f7;max-width:88rem;margin:2rem auto;padding:0 1rem}h1{letter-spacing:-.035em}fieldset{display:flex;flex-wrap:wrap;align-items:center;gap:.65rem;border:0;padding:0}button,select{font:inherit;padding:.35rem}#stage{position:relative;margin:1rem 0;background:#101e28;overflow:hidden}canvas{width:100%;height:min(62vh,48rem);display:block;touch-action:none;cursor:grab}#labels{position:absolute;inset:0;pointer-events:none}.tag{position:absolute;background:#142833d9;color:white;padding:0 3px;font:11px system-ui;white-space:nowrap}output{font-variant-numeric:tabular-nums}small{display:block}
 </style>
 <h1>Preliminary assembly motion</h1><p id="issue"></p>
+<details><summary>Strategic narrative review</summary><p id="narrativeSource"></p><ul id="objectives"></ul></details>
 <fieldset><legend>Trajectory</legend><label>Case <select id="cases"></select></label>
 <button id="play">Play</button><label>Stroke <input type="range" id="frame" min="0" max="24" value="0"></label><output id="position"></output>
 <label><input id="showLabels" type="checkbox"> Labels</label><label><input id="floor" type="checkbox" checked> Floor</label><button id="fit">Fit model</button></fieldset>
 <div id="stage"><canvas tabindex="0" aria-label="Orbitable solid package assembly"></canvas><div id="labels"></div></div>
+<section aria-label="Component inspector"><label>Inspect a component <select id="component"></select></label>
+<dl aria-live="polite"><dt>Purpose</dt><dd id="purpose"></dd><dt>Why it is included</dt><dd id="rationale"></dd></dl></section>
 <small>Drag to orbit, Shift-drag or right-drag to pan, and scroll to zoom. Arrow keys rotate, Shift and arrow keys pan, and Home fits the model. The grid lies at datum Z = 0. The clearance receipt bounds the paths between displayed frames.</small>
 <script type="application/json" id="data">PACKAGE_DATA</script><script>
 const data=JSON.parse(document.querySelector('#data').textContent);
 const get=id=>document.getElementById(id),canvas=document.querySelector('canvas'),gl=canvas.getContext('webgl',{antialias:true});
 get('issue').textContent=data.issue+' · STEP '+data.step.sha256.slice(0,12)+' · motion '+data.motion.sha256.slice(0,12);
+const narrative=data.narrativeReview;
+get('narrativeSource').textContent=narrative.source ? narrative.source.file+' · '+narrative.source.sha256.slice(0,12) : 'Narrative pre-read missing';
+for(const row of narrative.objectives||[]){
+ const item=document.createElement('li');
+ item.textContent=row.objective+' — '+row.disposition+'. '+row.basis;
+ get('objectives').append(item);
+}
+const component=get('component');
+for(const name of [...new Set(Object.values(data.groups).flatMap(g=>g.members))].sort())component.add(new Option(name,name));
+function explain(){
+ const row=data.components[component.value]||{};
+ for(const key of ['purpose','rationale'])get(key).textContent=row[key]?.trim()||'Missing from this review';
+}
+component.onchange=()=>{explain();draw()};
+explain();
 if(!gl){get('issue').textContent+=' · Enable WebGL to view the assembly.';throw Error('WebGL unavailable')}
 const program=gl.createProgram();
 function shader(type,source){const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));gl.attachShader(program,s)}
@@ -29,6 +47,7 @@ const aliases={drive:'mechanism',payload:'game-piece',battery:'electrical',other
 const rgb=hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255);
 function placed(m,p){return [0,4,8].map(k=>m[k+3]+m[k]*p[0]+m[k+1]*p[1]+m[k+2]*p[2])}
 let center,extent,az,el,scale,panX,panY,timer,drag;
+let pickSurfaces=[],pointerStart;
 function fit(){
  const low=[Infinity,Infinity,Infinity],high=low.map(()=>-Infinity);
  for(const b of Object.values(data.cases[view.selectedIndex].bodies))for(const v of b.vertices){const p=placed(b.matrices[+frame.value]||b.matrices[0],v);p.forEach((x,i)=>{low[i]=Math.min(low[i],x);high[i]=Math.max(high[i],x)})}
@@ -39,11 +58,12 @@ function draw(){
  canvas.width=Math.round(width*ratio);canvas.height=Math.round(height*ratio);gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(.063,.118,.157,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
  const ca=Math.cos(az),sa=Math.sin(az),ce=Math.cos(el),se=Math.sin(el),k=scale/extent;
  function proj(p){const [x,y,z]=p.map((v,i)=>v-center[i]);return [((-sa*x+ca*y)*k+panX)*Math.min(1,height/width),((ce*z-se*(ca*x+sa*y))*k+panY)*Math.min(1,width/height),-(ce*(ca*x+sa*y)+se*z)/(extent*30)]}
- const surfaces=[],lines=[],labels=[];const grid=extent/12;
+ const surfaces=[],lines=[],labels=[];const grid=extent/12;pickSurfaces=[];
  if(get('floor').checked){for(let i=-12;i<=12;i++){const x=Math.round(center[0]/grid)*grid,y=Math.round(center[1]/grid)*grid;for(const [a,b] of [[[x+i*grid,y-extent,0],[x+i*grid,y+extent,0]],[[x-extent,y+i*grid,0],[x+extent,y+i*grid,0]]])lines.push(...proj(a),.23,.32,.35,...proj(b),.23,.32,.35)}}
  for(const [name,b] of Object.entries(data.cases[view.selectedIndex].bodies)){
   const m=b.matrices[+frame.value]||b.matrices[0],world=b.vertices.map(p=>placed(m,p)),clip=world.map(proj);
-  const col=rgb(data.palette[roles[name]]||data.palette[aliases[roles[name]]]||data.palette.reference);
+  pickSurfaces.push({name,points:clip,triangles:b.triangles});
+  const col=name===component.value?[1,.76,.23]:rgb(data.palette[roles[name]]||data.palette[aliases[roles[name]]]||data.palette.reference);
   for(const [a,j,h] of b.triangles){
    const u=world[j].map((x,i)=>x-world[a][i]),v=world[h].map((x,i)=>x-world[a][i]),normal=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];
    const light=.75+.3*(.4*normal[0]-.45*normal[1]+.8*normal[2])/(Math.hypot(...normal)||1);
@@ -59,7 +79,24 @@ view.onchange=()=>{stop();frame.value=0;draw()};frame.oninput=()=>{stop();draw()
 get('fit').onclick=fit;get('showLabels').onchange=get('floor').onchange=draw;
 canvas.oncontextmenu=e=>e.preventDefault();canvas.onpointerdown=e=>{canvas.setPointerCapture(e.pointerId);drag=[e.clientX,e.clientY,e.shiftKey||e.button===2||e.button===1];canvas.focus()};
 canvas.onpointermove=e=>{if(!drag)return;const dx=e.clientX-drag[0],dy=e.clientY-drag[1];if(drag[2]){const unit=2/Math.min(canvas.clientWidth,canvas.clientHeight);panX+=dx*unit;panY-=dy*unit}else{az-=dx*.01;el+=dy*.01}drag[0]=e.clientX;drag[1]=e.clientY;draw()};
-canvas.onpointerup=canvas.onpointercancel=()=>drag=null;
+canvas.addEventListener('pointerdown',e=>{pointerStart=e.button===0&&!e.shiftKey?[e.clientX,e.clientY]:null});
+canvas.onpointercancel=()=>{drag=null;pointerStart=null};
+canvas.onpointerup=e=>{
+ drag=null;
+ if(!pointerStart||Math.hypot(e.clientX-pointerStart[0],e.clientY-pointerStart[1])>4)return;
+ pointerStart=null;
+ const rect=canvas.getBoundingClientRect(),x=2*(e.clientX-rect.left)/rect.width-1,y=1-2*(e.clientY-rect.top)/rect.height;
+ let closest=Infinity,hit;
+ for(const {name,points,triangles} of pickSurfaces)for(const face of triangles){
+  const [a,b,c]=face.map(i=>points[i]),det=(b[1]-c[1])*(a[0]-c[0])+(c[0]-b[0])*(a[1]-c[1]);
+  if(Math.abs(det)<1e-14)continue;
+  const u=((b[1]-c[1])*(x-c[0])+(c[0]-b[0])*(y-c[1]))/det,v=((c[1]-a[1])*(x-c[0])+(a[0]-c[0])*(y-c[1]))/det,w=1-u-v;
+  if(Math.min(u,v,w)<0)continue;
+  const depth=u*a[2]+v*b[2]+w*c[2];
+  if(depth<closest){closest=depth;hit=name}
+ }
+ if(hit){component.value=hit;explain();draw()}
+};
 canvas.addEventListener('wheel',e=>{e.preventDefault();scale=Math.min(100,Math.max(.05,scale*Math.exp(-e.deltaY*.0015)));draw()},{passive:false});
 canvas.onkeydown=e=>{const v={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,1],ArrowDown:[0,-1]}[e.key];if(v){if(e.shiftKey){panX+=v[0]*.08;panY+=v[1]*.08}else{az+=v[0]*.15;el+=v[1]*.15}}else if(e.key==='Home'){fit()}else if(e.key==='+'||e.key==='-'){scale*=e.key==='+'?1.2:1/1.2}else return;e.preventDefault();draw()};
 fit();new ResizeObserver(draw).observe(canvas);

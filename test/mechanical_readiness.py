@@ -1066,6 +1066,20 @@ class Readiness(unittest.TestCase):
         self.assertEqual(good["control"]["witness"]["witness"]["t"],.5)
         self.assertGreater(good["control"]["witness"]["witness"]["volumeMm3"],50)
         self.assertTrue(good["view"]["verified"])
+        from copy import deepcopy
+        incomplete = deepcopy(plan)
+        del incomplete["presentation"]["components"]["head"]["rationale"]
+        incomplete["narrativeReview"]["objectives"][1]["disposition"] = "open"
+        write(folder,"layout.json",incomplete)
+        held = review(folder,file)
+        self.assertEqual(held["status"],"provisional")
+        self.assertIn("Missing component rationale: head",held["missingInputs"])
+        self.assertIn("Open narrative objective: Park at the finish",held["missingInputs"])
+        old = dict(plan)
+        del old["narrativeReview"], old["presentation"]
+        write(folder,"layout.json",old)
+        self.assertIn("Read and identify the current strategic narrative",review(folder,file)["missingInputs"])
+        write(folder,"layout.json",plan)
         self.assertEqual(good["budgets"]["inspectionKg"],[11,13.5])
         weak=[r for r in good["budgets"]["electricalCases"] if r["batteryCondition"]=="weak"]
         self.assertEqual({r["stage"] for r in weak},set(plan["cycle"]))
