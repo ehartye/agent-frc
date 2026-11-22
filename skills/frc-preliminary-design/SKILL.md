@@ -9,6 +9,8 @@ description: "Use for preliminary design of the whole robot: compare architectur
 
 For every placed member, write its **purpose** (the job it performs) and **rationale** (the requirement, interface, constraint or tradeoff that earns it space here). Include supports, controls, game pieces and service gauges. Use its placed ID in the [review presentation](references/presentation.md) so selecting it reveals both explanations.
 
+When lifting or tipping a game piece, test retention separately from the animated path. At each change of support, project gravity into the holder frame, identify contacts that can push back, and sweep the entire piece toward a possible exit. Repeat with grip or power removed, including the worst loaded angle. Record a restraint, measured friction and preload, or an open retention finding. Use a free-piece simulation or load test to check dynamic capture, slip and release. [Contact and load evidence](../../docs/loaded-transfer.md)
+
 During preliminary design, use a top-down assembly layout. Share one moving layout, its checked clearance, complete weight estimate and loaded-voltage range before distributing detailed CAD. [Engineering detail and exit criteria for the three phases](../../docs/design-phase-detail.md)
 
 Present the selected layout as an inspectable solid model with motion evidence, inventory and resource budgets. Follow the [preliminary design presentation reference](references/presentation.md) when preparing the review or handing it to another designer.

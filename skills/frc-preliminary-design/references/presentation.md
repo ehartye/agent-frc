@@ -42,6 +42,8 @@ The local package player reads project-authored `presentation.components` keyed 
 
 ## Evidence behind the picture
 
+Label imposed payload motion as prescribed. For a tipping holder, show the reviewer the loaded pose and a separate power-off escape control. Identify the first angle at which gravity points through an opening, the available resisting contacts, and the measured escape distance or obstruction. A collision-free carried path alone establishes clearance.
+
 1. Bind the view to the reviewed geometry, motion definition and result by revision and digest. Check that every displayed mesh is closed, that the roster matches and that mesh volumes agree with source solids at a declared tolerance.
 2. Check the parked assembly for positive-volume intersections. Account for all unique pairs, including broad-phase separations. Identify intended interfaces individually with allowed geometry and allowance. Keep unresolved measurements visible.
 3. Check clearance throughout each prescribed path, including its endpoints, simultaneous motions, payload and withdrawal tools. Give the method, tolerance and interval coverage. Sampled poses alone establish clearance only at those samples.
