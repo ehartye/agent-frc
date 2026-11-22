@@ -68,7 +68,8 @@ function fixture(t) {
     assert.ok(path.basename(dir).startsWith('agent-frc-skills-'));
     fs.rmSync(dir, { recursive: true, force: true });
   });
-  for (const file of ['scripts/validate.mjs', 'scripts/skill-validation.mjs', 'scripts/check-design-references.mjs', 'plugin.json', '.claude-plugin/plugin.json', '.codex-plugin/plugin.json']) {
+  for (const file of ['scripts/validate.mjs', 'scripts/skill-validation.mjs', 'scripts/check-design-references.mjs', 'scripts/install-manifests.mjs', 'package.json', 'plugin.json',
+    '.claude-plugin/plugin.json', '.codex-plugin/plugin.json', '.claude-plugin/marketplace.json', '.agents/plugins/marketplace.json']) {
     fs.mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
     fs.copyFileSync(path.join(root, file), path.join(dir, file));
   }
@@ -110,5 +111,5 @@ test('CLI retains manifest schema, subtitle and compatibility checks', t => {
   const compat = path.join(dir, '.codex-plugin/plugin.json');
   const originalCompat = JSON.parse(fs.readFileSync(compat, 'utf8'));
   fs.writeFileSync(compat, JSON.stringify({ ...originalCompat, version: '99.0.0' }));
-  assert.match(run().stderr, /Compatibility mismatch/);
+  assert.match(run().stderr, /\.codex-plugin\/plugin\.json: version-mismatch/);
 });

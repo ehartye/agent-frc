@@ -4,7 +4,7 @@ A long Fusion job can finish creating geometry after its original plugin cache o
 
 ## Stage before dispatch
 
-Use the checkout's clean `npm run plugin:stage` output, or an installed local package that contains `.agent-frc-stage.json`. The release manifest identifies the source commit and SHA-256 of every packaged file, including Python siblings, templates and other resources. Keep the job's independently frozen registration digest in the existing guard's request intent. Choose a unique job ID and existing private station directory outside the cache and feature worktree.
+Use the checkout's clean `npm run plugin:stage` output, or an installed local package that contains `.agent-frc-stage.json`. An installation from a Git source has no such receipt, so stage a checkout of the same commit. The release manifest identifies the source commit and SHA-256 of every packaged file, including Python siblings, templates and other resources. Keep the job's independently frozen registration digest in the existing guard's request intent. Choose a unique job ID and existing private station directory outside the cache and feature worktree.
 
 ```json
 {

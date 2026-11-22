@@ -1,32 +1,90 @@
-# Run Agent FRC from a local checkout
+# Install Agent FRC
 
-The repository includes a Codex marketplace named `agent-frc-local`. Its plugin source is a clean export generated inside this checkout, so the setup works wherever the checkout lives. The project configuration enables `agent-frc@agent-frc-local` in trusted checkouts.
+This repository is a plugin marketplace named `agent-frc-local`. It lists one plugin, `agent-frc`, whose source is the repository root. Claude Code reads `.claude-plugin/marketplace.json`. Codex reads `.agents/plugins/marketplace.json`. Both hosts copy the plugin into their own cache, so an installed plugin does not need a checkout.
 
-From the repository root, use a Codex CLI that supports these commands:
+## Install from GitHub
+
+### Claude Code
 
 ```sh
-npm run plugin:stage
-codex plugin marketplace add .
+claude plugin marketplace add ehartye/agent-frc
+claude plugin install agent-frc@agent-frc-local
+```
+
+Inside a session, `/plugin install agent-frc --marketplace ehartye/agent-frc` does both steps. Start a new session, invoke `/agent-frc:frc-setup` and ask for the runtime identity. Then [check the session's plugin root and version](setup-health.md#claude-code-session).
+
+### Codex
+
+```sh
+codex plugin marketplace add ehartye/agent-frc
 codex plugin add agent-frc@agent-frc-local
 codex plugin list --marketplace agent-frc-local --json
 ```
 
-Then start a new Codex session in this checkout. In the desktop app, restart the app if the marketplace or plugin does not appear. Select **Agent FRC Local Checkout** in the plugin directory and confirm Agent FRC is enabled. Ask to use `frc-setup` for a core runtime check, or `frc-strategic-narrative` to begin a season-specific strategy discussion.
+Start a new Codex session. In the desktop app, restart the app if the marketplace or plugin does not appear. Select **Agent FRC Repository** in the plugin directory and confirm Agent FRC is enabled. Ask to use `frc-setup` for a core runtime check, or `frc-strategic-narrative` to begin a season-specific strategy discussion.
 
-### Claude Code
+To follow a release instead of the default branch, add `--ref TAG` to the Codex marketplace command or use `ehartye/agent-frc#TAG` as the Claude Code source.
 
-From a separate working project, start `claude --plugin-dir PATH_TO_PLUGIN` to load Agent FRC for that session. A configured installation can use the same skill. Invoke `/agent-frc:frc-setup` and ask for the runtime identity. [Check the session's plugin root and version](setup-health.md#claude-code-session)
+## Update an installation
 
-### Refresh the Codex installation
+Each host installs the version declared in the plugin manifest. Refresh the marketplace, then install that version and start a new session.
 
-Commit tracked changes before staging. The staging command copies tracked files into `artifacts/local-plugin`, excluding repository marketplace and host configuration. It records the source commit and file hashes. Git history, untracked files, ignored build outputs and private local evidence are excluded. An existing export is replaced only when it has the staging command's ownership marker.
+```sh
+claude plugin marketplace update agent-frc-local
+claude plugin update agent-frc@agent-frc-local
 
-Codex installs a cached copy of that export. After changing or pulling plugin files, rerun `npm run plugin:stage` and the install command, then start a new session; do not edit the installed cache. This setup does not publish to a public directory or modify any other marketplace.
+codex plugin marketplace upgrade agent-frc-local
+codex plugin add agent-frc@agent-frc-local
+```
+
+Do not edit an installed cache. A deferred native job can still be reading the previous copy. Check for a running job before replacing a cache.
+
+An installation from a Git source has no staging receipt. A [deferred native job](native-job.md) freezes its plugin from a staged export, so stage a checkout of the same commit before dispatch.
+
+## Run plugin commands from an installation
+
+The guides write commands such as `npm run kickoff` and `node scripts/design.mjs` relative to the plugin root. That root is the installed copy or a checkout. The scripts use only Node.js built-in modules, so an installed copy needs no `npm install`. Use absolute paths for project files when the project is a different directory.
+
+- **Claude Code:** `frc-setup` reports the root that the running session selected.
+- **Codex:** the plugin root is two directories above the `SKILL.md` file that Codex opened. The [runtime resolver](setup-health.md#resolve-the-plugin-used-by-this-check) confirms it against the host inventory.
+
+## Develop from a checkout
+
+For one Claude Code session, start `claude --plugin-dir PATH_TO_CHECKOUT` from a separate working project. The session loads the files in the checkout, including uncommitted edits.
+
+To install a checkout through the marketplace, pass its path in place of `ehartye/agent-frc`. A host can copy everything under a local source, including ignored build outputs and private local evidence. Use a clean clone, or stage a clean export and add that directory as the marketplace:
+
+```sh
+npm run plugin:stage
+codex plugin marketplace add ./artifacts/local-plugin
+codex plugin add agent-frc@agent-frc-local
+```
+
+Commit tracked changes before staging. The staging command copies tracked files into `artifacts/local-plugin`, excluding project host configuration and repository automation. The export includes both marketplace files, so it is a complete marketplace. It records the source commit and the SHA-256 of every packaged file in `.agent-frc-stage.json`. Git history, untracked files, ignored build outputs and private local evidence are excluded. An existing export is replaced only when it has the staging command's ownership marker. After changing or pulling plugin files, rerun the staging and install commands, then start a new session.
+
+Earlier revisions pointed the Codex marketplace at the staged export from the checkout root. If the checkout root is already configured as a Codex marketplace, run `codex plugin marketplace remove agent-frc-local` and add `./artifacts/local-plugin` instead.
+
+The project configuration in `.codex/config.toml` enables `agent-frc@agent-frc-local` in a trusted checkout. A marketplace name maps to one source at a time. Codex refuses to add the same name from a different source until the configured marketplace is removed. Claude Code repoints the name and updates installed plugins from the new source.
+
+## Check the install files
+
+`npm run validate` compares both host manifests and both marketplace entries with the root `plugin.json`. It fails when a file is missing or malformed, when a name, version or description differs, when a marketplace source is not a committed plugin directory, or when a skill links to a file that a clean clone does not contain. Change the version in `package.json`, `plugin.json`, `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json` together. The marketplace entries omit a version so the manifest stays the single declaration.
+
+Run `claude plugin validate . --strict` for the Claude Code schema. Then install into a temporary host configuration to exercise both hosts without changing your own:
+
+```sh
+CLAUDE_CONFIG_DIR=EMPTY_DIRECTORY claude plugin marketplace add PATH_TO_CLEAN_CLONE
+CLAUDE_CONFIG_DIR=EMPTY_DIRECTORY claude plugin install agent-frc@agent-frc-local
+CODEX_HOME=OTHER_EMPTY_DIRECTORY codex plugin marketplace add PATH_TO_CLEAN_CLONE
+CODEX_HOME=OTHER_EMPTY_DIRECTORY codex plugin add agent-frc@agent-frc-local
+```
+
+In PowerShell, set `$env:CLAUDE_CONFIG_DIR` or `$env:CODEX_HOME` before the command and clear it afterward.
+
+`claude plugin details agent-frc@agent-frc-local` lists the installed skills. Compare the count with the `skills` value printed by `npm run validate`.
+
+A successful plugin installation does not install Java, WPILib, Python physics packages or Fusion. Optional vault grounding remains explicitly configured and is not required for installation. This setup does not publish to a public directory or modify any other marketplace.
 
 For a release-day exercise, ask Agent FRC to open the kickoff field lab. The [kickoff guide](kickoff-field-lab.md) includes the standalone command and student narrative handoff.
 
-Validate the source with `npm test` and `npm run validate`. A successful plugin installation does not install Java, WPILib, Python physics packages or Fusion. Optional vault grounding remains explicitly configured and is not required for installation.
-
-See the [OpenAI local plugin packaging documentation](https://developers.openai.com/plugins/build/plugins) for current marketplace and cache behavior.
-
-For a deferred native job, [freeze its plugin and project inputs](native-job.md) before dispatch. Keep those bytes through cold readback. Before replacing a cache or removing a worktree, check whether a job still reads files there.
+See the [Claude Code plugin marketplace documentation](https://code.claude.com/docs/en/plugin-marketplaces) and the [OpenAI plugin packaging documentation](https://developers.openai.com/plugins/build/plugins) for current marketplace and cache behavior.

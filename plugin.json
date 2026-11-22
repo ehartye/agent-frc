@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "agent-frc",
-  "version": "0.103.0",
+  "version": "0.104.0",
   "description": "Season-aware high-school FRC engineering guidance with explicit evidence and optional local vault grounding.",
   "author": {
     "name": "ehartye"
@@ -20,9 +20,19 @@
       "interface": {
         "displayName": "Agent FRC",
         "shortDescription": "FRC engineering case studies",
+        "longDescription": "Turn a supplied game manual into a rules model, field rehearsal, strategy comparison, robot design and verification plan. Skills cover conceptual, preliminary and detailed design, swerve, Java, vision, mechanical readiness and student showcases, with explicit evidence and optional local vault grounding.",
         "developerName": "ehartye",
         "category": "Education",
-        "capabilities": []
+        "capabilities": [
+          "Read",
+          "Write"
+        ],
+        "websiteURL": "https://github.com/ehartye/agent-frc",
+        "defaultPrompt": [
+          "Check my Agent FRC setup for this project.",
+          "Turn our game manual into a rules model and field rehearsal.",
+          "Compare whole-robot architectures for our chosen strategy."
+        ]
       }
     }
   }
