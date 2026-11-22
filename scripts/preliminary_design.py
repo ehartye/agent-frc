@@ -446,7 +446,8 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
     for m in mounts:
         require(m["group"] in groups and m["on"] in roster and named(m["basis"]),"Unknown mount group, host or basis")
         # A mount may name the one member it supports; without a member it stands for the whole group.
-        require("member" not in m or m["member"] in groups[m["group"]]["members"],"A mount names a member of its own group")
+        require("member" not in m or m["member"] in groups[m["group"]]["members"] and m["member"]!=m["on"],
+                "A mount names a member of its own group, other than its host")
         vec(m["pointMm"])
     for key,g in groups.items():
         if g["role"]=="mechanism" and not any(m["group"]==key for m in mounts):

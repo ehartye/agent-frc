@@ -115,4 +115,6 @@ test('a mount registered against a member leads its support and load path', () =
   assert.deepEqual(errors, []);
   scene.bodies.arm.mounts = [{on: 'frame', pointMm: [10, 20], basis: 'Invented'}];
   assert.ok(validateScene(scene).errors.length, 'a mount point needs three coordinates');
+  scene.bodies.arm.mounts = [{on: 'absent', pointMm: [10, 20, 30], basis: 'Invented'}];
+  assert.deepEqual(validateScene(scene).errors, ['/bodies/arm/mounts names an unknown body: absent']);
 });

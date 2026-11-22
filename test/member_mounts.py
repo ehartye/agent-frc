@@ -35,10 +35,10 @@ class MemberMounts(unittest.TestCase):
         return json.loads(gzip.decompress(self.scene_file.read_bytes()))["bodies"]
 
     def test_group_mounts_keep_the_receipt_and_scene_they_had(self):
-        self.scene_file.write_bytes(self.stock_scene)
-        result = self.review(self.plan, fresh=False)
+        result = self.review(self.plan)
         self.assertEqual(result["status"], "layout-checked", result["missingInputs"])
         self.assertEqual(result["mounts"], self.plan["mounts"])
+        self.assertEqual(self.scene_file.read_bytes(), self.stock_scene, "a plan without member mounts regenerates the same scene")
         self.assertTrue(all("mounts" not in body for body in self.bodies().values()))
 
     def test_a_mount_names_the_member_it_supports(self):
@@ -55,11 +55,16 @@ class MemberMounts(unittest.TestCase):
         self.assertFalse(any("Missing mount datum" in m for m in result["missingInputs"]))
 
     def test_a_mount_member_must_belong_to_its_group(self):
-        for member in ("gate", "unknown", ""):
+        for member in ("gate", "unknown", "", None, 3):
             plan = deepcopy(self.plan)
             plan["mounts"][0]["member"] = member
-            with self.assertRaisesRegex(ValueError, "A mount names a member of its own group", msg=member):
+            with self.assertRaisesRegex(ValueError, "A mount names a member of its own group", msg=str(member)):
                 self.review(plan)
+        # A member cannot be its own host: any point inside its own box would pass the envelope check.
+        plan = deepcopy(self.plan)
+        plan["mounts"].append(dict(group="structure", member="rail", on="rail", pointMm=self.plan["mounts"][1]["pointMm"], basis="Invented"))
+        with self.assertRaisesRegex(ValueError, "other than its host"):
+            self.review(plan)
 
     def test_a_structure_member_registers_its_joint_to_a_host(self):
         joint = dict(group="structure", member="rail", on="mount", pointMm=self.plan["mounts"][0]["pointMm"],
