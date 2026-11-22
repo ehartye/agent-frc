@@ -18,6 +18,7 @@ from pilot_alignment_test import SeatedPilot
 from mission_boundaries import MissionBoundaries
 from spatial_operating_cases import SpatialOperatingCases
 from constant_pose_pairs import ConstantPosePairs
+from interface_evidence import InterfaceEvidence
 from game_piece_compression import GamePieceCompression
 from checker_progress_failfast import CheckerProgressFailFast
 from motion_heartbeat import MotionHeartbeat

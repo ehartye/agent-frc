@@ -188,6 +188,13 @@ export function checkProject(root, options = {}) {
   const attempt = (what, body) => { try { return body(); } catch (error) { errors.push(error.message); return undefined; } };
   const changed = changedPaths(root, o.base);
   const rel = full => path.relative(root, full).split(path.sep).join('/');
+  // A release checked from the repository root pins its files from there. The view sits in the plan's folder, so its recorded
+  // path tells the two forms apart; the STEP does for a receipt without a view.
+  const checkedFromRoot = (project, receipt) => {
+    const recorded = [receipt?.view?.file, receipt?.step?.file].find(named);
+    const pinnedFile = recorded ? path.resolve(root, recorded) : null, into = pinnedFile && path.relative(project, pinnedFile);
+    return project !== root && !!into && into !== '..' && !into.startsWith('..' + path.sep) && !path.isAbsolute(into) && existsSync(pinnedFile);
+  };
   // A design that was already effective at the base commit was accepted in review with the files it had then.
   const warnIfChanged = (where, indexFile, id, places) => {
     if (!changed) return;
@@ -240,7 +247,7 @@ export function checkProject(root, options = {}) {
         // Effective is the project's decision in a reviewed pull request. The report is for its reviewer.
         if (entry.status === 'effective') {
           reports.push({title: where + ' (effective)',
-            text: existsSync(inputs) ? readinessText(effectiveReadiness(inputs)) : 'No readiness report: the check inputs are not committed.\n'});
+            text: existsSync(inputs) ? readinessText(checkedFromRoot(inputs, receipt) ? effectiveReadiness(root, {release: rel(inputs)}) : effectiveReadiness(inputs)) : 'No readiness report: the check inputs are not committed.\n'});
           warnIfChanged(where, prelimIndexFile, id, [inputs, dir]);
         }
       });
@@ -325,11 +332,7 @@ export function checkProject(root, options = {}) {
       const previous = receipt.previousCheckpointSha256 ? record.check?.previous ?? findByDigest(project, receipt.previousCheckpointSha256) : null;
       check(!receipt.previousCheckpointSha256 || previous, where + ': commit the held receipt it was checked against (SHA-256 ' + receipt.previousCheckpointSha256 + ') under ' + rel(project));
       o.log('[rerun] ' + where + ': layout check on ' + rel(planFile));
-      // A release checked from the repository root pins its files from there: its receipt names its view, or else its STEP, inside the inputs folder.
-      // The view sits in the plan's folder, so its recorded path tells the two forms apart; the STEP does for a receipt without a view.
-      const recorded = [receipt.view?.file, receipt.step?.file].find(named);
-      const pinnedFile = recorded ? path.resolve(root, recorded) : null, into = pinnedFile && path.relative(project, pinnedFile);
-      const fromRoot = project !== root && !!into && into !== '..' && !into.startsWith('..' + path.sep) && !path.isAbsolute(into) && existsSync(pinnedFile);
+      const fromRoot = checkedFromRoot(project, receipt);
       const within = name => fromRoot ? rel(path.join(project, name)) : name;
       try { fresh = o.run({project: fromRoot ? root : project, plan: within(planName), previous: previous && within(previous), budgetMinutes: o.budgetMinutes}); }
       catch (error) { throw Error(where + ': ' + error.message); }

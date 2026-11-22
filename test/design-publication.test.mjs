@@ -330,6 +330,13 @@ test('the real layout check reruns a committed synthetic release and rejects a f
     const result = checkProject(season, {budgetMinutes: 5});
     assert.deepEqual(result.errors, []);
     assert.deepEqual(result.preliminary.releases, [{release: 'layout-001', status: 'in-progress', rerun: 'pass'}]);
+    // The readiness report of an effective release resolves its trial pins from the repository root, where the check ran.
+    editJson(path.join(season, prelim, 'releases.json'), i => ({...i, designStatus: {'layout-001': 'effective'}}));
+    const report = checkProject(season, {skipRerun: true}).reports.map(r => r.text).join(' ');
+    assert.match(report, /Effective-readiness report for synthetic-package-layout-001/);
+    assert.match(report, /trial cad\/preliminary-design\/releases\/layout-001\/release-lane-trial\.json has no qualification record/);
+    assert.doesNotMatch(report, /the motion is prescribed/);
+    editJson(path.join(season, prelim, 'releases.json'), i => ({...i, designStatus: {'layout-001': 'in-progress'}}));
     // Move the displaced control so it no longer collides, then forge the receipt's plan digest by hand.
     const plan = path.join(season, 'cad/preliminary-design/releases/layout-001/layout.json');
     editJson(plan, l => ({...l, control: {...l.control, offsetMm: [0, 50, 0]}}));
