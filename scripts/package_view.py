@@ -226,6 +226,14 @@ def first_unmet(result):
     return None
 
 
+def safe_href(href):
+    """A link the review may follow: relative to the release page without a scheme, or https with a host."""
+    parts = urlsplit(href) if isinstance(href, str) else None
+    return bool(parts) and not re.search(r"[\x00-\x20\x7f\\]", href) and (
+        parts.scheme == "https" and bool(re.fullmatch(r"[A-Za-z0-9.-]+", parts.netloc))
+        or not parts.scheme and not parts.netloc and not href.startswith("/") and ":" not in href.split("/")[0])
+
+
 def field_interactions(root, plan):
     """Season-owned field-interaction or physics players linked from the review."""
     rows = []
@@ -234,10 +242,7 @@ def field_interactions(root, plan):
         require(isinstance(item, dict) and named(item.get("title")) and named(item.get("href"))
                 and named(item.get("objective")), "Give each field interaction a title, href and mission objective")
         href = item["href"]
-        parts = urlsplit(href)
-        require(not re.search(r"[\x00-\x20\x7f\\]", href)
-                and (parts.scheme == "https" and parts.netloc or not parts.scheme and not parts.netloc and not href.startswith("/")),
-                "Link a field interaction with a relative URL or https: " + repr(href))
+        require(safe_href(href), "Link a field interaction with a relative URL or https: " + repr(href))
         evidence = item.get("evidence")
         if isinstance(evidence, dict):
             pinned(root, evidence)
@@ -340,8 +345,13 @@ def parked_assembly(observed_cases, study_cases, roster):
                 positive[pair] = max(positive.get(pair, 0), round(witness["volumeMm3"], 3))
             elif row["status"] == "open":
                 unresolved.add(pair)
-    n = len(installed)
-    return dict(screenedPairs=n * (n - 1) // 2, positive=[dict(pair=list(p), volumeMm3=v) for p, v in sorted(positive.items())],
+    # Every pair the checker examined with both bodies still, in any case, counts as screened.
+    screened = set()
+    for observed in observed_cases:
+        case = by_id.get(observed["case"], {})
+        still = sorted(set(installed) - set(case.get("moves", {})) - set(case.get("initialPose", {})))
+        screened.update((a, b) for i, a in enumerate(still) for b in still[i + 1:])
+    return dict(screenedPairs=len(screened), positive=[dict(pair=list(p), volumeMm3=v) for p, v in sorted(positive.items())],
                 unresolved=[list(p) for p in sorted(unresolved)])
 
 
@@ -351,7 +361,10 @@ def _colour(palette, category, role):
 
 def _timeline(plan, case_id, frames):
     """Optional per-frame time, readout and field position from presentation.caseTimelines."""
-    line = plan.get("presentation", {}).get("caseTimelines", {}).get(case_id) or {}
+    timelines = plan.get("presentation", {}).get("caseTimelines", {})
+    require(isinstance(timelines, dict) and set(timelines) <= set(plan.get("stages", {})),
+            "presentation.caseTimelines maps commissioned case IDs to their timelines")
+    line = timelines.get(case_id) or {}
     require(isinstance(line, dict) and set(line) <= {"time", "measure", "positions"}, "caseTimelines entries hold time, measure and positions")
     out = {}
     for key, value in line.items():
@@ -455,11 +468,22 @@ def build_scene(root, plan, scenes, observed, budgets, review):
     if cut is not None:
         require(isinstance(cut, dict) and named(cut.get("label")) and isinstance(cut.get("hides"), list)
                 and set(cut["hides"]) <= fixtures, "presentation.cutaway needs a label and the fixture IDs it hides")
-    for link in scene["links"]:
-        require(isinstance(link, dict) and named(link.get("label")) and named(link.get("href"))
-                and not re.search(r"[\x00-\x20\x7f\\]", link["href"]) and urlsplit(link["href"]).scheme in ("", "https"),
-                "presentation.links holds {label, href} with relative or https links")
+    require(isinstance(scene["links"], list) and all(isinstance(link, dict) and set(link) == {"label", "href"} and named(link["label"])
+                                                     and safe_href(link["href"]) for link in scene["links"]),
+            "presentation.links holds {label, href} with relative or https links")
     return scene
+
+
+def _validate(content):
+    """Refuse a scene the stock page or the release gate would reject, before any view is credited."""
+    import subprocess
+    script = Path(__file__).with_name("review-scene.mjs")
+    run = subprocess.run(["node", str(script), "validate", "-"], input=content, capture_output=True)
+    try:
+        errors = json.loads(run.stdout)["errors"]
+    except (ValueError, KeyError):
+        raise ValueError("Could not validate the review scene: " + run.stderr.decode(errors="replace").strip()) from None
+    require(not errors, "The review scene is invalid: " + "; ".join(errors[:5]))
 
 
 def verify_view(root, plan, scenes, write, observed, budgets, review=None):
@@ -469,11 +493,12 @@ def verify_view(root, plan, scenes, write, observed, budgets, review=None):
         return None
     review = review or {}
     path = (root / name).resolve()
-    require(not Path(name).is_absolute() and path.is_relative_to(root) and path.suffix.lower() == ".html",
-            "Select a project-relative HTML view")
+    require(not Path(name).is_absolute() and path.is_relative_to(root) and path.suffix.lower() == ".html"
+            and Path(name).parent == Path("."), "Select an HTML view beside the layout plan")
     page = PAGE.read_bytes().replace(b"\r\n", b"\n")
     content = json.dumps(build_scene(root, plan, scenes, observed, budgets, review), allow_nan=False, sort_keys=True,
                          separators=(",", ":")).encode("utf-8")
+    _validate(content)
     scene_file = path.with_name(SCENE_FILE)
     if write and not path.exists():
         with path.open("xb") as output:

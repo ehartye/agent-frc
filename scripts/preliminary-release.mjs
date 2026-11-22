@@ -3,7 +3,7 @@ import {createHash} from 'node:crypto';
 import {lstatSync,readFileSync,readdirSync,realpathSync} from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
-import {compareWithReceipt,readScene,sceneSchemaId,validateScene} from './review-scene.mjs';
+import {compareWithLedger,compareWithReceipt,maxSceneBytes,readScene,sceneSchemaId,validateScene} from './review-scene.mjs';
 
 export const releaseSchema='agent-frc/preliminary-release@1';
 export const releaseLabel='Work-in-progress preliminary design';
@@ -41,7 +41,7 @@ function stockPage(html){return lf(html)===lf(readFileSync(page))}
  */
 function pinnedScene(bytes,receipt){
   const pin=receipt?.view?.scene;
-  if(!object(pin)||pin.file!==sceneFile||!hex.test(pin.sha256??'')||!hex.test(pin.contentSha256??'')||!Number.isSafeInteger(pin.bytes))
+  if(!object(pin)||pin.file!==sceneFile||!hex.test(pin.sha256??'')||!hex.test(pin.contentSha256??'')||!Number.isSafeInteger(pin.bytes)||pin.bytes<1||pin.bytes>maxSceneBytes)
     return {error:'The receipt does not pin '+sceneFile};
   if(!bytes||sha(bytes)!==pin.sha256)return {error:'Published review scene differs from its receipt pin'};
   let read;
@@ -409,6 +409,8 @@ export function checkRelease(id,files,policy={}){
   const pinned=pinnedScene(files.get(sceneFile),receipt);
   check(!pinned.error,(pinned.error||'')+': '+id+'. Regenerate it with --write-view');
   const data=pinned.scene;
+  const ledgerDiffers=compareWithLedger(data,parse(files.get('budgets.json'),'budget ledger: '+id),parse(files.get('limits.json'),'limits: '+id));
+  check(!ledgerDiffers.length,'Published review scene shows figures that differ from the published budgets: '+ledgerDiffers.join('; ')+': '+id);
   const shownStatus=new Map(data.cases.map(c=>[c.id,c.status]));
 
   const objectives=Array.isArray(receipt.narrativeReview?.objectives)?receipt.narrativeReview.objectives:[];

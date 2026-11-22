@@ -6,6 +6,9 @@ import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 
 export const sceneSchemaId = 'agent-frc/preliminary-review-scene@1';
+export const controlCase = 'package-displacement-control';
+/** No legitimate scene approaches this; it bounds decompression even when a receipt claims more. */
+export const maxSceneBytes = 512 * 1024 * 1024;
 export const schema = JSON.parse(readFileSync(new URL('../templates/preliminary-review/scene.schema.json', import.meta.url), 'utf8'));
 
 const kind = v => v === null ? 'null' : Array.isArray(v) ? 'array' : Number.isInteger(v) ? 'integer' : typeof v;
@@ -35,6 +38,7 @@ export function checkSchema(value, node = schema, at = '', errors = []) {
     if (node.minProperties && Object.keys(value).length < node.minProperties) errors.push(at + ' needs at least ' + node.minProperties + ' entries');
     for (const [key, v] of Object.entries(value)) {
       if (node.properties?.[key]) checkSchema(v, node.properties[key], at + '/' + key, errors);
+      else if (node.additionalProperties === false) errors.push(at + '/' + key + ' is not a scene field');
       else if (node.additionalProperties && typeof node.additionalProperties === 'object') checkSchema(v, node.additionalProperties, at + '/' + key, errors);
     }
   }
@@ -54,6 +58,9 @@ export function validateScene(scene) {
   const known = (list, where) => { for (const id of list) if (!ids.has(id)) errors.push(where + ' names an unknown body: ' + id); };
   for (const [id, body] of Object.entries(bodies)) if (body.mesh !== undefined && !(body.mesh < scene.meshes.length)) errors.push('/bodies/' + id + ' mesh out of range');
   scene.meshes.forEach((m, i) => { if (m.f.some(face => face.some(k => k >= m.v.length))) errors.push('/meshes/' + i + ' face indexes a missing vertex'); });
+  const controls = scene.cases.filter(c => c.kind === 'displaced control');
+  if (controls.length > 1 || controls.some(c => c.id !== controlCase)) errors.push('/cases may hold one displaced control, with id ' + controlCase);
+  if (scene.cases.some(c => c.id === controlCase && c.kind !== 'displaced control')) errors.push('/cases/' + controlCase + ' must be the displaced control');
   const caseIds = new Set();
   for (const [i, c] of scene.cases.entries()) {
     const at = '/cases/' + i;
@@ -98,7 +105,8 @@ export function validateScene(scene) {
 }
 
 /** Decompress a served scene within a size bound and return its content and digests. */
-export function readScene(bytes, maxBytes = 512 * 1024 * 1024) {
+export function readScene(bytes, maxBytes = maxSceneBytes) {
+  maxBytes = Math.min(maxBytes, maxSceneBytes);
   const content = bytes[0] === 0x1f && bytes[1] === 0x8b ? gunzipSync(bytes, {maxOutputLength: maxBytes}) : Buffer.from(bytes);
   return {scene: JSON.parse(content.toString('utf8')), sha256: createHash('sha256').update(bytes).digest('hex'),
     contentSha256: createHash('sha256').update(content).digest('hex'), bytes: content.length};
@@ -113,16 +121,37 @@ export function compareWithReceipt(read, receipt) {
   const s = read.scene;
   if (s.issue !== receipt.issue) errors.push('Scene issue differs from the receipt');
   if (!same(s.sources?.step, receipt.step) || !same(s.sources?.motion, receipt.motion)) errors.push('Scene STEP or motion pin differs from the receipt');
-  const shown = Object.fromEntries((s.cases || []).filter(c => c.kind !== 'displaced control').map(c => [c.id, c.status]));
+  const shown = Object.fromEntries((s.cases || []).filter(c => c.id !== controlCase).map(c => [c.id, c.status]));
   const checked = Object.fromEntries((receipt.cases || []).map(c => [c.case, c.status]));
   if (!same(Object.keys(shown).sort(), Object.keys(checked).sort()) || Object.keys(checked).some(k => shown[k] !== checked[k])) errors.push('Scene case results differ from the receipt');
-  const control = (s.cases || []).find(c => c.kind === 'displaced control');
-  if (receipt.control?.witness && control?.status !== 'fail') errors.push('Scene must show the rejected displaced control');
+  const control = (s.cases || []).find(c => c.id === controlCase);
+  if ((receipt.control?.witness || control) && (control?.status !== 'fail' || control.kind !== 'displaced control'))
+    errors.push('Scene must show the rejected displaced control');
+  if (receipt.parked && !same(s.parked, receipt.parked)) errors.push('Scene parked-assembly result differs from the receipt');
+  if (!['pending receipt', 'blocked'].includes(s.decision?.status)) errors.push('Scene decision may not claim a checked result');
   if (!same(s.narrativeReview?.objectives ?? [], receipt.narrativeReview?.objectives ?? [])) errors.push('Scene narrative objectives differ from the receipt');
   const budgets = receipt.budgets;
   if (budgets) {
-    if (!same((s.power || []).map(r => [r.case, r.status]), budgets.electricalCases.map(r => [r.case, r.status]))) errors.push('Scene duties differ from the receipt');
-    if (!s.mass || !same(s.mass.inspectionKg, budgets.inspectionKg) || !same(s.mass.remainingKg, budgets.remainingKg)) errors.push('Scene mass differs from the receipt');
+    const duty = r => [r.case, r.status, r.batteryCondition, r.requiredMinV, r.marginV, r.loadedBusV, r.batterySideA];
+    if (!same((s.power || []).map(duty), budgets.electricalCases.map(duty))) errors.push('Scene duties differ from the receipt');
+    if (!s.mass || !same(s.mass.inspectionKg, budgets.inspectionKg) || !same(s.mass.remainingKg, budgets.remainingKg) || !same(s.mass.runningKg, budgets.runningKg))
+      errors.push('Scene mass differs from the receipt');
+  }
+  return errors;
+}
+
+/** The figures the page draws from the published ledger files: the limit, the mass lines and each duty's loads and pack. */
+export function compareWithLedger(scene, ledger, limits, loadMembers) {
+  const errors = [], same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  if (!scene.mass) return ['Scene omits the published budgets'];
+  if (scene.mass.limitKg !== limits?.inspectionLimitKg) errors.push('Scene inspection limit differs from limits.json');
+  const lines = (ledger?.masses || []).map(r => [r.id, r.kg, r.members, r.basis]);
+  if (!same(scene.mass.lines.map(r => [r.id, r.kg, r.members, r.basis]), lines)) errors.push('Scene mass lines differ from budgets.json');
+  for (const d of scene.power) {
+    const source = ledger?.electricalCases?.[d.case];
+    if (!source || d.openCircuitV !== source.openCircuitV?.[0] || d.resistanceOhm !== source.resistanceOhm?.[1]
+        || !same(d.lines.map(l => [l.name, l.amps]), Object.entries(source.batterySideA || {})))
+      errors.push('Scene duty ' + d.case + ' differs from budgets.json');
   }
   return errors;
 }
@@ -130,8 +159,8 @@ export function compareWithReceipt(read, receipt) {
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   try {
     const [mode, file, flag, receiptFile, ...rest] = process.argv.slice(2);
-    if (mode !== 'validate' || !file || rest.length || (flag && flag !== '--receipt') || (flag && !receiptFile)) throw Error('Usage: review-scene.mjs validate SCENE.json[.gz] [--receipt receipt.json]');
-    const read = readScene(readFileSync(file));
+    if (mode !== 'validate' || !file || rest.length || (flag && flag !== '--receipt') || (flag && !receiptFile)) throw Error('Usage: review-scene.mjs validate SCENE.json[.gz]|- [--receipt receipt.json]');
+    const read = readScene(readFileSync(file === '-' ? 0 : file));
     const result = validateScene(read.scene);
     if (receiptFile) result.errors.push(...compareWithReceipt(read, JSON.parse(readFileSync(receiptFile, 'utf8'))));
     console.log(JSON.stringify({scene: sceneSchemaId, contentSha256: read.contentSha256, ...result}, null, 2));

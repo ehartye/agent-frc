@@ -53,7 +53,7 @@ class Regions(unittest.TestCase):
                                              dict(pair=["base", "rail"], status="open", witness=[0, 1])]),
                     dict(case="hold", pairs=[dict(pair=["base", "post"], status="fail", witness=dict(t=0, gapMm=0, volumeMm3=13.0))])]
         parked = parked_assembly(observed, cases, {"arm", "base", "post", "rail"})
-        self.assertEqual(parked["screenedPairs"], 6)
+        self.assertEqual(parked["screenedPairs"], 3, "only pairs examined with both bodies still are screened")
         self.assertEqual(parked["positive"], [dict(pair=["base", "post"], volumeMm3=13.0)], "a moving pair is not a parked finding")
         self.assertEqual(parked["unresolved"], [["base", "rail"]])
 
@@ -172,7 +172,7 @@ class CompressedScene(unittest.TestCase):
             good = review(folder, file)
             self.assertEqual(good["status"], "layout-checked")
             self.assertEqual(good["decision"], dict(status="layout-checked", firstUnmet=None))
-            self.assertEqual(good["parked"], dict(screenedPairs=28, positive=[], unresolved=[]))
+            self.assertEqual(good["parked"], dict(screenedPairs=21, positive=[], unresolved=[]), "pairs examined with both bodies still in some case")
             scene = good["view"]["scene"]
             served = folder / scene["file"]
             self.assertEqual(scene["file"], "review-scene.json.gz")

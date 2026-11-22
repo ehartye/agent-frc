@@ -118,6 +118,7 @@ function partition(lines,selected,whole){
  return {included,shared};
 }
 function frameCount(c){return Math.max(1,...Object.values(c.bodies).map(b=>b.matrices.length))}
+function followable(href,base){try{const u=new URL(href,base);return u.protocol==='https:'||u.origin===new URL(base).origin?u:null}catch{return null}}
 // SHA-256 for contexts without crypto.subtle, such as a plain-http LAN review. FIPS 180-4.
 const SHA_K=new Uint32Array([0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2]);
 // Hashes the input in place, padding only the final blocks, and yields about every megabyte.
@@ -159,12 +160,12 @@ const sum=(rows,key)=>rows.reduce((s,r)=>s.map((v,i)=>v+r[key][i]),[0,0]);
 const flat=(m,p)=>[0,4,8].map(k=>m[k]*p[0]+m[k+1]*p[1]+m[k+2]*p[2]+m[k+3]);
 const rgb=s=>[1,3,5].map(i=>parseInt(s.slice(i,i+2),16)/255);
 const short=s=>s?s.slice(0,12):'';
-let scene,entries,custom={},selNames=new Set(),picked=new Set(),marked=[],selected=null,isolated=null,timer,cam,gl,program,position,normal,locations={},gpu,lastProjection,paintPending=false,extent=1,locatedId=null;
+let scene,entries,custom=Object.create(null),selNames=new Set(),picked=new Set(),marked=[],selected=null,isolated=null,timer,cam,gl,program,position,normal,locations={},gpu,lastProjection,paintPending=false,extent=1,locatedId=null;
 const current=()=>scene.cases[$('motion').selectedIndex];
 const duty=()=>scene.power[$('duty').selectedIndex];
 const frameOf=()=>+$('time').value;
 const storageKey=()=>'agent-frc/preliminary/groups/'+scene.sources.step.sha256;
-function readGroups(){try{return JSON.parse(localStorage.getItem(storageKey())||'{}')}catch{return {}}}
+function readGroups(){const groups=Object.create(null);try{Object.assign(groups,JSON.parse(localStorage.getItem(storageKey())||'{}'))}catch{}return groups}
 function writeGroups(){try{localStorage.setItem(storageKey(),JSON.stringify(custom))}catch{}}
 function poseAt(c,id,t){const b=c.bodies[id];const m=b.matrices[Math.min(t,b.matrices.length-1)];
  if(!scene.bodies[id].fixture||!c.positions)return m;const [x,y]=c.positions[t];return [m[0],m[1],m[2],m[3]-x,m[4],m[5],m[6],m[7]-y,m[8],m[9],m[10],m[11]]}
@@ -175,7 +176,7 @@ function header(){
  document.title=scene.issue+' · Preliminary design review';
  $('heading').textContent=scene.issue;
  if(scene.context)$('context').textContent=scene.context+'　/　Preliminary design';
- for(const link of scene.links||[]){const a=text('a',link.label);a.href=link.href;$('links').append(a)}
+ for(const link of scene.links||[]){const url=followable(link.href,location.href);if(!url)continue;const a=text('a',link.label);a.href=url.href;$('links').append(a)}
  const show=(id,value,what)=>value?($(id).textContent=value):$(id).replaceChildren(notSupplied(what));
  show('architecture',scene.architecture,'presentation.architecture');show('datum',scene.datum);$('units').textContent=scene.units;
  const n=scene.narrativeReview?.source;$('narrativeSource').textContent=n?n.file+' · '+short(n.sha256):'Narrative pre-read missing';
@@ -274,7 +275,7 @@ function render(){
  gl.uniformMatrix4fv(locations.camera,false,[u[0],v[0],z[0],0,u[1],v[1],z[1],0,u[2],v[2],z[2],0,...off,1]);
  const paint=(item,m,col)=>{gl.bindBuffer(gl.ARRAY_BUFFER,item.buffer);gl.vertexAttribPointer(position,3,gl.FLOAT,false,24,0);gl.vertexAttribPointer(normal,3,gl.FLOAT,false,24,12);gl.uniformMatrix4fv(locations.pose,false,modelMatrix(m));gl.uniform3fv(locations.tint,col);gl.drawArrays(item.mode,0,item.count)};
  const field=cs.positions?[1,0,0,-cs.positions[t][0],0,1,0,-cs.positions[t][1],0,0,1,0]:[1,0,0,0,0,1,0,0,0,0,1,0];
- if($('floor').checked)paint(gpu.grid,field,[.16,.25,.34]);
+ if($('floor').checked){const g=gpu.gridStep,off=cs.positions?cs.positions[t].map(x=>x-Math.round(x/g)*g):[0,0];paint(gpu.grid,[1,0,0,-off[0],0,1,0,-off[1],0,0,1,0],[.16,.25,.34])}
  if(gpu.outline&&$('cutaway').checked)paint(gpu.outline,field,[.36,.94,1]);
  const labels=[];
  for(const id of visibleBodies(presentIds(cs),isolated)){
@@ -300,7 +301,7 @@ function pick(e){
 function inspect(id,also=[]){
  if(!scene.bodies[id])return;
  $('inspectStatus').textContent='';
- if(isolated&&!isolated.has(id)){isolated=null;$('inspectStatus').textContent='Showed the full assembly to inspect '+id+'.'}
+ if(isolated&&!isolated.has(id)){isolated=null;reset();$('inspectStatus').textContent='Showed the full assembly to inspect '+id+'.'}
  followLabel=id;selected=id;marked=also.slice();if(locatedId!==id){locatedId=null;markLedger()}
  const b=scene.bodies[id];
  $('inspName').textContent=b.name;$('inspId').textContent='Stable ID: '+id+(b.fixture?' · field fixture':'');
@@ -456,7 +457,7 @@ function motionEvidence(){
  const fields=$('fieldInteractions');
  if(!scene.fieldInteractions.length)fields.append(text('p','No season-owned field-interaction or physics player is linked to this release (presentation.fieldInteractions).'));
  for(const f of scene.fieldInteractions){
-  let url;try{url=new URL(f.href,location.href)}catch{continue}if(url.protocol!=='https:'&&url.origin!==location.origin)continue;
+  const url=followable(f.href,location.href);if(!url)continue;
   const box=document.createElement('div');box.className='interaction';const link=text('a','Open player');link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';
   const ev=typeof f.evidence==='string'?f.evidence:f.evidence.file+' · '+short(f.evidence.sha256);
   box.append(text('h3',f.title),text('p','Mission objective: '+f.objective+(f.objectiveKnown===false?' (not in the reviewed narrative)':'')),text('p','Evidence: '+ev),link);
@@ -473,10 +474,10 @@ function start(){
  timer=setInterval(()=>{const elapsed=offset+(performance.now()-begin)*rate/1000;let t=+$('time').value;while(t<frames-1&&times[t+1]<=elapsed)t++;$('time').value=t;draw();if(t===frames-1)stop()},16);
 }
 function selectCase(i){if($('motion').selectedIndex!==i){$('motion').selectedIndex=i;activate()}}
-function activate(){
+function activate(opening=false){
  stop();const c=current(),frames=frameCount(c);$('time').max=frames-1;$('time').value=0;marked=[];
  const link=new URL(location.href);link.searchParams.set('case',c.id);try{history.replaceState({},'',link)}catch{}
- const match=scene.power.findIndex(e=>e.stage===c.id&&e.batteryCondition==='weak');if(match>=0){$('duty').selectedIndex=match;budget()}
+ const match=opening?-1:scene.power.findIndex(e=>e.stage===c.id&&e.batteryCondition==='weak');if(match>=0){$('duty').selectedIndex=match;budget()}
  const fixtures=presentIds(c).some(id=>scene.bodies[id].fixture);$('field').disabled=!fixtures;$('field').title=fixtures?'':'This case places no field fixtures';
  $('cutaway').disabled=!scene.cutaway||!scene.cutaway.hides.some(id=>c.bodies[id]);
  $('basis').textContent=c.basis;$('witness').textContent='';evidence();draw();
@@ -506,12 +507,12 @@ async function init(){
  const n=scene.narrativeReview;$('narrative').replaceChildren(...(n?.source?[text('p',n.source.file+' · '+short(n.source.sha256))]:[notSupplied('narrativeReview')]),...(n?.objectives||[]).map(o=>text('p',o.objective+' — '+o.disposition+'. '+o.basis)));
  $('notes').replaceChildren(...(scene.notes?.length?scene.notes.map(v=>text('p',v)):[notSupplied('presentation.notes')]));
  validationText();motionEvidence();initGL();group();
- activate();reset();
+ activate(true);reset();
  $('sceneStatus').textContent='Scene loaded';
  bindReceipt(loaded.contentSha).then(()=>{if($('decisionSource').textContent.startsWith('(from the review receipt'))$('sceneStatus').textContent='Scene digest verified'+(isSecureContext?'':' (plain HTTP: consistency check only)')});
  $('duty').onchange=budget;$('group').onchange=group;$('subset').onchange=()=>{if($('group').value==='Custom subsystem')picked=new Set(custom[$('subset').value]||[]);select()};
  $('save').onclick=()=>{const name=$('subname').value.trim();if(!name||!picked.size){$('inventoryScope').textContent='Enter a subsystem name and select at least one component.';return}custom[name]=[...picked];writeGroups();group();$('subset').value=name;$('subset').onchange()};
- $('motion').onchange=activate;$('time').oninput=()=>{stop();draw()};$('play').onclick=()=>timer?stop():start();$('speed').onchange=stop;
+ $('motion').onchange=()=>activate();$('time').oninput=()=>{stop();draw()};$('play').onclick=()=>timer?stop():start();$('speed').onchange=stop;
  $('labelPrev').onclick=()=>{labelPage=Math.max(0,labelPage-1);draw()};$('labelNext').onclick=()=>{labelPage+=1;draw()};
  for(const id of ['labels','floor','cutaway'])$(id).onchange=draw;
  $('expand').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.querySelector('.viewer').requestFullscreen()}catch{}};

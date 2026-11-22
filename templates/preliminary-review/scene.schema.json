@@ -4,148 +4,831 @@
   "title": "Agent FRC preliminary review scene",
   "description": "The only input of the stock preliminary design review page. The plugin builds it from a checked preliminary package; seasons supply data, not markup. Each property's `x-supplier` says who provides it: `plugin` (derived from the plan, receipt, STEP, motion study or budgets), `project` (authored in layout.json presentation fields; a missing value renders as 'Not supplied in this review' and validates with a warning) or `optional` (a feature that hides cleanly when absent).",
   "type": "object",
-  "required": ["schema", "issue", "sources", "decision", "palette", "meshes", "bodies", "cases", "openingCase", "parked", "mass", "power", "required", "narrativeReview", "motionEvidence", "returnCriteria", "fieldInteractions"],
+  "required": [
+    "schema",
+    "issue",
+    "sources",
+    "decision",
+    "palette",
+    "meshes",
+    "bodies",
+    "cases",
+    "openingCase",
+    "parked",
+    "mass",
+    "power",
+    "required",
+    "narrativeReview",
+    "motionEvidence",
+    "returnCriteria",
+    "fieldInteractions"
+  ],
   "properties": {
-    "schema": {"const": "agent-frc/preliminary-review-scene@1", "x-supplier": "plugin"},
-    "issue": {"type": "string", "minLength": 1, "x-supplier": "plugin", "description": "Layout issue identifier; the page heading."},
-    "context": {"type": ["string", "null"], "x-supplier": "project", "description": "presentation.context: the line above the heading, such as the project and iteration."},
-    "architecture": {"type": ["string", "null"], "x-supplier": "project", "description": "presentation.architecture: the selected whole-robot architecture."},
-    "datum": {"type": ["string", "null"], "x-supplier": "plugin", "description": "The registered layout datum name."},
-    "units": {"type": "string", "x-supplier": "plugin"},
-    "links": {"type": "array", "x-supplier": "optional", "description": "presentation.links: header links to season pages.", "items": {"$ref": "#/$defs/link"}},
+    "schema": {
+      "const": "agent-frc/preliminary-review-scene@1",
+      "x-supplier": "plugin"
+    },
+    "issue": {
+      "type": "string",
+      "minLength": 1,
+      "x-supplier": "plugin",
+      "description": "Layout issue identifier; the page heading."
+    },
+    "context": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "x-supplier": "project",
+      "description": "presentation.context: the line above the heading, such as the project and iteration."
+    },
+    "architecture": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "x-supplier": "project",
+      "description": "presentation.architecture: the selected whole-robot architecture."
+    },
+    "datum": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "x-supplier": "plugin",
+      "description": "The registered layout datum name."
+    },
+    "units": {
+      "type": "string",
+      "x-supplier": "plugin"
+    },
+    "links": {
+      "type": "array",
+      "x-supplier": "optional",
+      "description": "presentation.links: header links to season pages.",
+      "items": {
+        "$ref": "#/$defs/link"
+      }
+    },
     "sources": {
-      "type": "object", "x-supplier": "plugin", "required": ["step", "motion"],
-      "properties": {"design": {"$ref": "#/$defs/pin"}, "step": {"$ref": "#/$defs/pin"}, "motion": {"$ref": "#/$defs/pin"}, "narrative": {"$ref": "#/$defs/pinOrNull"}}
+      "type": "object",
+      "x-supplier": "plugin",
+      "required": [
+        "step",
+        "motion"
+      ],
+      "properties": {
+        "design": {
+          "$ref": "#/$defs/pin"
+        },
+        "step": {
+          "$ref": "#/$defs/pin"
+        },
+        "motion": {
+          "$ref": "#/$defs/pin"
+        },
+        "narrative": {
+          "$ref": "#/$defs/pinOrNull"
+        }
+      }
     },
     "decision": {
-      "type": "object", "x-supplier": "plugin", "required": ["status", "firstUnmet"],
+      "type": "object",
+      "x-supplier": "plugin",
+      "required": [
+        "status",
+        "firstUnmet"
+      ],
       "description": "The checker's findings when the scene was built. The page replaces them with receipt.json's decision when that receipt pins this scene.",
-      "properties": {"status": {"type": "string"}, "firstUnmet": {"type": ["object", "null"], "properties": {"kind": {"type": "string"}, "text": {"type": "string"}}}}
+      "properties": {
+        "status": {
+          "enum": [
+            "pending receipt",
+            "blocked"
+          ],
+          "description": "Never a passing claim: only the receipt that pins this scene can set the decision the page shows as checked."
+        },
+        "firstUnmet": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            }
+          }
+        }
+      }
     },
-    "palette": {"type": "object", "x-supplier": "plugin", "additionalProperties": {"type": "string", "pattern": "^#[0-9a-fA-F]{6}$"}},
+    "palette": {
+      "type": "object",
+      "x-supplier": "plugin",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^#[0-9a-fA-F]{6}$"
+      }
+    },
     "meshes": {
-      "type": "array", "x-supplier": "plugin", "minItems": 1,
-      "items": {"type": "object", "required": ["v", "f"], "properties": {
-        "v": {"type": "array", "items": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "number"}}},
-        "f": {"type": "array", "items": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "integer", "minimum": 0}}}}}
+      "type": "array",
+      "x-supplier": "plugin",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "v",
+          "f"
+        ],
+        "properties": {
+          "v": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "minItems": 3,
+              "maxItems": 3,
+              "items": {
+                "type": "number"
+              }
+            },
+            "minItems": 3
+          },
+          "f": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "minItems": 3,
+              "maxItems": 3,
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "minItems": 1
+          }
+        },
+        "additionalProperties": false
+      }
     },
     "bodies": {
-      "type": "object", "x-supplier": "plugin", "minProperties": 1,
+      "type": "object",
+      "x-supplier": "plugin",
+      "minProperties": 1,
       "description": "Every placed ID and fixture, keyed by stable ID.",
-      "additionalProperties": {"$ref": "#/$defs/body"}
+      "additionalProperties": {
+        "$ref": "#/$defs/body"
+      }
     },
-    "cases": {"type": "array", "x-supplier": "plugin", "minItems": 1, "items": {"$ref": "#/$defs/case"}},
-    "openingCase": {"type": "string", "x-supplier": "plugin"},
+    "cases": {
+      "type": "array",
+      "x-supplier": "plugin",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/case"
+      }
+    },
+    "openingCase": {
+      "type": "string",
+      "x-supplier": "plugin"
+    },
     "parked": {
-      "type": "object", "x-supplier": "plugin", "required": ["screenedPairs", "positive", "unresolved"],
+      "type": "object",
+      "x-supplier": "plugin",
+      "required": [
+        "screenedPairs",
+        "positive",
+        "unresolved"
+      ],
       "description": "The checker's parked-assembly result: pairs screened, positive-volume pairs and unresolved pairs.",
       "properties": {
-        "screenedPairs": {"type": "integer", "minimum": 0},
-        "positive": {"type": "array", "items": {"type": "object", "required": ["pair", "volumeMm3"], "properties": {"pair": {"$ref": "#/$defs/pair"}, "volumeMm3": {"type": "number"}}}},
-        "unresolved": {"type": "array", "items": {"$ref": "#/$defs/pair"}}
+        "screenedPairs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "positive": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "pair",
+              "volumeMm3"
+            ],
+            "properties": {
+              "pair": {
+                "$ref": "#/$defs/pair"
+              },
+              "volumeMm3": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "unresolved": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/pair"
+          }
+        }
       }
     },
     "mass": {
-      "type": ["object", "null"], "x-supplier": "plugin",
-      "required": ["limitKg", "inspectionKg", "remainingKg", "runningKg", "lines", "runningAdditions"],
+      "type": [
+        "object",
+        "null"
+      ],
+      "x-supplier": "plugin",
+      "required": [
+        "limitKg",
+        "inspectionKg",
+        "remainingKg",
+        "runningKg",
+        "lines",
+        "runningAdditions"
+      ],
       "properties": {
-        "limitKg": {"type": "number", "exclusiveMinimum": 0},
-        "inspectionKg": {"$ref": "#/$defs/interval"},
-        "remainingKg": {"type": "number"},
-        "runningKg": {"$ref": "#/$defs/interval"},
-        "lines": {"type": "array", "items": {"type": "object", "required": ["id", "kg", "members", "basis"], "properties": {
-          "id": {"type": "string"}, "kg": {"$ref": "#/$defs/interval"}, "members": {"$ref": "#/$defs/ids"}, "basis": {"type": "string"}}}},
-        "runningAdditions": {
-          "type": ["array", "null"], "x-supplier": "project",
-          "description": "presentation.runningAdditions: itemized running-only articles (battery, bumpers, payload) with member IDs.",
-          "items": {"type": "object", "required": ["name", "kg", "members"], "properties": {"name": {"type": "string"}, "kg": {"$ref": "#/$defs/interval"}, "members": {"$ref": "#/$defs/ids"}}}
+        "limitKg": {
+          "type": "number",
+          "exclusiveMinimum": 0
         },
-        "runningBasis": {"type": ["string", "null"]}
+        "inspectionKg": {
+          "$ref": "#/$defs/interval"
+        },
+        "remainingKg": {
+          "type": "number"
+        },
+        "runningKg": {
+          "$ref": "#/$defs/interval"
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "kg",
+              "members",
+              "basis"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "kg": {
+                "$ref": "#/$defs/interval"
+              },
+              "members": {
+                "$ref": "#/$defs/ids"
+              },
+              "basis": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "runningAdditions": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "x-supplier": "project",
+          "description": "presentation.runningAdditions: itemized running-only articles (battery, bumpers, payload) with member IDs.",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "kg",
+              "members"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "kg": {
+                "$ref": "#/$defs/interval"
+              },
+              "members": {
+                "$ref": "#/$defs/ids"
+              }
+            }
+          }
+        },
+        "runningBasis": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       }
     },
-    "power": {"type": "array", "x-supplier": "plugin", "items": {"$ref": "#/$defs/duty"}},
+    "power": {
+      "type": "array",
+      "x-supplier": "plugin",
+      "items": {
+        "$ref": "#/$defs/duty"
+      }
+    },
     "required": {
-      "type": "array", "x-supplier": "project",
+      "type": "array",
+      "x-supplier": "project",
       "description": "presentation.required: each role and the placed IDs that represent it. Absent IDs show as missing.",
-      "items": {"type": "object", "required": ["role", "ids"], "properties": {"role": {"type": "string"}, "ids": {"$ref": "#/$defs/ids"}}}
+      "items": {
+        "type": "object",
+        "required": [
+          "role",
+          "ids"
+        ],
+        "properties": {
+          "role": {
+            "type": "string"
+          },
+          "ids": {
+            "$ref": "#/$defs/ids"
+          }
+        }
+      }
     },
-    "narrativeReview": {"type": "object", "x-supplier": "plugin", "properties": {"source": {"$ref": "#/$defs/pinOrNull"}, "objectives": {"type": "array"}}},
-    "motionEvidence": {"type": "array", "x-supplier": "plugin", "items": {"type": "object", "required": ["case", "kind", "result"]}},
-    "returnCriteria": {"type": "object", "x-supplier": "plugin", "required": ["preliminary", "conceptual"]},
+    "narrativeReview": {
+      "type": "object",
+      "x-supplier": "plugin",
+      "properties": {
+        "source": {
+          "$ref": "#/$defs/pinOrNull"
+        },
+        "objectives": {
+          "type": "array"
+        }
+      }
+    },
+    "motionEvidence": {
+      "type": "array",
+      "x-supplier": "plugin",
+      "items": {
+        "type": "object",
+        "required": [
+          "case",
+          "kind",
+          "result"
+        ]
+      }
+    },
+    "returnCriteria": {
+      "type": "object",
+      "x-supplier": "plugin",
+      "required": [
+        "preliminary",
+        "conceptual"
+      ]
+    },
     "fieldInteractions": {
-      "type": "array", "x-supplier": "optional", "description": "presentation.fieldInteractions: season-owned field-interaction or physics players.",
-      "items": {"type": "object", "required": ["title", "href", "objective", "evidence"]}
+      "type": "array",
+      "x-supplier": "optional",
+      "description": "presentation.fieldInteractions: season-owned field-interaction or physics players.",
+      "items": {
+        "type": "object",
+        "required": [
+          "title",
+          "href",
+          "objective",
+          "evidence"
+        ],
+        "properties": {
+          "href": {
+            "type": "string",
+            "pattern": "^(https://[A-Za-z0-9.-]+(/[^\\s\\\\]*)?|(?![A-Za-z][A-Za-z0-9+.-]*:)[^\\s\\\\/][^\\s\\\\]*)$"
+          }
+        }
+      }
     },
-    "focus": {"type": ["string", "null"], "x-supplier": "project", "description": "presentation.focus: what the reviewer should look at first."},
-    "notes": {"type": ["array", "null"], "x-supplier": "project", "description": "presentation.notes: model basis and limits.", "items": {"type": "string"}},
+    "focus": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "x-supplier": "project",
+      "description": "presentation.focus: what the reviewer should look at first."
+    },
+    "notes": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "x-supplier": "project",
+      "description": "presentation.notes: model basis and limits.",
+      "items": {
+        "type": "string"
+      }
+    },
     "cutaway": {
-      "type": ["object", "null"], "x-supplier": "optional",
+      "type": [
+        "object",
+        "null"
+      ],
+      "x-supplier": "optional",
       "description": "presentation.cutaway: a toggle that hides named fixtures and outlines an opening, for example a target aperture.",
-      "required": ["label", "hides"],
-      "properties": {"label": {"type": "string"}, "hides": {"$ref": "#/$defs/ids"},
-        "outline": {"type": "array", "minItems": 3, "items": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "number"}}}}
+      "required": [
+        "label",
+        "hides"
+      ],
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "hides": {
+          "$ref": "#/$defs/ids"
+        },
+        "outline": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+              "type": "number"
+            }
+          }
+        }
+      }
     }
   },
   "$defs": {
-    "pin": {"type": "object", "required": ["file", "sha256"], "properties": {"file": {"type": "string"}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}},
-    "pinOrNull": {"type": ["object", "null"], "properties": {"file": {"type": "string"}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}},
-    "link": {"type": "object", "required": ["label", "href"], "properties": {"label": {"type": "string"}, "href": {"type": "string"}}},
-    "interval": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
-    "ids": {"type": "array", "items": {"type": "string"}},
-    "pair": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "string"}},
-    "matrix": {"type": "array", "minItems": 12, "maxItems": 12, "items": {"type": "number"}},
+    "pin": {
+      "type": "object",
+      "required": [
+        "file",
+        "sha256"
+      ],
+      "properties": {
+        "file": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "pinOrNull": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "file": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "link": {
+      "type": "object",
+      "required": [
+        "label",
+        "href"
+      ],
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "href": {
+          "type": "string",
+          "pattern": "^(https://[A-Za-z0-9.-]+(/[^\\s\\\\]*)?|(?![A-Za-z][A-Za-z0-9+.-]*:)[^\\s\\\\/][^\\s\\\\]*)$",
+          "description": "Relative to the release page, or https: with a host. No other scheme."
+        }
+      },
+      "additionalProperties": false
+    },
+    "interval": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "number"
+      }
+    },
+    "ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "pair": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "string"
+      }
+    },
+    "matrix": {
+      "type": "array",
+      "minItems": 12,
+      "maxItems": 12,
+      "items": {
+        "type": "number"
+      }
+    },
     "body": {
       "type": "object",
-      "required": ["name", "category", "role", "color", "motionGroup", "fixture", "volumeMm3", "closed", "missing"],
+      "required": [
+        "name",
+        "category",
+        "role",
+        "color",
+        "motionGroup",
+        "fixture",
+        "volumeMm3",
+        "closed",
+        "missing"
+      ],
       "properties": {
-        "name": {"type": "string"},
-        "category": {"type": "string", "description": "What the article is; colours the model and legend."},
-        "role": {"type": "string"},
-        "color": {"type": "string", "pattern": "^#[0-9a-fA-F]{6}$"},
-        "subsystem": {"type": ["string", "null"], "x-supplier": "project", "description": "Which function it serves."},
-        "motionGroup": {"type": "string", "description": "What it moves with."},
-        "material": {"type": ["string", "null"], "x-supplier": "project"},
-        "volumeMm3": {"type": ["number", "null"]},
-        "volumeType": {"enum": ["material", "envelope", "gauge", null], "x-supplier": "project"},
-        "closed": {"type": "boolean"},
-        "fixture": {"type": "boolean"},
-        "purpose": {"type": ["string", "null"], "x-supplier": "project"},
-        "rationale": {"type": ["string", "null"], "x-supplier": "project"},
-        "support": {"type": ["string", "null"], "x-supplier": "project", "description": "presentation.loadPaths: the support and load path into the frame."},
-        "massExcluded": {"type": ["string", "null"]},
-        "missing": {"$ref": "#/$defs/ids"}
-      }
+        "name": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string",
+          "description": "What the article is; colours the model and legend."
+        },
+        "role": {
+          "type": "string"
+        },
+        "color": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "subsystem": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "x-supplier": "project",
+          "description": "Which function it serves."
+        },
+        "motionGroup": {
+          "type": "string",
+          "description": "What it moves with."
+        },
+        "material": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "x-supplier": "project"
+        },
+        "volumeMm3": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "volumeType": {
+          "enum": [
+            "material",
+            "envelope",
+            "gauge",
+            null
+          ],
+          "x-supplier": "project"
+        },
+        "closed": {
+          "type": "boolean"
+        },
+        "fixture": {
+          "type": "boolean"
+        },
+        "purpose": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "x-supplier": "project"
+        },
+        "rationale": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "x-supplier": "project"
+        },
+        "support": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "x-supplier": "project",
+          "description": "presentation.loadPaths: the support and load path into the frame."
+        },
+        "massExcluded": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "missing": {
+          "$ref": "#/$defs/ids"
+        }
+      },
+      "additionalProperties": false
     },
     "case": {
       "type": "object",
-      "required": ["id", "label", "kind", "stage", "basis", "status", "bodies", "removed", "results"],
+      "required": [
+        "id",
+        "label",
+        "kind",
+        "stage",
+        "basis",
+        "status",
+        "bodies",
+        "removed",
+        "results"
+      ],
       "properties": {
-        "id": {"type": "string"},
-        "label": {"type": "string"},
-        "kind": {"enum": ["nominal", "inhibited", "adverse", "displaced control"]},
-        "stage": {"type": "string"},
-        "basis": {"type": "string"},
-        "status": {"type": "string"},
-        "allowanceMm": {"type": ["number", "null"]},
-        "bodies": {"type": "object", "additionalProperties": {"type": "object", "required": ["mesh", "matrices"], "properties": {
-          "mesh": {"type": "integer", "minimum": 0}, "matrices": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/matrix"}}}}},
-        "removed": {"$ref": "#/$defs/ids"},
-        "results": {"type": "array", "items": {"type": "object", "required": ["pair", "status"], "properties": {"pair": {"$ref": "#/$defs/pair"}, "status": {"type": "string"}}}},
-        "time": {"type": "array", "x-supplier": "optional", "description": "presentation.caseTimelines[id].time: seconds per frame.", "items": {"type": "number"}},
-        "measure": {"type": "array", "x-supplier": "optional", "description": "presentation.caseTimelines[id].measure: live readout per frame.", "items": {"type": "string"}},
-        "positions": {"type": "array", "x-supplier": "optional", "description": "presentation.caseTimelines[id].positions: robot field position per frame, mm.", "items": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}}}
-      }
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "nominal",
+            "inhibited",
+            "adverse",
+            "displaced control"
+          ]
+        },
+        "stage": {
+          "type": "string"
+        },
+        "basis": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "allowanceMm": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "bodies": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "mesh",
+              "matrices"
+            ],
+            "properties": {
+              "mesh": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "matrices": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/matrix"
+                }
+              }
+            }
+          }
+        },
+        "removed": {
+          "$ref": "#/$defs/ids"
+        },
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "pair",
+              "status"
+            ],
+            "properties": {
+              "pair": {
+                "$ref": "#/$defs/pair"
+              },
+              "status": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "time": {
+          "type": "array",
+          "x-supplier": "optional",
+          "description": "presentation.caseTimelines[id].time: seconds per frame.",
+          "items": {
+            "type": "number"
+          }
+        },
+        "measure": {
+          "type": "array",
+          "x-supplier": "optional",
+          "description": "presentation.caseTimelines[id].measure: live readout per frame.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "positions": {
+          "type": "array",
+          "x-supplier": "optional",
+          "description": "presentation.caseTimelines[id].positions: robot field position per frame, mm.",
+          "items": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "number"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
     },
     "duty": {
       "type": "object",
-      "required": ["case", "duty", "batteryCondition", "openCircuitV", "resistanceOhm", "requiredMinV", "loadedBusV", "batterySideA", "marginV", "status", "lines"],
+      "required": [
+        "case",
+        "duty",
+        "batteryCondition",
+        "openCircuitV",
+        "resistanceOhm",
+        "requiredMinV",
+        "loadedBusV",
+        "batterySideA",
+        "marginV",
+        "status",
+        "lines"
+      ],
       "properties": {
-        "case": {"type": "string"}, "duty": {"type": "string"}, "stage": {"type": "string"}, "batteryCondition": {"type": "string"},
-        "openCircuitV": {"type": "number"}, "resistanceOhm": {"type": "number", "minimum": 0}, "requiredMinV": {"type": "number"},
-        "loadedBusV": {"$ref": "#/$defs/interval"}, "batterySideA": {"$ref": "#/$defs/interval"}, "marginV": {"type": "number"}, "status": {"type": "string"},
-        "lines": {"type": "array", "items": {"type": "object", "required": ["name", "amps", "members"], "properties": {
-          "name": {"type": "string"}, "amps": {"$ref": "#/$defs/interval"}, "members": {"$ref": "#/$defs/ids"}}}}
-      }
+        "case": {
+          "type": "string"
+        },
+        "duty": {
+          "type": "string"
+        },
+        "stage": {
+          "type": "string"
+        },
+        "batteryCondition": {
+          "type": "string"
+        },
+        "openCircuitV": {
+          "type": "number"
+        },
+        "resistanceOhm": {
+          "type": "number",
+          "minimum": 0
+        },
+        "requiredMinV": {
+          "type": "number"
+        },
+        "loadedBusV": {
+          "$ref": "#/$defs/interval"
+        },
+        "batterySideA": {
+          "$ref": "#/$defs/interval"
+        },
+        "marginV": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string"
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "amps",
+              "members"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "amps": {
+                "$ref": "#/$defs/interval"
+              },
+              "members": {
+                "$ref": "#/$defs/ids"
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
     }
-  }
+  },
+  "additionalProperties": false
 }

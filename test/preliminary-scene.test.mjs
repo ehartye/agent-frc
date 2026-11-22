@@ -10,7 +10,7 @@ import { gzipSync } from 'node:zlib';
 
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 
-test('staging publishes the compressed geometry once and the index check refuses a tampered copy', async t => {
+test('staging refuses a new release in the retired geometry format', async t => {
   const root = await mkdtemp(path.join(tmpdir(), 'preliminary-geometry-'));
   t.after(() => rm(root, { recursive: true, force: true }));
   const author = path.join(root, 'cad', 'preliminary-design');
@@ -38,19 +38,8 @@ test('staging publishes the compressed geometry once and the index check refuses
   await pin('missions.json', JSON.stringify({ missionCases: [{ case: 'turn', kind: 'operating-case', accomplishes: 'delivered', objective: 'Move the sample' }] }));
   const run = (...args) => spawnSync(process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3'), [script, ...args], { encoding: 'utf8' });
 
-  const input = path.join(dir, geometry.file);
-  await writeFile(input, gzipSync(content, { level: 1 }));
-  assert.match(run('a').stderr, /Regenerate it with --write-view and save that run's receipt/, 'the receipt pins the compressed bytes it checked');
-  await writeFile(input, gzipSync(content));
-  const staged = run('a');
-  assert.equal(staged.status, 0, staged.stderr);
-  const served = path.join(root, 'docs', 'preliminary-design', 'releases', 'a', geometry.file);
-  assert.equal(sha(await readFile(served)), geometry.sha256);
-  assert.equal(run('--check-index').status, 0);
-  await writeFile(served, gzipSync(Buffer.from('{"meshes":["tampered"]}')));
-  assert.match(run('--check-index').stderr, /Indexed geometry differs from receipt: a/);
-  await writeFile(served, Buffer.from('not gzip'));
-  assert.match(run('--check-index').stderr, /Indexed geometry differs from receipt: a/, 'a corrupt stream fails the check instead of crashing');
+  // Issued geometry-format releases stay as published; a new release must carry the stock page and its scene.
+  assert.match(run('a').stderr, /Regenerate the review with --write-view: new releases publish the stock page and its review scene/);
 });
 
 test('staging publishes the pinned review scene and the index check refuses a tampered or corrupt scene', async t => {
@@ -79,6 +68,10 @@ test('staging publishes the pinned review scene and the index check refuses a ta
     cases: [{ case: 'turn', status: 'pass' }], narrativeReview: { objectives: [{ objective: 'Move the sample', disposition: 'represented' }] } }));
   await pin('missions.json', JSON.stringify({ missionCases: [{ case: 'turn', kind: 'operating-case', accomplishes: 'delivered', objective: 'Move the sample' }] }));
   const run = (...args) => spawnSync(process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3'), [script, ...args], { encoding: 'utf8' });
+  const input = path.join(dir, 'review-scene.json.gz');
+  await writeFile(input, gzipSync(content, { level: 1 }));
+  assert.match(run('a').stderr, /Regenerate it with --write-view and save that run's receipt/, 'the receipt pins the compressed bytes it checked');
+  await writeFile(input, gzipSync(content));
   const staged = run('a');
   assert.equal(staged.status, 0, staged.stderr);
   const served = path.join(root, 'docs', 'preliminary-design', 'releases', 'a', 'review-scene.json.gz');

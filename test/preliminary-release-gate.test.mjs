@@ -36,14 +36,16 @@ const laneObjective='Carry the sample to the bin';
 function issueRelease(site,id,{status='layout-checked',edit=r=>r,missions,trial,display=d=>d,field}={}) {
   const dir=path.join(site,tree,'releases',id);
   const motion=JSON.stringify({cases:[{id:'loaded-turn'},{id:'park'}],issue:id});
-  const budgets=JSON.stringify({masses:[],electricalCases:{}}),limits=JSON.stringify({inspectionLimitKg:14});
+  // One invented robot: the scene, ledger files and receipt below all carry the same figures.
+  const base=reviewScene(),[turn,control]=base.cases,duty={...base.power[0],case:'weak traverse',status:'pass'};
+  const budgets=JSON.stringify({masses:base.mass.lines,electricalCases:{'weak traverse':{openCircuitV:[duty.openCircuitV,12],resistanceOhm:[0.02,duty.resistanceOhm],
+    batterySideA:Object.fromEntries(duty.lines.map(l=>[l.name,l.amps]))}}}),limits=JSON.stringify({inspectionLimitKg:base.mass.limitKg});
   const step={file:'package.step',sha256:sha('step '+id)},motionPin={file:'paths.json',sha256:sha(motion)};
   // The scene the stock page reads repeats the receipt below: cases, control, objectives, mass and duties.
-  const base=reviewScene(),[turn,control]=base.cases;
   const scene=display({...base,issue:'synthetic-'+id,sources:{step,motion:motionPin},
     cases:[{...turn,id:'loaded-turn',label:'loaded-turn (operating)'},{...turn,id:'park',label:'park (park)',stage:'park'},control],openingCase:'loaded-turn',
     narrativeReview:{source:null,objectives},mass:{...base.mass,inspectionKg:[11,12],remainingKg:2},
-    power:[{...base.power[0],case:'weak traverse',status:'pass'}],
+    power:[duty],
     fieldInteractions:field?field.rows??[{title:'Invented lane',href:'field/lane.html',objective:laneObjective,
       evidence:{file:'lane-trial.json',sha256:sha(laneTrial)},embed:true,objectiveKnown:true}]:[]});
   const content=Buffer.from(JSON.stringify(scene)),served=gzipSync(content),view=stockPage;
@@ -53,8 +55,9 @@ function issueRelease(site,id,{status='layout-checked',edit=r=>r,missions,trial,
     missingInputs:[],reopen:[],step,motion:motionPin,narrativeReview:{source:{file:'narrative.md',sha256:sha('narrative')},objectives},
     stages,cycle:['loaded-turn','park'],cases:[{case:'loaded-turn',status:'pass',pairs:[]},{case:'park',status:'pass',pairs:[]}],
     control:{case:'loaded-turn',displaced:'rail',offsetMm:[0,-50,0],witness:{pair:['head','rail'],status:'fail'}},
-    budgets:{source:{file:'budgets.json',sha256:sha(budgets)},limits:{file:'limits.json',sha256:sha(limits)},massStatus:'pass',inspectionKg:[11,12],remainingKg:2,
-      electricalCases:[{case:'weak traverse',status:'pass'}]},
+    budgets:{source:{file:'budgets.json',sha256:sha(budgets)},limits:{file:'limits.json',sha256:sha(limits)},massStatus:'pass',inspectionKg:[11,12],remainingKg:2,runningKg:base.mass.runningKg,
+      electricalCases:[{case:'weak traverse',status:'pass',batteryCondition:duty.batteryCondition,requiredMinV:duty.requiredMinV,marginV:duty.marginV,
+        loadedBusV:duty.loadedBusV,batterySideA:duty.batterySideA}]},parked:base.parked,
     view:{file:'package-motion.html',sha256:sha(view),verified:true,
       scene:{file:'review-scene.json.gz',sha256:sha(served),contentSha256:sha(content),bytes:content.length}}};
   receipt=edit(receipt);
@@ -297,6 +300,17 @@ test('an author can check one release directory before committing it', async t=>
   await assert.rejects(verifyRelease(bad.dir),/layout-checked/);
 });
 
+test('a scene cannot carry a scripted link, a second control or figures that differ from its published budgets', async t=>{
+  for(const [display,pattern] of [[d=>({...d,links:[{label:'Season',href:'javascript:alert(1)'}]}),/links\/0\/href must match/],
+    [d=>({...d,cases:[...d.cases,{...d.cases[2],id:'second-control',status:'pass'}]}),/one displaced control/],
+    [d=>({...d,mass:{...d.mass,limitKg:99}}),/differ from the published budgets: Scene inspection limit differs from limits.json/],
+    [d=>({...d,decision:{status:'layout-checked',firstUnmet:null}}),/decision/]]){
+    const {approved,site,policy}=fixture(t);
+    next(site,'layout-002',{display});
+    await assert.rejects(auditStaged(approved,site,policy),pattern);
+  }
+});
+
 test('a release publishes only the review scene its receipt pins, and the bundled fonts', async t=>{
   const {approved,site,policy}=fixture(t);
   const {dir}=next(site,'layout-002');
@@ -435,7 +449,8 @@ test('field player links name the served page and player missions bind their own
   const row=href=>({title:'Lane',href,objective:laneObjective,evidence:{file:'lane-trial.json',sha256:sha(laneTrial)}});
   for(const href of ['field%2flane.html','field\\lane.html','field/LANE.html','field//lane.html','/field/lane.html']){
     const f=fixture(t);next(f.site,'layout-002',{field:{rows:[row(href)]}});
-    await assert.rejects(auditStaged(f.approved,f.site,f.policy),/listed field player/,href);
+    // A backslash or root-relative link is refused by the scene schema before the player check.
+    await assert.rejects(auditStaged(f.approved,f.site,f.policy),/listed field player|fieldInteractions\/0\/href must match/,href);
   }
   let f=fixture(t);next(f.site,'layout-002',{field:{rows:[row('./field/lane.html')]}});
   assert.deepEqual((await auditStaged(f.approved,f.site,f.policy)).preliminary.added,['layout-002']);

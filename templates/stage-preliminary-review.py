@@ -80,13 +80,15 @@ TRIAL = re.compile(r"[a-z0-9][a-z0-9._-]{0,127}\.json")
 GEOMETRY = re.compile(r"[a-z0-9][a-z0-9._-]{0,110}\.geometry\.json\.gz")
 SCENE = "review-scene.json.gz"
 SCENE_SCHEMA = "agent-frc/preliminary-review-scene@1"
+MAX_SCENE_BYTES = 512 * 1024 * 1024
 
 
 def scene_content(release, view):
     """The served review scene when the receipt pins its exact bytes and content, else None."""
     pin = view.get("scene") or {}
     path = release / SCENE
-    if Path(pin.get("file") or "").name != SCENE or not path.is_file() or not isinstance(pin.get("bytes"), int):
+    if (Path(pin.get("file") or "").name != SCENE or not path.is_file() or not isinstance(pin.get("bytes"), int)
+            or not 0 < pin["bytes"] <= MAX_SCENE_BYTES):
         return None
     served = path.read_bytes()
     if hashlib.sha256(served).hexdigest() != pin.get("sha256"):
@@ -285,9 +287,7 @@ def view_data(directory, view=None):
             raise ValueError("Review scene differs from its receipt pin")
         return scene
     page = (directory / "index.html").read_text(encoding="utf-8") if (directory / "index.html").is_file() else ""
-    if 'id="data">' not in page:
-        return {}
-    return json.loads(page.split('id="data">', 1)[1].split("</script>", 1)[0])
+    return view_data_page(page)
 
 
 def view_data_page(page):
@@ -459,22 +459,12 @@ def stage(season, inputs, release, verifier=None, policy=None):
             if scene.parent != viewer.parent or scene.name != SCENE:
                 raise ValueError("Keep the review scene beside its view, named " + SCENE)
             files[SCENE] = scene
-        elif result["view"].get("geometry"):
-            try:
-                geometry = pinned(inputs, result["view"]["geometry"])
-            except ValueError as error:
-                # Another zlib can compress the same content differently; the receipt pins the bytes it checked.
-                raise ValueError(str(error) + ". Regenerate it with --write-view and save that run's receipt") from None
-            if geometry.parent != viewer.parent or not GEOMETRY.fullmatch(geometry.name):
-                raise ValueError("Keep the compressed geometry beside its view, named VIEW.geometry.json.gz")
-            files[geometry.name] = geometry
+        else:
+            raise ValueError("Regenerate the review with --write-view: new releases publish the stock page and its review scene")
         ledger = pinned(inputs, plan["budgets"])
         files.update({"budgets.json": ledger, "limits.json": pinned(inputs, read(ledger)["requirements"])})
         players = []
-        source = viewer.parent if result["view"].get("scene") else None
-        data = view_data(viewer.parent, result["view"]) if source else (
-            view_data_page(viewer.read_text(encoding="utf-8")))
-        for row in data.get("fieldInteractions") or []:
+        for row in view_data(viewer.parent, result["view"]).get("fieldInteractions") or []:
             name = player_target(row.get("href"))
             if not name or not FIELD.fullmatch(name):
                 raise ValueError("Link each field interaction to a season player at field/NAME.html beside the view: "

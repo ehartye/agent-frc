@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { gzipSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
-import { checkSchema, validateScene, readScene, compareWithReceipt } from '../scripts/review-scene.mjs';
+import { checkSchema, validateScene, readScene, compareWithReceipt, compareWithLedger } from '../scripts/review-scene.mjs';
 import { reviewScene } from './fixtures/review-scene.mjs';
 
 test('the synthetic scene satisfies the schema and cross-checks', () => {
@@ -74,14 +74,47 @@ test('the receipt must pin the served scene bytes and repeat its results', () =>
   const served = gzipSync(content);
   const receipt = {issue: scene.issue, step: scene.sources.step, motion: scene.sources.motion, narrativeReview: scene.narrativeReview,
     cases: [{case: 'raise', status: 'pass'}], control: {witness: {pair: ['arm', 'battery'], status: 'fail'}},
-    budgets: {inspectionKg: scene.mass.inspectionKg, remainingKg: scene.mass.remainingKg, electricalCases: [{case: 'raise-weak', status: 'pass'}]},
+    budgets: {inspectionKg: scene.mass.inspectionKg, remainingKg: scene.mass.remainingKg, runningKg: scene.mass.runningKg,
+      electricalCases: scene.power.map(({case: c, status, batteryCondition, requiredMinV, marginV, loadedBusV, batterySideA}) => ({case: c, status, batteryCondition, requiredMinV, marginV, loadedBusV, batterySideA}))},
+    parked: scene.parked,
     view: {scene: {file: 'review-scene.json.gz', sha256: sha(served), contentSha256: sha(content), bytes: content.length}}};
   const read = readScene(served);
   assert.deepEqual(compareWithReceipt(read, receipt), []);
   assert.deepEqual(compareWithReceipt(read, {...receipt, cases: [{case: 'raise', status: 'fail'}]}), ['Scene case results differ from the receipt']);
+  assert.deepEqual(compareWithReceipt(read, {...receipt, parked: {...scene.parked, screenedPairs: 7}}), ['Scene parked-assembly result differs from the receipt']);
+  assert.deepEqual(compareWithReceipt(read, {...receipt, budgets: {...receipt.budgets, electricalCases: [{...receipt.budgets.electricalCases[0], marginV: 0.2}]}}),
+    ['Scene duties differ from the receipt'], 'the figures the page draws are the receipt figures');
+  const claim = {...scene, decision: {status: 'layout-checked', firstUnmet: null}}, claimContent = Buffer.from(JSON.stringify(claim)), claimServed = gzipSync(claimContent);
+  assert.ok(compareWithReceipt(readScene(claimServed), {...receipt, view: {scene: {sha256: sha(claimServed), contentSha256: sha(claimContent), bytes: claimContent.length}}})
+    .includes('Scene decision may not claim a checked result'));
   assert.deepEqual(compareWithReceipt(readScene(gzipSync(Buffer.from(JSON.stringify({...scene, issue: 'other'})))), receipt).slice(0, 2),
     ['The receipt does not pin these scene bytes', 'Scene issue differs from the receipt']);
   assert.throws(() => readScene(gzipSync(Buffer.alloc(2048, 32)), 1024), /Cannot create a Buffer larger|maxOutputLength|larger than/i, 'decompression is bounded');
 });
 
 function sha(bytes) { return createHash('sha256').update(bytes).digest('hex'); }
+
+test('links, extra fields and a misnamed or second displaced control are refused', () => {
+  for (const href of ['javascript:alert(1)', 'data:text/html,x', '//host/x', '/root', 'http://plain', ' ../x', '..\\x']) {
+    const errors = checkSchema(reviewScene({links: [{label: 'x', href}]}));
+    assert.ok(errors.some(e => e.startsWith('/links/0/href must match')), href + ': ' + errors);
+  }
+  for (const href of ['../../', 'https://example.org/season', 'field/lane.html']) assert.deepEqual(checkSchema(reviewScene({links: [{label: 'x', href}]})), [], href);
+  assert.ok(checkSchema({...reviewScene(), payload: 'extra'}).includes('/payload is not a scene field'));
+  const scene = reviewScene();
+  scene.cases.push({...scene.cases[1], id: 'second-control', status: 'pass'});
+  assert.ok(validateScene(scene).errors.includes('/cases may hold one displaced control, with id package-displacement-control'));
+  const renamed = reviewScene();
+  renamed.cases[1].kind = 'nominal';
+  assert.ok(validateScene(renamed).errors.includes('/cases/package-displacement-control must be the displaced control'));
+});
+
+test('the ledger files must match the figures the page draws', () => {
+  const scene = reviewScene();
+  const ledger = {masses: scene.mass.lines.map(l => ({...l})), electricalCases: {'raise-weak': {openCircuitV: [11.6, 12], resistanceOhm: [0.02, 0.03], batterySideA: {drive: [15, 35], arm: [5, 15]}}}};
+  assert.deepEqual(compareWithLedger(scene, ledger, {inspectionLimitKg: 20}), []);
+  assert.deepEqual(compareWithLedger(scene, ledger, {inspectionLimitKg: 99}), ['Scene inspection limit differs from limits.json']);
+  ledger.masses[0].kg = [1, 2];
+  ledger.electricalCases['raise-weak'].batterySideA.arm = [5, 25];
+  assert.deepEqual(compareWithLedger(scene, ledger, {inspectionLimitKg: 20}), ['Scene mass lines differ from budgets.json', 'Scene duty raise-weak differs from budgets.json']);
+});

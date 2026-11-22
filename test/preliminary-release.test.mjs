@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { gzipSync } from 'node:zlib';
 
 test('season review appends immutable releases and refuses a changed source', async t => {
   const root = await mkdtemp(path.join(tmpdir(), 'preliminary-releases-'));
@@ -24,10 +25,12 @@ test('season review appends immutable releases and refuses a changed source', as
     }
     const motion = await pin('paths.json', '{"cases":[]}');
     const view = await pin('viewer.html', '<html>'+id+'</html>');
+    const content = Buffer.from(JSON.stringify({schema: 'agent-frc/preliminary-review-scene@1', issue: 'synthetic-' + id, fieldInteractions: []}));
+    const scene = {...(await pin('review-scene.json.gz', gzipSync(content))), contentSha256: createHash('sha256').update(content).digest('hex'), bytes: content.length};
     const limits = await pin('package-limits.json', '{"inspectionLimitKg":14}');
     const budgets = await pin('budgets.json', JSON.stringify({requirements: limits, masses: [], electricalCases: {}}));
     const plan = await pin('layout.json', JSON.stringify({motion, budgets, view: view.file}));
-    await pin('receipt.json', JSON.stringify({planSha256: plan.sha256, view: {...view, verified: true}, issue: 'synthetic-' + id,
+    await pin('receipt.json', JSON.stringify({planSha256: plan.sha256, view: {...view, verified: true, scene}, issue: 'synthetic-' + id,
       status: 'layout-checked', missingInputs: [], reopen: [], step: {file: 'package.step', sha256: 'a'.repeat(64)}, motion,
       stages: {turn: {purpose: 'operating'}}, cycle: ['turn'], control: {witness: {pair: ['head', 'rail'], status: 'fail'}},
       budgets: {source: budgets, limits, massStatus: 'pass', electricalCases: [{case: 'weak', status: 'pass'}]},
