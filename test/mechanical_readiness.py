@@ -23,6 +23,7 @@ from checker_progress_failfast import CheckerProgressFailFast
 from motion_heartbeat import MotionHeartbeat
 from atomic_writes import AtomicWrites
 from free_path import FreePath
+from fixture_support import FixtureSupport
 from fixture_warning import FixtureWarning
 from member_mounts import MemberMounts
 from scene_replace import SceneReplace

@@ -92,6 +92,38 @@ def free_paths(root, key, case, stage, groups, moving, missing):
     return bound
 
 
+def fixture_support(root, key, case, stage, groups, moving, missing):
+    """Return, per payload a field fixture supports or guides in this case, whether a pinned trial records the path.
+
+    The payload rests on, rolls along or slides in a fixture the case registers, such as a chute or a target, and no
+    mechanism moves it. The pinned trial must record this case, payload, the supporting fixtures and the payload
+    members' exact start and travel. A fixture-supported path never counts as a loaded operating case."""
+    supported=stage.get("supportedBy",{})
+    require(isinstance(supported,dict),"List fixture-supported payloads by group")
+    registered={f["id"] for f in case.get("fixtures",[])}
+    bound={}
+    for payload,spec in supported.items():
+        require(payload in moving and groups.get(payload,{}).get("role")=="payload"
+                and not any(payload in stage.get(k,{}) for k in ("carriedWith","transportedBy","freePath")),
+                "Identify the moving payload a fixture supports, declared under supportedBy alone")
+        require(isinstance(spec,dict) and named(spec.get("basis")),"Describe how a fixture supports "+payload)
+        fixtures=names(spec.get("fixtures"),"supporting fixtures")
+        require(fixtures<=registered,"Only a field fixture registered in "+key+" can support a payload: "
+                +", ".join(sorted(fixtures-registered)))
+        bound[payload]=False
+        evidence=spec.get("evidence")
+        if not (isinstance(evidence,dict) and named(evidence.get("file")) and named(evidence.get("sha256"))):
+            missing.append("Pin the fixture-support evidence for "+payload+" in "+key);continue
+        trial=read(pinned(root,evidence))
+        members=groups[payload]["members"]
+        expected=dict(case=key,payload=payload,fixtures=sorted(fixtures),moves={n:case["moves"][n] for n in members},
+                      initialPose={n:case.get("initialPose",{}).get(n,[]) for n in members})
+        if not isinstance(trial,dict) or trial.get("support")!=expected:
+            missing.append("Fixture-support evidence for "+payload+" in "+key+" does not record this payload path");continue
+        bound[payload]=True
+    return bound
+
+
 def same_scenario(a, b):
     """Whether two premise records describe one scenario.
 
@@ -509,6 +541,7 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
     covered=set()
     loaded_operating=False
     free_bound={}
+    support_bound={}
     for key,stage in stages.items():
         c=by_id[key]
         payloads={member for group in groups.values() if group["role"]=="payload" for member in group["members"]}
@@ -536,6 +569,8 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
         if contact_transport(root,key,c,stage,groups,moving,missing) and stage["purpose"]=="operating":loaded_operating=True
         flights=free_paths(root,key,c,stage,groups,moving,missing)
         if flights:free_bound[key]=flights
+        rests=fixture_support(root,key,c,stage,groups,moving,missing)
+        if rests:support_bound[key]=rests
         covered.add(stage["purpose"])
     for purpose in sorted({"operating","park","service"}-covered):
         missing.append("Unexamined stage: "+purpose)
@@ -630,7 +665,7 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
             result["view"]=verify_view(root,plan,sorted(frames,key=lambda f:cycle.index(f["id"]) if f["id"] in cycle else len(cycle)),
                                        write_view,observed,result["budgets"],
                                        dict(control=result.get("control"),missing=missing,
-                                            studyCases=cases,fixtures=fixture_ids,freePaths=free_bound),deferred=view_writes,
+                                            studyCases=cases,fixtures=fixture_ids,freePaths=free_bound,supports=support_bound),deferred=view_writes,
                                        beside=Path(file).resolve().parent)
             if not result["view"] or not result["view"]["verified"]:
                 missing.append("Generate the matching view of these checked trajectories with --write-view")
@@ -659,7 +694,7 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
                       if isinstance(r.get("evidence"),dict) and named(r["evidence"].get("file")) and named(r["evidence"].get("sha256")))]:
             pinned(root,ref)
     for stage in stages.values():
-        for spec in [*stage.get("transportedBy",{}).values(),*stage.get("freePath",{}).values()]:
+        for spec in [*stage.get("transportedBy",{}).values(),*stage.get("freePath",{}).values(),*stage.get("supportedBy",{}).values()]:
             evidence=spec.get("evidence")
             if isinstance(evidence,dict) and named(evidence.get("file")) and named(evidence.get("sha256")):pinned(root,evidence)
     require(digest(source)==observed["stepSha256"]==plan["step"]["sha256"] and digest(file)==plan_hash,
