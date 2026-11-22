@@ -141,6 +141,14 @@ class Regions(unittest.TestCase):
         self.assertEqual(set(post["missing"]), {"purpose", "subsystem", "volume type"}, "missing purpose is reported, not hidden")
         self.assertIn("mass line", rows["base"]["missing"])
         self.assertIsNone(rows["base"]["volumeMm3"])
+        self.assertIn("volume", rows["base"]["missing"])
+        gauge = dict(layout, presentation={"components": {"base": dict(volumeType="gauge")}})
+        self.assertIn("mass line", component_inspector(gauge, scenes, study(), lines)["base"]["missing"],
+                      "a gauge without a mass line is a gap, as in the budget")
+        drift = [dict(scenes[0], bodies={**scenes[0]["bodies"], "arm": dict(scenes[0]["bodies"]["arm"], volumeMm3=1.0000004)})]
+        self.assertEqual(component_inspector(layout, drift, study(), lines)["arm"]["volumeMm3"], 1.0, "volume is rounded like the geometry")
+        late = [dict(id="park", stage="park", bodies={"arm": dict(box([0, 0, 0], [1, 1, 1]), volumeMm3=None)}), scenes[0]]
+        self.assertEqual(component_inspector(layout, late, study(), lines)["arm"]["volumeMm3"], 1.0)
         self.assertIn("payload", rows["piece"]["massExcluded"])
         self.assertNotIn("mass line", rows["piece"]["missing"])
         with self.assertRaises(ValueError):

@@ -301,7 +301,8 @@ def component_inspector(plan, scenes, study_cases, mass_lines=None, load_members
     volumes = {}
     for case in scenes:
         for name, body in case["bodies"].items():
-            volumes.setdefault(name, body.get("volumeMm3"))
+            if volumes.get(name) is None and body.get("volumeMm3") is not None:
+                volumes[name] = round(body["volumeMm3"], 3)
     rows = {}
     for member in sorted(group_of):
         entry = components.get(member, {}) if isinstance(components.get(member), dict) else {}
@@ -317,7 +318,7 @@ def component_inspector(plan, scenes, study_cases, mass_lines=None, load_members
                 lines.append(dict(id=line["id"], kg=line["kg"], basis=line.get("basis"), sharedWith=others,
                                   note=("Shared with " + ", ".join(others) + "; unallocated until the line is split")
                                   if others else "Allocated to this component alone"))
-        excluded = member in fixtures or role in ("payload", "service") or volume_type == "gauge"
+        excluded = member in fixtures or role in ("payload", "service")
         if not lines and not excluded and mass_lines is not None:
             missing.append("mass line")
         for field in ("purpose", "rationale"):
@@ -328,13 +329,15 @@ def component_inspector(plan, scenes, study_cases, mass_lines=None, load_members
                 missing.append(field)
         if volume_type is None:
             missing.append("volume type")
+        if volumes.get(member) is None:
+            missing.append("volume")
         moves = [c["id"] for c in study_cases if member in c.get("moves", {})]
         rows[member] = dict(
             id=member, name=entry.get("name") or member, category=entry.get("category") or role, role=role,
             subsystem=entry.get("subsystem"), motionGroup=group, material=entry.get("material"),
             volumeMm3=volumes.get(member), volumeType=volume_type,
             mass=lines, massExcluded=("Field fixture; not robot mass" if member in fixtures else
-                                      "Excluded from inspection weight (" + (role if role in ("payload", "service") else "gauge") + ")")
+                                      "Excluded from inspection weight (" + role + ")")
                      if excluded else None,
             purpose=entry.get("purpose"), rationale=entry.get("rationale"),
             loads=sorted(k for k, ids in (load_members or {}).items() if member in ids),

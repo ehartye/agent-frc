@@ -16,9 +16,9 @@ output,td,dd,#metrics{font-variant-numeric:tabular-nums}small{display:block;colo
 #metrics{display:flex;flex-wrap:wrap;gap:.5rem 2rem;padding:1rem;background:var(--navy);color:white;border-top:3px solid var(--gold)}#metrics dl{margin:0}#metrics dt{font-size:.85rem}#metrics dd{margin:0;font-size:1.25rem;font-weight:700}
 section{margin:1rem 0}table{border-collapse:collapse;width:100%;background:white}th,td{padding:.4rem .55rem;text-align:left;border-bottom:1px solid var(--edge);vertical-align:top}th{background:#e2eef2;font-family:var(--display);font-size:1rem}.scroll{overflow-x:auto}#memberSet{display:flex;gap:.65rem;flex-wrap:wrap}#summary{font-weight:600}
 #inspector{background:white;border:1px solid var(--edge);border-top:4px solid var(--gold);border-radius:12px;padding:.75rem 1rem;max-height:min(66vh,50rem);overflow:auto}
-#inspector h2{margin:0 0 .4rem;border:0;font-size:1.35rem}#inspector label{display:block;font-weight:600;font-size:.9rem}#inspector input,#inspector select{width:100%;margin:.2rem 0 .5rem}
-#inspector h3{margin:.2rem 0 0;font-size:1.4rem}#inspector .inspector-actions{margin:.4rem 0}#componentList{margin-top:.6rem;border-top:1px solid var(--edge);padding-top:.4rem}#componentList summary{cursor:pointer;font-weight:600}.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}#inspId{margin:0;color:var(--steel);font-size:.9rem}#inspFields{margin:.4rem 0}#inspFields dt{font:600 .8rem var(--display);text-transform:uppercase;letter-spacing:.06em;color:var(--steel);margin-top:.45rem}#inspFields dd{margin:0}#inspFields ul{margin:0;padding-left:1.1rem}
-.inspector-actions{display:flex;flex-wrap:wrap;gap:.35rem}.swatch{display:inline-block;width:.85em;height:.85em;margin-right:.35em;border:1px solid var(--ink);vertical-align:-.05em}.missing{color:#a3361f;font-style:italic}#isolation{font-size:.85rem;color:var(--steel)}
+#inspector h3{margin:0 0 .4rem;font-size:1.35rem}#inspector label{display:block;font-weight:600;font-size:.9rem}#inspector input,#inspector select{width:100%;margin:.2rem 0 .5rem}
+#inspector h4{margin:.2rem 0 0;font-size:1.4rem;font-family:var(--display);color:var(--navy)}#inspector .inspector-actions{margin:.4rem 0}#componentList{margin-top:.6rem;border-top:1px solid var(--edge);padding-top:.4rem}#componentList summary{cursor:pointer;font-weight:600}.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}#inspId{margin:0;color:var(--steel);font-size:.9rem}#inspFields{margin:.4rem 0}#inspFields dt{font:600 .8rem var(--display);text-transform:uppercase;letter-spacing:.06em;color:var(--steel);margin-top:.45rem}#inspFields dd{margin:0}#inspFields ul{margin:0;padding-left:1.1rem}
+.inspector-actions{display:flex;flex-wrap:wrap;gap:.35rem}.swatch{display:inline-block;width:.85em;height:.85em;margin-right:.35em;border:1px solid var(--ink);vertical-align:-.05em}.missing{color:#a3361f;font-style:italic}#isolation,#inspectStatus{font-size:.85rem;color:var(--steel);margin:.2rem 0}#isolation:empty,#inspectStatus:empty{display:none}tr[aria-current=true] td:first-child{box-shadow:inset 4px 0 0 var(--blue)}
 tr[data-members]{cursor:pointer}tr[data-members]:hover td{background:#eef5fb}tr.located td{background:#fff1cc;box-shadow:inset 0 0 0 9999px #ffd07833}
 @media(max-width:60rem){.viewer-row{grid-template-columns:1fr}#inspector{max-height:none}}
 tr.control td{background:#fff6dd}tr.uncovered td{color:var(--steel);font-style:italic}td .actions{display:flex;flex-wrap:wrap;gap:.3rem}#pairInspect{background:white;border-left:4px solid var(--gold);padding:.5rem .75rem}#pairInspect:empty{display:none}
@@ -47,13 +47,13 @@ tr.control td{background:#fff6dd}tr.uncovered td{color:var(--steel);font-style:i
 <div class="viewer-row">
 <div id="stage"><canvas tabindex="0" aria-label="Orbitable solid package assembly. Click a surface to inspect its component."></canvas><div id="labels"></div><div id="sceneStatus" role="status">Loading scene…</div></div>
 <aside id="inspector" aria-label="Component inspector">
-<h2>Component inspector</h2>
+<h3>Component inspector</h3>
 <label for="componentSearch">Find by name or ID</label><input id="componentSearch" type="search" list="componentNames" autocomplete="off" placeholder="Type a name, then Enter"><datalist id="componentNames"></datalist>
-<h3 id="inspName"></h3><p id="inspId"></p>
+<h4 id="inspName"></h4><p id="inspId"></p><p id="inspSummary" class="visually-hidden" aria-live="polite"></p>
 <div class="inspector-actions"><button id="isolate" type="button">Isolate</button><button id="restore" type="button" disabled>Restore full assembly</button><button id="locate" type="button">Locate in ledger</button></div>
-<p id="isolation" role="status"></p>
+<p id="isolation" role="status"></p><p id="inspectStatus" role="status"></p>
 <div id="pairInspect" aria-live="polite"></div>
-<dl id="inspFields" aria-live="polite"></dl>
+<dl id="inspFields"></dl>
 <details id="componentList"><summary>All components</summary><label for="component" class="visually-hidden">Components</label><select id="component" size="8"></select></details>
 </aside>
 </div>
@@ -88,7 +88,7 @@ function inspectorFields(entry){
  const volume=entry.volumeMm3==null?[MISSING,true]:[(entry.volumeMm3/1000).toFixed(2)+' cm³ · '+(entry.volumeType?entry.volumeType+' volume':'volume type '+MISSING.toLowerCase()),!entry.volumeType];
  const mass=entry.mass?.length?[entry.mass.map(massText),false]:entry.massExcluded?[entry.massExcluded,false]:miss.has('mass line')?['No mass line includes this component',true]:['Budget ledger not supplied',true];
  return [
-  ['Category',entry.category||MISSING,!entry.category,'swatch'],
+  ['Category',(entry.category||MISSING)+(entry.role&&entry.category!==entry.role?' (colour of role '+entry.role+')':''),!entry.category,'swatch'],
   ['Subsystem',...val('subsystem',entry.subsystem)],
   ['Motion group',entry.motionGroup||MISSING,!entry.motionGroup],
   ['Material',...val('material',entry.material)],
@@ -100,10 +100,12 @@ function inspectorFields(entry){
   ['Moves in',entry.movesIn?.length?entry.movesIn:'Stationary in every commissioned case',false]];
 }
 function visibleBodies(names,isolated){return isolated&&isolated.size?names.filter(n=>isolated.has(n)):names.slice()}
-function findComponent(query,inspector){
+function findComponent(query,inspector,exact=false){
  const q=String(query||'').trim().toLowerCase();if(!q)return null;
  const rows=Object.values(inspector||{});
- return (rows.find(r=>r.id.toLowerCase()===q||String(r.name).toLowerCase()===q)||rows.find(r=>r.id.toLowerCase().includes(q)||String(r.name).toLowerCase().includes(q)))?.id??null;
+ const whole=rows.find(r=>r.id.toLowerCase()===q||String(r.name).toLowerCase()===q);
+ if(whole||exact)return whole?.id??null;
+ return rows.find(r=>r.id.toLowerCase().includes(q)||String(r.name).toLowerCase().includes(q))?.id??null;
 }
 </script>
 <script>
@@ -210,6 +212,8 @@ function describe(name){
 function roleColor(role){const alias={drive:'mechanism',payload:'game-piece',battery:'electrical',other:'reference'}[role];return data.palette[role]||data.palette[alias]||data.palette.reference}
 function explain(){
  const entry=inspector[component.value];
+ for(const b of ['isolate','locate'])get(b).disabled=!component.value;
+ get('inspSummary').textContent=entry?'Selected '+entry.name+(entry.subsystem?', '+entry.subsystem:'')+(entry.missing?.length?', '+entry.missing.length+' fields missing':''):'';
  get('inspName').textContent=entry?.name||component.value||'No component selected';
  get('inspId').textContent=entry?'Stable ID: '+entry.id:'';
  const list=get('inspFields');list.replaceChildren();
@@ -221,22 +225,35 @@ function explain(){
   list.append(element('dt',label),dd);
  }
 }
-function selectComponent(id){
+let locatedId=null;
+function selectComponent(id,also=[]){
  if(!id||!inspector[id]&&![...component.options].some(o=>o.value===id))return;
- component.value=id;highlight.clear();get('pairInspect').replaceChildren();explain();draw();
+ get('inspectStatus').textContent='';
+ if(isolated&&!isolated.has(id)){setIsolation(null,false);get('inspectStatus').textContent='Restored the full assembly to show '+id+'.'}
+ component.value=id;highlight.clear();for(const n of also)highlight.add(n);get('pairInspect').replaceChildren();
+ if(locatedId!==id){locatedId=null;markLedger()}
+ explain();draw();
 }
-function setIsolation(names){
+function markLedger(){
+ for(const r of document.querySelectorAll('tr[data-members]')){
+  const ids=JSON.parse(r.dataset.members);
+  r.classList.toggle('located',locatedId!==null&&ids.includes(locatedId));
+  r.setAttribute('aria-current',ids.includes(component.value)?'true':'false');
+ }
+}
+function setIsolation(names,redraw=true){
  isolated=names&&names.size?new Set(names):null;
  get('restore').disabled=!isolated;
  get('isolation').textContent=isolated?'Showing only '+[...isolated].join(', ')+'. Hidden components still count in every check and budget.':'';
- draw();
+ if(redraw)draw();
 }
 function locate(){
- const id=component.value;if(scope.value!=='all'){scope.value='all';budgets()}
- const rows=[...document.querySelectorAll('tr[data-members]')];rows.forEach(r=>r.classList.remove('located'));
- const hits=rows.filter(r=>JSON.parse(r.dataset.members).includes(id));hits.forEach(r=>r.classList.add('located'));
+ const id=component.value;if(!id)return;
+ const reset=scope.value!=='all';if(reset){scope.value='all';budgets()}
+ locatedId=id;markLedger();
+ const hits=[...document.querySelectorAll('tr.located')];
  if(hits.length){hits[0].scrollIntoView({block:'center',behavior:'smooth'});hits[0].focus({preventScroll:true})}
- get('isolation').textContent=hits.length?id+' appears in '+hits.length+' ledger row'+(hits.length>1?'s':'')+'.':id+' has no weight or electrical ledger row.';
+ get('inspectStatus').textContent=(hits.length?id+' appears in '+hits.length+' ledger row'+(hits.length>1?'s':'')+' in this duty.':id+' has no weight or electrical ledger row in this duty.')+(reset?' Group reset to Whole robot to show every row.':'');
 }
 function inspectPair(row){
  highlight.clear();for(const n of row.limitingPair)highlight.add(n);component.value=row.limitingPair[0];explain();
@@ -245,8 +262,8 @@ function inspectPair(row){
 }
 component.onchange=()=>selectComponent(component.value);
 const search=get('componentSearch');
-search.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const id=findComponent(search.value,inspector);if(id){selectComponent(id);search.value=''}else get('isolation').textContent='No component matches “'+search.value+'”.'}};
-search.onchange=()=>{const id=findComponent(search.value,inspector);if(id){selectComponent(id);search.value=''}};
+search.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const id=findComponent(search.value,inspector);if(id){selectComponent(id);search.value=''}else get('inspectStatus').textContent='No component matches “'+search.value+'”.'}};
+search.onchange=()=>{const id=findComponent(search.value,inspector,true);if(id){selectComponent(id);search.value=''}};
 get('isolate').onclick=()=>setIsolation(highlight.size?new Set(highlight):new Set([component.value]));
 get('restore').onclick=()=>setIsolation(null);
 get('locate').onclick=locate;
@@ -279,12 +296,12 @@ function table(id,headers,rows,members=[]){
   const r=body.insertRow();for(const value of row)r.insertCell().textContent=value;
   const ids=members[i]||[];
   if(ids.length){
-   r.dataset.members=JSON.stringify(ids);r.tabIndex=0;r.title='Inspect '+ids.join(', ');
-   const pick=()=>{selectComponent(ids.includes(component.value)?component.value:ids[0]);highlight.clear();for(const n of ids)highlight.add(n);draw()};
+   r.dataset.members=JSON.stringify(ids);r.tabIndex=0;r.title='Inspect '+ids.join(', ');r.setAttribute('aria-label',row[0]+': inspect '+ids.join(', '));
+   const pick=()=>selectComponent(ids.includes(component.value)?component.value:ids[0],ids);
    r.onclick=pick;r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pick()}};
   }
  });
- get(id).replaceChildren(t);
+ get(id).replaceChildren(t);markLedger();
 }
 function budgets(){
  const all=scope.value==='all',members=scope.value==='custom'?custom:scope.value.startsWith('category:')?categories.get(scope.value.slice(9)):new Set(data.groups[scope.value.slice(6)]?.members||[]);

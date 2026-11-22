@@ -60,4 +60,8 @@ test('search selects by stable ID or display name', () => {
   assert.equal(findComponent('turn', inspector), 'head');
   assert.equal(findComponent('nothing', inspector), null);
   assert.equal(findComponent('  ', inspector), null);
+  assert.equal(findComponent('turn', inspector, true), null, 'leaving the box accepts only an exact match');
+  assert.equal(findComponent('Sliding gate', inspector, true), 'gate');
+  const tie = { arm2: { id: 'arm2', name: 'Second arm' }, arm: { id: 'arm', name: 'First arm' } };
+  assert.equal(findComponent('arm', tie), 'arm', 'an exact ID beats an earlier substring match');
 });
