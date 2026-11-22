@@ -17,7 +17,7 @@ export function reviewScene(overrides = {}) {
   const scene = {
     schema: 'agent-frc/preliminary-review-scene@1', issue: 'synthetic-review-layout', title: 'Invented arm raise and return', context: 'Synthetic project',
     architecture: 'Invented pivoting arm on a fixed frame', datum: 'Invented frame datum, millimetres', units: 'Millimetres in the registered STEP world; kg, A, V',
-    links: [{label: 'Season site', href: '../../'}],
+    links: [{label: 'Season site', href: '../../../'}],
     sources: {step: pin('package.step'), motion: pin('paths.json'), narrative: pin('narrative.md')},
     decision: {status: 'pending receipt', firstUnmet: null},
     palette: {structure: '#5e7da3', mechanism: '#2f9e8f', electrical: '#8e6bb8', reference: '#c9a227'},

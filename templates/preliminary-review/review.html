@@ -5,7 +5,7 @@
 :root{--navy:#102746;--royal:#184e98;--blue:#194fb0;--gold:#f4c44d;--paper:#f3f6fb;--ink:#132b48;--line:#b8c8d7;--steel:#48616a;--display:"Barlow Condensed","Franklin Gothic Medium","Arial Narrow",sans-serif;--body:"Source Sans 3","Segoe UI",Arial,sans-serif;--mono:"IBM Plex Mono",Consolas,monospace}
 *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.45 var(--body)}main{max-width:1920px;margin:auto;padding:0 2vw 3rem}
 a{color:#1b528b}h1,h2,h3,p{margin:0}h2{font:600 20px var(--display);margin:0 0 10px;color:var(--navy)}h3{font:600 15px var(--display);margin:10px 0 2px;color:var(--navy)}
-nav{padding:6px 0;font-size:13px}header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:0 -2vw;padding:10px 2vw;background:var(--navy);border-bottom:3px solid var(--gold);color:white;font:600 14px var(--display);letter-spacing:.045em}header>span:first-child{margin-right:auto}header a{color:#ffda76;font:13px var(--body);letter-spacing:0}
+header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:0 -2vw;padding:10px 2vw;background:var(--navy);border-bottom:3px solid var(--gold);color:white;font:600 14px var(--display);letter-spacing:.045em}header>span:first-child{margin-right:auto}header a{color:#ffda76;font:13px var(--body);letter-spacing:0}
 .title-side{display:flex;flex-direction:column;align-items:flex-end;gap:4px;max-width:45%}#unmetInline{margin:0;font-size:13px;color:#7a1d10;text-align:right}
 .title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:14px 0 8px}.title p{color:var(--royal);font:600 12px var(--mono);margin-bottom:4px}.title h1{font:600 clamp(25px,2.4vw,38px)/1.05 var(--display);letter-spacing:-.025em}
 .chip{display:inline-block;padding:6px 12px;border-radius:4px;color:#684100;background:#fff0bf;border:1px solid #e5c56b;font-weight:700}.chip.layout-checked{color:#0f5130;background:#dff3e6;border-color:#8cc8a2}.chip.blocked,.chip.reopen{color:#7a1d10;background:#fde0da;border-color:#e3a093}
@@ -42,7 +42,6 @@ aside{padding:16px;align-self:start}aside label{display:block;margin-bottom:5px}
 @media(max-width:560px){#resources{display:grid;grid-template-columns:1fr}}
 </style></head>
 <main>
-<nav aria-label="Review releases"><a href="../../">All preliminary releases</a></nav>
 <header><span>Agent FRC　/　Engineering review</span><span id="links"></span></header>
 <div class="title"><div><p id="context">Preliminary design</p><h1 id="heading">Preliminary design review</h1></div><div class="title-side"><strong id="state" class="chip" title="Design status from the release index · checked result from the review receipt">Loading geometry…</strong><p id="unmetInline" hidden></p></div></div>
 <details id="review-basis"><summary>Review basis</summary><p>Preliminary design: not the released detailed model. The review receipt gives the checked result.</p>
@@ -75,7 +74,7 @@ aside{padding:16px;align-self:start}aside label{display:block;margin-bottom:5px}
 <section class="checks"><details><summary>Strategic narrative review</summary><div id="narrative"></div></details><h2>Required components</h2><p id="warningText"></p><div id="required"></div></section>
 <section class="lower"><div><h2>Clearance evidence</h2><p id="validation"></p><label>Evidence set <select id="set"><option>Current motion</option><option>Parked assembly</option></select></label><label> Outcome <select id="filter"><option value="adverse">Failed or open</option><option value="all">All recorded pairs</option></select></label><p id="count"></p><div id="findings"></div><p id="witness"></p></div><div><h2>Component inventory</h2><p id="inventoryScope"></p><div id="inventory"></div></div></section>
 <section class="decision" id="motion-evidence" aria-label="Motion evidence and decision"><h2>Motion evidence and decision</h2><div class="scroll"><table id="evidenceTable"></table></div>
- <p>Pinned evidence: <a id="receiptLink" href="receipt.json">review receipt</a> <span id="receiptPin"></span></p>
+ <p>Pinned evidence: <a id="receiptLink" href="receipt.json" target="_blank" rel="noopener">review receipt</a> <span id="receiptPin"></span></p>
  <h3>Return to an earlier phase</h3><p>Return to <strong>preliminary design</strong> when:</p><ul id="returnPreliminary"></ul><p>Return to <strong>conceptual design</strong> when:</p><ul id="returnConceptual"></ul><p>Currently triggered:</p><ul id="triggered"></ul>
  <h3>Season-owned field interactions</h3><div id="fieldInteractions"></div></section>
 <details class="notes"><summary>Model basis and limits</summary><div id="notes"></div></details>
@@ -177,7 +176,7 @@ function header(){
  document.title=heading+' · Preliminary design review';
  $('heading').textContent=heading;
  $('context').textContent=[scene.context,releaseId(),'Preliminary design'].filter(Boolean).join('　/　');
- for(const link of scene.links||[]){const url=followable(link.href,location.href);if(!url)continue;const a=text('a',link.label);a.href=url.href;$('links').append(a)}
+ for(const link of scene.links||[]){const url=followable(link.href,location.href);if(!url)continue;const a=text('a',link.label);a.href=url.href;a.target='_top';$('links').append(a)}
  const show=(id,value,what)=>value?($(id).textContent=value):$(id).replaceChildren(notSupplied(what));
  show('architecture',scene.architecture,'presentation.architecture');show('datum',scene.datum);$('units').textContent=scene.units;
  const n=scene.narrativeReview?.source;$('narrativeSource').textContent=n?n.file+' · '+short(n.sha256):'Narrative pre-read missing';

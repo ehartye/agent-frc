@@ -67,6 +67,12 @@ test('the stock page keeps the reference region order, control placement, labels
   assert.ok(top.canvasTop < 1000, 'the model starts within the first screen at 1680 x 1000 (' + top.canvasTop + ')');
   assert.deepEqual(top.idle, {actions: true, hint: 'Click a solid or choose a part in the inventory.', search: true}, 'the idle inspector shows its hint and search only');
   assert.equal(top.csp, true, 'the stock page ships its policy as the first element in <head>, and still loads its scene and fonts');
+  // Inside the stable index's frame, no link may load a page into the frame: the index's picker moves between releases.
+  const {links} = await probePage(dir, url, ready + `return {links:[...document.querySelectorAll('a[href]')].map(a=>({href:a.getAttribute('href'),target:a.target}))}`);
+  assert.ok(!links.some(l => /^(\.\.\/\.\.\/)(index\.html)?$/.test(l.href) || /releases\.json$/.test(l.href)), 'no link back to the release index: ' + JSON.stringify(links));
+  for (const l of links.filter(l => !l.href.startsWith('#')))
+    assert.ok(['_top', '_blank'].includes(l.target), 'a link that leaves the review opens at the top or in a new tab: ' + JSON.stringify(l));
+  assert.ok(links.some(l => l.href.startsWith('http') && l.target === '_top'), 'season links from data leave the frame');
   // The opening view fits the robot, not the field: every robot body inside the canvas at a sensible share of its width.
   const fitted = await probePage(dir, url, ready + `await new Promise(r=>setTimeout(r,300));const cs=current(),box=[1/0,-1/0,1/0,-1/0],field=[1/0,-1/0];
    for(const id of presentIds(cs)){const m=poseAt(cs,id,0);for(const v of scene.meshes[cs.bodies[id].mesh].v){const p=lastProjection(flat(m,v));
