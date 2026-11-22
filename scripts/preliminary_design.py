@@ -563,6 +563,10 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
                 "fail" if any(r["status"]=="fail" for r in b["electricalCases"]) else "pass")
             progress(f"[budgets] done {summary} {perf_counter()-began:.2f}s")
         fixture_ids={f["id"] for c in cases for f in c.get("fixtures",[])}
+        if progress and plan.get("presentation",{}).get("fieldInteractions") and not fixture_ids:
+            progress("[view] warning: field interactions are linked but no case registers a field fixture, so the review's "
+                     "Fit field interaction stays off. If a field part is modeled as a package member it counts as robot; "
+                     "register it under the case fixtures in the motion study")
         result["view"]=verify_view(root,plan,sorted(frames,key=lambda f:cycle.index(f["id"]) if f["id"] in cycle else len(cycle)),
                                    write_view,observed,result["budgets"],
                                    dict(control=result.get("control"),missing=missing,

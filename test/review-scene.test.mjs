@@ -118,3 +118,17 @@ test('the ledger files must match the figures the page draws', () => {
   ledger.electricalCases['raise-weak'].batterySideA.arm = [5, 25];
   assert.deepEqual(compareWithLedger(scene, ledger, {inspectionLimitKg: 20}), ['Scene mass lines differ from budgets.json', 'Scene duty raise-weak differs from budgets.json']);
 });
+
+test('field interactions without any registered field fixture are reported', () => {
+  const linked = reviewScene();
+  linked.fieldInteractions = [{title: 'Invented lane', href: 'field/lane.html', objective: 'Invented objective', evidence: 'Invented trial'}];
+  const finding = /no case registers a field fixture/;
+  assert.ok(!validateScene(linked).warnings.some(w => finding.test(w)), 'a case that places a fixture has nothing to report');
+  for (const body of Object.values(linked.bodies)) body.fixture = false;
+  linked.cutaway = null;
+  const {errors, warnings} = validateScene(linked);
+  assert.deepEqual(errors, []);
+  assert.ok(warnings.some(w => finding.test(w) && /fixtures/.test(w)), warnings.join('\n'));
+  linked.fieldInteractions = [];
+  assert.ok(!validateScene(linked).warnings.some(w => finding.test(w)), 'no linked interaction, no finding');
+});
