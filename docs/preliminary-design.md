@@ -97,6 +97,10 @@ node scripts/rehearsal-step-pose.mjs PROFILE.json trial-1 B1 "Main play" 1
 
 The stand-off is a center-to-center planar distance. It does not represent approach heading, release height or mechanism reach.
 
+A held delivery-position acceptance saved before `fieldInput` records may still name its step in its own pinned `source`, under `fieldReplay` or `fieldInput`. The checker derives the held input from that evidence. It must name the same match, actor, period, step index, step label and station as the `stepPosition` repeat, with the same value types. It may also name the input and a `program`, and nothing else. A named program must be the one the actor runs in that period of the saved result. Every named step record must agree, and the held and repeated premises must share a scenario and unit. When nothing in the evidence identifies the step, the hold stays open and the receipt lists `Held premise ID predates fieldInput and its evidence does not identify the step`. A record naming a different step lists `evidence identifies a different field step`.
+
+A field replay clears only a `conceptual-design` hold. A stale field conclusion reopens the conceptual trade study. Clearance, weight and voltage holds in preliminary design clear through their own repeated cases.
+
 ## Narrative pre-read and component intent
 
 Before placing solids, read the project's current strategic narrative from opening through endgame, including contingencies. In the layout plan, set `narrativeReview.source` to its project-relative file and SHA-256. Under `narrativeReview.objectives`, give each objective and fallback an `objective`, a `disposition` (`represented`, `open` or `out-of-scope`) and a `basis` naming its case, gap or explicit scope decision. The author reconciles the list with the complete narrative. The checker verifies the source pin and recorded coverage.

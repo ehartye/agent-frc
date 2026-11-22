@@ -134,6 +134,36 @@ def repeated_step_position(profile_path, saved, match, robot, repeat, value, uni
             and abs(pose["standoffIn"]-value)<=STANDOFF_TOLERANCE_IN)
 
 
+# Fields that identify the rehearsal delivery step a held field premise was accepted on.
+FIELD_STEP=("match","actor","period","stepIndex","stepLabel","station")
+
+
+def held_field_input(root, before, selection, replay):
+    """Return the held premise's field input, or None and the reason it cannot be established.
+
+    A delivery-position premise accepted before fieldInput records existed may still name its rehearsal
+    step in its own pinned evidence, under fieldReplay or fieldInput. Every named record must agree, name
+    every step field and nothing else but an optional program and input, and identify the same step, with
+    the same types, as the repeat. A named program must be the one the repeated actor runs in that period."""
+    if "fieldInput" in before:return before["fieldInput"],None
+    unidentified="Held premise "+before["id"]+" predates fieldInput and its evidence does not identify the step"
+    if selection.get("input")!="stepPosition":return None,unidentified
+    evidence=read(pinned(root,before["source"]))
+    named_steps=[{k:v for k,v in evidence[key].items() if k not in ("profile","result")}
+                 for key in ("fieldReplay","fieldInput") if isinstance(evidence,dict) and isinstance(evidence.get(key),dict)]
+    if (not named_steps or any(step!=named_steps[0] for step in named_steps)
+            or not set(FIELD_STEP)<=set(named_steps[0])<=set(FIELD_STEP)|{"program","input"}):
+        return None,unidentified
+    derived=named_steps[0]
+    same=all(type(derived[k])==type(selection.get(k)) and derived[k]==selection.get(k) for k in set(derived)-{"program"})
+    if same and "program" in derived:
+        saved=read(pinned(root,replay["result"]))
+        robots=[r for m in saved["matches"] if m["id"]==selection["match"] for r in m["roster"] if r["id"]==selection["actor"]]
+        same=len(robots)==1 and robots[0]["plans"].get(selection["period"])==derived["program"]
+    if not same:return None,"Held premise "+before["id"]+" evidence identifies a different field step"
+    return selection,None
+
+
 def verify_reopens(root, plan, prior, decisions, observations, missing, budget):
     """The project supplies its previously held checkpoint independently of the proposed package."""
     require(prior["schema"]=="agent-frc/preliminary-layout-result@1","Unknown parent checkpoint")
@@ -158,7 +188,10 @@ def verify_reopens(root, plan, prior, decisions, observations, missing, budget):
                 evidence=read(pinned(root,accepted["source"]))
                 before=read(pinned(root,original[key]["accepted"]))
                 selection={k:v for k,v in evidence.get("fieldReplay",{}).items() if k not in ("profile","result")}
-                checked=(bool(selection) and selection==before.get("fieldInput")==accepted.get("fieldInput")
+                held_input,reason=held_field_input(root,before,selection,evidence["fieldReplay"]) if selection else (None,None)
+                if reason:missing.append(reason)
+                checked=(bool(selection) and selection==held_input==accepted.get("fieldInput")
+                         and ("fieldInput" in before or before["scenario"]==accepted["scenario"] and before["unit"]==accepted["unit"])
                          and phase==accepted["phase"]==before["phase"] and current[key]["status"]=="within" and repeat.get("previousPlanSha256")==previous_study
                          and evidence.get("issue")==plan["issue"] and evidence.get("designSha256")==plan["design"]["sha256"]
                          and evidence.get("stepSha256")==plan["step"]["sha256"] and evidence.get("phase")==phase
