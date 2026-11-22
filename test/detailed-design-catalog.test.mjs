@@ -60,7 +60,7 @@ test('the catalog loads with an in-progress design as the primary card, beside a
   assert.equal(find(beside.archive,link('detail-001')).length,1,'an older in-progress design is listed with its link');
 });
 
-test('a missing index still reports the load failure',async()=>{
+test('a malformed index still reports the load failure',async()=>{
   const ids=await render({...base,designs:undefined},null);
   assert.match(ids.current.textContent,/could not be loaded/);
 });

@@ -216,7 +216,7 @@ Opt in through the approved staged policy, beside `preliminaryReleases`:
 
 `root` is the deployed design tree. `legacy` names the model the site published before this process, or is `null` when it published none. A legacy design holds the primary view under the full gate, exactly as before, until a signed design supersedes it or a declaration withdraws it. `secondaryLink` optionally names one primary entry page that may gain one plain anchor to the tree, such as `<a href="detailed-design/">Detailed designs</a>`, under the same rules as the preliminary link. A page that both policies name may gain both links in one change, one plain anchor to each tree. `catalogSha256` optionally pins a project catalog page in place of the plugin's [stock catalog](../templates/detailed-design-index.html).
 
-The tree holds the catalog `index.html`, the index `designs.json`, one immutable directory per design under `designs/ID/` and the archive of withdrawn files under `archive/ID/`.
+The tree holds the catalog `index.html`, the index `designs.json`, one immutable directory per design under `designs/ID/` and the archive of withdrawn files under `archive/ID/`. The release commands write the stock catalog only when `index.html` is absent, and the gate compares a committed stock catalog with the template of the verifier's plugin revision. The stock catalog before plugin 0.111.1 fails to load when no design is current or one is in progress: after moving the verifier to 0.111.1 or later, copy `templates/detailed-design-index.html` over the committed `index.html` in the same change.
 
 ```json
 {
