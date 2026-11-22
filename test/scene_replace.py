@@ -94,23 +94,54 @@ class SceneReplace(unittest.TestCase):
     def test_partly_registered_mounts_draw_a_stderr_note_only(self):
         plain, notes = self.notes(self.plan)
         self.assertEqual(notes, [])
-        # Two invented members in one mechanism group; only one names its own mount.
+        # Invented groups: two lifts on a frame of three rails; only some members are registered.
         from preliminary_design import mount_notes
-        groups = dict(lifts=dict(role="mechanism", members=["left lift", "right lift"]), frame=dict(role="structure", members=["rails"]))
-        left = dict(group="lifts", member="left lift", on="rails", pointMm=[0, 0, 0], basis="Invented")
+        groups = dict(lifts=dict(role="mechanism", members=["left lift", "right lift"]),
+                      frame=dict(role="structure", members=["base rail", "left post", "right post"]))
+        left = dict(group="lifts", member="left lift", on="left post", pointMm=[0, 0, 0], basis="Invented")
+        whole = {k: v for k, v in left.items() if k != "member"}
         self.assertEqual(mount_notes(groups, [left]),
-                         ["[mounts] note: right lift in lifts has no mount of its own; the group's mounts name only left lift"])
+                         ["[mounts] note: lifts members without a mount of their own: right lift (its mounts name only left lift)"])
         self.assertEqual(mount_notes(groups, [left, dict(left, member="right lift")]), [])
-        self.assertEqual(mount_notes(groups, [left, {k: v for k, v in left.items() if k != "member"}]), [], "a group-level mount covers the rest")
-        self.assertEqual(mount_notes(groups, [{k: v for k, v in left.items() if k != "member"}]), [])
-        # A structure joint registered for one member points at the members that have none.
+        self.assertEqual(mount_notes(groups, [left, whole]), [], "a group-level mount covers the rest")
+        self.assertEqual(mount_notes(groups, [whole]), [])
+        joint = dict(group="frame", member="left post", on="base rail", pointMm=[0, 0, 0], basis="Invented")
+        self.assertEqual(mount_notes(groups, [whole, joint]),
+                         ["[mounts] note: frame members without a registered joint: right post (a root frame member needs none)"])
+        self.assertEqual(mount_notes(groups, [whole, joint, dict(joint, member="right post")]), [], "the host itself needs no joint")
+        # On a real check the note reaches stderr only and never the receipt.
         plan = deepcopy(self.plan)
         plan["mounts"].append(dict(group="structure", member="rail", on="mount", pointMm=self.plan["mounts"][0]["pointMm"], basis="Invented joint"))
         result, notes = self.notes(plan)
-        self.assertEqual(notes, ["[mounts] note: structure members without a registered joint: mount (a root frame member needs none)"])
+        self.assertEqual(notes, [], "the only other structure member is the host")
         self.assertEqual(result["status"], "layout-checked", result["missingInputs"])
-        quiet = self.review(plan)
-        self.assertEqual(json.dumps(quiet), json.dumps(result), "the note never enters the receipt")
+        with patch("preliminary_design.mount_notes", return_value=["[mounts] note: invented"]):
+            noted, lines = self.notes(plan)
+        self.assertEqual(lines, ["[mounts] note: invented"])
+        self.assertEqual(json.dumps(noted), json.dumps(result), "the note never enters the receipt")
+
+    def test_a_late_failure_leaves_the_previous_view(self):
+        previous = self.stale()
+        self.page.unlink()
+        # The roster names a member the STEP does not hold: the run fails after the view was prepared.
+        plan = deepcopy(self.plan)
+        plan["groups"]["structure"]["members"].append("absent")
+        with self.assertRaisesRegex(ValueError, "Package roster differs"):
+            self.review(plan, write_view=True)
+        self.assertEqual(self.scene.read_bytes(), previous)
+        self.assertFalse(self.page.exists(), "a failed run creates no page either")
+
+    def test_an_unreadable_scene_is_reported_and_kept(self):
+        import package_view
+        real = Path.read_bytes
+        def busy(path):
+            if path == self.scene:
+                raise PermissionError("held open by a reader")
+            return real(path)
+        with patch.object(Path, "read_bytes", busy):
+            result = self.review(write_view=True)
+        self.assertFalse(result["view"]["verified"])
+        self.assertEqual(self.scene.read_bytes(), self.stock_scene)
 
 
 if __name__ == "__main__":
