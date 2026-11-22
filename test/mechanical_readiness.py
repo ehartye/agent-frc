@@ -21,6 +21,7 @@ from constant_pose_pairs import ConstantPosePairs
 from checker_progress_failfast import CheckerProgressFailFast
 from held_position_replay import HeldPositionReplay
 from contact_transport import ContactTransport
+from held_pin_relocation import HeldPinRelocation
 
 
 class Readiness(unittest.TestCase):
