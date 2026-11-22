@@ -211,7 +211,7 @@ def repeated_step_position(profile_path, saved, match, robot, repeat, value, uni
 FIELD_STEP=("match","actor","period","stepIndex","stepLabel","station")
 
 
-def held_field_input(root, before, selection, replay):
+def held_field_input(root, before, selection, replay, relocations=None, followed=None):
     """Return the held premise's field input, or None and the reason it cannot be established.
 
     A delivery-position premise accepted before fieldInput records existed may still name its rehearsal
@@ -221,7 +221,11 @@ def held_field_input(root, before, selection, replay):
     if "fieldInput" in before:return before["fieldInput"],None
     unidentified="Held premise "+before["id"]+" predates fieldInput and its evidence does not identify the step"
     if selection.get("input") not in ("stepPosition","stationPosition"):return None,unidentified
-    evidence=read(pinned(root,before["source"]))
+    source=held_pinned(root,before["source"],relocations or {},[] if followed is None else followed)
+    if source is None:
+        return None,("Relocated held file "+before["source"]["file"]+" -> "+(relocations or {})[before["source"]["file"]]
+                     +" does not match its pinned SHA-256")
+    evidence=read(source)
     named_steps=[{k:v for k,v in evidence[key].items() if k not in ("profile","result")}
                  for key in ("fieldReplay","fieldInput") if isinstance(evidence,dict) and isinstance(evidence.get(key),dict)]
     # A generic premise names no step; only a replay of every attempt at the station can clear it.
@@ -240,6 +244,37 @@ def held_field_input(root, before, selection, replay):
     return selection,None
 
 
+def held_pinned(root, ref, relocations, followed):
+    """Resolve a pin read from the held receipt. A declared relocation is followed only to identical bytes.
+
+    Returns the resolved path, or None when the relocated file differs from the pinned SHA-256. A held pin
+    without a relocation resolves exactly as pinned() does."""
+    require(isinstance(ref,dict),"Missing revision-bound file")
+    name=ref.get("file")
+    if name not in relocations:return pinned(root,ref)
+    target=project_path(root,relocations[name])
+    if digest(target)!=ref.get("sha256"):return None
+    entry=dict(fromFile=name,toFile=relocations[name],sha256=ref["sha256"])
+    if entry not in followed:followed.append(entry)
+    return target
+
+
+def current_pins(root, plan):
+    """Every file the revised plan pins, including the sources its premise records pin."""
+    files=set()
+    def walk(node):
+        if isinstance(node,dict):
+            if isinstance(node.get("file"),str) and isinstance(node.get("sha256"),str):files.add(node["file"])
+            for value in node.values():walk(value)
+        elif isinstance(node,list):
+            for value in node:walk(value)
+    walk({k:v for k,v in plan.items() if k!="relocations"})
+    for links in plan.get("premises",[]):
+        for ref in (links.get("accepted"),links.get("current")):
+            if isinstance(ref,dict) and (root/str(ref.get("file"))).is_file():walk(read(root/ref["file"]))
+    return files
+
+
 def verify_reopens(root, plan, prior, decisions, observations, missing, budget):
     """The project supplies its previously held checkpoint independently of the proposed package."""
     require(prior["schema"]=="agent-frc/preliminary-layout-result@1","Unknown parent checkpoint")
@@ -248,7 +283,9 @@ def verify_reopens(root, plan, prior, decisions, observations, missing, budget):
     current={d["id"]:d for d in decisions}
     history=[]
     replayed={}
+    relocations=plan.get("relocations",{})
     for hold in prior["reopen"]:
+        followed=[]
         phase,key=hold["phase"],hold["reason"]
         checked=False
         if phase=="preliminary-design" and key=="inspection-weight":
@@ -260,11 +297,20 @@ def verify_reopens(root, plan, prior, decisions, observations, missing, budget):
         elif key in current and key in original:
             accepted=read(pinned(root,current[key]["accepted"]))
             repeat=accepted.get("repeat")
+            before=None
             if isinstance(repeat,dict):
                 evidence=read(pinned(root,accepted["source"]))
-                before=read(pinned(root,original[key]["accepted"]))
+                held_ref=original[key]["accepted"]
+                before_path=held_pinned(root,held_ref,relocations,followed)
+                if before_path is None:
+                    missing.append("Relocated held file "+held_ref["file"]+" -> "+relocations[held_ref["file"]]
+                                   +" does not match its pinned SHA-256")
+                    before=None
+                else:before=read(before_path)
+            if isinstance(repeat,dict) and before is not None:
                 selection={k:v for k,v in evidence.get("fieldReplay",{}).items() if k not in ("profile","result")}
-                held_input,reason=held_field_input(root,before,selection,evidence["fieldReplay"]) if selection else (None,None)
+                held_input,reason=(held_field_input(root,before,selection,evidence["fieldReplay"],relocations,followed)
+                                   if selection else (None,None))
                 if reason:missing.append(reason)
                 checked=(bool(selection) and selection==held_input==accepted.get("fieldInput")
                          and ("fieldInput" in before or before["scenario"]==accepted["scenario"]
@@ -276,7 +322,7 @@ def verify_reopens(root, plan, prior, decisions, observations, missing, budget):
                          and phase=="conceptual-design" and isinstance(evidence.get("fieldReplay"),dict)
                          and repeated_field_input(root,evidence["fieldReplay"],current[key]["value"],accepted["unit"],replayed,
                                                   accepted["criterion"],missing))
-        history.append(dict(**hold,repeatVerified=checked))
+        history.append(dict(**hold,repeatVerified=checked,**({"relocated":followed} if followed else {})))
         if not checked:missing.append("Repeat "+phase+" on this issue before resuming "+key)
     return history
 
@@ -323,6 +369,12 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
     result["reopen"]=reopen
     if reopen:result["status"]="reopen"
     prior = read(previous) if previous else None
+    relocations=plan.get("relocations",{})
+    require(isinstance(relocations,dict) and all(named(k) and named(v) for k,v in relocations.items()),
+            "Map each relocated held file to its new project-relative path")
+    require(not relocations or prior,"Relocations apply only to a held receipt passed with --previous")
+    redirected=sorted(set(relocations)&current_pins(root,plan))
+    require(not redirected,"A relocation cannot redirect a current-issue pin: "+", ".join(redirected))
     if prior:
         require(prior["schema"] == "agent-frc/preliminary-layout-result@1" and prior.get("designId")==design["id"],
                 "Prior checkpoint belongs to another design")
@@ -511,8 +563,10 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
     result.update(groups=groups,mounts=mounts,mountHostBoundsMm=observed["mountHostBoundsMm"],stages=stages,cases=observations)
     if prior:
         result["priorDecisions"]=verify_reopens(root,plan,prior,decisions,observations,missing,result["budgets"])
+        followed=[r for held in result["priorDecisions"] for r in held.get("relocated",[])]
+        if followed:result["heldRelocations"]=[r for i,r in enumerate(followed) if r not in followed[:i]]
         for held in result["priorDecisions"]:
-            item={k:v for k,v in held.items() if k!="repeatVerified"}
+            item={k:v for k,v in held.items() if k not in ("repeatVerified","relocated")}
             if not held["repeatVerified"] and item not in reopen:reopen.append(item)
         if reopen:result["status"]="reopen"
     if any(c["status"]=="fail" for c in observations):

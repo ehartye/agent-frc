@@ -97,6 +97,16 @@ node scripts/design.mjs preliminary-check PROJECT revised-layout.json --previous
 
 The package checker repeats the affected package cases. For a held field premise it checks the current issue and the original registered actor, match and input, replays the pinned first-party field profile and compares the full saved result. The upstream decision must identify the held plan hash. Supported replay inputs include a named program step’s dwell, a named scoring step’s delivery stand-off, robot speed, height and heading, and a modeled front pickup mouth. An independently chosen different face needs a rehearsal that actually represents it. An unsupported repeat stays open. The project chooses the duty, threshold and acceptance of the resulting field strategy. An initial review without a supplied prior receipt cannot clear a historical hold.
 
+### Move a file the held receipt pins
+
+A held receipt pins each premise acceptance and its evidence by project-relative path and SHA-256. If the project later moves one of those files, for example into an allowed project folder, declare the move on the revised layout plan:
+
+```json
+"relocations": {"premise-delivery-accepted.json": "experiments/premises/premise-delivery-accepted.json"}
+```
+
+The checker follows a relocation only for a file read from the held receipt: a held premise acceptance, or the evidence a legacy held acceptance cites. It follows it only when the file at the new path has exactly the pinned SHA-256. Each followed relocation is recorded on its prior decision under `relocated` and in the receipt's `heldRelocations`, with the old path, new path and hash, whether or not the hold clears. A new path must stay inside the project. A relocated file with different bytes leaves the hold open with `Relocated held file OLD -> NEW does not match its pinned SHA-256`. A relocation is rejected outright when it names a file that the revised plan or its premise records pin, or when no `--previous` receipt is supplied. Without `relocations`, a moved held file stops the review as before.
+
 ### Resume a held delivery position
 
 When the held premise is the distance the robot delivers from, move that scoring step in the field profile, then re-run the match series with `scripts/rehearsal-series.mjs`. Check the run for [permanent robot wait cycles](match-series.md#find-and-resolve-robot-wait-cycles) before relying on its result. Register the premise in inches (`"unit": "in"`) and name the step in `fieldInput`, identically in the original and repeated decisions:
