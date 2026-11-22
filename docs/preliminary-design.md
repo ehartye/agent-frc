@@ -60,12 +60,12 @@ Each transporter must be a `mechanism` group. A transporter that does not move i
 
 ### Follow progress and stop at the first blocking case
 
-While the check runs, it writes one line to stderr as each motion case finishes. The receipt on stdout is unchanged. Each line gives the case's position in the study, its ID and status, the failing and open pair rows, the `bounded`, `broadPhase` and `constantPoseBroadPhase` counts, and the case and total elapsed seconds. The displaced control is the last line. Lines mark the start and finish of the budget review. A case that runs 30 seconds without a line writes a `[heartbeat]` line with the pairs visited, the active pair, its subdivision depth and samples; set the interval with `--heartbeat SECONDS`. A `[motion] warning` line names a body whose rotation cannot change its swept volume, or a body listed in the motion study's optional `sweptEnvelopes` whose rotation does change it. Add `--quiet` to omit all of these lines.
+While the check runs, it writes one line to stderr as each motion case finishes. The receipt on stdout is unchanged. Each line gives the case's position in the study, its ID and status, the failing and open pair rows, the `bounded`, `broadPhase` and `constantPoseBroadPhase` counts, and the case and total elapsed seconds. The displaced control is the last line. Lines mark the start and finish of the budget review. When 30 seconds pass inside a case, the next pair or sample writes a `[heartbeat]` line with the pairs visited, the active pair, its subdivision depth and samples; set the interval with `--heartbeat SECONDS`. A `[motion] warning` line names a body whose rotation cannot change its swept volume, or a body listed in the motion study's optional `sweptEnvelopes` whose rotation does change it. Add `--quiet` to omit all of these lines.
 
 ```text
 [motion] 2/6 park-loaded status=pass failing=0 open=0 bounded=3 broadPhase=10 constantPoseBroadPhase=14 case=0.03s total=0.07s
 [heartbeat] motion 3/6 lift-loaded pairs=41/120 pair=carriage|rail depth=7 samples=93 case=30.02s total=31.40s
-[motion] warning turn-loaded roller: the body is unchanged by its rotation about its own axis, so the move cannot change its swept volume and only adds refinement cost; model it as a static envelope and remove the rotation
+[motion] warning turn-loaded roller: the body is unchanged by its rotation about its own axis, so the move cannot change its swept volume and only adds refinement cost; unless another body shares the move, model it as a static envelope and remove the rotation
 [budgets] done mass=pass electrical=pass 0.00s
 ```
 

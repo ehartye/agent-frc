@@ -219,10 +219,12 @@ HEARTBEAT_SECONDS=30.
 # The full, half and golden-section fractions of a rotation: no finite rotational symmetry satisfies all three by accident.
 INVARIANCE_FRACTIONS=(1.,.5,(math.sqrt(5)-1)/2)
 INVARIANCE_TOLERANCE_MM=1e-3
+INVARIANCE_FACE_LIMIT=200
 
 
-def boundary_samples(shape,limit=96):
-    """The boundary faces of a placed solid and at most `limit` points on them, from a mesh of a private copy."""
+def boundary_samples(shape,per_face=4):
+    """The boundary faces of a placed solid with points on every face: mesh nodes and the surface points under
+    triangle centers, so a flat or ruled wall is sampled away from its edges. Returns None above the face limit."""
     from OCP.BRep import BRep_Builder,BRep_Tool
     from OCP.BRepBuilderAPI import BRepBuilderAPI_Copy
     from OCP.BRepMesh import BRepMesh_IncrementalMesh
@@ -230,48 +232,61 @@ def boundary_samples(shape,limit=96):
     from OCP.TopExp import TopExp_Explorer
     from OCP.TopLoc import TopLoc_Location
     from OCP.TopoDS import TopoDS,TopoDS_Compound
+    face_of=getattr(TopoDS,"Face_s",None) or TopoDS.Face
     faces=TopoDS_Compound();builder=BRep_Builder();builder.MakeCompound(faces)
-    explorer=TopExp_Explorer(shape,TopAbs_FACE)
+    explorer=TopExp_Explorer(shape,TopAbs_FACE);count=0
     while explorer.More():
-        builder.Add(faces,explorer.Current());explorer.Next()
+        builder.Add(faces,explorer.Current());explorer.Next();count+=1
+    if count>INVARIANCE_FACE_LIMIT:return None
     # Meshing the original would attach a triangulation to a shape other checks and views still use.
     copy=BRepBuilderAPI_Copy(shape,True,False).Shape()
     box=bounds(copy)
     BRepMesh_IncrementalMesh(copy,max(math.dist(box[:3],box[3:])/200,1e-3),False,.3)
     points=[];explorer=TopExp_Explorer(copy,TopAbs_FACE)
+    def spread(n):
+        return range(1,n+1,max(1,math.ceil(n/per_face)))
     while explorer.More():
-        location=TopLoc_Location();mesh=BRep_Tool.Triangulation_s((getattr(TopoDS,"Face_s",None) or TopoDS.Face)(explorer.Current()),location)
-        if mesh is not None:
-            points.extend(mesh.Node(i).Transformed(location.Transformation()) for i in range(1,mesh.NbNodes()+1))
+        face=face_of(explorer.Current());location=TopLoc_Location();mesh=BRep_Tool.Triangulation_s(face,location)
+        if mesh is None:return None
+        points.extend(mesh.Node(i).Transformed(location.Transformation()) for i in spread(mesh.NbNodes()))
+        if not mesh.HasUVNodes():return None
+        surface=BRep_Tool.Surface_s(face)
+        for i in spread(mesh.NbTriangles()):
+            corners=[mesh.UVNode(n) for n in mesh.Triangle(i).Get()]
+            points.append(surface.Value(sum(c.X() for c in corners)/3,sum(c.Y() for c in corners)/3))
         explorer.Next()
-    return faces,points[::max(1,math.ceil(len(points)/limit))]
+    return faces,points
 
 
 def rotation_invariant(shape,move):
     """Whether one rotation leaves a placed solid unchanged at its full, half and golden-section travel.
 
-    A solid of revolution about the rotation axis passes. The test compares the centroid, the bounding box
-    and sampled boundary points, so it supports a warning and never a clearance finding."""
-    if not move["travelDeg"]:return False
+    True for a solid of revolution about the rotation axis. None when the test cannot judge: the travel is too
+    small to tell, the solid has too many faces or the kernel fails. The test compares the centroid, the
+    bounding box and sampled boundary points, so it supports a warning and never a clearance finding."""
     try:
         return _rotation_invariant(shape,move)
     except Exception:
         # An advisory check never stops or changes a clearance run.
-        return False
+        return None
 
 
 def _rotation_invariant(shape,move):
     from OCP.BRepBuilderAPI import BRepBuilderAPI_MakeVertex
     from OCP.BRepGProp import BRepGProp
     from OCP.GProp import GProp_GProps
-    from OCP.gp import gp_Lin
+    from OCP.gp import gp_Lin,gp_Pnt
+    axis=gp_Lin(axes(move));box=bounds(shape)
+    reach=max(axis.Distance(gp_Pnt(*corner)) for corner in product(*[(box[i],box[i+3]) for i in range(3)]))
+    if abs(math.radians(move["travelDeg"]))*min(INVARIANCE_FRACTIONS)*reach<100*INVARIANCE_TOLERANCE_MM:return None
     props=GProp_GProps();BRepGProp.VolumeProperties_s(shape,props,True)
-    if not props.Mass()>0 or gp_Lin(axes(move)).Distance(props.CentreOfMass())>INVARIANCE_TOLERANCE_MM:return False
-    box=bounds(shape)
+    if not props.Mass()>0:return None
+    if axis.Distance(props.CentreOfMass())>INVARIANCE_TOLERANCE_MM:return False
     for fraction in INVARIANCE_FRACTIONS:
         if max(abs(x-y) for x,y in zip(box,bounds(transform(shape,[move],fraction))))>INVARIANCE_TOLERANCE_MM:return False
-    faces,points=boundary_samples(shape)
-    if not points:return False
+    sampled=boundary_samples(shape)
+    if sampled is None or not sampled[1]:return None
+    faces,points=sampled
     for fraction in INVARIANCE_FRACTIONS:
         turn=next(transforms([move],fraction))
         for point in points:
@@ -279,17 +294,19 @@ def _rotation_invariant(shape,move):
     return True
 
 
-def sweep_warnings(case,scene,moves,keys,declared,known):
+def sweep_warnings(case,scene,moves,keys,declared,known,told):
     """Advisory stderr lines about rotations that cannot change, or fail to preserve, a body's occupied volume.
 
-    Only the rotations before a body's first other move are judged, each against the case's starting pose."""
+    Only the rotations before a body's first other move are judged, each against the case's starting pose.
+    A body, pose and move that already drew a warning in an earlier case is not repeated."""
     lines=[]
     for name,ops in moves.items():
+        ops=[m for m in ops if not (m["kind"]=="rotation" and m["travelDeg"]==0)]
         leading=[]
         for move in ops:
             if move["kind"]!="rotation":break
             leading.append(move)
-        invariant=bool(leading)
+        invariant=True if leading else None
         for move in leading:
             key=None if keys.get(name) is None else (keys[name],json.dumps(move,sort_keys=True,allow_nan=False))
             if key is None:invariant=rotation_invariant(scene[name],move)
@@ -297,12 +314,17 @@ def sweep_warnings(case,scene,moves,keys,declared,known):
                 if key not in known:known[key]=rotation_invariant(scene[name],move)
                 invariant=known[key]
             if not invariant:break
-        if invariant and len(leading)==len(ops):
-            lines.append(f"[motion] warning {case} {name}: the body is unchanged by its rotation about its own axis, so the move "
-                         "cannot change its swept volume and only adds refinement cost; model it as a static envelope and remove the rotation")
-        elif name in declared and leading and not invariant:
-            lines.append(f"[motion] warning {case} {name}: declared full swept envelope, but its rotation changes the occupied volume; "
-                         "revolve the geometry about the rotation axis or remove it from sweptEnvelopes")
+        if invariant is True and len(leading)==len(ops):
+            kind="redundant";text=("the body is unchanged by its rotation about its own axis, so the move cannot change its swept volume "
+                "and only adds refinement cost; unless another body shares the move, model it as a static envelope and remove the rotation")
+        elif name in declared and invariant is False:
+            kind="declared";text=("declared full swept envelope, but its rotation changes the occupied volume; "
+                "revolve the geometry about the rotation axis or remove it from sweptEnvelopes")
+        else:continue
+        seen=(kind,name,None if keys.get(name) is None else keys[name],json.dumps(ops,sort_keys=True,allow_nan=False))
+        if seen[2] is not None and seen in told:continue
+        told.add(seen)
+        lines.append(f"[motion] warning {case} {name}: {text}")
     return lines
 
 
@@ -319,7 +341,7 @@ def evaluate(root,study,*,mount_hosts=(),package_scene=None,progress=None,fail_f
     declared=study.get("sweptEnvelopes",[])
     require(isinstance(declared,list) and all(named(n) for n in declared),"sweptEnvelopes lists the IDs of bodies modeled as full swept volumes")
     require(number(heartbeat_seconds) and heartbeat_seconds>=0,"Heartbeat interval must be zero or more seconds")
-    invariance={}
+    invariance={};told=set();present=set()
     original=pinned(root,study["step"])
     identities={}
     shapes,non_solids=load_solids(original,identities)
@@ -367,7 +389,8 @@ def evaluate(root,study,*,mount_hosts=(),package_scene=None,progress=None,fail_f
                 progress(f"[heartbeat] motion {index}/{len(study['cases'])} {id} pairs={done}/{pair_total} pair={a}|{b} depth={d} "
                          f"samples={samples} case={now-case_started:.2f}s total={now-started:.2f}s")
         if progress:
-            for line in sweep_warnings(id,scene,moves,keys,declared,invariance):progress(line)
+            present.update(scene)
+            for line in sweep_warnings(id,scene,moves,keys,declared,invariance,told):progress(line)
         cut=case["minGapMm"];depth=case.get("maxDepth",9)
         require(number(cut) and cut>=0 and type(depth)==int and 0<=depth<=18,"Invalid clearance or subdivision bound")
         excluded={}
@@ -505,6 +528,9 @@ def evaluate(root,study,*,mount_hosts=(),package_scene=None,progress=None,fail_f
         skipped=[c.get("id") for c in study["cases"][len(results):]]
         result.update(partial=True,stoppedAt=stopped,checkedCases=[r["case"] for r in results],skippedCases=skipped)
         if progress:progress(f"[motion] fail-fast stopped at {stopped}; skipped {len(skipped)} case{'' if len(skipped)==1 else 's'}: "+(", ".join(map(str,skipped)) or "none"))
+    elif progress:
+        for name in declared:
+            if name not in present:progress(f"[motion] warning sweptEnvelopes names {name}, which no case contains")
     return result
 
 

@@ -18,6 +18,7 @@ HEARTBEAT = re.compile(r"^\[heartbeat\] motion (\d+)/(\d+) (\S+) pairs=(\d+)/(\d
 
 def solids_step(path, solids):
     """Write invented named boxes and cylinders in millimeters."""
+    from OCP.BRepAlgoAPI import BRepAlgoAPI_Cut
     from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox, BRepPrimAPI_MakeCylinder
     from OCP.STEPCAFControl import STEPCAFControl_Writer
     from OCP.STEPControl import STEPControl_AsIs
@@ -34,6 +35,8 @@ def solids_step(path, solids):
         else:
             base, axis, radius, height = spec["cylinder"]
             solid = BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(*base), gp_Dir(*axis)), radius, height).Shape()
+        for lo, hi in spec.get("cut", []):
+            solid = BRepAlgoAPI_Cut(solid, BRepPrimAPI_MakeBox(gp_Pnt(*lo), gp_Pnt(*hi)).Shape()).Shape()
         TDataStd_Name.Set_s(table.AddShape(solid, False), TCollection_ExtendedString(name))
     writer = STEPCAFControl_Writer()
     writer.Transfer(doc, STEPControl_AsIs)
@@ -54,11 +57,19 @@ class MotionHeartbeat(unittest.TestCase):
             wall=dict(box=([30, -40, 0], [34, 40, 40])),
             roller=dict(cylinder=([0, 0, 0], [0, 0, 1], 20, 30)),
             post=dict(box=([-80, -10, 0], [-60, 10, 30])),
-            guard=dict(box=([-55, -40, 0], [-51, 40, 40]))))
+            guard=dict(box=([-55, -40, 0], [-51, 40, 40])),
+            # A roller with a square through-bore is not a solid of revolution, although its rim is.
+            hub=dict(cylinder=([0, 100, 0], [0, 0, 1], 20, 30), cut=[([-5, 95, -1], [5, 105, 31])])))
         cls.cases = dict(
             spin=dict(id="spin", basis="Invented roller turning on its own axis", minGapMm=1, moves={"roller": turn([0, 0, 0], 90)}),
             orbit=dict(id="orbit", basis="Invented roller swinging about an offset pivot", minGapMm=1,
                        moves={"roller": turn([0, -5, 0], 40)}),
+            bored=dict(id="bored", basis="Invented square-bored roller turning on its axis", minGapMm=1,
+                       moves={"hub": turn([0, 100, 0], 90)}),
+            still=dict(id="still", basis="Invented post with a zero rotation", minGapMm=1, moves={"post": turn([-70, 0, 0], 0)}),
+            carried=dict(id="carried", basis="Invented roller turning and then rising", minGapMm=1,
+                         moves={"roller": [*turn([0, 0, 0], 90), dict(kind="translation", travelMm=[0, 0, 5])]}),
+            again=dict(id="again", basis="Invented repeat of the roller turn", minGapMm=1, moves={"roller": turn([0, 0, 0], 90)}),
             quarter=dict(id="quarter", basis="Invented square post turning a quarter turn on its center", minGapMm=1,
                          moves={"post": turn([-70, 0, 0], 90)}))
 
@@ -82,7 +93,7 @@ class MotionHeartbeat(unittest.TestCase):
         self.assertEqual(json.dumps(result), json.dumps(silent))
         beats = [HEARTBEAT.match(l).groups() for l in lines if l.startswith("[heartbeat] ")]
         self.assertTrue(beats)
-        self.assertTrue(all(b[:3] == ("1", "1", "orbit") and b[4] == "6" for b in beats))
+        self.assertTrue(all(b[:3] == ("1", "1", "orbit") and b[4] == "10" for b in beats))
         self.assertIn(("roller", "wall"), {(b[5], b[6]) for b in beats})
         refined = [b for b in beats if (b[5], b[6]) == ("roller", "wall")]
         self.assertGreater(max(int(b[8]) for b in refined), 2)
@@ -143,6 +154,36 @@ class MotionHeartbeat(unittest.TestCase):
         self.assertTrue(warnings[1].startswith("[motion] warning spin roller: "))
         with self.assertRaises(ValueError):
             evaluate(self.root, dict(json.loads((self.root / file).read_text()), sweptEnvelopes="post"))
+
+    def test_warnings_judge_only_what_they_can_and_say_it_once(self):
+        file = self.study("edges.json", "bored", "still", "carried", "spin", "again", sweptEnvelopes=["post", "absent"])
+        _, lines = self.run_study(file)
+        warnings = [l for l in lines if l.startswith("[motion] warning ")]
+        # The bored hub, the zero rotation and the turn that also rises draw nothing; the repeated turn is told once.
+        self.assertEqual(len(warnings), 2, warnings)
+        self.assertTrue(warnings[0].startswith("[motion] warning spin roller: "), warnings[0])
+        self.assertEqual(warnings[1], "[motion] warning sweptEnvelopes names absent, which no case contains")
+
+    def test_replaced_bodies_are_judged_and_scene_shapes_stay_unmeshed(self):
+        from OCP.BRep import BRep_Tool
+        from OCP.BRepBuilderAPI import BRepBuilderAPI_Copy
+        from OCP.TopAbs import TopAbs_FACE
+        from OCP.TopExp import TopExp_Explorer
+        from OCP.TopLoc import TopLoc_Location
+        from OCP.TopoDS import TopoDS
+        seen = {}
+        def replace(case, scene):
+            scene["roller"] = BRepBuilderAPI_Copy(scene["roller"]).Shape()
+            seen.update(scene)
+        lines = []
+        study = json.loads((self.root / self.study("replaced.json", "spin", "again")).read_text())
+        evaluate(self.root, study, progress=lines.append, package_scene=replace)
+        self.assertEqual(len([l for l in lines if l.startswith("[motion] warning ")]), 2)
+        explorer = TopExp_Explorer(seen["roller"], TopAbs_FACE)
+        while explorer.More():
+            face = (getattr(TopoDS, "Face_s", None) or TopoDS.Face)(explorer.Current())
+            self.assertIsNone(BRep_Tool.Triangulation_s(face, TopLoc_Location()))
+            explorer.Next()
 
 
 if __name__ == "__main__":
