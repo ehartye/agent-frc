@@ -36,6 +36,24 @@ jobs:
           echo "FRC_ACTIONLINT=$RUNNER_TEMP/actionlint" >> "$GITHUB_ENV"
       - run: npm run validate
       - run: npm run test:portable
+  rerun:
+    name: Layout check rerun
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+        with:
+          python-version: '3.13'
+      # The same interpreter and kernel versions as templates/design-publication.yml, so the template's install is exercised here.
+      - run: python -m pip install "cadquery-ocp==8.0.1.0.0" "numpy==2.5.3"
+      # Builds a synthetic release with the real layout check, reruns it as a project's CI does and rejects a forged receipt.
+      - run: node --test test/design-publication.test.mjs
+        env:
+          FRC_TEST_PROFILE: station
   build:
     needs: check
     permissions:
