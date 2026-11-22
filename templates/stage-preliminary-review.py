@@ -51,7 +51,75 @@ def index(site, recovering=None):
         expected = read(release / "receipt.json")["view"]["sha256"]
         if hashlib.sha256((release / "index.html").read_bytes()).hexdigest() != expected:
             raise ValueError("Indexed view differs from receipt: " + name)
+        check_release(release)
     return record
+
+
+LABEL = "Work-in-progress preliminary design"
+RESERVED = {"index.html", "receipt.json", "motion.json", "release.json", "budgets.json", "limits.json"}
+TRIAL = re.compile(r"[a-z0-9][a-z0-9._-]{0,127}\.json")
+KINDS = {"operating-case", "field-interaction-trial"}
+OUTCOMES = {"acquired", "delivered", "scored", "climb-held"}
+
+
+def check_release(release):
+    """Mirror the plugin's preliminary release gate: physics receipt, digests and a mission-task case."""
+    def fail(message):
+        raise ValueError(message + ": " + release.name)
+    if not (release / "release.json").is_file():
+        fail("Release has no release record (release.json); stage it with this script")
+    present = {p.name for p in release.iterdir()}
+    if RESERVED - present:
+        fail("Release is missing " + ", ".join(sorted(RESERVED - present)))
+    record, receipt = read(release / "release.json"), read(release / "receipt.json")
+    sha = lambda name: hashlib.sha256((release / name).read_bytes()).hexdigest()
+    if (record.get("schema") != "agent-frc/preliminary-release@1" or record.get("release") != release.name
+            or record.get("label") != LABEL or record.get("issue") != receipt.get("issue")):
+        fail("Release record names a different schema, release, label or issue")
+    pins = [(record.get("receipt") or {}, "receipt.json"), (record.get("view") or {}, "index.html"),
+            (record.get("scene") or {}, "motion.json")]
+    if (any(pin.get("file") != name or pin.get("sha256") != sha(name) for pin, name in pins)
+            or (receipt.get("view") or {}).get("sha256") != sha("index.html") or not receipt["view"].get("verified")
+            or (receipt.get("motion") or {}).get("sha256") != sha("motion.json")
+            or record["scene"].get("stepSha256") != (receipt.get("step") or {}).get("sha256")):
+        fail("Published receipt, view or scene differs from its pins")
+    budgets = receipt.get("budgets") or {}
+    if ((budgets.get("source") or {}).get("sha256") != sha("budgets.json")
+            or (budgets.get("limits") or {}).get("sha256") != sha("limits.json")):
+        fail("Published budgets differ from the receipt")
+    witness = (receipt.get("control") or {}).get("witness") or {}
+    cases, power = receipt.get("cases") or [], budgets.get("electricalCases") or []
+    if (receipt.get("status") != "layout-checked" or record.get("status") != "layout-checked" or receipt.get("partial")
+            or receipt.get("missingInputs") or receipt.get("reopen") or not cases
+            or any(c.get("status") != "pass" for c in cases) or witness.get("status") != "fail"
+            or budgets.get("massStatus") != "pass" or not power or any(r.get("status") != "pass" for r in power)):
+        fail("A preliminary release needs a layout-checked receipt: clearance, mass and voltage pass, "
+             "the displaced control is rejected and no inputs are missing")
+    objectives = (receipt.get("narrativeReview") or {}).get("objectives") or []
+    represented = {o.get("objective") for o in objectives if o.get("disposition") == "represented"}
+    passed = {c.get("case") for c in cases if c.get("status") == "pass"}
+    missions, trials = record.get("missionCases") or [], set()
+    if not missions:
+        fail("Declare a mission-task case in missions.json")
+    for m in missions:
+        stage_ = (receipt.get("stages") or {}).get(m.get("case")) or {}
+        ok = (m.get("kind") in KINDS and m.get("accomplishes") in OUTCOMES and m.get("objective") in represented
+              and m.get("case") in passed and stage_.get("purpose") == "operating"
+              and m.get("case") in (receipt.get("cycle") or []))
+        if m.get("kind") == "field-interaction-trial":
+            t = m.get("trial") or {}
+            name = t.get("file") or ""
+            ok = (ok and bool(TRIAL.fullmatch(name)) and name not in RESERVED and (release / name).is_file()
+                  and sha(name) == t.get("sha256") and any((s.get("evidence") or {}).get("sha256") == t.get("sha256")
+                                                          for s in (stage_.get("transportedBy") or {}).values()))
+            trials.add(name)
+        elif "trial" in m:
+            ok = False
+        if not ok:
+            fail("Mission case " + str(m.get("case")) + " must be a passing operating case in the checked cycle, "
+                 "with a known accomplishment, for a represented narrative objective")
+    if present - RESERVED - trials:
+        fail("Unrecognized release files " + ", ".join(sorted(present - RESERVED - trials)))
 
 
 def stage(season, inputs, release):
@@ -74,26 +142,27 @@ def stage(season, inputs, release):
         raise ValueError("The checked view differs from the layout's selected view")
     if result.get("status") != "layout-checked" or result.get("missingInputs"):
         raise ValueError("A preliminary release needs a layout-checked receipt with no missing inputs")
+    if not plan.get("budgets"):
+        raise ValueError("A preliminary release needs the checked weight and loaded-voltage budgets")
     missions = read(inputs / "missions.json")["missionCases"] if (inputs / "missions.json").exists() else []
-    represented = {o["objective"] for o in result["narrativeReview"]["objectives"] if o["disposition"] == "represented"}
-    passed = {c["case"] for c in result["cases"] if c["status"] == "pass"}
-    if not missions or any(m["objective"] not in represented or m["case"] not in passed for m in missions):
+    if not missions:
         raise ValueError("Declare a passing mission-task case for a represented objective in missions.json")
     with update_index(site), tempfile.TemporaryDirectory(dir=site.parent, prefix=".stage-") as tmp:
         record = index(site, recovering=release)
         if release in record["releases"]:
             raise FileExistsError("Release already exists: " + release)
         files = {"index.html": viewer, "receipt.json": receipt_file, "motion.json": pinned(inputs, plan["motion"])}
-        if plan.get("budgets"):
-            ledger = pinned(inputs, plan["budgets"])
-            files.update({"budgets.json": ledger, "limits.json": pinned(inputs, read(ledger)["requirements"])})
+        ledger = pinned(inputs, plan["budgets"])
+        files.update({"budgets.json": ledger, "limits.json": pinned(inputs, read(ledger)["requirements"])})
         published = []
         for mission in missions:
             mission = dict(mission)
             if mission.get("trial"):
                 trial = pinned(inputs, mission["trial"])
-                if trial.name in files or trial.name == "release.json":
-                    raise ValueError("A trial file name collides with a release file: " + trial.name)
+                if not TRIAL.fullmatch(trial.name) or trial.name in RESERVED:
+                    raise ValueError("Name a trial file in lowercase JSON that differs from the release files: " + trial.name)
+                if files.get(trial.name, trial) != trial:
+                    raise ValueError("Two different trial files share a name: " + trial.name)
                 files[trial.name] = trial
                 mission["trial"] = dict(file=trial.name, sha256=mission["trial"]["sha256"])
             published.append(mission)
@@ -110,6 +179,7 @@ def stage(season, inputs, release):
         staged.mkdir()
         for name, src in files.items():
             shutil.copyfile(src, staged / name)
+        check_release(staged)
         if destination.exists():
             if {p.name for p in destination.iterdir()} != set(files) or any(
                     (destination / n).read_bytes() != (staged / n).read_bytes() for n in files):

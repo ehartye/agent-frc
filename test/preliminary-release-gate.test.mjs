@@ -24,22 +24,23 @@ const objectives=[
   {objective:'Hang from the bar',disposition:'open',basis:'No hanging mechanism selected yet'},
   {objective:'Return to the start box',disposition:'out-of-scope',basis:'Handled by the drive team'}];
 
-function issueRelease(site,id,{status='layout-checked',edit=r=>r,missions,trial}={}) {
+function issueRelease(site,id,{status='layout-checked',edit=r=>r,missions,trial,display=d=>d}={}) {
   const dir=path.join(site,tree,'releases',id);
   const motion=JSON.stringify({cases:[{id:'loaded-turn'},{id:'park'}],issue:id});
-  const budgets=JSON.stringify({masses:[]}),limits=JSON.stringify({inspectionLimitKg:14});
+  const budgets=JSON.stringify({masses:[],electricalCases:{}}),limits=JSON.stringify({inspectionLimitKg:14});
   const step={file:'package.step',sha256:sha('step '+id)},motionPin={file:'paths.json',sha256:sha(motion)};
-  const evidence={'loaded-turn':{status:'pass',pairs:[]},park:{status:'pass',pairs:[]}};
+  const evidence={'loaded-turn':{status:'pass',pairs:[]},park:{status:'pass',pairs:[]},'package-displacement-control':{status:'fail',pairs:[]}};
   const series={issue:'synthetic-'+id,step,motion:motionPin,cases:[{id:'loaded-turn',stage:'operating',bodies:{}},
-    {id:'park',stage:'park',bodies:{}}],evidence,narrativeReview:{objectives}};
-  const view=player.replace('PACKAGE_DATA',JSON.stringify(series).replace(/</g,'\\u003c'));
+    {id:'park',stage:'park',bodies:{}}],evidence,narrativeReview:{objectives},mass:{range:[11,12],remaining:2},
+    power:[{case:'weak traverse',status:'pass'}]};
+  const view=player.replace('PACKAGE_DATA',JSON.stringify(display(series)).replace(/</g,'\\u003c'));
   const stages={'loaded-turn':{purpose:'operating'},park:{purpose:'park'}};
   if(trial)stages['loaded-turn'].transportedBy={sample:{mechanisms:['carrier'],evidence:{file:'acquire-trial.json',sha256:sha(trial)}}};
   let receipt={schema:'agent-frc/preliminary-layout-result@1',issue:'synthetic-'+id,planSha256:sha('plan '+id),status,
     missingInputs:[],reopen:[],step,motion:motionPin,narrativeReview:{source:{file:'narrative.md',sha256:sha('narrative')},objectives},
     stages,cycle:['loaded-turn','park'],cases:[{case:'loaded-turn',status:'pass',pairs:[]},{case:'park',status:'pass',pairs:[]}],
     control:{case:'loaded-turn',displaced:'rail',offsetMm:[0,-50,0],witness:{pair:['head','rail'],status:'fail'}},
-    budgets:{source:{file:'budgets.json',sha256:sha(budgets)},limits:{file:'limits.json',sha256:sha(limits)},massStatus:'pass',
+    budgets:{source:{file:'budgets.json',sha256:sha(budgets)},limits:{file:'limits.json',sha256:sha(limits)},massStatus:'pass',inspectionKg:[11,12],remainingKg:2,
       electricalCases:[{case:'weak traverse',status:'pass'}]},
     view:{file:'package-motion.html',sha256:sha(view),verified:true}};
   receipt=edit(receipt);
@@ -181,6 +182,48 @@ test('output outside the preliminary tree still requires the signed packet', asy
     sha256:sha(readFileSync(path.join(site,tree,'releases','layout-002','index.html')))}]};
   write(temp,'packet.json',{body,signature:sign(null,Buffer.from(JSON.stringify(body)),keys.privateKey).toString('base64')});
   await assert.rejects(auditStaged(approved,site,policy,path.join(temp,'packet.json'),path.join(temp,'key.pem')),/signed packet/i);
+});
+
+function rewrite(dir,file,change){const v=JSON.parse(readFileSync(path.join(dir,file),'utf8'));change(v);write(dir,file,v);}
+function repin(dir){rewrite(dir,'release.json',r=>{r.receipt.sha256=sha(readFileSync(path.join(dir,'receipt.json')));});}
+
+test('a release cannot smuggle script, geometry or unpinned files into the tree', async t=>{
+  let f=fixture(t);
+  let {dir}=next(f.site,'layout-002');
+  const html=readFileSync(path.join(dir,'index.html'),'utf8').replace('"issue":','"x":"</script><script>alert(1)</script>","issue":');
+  write(dir,'index.html',html);
+  rewrite(dir,'receipt.json',r=>{r.view.sha256=sha(html);});
+  rewrite(dir,'release.json',r=>{r.view.sha256=sha(html);});repin(dir);
+  await assert.rejects(auditStaged(f.approved,f.site,f.policy),/checked player/);
+  for(const [file,bytes] of [['budgets.json','glTF\u0002 binary'],['limits.json','<html><script></script></html>'],
+    ['budgets.json',JSON.stringify({asset:{version:'2.0'},meshes:[],masses:[],electricalCases:{}})]]){
+    f=fixture(t);({dir}=next(f.site,'layout-002'));write(dir,file,bytes);
+    rewrite(dir,'receipt.json',r=>{r.budgets[file==='budgets.json'?'source':'limits'].sha256=sha(bytes);});repin(dir);
+    await assert.rejects(auditStaged(f.approved,f.site,f.policy),/Unreadable|expected evidence JSON/,file);
+  }
+  f=fixture(t);
+  next(f.site,'layout-002',{missions:[{case:'loaded-turn',kind:'operating-case',accomplishes:'delivered',
+    objective:'Carry the sample to the bin',trial:{file:'extra.json',sha256:sha('{}')}}]});
+  write(path.join(f.site,tree,'releases','layout-002'),'extra.json','{}');
+  await assert.rejects(auditStaged(f.approved,f.site,f.policy),/Only a field-interaction-trial/);
+});
+
+test('the player must display the receipt results and the viewer must carry the label', async t=>{
+  for(const display of [d=>({...d,evidence:{...d.evidence,park:{status:'fail',pairs:[]}}}),
+    d=>({...d,evidence:{...d.evidence,'package-displacement-control':{status:'pass',pairs:[]}}}),
+    d=>({...d,narrativeReview:{objectives:[]}}),d=>({...d,mass:{range:[9,10],remaining:4}}),
+    d=>({...d,power:[{case:'weak traverse',status:'fail'}]})]){
+    const {approved,site,policy}=fixture(t);
+    next(site,'layout-002',{display});
+    await assert.rejects(auditStaged(approved,site,policy),/differ from the receipt/);
+  }
+  const {approved,site,policy}=fixture(t);
+  const legacy='<!doctype html><title>Preliminary design releases</title>';
+  write(approved,tree+'/index.html',legacy);write(site,tree+'/index.html',legacy);
+  next(site,'layout-002');
+  await assert.rejects(auditStaged(approved,site,policy),/work-in-progress label/);
+  listing(site,'layout-001',['layout-001']);rmSync(path.join(site,tree,'releases','layout-002'),{recursive:true});
+  assert.deepEqual((await auditStaged(approved,site,policy)).preliminary.added,[],'unchanged history still deploys');
 });
 
 test('an author can check one release directory before committing it', async t=>{

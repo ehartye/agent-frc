@@ -13,6 +13,7 @@ const hex=/^[0-9a-f]{64}$/;
 const reserved=['index.html','receipt.json','motion.json','release.json','budgets.json','limits.json'];
 const accomplishments=['acquired','delivered','scored','climb-held'];
 const kinds=['operating-case','field-interaction-trial'];
+const controlCase='package-displacement-control';
 const player=new URL('./package-view.html',import.meta.url);
 const stableViewer=new URL('../templates/preliminary-review-index.html',import.meta.url);
 
@@ -31,7 +32,19 @@ function playerData(html){
   const [before,after]=lf(readFileSync(player)).split('PACKAGE_DATA');
   const text=html.toString('utf8');
   if(!text.startsWith(before)||!text.endsWith(after)||text.length<before.length+after.length)return null;
-  try{return JSON.parse(text.slice(before.length,text.length-after.length));}catch{return null;}
+  const middle=text.slice(before.length,text.length-after.length);
+  // The checker escapes every '<' so the embedded data can never close its script element.
+  if(middle.includes('<'))return null;
+  try{return JSON.parse(middle);}catch{return null;}
+}
+const canonical=v=>JSON.stringify(v,(k,x)=>object(x)?Object.fromEntries(Object.keys(x).sort().map(n=>[n,x[n]])):x);
+const same=(a,b)=>canonical(a)===canonical(b);
+/** Parse a published JSON file and refuse a glTF document hiding under an evidence name. */
+function evidence(bytes,what,shape){
+  const value=parse(bytes,what);
+  check(object(value)&&!(Object.hasOwn(value,'asset')&&['buffers','meshes','accessors'].some(k=>Object.hasOwn(value,k)))&&
+    (!shape||shape(value)),'Published '+what+' is not the expected evidence JSON');
+  return value;
 }
 
 /**
@@ -48,7 +61,10 @@ export function checkRelease(id,files){
   check(record.label===releaseLabel,'Label release '+id+' "'+releaseLabel+'"');
   const trials=new Set();
   const missions=record.missionCases;
-  for(const m of Array.isArray(missions)?missions:[])if(object(m)&&object(m.trial))trials.add(m.trial.file);
+  for(const m of Array.isArray(missions)?missions:[]){
+    if(object(m)&&m.kind==='field-interaction-trial'&&object(m.trial))trials.add(m.trial.file);
+    else check(!object(m)||m.trial===undefined,'Only a field-interaction-trial mission case can publish a trial: '+id);
+  }
   for(const name of files.keys()){
     check(reserved.includes(name)||trials.has(name)&&trialName.test(name)&&!reserved.includes(name),
       'Unrecognized preliminary output: releases/'+id+'/'+name);
@@ -56,6 +72,9 @@ export function checkRelease(id,files){
   for(const name of ['index.html','receipt.json','motion.json','budgets.json','limits.json'])
     check(files.has(name),'Preliminary release '+id+' is missing '+name);
   const receiptBytes=files.get('receipt.json'),view=files.get('index.html'),scene=files.get('motion.json');
+  evidence(scene,'scene: '+id,v=>Array.isArray(v.cases));
+  evidence(files.get('budgets.json'),'budget ledger: '+id,v=>Array.isArray(v.masses)&&object(v.electricalCases));
+  evidence(files.get('limits.json'),'limits: '+id,v=>typeof v.inspectionLimitKg==='number');
   check(pinMatches(record.receipt,'receipt.json',receiptBytes),'Release record does not pin the published receipt: '+id);
   const receipt=parse(receiptBytes,'receipt: '+id);
   check(receipt?.schema===receiptSchema&&named(receipt.issue)&&record.issue===receipt.issue,
@@ -90,6 +109,15 @@ export function checkRelease(id,files){
   check(data&&data.issue===receipt.issue&&JSON.stringify(data.step)===JSON.stringify(receipt.step)&&
     JSON.stringify(data.motion)===JSON.stringify(receipt.motion)&&object(data.evidence),
     'Published view is not this plugin\'s checked player for the receipt: '+id+'. Regenerate it with --write-view');
+  // Everything the player displays as a result must be the receipt's result.
+  // The player also shows the displaced control, which the receipt reports separately as rejected.
+  const shown=Object.keys(data.evidence).filter(k=>k!==controlCase);
+  check(same(shown.sort(),cases.map(c=>c.case).sort())&&cases.every(c=>data.evidence[c.case]?.status===c.status)&&
+    (!Object.hasOwn(data.evidence,controlCase)||data.evidence[controlCase]?.status==='fail')&&
+    same(data.narrativeReview?.objectives??[],receipt.narrativeReview?.objectives??[])&&
+    Array.isArray(data.power)&&same(data.power.map(r=>[r?.case,r?.status]),budgets.electricalCases.map(r=>[r.case,r.status]))&&
+    object(data.mass)&&same(data.mass.range,budgets.inspectionKg)&&same(data.mass.remaining,budgets.remainingKg),
+    'Published view shows results that differ from the receipt: '+id);
 
   // Mission gate.
   check(Array.isArray(missions)&&missions.length,'Release '+id+' declares no mission-task case');
@@ -110,7 +138,7 @@ export function checkRelease(id,files){
       check(object(t)&&trialName.test(t.file??'')&&files.has(t.file)&&pinMatches(t,t.file,files.get(t.file)),
         'Publish the pinned field-interaction trial for the '+where);
       const bound=Object.values(receipt.stages[m.case].transportedBy??{}).some(s=>s?.evidence?.sha256===t.sha256);
-      check(bound&&parse(files.get(t.file),'trial').transport?.case===m.case,
+      check(bound&&evidence(files.get(t.file),'trial: '+id).transport?.case===m.case,
         'The field-interaction trial for the '+where+' is not the one the receipt pins');
     }
   }
@@ -175,8 +203,8 @@ export function auditTree(oldFiles,newFiles){
   }
   const viewer=after.top.get('index.html');
   check(viewer,'Publish the stable preliminary viewer (index.html)');
-  check(before.top.has('index.html')&&Buffer.compare(before.top.get('index.html'),viewer)===0||
-    lf(readFileSync(stableViewer))===lf(viewer),
+  const approvedViewer=before.top.has('index.html')&&Buffer.compare(before.top.get('index.html'),viewer)===0;
+  check(approvedViewer||lf(readFileSync(stableViewer))===lf(viewer),
     'The stable preliminary viewer must equal the approved copy or this plugin\'s template');
   check(after.top.has('releases.json'),'Publish the preliminary release index (releases.json)');
   const index=parse(after.top.get('releases.json'),'preliminary release index');
@@ -190,6 +218,8 @@ export function auditTree(oldFiles,newFiles){
   }
   check(ids.length===after.releases.size&&ids.every(i=>after.releases.has(i)),'The preliminary release index and release directories disagree');
   const added=ids.filter(i=>!before.releases.has(i));
+  check(!added.length||lf(viewer).includes('id="wip"')&&lf(viewer).includes(releaseLabel),
+    'Update the stable preliminary viewer to this plugin\'s template so new releases show the work-in-progress label');
   for(const id of added)checkRelease(id,after.releases.get(id));
   return {releases:ids,added,current:index.current};
 }

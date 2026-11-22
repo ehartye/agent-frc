@@ -24,9 +24,13 @@ test('season review appends immutable releases and refuses a changed source', as
     }
     const motion = await pin('paths.json', '{"cases":[]}');
     const view = await pin('viewer.html', '<html>'+id+'</html>');
-    const plan = await pin('layout.json', JSON.stringify({motion, view: view.file}));
+    const limits = await pin('package-limits.json', '{"inspectionLimitKg":14}');
+    const budgets = await pin('budgets.json', JSON.stringify({requirements: limits, masses: [], electricalCases: {}}));
+    const plan = await pin('layout.json', JSON.stringify({motion, budgets, view: view.file}));
     await pin('receipt.json', JSON.stringify({planSha256: plan.sha256, view: {...view, verified: true}, issue: 'synthetic-' + id,
-      status: 'layout-checked', missingInputs: [], step: {file: 'package.step', sha256: 'a'.repeat(64)},
+      status: 'layout-checked', missingInputs: [], reopen: [], step: {file: 'package.step', sha256: 'a'.repeat(64)}, motion,
+      stages: {turn: {purpose: 'operating'}}, cycle: ['turn'], control: {witness: {pair: ['head', 'rail'], status: 'fail'}},
+      budgets: {source: budgets, limits, massStatus: 'pass', electricalCases: [{case: 'weak', status: 'pass'}]},
       cases: [{case: 'turn', status: 'pass'}], narrativeReview: {objectives: [{objective: 'Move the sample', disposition: 'represented'}]}}));
     await pin('missions.json', JSON.stringify({missionCases: [{case: 'turn', kind: 'operating-case', accomplishes: 'delivered', objective: 'Move the sample'}]}));
     return dir;
@@ -35,6 +39,8 @@ test('season review appends immutable releases and refuses a changed source', as
   const a = await fixture('a');
   await writeFile(path.join(a, 'missions.json'), JSON.stringify({missionCases: []}));
   assert.match(stage('a').stderr, /mission-task case/);
+  await writeFile(path.join(a, 'missions.json'), JSON.stringify({missionCases: [{case: 'turn', kind: 'operating-case', accomplishes: 'admired', objective: 'Move the sample'}]}));
+  assert.match(stage('a').stderr, /Mission case turn/);
   await fixture('a');
   assert.equal(stage('a').status, 0);
   const record = JSON.parse(await readFile(path.join(site, 'releases', 'a', 'release.json')));
