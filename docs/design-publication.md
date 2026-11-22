@@ -84,7 +84,7 @@ Staging copies the review page as it is, the scene, receipt, motion, budget and 
 }
 ```
 
-A mission case names a passing operating case, what it accomplishes (`acquired`, `delivered`, `scored` or `climb-held`) and a narrative objective the receipt marks `represented`. For a contact-transport or free-path trial use `"kind": "field-interaction-trial"` with `"trial": {"file": "acquire-trial.json"}`, or `"player": "field/release-lane.html"` for a trial shown by a field player. The trial must be one the receipt names for that case. The record carries no digest of its sibling files: they are committed together, and the check compares their content.
+A mission case names a passing operating case, what it accomplishes (`acquired`, `delivered`, `scored` or `climb-held`) and a narrative objective the receipt marks `represented`. For a contact-transport, free-path or fixture-support trial use `"kind": "field-interaction-trial"` with `"trial": {"file": "acquire-trial.json"}`, or `"player": "field/release-lane.html"` for a trial shown by a field player. The trial must be one the receipt names for that case. The record carries no digest of its sibling files: they are committed together, and the check compares their content.
 
 Change a status in the same way, in a pull request:
 
