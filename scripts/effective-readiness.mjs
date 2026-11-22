@@ -94,7 +94,7 @@ function qualification(trial,name){
   return reasons;
 }
 /** The case a trial record says it ran. */
-const trialCase=trial=>object(trial)?trial.case??(object(trial.transport)?trial.transport.case:undefined)??(object(trial.freePath)?trial.freePath.case:undefined):undefined;
+const trialCase=trial=>object(trial)?trial.case??(object(trial.transport)?trial.transport.case:undefined)??(object(trial.freePath)?trial.freePath.case:undefined)??(object(trial.support)?trial.support.case:undefined):undefined;
 
 /** Criterion 2: every mission case moves on a pinned, qualified physics trial rather than a prescribed path. */
 function trialDriven(root,plan,planBytes,receipt,missions){
@@ -107,14 +107,14 @@ function trialDriven(root,plan,planBytes,receipt,missions){
     if(!named(m.case)){reasons.push('A mission case names no case');continue;}
     const where='Mission case '+m.case+(named(m.accomplishes)?' ('+m.accomplishes+')':'');
     const stage=checked&&object(receipt.stages)&&object(receipt.stages[m.case])?receipt.stages[m.case]:{};
-    const pins=[...Object.values(object(stage.transportedBy)?stage.transportedBy:{}),...Object.values(object(stage.freePath)?stage.freePath:{})]
+    const pins=['transportedBy','freePath','supportedBy'].flatMap(k=>Object.values(object(stage[k])?stage[k]:{}))
       .map(s=>object(s)?s.evidence:null).filter(object);
     if(object(m.trial))pins.push(m.trial);
     // A linked field interaction binds the motion only when its trial records this case.
     for(const pin of links){const trial=load(root,pin.file);if(!trial.reason&&trialCase(trial.json)===m.case)pins.push(pin);}
     const unique=[...new Map(pins.filter(p=>named(p.file)).map(p=>[p.file,p])).values()];
     if(!unique.length){
-      reasons.push(where+': the motion is prescribed; no trial is pinned through transportedBy, freePath, a mission trial or a linked field interaction'
+      reasons.push(where+': the motion is prescribed; no trial is pinned through transportedBy, freePath, supportedBy, a mission trial or a linked field interaction'
         +(checked?'':' (stage pins are read only from a layout-checked receipt of this plan)'));
       continue;
     }

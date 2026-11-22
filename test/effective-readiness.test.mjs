@@ -39,7 +39,7 @@ function project(t,edit=x=>x){
   for(const [name,body] of Object.entries(d.files))writeFileSync(path.join(root,name),typeof body==='string'?body:JSON.stringify(body));
   const pin=name=>({file:name,sha256:sha(readFileSync(path.join(root,name)))});
   if(d.receipt&&d.files['intake-trial.json'])d.receipt.stages.acquire.transportedBy={sample:{mechanisms:['carrier'],evidence:d.pins?.intake??pin('intake-trial.json')}};
-  if(d.receipt&&d.files['release-trial.json'])d.receipt.stages.deliver.freePath={sample:{basis:'Invented',evidence:d.pins?.release??pin('release-trial.json')}};
+  if(d.receipt&&d.files['release-trial.json'])d.receipt.stages.deliver[d.relation??'freePath']={sample:{basis:'Invented',evidence:d.pins?.release??pin('release-trial.json')}};
   const planText=JSON.stringify(d.plan);
   writeFileSync(path.join(root,'layout.json'),planText);
   if(d.receipt){if(d.receipt.planSha256===undefined)d.receipt.planSha256=sha(planText);writeFileSync(path.join(root,'receipt.json'),JSON.stringify(d.receipt));}
@@ -59,6 +59,14 @@ test('a complete synthetic package meets every exit criterion',t=>{
   assert.match(text,/^Effective-readiness report for synthetic-issue\n/);
   assert.match(text,/\[met\]     1\. Whole mission cycle/);
   assert.match(text,/verification items .*: belt-slip\nResult: 3 of 3 criteria met\.\n$/);
+});
+
+test('a trial pinned through supportedBy drives its mission case, and one for another case does not',t=>{
+  const rest=d=>{const {freePath,...trial}=d.files['release-trial.json'];d.relation='supportedBy';return trial;};
+  const supported=effectiveReadiness(project(t,d=>{d.files['release-trial.json']={...rest(d),support:{case:'deliver',fixtures:['lane']}};}));
+  assert.equal(supported.met,3,supported.criteria.flatMap(c=>c.reasons).join(' | '));
+  const other=effectiveReadiness(project(t,d=>{d.files['release-trial.json']={...rest(d),support:{case:'acquire',fixtures:['lane']}};}));
+  assert.match(other.criteria.flatMap(c=>c.reasons).join(' | '),/Mission case deliver \(delivered\): trial release-trial\.json records another case/);
 });
 
 test('the whole cycle needs a passing case for every narrative stage in a layout-checked receipt',t=>{

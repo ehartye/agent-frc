@@ -59,8 +59,8 @@ export function checkPhysics(receipt, where, {rerun = false} = {}) {
   check(duties.length && duties.every(r => r?.status === 'pass'), where + ' needs every loaded-voltage case to pass');
 }
 
-/** The trial evidence a stage names, by digest: a contact transport or an unsupported free path. */
-const trialDigests = stage => [...Object.values(stage?.transportedBy ?? {}), ...Object.values(stage?.freePath ?? {})].map(x => x?.evidence?.sha256).filter(Boolean);
+/** The trial evidence a stage names, by digest: a contact transport, an unsupported free path or a path a field fixture supports. */
+const trialDigests = stage => [...Object.values(stage?.transportedBy ?? {}), ...Object.values(stage?.freePath ?? {}), ...Object.values(stage?.supportedBy ?? {})].map(x => x?.evidence?.sha256).filter(Boolean);
 
 /** What a rerun must reproduce: the inputs by digest and every verdict. Measured values are left out; a kernel on another system may round them differently. */
 export function verdict(receipt) {
