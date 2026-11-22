@@ -49,7 +49,7 @@ def capture(case, scene, cache=None):
     bodies = {}
     for name, solid in sorted(scene.items()):
         start = _composed(case.get("initialPose", {}).get(name, []), 1)
-        # The start pose only moved the solid's location, so removing it recovers the placed STEP pose.
+        # Removing the start pose from the solid's placement recovers its placed STEP pose.
         placed = TopLoc_Location(start.Inverted()).Multiplied(solid.Location())
         entry = cache.get(name)
         if entry is None or not entry["solid"].IsPartner(solid) or not _same_placement(

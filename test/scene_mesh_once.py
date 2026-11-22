@@ -110,6 +110,25 @@ class SceneMeshOnce(unittest.TestCase):
         bodies = {name for case in self.new["cases"] for name in case["bodies"]}
         self.assertEqual(len(calls), len(bodies))
 
+    def test_another_solid_under_the_same_id_is_tessellated_again(self):
+        from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox
+        from OCP.TopLoc import TopLoc_Location
+        from OCP.gp import gp_Pnt, gp_Trsf, gp_Vec
+        case = dict(id="invented", stage="operating", moves={}, initialPose={"block": [dict(kind="translation", travelMm=[5, 0, 0])]})
+        small = BRepPrimAPI_MakeBox(gp_Pnt(0, 0, 0), gp_Pnt(10, 10, 10)).Shape()
+        shift = gp_Trsf()
+        shift.SetTranslation(gp_Vec(5, 0, 0))
+        cache = {}
+        first = capture(case, {"block": small.Moved(TopLoc_Location(shift))}, cache)
+        self.assertEqual(first["bodies"]["block"]["matrices"], [[1, 0, 0, 5, 0, 1, 0, 0, 0, 0, 1, 0]])
+        self.assertEqual(max(v[0] for v in first["bodies"]["block"]["vertices"]), 10, "the mesh is in the placed pose, before the start pose")
+        large = BRepPrimAPI_MakeBox(gp_Pnt(0, 0, 0), gp_Pnt(30, 10, 10)).Shape()
+        second = capture(dict(case, initialPose={}), {"block": large}, cache)
+        self.assertEqual(max(v[0] for v in second["bodies"]["block"]["vertices"]), 30)
+        # The same solid placed elsewhere without a declared start pose is a different placed pose.
+        third = capture(dict(case, initialPose={}), {"block": large.Moved(TopLoc_Location(shift))}, cache)
+        self.assertEqual(max(v[0] for v in third["bodies"]["block"]["vertices"]), 35)
+
     def test_the_generated_scene_still_validates_and_the_check_still_passes(self):
         from preliminary_design import review
         (self.root / package_view.SCENE_FILE).unlink()
