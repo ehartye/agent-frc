@@ -8,7 +8,7 @@ import sys
 from time import perf_counter
 
 from component_shape import proper_rotation
-from mechanical_motion import evaluate, stderr_progress, transforms, vec
+from mechanical_motion import HEARTBEAT_SECONDS, evaluate, stderr_progress, transforms, vec
 from package_budgets import budget_review
 from package_view import CONTROL_ID, capture, first_unmet, parked_assembly, verify_view
 from mechanical_readiness import digest, named, number, pinned, project_path, read, require
@@ -327,7 +327,7 @@ def verify_reopens(root, plan, prior, decisions, observations, missing, budget):
     return history
 
 
-def review(root, file, previous=None, *, write_view=False, fail_fast=False, progress=None):
+def review(root, file, previous=None, *, write_view=False, fail_fast=False, progress=None, heartbeat_seconds=HEARTBEAT_SECONDS):
     """Check one package issue. progress receives stderr-only lines; fail_fast stops at the first non-passing nominal case."""
     plan_hash=digest(file)
     plan=read(file)
@@ -501,7 +501,7 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
     # The displaced control is expected to fail, so it never stops a fail-fast run. It runs last and
     # only after every nominal case passed; otherwise it is skipped and the receipt cannot be checked.
     observed=evaluate(root,study,mount_hosts={m["on"] for m in mounts},package_scene=inspect_scene,
-                      progress=progress,fail_fast=fail_fast,never_stop={control_id})
+                      progress=progress,fail_fast=fail_fast,never_stop={control_id},heartbeat_seconds=heartbeat_seconds)
     partial=observed.get("partial",False)
     observations=observed["cases"]
     if control and partial:
@@ -607,12 +607,15 @@ if __name__=="__main__":
     parser.add_argument("--previous",help="Project-selected previous checkpoint, relative to the project")
     parser.add_argument("--fail-fast",action="store_true",
                         help="Stop at the first nominal case that does not pass and write a partial, never checked receipt")
-    parser.add_argument("--quiet",action="store_true",help="Omit progress lines on stderr")
+    parser.add_argument("--quiet",action="store_true",help="Omit progress, heartbeat and warning lines on stderr")
+    parser.add_argument("--heartbeat",type=float,default=HEARTBEAT_SECONDS,metavar="SECONDS",
+                        help="Seconds inside a motion case before a stderr line names the active pair (default 30)")
     args=parser.parse_args()
     try:
         root=args.project.resolve()
         result=review(root,project_path(root,args.plan),project_path(root,args.previous) if args.previous else None,
-                      write_view=args.write_view,fail_fast=args.fail_fast,progress=None if args.quiet else stderr_progress)
+                      write_view=args.write_view,fail_fast=args.fail_fast,progress=None if args.quiet else stderr_progress,
+                      heartbeat_seconds=args.heartbeat)
         print(json.dumps(result,indent=2,allow_nan=False))
         sys.exit(int(args.require_checked and (result.get("partial",False) or result["status"]!="layout-checked")))
     except (KeyError,IndexError,ValueError,TypeError,OSError,RuntimeError) as error:
