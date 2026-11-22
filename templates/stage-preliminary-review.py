@@ -482,6 +482,10 @@ def check_release(release):
             name = t.get("file") or ""
             ok = (ok and bool(TRIAL.fullmatch(name)) and name not in RESERVED and (release / name).is_file()
                   and sha(name) == t.get("sha256") and t.get("sha256") in pins_of(stage_))
+            # A trial pinned only for a free path must be a free-path record of this case.
+            if ok and not any((s.get("evidence") or {}).get("sha256") == t.get("sha256")
+                              for s in (stage_.get("transportedBy") or {}).values()):
+                ok = (read(release / name).get("freePath") or {}).get("case") == m.get("case")
             trials.add(name)
         elif "trial" in m:
             ok = False

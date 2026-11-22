@@ -82,6 +82,12 @@ test('a trial the receipt pins for a free payload path can carry the mission tas
   next(unpinned.site,'layout-002',{trial,freePath:true,missions:mission(trial),
     edit:r=>{delete r.stages['loaded-turn'].freePath;r.stages.park.freePath={sample:{evidence:{file:'acquire-trial.json',sha256:sha(trial)}}};return r;}});
   await assert.rejects(auditStaged(unpinned.approved,unpinned.site,unpinned.policy),/not the one the receipt pins/);
+  // A free-path record does not satisfy a contact-transport pin, nor a transport record a free-path pin.
+  for(const [record,asFree] of [[trial,false],[JSON.stringify({transport:{case:'loaded-turn',payload:'sample'}}),true]]){
+    const crossed=fixture(t);
+    next(crossed.site,'layout-002',{trial:record,freePath:asFree,missions:mission(record)});
+    await assert.rejects(auditStaged(crossed.approved,crossed.site,crossed.policy),/not the one the receipt pins/);
+  }
 });
 
 test('provisional, reopen and blocked receipts are each rejected', async t=>{
@@ -430,12 +436,13 @@ test('stage.py --check-index accepts a mission trial pinned for a free payload p
   const trial=JSON.stringify({freePath:{case:'loaded-turn',payload:'sample'}});
   const missions=[{case:'loaded-turn',kind:'field-interaction-trial',accomplishes:'delivered',
     objective:'Carry the sample to the bin',trial:{file:'acquire-trial.json',sha256:sha(trial)}}];
-  for(const [freePath,expected] of [[true,0],[false,0],['unpinned',/Mission case loaded-turn/]]){
+  for(const [freePath,expected] of [[true,0],['other-case',/Mission case loaded-turn/],['unpinned',/Mission case loaded-turn/]]){
     const temp=mkdtempSync(path.join(os.tmpdir(),'prelim-index-'));
     t.after(()=>rmSync(temp,{recursive:true,force:true}));
     const docs=path.join(temp,'docs');
     write(temp,'cad/preliminary-design/stage.py',readFileSync(path.join(plugin,'templates','stage-preliminary-review.py')));
-    issueRelease(docs,'layout-002',{trial,freePath:!!freePath,missions,
+    const used=freePath==='other-case'?JSON.stringify({freePath:{case:'park',payload:'sample'}}):trial;
+    issueRelease(docs,'layout-002',{trial:used,freePath:true,missions:[{...missions[0],trial:{file:'acquire-trial.json',sha256:sha(used)}}],
       edit:r=>{if(freePath==='unpinned')delete r.stages['loaded-turn'].freePath;return r;}});
     listing(docs,'layout-002',['layout-002']);
     const run=spawnSync(python,[path.join(temp,'cad','preliminary-design','stage.py'),'--check-index'],{encoding:'utf8'});

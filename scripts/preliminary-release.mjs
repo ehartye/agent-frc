@@ -531,8 +531,10 @@ export function checkRelease(id,files,policy={},{added=false}={}){
       const t=m.trial;
       check(object(t)&&trialName.test(t.file??'')&&files.has(t.file)&&pinMatches(t,t.file,files.get(t.file)),
         'Publish the pinned field-interaction trial for the '+where);
-      const bound=pinsOf(receipt.stages[m.case]).includes(t.sha256),record=evidence(files.get(t.file),'trial: '+id);
-      check(bound&&(record.transport?.case??record.freePath?.case)===m.case,
+      // The record must be of the relation that pins it: a transport record for transportedBy, a free-path record for freePath.
+      const record=evidence(files.get(t.file),'trial: '+id),stage=receipt.stages[m.case];
+      const pinnedAs=(relation,key)=>Object.values(stage[relation]??{}).some(s=>s?.evidence?.sha256===t.sha256)&&record[key]?.case===m.case;
+      check(pinnedAs('transportedBy','transport')||pinnedAs('freePath','freePath'),
         'The field-interaction trial for the '+where+' is not the one the receipt pins');
     }
   }
