@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-src 'self' https:; base-uri 'none'; form-action 'none'"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en"><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'none'"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Preliminary design review</title><link rel="icon" href="data:,"><link rel="stylesheet" href="../../fonts/fonts.css">
 <style>
 :root{--navy:#102746;--royal:#184e98;--blue:#194fb0;--gold:#f4c44d;--paper:#f3f6fb;--ink:#132b48;--line:#b8c8d7;--steel:#48616a;--display:"Barlow Condensed","Franklin Gothic Medium","Arial Narrow",sans-serif;--body:"Source Sans 3","Segoe UI",Arial,sans-serif;--mono:"IBM Plex Mono",Consolas,monospace}
@@ -190,7 +190,7 @@ function decide(status,unmet,source){
 function triggered(list){$('triggered').replaceChildren(...(list.length?list:['None recorded']).map(v=>text('li',typeof v==='string'?v:v.phase+': '+v.reason+(v.affected?' ('+v.affected.join(', ')+')':''))))}
 // The release index beside the releases says this release's design status; it is display only.
 async function showDesignStatus(){
- const id=location.pathname.split('/').filter(Boolean).at(-2);
+ const id=new URL('.',location.href).pathname.split('/').filter(Boolean).at(-1);
  try{const r=await fetch('../../releases.json',{cache:'no-store'});if(!r.ok)return;const index=await r.json();if(!index.releases?.includes(id))return;
   const s=index.designStatus?.[id]??'in-progress';$('designStatus').textContent=' · '+s.replace('-',' ')+(s==='withdrawn'?' (withdrawn: not a current design)':'')}catch{}
 }

@@ -78,7 +78,7 @@ function issueRelease(site,id,{status='layout-checked',edit=r=>r,missions,trial,
   write(dir,'release.json',record);
   return {dir,record};
 }
-function listing(site,current,releases,designStatus){write(site,tree+'/releases.json',{current,releases,...(designStatus?{designStatus}:{})});}
+function listing(site,current,releases,designStatus,effectiveHistory){write(site,tree+'/releases.json',{current,releases,...(designStatus?{designStatus}:{}),...(effectiveHistory?{effectiveHistory}:{})});}
 
 function fixture(t) {
   const temp=mkdtempSync(path.join(os.tmpdir(),'prelim-gate-'));
@@ -136,7 +136,7 @@ test('a layout-checked preliminary release with a mission case deploys without a
   assert.equal(result.signed,0);
   listing(site,'layout-001',['layout-001','layout-002']);
   await assert.rejects(auditStaged(approved,site,policy),/current must open the effective release, else the newest in-progress one: expected layout-002/);
-  listing(site,'layout-001',['layout-001','layout-002'],{'layout-001':'effective'});
+  listing(site,'layout-001',['layout-001','layout-002'],{'layout-001':'effective'},['layout-001']);
   assert.equal((await auditStaged(approved,site,policy)).preliminary.current,'layout-001','the stable URL opens the effective release');
 });
 
@@ -505,37 +505,62 @@ test('an issued field player is immutable', async t=>{
 test('design status lives in the index: effective, superseded and withdrawn without touching an issued release', async t=>{
   const {approved,site,policy}=fixture(t);
   next(site,'layout-002');
-  // The approved site now holds both releases, each in progress.
   cpSync(site,approved,{recursive:true,force:true});
-  const audit=()=>auditStaged(approved,site,policy);
-  listing(site,'layout-001',['layout-001','layout-002'],{'layout-001':'effective'});
+  const audit=()=>auditStaged(approved,site,policy),ids=['layout-001','layout-002'];
+  listing(site,'layout-001',ids,{'layout-001':'effective'},['layout-001']);
   const flipped=await audit();
   assert.deepEqual([flipped.preliminary.effective,flipped.preliminary.added],['layout-001',[]],'an index change alone marks a release effective');
-  for(const [statuses,current,pattern] of [
-    [{'layout-001':'final'},'layout-002',/designStatus maps listed release IDs/],
-    [{'layout-009':'effective'},'layout-002',/designStatus maps listed release IDs/],
-    [{'layout-001':'effective','layout-002':'effective'},'layout-001',/At most one/],
-    [{'layout-001':'superseded'},'layout-002',/cannot move from in-progress to superseded/]]){
-    listing(site,current,['layout-001','layout-002'],statuses);
+  for(const [statuses,history,current,pattern] of [
+    [{'layout-001':'final'},[],'layout-002',/designStatus maps listed release IDs/],
+    [{'layout-009':'effective'},[],'layout-002',/designStatus maps listed release IDs/],
+    [{'layout-001':'effective','layout-002':'effective'},['layout-001','layout-002'],'layout-001',/At most one/],
+    [{'layout-001':'effective'},[],'layout-001',/last entry in effectiveHistory/],
+    [{'layout-001':'superseded'},[],'layout-002',/cannot move from in-progress to superseded/]]){
+    listing(site,current,ids,statuses,history);
     await assert.rejects(audit(),pattern,JSON.stringify(statuses));
   }
-  // Approve layout-001 as effective, then make layout-002 effective: it must have been checked against layout-001.
-  listing(site,'layout-001',['layout-001','layout-002'],{'layout-001':'effective'});
+  // Approve layout-001 as effective. A successor cannot supersede it without its checkpoint, and nothing is superseded alone.
+  listing(site,'layout-001',ids,{'layout-001':'effective'},['layout-001']);
   cpSync(site,approved,{recursive:true,force:true});
-  listing(site,'layout-002',['layout-001','layout-002'],{'layout-001':'effective','layout-002':'effective'});
-  await assert.rejects(audit(),/At most one/);
-  listing(site,'layout-002',['layout-001','layout-002'],{'layout-001':'superseded','layout-002':'effective'});
-  await assert.rejects(audit(),/checked against the previous effective one/);
-  const dir=path.join(site,tree,'releases','layout-002'),prior=readFileSync(path.join(site,tree,'releases','layout-001','receipt.json'));
-  const receipt=JSON.parse(readFileSync(path.join(dir,'receipt.json'),'utf8'));
-  write(dir,'receipt.json',JSON.stringify({...receipt,previousCheckpointSha256:sha(prior)},null,2));
-  await assert.rejects(audit(),/An earlier preliminary release changed/,'an issued release stays byte-immutable');
-  write(dir,'receipt.json',JSON.stringify(receipt,null,2));
-  listing(site,'layout-002',['layout-001','layout-002'],{'layout-001':'withdrawn'});
+  listing(site,'layout-002',ids,{'layout-001':'superseded'},['layout-001']);
+  await assert.rejects(audit(),/cannot move from effective to superseded/,'superseded needs a successor');
+  listing(site,'layout-002',ids,{'layout-001':'superseded','layout-002':'effective'},['layout-001','layout-002']);
+  await assert.rejects(audit(),/checked against the previous effective one, layout-001/);
+  // Withdrawing the effective release first does not skip the check: the history remembers it.
+  listing(site,'layout-002',ids,{'layout-001':'withdrawn'},['layout-001']);
   assert.equal((await audit()).preliminary.current,'layout-002','a withdrawn release is never current');
   cpSync(site,approved,{recursive:true,force:true});
-  listing(site,'layout-001',['layout-001','layout-002'],{'layout-001':'effective'});
+  listing(site,'layout-002',ids,{'layout-001':'withdrawn','layout-002':'effective'},['layout-001','layout-002']);
+  await assert.rejects(audit(),/checked against the previous effective one, layout-001/);
+  listing(site,'layout-001',ids,{'layout-001':'effective'},['layout-001']);
   await assert.rejects(audit(),/cannot move from withdrawn to effective/,'nothing returns from withdrawn');
+  const issued=readFileSync(path.join(site,tree,'releases','layout-002','receipt.json'));
+  write(path.join(site,tree,'releases','layout-002'),'receipt.json',Buffer.concat([issued,Buffer.from(' ')]));
+  listing(site,'layout-002',ids,{'layout-001':'withdrawn'},['layout-001']);
+  await assert.rejects(audit(),/An earlier preliminary release changed/,'an issued release stays byte-immutable');
+});
+
+test('a successor checked against the effective release can supersede it', async t=>{
+  const {approved,site,policy}=fixture(t);
+  listing(site,'layout-001',['layout-001'],{'layout-001':'effective'},['layout-001']);
+  cpSync(site,approved,{recursive:true,force:true});
+  const prior=readFileSync(path.join(site,tree,'releases','layout-001','receipt.json'));
+  issueRelease(site,'layout-002',{edit:r=>({...r,previousCheckpointSha256:sha(prior)})});
+  listing(site,'layout-002',['layout-001','layout-002'],{'layout-001':'superseded','layout-002':'effective'},['layout-001','layout-002']);
+  const result=await auditStaged(approved,site,policy);
+  assert.deepEqual([result.preliminary.added,result.preliminary.effective,result.preliminary.current],[['layout-002'],'layout-002','layout-002'],
+    'a new release can enter effective when checked against its predecessor');
+  listing(site,'layout-002',['layout-001','layout-002'],{'layout-001':'effective','layout-002':'effective'},['layout-001','layout-002']);
+  await assert.rejects(auditStaged(approved,site,policy),/At most one/);
+});
+
+test('a catalog of releases issued with the earlier label still verifies', async t=>{
+  const {site}=fixture(t);
+  const {dir}=issueRelease(site,'layout-002',{field:{page:fieldPage.replace('<p>Preliminary design release</p>','<p>Work-in-progress preliminary design</p>')}});
+  rewrite(dir,'release.json',r=>{delete r.phase;r.label='Work-in-progress preliminary design';});
+  assert.equal((await verifyRelease(dir)).release,'layout-002','an issued record keeps its label');
+  listing(site,'layout-002',['layout-001','layout-002']);
+  assert.deepEqual(verifyCatalog(path.join(site,tree),{}).releases,['layout-001','layout-002']);
 });
 
 test('a release must name its phase and the page must say it is a preliminary design', async t=>{

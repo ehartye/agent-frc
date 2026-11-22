@@ -49,13 +49,18 @@ export function compareTemplate(html){
   for(let i=0;i<Math.max(a.length,b.length)&&differences.length<20;i++)if(a[i]!==b[i])differences.push({line:i+1,page:a[i]??null,stock:b[i]??null});
   return {stock:false,csp,differences};
 }
-/** The status a release has in an index: listed releases without an entry are in progress. */
-export const statusOf=(index,id)=>index?.designStatus?.[id]??'in-progress';
+/** A record issued before releases named their phase carried this label; it still identifies the phase. */
+export const issuedLabel='Work-in-progress preliminary design';
+/**
+ * The status a release has in an index. A listed release without an entry is in progress, except a historical
+ * review, which is superseded by definition.
+ */
+export const statusOf=(index,id,historical=new Set())=>index?.designStatus?.[id]??(historical.has(id)?'superseded':'in-progress');
 /** The release the stable URL opens: the effective release, else the newest in-progress one, else the newest not withdrawn. */
-export function currentFor(index){
-  const ids=index.releases;
-  return ids.find(i=>statusOf(index,i)==='effective')??[...ids].reverse().find(i=>statusOf(index,i)==='in-progress')
-    ??[...ids].reverse().find(i=>statusOf(index,i)!=='withdrawn')??ids.at(-1);
+export function currentFor(index,historical=new Set()){
+  const ids=index.releases,st=i=>statusOf(index,i,historical);
+  return ids.find(i=>st(i)==='effective')??[...ids].reverse().find(i=>st(i)==='in-progress')
+    ??[...ids].reverse().find(i=>st(i)!=='withdrawn'&&!historical.has(i))??ids.at(-1);
 }
 /**
  * The release index's design statuses and each change against the approved index. Allowed: in-progress to effective,
@@ -63,32 +68,42 @@ export function currentFor(index){
  * from superseded or withdrawn. A release made effective after an earlier effective one must have been checked
  * against it: its receipt's previousCheckpointSha256 is the earlier release's receipt digest.
  */
-export function checkStatusChange(before,after,receipts){
-  const ids=after.releases,map=after.designStatus;
+export function checkStatusChange(before,after,receipts,{historical=new Set(),legacy=[]}={}){
+  const ids=after.releases,map=after.designStatus,st=(index,i)=>statusOf(index,i,historical);
   check(map===undefined||object(map)&&Object.entries(map).every(([id,v])=>ids.includes(id)&&designStatuses.includes(v)),
     'designStatus maps listed release IDs to '+designStatuses.join(', '));
-  const effective=ids.filter(i=>statusOf(after,i)==='effective');
+  // Every release ever made effective, in order. It only grows, so withdrawing an effective release first cannot
+  // skip the predecessor check for the next one.
+  const history=after.effectiveHistory??[],priorHistory=before?.effectiveHistory??[];
+  check(Array.isArray(history)&&history.every(i=>ids.includes(i))&&new Set(history).size===history.length&&
+    priorHistory.every((i,n)=>history[n]===i),'effectiveHistory lists each release made effective once, in order, and only grows');
+  const effective=ids.filter(i=>st(after,i)==='effective');
   check(effective.length<=1,'At most one preliminary design release is effective');
-  check(after.current===currentFor(after),'current must open the effective release, else the newest in-progress one: expected '+currentFor(after));
-  const was=id=>before?.releases?.includes(id)?statusOf(before,id):null;
-  const priorEffective=(before?.releases??[]).find(i=>statusOf(before,i)==='effective')??null;
+  check(effective.every(i=>history.at(-1)===i),'The effective release must be the last entry in effectiveHistory');
+  check(after.current===currentFor(after,historical),'current must open the effective release, else the newest in-progress one: expected '+currentFor(after,historical));
+  const was=id=>before?.releases?.includes(id)?st(before,id):null;
+  const promoted=ids.filter(i=>st(after,i)==='effective'&&was(i)!=='effective');
   for(const id of ids){
-    const from=was(id),to=statusOf(after,id);
-    if(from===null){check(['in-progress','effective'].includes(to),'A new preliminary release enters in progress or effective: '+id);}
-    else if(from!==to)check(to==='withdrawn'&&from!=='withdrawn'||from==='in-progress'&&to==='effective'||from==='effective'&&to==='superseded',
+    const from=was(id),to=st(after,id);
+    if(from===null)check(['in-progress','effective'].includes(to)||historical.has(id)&&to==='superseded','A new preliminary release enters in progress or effective: '+id);
+    else if(from!==to)check(to==='withdrawn'&&from!=='withdrawn'||from==='in-progress'&&to==='effective'||from==='effective'&&to==='superseded'&&promoted.length,
       'Preliminary release '+id+' cannot move from '+from+' to '+to);
-    if(to==='effective'&&from!=='effective'&&priorEffective&&priorEffective!==id){
-      check(statusOf(after,priorEffective)==='superseded'||statusOf(after,priorEffective)==='withdrawn',
-        'Mark the previous effective release '+priorEffective+' superseded when '+id+' becomes effective');
-      const prior=receipts.get(priorEffective),mine=receipts.get(id);
-      check(prior&&mine&&parse(mine,'receipt: '+id).previousCheckpointSha256===sha(prior),
-        'An effective release must be checked against the previous effective one (--previous its receipt): '+id);
-    }
     if(to==='effective'&&from!=='effective'){
+      check(!legacy.includes(id)&&!historical.has(id),'A legacy or historical release cannot become effective: '+id);
       const r=receipts.get(id);
       check(r&&parse(r,'receipt: '+id).status==='layout-checked','An effective preliminary release needs a layout-checked receipt: '+id);
+      check(!priorHistory.includes(id),'A release cannot become effective again: '+id);
+      const predecessor=priorHistory.at(-1);
+      if(predecessor){
+        check(st(after,predecessor)!=='effective','Mark the previous effective release '+predecessor+' superseded when '+id+' becomes effective');
+        const prior=receipts.get(predecessor);
+        check(prior&&parse(r,'receipt: '+id).previousCheckpointSha256===sha(prior),
+          'An effective release must be checked against the previous effective one, '+predecessor+' (--previous its receipt): '+id);
+      }
+      check(history.at(-1)===id&&history.length===priorHistory.length+1,'Append '+id+' to effectiveHistory when it becomes effective');
     }
   }
+  check(promoted.length||history.length===priorHistory.length,'effectiveHistory grows only when a release becomes effective');
   return {effective:effective[0]??null,current:after.current};
 }
 /**
@@ -376,7 +391,7 @@ export function checkSelfContained(bytes,where){
   if(policies!==1)fail('declare exactly one http-equiv element, the policy');
   if(/\b(?:fetch|importScripts|sendBeacon)\s*\(|\b(?:XMLHttpRequest|WebSocket|EventSource|RTCPeerConnection)\b/.test(html))
     fail('a network API');
-  if(!html.includes(phaseText))fail('say on the page that it is a "'+phaseText+'" release');
+  if(!html.includes(phaseText)&&!html.includes(issuedLabel))fail('say on the page that it is a "'+phaseText+'" release');
 }
 
 /**
@@ -385,7 +400,7 @@ export function checkSelfContained(bytes,where){
  * control rejected and no missing inputs. Mission: at least one passing, playable operating case or
  * receipt-bound field-interaction trial accomplishes a represented narrative objective.
  */
-export function checkRelease(id,files,policy={}){
+export function checkRelease(id,files,policy={},{added=false}={}){
   check(releaseId.test(id),'Invalid preliminary release ID: '+id);
   check(files.has('release.json'),'Preliminary release '+id+' has no release record (release.json)');
   const record=parse(files.get('release.json'),'release record: '+id);
@@ -414,7 +429,8 @@ export function checkRelease(id,files,policy={}){
     check(record.view?.file==='package-motion.html'&&files.has('package-motion.html'),'Missing checked player: '+id);
   }
   const checkedView=approved?'package-motion.html':'index.html';
-  check(record.phase===releasePhase,'Release '+id+' must identify its phase: "phase": "'+releasePhase+'"');
+  // A newly added release names its phase; a release issued earlier may carry the label it was issued with.
+  check(record.phase===releasePhase||!added&&record.label===issuedLabel,'Release '+id+' must identify its phase: "phase": "'+releasePhase+'"');
   const trials=new Set();
   const missions=record.missionCases;
   // Season field-interaction players, listed and pinned by the release record.
@@ -460,7 +476,7 @@ export function checkRelease(id,files,policy={}){
   check(pinMatches(record.view,checkedView,view)&&object(receipt.view)&&receipt.view.verified===true&&receipt.view.sha256===record.view.sha256,
     'Published view differs from the receipt and release record: '+id);
   // The page is the season's own copy of the stock page: only its preliminary-design identity is checked.
-  check(lf(view).includes(phaseText),'The release page must say it is a "'+phaseText+'" release: '+id);
+  check(lf(view).includes(phaseText)||!added&&lf(view).includes(issuedLabel),'The release page must say it is a "'+phaseText+'" release: '+id);
   // Everything the page displays as a result comes from the pinned scene, which must repeat the receipt's result,
   // including the displaced control the receipt reports separately as rejected.
   const pinned=pinnedScene(files.get(sceneFile),receipt);
@@ -570,7 +586,7 @@ export function verifyCatalog(dir,policy){
   }
   check(!lstatSync(dir).isSymbolicLink(),'Redirected preliminary catalog');
   visit(dir,'');
-  return auditTree(new Map(),files,policy);
+  return auditTree(new Map(),files,policy,{issued:true});
 }
 
 /** Validate the trusted policy field. Paths are relative to the deployed site. */
@@ -657,7 +673,7 @@ function elementContentAt(html){
  * Compare the preliminary tree of an approved and candidate site.
  * read(folder,name) returns bytes; oldNames and newNames are the tree-relative inventories.
  */
-export function auditTree(oldFiles,newFiles,policy={}){
+export function auditTree(oldFiles,newFiles,policy={},{issued=false}={}){
   const group=files=>{
     const top=new Map(),releases=new Map();
     for(const [name,bytes] of files){
@@ -697,7 +713,7 @@ export function auditTree(oldFiles,newFiles,policy={}){
   check(after.top.has('releases.json'),'Publish the preliminary release index (releases.json)');
   const index=parse(after.top.get('releases.json'),'preliminary release index');
   const ids=index?.releases;
-  check(object(index)&&Object.keys(index).every(k=>['current','releases','legacy','designStatus'].includes(k))&&Array.isArray(ids)&&ids.length&&
+  check(object(index)&&Object.keys(index).every(k=>['current','releases','legacy','designStatus','effectiveHistory'].includes(k))&&Array.isArray(ids)&&ids.length&&
     ids.every(i=>typeof i==='string'&&releaseId.test(i))&&new Set(ids).size===ids.length&&ids.includes(index.current),
     'The preliminary release index needs unique release IDs and a listed current release');
   // Releases deployed before release records existed may be named as legacy, but only if already approved.
@@ -712,7 +728,8 @@ export function auditTree(oldFiles,newFiles,policy={}){
   const added=ids.filter(i=>!before.releases.has(i));
   check(!added.length||lf(viewer).includes(phaseText),'The stable preliminary viewer must say it lists "'+phaseText+'" releases');
   const receipts=new Map(ids.map(i=>[i,after.releases.get(i)?.get('receipt.json')]).filter(([,r])=>r));
-  const status=checkStatusChange(priorIndex,index,receipts);
+  const historical=new Set(ids.filter(i=>{const r=after.releases.get(i)?.get('release.json');return r&&parse(r,'release record: '+i).status==='historical-review';}));
+  const status=checkStatusChange(priorIndex,index,receipts,{historical,legacy:index.legacy??[]});
   for(const id of ids){
     const files=after.releases.get(id);
     if(files.has('release.json')){
@@ -721,7 +738,8 @@ export function auditTree(oldFiles,newFiles,policy={}){
         'A historical review needs a later indexed successor and cannot be current: '+id);
     }
   }
-  for(const id of added)checkRelease(id,after.releases.get(id),policy);
+  // A catalog check reads releases already issued, which may carry the label they were issued with.
+  for(const id of added)checkRelease(id,after.releases.get(id),policy,{added:!issued});
   return {releases:ids,added,current:index.current,effective:status.effective};
 }
 
@@ -739,7 +757,7 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1]
   const args=process.argv.slice(2),compare=args.includes('--compare-template'),[mode,dir,...rest]=args.filter(a=>a!=='--compare-template');
   try{
     if(mode==='compare-template'&&dir&&!rest.length){console.log(JSON.stringify(templateReport(dir),null,2));}
-    else if(['verify','verify-catalog'].includes(mode)&&dir&&(!rest.length||rest.length===2&&rest[0]==='--policy')){
+    else if(['verify','verify-catalog'].includes(mode)&&dir&&(!rest.length||rest.length===2&&rest[0]==='--policy')&&!(compare&&mode==='verify-catalog')){
       const policy=rest.length?preliminaryPolicy(parse(readFileSync(rest[1]),'site policy').preliminaryReleases,[]):{};
       const result=mode==='verify'?await verifyRelease(dir,policy??{}):verifyCatalog(dir,policy??{});
       console.log(JSON.stringify(result,null,2));

@@ -16,7 +16,7 @@ test('season review appends immutable releases and refuses a changed source', as
   await mkdir(author, { recursive: true });
   const script = path.join(author, 'stage.py');
   await writeFile(script, await readFile(fileURLToPath(new URL('../templates/stage-preliminary-review.py', import.meta.url))));
-  async function fixture(id) {
+  async function fixture(id, extra = {}) {
     const dir = path.join(author, 'releases', id);
     await mkdir(dir, { recursive: true });
     async function pin(file, content) {
@@ -34,7 +34,7 @@ test('season review appends immutable releases and refuses a changed source', as
       status: 'layout-checked', missingInputs: [], reopen: [], step: {file: 'package.step', sha256: 'a'.repeat(64)}, motion,
       stages: {turn: {purpose: 'operating'}}, cycle: ['turn'], control: {witness: {pair: ['head', 'rail'], status: 'fail'}},
       budgets: {source: budgets, limits, massStatus: 'pass', electricalCases: [{case: 'weak', status: 'pass'}]},
-      cases: [{case: 'turn', status: 'pass'}], narrativeReview: {objectives: [{objective: 'Move the sample', disposition: 'represented'}]}}));
+      cases: [{case: 'turn', status: 'pass'}], narrativeReview: {objectives: [{objective: 'Move the sample', disposition: 'represented'}]}, ...extra}));
     await pin('missions.json', JSON.stringify({missionCases: [{case: 'turn', kind: 'operating-case', accomplishes: 'delivered', objective: 'Move the sample'}]}));
     return dir;
   }
@@ -70,26 +70,38 @@ test('season review appends immutable releases and refuses a changed source', as
   // Design status changes the index only; the issued directories stay byte for byte.
   const before = await readFile(path.join(site,'releases','a','index.html'));
   assert.equal(stage('--set-status','a','effective').status, 0);
-  assert.deepEqual(JSON.parse(await readFile(listing)), {current:'a',releases:['a','b'],designStatus:{a:'effective',b:'in-progress'}});
+  assert.deepEqual(JSON.parse(await readFile(listing)), {current:'a',releases:['a','b'],designStatus:{a:'effective',b:'in-progress'},effectiveHistory:['a']});
   assert.deepEqual(await readFile(path.join(site,'releases','a','index.html')), before);
   assert.match(stage('--set-status','b','effective').stderr, /Check b against the effective release a/, 'an effective successor is checked against its predecessor');
   assert.match(stage('--set-status','a','superseded').stderr, /effective or withdrawn/);
-  assert.equal(stage('--set-status','b','withdrawn').status, 0);
-  assert.match(stage('--set-status','b','effective').stderr, /cannot move from withdrawn to effective/);
-  await writeFile(listing, JSON.stringify({current:'b',releases:['a','b'],designStatus:{a:'effective',b:'withdrawn'}}));
+  // Withdrawing the effective release first still leaves it as the predecessor a successor must be checked against.
+  assert.equal(stage('--set-status','a','withdrawn').status, 0);
+  assert.equal(JSON.parse(await readFile(listing)).current, 'b');
+  assert.match(stage('--set-status','b','effective').stderr, /Check b against the effective release a/);
+  assert.match(stage('--set-status','a','effective').stderr, /cannot move from withdrawn to effective/);
+  // A successor staged with --previous the predecessor's receipt can become effective.
+  const prior = createHash('sha256').update(await readFile(path.join(site,'releases','a','receipt.json'))).digest('hex');
+  await fixture('c', {previousCheckpointSha256: prior});
+  assert.equal(stage('c').status, 0);
+  assert.equal(stage('--set-status','c','effective').status, 0);
+  assert.deepEqual(JSON.parse(await readFile(listing)), {current:'c',releases:['a','b','c'],designStatus:{a:'withdrawn',b:'in-progress',c:'effective'},effectiveHistory:['a','c']});
+  await writeFile(listing, JSON.stringify({current:'b',releases:['a','b','c'],designStatus:{a:'withdrawn',c:'effective'},effectiveHistory:['a','c']}));
   assert.match(stage('--check-index').stderr, /current must open the effective release/);
-  await writeFile(listing, JSON.stringify({current:'a',releases:['a','b'],designStatus:{a:'final'}}));
+  await writeFile(listing, JSON.stringify({current:'c',releases:['a','b','c'],designStatus:{a:'final'}}));
   assert.match(stage('--check-index').stderr, /designStatus maps listed release IDs/);
-  await writeFile(listing, JSON.stringify({current:'b',releases:['a','b'],designStatus:{a:'in-progress',b:'in-progress'}}));
+  await writeFile(listing, JSON.stringify({current:'c',releases:['a','b','c'],designStatus:{c:'effective'}}));
+  assert.match(stage('--check-index').stderr, /last in effectiveHistory/);
+  await writeFile(listing, JSON.stringify({current:'c',releases:['a','b','c'],designStatus:{a:'withdrawn',c:'effective'},effectiveHistory:['a','c']}));
   // A release published before release records existed fails the check until it is listed as legacy.
   const old = path.join(site, 'releases', 'old');
   await mkdir(old);
   await writeFile(path.join(old, 'index.html'), '<html>Preliminary design old</html>');
   await writeFile(path.join(old, 'receipt.json'), JSON.stringify({view: {sha256: createHash('sha256').update('<html>Preliminary design old</html>').digest('hex')}}));
-  await writeFile(listing, JSON.stringify({current:'b',releases:['old','a','b']}));
+  const statuses = {designStatus:{a:'withdrawn',c:'effective'},effectiveHistory:['a','c']};
+  await writeFile(listing, JSON.stringify({current:'c',releases:['old','a','b','c'],...statuses}));
   assert.match(stage('--check-index').stderr, /no release record/);
-  await writeFile(listing, JSON.stringify({current:'b',releases:['old','a','b'],legacy:['old']}));
+  await writeFile(listing, JSON.stringify({current:'c',releases:['old','a','b','c'],legacy:['old'],...statuses}));
   assert.equal(stage('--check-index').status, 0);
-  await writeFile(listing, JSON.stringify({current:'b',releases:['old','a','b'],legacy:['old','b']}));
+  await writeFile(listing, JSON.stringify({current:'c',releases:['old','a','b','c'],legacy:['old','b'],...statuses}));
   assert.match(stage('--check-index').stderr, /earliest entries/, 'a legacy entry cannot excuse a later release');
 });

@@ -51,9 +51,9 @@ def index(site, recovering=None, verifier=None, policy=None):
     dirs = {p.name for p in (site / "releases").iterdir() if p.is_dir() and not p.name.startswith(".")}
     if set(names) - dirs or dirs - set(names) - {recovering}:
         raise ValueError("Release index and immutable directories disagree. Reconcile every release before publishing.")
-    if set(record) - {"current", "releases", "legacy", "designStatus"}:
+    if set(record) - {"current", "releases", "legacy", "designStatus", "effectiveHistory"}:
         raise ValueError("Unknown release index field")
-    check_statuses(record)
+    check_statuses(record, site)
     for name in names:
         release = site / "releases" / name
         if policy and name in read(policy).get("preliminaryReleases", {}).get("presentations", {}):
@@ -84,30 +84,51 @@ ISSUED_LABEL = "Work-in-progress preliminary design"
 STATUSES = ("in-progress", "effective", "superseded", "withdrawn")
 
 
-def status_of(record, release):
-    """A listed release without a designStatus entry is in progress."""
-    return (record.get("designStatus") or {}).get(release, "in-progress")
+def historical_ids(site, record):
+    """Historical reviews are superseded by definition and never open as current."""
+    out = set()
+    for name in record["releases"]:
+        path = site / "releases" / name / "release.json"
+        if path.is_file() and read(path).get("status") == "historical-review":
+            out.add(name)
+    return out
 
 
-def current_for(record):
+def status_of(record, release, historical=frozenset()):
+    """A listed release without a designStatus entry is in progress, or superseded when it is a historical review."""
+    return (record.get("designStatus") or {}).get(release, "superseded" if release in historical else "in-progress")
+
+
+def current_for(record, historical=frozenset()):
     """The release the stable URL opens: the effective one, else the newest in-progress one, else the newest not withdrawn."""
     names = record["releases"]
-    return (next((n for n in names if status_of(record, n) == "effective"), None)
-            or next((n for n in reversed(names) if status_of(record, n) == "in-progress"), None)
-            or next((n for n in reversed(names) if status_of(record, n) != "withdrawn"), None)
+    st = lambda n: status_of(record, n, historical)
+    return (next((n for n in names if st(n) == "effective"), None)
+            or next((n for n in reversed(names) if st(n) == "in-progress"), None)
+            or next((n for n in reversed(names) if st(n) != "withdrawn" and n not in historical), None)
             or (names[-1] if names else None))
 
 
-def check_statuses(record):
+def check_statuses(record, site=None):
+    """The index's own design-status rules; changes against an approved index are the release gate's to check."""
+    historical = historical_ids(site, record) if site else set()
     statuses = record.get("designStatus")
     if statuses is not None and (not isinstance(statuses, dict) or any(
             k not in record["releases"] or v not in STATUSES for k, v in statuses.items())):
         raise ValueError("designStatus maps listed release IDs to " + ", ".join(STATUSES))
-    if sum(status_of(record, n) == "effective" for n in record["releases"]) > 1:
+    history = record.get("effectiveHistory", [])
+    if (not isinstance(history, list) or len(set(history)) != len(history) or any(n not in record["releases"] for n in history)):
+        raise ValueError("effectiveHistory lists each release made effective once, in order")
+    effective = [n for n in record["releases"] if status_of(record, n, historical) == "effective"]
+    if len(effective) > 1:
         raise ValueError("At most one preliminary design release is effective")
-    if record["releases"] and record.get("current") != current_for(record):
+    if effective and (history[-1:] != effective or effective[0] in record.get("legacy", []) or effective[0] in historical):
+        raise ValueError("The effective release must be the last in effectiveHistory and not a legacy or historical release")
+    if effective and site and read(site / "releases" / effective[0] / "receipt.json").get("status") != "layout-checked":
+        raise ValueError("An effective preliminary release needs a layout-checked receipt: " + effective[0])
+    if record["releases"] and record.get("current") != current_for(record, historical):
         raise ValueError("current must open the effective release, else the newest in-progress one: expected "
-                         + str(current_for(record)))
+                         + str(current_for(record, historical)))
 RESERVED = {"index.html", "receipt.json", "motion.json", "release.json", "budgets.json", "limits.json"}
 TRIAL = re.compile(r"[a-z0-9][a-z0-9._-]{0,127}\.json")
 GEOMETRY = re.compile(r"[a-z0-9][a-z0-9._-]{0,110}\.geometry\.json\.gz")
@@ -305,7 +326,7 @@ def self_contained(html):
         return "declare exactly one http-equiv element, the policy"
     if NETWORK.search(html):
         return "a network API"
-    if PHASE_TEXT not in html:
+    if PHASE_TEXT not in html and ISSUED_LABEL not in html:
         return 'say on the page that it is a "' + PHASE_TEXT + '" release'
     return None
 
@@ -358,7 +379,8 @@ def check_release(release):
             or not (record.get("phase") == PHASE or record.get("label") == ISSUED_LABEL)
             or record.get("issue") != receipt.get("issue")):
         fail("Release record names a different schema, release, phase or issue")
-    if PHASE_TEXT not in (release / "index.html").read_text(encoding="utf-8", errors="replace"):
+    page = (release / "index.html").read_text(encoding="utf-8", errors="replace")
+    if PHASE_TEXT not in page and not (record.get("label") == ISSUED_LABEL and ISSUED_LABEL in page):
         fail('The release page must say it is a "' + PHASE_TEXT + '" release')
     pins = [(record.get("receipt") or {}, "receipt.json"), (record.get("view") or {}, "index.html"),
             (record.get("scene") or {}, "motion.json")]
@@ -554,13 +576,13 @@ def stage(season, inputs, release, verifier=None, policy=None):
         record["releases"].append(release)
         # A new release enters in progress; the stable URL keeps opening the effective release when there is one.
         record.setdefault("designStatus", {})[release] = "in-progress"
-        record["current"] = current_for(record)
+        record["current"] = current_for(record, historical_ids(site, record))
         new_index = Path(tmp) / "releases.json"
         new_index.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
         new_index.replace(site / "releases.json")
 
 
-def set_status(site, release, status):
+def set_status(site, release, status, verifier=None, policy=None):
     """Mark a release effective or withdrawn in the index; the issued directory never changes.
 
     Making a release effective supersedes the previous effective release. When one existed, the new release must
@@ -568,10 +590,14 @@ def set_status(site, release, status):
     if status not in ("effective", "withdrawn"):
         raise ValueError("Set a release effective or withdrawn; superseded follows automatically")
     with update_index(site):
-        record = index(site)
+        record = index(site, verifier=verifier, policy=policy)
         if release not in record["releases"]:
             raise ValueError("Unknown release: " + release)
-        before = status_of(record, release)
+        historical = historical_ids(site, record)
+        if release in historical or release in record.get("legacy", []):
+            if status == "effective":
+                raise ValueError("A legacy or historical release cannot become effective: " + release)
+        before = status_of(record, release, historical)
         if before in ("superseded", "withdrawn") or before == status:
             raise ValueError("Preliminary release " + release + " cannot move from " + before + " to " + status)
         statuses = record.setdefault("designStatus", {})
@@ -580,16 +606,22 @@ def set_status(site, release, status):
             receipt = json.loads(receipt_bytes)
             if receipt.get("status") != "layout-checked":
                 raise ValueError("An effective preliminary release needs a layout-checked receipt: " + release)
-            previous = next((n for n in record["releases"] if status_of(record, n) == "effective"), None)
+            history = record.setdefault("effectiveHistory", [])
+            if release in history:
+                raise ValueError("A release cannot become effective again: " + release)
+            # The predecessor is the last release ever made effective, even if it was withdrawn since.
+            previous = history[-1] if history else None
             if previous:
                 prior = hashlib.sha256((site / "releases" / previous / "receipt.json").read_bytes()).hexdigest()
                 if receipt.get("previousCheckpointSha256") != prior:
                     raise ValueError("Check " + release + " against the effective release " + previous
                                      + " (--previous its receipt.json) before making it effective")
-                statuses[previous] = "superseded"
+                if status_of(record, previous, historical) == "effective":
+                    statuses[previous] = "superseded"
+            history.append(release)
         statuses[release] = status
-        record["current"] = current_for(record)
-        check_statuses(record)
+        record["current"] = current_for(record, historical)
+        check_statuses(record, site)
         with tempfile.NamedTemporaryFile("w", dir=site, delete=False, encoding="utf-8", suffix=".json") as out:
             out.write(json.dumps(record, indent=2) + "\n")
         Path(out.name).replace(site / "releases.json")
@@ -626,6 +658,6 @@ if __name__ == "__main__":
         index(base.parents[1] / "docs/preliminary-design", verifier=args.verifier, policy=args.policy)
         template_report(base.parents[1] / "docs/preliminary-design", args.verifier)
     elif args.set_status:
-        set_status(base.parents[1] / "docs/preliminary-design", *args.set_status)
+        set_status(base.parents[1] / "docs/preliminary-design", *args.set_status, verifier=args.verifier, policy=args.policy)
     else:
         stage(base.parents[1], base / "releases" / args.release, args.release, args.verifier, args.policy)
