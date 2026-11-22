@@ -43,6 +43,9 @@ def index(site, recovering=None):
     names = record["releases"]
     if len(names) != len(set(names)) or (names and record.get("current") not in names):
         raise ValueError("Release index has a duplicate ID or an unknown current release")
+    legacy = record.get("legacy", [])
+    if names[:len(legacy)] != legacy:
+        raise ValueError("Legacy releases must be the earliest entries in the release index, in order")
     dirs = {p.name for p in (site / "releases").iterdir() if p.is_dir() and not p.name.startswith(".")}
     if set(names) - dirs or dirs - set(names) - {recovering}:
         raise ValueError("Release index and immutable directories disagree. Reconcile every release before publishing.")
@@ -51,7 +54,9 @@ def index(site, recovering=None):
         expected = read(release / "receipt.json")["view"]["sha256"]
         if hashlib.sha256((release / "index.html").read_bytes()).hexdigest() != expected:
             raise ValueError("Indexed view differs from receipt: " + name)
-        check_release(release)
+        # A release deployed before release records existed stays as published; list it once under "legacy".
+        if name not in record.get("legacy", []) or (release / "release.json").exists():
+            check_release(release)
     return record
 
 

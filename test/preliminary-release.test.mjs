@@ -63,4 +63,15 @@ test('season review appends immutable releases and refuses a changed source', as
   assert.equal(stage('--check-index').status, 0);
   for (const id of ['a','b'])
     assert.equal(await readFile(path.join(site,'releases',id,'index.html'),'utf8'), '<html>'+id+'</html>');
+  // A release published before release records existed fails the check until it is listed as legacy.
+  const old = path.join(site, 'releases', 'old');
+  await mkdir(old);
+  await writeFile(path.join(old, 'index.html'), '<html>old</html>');
+  await writeFile(path.join(old, 'receipt.json'), JSON.stringify({view: {sha256: createHash('sha256').update('<html>old</html>').digest('hex')}}));
+  await writeFile(listing, JSON.stringify({current:'b',releases:['old','a','b']}));
+  assert.match(stage('--check-index').stderr, /no release record/);
+  await writeFile(listing, JSON.stringify({current:'b',releases:['old','a','b'],legacy:['old']}));
+  assert.equal(stage('--check-index').status, 0);
+  await writeFile(listing, JSON.stringify({current:'b',releases:['old','a','b'],legacy:['old','b']}));
+  assert.match(stage('--check-index').stderr, /earliest entries/, 'a legacy entry cannot excuse a later release');
 });

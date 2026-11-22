@@ -165,6 +165,11 @@ test('earlier releases stay byte-identical and listed', async t=>{
   await assert.rejects(auditStaged(f.approved,f.site,f.policy),/earlier preliminary release/i);
   f=fixture(t);issueRelease(f.site,'layout-002');listing(f.site,'layout-002',['layout-002','layout-001']);
   await assert.rejects(auditStaged(f.approved,f.site,f.policy),/append/i);
+  f=fixture(t);next(f.site,'layout-002');
+  write(f.site,tree+'/releases.json',{current:'layout-002',releases:['layout-001','layout-002'],legacy:['layout-001']});
+  assert.deepEqual((await auditStaged(f.approved,f.site,f.policy)).preliminary.added,['layout-002'],'an approved release can be legacy');
+  write(f.site,tree+'/releases.json',{current:'layout-002',releases:['layout-001','layout-002'],legacy:['layout-001','layout-002']});
+  await assert.rejects(auditStaged(f.approved,f.site,f.policy),/legacy/);
   f=fixture(t);next(f.site,'layout-002');write(path.join(f.site,tree,'releases','layout-002'),'model.glb','geometry');
   await assert.rejects(auditStaged(f.approved,f.site,f.policy),/Unrecognized preliminary output/);
 });
@@ -200,6 +205,13 @@ test('a release cannot smuggle script, geometry or unpinned files into the tree'
     f=fixture(t);({dir}=next(f.site,'layout-002'));write(dir,file,bytes);
     rewrite(dir,'receipt.json',r=>{r.budgets[file==='budgets.json'?'source':'limits'].sha256=sha(bytes);});repin(dir);
     await assert.rejects(auditStaged(f.approved,f.site,f.policy),/Unreadable|expected evidence JSON/,file);
+  }
+  for(const extra of [{asset:{version:'2.0'},buffers:[],meshes:[{}]},'data:model/gltf-binary;base64,AAAA','Z2xURgIAAAA=']){
+    f=fixture(t);({dir}=next(f.site,'layout-002'));
+    const bytes=JSON.stringify({cases:[{id:'loaded-turn'}],extra:{nested:[extra]}});write(dir,'motion.json',bytes);
+    rewrite(dir,'receipt.json',r=>{r.motion.sha256=sha(bytes);});
+    rewrite(dir,'release.json',r=>{r.scene.sha256=sha(bytes);});repin(dir);
+    await assert.rejects(auditStaged(f.approved,f.site,f.policy),/expected evidence JSON/,JSON.stringify(extra));
   }
   f=fixture(t);
   next(f.site,'layout-002',{missions:[{case:'loaded-turn',kind:'operating-case',accomplishes:'delivered',

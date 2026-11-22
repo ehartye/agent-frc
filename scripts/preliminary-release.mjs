@@ -39,11 +39,18 @@ function playerData(html){
 }
 const canonical=v=>JSON.stringify(v,(k,x)=>object(x)?Object.fromEntries(Object.keys(x).sort().map(n=>[n,x[n]])):x);
 const same=(a,b)=>canonical(a)===canonical(b);
-/** Parse a published JSON file and refuse a glTF document hiding under an evidence name. */
+/** True when a value nests a glTF document, a data URI or a base64 glTF binary. */
+function payload(value){
+  if(typeof value==='string')return /^data:/i.test(value)||value.startsWith('Z2xURg');
+  if(Array.isArray(value))return value.some(payload);
+  if(!object(value))return false;
+  if(Object.hasOwn(value,'asset')&&['buffers','meshes','accessors'].some(k=>Object.hasOwn(value,k)))return true;
+  return Object.values(value).some(payload);
+}
+/** Parse a published JSON file and refuse a model or encoded payload hiding under an evidence name. */
 function evidence(bytes,what,shape){
   const value=parse(bytes,what);
-  check(object(value)&&!(Object.hasOwn(value,'asset')&&['buffers','meshes','accessors'].some(k=>Object.hasOwn(value,k)))&&
-    (!shape||shape(value)),'Published '+what+' is not the expected evidence JSON');
+  check(object(value)&&!payload(value)&&(!shape||shape(value)),'Published '+what+' is not the expected evidence JSON');
   return value;
 }
 
@@ -209,9 +216,12 @@ export function auditTree(oldFiles,newFiles){
   check(after.top.has('releases.json'),'Publish the preliminary release index (releases.json)');
   const index=parse(after.top.get('releases.json'),'preliminary release index');
   const ids=index?.releases;
-  check(object(index)&&Object.keys(index).sort().join()==='current,releases'&&Array.isArray(ids)&&ids.length&&
+  check(object(index)&&['current,releases','current,legacy,releases'].includes(Object.keys(index).sort().join())&&Array.isArray(ids)&&ids.length&&
     ids.every(i=>typeof i==='string'&&releaseId.test(i))&&new Set(ids).size===ids.length&&ids.includes(index.current),
     'The preliminary release index needs unique release IDs and a listed current release');
+  // Releases deployed before release records existed may be named as legacy, but only if already approved.
+  check(index.legacy===undefined||Array.isArray(index.legacy)&&index.legacy.every((i,n)=>ids[n]===i&&before.releases.has(i)),
+    'Only releases already in the approved site can be listed as legacy');
   if(before.top.has('releases.json')){
     const prior=parse(before.top.get('releases.json'),'approved preliminary release index').releases;
     check(Array.isArray(prior)&&prior.every((p,i)=>ids[i]===p),'Preliminary releases may only append; keep every earlier entry in order');
