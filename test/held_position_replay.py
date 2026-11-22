@@ -59,7 +59,7 @@ class HeldPositionReplay(unittest.TestCase):
         write(self.root, tag + "-hold.json", held)
         return held, self.root / (tag + "-hold.json")
 
-    def resubmit(self, tag, held, field_input, delivery_at, value, phase="conceptual-design", edit=None, criterion=(0., 80.)):
+    def resubmit(self, tag, held, field_input, delivery_at, value, phase="conceptual-design", edit=None, criterion=(0., 80.), unit="in"):
         """Re-run the field series with the delivery step at the revised position and resubmit."""
         profile = json.loads(json.dumps(self.base))
         profile["rehearsal"]["programs"]["shuttle"]["steps"][1]["at"] = delivery_at
@@ -73,7 +73,7 @@ class HeldPositionReplay(unittest.TestCase):
         upstream = write(self.root, tag + "-upstream.json", dict(issue=plan["issue"], designSha256=plan["design"]["sha256"],
                          stepSha256=plan["step"]["sha256"], phase=phase, scenario="selected cycle",
                          premise="delivery-standoff", fieldReplay=field))
-        self.premise(tag, value, field_input, dict(repeat=dict(previousPlanSha256=held["planSha256"])), phase=phase, criterion=criterion)
+        self.premise(tag, value, field_input, dict(repeat=dict(previousPlanSha256=held["planSha256"])), phase=phase, criterion=criterion, unit=unit)
         accepted_file = self.root / (tag + "-standoff-accepted.json")
         accepted = json.loads(accepted_file.read_text())
         accepted["source"] = upstream
@@ -241,6 +241,32 @@ class HeldPositionReplay(unittest.TestCase):
         result = self.generic("generic-dry", STATION, (0., 15.), extra=dry)
         self.assertFalse(self.prior(result)["repeatVerified"])
         self.assertIn("Station replay: B1 delivered no piece at blue-bay in trial-3", result["missingInputs"])
+
+    def test_station_replay_needs_generic_evidence_and_an_inch_range(self):
+        # Evidence naming one step needs that step's replay.
+        step = {k: v for k, v in DELIVERY.items() if k != "input"}
+        source = write(self.root, "named-generic-evidence.json", dict(fieldReplay=step))
+        held, _ = self.hold("named", None, source=source)
+        result = self.resubmit("named", held, STATION, [BAY[0], BAY[1] - 10], 10.)
+        self.assertFalse(self.prior(result)["repeatVerified"])
+        self.assertIn(UNIDENTIFIED, result["missingInputs"])
+        # The revised premise must measure the stand-off in inches.
+        source = write(self.root, "unit-generic-evidence.json", self.base)
+        held, _ = self.hold("generic-unit", None, source=source, unit="m")
+        result = self.resubmit("generic-unit", held, STATION, [BAY[0], BAY[1] - 10], 10., criterion=(0., 15.), unit="m")
+        self.assertFalse(self.prior(result)["repeatVerified"])
+        self.assertIn("Station replay: needs an inch stand-off range", result["missingInputs"])
+
+    def test_generic_premise_without_any_delivery_stays_open(self):
+        def dry(profile):
+            programs = profile["rehearsal"]["programs"]
+            programs["attempt-only"] = dict(label="Attempt without pickup", loop=True, steps=[programs["shuttle"]["steps"][1]])
+            for match in profile["rehearsal"]["series"]["matches"]:
+                robot = next(r for r in match["roster"] if r["side"] == "blue" and r["slot"] == 1)
+                robot["plans"] = {period: "attempt-only" for period in robot["plans"]}
+        result = self.generic("generic-none", STATION, (0., 15.), extra=dry)
+        self.assertFalse(self.prior(result)["repeatVerified"])
+        self.assertIn("Station replay: B1 delivered no piece at blue-bay in the series", result["missingInputs"])
 
     def test_generic_premise_with_a_single_step_input_stays_open(self):
         result = self.generic("generic-step", DELIVERY, (0., 15.))

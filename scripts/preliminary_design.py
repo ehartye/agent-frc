@@ -90,7 +90,7 @@ def repeated_station_position(profile_path, saved, repeat, criterion, unit, reas
     require(set(repeat)=={"profile","result","input","actor","station"} and named(repeat["actor"]) and named(repeat["station"]),
             "Name only the actor and scoring station for a station replay")
     if unit!="in" or "range" not in criterion:
-        reasons.append("Station replay needs an inch stand-off range");return False
+        reasons.append("Station replay: needs an inch stand-off range");return False
     process=subprocess.run(["node",str(Path(__file__).with_name("rehearsal-step-pose.mjs")),str(profile_path),"--station",
                             repeat["actor"],repeat["station"]],capture_output=True,text=True,encoding="utf-8")
     require(process.returncode==0,"Station attempts did not resolve: "+process.stderr)
@@ -184,6 +184,7 @@ def held_field_input(root, before, selection, replay):
     the same types, as the repeat. A named program must be the one the repeated actor runs in that period."""
     if "fieldInput" in before:return before["fieldInput"],None
     unidentified="Held premise "+before["id"]+" predates fieldInput and its evidence does not identify the step"
+    if selection.get("input") not in ("stepPosition","stationPosition"):return None,unidentified
     evidence=read(pinned(root,before["source"]))
     named_steps=[{k:v for k,v in evidence[key].items() if k not in ("profile","result")}
                  for key in ("fieldReplay","fieldInput") if isinstance(evidence,dict) and isinstance(evidence.get(key),dict)]
