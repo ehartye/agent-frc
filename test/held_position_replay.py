@@ -32,11 +32,12 @@ class HeldPositionReplay(unittest.TestCase):
         from preliminary_design import review
         return review(self.root, self.root / "layout.json", previous)
 
-    def premise(self, tag, value, field_input, accepted_extra=None, criterion=(0., 80.), source=None, phase="conceptual-design", scenario="selected cycle", unit="in"):
+    def premise(self, tag, value, field_input, accepted_extra=None, criterion=(0., 80.), source=None, phase="conceptual-design", scenario="selected cycle", unit="in",
+                scenario_id=None, observed=None):
         """Register a delivery stand-off premise alongside the example premises."""
         plan = self.plan
         role = source or json.loads((self.root / plan["premises"][0]["accepted"]["file"]).read_text())["source"]
-        identity = dict(id="delivery-standoff", unit=unit, scenario=scenario)
+        identity = dict(id="delivery-standoff", unit=unit, scenario=scenario, **({} if scenario_id is None else {"scenarioId": scenario_id}))
         accepted = dict(**identity, criterion={"range": list(criterion)}, phase=phase,
                         interfaces=["carrier", "carried article"], source=role,
                         basis="Invented delivery stand-off from the bay center", **(accepted_extra or {}))
@@ -44,14 +45,14 @@ class HeldPositionReplay(unittest.TestCase):
             accepted["fieldInput"] = field_input
         estimate = write(self.root, tag + "-standoff.json", {"standoffIn": value})
         current = write(self.root, tag + "-standoff-current.json",
-                        dict(**identity, value=value, issue=plan["issue"], designSha256=plan["design"]["sha256"],
+                        dict(**dict(identity, **(observed or {})), value=value, issue=plan["issue"], designSha256=plan["design"]["sha256"],
                              stepSha256=plan["step"]["sha256"], source=estimate, valueField="standoffIn"))
         premises = [*plan["premises"], dict(accepted=write(self.root, tag + "-standoff-accepted.json", accepted), current=current)]
         write(self.root, "layout.json", dict(plan, premises=premises))
 
-    def hold(self, tag, field_input, source=None, phase="conceptual-design", scenario="selected cycle", unit="in"):
+    def hold(self, tag, field_input, source=None, phase="conceptual-design", scenario="selected cycle", unit="in", scenario_id=None):
         """A first issue observed a stand-off outside the rehearsed range and reopened its phase."""
-        self.premise(tag + "-held", 90., field_input, source=source, phase=phase, scenario=scenario, unit=unit)
+        self.premise(tag + "-held", 90., field_input, source=source, phase=phase, scenario=scenario, unit=unit, scenario_id=scenario_id)
         held = self.review()
         self.assertEqual(held["status"], "reopen")
         self.assertIn("delivery-standoff", [r["reason"] for r in held["reopen"]])
@@ -59,7 +60,8 @@ class HeldPositionReplay(unittest.TestCase):
         write(self.root, tag + "-hold.json", held)
         return held, self.root / (tag + "-hold.json")
 
-    def resubmit(self, tag, held, field_input, delivery_at, value, phase="conceptual-design", edit=None, criterion=(0., 80.), unit="in"):
+    def resubmit(self, tag, held, field_input, delivery_at, value, phase="conceptual-design", edit=None, criterion=(0., 80.), unit="in",
+                 scenario="selected cycle", scenario_id=None, upstream=None):
         """Re-run the field series with the delivery step at the revised position and resubmit."""
         profile = json.loads(json.dumps(self.base))
         profile["rehearsal"]["programs"]["shuttle"]["steps"][1]["at"] = delivery_at
@@ -71,9 +73,11 @@ class HeldPositionReplay(unittest.TestCase):
         field = dict(profile=run_input, result=write(self.root, tag + "-replayed.json", replay), **field_input)
         plan = self.plan
         upstream = write(self.root, tag + "-upstream.json", dict(issue=plan["issue"], designSha256=plan["design"]["sha256"],
-                         stepSha256=plan["step"]["sha256"], phase=phase, scenario="selected cycle",
+                         stepSha256=plan["step"]["sha256"], phase=phase,
+                         **(upstream or dict(scenario=scenario, **({} if scenario_id is None else {"scenarioId": scenario_id}))),
                          premise="delivery-standoff", fieldReplay=field))
-        self.premise(tag, value, field_input, dict(repeat=dict(previousPlanSha256=held["planSha256"])), phase=phase, criterion=criterion, unit=unit)
+        self.premise(tag, value, field_input, dict(repeat=dict(previousPlanSha256=held["planSha256"])), phase=phase, criterion=criterion, unit=unit,
+                     scenario=scenario, scenario_id=scenario_id)
         accepted_file = self.root / (tag + "-standoff-accepted.json")
         accepted = json.loads(accepted_file.read_text())
         accepted["source"] = upstream
@@ -180,6 +184,80 @@ class HeldPositionReplay(unittest.TestCase):
             result = self.legacy(tag, dict(fieldReplay=step), **change)
             self.assertFalse(self.prior(result)["repeatVerified"], tag)
             self.assertEqual(result["status"], "reopen", tag)
+
+    STEP = {k: v for k, v in DELIVERY.items() if k != "input"}
+    FAR, NEAR = "Invented cycle delivering from 90 in", "Invented cycle delivering from 10 in"
+
+    def reworded(self, tag, held_id, revised_id, upstream=None, revised=NEAR):
+        """Hold a premise that predates fieldInput under one description, then resubmit it under another."""
+        source = write(self.root, tag + "-legacy-evidence.json", dict(fieldReplay=self.STEP))
+        held, _ = self.hold(tag, None, source=source, scenario=self.FAR, scenario_id=held_id)
+        return self.resubmit(tag, held, DELIVERY, [BAY[0], BAY[1] - 10], 10., scenario=revised, scenario_id=revised_id, upstream=upstream)
+
+    def test_a_stable_scenario_id_lets_the_description_change(self):
+        result = self.reworded("same-id", "delivery-cycle", "delivery-cycle")
+        prior = self.prior(result)
+        self.assertTrue(prior["repeatVerified"], result["missingInputs"])
+        self.assertEqual(result["status"], "layout-checked")
+        # The receipt keeps both wordings in view.
+        self.assertEqual(prior["scenarioRevised"], dict(held=self.FAR, current=self.NEAR))
+        decision = [d for d in result["premises"] if d["id"] == "delivery-standoff"][0]
+        self.assertEqual((decision["scenarioId"], decision["scenario"]), ("delivery-cycle", self.NEAR))
+
+    def test_a_different_scenario_id_stays_open_with_its_reason(self):
+        result = self.reworded("other-id", "delivery-cycle", "defended-cycle")
+        self.assertFalse(self.prior(result)["repeatVerified"])
+        self.assertEqual(result["status"], "reopen")
+        self.assertIn("Held premise delivery-standoff has scenarioId delivery-cycle; the revised premise has defended-cycle",
+                      result["missingInputs"])
+        # A hold that records its field input replays without comparing descriptions; two different IDs still keep it open.
+        held, _ = self.hold("other-id-input", DELIVERY, scenario_id="delivery-cycle")
+        result = self.resubmit("other-id-input", held, DELIVERY, [BAY[0], BAY[1] - 10], 10., scenario_id="defended-cycle")
+        self.assertFalse(self.prior(result)["repeatVerified"])
+        self.assertEqual(result["status"], "reopen")
+        held, _ = self.hold("same-id-input", DELIVERY, scenario_id="delivery-cycle")
+        same = self.resubmit("same-id-input", held, DELIVERY, [BAY[0], BAY[1] - 10], 10., scenario=self.NEAR, scenario_id="delivery-cycle")
+        self.assertTrue(self.prior(same)["repeatVerified"], same["missingInputs"])
+        # The same wording does not override two different IDs.
+        result = self.reworded("other-id-same-text", "delivery-cycle", "defended-cycle", revised=self.FAR)
+        self.assertFalse(self.prior(result)["repeatVerified"])
+
+    def test_an_id_on_one_side_only_falls_back_to_the_exact_description(self):
+        for tag, held_id, revised_id in (("held-only", "delivery-cycle", None), ("revised-only", None, "delivery-cycle")):
+            result = self.reworded(tag, held_id, revised_id)
+            self.assertFalse(self.prior(result)["repeatVerified"], tag)
+            self.assertEqual(result["status"], "reopen", tag)
+            same = self.reworded(tag + "-same-text", held_id, revised_id, revised=self.FAR)
+            self.assertTrue(self.prior(same)["repeatVerified"], tag)
+            self.assertNotIn("scenarioRevised", self.prior(same))
+
+    def test_upstream_evidence_is_matched_by_scenario_id(self):
+        worded = "Invented upstream wording of the same cycle"
+        result = self.reworded("upstream-same", "delivery-cycle", "delivery-cycle", upstream=dict(scenario=worded, scenarioId="delivery-cycle"))
+        self.assertTrue(self.prior(result)["repeatVerified"], result["missingInputs"])
+        for tag, upstream in (("upstream-other", dict(scenario=self.NEAR, scenarioId="defended-cycle")),
+                              ("upstream-none", dict(scenario=worded))):
+            result = self.reworded(tag, "delivery-cycle", "delivery-cycle", upstream=upstream)
+            self.assertFalse(self.prior(result)["repeatVerified"], tag)
+            self.assertEqual(result["status"], "reopen", tag)
+
+    def test_an_observation_is_matched_to_its_acceptance_by_scenario_id(self):
+        worded = "Invented observer wording of the same cycle"
+        self.premise("observed-same", 10., DELIVERY, scenario=self.NEAR, scenario_id="delivery-cycle", observed=dict(scenario=worded))
+        decision = [d for d in self.review()["premises"] if d["id"] == "delivery-standoff"][0]
+        self.assertEqual((decision["status"], decision["observedScenario"]), ("within", worded))
+        # Another ID, or a reworded observation without an ID of its own, is a different scope.
+        for tag, observed in (("observed-other", dict(scenarioId="defended-cycle")), ("observed-none", dict(scenario=worded, scenarioId=None))):
+            self.premise(tag, 10., DELIVERY, scenario=self.NEAR, scenario_id="delivery-cycle", observed=observed)
+            with self.assertRaisesRegex(ValueError, "Premise observation differs in scope", msg=tag):
+                self.review()
+        for bad in ("", " ", 0, False, 5, []):
+            self.premise("bad-id", 10., DELIVERY, scenario_id=bad)
+            with self.assertRaisesRegex(ValueError, "Bind each premise", msg=repr(bad)):
+                self.review()
+        self.premise("bad-wording", 10., DELIVERY, scenario_id="delivery-cycle", observed=dict(scenario={"x": 1}))
+        with self.assertRaisesRegex(ValueError, "Premise observation differs in scope"):
+            self.review()
 
     def test_preliminary_design_field_premise_stays_open(self):
         # A stale field conclusion reopens the conceptual trade study; a field replay cannot clear a preliminary hold.

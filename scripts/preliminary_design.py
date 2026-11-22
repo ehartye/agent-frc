@@ -92,6 +92,16 @@ def free_paths(root, key, case, stage, groups, moving, missing):
     return bound
 
 
+def same_scenario(a, b):
+    """Whether two premise records describe one scenario.
+
+    When both declare a stable scenarioId, the IDs decide and the scenario description may be reworded.
+    When either lacks one, the descriptions must be equal, as they always had to be."""
+    if a.get("scenarioId") is not None and b.get("scenarioId") is not None:
+        return a["scenarioId"]==b["scenarioId"]
+    return a.get("scenario")==b.get("scenario")
+
+
 def compare_premises(root, rows, plan, missing):
     require(isinstance(rows,list),"List the accepted upstream premises")
     decisions=[]
@@ -101,7 +111,8 @@ def compare_premises(root, rows, plan, missing):
         accepted=read(pinned(root,links["accepted"]))
         key=accepted["id"]
         require(named(key) and key not in seen and named(accepted["scenario"]) and named(accepted["basis"])
-                and accepted["phase"] in ("conceptual-design","preliminary-design") and named(accepted["unit"]),
+                and accepted["phase"] in ("conceptual-design","preliminary-design") and named(accepted["unit"])
+                and (accepted.get("scenarioId") is None or named(accepted["scenarioId"])),
                 "Bind each premise to a unique ID, scenario, unit, upstream phase and evidence")
         seen.add(key)
         interfaces=names(accepted["interfaces"],"affected interfaces")
@@ -115,12 +126,16 @@ def compare_premises(root, rows, plan, missing):
             require(set(criterion)=={"equals"} and named(criterion["equals"]),"Supply one categorical or numeric criterion")
         decision=dict(id=key,phase=accepted["phase"],scenario=accepted["scenario"],interfaces=sorted(interfaces),
                       unit=accepted["unit"],criterion=criterion,accepted=links["accepted"],status="unknown")
+        if accepted.get("scenarioId") is not None:decision["scenarioId"]=accepted["scenarioId"]
         decisions.append(decision)
         if not links.get("current"):
             missing.append("Missing current observation for "+key)
             continue
         current=read(pinned(root,links["current"]))
-        require(all(current.get(k)==accepted[k] for k in ("id","scenario","unit")),"Premise observation differs in scope")
+        require(all(current.get(k)==accepted[k] for k in ("id","unit")) and same_scenario(current,accepted)
+                and named(current.get("scenario")),"Premise observation differs in scope")
+        # A matching scenarioId lets the observer word the scenario differently; the receipt keeps both wordings.
+        if current.get("scenario")!=accepted["scenario"]:decision["observedScenario"]=current.get("scenario")
         source=read(pinned(root,current["source"]))
         require(named(current["valueField"]) and isinstance(source,dict) and current["valueField"] in source,
                 "Locate the observed value in its pinned project measurement")
@@ -315,7 +330,7 @@ def verify_reopens(root, plan, prior, decisions, observations, missing, budget):
     for hold in prior["reopen"]:
         followed=[]
         phase,key=hold["phase"],hold["reason"]
-        checked=False
+        checked=False;before=repeat=None
         if phase=="preliminary-design" and key=="inspection-weight":
             checked=bool(budget) and budget["massStatus"]=="pass" and not missing
         elif phase=="preliminary-design" and key.startswith("voltage/"):
@@ -341,16 +356,25 @@ def verify_reopens(root, plan, prior, decisions, observations, missing, budget):
                                    if selection else (None,None))
                 if reason:missing.append(reason)
                 checked=(bool(selection) and selection==held_input==accepted.get("fieldInput")
-                         and ("fieldInput" in before or before["scenario"]==accepted["scenario"]
+                         and ("fieldInput" in before or same_scenario(before,accepted)
                               and (before["unit"]==accepted["unit"] or selection.get("input")=="stationPosition"))
                          and phase==accepted["phase"]==before["phase"] and current[key]["status"]=="within" and repeat.get("previousPlanSha256")==previous_study
                          and evidence.get("issue")==plan["issue"] and evidence.get("designSha256")==plan["design"]["sha256"]
                          and evidence.get("stepSha256")==plan["step"]["sha256"] and evidence.get("phase")==phase
-                         and evidence.get("scenario")==accepted["scenario"] and evidence.get("premise")==key
+                         and same_scenario(evidence,accepted) and evidence.get("premise")==key
                          and phase=="conceptual-design" and isinstance(evidence.get("fieldReplay"),dict)
                          and repeated_field_input(root,evidence["fieldReplay"],current[key]["value"],accepted["unit"],replayed,
                                                   accepted["criterion"],missing))
-        history.append(dict(**hold,repeatVerified=checked,**({"relocated":followed} if followed else {})))
+        reworded={}
+        if isinstance(before,dict) and isinstance(repeat,dict):
+            ids=(before.get("scenarioId"),accepted.get("scenarioId"))
+            if None not in ids and ids[0]!=ids[1]:
+                # Two declared IDs that differ name two scenarios, whichever way the hold was otherwise replayed.
+                checked=False
+                missing.append("Held premise "+key+" has scenarioId "+str(ids[0])+"; the revised premise has "+str(ids[1]))
+            elif None not in ids and before.get("scenario")!=accepted["scenario"]:
+                reworded=dict(scenarioRevised=dict(held=before.get("scenario"),current=accepted["scenario"]))
+        history.append(dict(**hold,repeatVerified=checked,**({"relocated":followed} if followed else {}),**reworded))
         if not checked:missing.append("Repeat "+phase+" on this issue before resuming "+key)
     return history
 
