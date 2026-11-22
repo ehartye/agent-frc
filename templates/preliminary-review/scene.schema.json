@@ -459,6 +459,14 @@
           }
         }
       }
+    },
+    "replays": {
+      "type": "array",
+      "x-supplier": "optional",
+      "description": "presentation.replays: playback of recorded trials in the same motion list and view as the checked cases. A replay is evidence playback, not a clearance case: the layout check neither runs nor credits it, and the receipt's case set does not include it.",
+      "items": {
+        "$ref": "#/$defs/replay"
+      }
     }
   },
   "$defs": {
@@ -863,6 +871,218 @@
                 "$ref": "#/$defs/ids"
               }
             }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "replay": {
+      "type": "object",
+      "required": [
+        "id",
+        "label",
+        "basis",
+        "evidence",
+        "time",
+        "follow",
+        "bodies",
+        "groups"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique among cases and replays; the ?case= deep link."
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "basis": {
+          "type": "string",
+          "description": "What was recorded and under which model."
+        },
+        "objective": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The reviewed narrative objective this replay plays, when it plays one."
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "description": "The trial or trace files this replay plays back, each pinned by SHA-256.",
+          "items": {
+            "type": "object",
+            "required": [
+              "file",
+              "sha256"
+            ],
+            "properties": {
+              "file": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "role": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "recorded": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Motions taken from the trial files."
+        },
+        "display": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Motions prescribed or interpolated for display; they carry no contact or load claim."
+        },
+        "time": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Seconds per frame, never decreasing. The frame count of the replay.",
+          "items": {
+            "type": "number"
+          }
+        },
+        "measure": {
+          "type": "array",
+          "description": "Live readout per frame.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "events": {
+          "type": "array",
+          "description": "Named moments, in frame order.",
+          "items": {
+            "type": "object",
+            "required": [
+              "frame",
+              "label"
+            ],
+            "properties": {
+              "frame": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "follow": {
+          "type": "string",
+          "description": "The group whose position the robot view follows: the robot base in the field frame."
+        },
+        "bodies": {
+          "type": "object",
+          "minProperties": 1,
+          "description": "The bodies shown. `group` names the rigid group the body moves with; null keeps it where its mesh was drawn.",
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "mesh",
+              "group"
+            ],
+            "properties": {
+              "mesh": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "group": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "groups": {
+          "type": "object",
+          "description": "One transform per frame for each rigid group, in the field frame, applied to the meshes as drawn. A null frame hides the group, so one piece body can serve several deliveries.",
+          "additionalProperties": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "minItems": 12,
+              "maxItems": 12,
+              "items": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "tubes": {
+          "type": "array",
+          "description": "Flexible parts that follow a centerline, such as a chain, rope or hose. `points` holds one centerline for a fixed part or one per frame for a deforming one, in the field frame. With `radiusMm` and `color` the part is drawn as a round tube. With `body` and `mesh` it is that field body's mesh, each vertex moved by the displacement, since the first centerline, of the nearest point on it.",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "points"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "radiusMm": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "color": {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              "points": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "array",
+                  "minItems": 2,
+                  "items": {
+                    "type": "array",
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "items": {
+                      "type": "number"
+                    }
+                  }
+                }
+              },
+              "body": {
+                "type": "string",
+                "minLength": 1,
+                "description": "A field body, not otherwise shown in this replay, whose mesh the centerline carries."
+              },
+              "mesh": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "additionalProperties": false
           }
         }
       },

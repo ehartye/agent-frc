@@ -45,10 +45,10 @@ Every design phase uses the same four statuses for a published design. They appl
 | --- | --- |
 | `in-progress` | Passes the phase's automated checks and may be shown, labelled as in progress. |
 | `effective` | The project has accepted it as the current design for that phase. At most one design per phase is effective; marking a new one effective marks the previous one `superseded` automatically. For preliminary design, an effective release is the handoff detailed design builds on. |
-| `superseded` | Replaced by a newer effective design. It stays viewable as history. |
+| `superseded` | Replaced by a newer effective design, or an in-progress release replaced by a later listed release that is now current. It stays viewable as history. |
 | `withdrawn` | Pulled with no replacement. The index keeps its reason and the last commit that held its files. The files leave the site and stay in Git. It is never shown as current. |
 
-A new release enters `in-progress`. The usual changes are in-progress to effective, effective to superseded (automatic) and any status to withdrawn. The status lives in the release index, never in a design's own record, so changing it never rewrites published evidence. Every status change is an index edit in a reviewed pull request, and Git history records it. [One check covers every published design](design-publication.md)
+A new release enters `in-progress`. The usual changes are in-progress to effective, effective to superseded (automatic), in-progress to superseded once a later listed release is current (`--set-status RELEASE superseded`) and any status to withdrawn. The status lives in the release index, never in a design's own record, so changing it never rewrites published evidence. Every status change is an index edit in a reviewed pull request, and Git history records it. [One check covers every published design](design-publication.md)
 
 ### Exit criteria for an effective preliminary design
 

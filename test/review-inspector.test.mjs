@@ -2,13 +2,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { reviewScene } from './fixtures/review-scene.mjs';
+import { reviewScene, replayScene } from './fixtures/review-scene.mjs';
 import { validateScene } from '../scripts/review-scene.mjs';
 
 // The stock page's pure helpers, loaded from the shipped template.
 const html = readFileSync(new URL('../templates/preliminary-review/review.html', import.meta.url), 'utf8');
 const source = html.split('<script id="review-logic">')[1].split('</script>')[0];
-const logic = new Function(source + '\nreturn {inspectorFields, visibleBodies, findComponent, partition, frameCount, massLinesFor, sha256Pure, digestHex, fieldFitState, MISSING, NOT_SUPPLIED};')();
+const logic = new Function(source + '\nreturn {inspectorFields, visibleBodies, findComponent, partition, frameCount, massLinesFor, sha256Pure, digestHex, fieldFitState, replayMotion, eventAt, tubeTriangles, triangleValues, alongCenterline, carriedValues, MISSING, NOT_SUPPLIED};')();
 const field = (fields, label) => fields.find(f => f[0] === label);
 
 test('the inspector shows identity, classification, volume, mass basis, support, loads and moving cases from the scene', () => {
@@ -117,4 +117,34 @@ test('a mount registered against a member leads its support and load path', () =
   assert.ok(validateScene(scene).errors.length, 'a mount point needs three coordinates');
   scene.bodies.arm.mounts = [{on: 'absent', pointMm: [10, 20, 30], basis: 'Invented'}];
   assert.deepEqual(validateScene(scene).errors, ['/bodies/arm/mounts names an unknown body: absent']);
+});
+
+test('a replay becomes one entry of the motion list: frames from its clock, events by frame, moving parts in the inspector', () => {
+  const scene = replayScene(), motion = logic.replayMotion(scene.replays[0]);
+  assert.deepEqual([motion.replay, motion.kind, motion.removed, motion.results], [true, 'replay', [], []]);
+  assert.equal(logic.frameCount(motion), 5, 'a replay has one frame per clock entry');
+  assert.equal(logic.frameCount(scene.cases[0]), 25);
+  assert.equal(logic.eventAt(motion.events, 1), null, 'no event before the first');
+  assert.deepEqual(logic.eventAt(motion.events, 2), [1, 'Halfway']);
+  assert.deepEqual(logic.eventAt(motion.events, 4), [2, 'At the target']);
+  assert.deepEqual(field(logic.inspectorFields('arm', scene), 'Moves in')[1], ['raise', 'package-displacement-control', 'lane-run']);
+  assert.equal(field(logic.inspectorFields('target', scene), 'Moves in')[1], 'Stationary in every commissioned case', 'a body a replay keeps in place does not move');
+});
+
+test('a tube is a closed ring of triangles at its radius, and a carried mesh moves with its centerline', () => {
+  const tube = logic.tubeTriangles([[0, 0, 0], [100, 0, 0], [200, 0, 50]], 8, 6);
+  assert.equal(tube.length, 2 * 6 * 36, 'two segments, six sides, two triangles a side, six numbers a vertex');
+  for (let k = 0; k < 6 * 6; k++) assert.ok(Math.abs(Math.hypot(tube[6 * k + 1], tube[6 * k + 2]) - 8) < 1e-4 || tube[6 * k] > 1, 'the first ring sits at the radius');
+  assert.equal(logic.tubeTriangles([[0, 0, 0]], 8).length, 0, 'a single point draws nothing');
+  const rest = [[0, 0, 0], [100, 0, 0], [200, 0, 0]], now = [[0, 0, 0], [100, 0, -40], [200, 0, 0]];
+  assert.equal(logic.alongCenterline([50, 5, 0], rest), 0.5);
+  assert.equal(logic.alongCenterline([150, -5, 3], rest), 1.5);
+  assert.equal(logic.alongCenterline([-30, 0, 0], rest), 0, 'a point before the start stays at the start');
+  const mesh = {v: [[40, 0, 0], [60, 0, 0], [50, 10, 0]], f: [[0, 1, 2]]}, base = logic.triangleValues(mesh);
+  assert.deepEqual([...base], [40, 0, 0, 0, 0, 1, 60, 0, 0, 0, 0, 1, 50, 10, 0, 0, 0, 1], 'position and face normal per vertex');
+  const param = Float32Array.from([0, 1, 2], k => logic.alongCenterline([base[6 * k], base[6 * k + 1], base[6 * k + 2]], rest));
+  const moved = logic.carriedValues(base, param, rest, now, base.slice());
+  assert.deepEqual([moved[2], moved[8], moved[14]].map(z => Math.round(z)), [-16, -24, -20], 'each vertex drops with the nearest point of the centerline');
+  assert.deepEqual([moved[0], moved[6], moved[13]], [40, 60, 10], 'and keeps its place along and across it');
+  assert.deepEqual([...logic.carriedValues(base, param, rest, rest, base.slice())], [...base], 'the first centerline leaves the mesh as drawn');
 });

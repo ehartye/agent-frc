@@ -56,3 +56,23 @@ export function reviewScene(overrides = {}) {
   };
   return Object.assign(scene, overrides);
 }
+
+/** The same invented scene with one trial replay: the robot drives 400 mm, the arm turns, a hose sags and a banner of links follows it. */
+export function replayScene(overrides = {}) {
+  const scene = reviewScene();
+  const frames = 5, move = k => [1, 0, 0, 100 * k, 0, 1, 0, 0, 0, 0, 1, 0];
+  const armAt = k => { const m = turn(6 * k); m[3] = 100 * k; return m; };
+  const line = k => [[-400, 300, 200], [-200, 300, 200 - 30 * k], [0, 300, 200]];
+  scene.meshes.push(box([-400, 290, 190], [0, 310, 210]));
+  scene.bodies.banner = {...scene.bodies.target, name: 'banner', purpose: 'Invented banner that follows the hose.'};
+  scene.replays = [{
+    id: 'lane-run', label: 'Lane run (recorded)', basis: 'Invented recorded run toward the target.', objective: 'Raise the invented article',
+    evidence: [{...pin('lane-run.json'), role: 'recorded run'}], recorded: ['Robot position', 'Arm angle'], display: ['Hose shape'],
+    time: Array.from({length: frames}, (_, k) => k * 0.5), measure: Array.from({length: frames}, (_, k) => 'Robot ' + 100 * k + ' mm along the lane'),
+    events: [{frame: 2, label: 'Halfway'}, {frame: 4, label: 'At the target'}], follow: 'robot',
+    bodies: {frame: {mesh: 0, group: 'robot'}, arm: {mesh: 1, group: 'arm'}, battery: {mesh: 2, group: 'robot'}, target: {mesh: 3, group: null}},
+    groups: {robot: Array.from({length: frames}, (_, k) => move(k)), arm: Array.from({length: frames}, (_, k) => armAt(k))},
+    tubes: [{name: 'Hose', radiusMm: 8, color: '#c9a227', points: Array.from({length: frames}, (_, k) => line(k))},
+      {name: 'Banner', body: 'banner', mesh: 4, points: Array.from({length: frames}, (_, k) => line(k))}]}];
+  return Object.assign(scene, overrides);
+}

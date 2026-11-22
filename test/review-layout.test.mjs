@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { browser, probePage } from './headless-browser.mjs';
-import { reviewScene } from './fixtures/review-scene.mjs';
+import { reviewScene, replayScene } from './fixtures/review-scene.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const page = readFileSync(path.join(root, 'templates/preliminary-review/review.html'));
@@ -96,7 +96,7 @@ test('the stock page keeps the reference region order, control placement, labels
     assert.deepEqual(g.playWords, ['Play'], 'playback row: no visible labels besides Play');
     assert.equal(g.playLabels, 0);
     assert.deepEqual([g.slider, g.sliderLabels], ['Position on path', 0], 'the slider is named only for assistive technology');
-    assert.deepEqual(g.speeds, ['1×', '¼×']);
+    assert.deepEqual(g.speeds, ['1×', '¼×', '4×', '10×']);
     for (const face of ['Barlow Condensed', 'Source Sans 3']) assert.ok(g.fonts.some(f => f.startsWith(face)), face + ' loaded: ' + g.fonts);
     assert.match(g.h1, /^"?Barlow Condensed/);
     assert.match(g.body, /^"?Source Sans 3/);
