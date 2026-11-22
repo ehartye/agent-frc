@@ -102,12 +102,13 @@ Opt in through the approved staged policy. The final-site audit reads it from th
   "mutableFieldPages": [],
   "preliminaryReleases": {
     "root": "preliminary-design",
-    "primaryEntryPoints": ["index.html", "media/robot-still.png", "models/selector.json"]
+    "primaryEntryPoints": ["index.html", "media/robot-still.png", "models/selector.json"],
+    "secondaryLink": "index.html"
   }
 }
 ```
 
-`root` is the deployed path of the [preliminary review tree](../skills/frc-preliminary-design/references/review-layout-template.md#multiple-releases-and-pages). `primaryEntryPoints` lists the detailed design's deployed entry page, README still and model selector. Keep these, `modelFiles` and field outputs outside `root`. Without the field, the preliminary tree stays under the full gate.
+`root` is the deployed path of the [preliminary review tree](../skills/frc-preliminary-design/references/review-layout-template.md#multiple-releases-and-pages). `primaryEntryPoints` lists the detailed design's deployed entry page, README still and model selector. Keep these, `modelFiles` and field outputs outside `root`. Without the field, the preliminary tree stays under the full gate. The optional `secondaryLink` names one primary entry page that may gain exactly one plain, relative anchor to the tree, such as `<a href="preliminary-design/">Preliminary design (work in progress)</a>`. The anchor uses double quotes and plain text (letters, digits, spaces and `.,()-`). It must sit in ordinary element content, between tags, never inside a tag, attribute, comment, script or other raw-text element. Up to 16 whitespace characters may come with it on each side. Any other difference on that page, a second link, extra attributes, markup inside the anchor or another target still needs a signed detailed-model issue. The primary model, still and selector stay byte-identical.
 
 The final-site audit applies this class only inside `root`:
 
@@ -117,7 +118,23 @@ The final-site audit applies this class only inside `root`:
 - **Front and center.** Every primary entry point must equal its approved bytes unless a signed detailed-model issue covers it.
 - **History.** Releases already in the approved site stay byte-identical. `releases.json` may only append IDs and move `current`. The stable viewer equals the approved copy or the plugin's template. When releases are added, it must show the work-in-progress label and status. The checked player carries the same label when opened directly.
 
-Every other added, changed or removed output keeps the full gate. The audit trusts the receipt's recorded results; it does not rerun the checker. The player's tessellated solids are display data that the audit does not compare with the STEP. Keep the season's checker run, its inputs and review under the project's own controls. Keep the release input directories, including their STEP files, outside the source policy's `publicRoots`; that audit treats any new CAD file there as a detailed model asset.
+Every other added, changed or removed output keeps the full gate. The audit trusts the receipt's recorded results; it does not rerun the checker. The player's tessellated solids are display data that the audit does not compare with the STEP. Keep the season's checker run, its inputs and review under the project's own controls. Without `preliminaryInputs`, the source audit treats a release input STEP inside a public root as a detailed model asset; see [source-side release inputs](#source-side-release-inputs).
+
+### Source-side release inputs
+
+The template keeps each release's editable inputs, including a block-level `package.step`, under `cad/preliminary-design/releases/ID/`. When a public root contains them, opt that tree into the class in the approved source policy:
+
+```json
+{
+  "schema": "agent-frc/public-model-policy@1",
+  "project": "Teaching project",
+  "publicRoots": ["docs", "cad"],
+  "modelFiles": ["cad/robot.step"],
+  "preliminaryInputs": {"root": "cad/preliminary-design/releases"}
+}
+```
+
+The source audit admits a new `ID/package.step` directly inside that tree without a signature only when the same directory holds a layout-checked `receipt.json`. That receipt must pass the physics rules above. The layout, STEP, motion, view and budget files must match its pins. A directory already in the approved commit is immutable: no file may change, appear or disappear. Any other CAD file, including extra or nested geometry in a release directory, keeps the full gate. `layout.json` must pin the same STEP and motion as the receipt. A new STEP may not duplicate any committed, registered or signed model outside the tree. `modelFiles` and signed files cannot sit inside the tree, so a preliminary input is never the primary model. The receipt is the season's own checker output; the audit does not rerun the checker, so review the run that produced it. With a source commit, every file in a new release directory must equal its committed bytes.
 
 ### Release record
 
@@ -149,5 +166,5 @@ node PLUGIN/scripts/preliminary-release.mjs verify docs/preliminary-design/relea
 
 1. Pin the plugin release that provides `scripts/preliminary-release.mjs`. Copy its `templates/stage-preliminary-review.py` over `cad/preliminary-design/stage.py` and its `templates/preliminary-review-index.html` over `docs/preliminary-design/index.html`. The updated `stage.py --check-index` applies the same physics and mission rules to every listed release.
 2. Add `missions.json` beside each new release's `layout.json` and `receipt.json`. A player saved before this plugin release lacks the work-in-progress label: delete its `package-motion.html`, rerun the preliminary check with `--write-view` and save the new receipt. A release that has never been deployed and lacks `release.json` cannot be restaged under the same ID. Remove its unpublished directory and its `releases.json` entry, then run `python cad/preliminary-design/stage.py RELEASE_ID` again. Do not alter a release in the approved site; issue a new ID. If the approved site already serves releases without `release.json`, list their IDs once under `"legacy"` in `releases.json`. They must be the earliest entries, in order, and already be in the approved site. Neither `stage.py --check-index` nor the final-site audit accepts a later or newly added release as legacy.
-3. Add `preliminaryReleases` to the staged policy. Merge that policy change on its own, then advance the trusted `approvedCommit` so the audit reads it. Add a secondary, labelled link to `preliminary-design/` from the detailed site through its normal approval.
+3. Add `preliminaryReleases`, with `secondaryLink` naming the season index, to the staged policy. If `cad/` is a public root, add `preliminaryInputs` to the source policy. Merge these policy changes on their own, then advance the trusted `approvedCommit` so the audits read them. Then add the single plain link `<a href="preliminary-design/">…</a>` to the season index. The gate accepts it without a signature only when nothing else on the page changes.
 4. Run `local-showcase-release.mjs check` on the final built site. The trusted configuration gains no new fields.
