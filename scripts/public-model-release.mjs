@@ -174,6 +174,28 @@ export async function audit(root,base,policyName,packetPath,pubKey,sourceCommit)
   const packet=packetPath?JSON.parse(readFileSync(packetPath)):null;
   const reviewed=packet?await verifyIssued(root,packet,readFileSync(pubKey),policy.project):new Set();
   const names=new Set(policy.modelFiles.map(relative));
+  // The independent policy can commission a README handoff to a preliminary review.
+  // Check the previous README verbatim and the reviewed image even on later reruns.
+  const handoff=policy.preliminaryReadmeArchive;
+  if(handoff){
+    check(names.has('README.md')&&hex.test(handoff.readmeSha256)&&hex.test(handoff.archivedSha256)&&
+      hex.test(handoff.imageSha256)&&typeof handoff.archive==='string'&&/\.md$/i.test(handoff.archive)&&
+      handoff.archive.toLowerCase()!=='readme.md'&&typeof handoff.image==='string'&&/\.png$/i.test(handoff.image),
+      'Pin the new README, its image and the archived README');
+    const current=readFileSync(file(root,'README.md'));
+    const currentHash=createHash('sha256').update(current).digest('hex');
+    if(currentHash===handoff.readmeSha256){
+      const old=git(root,['show',base+':README.md']);
+      const oldHash=createHash('sha256').update(old).digest('hex');
+      check(oldHash===handoff.archivedSha256||oldHash===handoff.readmeSha256,'Unexpected README predecessor');
+      check(await hash(file(root,handoff.archive))===handoff.archivedSha256&&
+        await hash(file(root,handoff.image))===handoff.imageSha256,'README archive or preliminary still changed');
+      for(const name of ['README.md',handoff.archive,handoff.image]){
+        if(sourceCommit)verifyCommittedFile(root,sourceCommit,name);
+      }
+      names.delete('README.md');
+    }
+  }
   // Work-in-progress preliminary inputs: opt-in, receipt-bound, immutable once issued and never a registered model.
   const spec=policy.preliminaryInputs;
   check(spec===undefined||spec&&typeof spec==='object'&&Object.keys(spec).join()==='root'&&typeof spec.root==='string',
