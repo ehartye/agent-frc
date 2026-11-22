@@ -92,7 +92,10 @@ test('the field-interaction fit says why it is unavailable', () => {
   for (const body of Object.values(scene.bodies)) body.fixture = false;
   const none = logic.fieldFitState(present, scene);
   assert.equal(none.enabled, false);
-  assert.match(none.reason, /No case registers a field fixture/);
-  assert.match(none.reason, /package member counts as robot/);
+  assert.equal(none.reason, 'No case registers a field fixture, so Fit field interaction is off.');
+  scene.fieldInteractions = [{title: 'Invented lane', href: 'field/lane.html', objective: 'Invented objective', evidence: 'Invented trial'}];
+  assert.match(logic.fieldFitState(present, scene).reason, /No case registers a field fixture.*package member counts as robot/);
+  assert.match(html, /aria-describedby="fieldWhy"/);
+  assert.doesNotMatch(html, /fieldFitState\(presentIds/, 'the cutaway does not change whether the case places a fixture');
   assert.match(html, /id="fieldWhy"/, 'the reason has a visible place on the page');
 });

@@ -51,7 +51,7 @@ aside{padding:16px;align-self:start}aside label{display:block;margin-bottom:5px}
 </dl></details>
 <div class="grid">
 <section class="viewer" aria-label="Model and controls">
- <div class="bar"><b>Assembly layout</b><label><input id="labels" type="checkbox"> Labels</label><span id="labelPages" hidden><button id="labelPrev" aria-label="Previous callouts">‹</button><output id="labelPageCount"></output><button id="labelNext" aria-label="Next callouts">›</button></span><label><input id="floor" type="checkbox" checked> Floor</label><label id="cutawayToggle" hidden><input type="checkbox" id="cutaway"> <span id="cutawayLabel"></span></label><button id="reset">Fit robot</button><button id="field">Fit field interaction</button><button id="expand" aria-label="Expand model viewer">Expand</button></div>
+ <div class="bar"><b>Assembly layout</b><label><input id="labels" type="checkbox"> Labels</label><span id="labelPages" hidden><button id="labelPrev" aria-label="Previous callouts">‹</button><output id="labelPageCount"></output><button id="labelNext" aria-label="Next callouts">›</button></span><label><input id="floor" type="checkbox" checked> Floor</label><label id="cutawayToggle" hidden><input type="checkbox" id="cutaway"> <span id="cutawayLabel"></span></label><button id="reset">Fit robot</button><button id="field" aria-describedby="fieldWhy">Fit field interaction</button><button id="expand" aria-label="Expand model viewer">Expand</button></div>
  <div id="stage"><canvas id="canvas" tabindex="0" aria-label="Solid model. Drag to orbit, Shift-drag to pan. Arrow keys rotate, Shift and arrow keys pan."></canvas><div id="names"></div><div id="sceneStatus" role="status">Loading geometry…</div></div>
  <small>Drag to orbit · Shift-drag or right-drag to pan · Scroll to zoom · Arrows rotate · Home fits robot</small>
  <div class="bar playback"><select aria-label="Motion case" id="motion"></select><button id="play">Play</button><select id="speed" aria-label="Playback speed"><option value="1">1×</option><option value=".25">¼×</option></select><input id="time" aria-label="Position on path" type="range" min="0" max="24" value="0"><output id="fraction">0%</output></div>
@@ -86,8 +86,9 @@ const fmt=(n,d=2)=>Number(n).toFixed(d),range=(r,n=2)=>r.map(v=>fmt(v,n)).join('
 // Whether the case shows a field fixture to fit, and the reason when it does not.
 function fieldFitState(ids,scene){
  if(ids.some(id=>scene.bodies[id].fixture))return {enabled:true,reason:''};
- return {enabled:false,reason:Object.values(scene.bodies).some(b=>b.fixture)?'This case places no field fixture, so Fit field interaction is off.'
-  :'No case registers a field fixture, so Fit field interaction is off. A field part modeled as a package member counts as robot; register it under the case fixtures in the motion study.'};
+ if(Object.values(scene.bodies).some(b=>b.fixture))return {enabled:false,reason:'This case places no field fixture, so Fit field interaction is off.'};
+ return {enabled:false,reason:'No case registers a field fixture, so Fit field interaction is off.'+((scene.fieldInteractions||[]).length?
+  ' A field part modeled as a package member counts as robot; register it under the case fixtures in the motion study.':'')};
 }
 function massLinesFor(id,scene){
  const rows=(scene.mass?.lines||[]).filter(l=>l.members.includes(id)).map(l=>{const others=l.members.filter(m=>m!==id);
@@ -494,7 +495,8 @@ function activate(opening=false){
  stop();const c=current(),frames=frameCount(c);$('time').max=frames-1;$('time').value=0;marked=[];
  const link=new URL(location.href);link.searchParams.set('case',c.id);try{history.replaceState({},'',link)}catch{}
  const match=opening?-1:scene.power.findIndex(e=>e.stage===c.id&&e.batteryCondition==='weak');if(match>=0){$('duty').selectedIndex=match;budget()}
- const fieldFitting=fieldFitState(presentIds(c),scene);$('field').disabled=!fieldFitting.enabled;$('field').title=fieldFitting.enabled?'':'This case places no field fixtures';
+ // The cutaway hides a fixture without removing it from the case, so it does not change this control.
+ const fieldFitting=fieldFitState(Object.keys(c.bodies).filter(id=>!c.removed.includes(id)),scene);$('field').disabled=!fieldFitting.enabled;$('field').title=fieldFitting.reason;
  $('fieldWhy').textContent=fieldFitting.reason;$('fieldWhy').hidden=fieldFitting.enabled;
  $('cutaway').disabled=!scene.cutaway||!scene.cutaway.hides.some(id=>c.bodies[id]);
  $('basis').textContent=c.basis;$('witness').textContent='';evidence();draw();
