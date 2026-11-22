@@ -232,8 +232,9 @@ export function createFieldRehearsal(profile) {
   // A cycle that holds for waitCycleS is logged with its start and duration. When yielding is enabled, the
   // member latest in roster order that can detour replans around the others' current footprints. Earlier
   // members keep their route. If no member can detour, the yield is recorded as unresolved.
-  function closeWaitCycle(sim,key,state,ended) {
-    const ms=x=>Math.round(x*1000)/1000,durationS=ms((sim.ticks-state.since)*dt);
+  const ms=x=>Math.round(x*1000)/1000;
+  function closeWaitCycle(sim,key,state,ended,endTick=sim.ticks) {
+    const durationS=ms((endTick-state.since)*dt);
     if(durationS+1e-9>=waitCycleS)sim.waitCycleLog.push({phase:sim.phase,cycle:state.cycle,startS:ms(state.since*dt),durationS,ended,
       ...(yieldCycles?{yielded:state.yielded ?? null}:{})});
   }
@@ -254,11 +255,12 @@ export function createFieldRehearsal(profile) {
       for(const id of [...order].reverse()){
         const r=byId[id],goal=r.waypoints?.at(-1);
         if(!goal)continue;
-        const route=geom.planAround(r.p,goal,r,sim.setup,order.filter(o=>o!==id).map(o=>byId[o]));
+        // Detour around every other robot's current footprint, not only the cycle members.
+        const route=geom.planAround(r.p,goal,r,sim.setup,sim.robots.filter(o=>o.id!==id));
         if(route.length){r.waypoints=route;r.target=1;yielded=id;break;}
       }
       state.yielded=yielded;
-      sim.deadlocks.push({phase:sim.phase,timeS:(sim.ticks+1)*dt,sinceS:state.since*dt,cycle:path,yielded});
+      sim.deadlocks.push({phase:sim.phase,timeS:ms((sim.ticks+1)*dt),sinceS:ms(state.since*dt),cycle:path,yielded});
       event(sim,'Wait cycle '+[...path,path[0]].join(' -> ')+(yielded?'; '+yielded+' yields':'; no member can detour'));
     }
     for(const [key,state] of Object.entries(sim.waitCycles))if(!active[key])closeWaitCycle(sim,key,state,'cleared');
@@ -277,7 +279,8 @@ export function createFieldRehearsal(profile) {
       if(elapsed+1e-9>=endgame.assessmentTimeS)terminal.assess(sim);
     }
     if(sim.ticks>=wallDuration(sim.phase)){
-      for(const [key,state] of Object.entries(sim.waitCycles))closeWaitCycle(sim,key,state,'period-end');
+      // Unpowered ticks after the active clock are not waiting time.
+      for(const [key,state] of Object.entries(sim.waitCycles))closeWaitCycle(sim,key,state,'period-end',Math.min(sim.ticks,duration(sim.phase)));
       sim.waitCycles={};
       if(!model.scoreAssessment)terminal?.assess(sim);
       sim.paused=true;sim.ended=true;sim.carry=0;

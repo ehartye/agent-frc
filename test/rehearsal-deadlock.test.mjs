@@ -71,7 +71,7 @@ test('opting in to yield resolves the swapped cycle deterministically', t => {
     assert.ok(B1.visits > 0 && B2.visits > 0 && B1.waitSeconds < 5 && B2.waitSeconds < 5, period.phase);
   }
   // B2 is latest in roster order and tries first, but its supply stop lies inside B1's footprint, so B1 detours.
-  assert.deepEqual(match.periods[0].deadlocks, [{phase: 'Opening', timeS: 1.4000000000000001, sinceS: 0.4, cycle: ['B1', 'B2'], yielded: 'B1'}]);
+  assert.deepEqual(match.periods[0].deadlocks, [{phase: 'Opening', timeS: 1.4, sinceS: 0.4, cycle: ['B1', 'B2'], yielded: 'B1'}]);
   assert.match(first.stderr, /trial-1 Opening wait cycle B1 -> B2 -> B1 from 0\.40 s for 1\.0\d s \(cleared\); B1 yielded/);
   assert.equal(run(file).stdout, first.stdout);
 });
