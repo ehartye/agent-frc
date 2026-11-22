@@ -78,7 +78,24 @@ Keep the held receipt in project custody and pass it separately on resubmission.
 node scripts/design.mjs preliminary-check PROJECT revised-layout.json --previous held-layout.json --require-checked
 ```
 
-The package checker repeats the affected package cases. For a held field premise it checks the current issue and the original registered actor, match and input, replays the pinned first-party field profile and compares the full saved result. The upstream decision must identify the held plan hash. Supported replay inputs include a named program step’s dwell, robot speed, height and heading, and a modeled front pickup mouth. An independently chosen different face needs a rehearsal that actually represents it. An unsupported repeat stays open. The project chooses the duty, threshold and acceptance of the resulting field strategy. An initial review without a supplied prior receipt cannot clear a historical hold.
+The package checker repeats the affected package cases. For a held field premise it checks the current issue and the original registered actor, match and input, replays the pinned first-party field profile and compares the full saved result. The upstream decision must identify the held plan hash. Supported replay inputs include a named program step’s dwell, a named scoring step’s delivery stand-off, robot speed, height and heading, and a modeled front pickup mouth. An independently chosen different face needs a rehearsal that actually represents it. An unsupported repeat stays open. The project chooses the duty, threshold and acceptance of the resulting field strategy. An initial review without a supplied prior receipt cannot clear a historical hold.
+
+### Resume a held delivery position
+
+When the held premise is the distance the robot delivers from, move that scoring step in the field profile, then re-run the match series with `scripts/rehearsal-series.mjs`. Register the premise in inches (`"unit": "in"`) and name the step in `fieldInput`, identically in the original and repeated decisions:
+
+```json
+{"match": "trial-1", "actor": "B1", "input": "stepPosition", "period": "Main play",
+ "stepIndex": 1, "stepLabel": "Deliver to bay", "station": "blue-bay"}
+```
+
+The upstream `fieldReplay` adds the pinned `profile` and saved `result` to the same fields. The checker reproduces the full saved result, then resolves the step for that robot's alliance and slot on the same profile bytes. The step must be a scoring `attempt` at the named scoring station. The premise value must equal the planar distance from the resolved point to the station's center, within 1e-6 in. The rehearsal's own wall and obstacle test must clear the robot footprint at that point in the match setup. The robot must also complete its program at least once in the named period. A displaced or blocked position, a different step or station, or another unit leaves the hold open. Inspect a step directly with:
+
+```sh
+node scripts/rehearsal-step-pose.mjs PROFILE.json trial-1 B1 "Main play" 1
+```
+
+The stand-off is a center-to-center planar distance. It does not represent approach heading, release height or mechanism reach.
 
 ## Narrative pre-read and component intent
 
