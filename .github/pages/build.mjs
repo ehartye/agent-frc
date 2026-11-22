@@ -25,6 +25,7 @@ import { fileURLToPath } from 'node:url';
 import { buildLab, rulesModel } from '../../scripts/kickoff.mjs';
 import { fieldGeometry } from '../../scripts/field-rehearsal-geometry.mjs';
 import { stages, purpose } from './guide.mjs';
+import { themeFontFiles } from '../../scripts/theme-fonts.mjs';
 import { reviewPower } from '../../scripts/power-review.mjs';
 import { review as reviewCamera } from '../../examples/sensor-study/camera-reference.mjs';
 
@@ -184,6 +185,9 @@ await writeFile(path.join(output,'index.html'),page);
 await writeFile(path.join(output,'starter-frame.dxf'),frameDxf(rearPlan));
 await copyFile(path.join(root,'examples/swerve/assembly.png'),path.join(output,'module-preview.png'));
 for(const file of ['guide.css','interact.js']) await copyFile(path.join(source,file),path.join(output,file));
+// The theme fonts and their OFL licenses, so the guide renders the same on every reader's machine.
+await mkdir(path.join(output,'fonts'));
+for(const {name,url} of themeFontFiles()) await copyFile(url,path.join(output,'fonts',name));
 await writeFile(path.join(output,'rules.json'),JSON.stringify(model,null,2)+'\n');
 await buildHighlights(path.join(root,'examples/highlights/project.json'),path.join(output,'robot'));
 await buildHighlights(path.join(root,'examples/highlights/stroke-chapter-page.json'),path.join(output,'stroke'));

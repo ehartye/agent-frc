@@ -1,4 +1,5 @@
 import {createScoreAssessment} from './score-assessment.mjs';
+import {inlineThemeFonts} from './theme-fonts.mjs';
 import {loadScoreObservations,scoreProfileForOutput} from './score-observations.mjs';
 import {allocateOpeningTasks} from './auto-allocation.mjs';
 import {createFieldPieceMotion} from './field-piece-motion.mjs';
@@ -192,7 +193,7 @@ export async function buildLab(input, destination, comparison) {
     PROFILE:json, SCENE:renderer, LAB:controls, 'ROUTE MODEL':routeStudy.toString(), 'WINDOW MODEL':analyzeWindow.toString(),
     'REHEARSAL MODEL':[framePlan.toString(),starterFrameProfile.toString(),initialTrial.toString(),fieldGeometry.toString(),createFieldPieceMotion.toString(),allocateOpeningTasks.toString(),createScoreAssessment.toString(),createRehearsalGame.toString(),rehearsalFindings.toString(),createTerminalRehearsal.toString(),createFieldRehearsal.toString(),createMatchSeries.toString(),createRehearsalSetup.toString(),
       'const rehearsal=createFieldRehearsal(profile); const rehearsalNotes=[];'].join('\n'),
-    OPPORTUNITIES:opportunities, 'REHEARSAL UI':rehearsalUI
+    OPPORTUNITIES:opportunities, 'REHEARSAL UI':rehearsalUI, 'THEME FONTS':inlineThemeFonts()
   };
   // Match the original template once. Project-owned strings may legitimately contain a template marker.
   const output=page.replace(/\/\* ([A-Z ]+) \*\//g,(token,key)=>Object.hasOwn(replacements,key)?replacements[key]:token);

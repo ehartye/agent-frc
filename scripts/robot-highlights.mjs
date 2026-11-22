@@ -1,4 +1,5 @@
 import { checkChapters, clipTime } from './replay-chapters.mjs';
+import { inlineThemeFonts } from './theme-fonts.mjs';
 import {publicFusionHandoff} from './public-fusion-handoff.mjs';
 import { workflowRows } from './project-layout.mjs';
 import { execFile } from 'node:child_process';
@@ -363,7 +364,7 @@ export async function buildHighlights(manifest, directory) {
   const buildSection = build ? '<section id="build"><h2>Build sheet</h2><table><thead><tr><th>Subsystem</th><th>Configuration</th><th>Evidence</th></tr></thead><tbody>'+build+'</tbody></table></section>' : '';
   const fields = {title, role, revision, results, workflow, labLink:lab ? '<a href="field-lab.html">Open the field lab</a>' : '', buildSection, buildLink:build ? '<a href="#build">Build sheet</a>' : '',
     revisionLabel:stage === 'analysis' ? 'Analysis revision' : 'Candidate', model:model+coverage, media:media ? '<section id="media"><h2>Evidence gallery</h2>' + media + '</section>' : '',
-    campaign, campaignLink:campaign ? '<a href="#campaign">Repeatability</a>' : '', mediaLink:media ? '<a href="#media">Gallery</a>' : ''};
+    campaign, campaignLink:campaign ? '<a href="#campaign">Repeatability</a>' : '', mediaLink:media ? '<a href="#media">Gallery</a>' : '', themeFonts:inlineThemeFonts({families:['Source Sans 3']})};
   const html = applyStyle(template.replace(/\{\{(\w+)\}\}/g, (_, key) => fields[key]));
   const visuals=[...assets.values()].filter(asset=>/\.(?:png|jpe?g|webp|mp4|webm|pdf)$/i.test(asset));
   if(!release&&!student&&visuals.length){
