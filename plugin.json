@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "agent-frc",
-  "version": "0.119.0",
+  "version": "0.120.0",
   "description": "Season-aware high-school FRC engineering guidance with explicit evidence and optional local vault grounding.",
   "author": {
     "name": "ehartye"

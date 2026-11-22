@@ -400,8 +400,12 @@ def evaluate(root,study,*,mount_hosts=(),package_scene=None,progress=None,fail_f
                     "Intentional motion interfaces need their separately qualified, pinned study")
             evidence=pinned(root,ex["qualifiedBy"])
             record=read(evidence)
-            require(record.get("stepSha256")==study["step"]["sha256"] and record.get("case")==id and
-                    set(record.get("pair",[]))=={a,b} and record.get("status")=="pass","Interface qualification is stale or incomplete")
+            # One record qualifies its own case and pair, and each row it lists under `interfaces`, all on its one STEP.
+            listed=record.get("interfaces",[]) if isinstance(record,dict) else []
+            require(isinstance(record,dict) and isinstance(listed,list) and record.get("stepSha256")==study["step"]["sha256"]
+                    and any(isinstance(row,dict) and row.get("case")==id and isinstance(row.get("pair"),list)
+                            and set(row["pair"])=={a,b} and row.get("status")=="pass" for row in [record,*listed]),
+                    "Interface qualification is stale or incomplete")
             excluded[tuple(sorted((a,b)))]=ex["basis"]
         compliant=payload_compression.interfaces(case,scene,excluded,root)
         rows=[];counts={"broadPhase":0,"bounded":0,"constantPoseBroadPhase":0,"constantPoseReused":0}
