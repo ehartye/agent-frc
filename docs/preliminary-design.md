@@ -48,3 +48,9 @@ node scripts/design.mjs preliminary-check PROJECT revised-layout.json --previous
 ```
 
 The package checker repeats the affected package cases. For a held field premise it checks the current issue and the original registered actor, match and input, replays the pinned first-party field profile and compares the full saved result. The upstream decision must identify the held plan hash. Supported replay inputs include a named program step’s dwell, robot speed, height and heading, and a modeled front pickup mouth. An independently chosen different face needs a rehearsal that actually represents it. An unsupported repeat stays open. The project chooses the duty, threshold and acceptance of the resulting field strategy. An initial review without a supplied prior receipt cannot clear a historical hold.
+
+## Narrative pre-read and component intent
+
+Before placing solids, read the project's current strategic narrative from opening through endgame, including contingencies. In the layout plan, set `narrativeReview.source` to its project-relative file and SHA-256. Under `narrativeReview.objectives`, give each objective and fallback an `objective`, a `disposition` (`represented`, `open` or `out-of-scope`) and a `basis` naming its case, gap or explicit scope decision. The author reconciles the list with the complete narrative. The checker verifies the source pin and recorded coverage.
+
+For each placed ID, including fixtures, set `presentation.components[ID].purpose` and `.rationale`. Explain the function and the reason this architecture needs the member. These appear in the generated player's inspector. Missing explanations or an open narrative objective leave the review provisional unless another finding already blocks it. Older plans can still be inspected and completed.

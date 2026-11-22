@@ -4,6 +4,8 @@ Give the reviewer an interactive whole-robot blockout and a decision they can in
 
 ## What the reviewer can do
 
+Show the reviewed strategic narrative revision and the disposition of each match objective and fallback. Provide a component selector and direct surface picking. Display two separate, project-authored explanations for every placed ID: **Purpose** describes what it does, and **Why it is included** identifies the need or tradeoff that justifies this piece in this architecture. A service gauge, for example, can represent a socket and justify its volume by the required removal sequence. Keep missing explanations visible.
+
 - Orbit through a full revolution and underneath the robot, pan in the view plane, zoom and reset to a fitted view. Provide pointer and keyboard controls and a visible control legend. Keep the camera where the reviewer puts it when scrubbing motion.
 - Display depth-tested, closed solid volumes. Preserve cavities, holes, independent moving members and the finite game piece. Include fixed and moving neighbors, bumpers, service stock and withdrawal envelopes. Show/hide labels independently of geometry. Provide a textual category legend and component list.
 - Put the floor at the registered ground elevation. Show units and a scale cue. Build visible game pieces and field fixtures from the selected official dimensions or field model, including openings, orientation and height. Preserve the field-to-robot transform during motion. Identify partial fixtures and distinguish nominal surfaces from conservative collision envelopes.
@@ -36,9 +38,11 @@ Lead the weight ledger with the inspection limit, low/high estimate and signed h
 
 Commission expected counts for the selected architecture, including its wheels, propulsion and steering actuators, control computer, power distribution, main disconnect, supply and communications. Compare expected IDs with the unfiltered placed roster. Display missing roles, counts, unallocated loads, voltage violations, overweight estimates and components awaiting a support or connection. Reviewers need to distinguish a missing representation from a missing physical design. Test a deliberately incomplete roster and a failing power case.
 
-The local package player accepts optional project-authored `presentation.components` keyed by placed ID (fields `category` and `material`), `presentation.required` mapping roles to expected placed IDs, and `presentation.loadMembers` mapping each budget source name to its consuming IDs. Supply these from the architecture and component register. A grouping or camera change preserves the commissioned checks.
+The local package player reads project-authored `presentation.components` keyed by placed ID (required `purpose` and `rationale`, optional `category` and `material`), `presentation.required` mapping roles to expected placed IDs, and `presentation.loadMembers` mapping each budget source name to its consuming IDs. Supply these from the architecture and component register. A grouping or camera change preserves the commissioned checks.
 
 ## Evidence behind the picture
+
+Label imposed payload motion as prescribed. For a tipping holder, show the reviewer the loaded pose and a separate power-off escape control. Identify the first angle at which gravity points through an opening, the available resisting contacts, and the measured escape distance or obstruction. A collision-free carried path alone establishes clearance.
 
 1. Bind the view to the reviewed geometry, motion definition and result by revision and digest. Check that every displayed mesh is closed, that the roster matches and that mesh volumes agree with source solids at a declared tolerance.
 2. Check the parked assembly for positive-volume intersections. Account for all unique pairs, including broad-phase separations. Identify intended interfaces individually with allowed geometry and allowance. Keep unresolved measurements visible.

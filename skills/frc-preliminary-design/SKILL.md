@@ -5,6 +5,12 @@ description: "Use for preliminary design of the whole robot: compare architectur
 
 # Preliminary design of the whole robot
 
+**Pre-read the current strategic narrative before sketching or revising the layout.** Read it end to end. Walk through the opening, repeated cycles, endgame, partner-dependent objectives and fallbacks that it calls for. Pin the project narrative in the review and record how each objective is represented, remains open, or was explicitly scoped out and why. Revisit this list at handoff. A subsystem experiment can cover a narrower question while the whole-robot review retains the other objectives.
+
+For every placed member, write its **purpose** (the job it performs) and **rationale** (the requirement, interface, constraint or tradeoff that earns it space here). Include supports, controls, game pieces and service gauges. Use its placed ID in the [review presentation](references/presentation.md) so selecting it reveals both explanations.
+
+When lifting or tipping a game piece, test retention separately from the animated path. At each change of support, project gravity into the holder frame, identify contacts that can push back, and sweep the entire piece toward a possible exit. Repeat with grip or power removed, including the worst loaded angle. Record a restraint, measured friction and preload, or an open retention finding. Use a free-piece simulation or load test to check dynamic capture, slip and release. [Contact and load evidence](../../docs/loaded-transfer.md)
+
 During preliminary design, use a top-down assembly layout. Share one moving layout, its checked clearance, complete weight estimate and loaded-voltage range before distributing detailed CAD. [Engineering detail and exit criteria for the three phases](../../docs/design-phase-detail.md)
 
 Present the selected layout as an inspectable solid model with motion evidence, inventory and resource budgets. Follow the [preliminary design presentation reference](references/presentation.md) when preparing the review or handing it to another designer.

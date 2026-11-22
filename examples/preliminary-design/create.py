@@ -72,6 +72,24 @@ def create(root):
               control=dict(case="loaded-turn",displaced="rail",moving="head",offsetMm=[0,-50,0],
                            basis="Move the fixed rail into the arc between the same clear endpoints"))
     plan.update(cycle=["acquire","loaded-turn","release","park-loaded"], view="package-motion.html")
+    (root/"narrative.md").write_text(
+        "Acquire a sample from the front and turn it past the gate for release. "
+        "At the finish, park the carrier. If the gate stays closed, stop before the turn.\n",
+        encoding="utf-8")
+    plan["narrativeReview"] = dict(source=pin("narrative.md"), objectives=[
+        dict(objective="Acquire, turn and release", disposition="represented", basis="The acquire, loaded-turn and release cases follow the sample."),
+        dict(objective="Park at the finish", disposition="represented", basis="The park-loaded case returns the carrier."),
+        dict(objective="Stop for a closed gate", disposition="represented", basis="The parked head clears the closed gate before the turn.")])
+    explanations = {
+        "mount": ("Locate the carrier pivot.", "Its fixed face establishes the repeatable attachment datum."),
+        "rail": ("Support the sliding gate.", "Its proximity to the turning head governs clearance at midstroke."),
+        "head": ("Carry the sample during the turn.", "A single rotating carrier connects pickup to release."),
+        "sample": ("Represent the article being transferred.", "Its overhang sets the loaded clearance."),
+        "gate": ("Control access to the release lane.", "Its concurrent slide can obstruct the loaded turn."),
+        "drive": ("Represent the propulsion package.", "The carrier must clear running gear during withdrawal."),
+        "battery": ("Supply the robot bus.", "The selected supply occupies space near the service path."),
+        "bumper": ("Represent the outer protective structure.", "Its fixed envelope constrains the approach.")}
+    plan["presentation"] = {"components": {n: dict(purpose=p, rationale=r) for n,(p,r) in explanations.items()}}
     requirements=write("package-limits.json",dict(basis="Invented design brief and loaded operating estimates",
         inspectionLimitKg=15,operatingMinV=9,
         massLines=["running gear","power","body","mechanisms","remaining robot"],
