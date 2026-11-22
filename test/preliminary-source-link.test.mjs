@@ -34,17 +34,30 @@ test('feature a preliminary still only with the exact previous README preserved'
 });
 
 /** Write one release input directory as the checker leaves it, with a receipt that pins every input. */
-function issueInputs(repo,id,{status='layout-checked',step='solid '+id,edit=r=>r}={}){
+/** An invented field fixture STEP: one named product per solid, as the checker's loader reads them. */
+const fixtureStep=(names,extra='')=>'ISO-10303-21;\nDATA;\n'+names.map((n,i)=>{
+  const b=100+i*10;
+  return "#"+b+"=PRODUCT('"+n+"','"+n+"','',(#90));\n#"+(b+1)+"=MANIFOLD_SOLID_BREP('',#91);\n#"+(b+2)+
+    "=ADVANCED_BREP_SHAPE_REPRESENTATION('',(#"+(b+1)+"),#92);\n#"+(b+3)+"=SHAPE_DEFINITION_REPRESENTATION(#"+(b+4)+",#"+(b+2)+");";
+}).join('\n')+extra+'\nENDSEC;\nEND-ISO-10303-21;\n';
+function issueInputs(repo,id,{status='layout-checked',step='solid '+id,edit=r=>r,fixtures,fixtureBody,fixtureRole='other',fixtureKg=[0,0],
+  fixturePin}={}){
   const dir=path.join(repo,inputs,id),pin=(file,body)=>{write(dir,file,body);return {file,sha256:sha(body)};};
-  const stepPin=pin('package.step',step),motion=pin('paths.json',JSON.stringify({cases:[]}));
+  const stepPin=pin('package.step',step);
+  const ids=fixtures??[];
+  const fixturePinned=ids.length?pin('field-fixtures.step',fixtureBody??fixtureStep(ids)):null;
+  const caseFixtures=ids.map(n=>({id:n,solid:n,file:fixturePin??fixturePinned,basis:'Invented field part'}));
+  const motion=pin('paths.json',JSON.stringify({cases:[{id:'turn',fixtures:caseFixtures}]}));
   const limits=pin('package-limits.json','{"inspectionLimitKg":14}');
-  const budgets=pin('budgets.json',JSON.stringify({requirements:limits,masses:[],electricalCases:{}}));
+  const masses=ids.length?[{id:'field fixtures (not robot)',members:ids,kg:fixtureKg,basis:'Field equipment'}]:[];
+  const budgets=pin('budgets.json',JSON.stringify({requirements:limits,masses,electricalCases:{}}));
   const view=pin('package-motion.html','<html>'+id+'</html>');
   const plan=pin('layout.json',JSON.stringify({issue:'synthetic-'+id,step:stepPin,motion,budgets,view:view.file}));
   const receipt=edit({schema:'agent-frc/preliminary-layout-result@1',issue:'synthetic-'+id,planSha256:plan.sha256,status,
     missingInputs:[],reopen:[],step:stepPin,motion,cases:[{case:'turn',status:'pass',pairs:[]}],
     control:{witness:{pair:['head','rail'],status:'fail'}},view:{...view,verified:true},
-    budgets:{source:budgets,limits,massStatus:'pass',electricalCases:[{case:'weak',status:'pass'}]}});
+    budgets:{source:budgets,limits,massStatus:'pass',electricalCases:[{case:'weak',status:'pass'}]},
+    groups:{carrier:{role:'mechanism',members:['head']},...(ids.length?{field:{role:fixtureRole,members:ids}}:{})}});
   write(dir,'receipt.json',receipt);
   return dir;
 }
@@ -184,4 +197,91 @@ test('the declared index can gain exactly one secondary link to the preliminary 
   const still=siteFixture(t);
   still.policy.preliminaryReleases.secondaryLink='media/robot-still.png';
   await assert.rejects(auditStaged(still.approved,still.site,still.policy),/secondaryLink/);
+});
+
+test('a field fixture STEP the motion study pins passes beside the package', async t=>{
+  let {repo,base}=sourceRepo(t);
+  issueInputs(repo,'layout-002',{fixtures:['hub body','tower base']});
+  assert.deepEqual((await run(repo,base)).preliminaryInputs,['layout-002']);
+  git(repo,'add','.');git(repo,'commit','-qm','Issue fixtures');
+  assert.deepEqual((await audit(repo,base,'.github/source-policy.json',undefined,undefined,git(repo,'rev-parse','HEAD'))).preliminaryInputs,['layout-002']);
+  // A package-only release still passes.
+  ({repo,base}=sourceRepo(t));
+  issueInputs(repo,'layout-002');
+  assert.deepEqual((await run(repo,base)).preliminaryInputs,['layout-002']);
+});
+
+test('unpinned, mispinned, robot-registered, massed or duplicate fixture STEPs are rejected', async t=>{
+  let {repo,base}=sourceRepo(t);
+  write(issueInputs(repo,'layout-002'),'extra.step','an unpinned solid');
+  await assert.rejects(run(repo,base),/Unreviewed new public model asset/);
+  ({repo,base}=sourceRepo(t));
+  issueInputs(repo,'layout-002',{fixtures:['hub body'],fixturePin:{file:'field-fixtures.step',sha256:sha('another fixture file')}});
+  await assert.rejects(run(repo,base),/fixture/);
+  ({repo,base}=sourceRepo(t));
+  write(issueInputs(repo,'layout-002',{fixtures:['hub body']}),'field-fixtures.step',fixtureStep(['hub body'])+' ');
+  await assert.rejects(run(repo,base),/fixture|differs/);
+  ({repo}=sourceRepo(t));
+  write(repo,'cad/arena.step',fixtureStep(['hub body']));git(repo,'add','.');git(repo,'commit','-qm','Arena');
+  base=git(repo,'rev-parse','HEAD');
+  issueInputs(repo,'layout-002',{fixtures:['hub body']});
+  await assert.rejects(run(repo,base),/duplicates an existing model/);
+  ({repo,base}=sourceRepo(t));
+  issueInputs(repo,'layout-002',{fixtures:['hub body'],fixtureRole:'mechanism'});
+  await assert.rejects(run(repo,base),/robot member/);
+  ({repo,base}=sourceRepo(t));
+  issueInputs(repo,'layout-002',{fixtures:['hub body'],fixtureKg:[0,1.5]});
+  await assert.rejects(run(repo,base),/robot mass/);
+  ({repo,base}=sourceRepo(t));
+  issueInputs(repo,'layout-002',{fixtures:['hub body'],fixtureBody:fixtureStep(['hub body','spare arm'])});
+  await assert.rejects(run(repo,base),/registered fixture/);
+  ({repo,base}=sourceRepo(t));
+  issueInputs(repo,'layout-002',{fixtures:['hub body'],fixtureBody:fixtureStep(['hub body'],"\n#50=MANIFOLD_SOLID_BREP('',#91);")});
+  await assert.rejects(run(repo,base),/registered fixture/);
+});
+
+test('fixture STEPs cannot hide robot solids from the product and body count', async t=>{
+  const hidden=[
+    ["comment-hidden product and body","\n#900=PRODUCT/**/('intake','intake','',(#90));\n#901=MANIFOLD_SOLID_BREP/* x */('',#91);"],
+    ["surface model","\n#900=SHELL_BASED_SURFACE_MODEL('',(#91));"],
+    ["tessellated shell","\n#900=TESSELLATED_SHELL('',(#91),$);"],
+    ["instanced assembly","\n#900=MAPPED_ITEM('',#91,#92);"],
+    ["complex product","\n#900=(PRODUCT('arm','arm','',(#90)) PRODUCT_CONTEXT('',#1,''));"],
+    ["orphan representation","\n#900=SHAPE_REPRESENTATION('',(#901),#92);\n#901=ADVANCED_FACE('',(#91),#93,.T.);"],
+    ["orphan brep representation","\n#900=ADVANCED_BREP_SHAPE_REPRESENTATION('',(#101),#92);"],
+    ["wireframe","\n#900=EDGE_BASED_WIREFRAME_MODEL('',(#91));"],
+    ["representation relationship","\n#900=SHAPE_REPRESENTATION_RELATIONSHIP('','',#102,#92);"]];
+  for(const [label,extra] of hidden){
+    const {repo,base}=sourceRepo(t);
+    issueInputs(repo,'layout-002',{fixtures:['hub body'],fixtureBody:fixtureStep(['hub body'],extra)});
+    await assert.rejects(run(repo,base),/registered fixture/,label);
+  }
+  // A comment or string that only mentions an entity is not one.
+  const {repo,base}=sourceRepo(t);
+  issueInputs(repo,'layout-002',{fixtures:['hub body'],fixtureBody:fixtureStep(['hub body'],"\n/* MANIFOLD_SOLID_BREP('',#1); */\n#900=DESCRIPTIVE_REPRESENTATION_ITEM('note','PRODUCT(x) MAPPED_ITEM(');")});
+  assert.deepEqual((await run(repo,base)).preliminaryInputs,['layout-002']);
+});
+
+test('fixture IDs and solids are checked against robot groups and package solids', async t=>{
+  const cases=[
+    [{edit:r=>{const {groups,...rest}=r;return rest;}},/receipt groups/],
+    [{fixtureRole:'Structure'},/robot member/],
+    [{edit:r=>({...r,groups:{...r.groups,field:{members:r.groups.field.members}}})},/robot member/],
+    [{edit:r=>({...r,groups:{carrier:r.groups.carrier}})},/other-role fixture group/],
+    [{edit:r=>({...r,groups:{...r.groups,carrier:{role:'mechanism',members:['head','tower base']}}})},/robot member|package solid/],
+    [{step:fixtureStep(['hub body'])},/package solid/],
+    [{fixtureBody:fixtureStep(['hub b\\X\\6Fdy'])},/registered fixture/]];
+  for(const [options,pattern] of cases){
+    const {repo,base}=sourceRepo(t);
+    issueInputs(repo,'layout-002',{fixtures:['hub body','tower base'],fixtureBody:fixtureStep(['hub body','tower base']),...options});
+    await assert.rejects(run(repo,base),pattern,JSON.stringify(options).slice(0,80));
+  }
+});
+
+test('an issued fixture STEP is immutable', async t=>{
+  const {repo}=sourceRepo(t);
+  issueInputs(repo,'layout-002',{fixtures:['hub body']});git(repo,'add','.');git(repo,'commit','-qm','Issued');
+  const base=git(repo,'rev-parse','HEAD');
+  write(path.join(repo,inputs,'layout-002'),'field-fixtures.step',fixtureStep(['hub body','hub top']));
+  await assert.rejects(run(repo,base),/issued preliminary input/);
 });
