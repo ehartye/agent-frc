@@ -131,6 +131,10 @@ def create(root, release_id=None):
                      "bumper": "Foam and backing"}
         for part, material in materials.items():
             plan["presentation"]["components"][part]["material"] = material
+        subsystems = {"mount": "Carrier", "head": "Carrier", "sample": "Carried article", "rail": "Gate",
+                      "gate": "Gate", "drive": "Drivetrain", "battery": "Power", "bumper": "Frame and bumper"}
+        for part, subsystem in subsystems.items():
+            plan["presentation"]["components"][part].update(subsystem=subsystem, volumeType="material")
         plan["presentation"]["architecture"] = "Synthetic pivoting carrier beside a sliding gate (invented teaching layout)"
         plan["presentation"]["caseKinds"] = {"park-loaded": "inhibited"}
         plan["presentation"]["uncoveredCases"] = [dict(id="gate-closes-mid-turn",

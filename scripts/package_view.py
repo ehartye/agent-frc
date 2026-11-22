@@ -286,6 +286,65 @@ def field_interactions(root, plan):
     return rows
 
 
+VOLUME_TYPES = ("material", "envelope", "gauge")
+
+
+def component_inspector(plan, scenes, study_cases, mass_lines=None, load_members=None, fixtures=()):
+    """Per placed ID: identity, classification, volume, mass basis, explanations, loads and moving cases.
+
+    Category (what it is), subsystem (what function it serves) and motion group (what it moves with) stay
+    separate. Every field the project has not supplied is listed under `missing` so the page shows it."""
+    presentation = plan.get("presentation", {})
+    components = presentation.get("components", {})
+    groups = plan.get("groups", {})
+    group_of = {m: (key, g.get("role")) for key, g in groups.items() for m in g.get("members", [])}
+    volumes = {}
+    for case in scenes:
+        for name, body in case["bodies"].items():
+            if volumes.get(name) is None and body.get("volumeMm3") is not None:
+                volumes[name] = round(body["volumeMm3"], 3)
+    rows = {}
+    for member in sorted(group_of):
+        entry = components.get(member, {}) if isinstance(components.get(member), dict) else {}
+        group, role = group_of[member]
+        missing = []
+        volume_type = entry.get("volumeType")
+        if volume_type is not None:
+            require(volume_type in VOLUME_TYPES, "volumeType for " + member + " is material, envelope or gauge")
+        lines = []
+        for line in mass_lines or []:
+            if member in line.get("members", []):
+                others = [m for m in line["members"] if m != member]
+                lines.append(dict(id=line["id"], kg=line["kg"], basis=line.get("basis"), sharedWith=others,
+                                  note=("Shared with " + ", ".join(others) + "; unallocated until the line is split")
+                                  if others else "Allocated to this component alone"))
+        excluded = member in fixtures or role in ("payload", "service")
+        if not lines and not excluded and mass_lines is not None:
+            missing.append("mass line")
+        for field in ("purpose", "rationale"):
+            if not named(entry.get(field)):
+                missing.append(field)
+        for field in ("material", "subsystem"):
+            if not named(entry.get(field)):
+                missing.append(field)
+        if volume_type is None:
+            missing.append("volume type")
+        if volumes.get(member) is None:
+            missing.append("volume")
+        moves = [c["id"] for c in study_cases if member in c.get("moves", {})]
+        rows[member] = dict(
+            id=member, name=entry.get("name") or member, category=entry.get("category") or role, role=role,
+            subsystem=entry.get("subsystem"), motionGroup=group, material=entry.get("material"),
+            volumeMm3=volumes.get(member), volumeType=volume_type,
+            mass=lines, massExcluded=("Field fixture; not robot mass" if member in fixtures else
+                                      "Excluded from inspection weight (" + role + ")")
+                     if excluded else None,
+            purpose=entry.get("purpose"), rationale=entry.get("rationale"),
+            loads=sorted(k for k, ids in (load_members or {}).items() if member in ids),
+            movesIn=moves, missing=missing)
+    return rows
+
+
 def review_header(plan, snapshot):
     presentation = plan.get("presentation", {})
     narrative = (plan.get("narrativeReview") or {}).get("source")
@@ -344,6 +403,9 @@ def verify_view(root, plan, scenes, write, observed, budgets, review=None):
             series["power"].append({**row, "loads": duty["batterySideA"], "resistance": duty["resistanceOhm"],
                                     "openCircuit": duty["openCircuitV"]})
         series["loadMembers"] = presentation.get("loadMembers", {})
+    series["inspector"] = component_inspector(plan, scenes, review.get("studyCases", []),
+                                              series["mass"]["lines"] if budgets else None,
+                                              presentation.get("loadMembers", {}), fixtures)
     data = json.dumps(series, allow_nan=False, sort_keys=True, separators=(",", ":")).replace("<", "\\u003c")
     expected = template.replace("PACKAGE_DATA", data).encode("utf-8")
     if write and not path.exists():
