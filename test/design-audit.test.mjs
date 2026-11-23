@@ -145,7 +145,7 @@ const cases = {
   'plugin-code': [replaceFile('scripts/old.py', 'import os, subprocess\nPLUGIN = os.environ["AGENT_FRC_ROOT"]\nsubprocess.run(["node", os.path.join(PLUGIN, "scripts", "design.mjs")])\n'),
     replaceFile('scripts/old.py', '# Checks are run by the agent with the plugin, never by this project.\nprint("done")\n')],
   'stale-output': [{stale: true}, {}],
-  'hand-edited-output': [replaceFile('design/generated/design.step', fixedStep(['base plate']).replace('2000-01-01T00:00:00', '2026-03-04T10:00:00')), {}],
+  'hand-edited-output': [replaceFile('design/generated/design.step', fixedStep(['base plate']).replace('2000-01-01T00:00:00', '2031-05-06T07:08:09')), {}],
   'custom-several-solids': [replaceFile('design/custom/hook.py', hookWith('    builder = BRep_Builder()\n    compound = TopoDS_Compound()\n')), {}],
   'custom-places-itself': [replaceFile('design/custom/hook.py', hookWith('    shift = gp_Trsf()\n    shift.SetTranslation(gp_Vec(reach, 0, 0))\n')), {}],
   'custom-reads-or-writes': [replaceFile('design/custom/hook.py', hookWith('    depth = float(Path("jaw.txt").read_text())\n')), {}],
