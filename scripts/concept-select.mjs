@@ -12,7 +12,7 @@
 // the sweep ended first its bound is the quantity's validity limit. Paths are relative to the project root.
 // A selected role's ranking is a recommendation from the modelled field; the selection is the student's decision.
 import path from 'node:path';
-import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
+import {readFileSync,writeFileSync,mkdirSync,readdirSync,rmSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 import {sweepableQuantities} from './concept-study.mjs';
@@ -101,6 +101,17 @@ export function conceptSelection({results,resultsRef,conceptRef,document,study,s
   return {selection,premises};
 }
 
+// The premise files in a folder that an earlier selection into the same folder wrote and this run did not: JSON
+// accepted premise records with phase conceptual-design whose source is this selection file. Anything else stays.
+export function stalePremises(folder,written,selectionFile) {
+  return readdirSync(folder).filter(name=>name.endsWith('.json') && !written.has(name)).map(name=>path.join(folder,name)).filter(file=>{
+    let record;
+    try{record=decode(readFileSync(file));}catch{return false;}
+    return record!==null && typeof record==='object' && record.phase==='conceptual-design' && record.source?.file===selectionFile &&
+      ['id','scenario','basis','unit'].every(k=>label(record[k])) && Array.isArray(record.interfaces) && Array.isArray(record.criterion?.range);
+  });
+}
+
 // The command line. Returns the exit code; io injects the project root and output for tests.
 export async function main(args,{cwd=process.cwd(),log=console.log,error=console.error}={}) {
   let resultsArg,candidate,basis,out;const renames=new Map();
@@ -147,6 +158,10 @@ export async function main(args,{cwd=process.cwd(),log=console.log,error=console
     for(const p of premises)writeFileSync(path.join(outDir,'premises',p.id+'.json'),JSON.stringify(p,null,2)+'\n');
     log('Selection: '+selectionFile);
     for(const p of selection.premises)log('Premise: '+p.file);
+    for(const file of stalePremises(path.join(outDir,'premises'),new Set(premises.map(p=>p.id+'.json')),selectionFile)){
+      rmSync(file);
+      log('Removed stale premise '+project(file));
+    }
     return 0;
   }catch(e){error(e.message);return 2;}
 }

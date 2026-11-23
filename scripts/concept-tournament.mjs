@@ -9,7 +9,7 @@
 // Margins are in expected points: a credited release scores the target's points × the port's successFraction.
 // The ranking covers base candidates only. A variant changes one quantity; every other quantity stays at base.
 import path from 'node:path';
-import {readFileSync,writeFileSync,existsSync} from 'node:fs';
+import {readFileSync,writeFileSync,existsSync,mkdirSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 import {loadScoreObservations} from './score-observations.mjs';
@@ -224,21 +224,27 @@ export async function main(args,{now,log=console.log,error=console.error}={}) {
     }catch(e){error(e.message);return 2;}
   }
   if(!study || !out){error(USAGE);return 2;}
-  let run;
-  try{run=await runTournament(study,{maxMatches,allowLong,log,outDir:path.dirname(path.resolve(out)),...(now?{now}:{})});}
-  catch(e){error(e.message);return 2;}
-  if(run.status!=='ok')return 3;
-  writeFileSync(out,JSON.stringify(run.results)+'\n');
-  log('Results: '+path.resolve(out));
-  if(html!==undefined){
-    const page=new URL('./concept-results-page.mjs',import.meta.url);
-    if(existsSync(page)){
-      const {writeResultsPage}=await import(page.href);
-      await writeResultsPage(run.results,html);
-      log('Page: '+path.resolve(html));
-    } else log('Results page not built: scripts/concept-results-page.mjs is not installed.');
-  }
-  return 0;
+  // Output folders are created before any match is played, so an unwritable path stops the run at once.
+  const folder=file=>{
+    try{mkdirSync(path.dirname(path.resolve(file)),{recursive:true});}
+    catch(e){throw Error('Cannot create the folder for '+file+': '+e.message);}
+  };
+  try{
+    folder(out);if(html!==undefined)folder(html);
+    const run=await runTournament(study,{maxMatches,allowLong,log,outDir:path.dirname(path.resolve(out)),...(now?{now}:{})});
+    if(run.status!=='ok')return 3;
+    try{writeFileSync(out,JSON.stringify(run.results)+'\n');}catch(e){throw Error('Cannot write '+out+': '+e.message);}
+    log('Results: '+path.resolve(out));
+    if(html!==undefined){
+      const page=new URL('./concept-results-page.mjs',import.meta.url);
+      if(existsSync(page)){
+        const {writeResultsPage}=await import(page.href);
+        try{await writeResultsPage(run.results,html);}catch(e){throw Error('Cannot write '+html+': '+e.message);}
+        log('Page: '+path.resolve(html));
+      } else log('Results page not built: scripts/concept-results-page.mjs is not installed.');
+    }
+    return 0;
+  }catch(e){error(e.message);return 2;}
 }
 
 if(process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href)process.exitCode=await main(process.argv.slice(2));

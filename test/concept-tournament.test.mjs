@@ -102,7 +102,8 @@ async function cli(args,stepMs=0){
 }
 
 test('the run budget: a max-matches stop before play, a projected long run stopped after three matches, and --allow-long',async t=>{
-  const dir=project(t),study=path.join(dir,'study.json'),out=path.join(dir,'results.json');
+  // The results go into a nested folder that does not exist yet.
+  const dir=project(t),study=path.join(dir,'study.json'),out=path.join(dir,'runs','first','results.json');
   const capped=await cli([study,'--out',out,'--max-matches','2']);
   assert.equal(capped.code,3);assert.match(capped.out,/4 matches/);assert.equal(capped.readings,0);
   // 100 s per match projects 400 s for four matches, above the 300 s guideline.
@@ -127,4 +128,7 @@ test('invalid concept studies exit 2: a stale concept pin names the file, and on
   writeFileSync(path.join(dir,'one.json'),JSON.stringify(study));
   const one=await cli([path.join(dir,'one.json'),'--out',path.join(dir,'r.json')]);
   assert.equal(one.code,2);assert.match(one.out,/2–8 base roles/);
+  // An output folder that cannot be created (its parent is a file) exits 2 before any match, naming the path.
+  const blocked=await cli([path.join(dir,'study.json'),'--out',path.join(dir,'study.json','results.json')]);
+  assert.equal(blocked.code,2);assert.match(blocked.out,/study\.json/);assert.doesNotMatch(blocked.out,/Planned/);
 });

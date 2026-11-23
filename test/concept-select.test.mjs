@@ -96,6 +96,22 @@ test('selection input errors exit 2, and --interface renames one interface group
   assert.deepEqual(readJson(root,'sel/premises/turret-shooter.drive.topSpeedInS.json').interfaces,['drive']);
 });
 
+test('a rerun removes the conceptual-design premises of this selection it did not write, and nothing else',async t=>{
+  const root=project(t),args=['--candidate','turret','--basis','Why.','--out','sel'];
+  assert.equal((await cli(root,args)).code,0);
+  const folder=path.join(root,'sel/premises'),written=readdirSync(folder).sort();
+  const stale={...readJson(root,'sel/premises/turret-shooter.drive.topSpeedInS.json'),id:'turret-shooter.drive.accelInS2'};
+  writeFileSync(path.join(folder,'turret-shooter.drive.accelInS2.json'),JSON.stringify(stale));
+  // Controls: an upstream preliminary-design premise, an unrelated JSON file and an unreadable one stay.
+  writeFileSync(path.join(folder,'upstream.json'),JSON.stringify({...stale,id:'upstream',phase:'preliminary-design'}));
+  writeFileSync(path.join(folder,'notes.json'),JSON.stringify({note:'kept'}));
+  writeFileSync(path.join(folder,'broken.json'),'{');
+  const rerun=await cli(root,args);
+  assert.equal(rerun.code,0,rerun.out);
+  assert.match(rerun.out,/Removed stale premise sel\/premises\/turret-shooter\.drive\.accelInS2\.json/);
+  assert.deepEqual(readdirSync(folder).sort(),[...written,'broken.json','notes.json','upstream.json'].sort());
+});
+
 test('the layout check reads every generated premise; a premise without a unit is rejected',async t=>{
   const root=project(t);
   assert.equal((await cli(root,['--candidate','turret','--basis','Why.','--out','sel'])).code,0);
