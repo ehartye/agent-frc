@@ -192,7 +192,7 @@ A season pins a plugin revision and holds copies of some plugin files. After mov
 | 0.122.1 | The release index page `docs/preliminary-design/index.html` from `templates/preliminary-review-index.html`. The note under the header is gone: the release picker names each design status and the review page shows the rest. |
 | 0.123.0 | `stage.py`, the release index page and the local review page (delete `package-motion.html` and rerun the check with `--write-view`). Staging an in-progress release again revises it in place and counts a revision; an effective release is no longer restaged. Mark in-progress releases that a later release replaced `superseded`, and add `accepted` for a superseded release that was once effective. [Revise an in-progress release in place](design-publication.md#revise-an-in-progress-release-in-place) |
 
-An issued release never changes; a new release carries the new page.
+An in-progress release takes the new page when it is staged again under its ID. An effective, superseded or withdrawn release never changes.
 
 ## Examine the moving blocks and budgets
 
