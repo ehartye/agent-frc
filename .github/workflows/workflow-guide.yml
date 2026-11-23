@@ -11,6 +11,7 @@ jobs:
   check:
     name: Plugin checks
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       GIT_AUTHOR_NAME: Plugin test fixture
       GIT_AUTHOR_EMAIL: tests@example.invalid
@@ -18,12 +19,16 @@ jobs:
       GIT_COMMITTER_EMAIL: tests@example.invalid
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0 # the changed-files selection compares with the merge base
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
       - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
         with:
           python-version: '3.12'
+          cache: pip
+          cache-dependency-path: .github/workflows/workflow-guide.yml # the pinned versions are in this file
       - run: python -m pip install Pillow==11.3.0 numpy==2.2.6
       - name: Prepare the workflow syntax checker used by the regression
         env:
@@ -35,23 +40,48 @@ jobs:
           tar -xzf "$archive" -C "$RUNNER_TEMP" actionlint
           echo "FRC_ACTIONLINT=$RUNNER_TEMP/actionlint" >> "$GITHUB_ENV"
       - run: npm run validate
-      - run: npm run test:portable
+      # A pull request runs the tests that cover its changed files. Main and a manual run execute the whole portable suite.
+      - name: Run the tests
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            node scripts/test-suite.mjs --portable --changed "origin/$GITHUB_BASE_REF"
+          else
+            npm run test:portable
+          fi
   rerun:
     name: Layout check rerun
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0 # the changed-files selection compares with the merge base
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
-      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+      # The job always reports. On a pull request the kernel steps run only when a changed file reaches the rerun test.
+      - name: Decide whether this change reaches the rerun test
+        id: reach
+        run: |
+          run=true
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            node scripts/test-suite.mjs --changed "origin/$GITHUB_BASE_REF" --list design-publication | tee "$RUNNER_TEMP/selection.txt"
+            grep -q 'design-publication.test.mjs$' "$RUNNER_TEMP/selection.txt" || run=false
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+          echo "Layout check rerun test: run=$run" >> "$GITHUB_STEP_SUMMARY"
+      - if: steps.reach.outputs.run == 'true'
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
         with:
           python-version: '3.13'
+          cache: pip
+          cache-dependency-path: .github/workflows/workflow-guide.yml # the pinned versions are in this file
       # The same interpreter and kernel versions as templates/design-publication.yml, so the template's install is exercised here.
-      - run: python -m pip install "cadquery-ocp==8.0.1.0.0" "numpy==2.5.3"
+      - if: steps.reach.outputs.run == 'true'
+        run: python -m pip install "cadquery-ocp==8.0.1.0.0" "numpy==2.5.3"
       # Builds a synthetic release with the real layout check, reruns it as a project's CI does and rejects a forged receipt.
-      - run: node --test test/design-publication.test.mjs
+      - if: steps.reach.outputs.run == 'true'
+        run: node --test test/design-publication.test.mjs
         env:
           FRC_TEST_PROFILE: station
   build:

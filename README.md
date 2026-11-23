@@ -38,14 +38,14 @@ To repeat a geometric check on a saved Fusion assembly, use the [native study re
 Use Node.js and npm. The same commands run from an installed copy. The plugin works with project files and has no required vault or robot connection.
 
 ```sh
-npm test
 npm run validate
+npm run test:changed
 npm run rules -- init ../robot-project/register.json
 npm run rules -- compile ../robot-project/register.json ../robot-project/field-profile.json ../robot-project/reviewed-rules.json
 npm run kickoff -- --profile ../robot-project/reviewed-rules.json --output ../robot-project/field.html
 ```
 
-Fill the register and field profile from the team's sources before compiling. Open the generated HTML locally. For a quick trial, run the last command with [the invented training field](examples/kickoff/training-field.json) as the profile. Outputs use new filenames to preserve prior revisions.
+`npm run test:changed` runs the tests that cover the files you changed; see [how the plugin tests itself](docs/project-ci.md#how-the-plugin-repository-tests-itself) for the full suite and the other runs. Fill the register and field profile from the team's sources before compiling. Open the generated HTML locally. For a quick trial, run the last command with [the invented training field](examples/kickoff/training-field.json) as the profile. Outputs use new filenames to preserve prior revisions.
 
 New robot blockouts default to two rear plan-view chamfers. Download the editable frame plan from the workflow guide or generate a Fusion sketch from the [project frame and bumper profile](docs/frame-profile.md).
 
