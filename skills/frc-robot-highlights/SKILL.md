@@ -1,71 +1,106 @@
 ---
 name: frc-robot-highlights
-description: "Create or refresh a student robot showcase with explorable CAD models, mechanism animations, maintained README stills and source-linked design evidence."
+description: "Create or refresh a student robot showcase with an explorable design review, mechanism animations, a maintained README still and source-linked design evidence."
 ---
 
-# Robot evidence highlights
+# Robot showcase
 
-Before promoting a new whole robot or subsystem model, use `frc-mechanical-readiness` on the exact Fusion configuration and every distributed derivative. Require a negative-control and candidate receipt from an installed first-party method for externally discovered defects. Require a passing, scoped mechanical review, committed with the status change in a reviewed pull request, before a design becomes `effective` and replaces the live model, its README image or the native download. On an open or failed candidate, preserve the deployed revision and continue private engineering work. [Model promotion and evidence](../../docs/mechanical-readiness.md)
+The showcase lets a student explore the robot, watch its mechanisms move and follow each claim to its evidence. It ends when the hosted page, the design review and the README still all show the same design and you have opened each one.
 
-Every published design holds a status: `in-progress`, `effective`, `superseded` or `withdrawn`. An [in-progress detailed design](../../docs/design-publication.md#publish-a-detailed-design) can deploy without that review once it links an effective preliminary release, its registered Fusion export passes the layout check and a mission animation plays. Show it beside the effective design, labelled with its status. It takes the primary view only when no effective detailed design exists. The project's pull request review covers the entry page, README and selector. To pull a published design with no replacement, [withdraw it](../../docs/design-publication.md#withdraw-a-design) with a reason in one pull request. The index keeps the reason and the last commit that held its files, and the files leave the site. When a design's preliminary release is superseded, re-link it.
+**Start here:** find the design to show in `docs/detailed-design/designs.json`, then do the six steps in order.
 
-A preliminary design release, in progress or effective, can also deploy beside the live model without that review. Each [preliminary release](../../docs/design-publication.md#publish-a-preliminary-design-release) needs a layout-checked receipt and a playable mission-task case for a represented narrative objective. Link it as a secondary page that identifies itself as preliminary design. It never replaces the primary view, README still or model selector, which keep showing the latest effective detailed design.
+## One design, one review
 
+Each design has one explorable view: its [design review](../../docs/design-publication.md#one-viewer-for-one-design), the page the layout check writes and staging copies to `docs/detailed-design/designs/ID/`. It serves the design while it is `in-progress` and after it is `effective`. The README still links to it. The showcase page links to it and adds results, films and sources.
 
-## Let students explore the model
+| Status | Where it shows |
+| --- | --- |
+| `effective` detailed design | Front and centre: the entry page, the README still and the selector |
+| `in-progress` detailed design | Beside the effective one, labelled. It takes the front only when no design is effective |
+| Preliminary design, in progress or effective | A secondary page that says it is preliminary design |
+| `superseded` | Viewable as history |
+| `withdrawn` | Not shown. The index keeps the reason |
 
-Resolve the project’s [component palette](../../docs/cad-color-convention.md) before exporting a colored assembly. Use the same stable part roles for Fusion, the design review and the README still. Check the bumper cover, adjacent moving parts and supplier finishes in each.
+Statuses, staging and withdrawal belong to [design publication](../../docs/design-publication.md). Update the entry page, README and selector in the pull request that changes a status.
 
-Each design has one explorable view: its [design review](../../docs/design-publication.md#one-viewer-for-one-design), the page the layout check writes and staging publishes at `docs/detailed-design/designs/ID/`. It serves the design while it is in progress and after it is effective. Lead the showcase with a CAD still that links to it, the design name, version and pose, and a link to the student Fusion source. Do not add a second model viewer. Identify simplified purchased parts and incomplete subsystems in the caption. A subsystem-only export should identify the subsystem in the title.
+## Order of work
 
-Use the same assembly for the still at the top of each project README. The image links to the design review and identifies whether it shows a current candidate, historical revision or fixture. For a shareable Fusion STEP export, set `source`, `title`, `scope` and the design's `status` in the project's `cad-showcase.json`. Run `python <plugin>/scripts/export-showcase-cad.py <project>` with OCP and VTK, followed by `python <plugin>/scripts/cad-readmes.py <project> --update`. Run the second command without `--update` in CI: it [checks that each README shows the still below its title, that the image exists and that the caption names the current design and its status](../../docs/cad-color-convention.md#keep-the-readme-still-current), and compares no bytes. For the results page add a `cad` object with `title`, `scope` and `shareable: true` to a project-root manifest; it shows the still and links the review of the current detailed design, or the one `cad.review` names.
+### 1. Choose what to show
 
-Before issuing a still, [verify the saved viewport or registered render](../../docs/cad-capture-review.md). Reopen and activate the selected assembly, restore only the intended display state and compare the resulting pixels with an independent view. Check the whole outline, visible mechanism, cover finish and readable markings promised in this pose. Keep failed captures and distinguish a verified renderer from a native viewport.
+Start with the project's existing public page, the design and its match role. Find the strongest recorded result that would help a student decide what to keep or change. Open the original run. Check the design it ran on, the clock, units, pass criterion and first failure. A tally from a development run stays beside the conditions that produced it. A different drivetrain or mechanism needs its own run.
 
-## Show how the mechanism moves
+### 2. Show the model
 
-For each mechanism central to the match role, show a student one complete operating cycle. For example, show the intake stowed, acquiring, transferring a piece and returning to stow. Name the moving part, state and relevant joint angle or extension. Pick a camera angle where both the moving part and its fixed reference are visible. Use a cutaway or isolated subsystem view when the frame hides the motion.
-
-Prefer a student-controlled animation with play, pause, scrub and named poses. A recorded Fusion joint drive or simulation clip with native video controls also works. Export from the same assembly revision and supply the motion source, units, joint limits, clock or playback multiplier and any omitted motion. Label a commanded CAD sequence as such. For a trace-driven replay, bind observed poses to timestamps and identify the first failure or contact. A camera orbit illustrates shape; show relative motion between components for the mechanism demonstration.
-
-Put a recorded animation in the manifest's `media` array with its local video, optional poster, accessible description, caption and source ID. Start paused. Verify in the design review that a student can rotate the assembly, pause the mechanism mid-cycle, inspect an endpoint and reset the view using keyboard and pointer controls. If a mechanism lacks motion evidence, name the missing joint or run in the showcase and leave its animation pending.
-
-Start with the project’s existing public page, selected robot revision and intended match role. Find the strongest recorded result that would help a student decide what to keep or change. Open the original run or engineering record. Check the candidate, clock, units, outcome criterion and first failure. A tally from a development run belongs alongside the conditions that produced it. A different drivetrain or mechanism needs a new run to inherit that tally.
-
-Author a project-owned manifest using the [working example](../../examples/highlights/project.json). Put the robot’s role and revision at the top. Give each result a claim, evidence basis (`modeled`, `measured`, `design` or `open`), conditions, limit, and source ID. Include the most consequential failed or untested condition. In the build sheet, connect each subsystem configuration to its drawing, settings or bill. Use a separate campaign for a frozen evaluation roster. Enter its criterion, required passes, and full counts including failed and unresolved attempts. Keep development starts out of that denominator.
-
-For each source, supply a label and the source revision. Prefer an immutable public HTTPS link to the exact record. For a local artifact under the manifest directory, supply its relative file path and `shareable: true`. Inspect private details before making that declaration. The builder copies the file into the page’s evidence directory under the digest it read; a `sha256` typed beside the path is verified and not required. It checks local content and leaves external links for the author to open and verify.
-
-Use the optional `media` array for recorded views. Each entry has `asset` (a local image or video source ID), `description` (accessible alternative), `caption`, and `source` (the run or drawing it illustrates). A video may specify a local image source ID as `poster`. Explain the viewpoint and playback speed when a film compresses match time. Identify renders, slow motion and sensor events individually. Use text and evidence links when the project has no distributable media.
-
-Run the [offline page builder](../../scripts/robot-highlights.mjs) from the installed plugin with the project manifest and the desired site directory:
+- Resolve the project's [component palette](../../docs/cad-color-convention.md) first. Use the same part roles in Fusion, the design review and the README still. Check the bumper cover, the moving parts next to it and supplier finishes in each.
+- Caption the view with the design name, status, pose and scope. Name simplified purchased parts and unfinished subsystems. Title a subsystem-only view with the subsystem.
+- Link the student Fusion file or its project location.
+- Put a CAD still directly below the title of each project README, linked to the design review. In the project's `cad-showcase.json` set `source`, `title`, `scope`, the design's `status` and `viewerUrl`, the design review's address. Then run:
 
 ```sh
-node <plugin>/scripts/robot-highlights.mjs <project>/highlights.json <project>/docs/robot
+python PLUGIN/scripts/export-showcase-cad.py .
+python PLUGIN/scripts/cad-readmes.py . --update
 ```
 
-Open the generated `index.html` on desktop and at a narrow viewport, follow the source links and play each film. Use a fresh output directory for a clean publication artifact. Regeneration replaces the generated page while preserving an independently authored index. Link the finished page from the project’s existing navigation. Publish through the project’s chosen host when authorized. On later revisions, revisit every changed configuration, claim and media caption and regenerate from the updated evidence.
-## Publish on the project's GitHub Pages site
+Run `cad-readmes.py .` with no option in CI. It checks that each README shows the still below its title, that the image exists and that the caption names the current design and its status. [Keep the README still current](../../docs/cad-color-convention.md#keep-the-readme-still-current)
 
-For a project-specific visual identity, set `stylesheet` on the highlights manifest with a project-relative CSS `file` and `shareable: true`. The builder publishes the stylesheet with the page. Scope selectors to `.robot-showcase`. Use self-contained CSS so offline and published views agree.
+Before publishing a still, reopen the Fusion file, restore only the intended display state and compare the picture with a second view. Check the whole outline, the visible mechanism, the cover finish and readable markings. [Check a captured still](../../docs/cad-capture-review.md)
 
-To use a two-color studio backdrop, add `"backdrop": {"center":"#536980","edge":"#192C44"}` to the project’s `cad-showcase.json`. Regenerate the CAD still before building the page. The colors affect the space around the model and leave all component appearances intact.
+### 3. Show how each mechanism moves
 
-When the team wants a public site, keep `highlights.json`, its CAD receipt and its approved source files in the project repository. For a repository with an existing Pages site, build the showcase into a subdirectory of its existing publication artifact and link it from the site's navigation. GitHub Pages serves one site per repository.
+For each mechanism central to the match role, show one whole operating cycle: for example stowed, acquiring, transferring a piece and back to stow. Name the moving part, its state and the joint angle or extension. Pick a camera angle that shows both the moving part and its fixed reference. Use a cutaway or an isolated subsystem when the frame hides the motion.
 
-For either branch-served or generated Pages, use the [design publication workflow](../../docs/design-publication.md#set-up-the-workflow). One check covers the preliminary releases and the detailed designs: it reruns each layout check from the committed inputs and checks the status indexes. Run it locally before pushing, and open the built site to confirm every post-build copy.
+Prefer an animation the student controls: play, pause, scrub and named poses. A recorded Fusion joint drive or simulation clip with video controls also works. Give the motion source, units, joint limits, playback speed and any motion left out. Label a commanded CAD sequence as commanded. For a replay driven by recorded data, tie poses to timestamps and mark the first failure or contact. A camera orbit shows shape, not mechanism motion.
 
-After the first successful deployment, open the URL reported by the deploy job. Verify the design review, the still image and film playback on the hosted page. Add the live URL to the project README. Refresh evidence in the project and merge to the default branch to update the site. Local and offline builds use the same manifest.
+If a mechanism has no motion evidence, name the missing joint or run in the showcase and leave its animation pending.
 
+### 4. Write the manifest
 
-Use the [publication checks](../../docs/showcase-evidence.md) for a kickoff-only analysis page, a project workflow index and observed pickup or release markers on the film clock. Keep chances and conditional point estimates distinct from an independently reached target. For a cut between studies, show the checked chapter boundary and compare the event type, time and qualification to independent observations. For a named animation, seek the event in its own clip.
+Write a project-owned manifest from the [working example](../../examples/highlights/project.json).
 
-Publish the project’s generated student field lab with the `fieldLab` entry and link it directly from the README. Verify the stable `field-lab.html` in the deployed site.
+- Put the robot's role and design at the top. Add a `cad` object with `title`, `scope` and `shareable: true`; the page shows the still and links to the design review.
+- Give each result a claim, a basis (`modeled`, `measured`, `design` or `open`), conditions, a limit and a source ID. Include the most consequential failed or untested condition.
+- In the build sheet, link each subsystem configuration to its drawing, settings or bill.
+- Use a separate campaign for a fixed evaluation set: criterion, required passes and full counts with failed and unresolved attempts. Keep development starts out of that count.
+- For each source give a label and the design or commit it came from. Prefer a permanent public link to the exact record. For a local file, give its relative path and `shareable: true`. Check private details first.
+- Put each recorded view in `media`: `asset`, `description`, `caption` and `source`, with an optional `poster`. Start paused. Explain the viewpoint and playback speed. Mark renders, slow motion and sensor events.
 
-For a publicly downloadable whole robot, bind the student archive to its own reopened component, feature and joint evidence. [Verify the public Fusion handoff](../../docs/public-fusion-handoff.md).
+### 5. Build the page and check it
 
-Use the [Fusion authority and revision handoff](../../docs/fusion-authority.md) to establish the one current saved native design, the STEP exported from that design and the identity of the engineering evidence. When resuming in another checkout or before replacing a published view, verify the selected register and lineage with `fusion_authority.py`. For a mechanical review, use `fusion_issue_inventory.capture` in Fusion for missing commissioned poses. [Resume a registered master](../../docs/fusion-authority.md#resume-a-registered-master)
+```sh
+node PLUGIN/scripts/robot-highlights.mjs highlights.json docs/robot
+```
 
+Open the generated `index.html` on a desktop and at a narrow width. Follow every source link and play every film. Confirm a student can pause a mechanism mid-cycle, inspect an endpoint and reset the view with keyboard and pointer. Build into a fresh folder for a clean result. Link the page from the project's navigation.
 
+### 6. Publish and verify
 
-After a numbered restart, keep the earlier design effective and published until the new whole robot passes its review. The pull request that makes the new design [effective](../../docs/design-publication.md#effective-designs) supersedes the earlier one.
+Keep `highlights.json` and its source files in the project repository. For a repository that already has a Pages site, build into a subfolder of that site and link it. Use the [design publication workflow](../../docs/design-publication.md#set-up-the-workflow); run its check locally before pushing.
+
+After the first deployment, open the URL the deploy job reports. Check the design review, the still and film playback on the hosted page. Add the live URL to the README. On a later change, revisit every changed configuration, claim and caption and build again.
+
+## Defaults: do these without being asked
+
+1. Show one design review for each design. Do not add a second model viewer.
+2. Label every view with the design name and its status.
+3. Show a failed or untested condition beside each headline result.
+4. Keep the effective design in front until another design is effective.
+5. Open the hosted page yourself after every deploy.
+
+## Check in with the user before
+
+1. Publishing a file whose private details you have not checked.
+2. Replacing the front view with a design that is not effective.
+3. Withdrawing a published design.
+
+## Special cases
+
+| When | Do | Detail |
+| --- | --- | --- |
+| The project wants its own look | Set `stylesheet` in the manifest: a project-relative CSS `file` and `shareable: true`. Scope selectors to `.robot-showcase`. Use self-contained CSS. Keep controls usable on a phone and by keyboard. | [Working example](../../examples/highlights/project.json) |
+| A two-colour backdrop behind the still | Add `"backdrop": {"center":"#536980","edge":"#192C44"}` to `cad-showcase.json` and regenerate the still. Part colours are unchanged. | [CAD colour convention](../../docs/cad-color-convention.md) |
+| A kickoff-only analysis page, a workflow index or markers on a film clock | Use the publication checks. Keep chances and conditional point estimates apart from a target reached independently. | [Publish what students can inspect](../../docs/showcase-evidence.md) |
+| A film cuts between two studies | Show the checked chapter boundary. Compare the event type, time and qualification with independent observations. For a named animation, seek the event in its own clip. | [Boundary between two studies](../../docs/showcase-evidence.md#mark-the-boundary-between-two-studies) |
+| The project has a student field lab | Publish it with the `fieldLab` entry and link it from the README. Verify `field-lab.html` on the deployed site. | [Publish the field lab](../../docs/showcase-evidence.md#publish-the-actual-interactive-field-lab) |
+| The whole robot is offered as a Fusion download | Reopen the downloadable file and record its own components, features and joints. | [Public Fusion handoff](../../docs/public-fusion-handoff.md) |
+| An outside study found a defect in the shown design | Require a failing control and a passing result from an installed plugin check before showing the fix. | [Reproduce a defect](../../docs/mechanical-methods.md) |
+| The team started over on a new architecture | The earlier design stays effective and published until the new one passes its review and its pull request merges. | [Effective designs](../../docs/design-publication.md#effective-designs) |
