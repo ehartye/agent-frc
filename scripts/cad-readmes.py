@@ -167,11 +167,14 @@ def check_block(file, name, text, design, status):
 
 
 def run(root, update, template, verify_export=False):
+    if verify_export and not update:
+        showcase(root, False, template)
     count = readmes(root, update)
     if update and not verify_export and not (root / "docs/robot/cad/receipt.json").is_file():
         print(f"Rewrote the still of {count} README files. No CAD export record at docs/robot/cad/receipt.json, so no orbit view was built.")
     elif update or verify_export:
-        showcase(root, update, template)
+        if update:
+            showcase(root, True, template)
         print(f"Verified CAD source, mesh, still and viewer, and {'rewrote' if update else 'checked'} the still of {count} README files.")
     else:
         print(f"Checked the still of {count} README files: block below the title, image present, design and status named. No bytes compared.")
