@@ -64,13 +64,21 @@ export function createFieldRehearsal(profile) {
         !geom.validBody(b) || !Number.isFinite(b.speed) || b.speed<=0 || b.speed>500) {
         throw Error('Check unique alliance slots, positive dimensions and speed (up to 500 in/s).');
       }
+      if(b.concept!==undefined){
+        // Only the drive is read here. The other concept-bot keys belong to the game and pass through.
+        const drive=b.concept?.drive;
+        if(!drive || typeof drive!=='object')throw Error(b.id+' concept.drive must describe the drive.');
+        if(drive.type!=='swerve')throw Error(b.id+' concept.drive.type must be "swerve"; v1 admits only swerve.');
+        for(const key of ['topSpeedInS','accelInS2','rotationDegS'])
+          if(!Number.isFinite(drive[key]) || drive[key]<=0)throw Error(b.id+' concept.drive.'+key+' must be a finite positive number.');
+      }
       if(b.intake && (!(b.intake.widthIn>0) || b.intake.widthIn>b.width+2*b.bumper || !Number.isFinite(b.intake.extensionIn) || b.intake.extensionIn<0))throw Error('Supply a positive intake width within the footprint and a nonnegative extension.');
       const p=sidePoint(model.starts[b.slot-1],b.side);
       const collision=geom.hit(p,p,b,setup);
       if(collision)throw Error(b.id+' start overlaps '+collision.name+'.');
       for(const other of robots) if(geom.robotContact(p,p,b,other.p,other.p,other)!==null)
         throw Error(b.id+' start overlaps '+other.id+'.');
-      robots.push({...b,p,leg:0,waypoints:null,target:0,dwell:0,wait:0,travelIn:0,visits:0,blocked:'',action:''});
+      robots.push({...b,p,leg:0,waypoints:null,target:0,dwell:0,wait:0,travelIn:0,visits:0,blocked:'',action:'',...(b.concept?{currentSpeedInS:0}:{})});
     }
     robots.sort((a,b)=>a.id.localeCompare(b.id));
     const ledger=game.start(robots,tieWinner,setup);
@@ -127,8 +135,32 @@ export function createFieldRehearsal(profile) {
     if(resource.owner===r.id){resource.owner=null;event(sim,r.id+' cleared '+key);}
     resource.queue=resource.queue.filter(id=>id!==r.id);
   }
+  // Swerve concept motion. A leg may carry requiredHeading, in field-frame degrees. The heading turns the
+  // shorter way toward it at up to rotationDegS while the robot translates, and the leg ends once both are done.
+  // Translation follows a trapezoid from the current speed: accelInS2 up to topSpeedInS, then a stop at the leg
+  // end, measured along the remaining waypoints. Corners are taken without slowing. currentSpeedInS is 0
+  // whenever the robot does not translate in a tick: at the start, during a dwell, a wait or a turn in place.
+  let turnTo,nextSpeed=0;
+  const turnLeft=(r,goal)=>goal===undefined?0:((goal-r.heading)%360+540)%360-180;
+  function turned(r,goal) {
+    const left=turnLeft(r,goal),most=r.concept.drive.rotationDegS*dt;
+    if(Math.abs(left)<1e-9)return r.heading;
+    return Math.abs(left)<=most+1e-9?goal:r.heading+Math.sign(left)*most;
+  }
+  // Distance covered and speed reached after one tick, starting at speed v with distance D left to the stop.
+  function trapezoid(v,D,a,top) {
+    if(D<=1e-9)return [D,0];
+    v=Math.min(v,top);
+    // After a replan onto a shorter route, brake harder than accelInS2 rather than overrun the leg end.
+    const brake=Math.max(a,v*v/(2*D)), peak=Math.max(v,Math.min(top,Math.sqrt((2*a*brake*D+brake*v*v)/(a+brake))));
+    const t1=(peak-v)/a, s1=(peak*peak-v*v)/(2*a), s3=peak*peak/(2*brake), s2=Math.max(0,D-s1-s3), t2=s2/peak, t3=peak/brake;
+    if(dt<=t1)return [v*dt+a*dt*dt/2,v+a*dt];
+    if(dt<=t1+t2)return [s1+peak*(dt-t1),peak];
+    const t=dt-t1-t2;
+    return t<t3-1e-12?[Math.min(D,s1+s2+peak*t-brake*t*t/2),peak-brake*t]:[D,0];
+  }
   function proposal(sim,r) {
-    r.blocked='';
+    r.blocked='';turnTo=undefined;nextSpeed=0;
     const goal=terminal?.enter(sim,r,sim.ticks*dt);
     if(goal)delete r.pickup;
     if(goal && terminal.inside(r,goal)){
@@ -147,9 +179,10 @@ export function createFieldRehearsal(profile) {
       }
       resource.queue.shift();resource.owner=r.id;event(sim,r.id+' entered '+key);
     }
+    if(r.concept)turnTo=leg.requiredHeading;
     function finishLeg(){
       if(leg.release)release(sim,r,key);
-      r.leg++;r.dwell=0;r.waypoints=null;delete r.pickup;
+      r.leg++;r.dwell=0;r.waypoints=null;delete r.pickup;turnTo=undefined;
       if(r.leg===legs.length){
         r.visits++;event(sim,r.id+' completed '+leg.action);
         if(program(r,sim).loop)r.leg=0;
@@ -178,6 +211,7 @@ export function createFieldRehearsal(profile) {
       return r.p;
     }
     if(r.target>=r.waypoints.length) {
+      if(r.concept && Math.abs(turnLeft(r,turnTo))>=1e-9)return r.p;
       if(leg.deliveryRatePerS){
         const time=(sim.ticks+1)*dt;
         if(!game.mayDeliver(sim,r,leg,sim.ticks*dt) || !game.mayDeliver(sim,r,leg,time))return finishLeg();
@@ -196,34 +230,46 @@ export function createFieldRehearsal(profile) {
       return r.p;
     }
     const dest=r.waypoints[r.target],d=norm(r.p,dest);
-    const f=d?Math.min(1,r.speed*dt/d):1;
+    let reach=r.speed*dt;
+    if(r.concept){
+      let rest=d;
+      for(let i=r.target+1;i<r.waypoints.length;i++)rest+=norm(r.waypoints[i-1],r.waypoints[i]);
+      [reach,nextSpeed]=trapezoid(r.currentSpeedInS,rest,r.concept.drive.accelInS2,r.concept.drive.topSpeedInS);
+    }
+    const f=d?Math.min(1,reach/d):1;
     return [r.p[0]+(dest[0]-r.p[0])*f,r.p[1]+(dest[1]-r.p[1])*f];
   }
   function poweredStep(sim) {
     game.replenish(sim,(sim.ticks+1)*dt);
     const begins=sim.robots.map(r=>[...r.p]), ends=begins.map(p=>[...p]);
+    // A robot whose heading changes this tick occupies its circumscribed circle for the whole sweep.
+    const bodies=sim.robots.slice(), headings=sim.robots.map(r=>r.heading);
     // Each move reserves a continuous sweep. Earlier movers saw later peers stationary.
     // A later peer may move only if its simultaneous sweep also misses earlier movers.
     for(let i=0;i<sim.robots.length;i++) {
       const r=sim.robots[i],a=begins[i],b=proposal(sim,r);
       r.waitFor=null;
-      if(norm(a,b)<1e-9){
+      const heading=r.concept && !r.blocked?turned(r,turnTo):r.heading, rotating=heading!==r.heading;
+      if(r.concept)r.currentSpeedInS=0;
+      if(norm(a,b)<1e-9 && !rotating){
         if(!r.blocked && r.waypoints?.[r.target] && norm(r.p,r.waypoints[r.target])<1e-8)r.target++;
         continue;
       }
-      let hit=geom.hit(a,b,r,sim.setup);
+      const body=rotating?{...r,circleIn:geom.circumradius(r)}:r;
+      let hit=geom.hit(a,b,body,sim.setup);
       for(let j=0;j<sim.robots.length;j++)if(i!==j){
-        const t=geom.robotContact(a,b,r,begins[j],ends[j],sim.robots[j]);
+        const t=geom.robotContact(a,b,body,begins[j],ends[j],bodies[j]);
         if(t!==null && (!hit || t<hit.t))hit={name:sim.robots[j].id,t};
       }
       // Rejected motion stays at its starting point for this entire tick. Earlier
       // movers already cleared that stationary footprint. Clipping one mover after
       // relative sweeps could introduce a late moving-peer overlap.
       if(hit){recordWait(sim,r,'Occupied by '+hit.name);if(sim.robots.some(p=>p.id===hit.name))r.waitFor=hit.name;continue;}
-      ends[i]=b;
+      ends[i]=b;bodies[i]=body;headings[i]=heading;
+      if(r.concept && norm(a,b)>=1e-9)r.currentSpeedInS=nextSpeed;
       if(r.waypoints?.[r.target] && norm(b,r.waypoints[r.target])<1e-8)r.target++;
     }
-    sim.robots.forEach((r,i)=>{r.travelIn+=norm(begins[i],ends[i]);r.p=ends[i];});
+    sim.robots.forEach((r,i)=>{r.travelIn+=norm(begins[i],ends[i]);r.p=ends[i];r.heading=headings[i];});
     resolveWaitCycles(sim);
     game.move(sim,dt,begins);
     terminal?.observe(sim,begins,sim.ticks*dt,(sim.ticks+1)*dt);
@@ -304,7 +350,7 @@ export function createFieldRehearsal(profile) {
     sim.phase=phases[++sim.phaseIndex].name;sim.ticks=0;sim.carry=0;sim.ended=false;sim.paused=true;sim.resources=reservations();
     sim.deadlocks=[];sim.waitCycles={};
     game.replenish(sim,0);
-    for(const r of sim.robots)Object.assign(r,{pickup:null,leg:0,waypoints:null,target:0,dwell:0,wait:0,travelIn:0,visits:0,blocked:'',action:''});
+    for(const r of sim.robots)Object.assign(r,{pickup:null,leg:0,waypoints:null,target:0,dwell:0,wait:0,travelIn:0,visits:0,blocked:'',action:'',...(r.concept?{currentSpeedInS:0}:{})});
   }
   return {supported,behaviors,defaults,startingRoster,completeRoster,create,createProbe,advance,nextPhase,assessRoute,geom,waypoint,intake:game?.intake,dt,periods:phases,terminal,
     phaseSeconds:name=>duration(name)*dt,elapsedSeconds:name=>wallDuration(name)*dt};
