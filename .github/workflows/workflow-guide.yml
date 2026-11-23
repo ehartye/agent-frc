@@ -64,21 +64,33 @@ jobs:
         id: reach
         run: |
           run=true
+          library=true
           if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
-            node scripts/test-suite.mjs --changed "origin/$GITHUB_BASE_REF" --list design-publication | tee "$RUNNER_TEMP/selection.txt"
+            node scripts/test-suite.mjs --changed "origin/$GITHUB_BASE_REF" --list design-publication kernel-layout.test | tee "$RUNNER_TEMP/selection.txt"
             grep -q 'design-publication.test.mjs$' "$RUNNER_TEMP/selection.txt" || run=false
+            grep -q 'kernel-layout.test.mjs$' "$RUNNER_TEMP/selection.txt" || library=false
           fi
           echo "run=$run" >> "$GITHUB_OUTPUT"
-          echo "Layout check rerun test: run=$run" >> "$GITHUB_STEP_SUMMARY"
-      - if: steps.reach.outputs.run == 'true'
+          echo "library=$library" >> "$GITHUB_OUTPUT"
+          echo "Layout check rerun test: run=$run. Layout check on the design library: run=$library" >> "$GITHUB_STEP_SUMMARY"
+      - if: steps.reach.outputs.run == 'true' || steps.reach.outputs.library == 'true'
         uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
         with:
           python-version: '3.13'
           cache: pip
           cache-dependency-path: .github/workflows/workflow-guide.yml # the pinned versions are in this file
       # The same interpreter and kernel versions as the defaults of .github/workflows/design-publication.yml, so that install is exercised here.
-      - if: steps.reach.outputs.run == 'true'
+      - if: steps.reach.outputs.run == 'true' || steps.reach.outputs.library == 'true'
         run: python -m pip install "cadquery-ocp==8.0.1.0.0" "numpy==2.5.3"
+      # The design library is not pinned: its main branch is the release, so this installs whatever is there now.
+      - if: steps.reach.outputs.library == 'true'
+        run: python -m pip install "git+https://github.com/ehartye/frc-design-kernel"
+      # Checks an invented design source with the design library and rejects interference, a floating solid, an
+      # overweight ledger and stale generated solids.
+      - if: steps.reach.outputs.library == 'true'
+        run: node --test test/kernel-layout.test.mjs
+        env:
+          FRC_TEST_PROFILE: station
       # Builds a synthetic release with the real layout check, marks it effective through the stage gate the agent runs,
       # checks a rename and a view refresh with no layout check and rejects a stale and a forged receipt.
       - if: steps.reach.outputs.run == 'true'
