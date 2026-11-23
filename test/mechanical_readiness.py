@@ -1,8 +1,6 @@
 # @lane merge
-# @subject scripts/layout_attachment.py
 # @subject scripts/mechanical_readiness.py
 # @subject scripts/package_view.py
-# @subject scripts/preliminary_design.py
 # @subject templates/preliminary-review/review.html
 # @subject scripts/stage_preliminary_review.py
 import shutil
@@ -28,26 +26,8 @@ from spatial_operating_cases import SpatialOperatingCases
 from constant_pose_pairs import ConstantPosePairs
 from interface_evidence import InterfaceEvidence
 from game_piece_compression import GamePieceCompression
-from checker_progress_failfast import CheckerProgressFailFast
 from motion_heartbeat import MotionHeartbeat
-from atomic_writes import AtomicWrites
-from free_path import FreePath
-from fixture_support import FixtureSupport
-from fixture_warning import FixtureWarning
-from member_mounts import MemberMounts
-from scene_replace import SceneReplace
 from compression_trial_pin import CompressionTrialPin
-from scene_mesh_once import SceneMeshOnce
-from view_location import ViewLocation
-from held_position_replay import HeldPositionReplay
-from contact_transport import ContactTransport
-from held_pin_relocation import HeldPinRelocation
-from parallel_cases import ParallelCases
-from view_only import ViewOnly
-from plan_identity import PlanIdentity
-from layout_scope import LayoutScope
-from path_references import PathReferences
-from attachment_report import LayoutAttachment
 
 
 class Readiness(unittest.TestCase):
@@ -1072,116 +1052,6 @@ class Readiness(unittest.TestCase):
             self.assertFalse(invalid["numericalEvidence"]["commonTopologyValid"])
         with patch("component_shape.boolean_measure",side_effect=ValueError("kernel failure")):
             self.assertEqual(measured_difference(block,placed(0),[])["measurementStatus"],"open")
-
-    def test_shared_package_keeps_partial_and_stale_handoffs_distinct(self):
-        import runpy
-        from preliminary_design import review
-        from mechanical_fixture import package_write
-        build=Path(__file__).resolve().parents[1]/"examples/preliminary-design/create.py"
-        folder=self.root/"layout"
-        plan=runpy.run_path(str(build))["create"](folder,pins=True)
-        file=folder/"layout.json"
-        good=review(folder.parent,file)
-        self.assertEqual(good["status"],"layout-checked")
-        self.assertEqual(good["control"]["witness"]["witness"]["t"],.5)
-        self.assertGreater(good["control"]["witness"]["witness"]["volumeMm3"],50)
-        self.assertTrue(good["view"]["verified"])
-        from copy import deepcopy
-        incomplete = deepcopy(plan)
-        del incomplete["presentation"]["components"]["head"]["rationale"]
-        incomplete["narrativeReview"]["objectives"][1]["disposition"] = "open"
-        package_write(folder,"layout.json",incomplete)
-        held = review(folder.parent,file)
-        self.assertEqual(held["status"],"provisional")
-        self.assertIn("Missing component rationale: head",held["missingInputs"])
-        self.assertIn("Open narrative objective: Park at the finish",held["missingInputs"])
-        old = dict(plan)
-        del old["narrativeReview"], old["presentation"]
-        package_write(folder,"layout.json",old)
-        self.assertIn("Read and identify the current strategic narrative",review(folder.parent,file)["missingInputs"])
-        package_write(folder,"layout.json",plan)
-        self.assertEqual(good["budgets"]["inspectionKg"],[11,13.5])
-        weak=[r for r in good["budgets"]["electricalCases"] if r["batteryCondition"]=="weak"]
-        self.assertEqual({r["stage"] for r in weak},set(plan["cycle"]))
-        self.assertTrue(all(r["loadedBusV"][0]==10 for r in weak))
-        player=folder.parent/plan["view"]
-        original=player.read_bytes()
-        # The review page is a starting place: a project's edit to its copy does not unsettle the checked layout.
-        player.write_bytes(original+b"<!-- an invented project edit -->")
-        self.assertEqual(review(folder.parent,file)["status"],"layout-checked")
-        player.write_bytes(original)
-        budget=json.loads((folder/"budgets.json").read_text())
-        budget["electricalCases"]["loaded-turn-weak"]["batterySideA"]["drive"]=[20,80]
-        package_write(folder,"layout.json",dict(plan,budgets=package_write(folder,"weak.json",budget)))
-        undervoltage=review(folder.parent,file)
-        self.assertEqual(undervoltage["status"],"blocked")
-        self.assertIn("voltage/loaded-turn-weak",[r["reason"] for r in undervoltage["reopen"]])
-        static=json.loads((folder/"paths.json").read_text())
-        static["cases"][0]["initialPose"]={"rail":[{"kind":"translation","travelMm":[-21,-72,-18]}]}
-        package_write(folder,"layout.json",dict(plan,motion=package_write(folder,"stationary.json",static)))
-        collision=review(folder.parent,file)
-        self.assertEqual(collision["status"],"blocked")
-        self.assertTrue(any(set(p["pair"])=={"mount","rail"} and p["status"]=="fail"
-                            for c in collision["cases"] for p in c["pairs"]))
-        off_host=dict(plan,mounts=[dict(plan["mounts"][0],pointMm=[200,0,0]),plan["mounts"][1]])
-        package_write(folder,"layout.json",off_host)
-        self.assertIn("outside the selected host",review(folder.parent,file)["missingInputs"][0])
-        partial=dict(plan,missingInputs=["Cable loop radius"])
-        package_write(folder,"layout.json",partial)
-        self.assertEqual(review(folder.parent,file)["status"],"provisional")
-        package_write(folder,"layout.json",dict(plan,control=dict(plan["control"],offsetMm=[0,50,0])))
-        self.assertEqual(review(folder.parent,file)["status"],"provisional")
-        observations=plan["premises"]
-        current=json.loads((folder.parent/observations[1]["current"]["file"]).read_text())
-        slower=package_write(folder,"slower.json",dict(current,value=3.01,source=package_write(folder,"slow-estimate.json",{"acquireSeconds":3.01})))
-        package_write(folder,"layout.json",dict(plan,premises=[observations[0],dict(observations[1],current=slower)]))
-        stale=review(folder.parent,file)
-        self.assertEqual(stale["status"],"reopen")
-        self.assertEqual(stale["reopen"],[dict(phase="conceptual-design",reason="acquire-time",affected=["carried article","carrier"])])
-        hold=folder/"hold.json"
-        package_write(folder,hold.name,stale)
-        package_write(folder,"layout.json",plan)
-        self.assertEqual(review(folder.parent,file,hold)["status"],"reopen")
-        decision=json.loads((folder.parent/observations[1]["accepted"]["file"]).read_text())
-        import subprocess
-        profile=json.loads((SCRIPTS.parent/"examples/kickoff/training-field.json").read_text())
-        profile["rehearsal"]["programs"]["shuttle"]["steps"][0]["dwell"]=current["value"]
-        run_input=package_write(folder,"field.json",profile)
-        replay=json.loads(subprocess.check_output(["node",str(SCRIPTS/"rehearsal-series.mjs"),str(folder/"field.json")]))
-        field=dict(profile=run_input,result=package_write(folder,"replayed.json",replay),match="trial-1",actor="B1",
-                   input="actionDwell",period="Opening",stepIndex=0,stepLabel="Pick up tile")
-        upstream=package_write(folder,"latest-role.json",dict(issue=plan["issue"],designSha256=plan["design"]["sha256"],
-                       stepSha256=plan["step"]["sha256"],phase="conceptual-design",scenario="selected cycle",premise="acquire-time",
-                       fieldReplay=field))
-        repeated=package_write(folder,"repeat.json",dict(decision,source=upstream,repeat=dict(previousPlanSha256=stale["planSha256"])))
-        package_write(folder,"layout.json",dict(plan,premises=[observations[0],dict(observations[1],accepted=repeated)]))
-        self.assertEqual(review(folder.parent,file,hold)["status"],"layout-checked")
-        # The same repeat with every file named by path alone: no digest in the upstream record, the repeat or the plan.
-        def paths(node):
-            if isinstance(node,dict):return {k:paths(v) for k,v in node.items() if k!="sha256"}
-            return [paths(v) for v in node] if isinstance(node,list) else node
-        package_write(folder,"latest-role-paths.json",paths(dict(issue=plan["issue"],phase="conceptual-design",scenario="selected cycle",
-                       premise="acquire-time",fieldReplay=field)))
-        package_write(folder,"repeat-paths.json",paths(dict(decision,source=dict(file=folder.name+"/latest-role-paths.json"),
-                       repeat=dict(basis="Invented repeat on the revised issue"))))
-        package_write(folder,"layout.json",paths(dict(plan,premises=[observations[0],dict(observations[1],accepted=dict(file=folder.name+"/repeat-paths.json"))])))
-        by_path=review(folder.parent,file,hold)
-        self.assertEqual(by_path["status"],"layout-checked",by_path["missingInputs"])
-        self.assertTrue(all(d["repeatVerified"] for d in by_path["priorDecisions"]))
-        earlier=package_write(folder,"earlier.json",dict(current,issue="outgoing"))
-        package_write(folder,"layout.json",dict(plan,premises=[dict(observations[1],current=earlier)]))
-        self.assertEqual(review(folder.parent,file)["status"],"provisional")
-        nominal=json.loads((folder/"paths.json").read_text())
-        nominal["cases"][0]["initialPose"]={"rail":[{"kind":"translation","travelMm":[0,-50,0]}]}
-        package_write(folder,"layout.json",dict(plan,motion=package_write(folder,"blocked.json",nominal)))
-        self.assertEqual(review(folder.parent,file)["status"],"blocked")
-        nominal["cases"][0]["moves"]["sample"][0]["travelDeg"]=-90
-        package_write(folder,"layout.json",dict(plan,motion=package_write(folder,"wrong-carry.json",nominal)))
-        with self.assertRaisesRegex(ValueError,"diverges"):
-            review(folder.parent,file)
-        (folder/"design.json").write_text((folder/"design.json").read_text()+" ")
-        with self.assertRaisesRegex(ValueError,"Changed evidence"):
-            review(folder.parent,file)
 
     def test_true_placed_bore_and_midstroke_tool_collision(self):
         try:

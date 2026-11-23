@@ -1,6 +1,5 @@
 # @lane merge
 # @subject scripts/mechanical_readiness.py
-# @subject scripts/preliminary_design.py
 """Let one pinned evidence file qualify several intended interfaces, each bound to the STEP, its case and its pair."""
 from pathlib import Path
 from tempfile import TemporaryDirectory

@@ -6,7 +6,7 @@
  * A new design takes a version as its ID, MAJOR.MINOR, and the name of its architecture: the same name as the
  * preliminary design it is built on, and its own numbers. The major number is the architecture. The minor number
  * counts the detailed effective baselines of that architecture. A draft is a publish of an in-progress version and
- * takes no number: staging the same ID again counts it. An ID issued before versions keeps working and has no name.
+ * takes no number: staging the same ID again counts it.
  *
  * These commands only write files: a design directory, the status index and the stock catalog page. The project's
  * Design publication workflow decides whether the result may merge (design-publication.mjs check).
@@ -28,7 +28,7 @@ export const designSchema = 'agent-frc/detailed-design@1';
 export const indexSchema = 'agent-frc/detailed-design-index@1';
 const readinessSchema = 'agent-frc/mechanical-readiness-result@1';
 const receiptSchema = 'agent-frc/preliminary-layout-result@1';
-// A version, MAJOR.MINOR, or an ID issued before versions: lowercase letters, digits and hyphens.
+const judgementFile = 'judgement.json';
 const designId = releaseId, useVersion = 'Use a version as the design ID: MAJOR.MINOR, such as 1.0';
 const catalog = new URL('../templates/detailed-design-index.html', import.meta.url);
 const fonts = fileURLToPath(new URL('../templates/preliminary-review-fonts', import.meta.url));
@@ -157,14 +157,13 @@ function fusionExport({project, authority, lineage, python}) {
 }
 
 /**
- * Publish a new in-progress design from checked inputs: a folder inside the project holding layout.json, its
- * layout-checked receipt.json, missions.json and every file the layout pins. The receipt's STEP must be the export
- * the registered Fusion design replays to, and the named preliminary release must be effective.
+ * Publish a new in-progress design from checked inputs: a folder inside the project holding judgement.json, the
+ * design source it names, its layout-checked receipt.json and missions.json. The design source must place its solids
+ * from the export the registered Fusion design replays to, and the named preliminary release must be effective.
  */
 export function stageInProgress({project, design, designName, inputs, preliminary, authority, lineage, python, replay: replayExport = fusionExport, ...folders}) {
   const at = layout(project, folders), index = loadIndex(at);
   check(designId.test(design ?? ''), useVersion);
-  check(designName === undefined || versionOf(design), '--design-name names the architecture of a version ID, MAJOR.MINOR. Design ' + design + ' keeps its earlier ID and has no name');
   check(named(inputs) && named(preliminary) && named(authority) && named(lineage), 'Supply --inputs, --preliminary, --authority and --lineage');
   const listed = index.designs.includes(design);
   if (listed && index.designStatus[design] !== 'in-progress') throw Error(settled(index, design));
@@ -176,17 +175,18 @@ export function stageInProgress({project, design, designName, inputs, preliminar
   };
   check(!path.relative(project, source).startsWith('..'), 'Keep the check inputs inside the project so its CI can rerun the layout check');
   const replay = replayExport({project, authority, lineage, python});
-  const plan = JSON.parse(need('layout.json')), receiptBytes = need('receipt.json'), receipt = JSON.parse(receiptBytes), missions = JSON.parse(need('missions.json'));
-  check(receipt.planSha256 === sha(need('layout.json')), 'The receipt belongs to a different layout. Rerun the layout check and save its receipt');
-  check(receipt.step?.sha256 === replay.stepSha256, 'The layout check ran on a STEP other than the registered Fusion export');
+  const plan = JSON.parse(need(judgementFile)), receiptBytes = need('receipt.json'), receipt = JSON.parse(receiptBytes), missions = JSON.parse(need('missions.json'));
+  check(receipt.planSha256 === sha(need(judgementFile)), 'The receipt belongs to a different judgement file. Rerun the layout check and save its receipt');
+  check((receipt.parts ?? []).some(part => part?.sha256 === replay.stepSha256),
+    'The design source places no solid from the registered Fusion export. Take each robot solid from that STEP as a part, then generate and check again');
   const viewName = plan.view, sceneName = path.posix.join(path.posix.dirname(viewName), 'review-scene.json.gz');
   const out = new Map([['index.html', need(viewName)], ['review-scene.json.gz', need(sceneName)], ['receipt.json', receiptBytes],
-    ['motion.json', need(plan.motion.file)], ['budgets.json', need(plan.budgets.file)]]);
+    ['source.json', need(plan.source.file)], ['budgets.json', need(plan.budgets.file)]]);
   out.set('limits.json', need(JSON.parse(out.get('budgets.json')).requirements.file));
   const record = {schema: designSchema, design, issue: receipt.issue, preliminary: {release: preliminary},
     fusion: {archiveSha256: replay.archiveSha256, stepSha256: replay.stepSha256, configuration: replay.configuration, ...(replay.revision ? {revision: replay.revision} : {})},
     // Where the project's CI finds the committed inputs to rerun the layout check.
-    check: {project: path.relative(project, source).split(path.sep).join('/'), plan: 'layout.json'},
+    check: {project: path.relative(project, source).split(path.sep).join('/')},
     missionCases: (missions.missionCases ?? []).map(m => m?.trial?.file ? {...m, trial: {file: path.posix.basename(m.trial.file)}} : m)};
   for (const m of missions.missionCases ?? []) if (m?.trial?.file) out.set(path.posix.basename(m.trial.file), need(m.trial.file));
   // Field-interaction players the review links, each with the trial behind it.
@@ -270,7 +270,7 @@ export function relink({project, design, preliminary, ...folders}) {
  * effective becomes superseded. A design not yet published gets a record from the review. A review that does not
  * pass is refused. The report goes to the reviewer of the pull request, who accepts the design by merging it.
  */
-export function markEffective({project, design, designName, readiness, benchTests, run, now, budgetMinutes, jobs, ...folders}) {
+export function markEffective({project, design, designName, readiness, benchTests, run, now, budgetMinutes, workers, ...folders}) {
   const at = layout(project, folders), index = loadIndex(at);
   check(designId.test(design ?? '') && named(readiness), 'Supply --design and --readiness, the mechanical-readiness review result');
   check(designName === undefined || versionOf(design), '--design-name names the architecture of a version ID, MAJOR.MINOR');
@@ -287,7 +287,7 @@ export function markEffective({project, design, designName, readiness, benchTest
   // A design recorded from its review alone has no layout of its own to check.
   const gate = existsSync(path.join(dir, 'receipt.json')) ? stageGate({root: at.project, where: sentence(described(index, design)), id: design, phase: 'detailed-design',
     inputs: path.resolve(at.project, readJson(recordFile).check?.project ?? path.join(at.inputs, design)), published: dir, record: readJson(recordFile),
-    ...(run ? {run} : {}), ...(now ? {now} : {}), budgetMinutes, jobs}) : null;
+    ...(run ? {run} : {}), ...(now ? {now} : {}), budgetMinutes, workers}) : null;
   if (gate) writeGate(dir, gate);
   if (!existsSync(recordFile)) {
     mkdirSync(dir, {recursive: true});
@@ -369,18 +369,18 @@ export function withdraw({project, design, reason, files, ...folders}) {
  *
  * A record can pin a file by path and SHA-256, and a design checked from the repository root names its own folder in
  * those paths. Each such pin is verified against the source, written with the new path and given the digest of the
- * copied file. The STEP and every other file that is not a pinning record keep their bytes. The review page, scene
- * and receipt are not copied: the layout check writes them for the new folder. A held receipt is copied unchanged.
+ * copied file. Every file that is not a pinning record keeps its bytes. The review page, scene and receipt are not
+ * copied: the layout check writes them for the new folder.
  */
 export function copyInputs({project, from, to, ...folders}) {
   const at = layout(project, folders);
   check(designId.test(from ?? '') && designId.test(to ?? ''), 'Supply --from and --to, two design IDs. ' + useVersion);
   const source = path.join(at.inputs, from), target = path.join(at.inputs, to), posix = full => path.relative(project, full).split(path.sep).join('/');
-  check(existsSync(path.join(source, 'layout.json')), 'No layout plan at ' + posix(path.join(source, 'layout.json')));
+  check(existsSync(path.join(source, judgementFile)), 'No judgement file at ' + posix(path.join(source, judgementFile)));
   check(!existsSync(target), posix(target) + ' already exists. Choose a new design ID, or remove that folder first');
   const before = posix(source) + '/', after = posix(target) + '/', digest = file => sha(readFileSync(file));
   const isFile = file => statSync(file, {throwIfNoEntry: false})?.isFile() ?? false;
-  const plan = readJson(path.join(source, 'layout.json')), view = named(plan.view) ? (plan.view.startsWith(before) ? plan.view.slice(before.length) : plan.view) : null;
+  const plan = readJson(path.join(source, judgementFile)), view = named(plan.view) ? (plan.view.startsWith(before) ? plan.view.slice(before.length) : plan.view) : null;
   const left = new Set(['receipt.json', ...(view ? [view, path.posix.join(path.posix.dirname(view), 'review-scene.json.gz')] : [])]);
   const done = new Set(), rewritten = [], copied = [];
   const repin = name => {
@@ -420,8 +420,8 @@ export function copyInputs({project, from, to, ...folders}) {
   } catch (error) { rmSync(target, {recursive: true, force: true}); throw error; }
   return {from, to, inputs: after.slice(0, -1), files: copied.length, rewritten: rewritten.sort(),
     report: 'Copied the inputs of design ' + from + ' to ' + after.slice(0, -1) + ' and wrote ' + rewritten.length + ' pinning record' + (rewritten.length === 1 ? '' : 's') +
-      ' for the new paths. The STEP is unchanged. Now run the layout check there, then stage ' + to + ':\n' +
-      '  node PLUGIN/scripts/design.mjs preliminary-check . ' + after + 'layout.json --write-view --require-checked --output ' + after + 'receipt.json\n'};
+      ' for the new paths. Now run the layout check there, then stage ' + to + ':\n' +
+      '  node PLUGIN/scripts/design.mjs preliminary-check . ' + after + 'judgement.json --write-view --require-checked --output ' + after + 'receipt.json\n'};
 }
 
 /**
@@ -471,7 +471,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
       check(rest[i]?.startsWith('--') && rest[i + 1] !== undefined, 'Expected --option value pairs');
       options[rest[i].slice(2).replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = rest[i + 1];
     }
-    for (const name of ['budgetMinutes', 'jobs']) if (options[name] !== undefined) options[name] = Number(options[name]);
+    for (const name of ['budgetMinutes', 'workers']) if (options[name] !== undefined) options[name] = Number(options[name]);
     // --check MODULE is for the plugin's own tests: the default export of the module stands in for the layout check.
     if (options.check) { options.run = (await import(pathToFileURL(path.resolve(options.check)).href)).default; delete options.check; }
     if (mode === 'effective') console.error('[gate] Running the full layout check on the committed design. Guideline: about 15 minutes.');
@@ -484,7 +484,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
     console.log(JSON.stringify(index, null, 2));
   } catch (error) {
     console.error(error.message + '\nUsage: detailed-design-release.mjs stage PROJECT --design MAJOR.MINOR [--design-name "NAME"] --inputs FOLDER --preliminary RELEASE --authority REGISTER --lineage LINEAGE' +
-      ' | relink PROJECT --design ID --preliminary RELEASE | effective PROJECT --design ID --readiness REVIEW_RESULT.json [--design-name "NAME"] [--bench-tests FILE] [--budget-minutes 45] [--jobs N]' +
+      ' | relink PROJECT --design ID --preliminary RELEASE | effective PROJECT --design ID --readiness REVIEW_RESULT.json [--design-name "NAME"] [--bench-tests FILE] [--budget-minutes 45] [--workers N]' +
       ' | supersede PROJECT --design ID [--by ID] | withdraw PROJECT --design ID --reason TEXT [--files PATH,PATH] | copy-inputs PROJECT --from ID --to ID' +
       ' | remove PROJECT --design ID [--replaced-by ID] | refresh PROJECT' +
       '   [--site docs] [--detailed detailed-design] [--preliminary-tree preliminary-design] [--detailed-inputs cad/detailed-design/designs]');

@@ -41,6 +41,7 @@ class Inputs:
     fixtures: set       # the names of the fixture solids
     roster: set         # every solid and fixture name
     volumes: dict = field(default_factory=dict)    # {solid: volume in mm3}, from the generated manifest
+    parts: list = field(default_factory=list)      # the STEP files the source places solids from, each with its digest
 
     @property
     def data(self):
@@ -196,4 +197,5 @@ def generated(inputs):
     rows = [*manifest.get("solids", []), *manifest.get("fixtures", [])]
     bounds = {row["name"]: row["boundsMm"] for row in rows}
     inputs.volumes.update({row["name"]: row["volumeMm3"] for row in rows})
+    inputs.parts[:] = [dict(file=row["file"], sha256=row["sha256"], solids=len(row.get("solids", []))) for row in manifest.get("parts", [])]
     return dict(file=step.relative_to(inputs.root).as_posix(), sha256=digest(step)), bounds

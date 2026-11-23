@@ -20,11 +20,10 @@ import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 
 import {writeFileAtomic} from './atomic-write.mjs';
-import {checkPhysics, checkedFromRoot, committedReceipt, compareVerdicts, findByDigest, runLayoutCheck} from './design-publication.mjs';
+import {checkPhysics, checkedFromRoot, committedReceipt, compareVerdicts, runLayoutCheck} from './design-publication.mjs';
 import {designTitle, versionOf} from './design-status.mjs';
 import {effectiveReadiness, readinessText} from './effective-readiness.mjs';
 import {receiptIdentity} from './physics-identity.mjs';
-import {planFile} from './layout-format.mjs';
 
 export const gateFile = 'gate.json', gateSchema = 'agent-frc/stage-gate@1';
 /** The time guideline for a stage gate, in minutes. */
@@ -53,22 +52,20 @@ export function gateTime(seconds) {
 /**
  * Run the gate of one design. `inputs` is the folder of its committed check inputs, `published` the folder its receipt
  * is published in, `record` its release or design record. Returns the gate record; throws, naming the reason, when
- * the design does not pass. Options: run (the layout check), now, budgetMinutes, jobs.
+ * the design does not pass. Options: run (the layout check), now, budgetMinutes, workers.
  */
-export function stageGate({root, where, id, phase, inputs, published, record, run = runLayoutCheck, now = () => Date.now(), budgetMinutes, jobs}) {
+export function stageGate({root, where, id, phase, inputs, published, record, run = runLayoutCheck, now = () => Date.now(), budgetMinutes, workers}) {
   const changes = uncommitted(root, inputs), rel = full => path.relative(root, full).split(path.sep).join('/');
   check(!changes?.length, where + ' is not marked effective: its inputs have uncommitted changes (' + (changes ?? []).slice(0, 5).map(line => line.trim()).join('; ') +
     '). The stage gate runs on the committed design. Commit ' + rel(inputs) + ', then mark it effective');
   const receiptPath = path.join(published, 'receipt.json');
   check(existsSync(receiptPath), where + ' is not marked effective: it has no published receipt. Publish it as a draft first');
-  const receipt = JSON.parse(readFileSync(receiptPath, 'utf8')), planName = record?.check?.plan ?? planFile;
+  const receipt = JSON.parse(readFileSync(receiptPath, 'utf8')), planName = 'judgement.json';
   const {fromRoot, absent} = committedReceipt(root, inputs, planName, receipt, where);
   check(!absent.length, where + ' is not marked effective: its receipt names files that are not in ' + rel(inputs) + ' (' + absent.join(', ') + ')');
-  const previous = receipt.previousCheckpointSha256 ? record?.check?.previous ?? findByDigest(inputs, receipt.previousCheckpointSha256) : null;
-  check(!receipt.previousCheckpointSha256 || previous, where + ': commit the held receipt it was checked against (SHA-256 ' + receipt.previousCheckpointSha256 + ') under ' + rel(inputs));
   const within = name => fromRoot ? rel(path.join(inputs, name)) : name, began = now();
   let fresh;
-  try { fresh = run({project: fromRoot ? root : inputs, plan: within(planName), previous: previous && within(previous), budgetMinutes, jobs}); }
+  try { fresh = run({project: fromRoot ? root : inputs, plan: within(planName), budgetMinutes, workers}); }
   catch (error) { throw Error(where + ' is not marked effective: ' + error.message); }
   try {
     checkPhysics(fresh, where + ' (stage gate)', {rerun: true});
@@ -108,13 +105,13 @@ export function preliminaryGate({project, release, site = 'docs', preliminary = 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   try {
     const [mode, project, ...rest] = process.argv.slice(2), options = {};
-    const usage = 'Usage: stage-gate.mjs preliminary PROJECT --release ID [--site docs] [--preliminary preliminary-design] [--inputs cad/preliminary-design/releases] [--budget-minutes 45] [--jobs N]';
+    const usage = 'Usage: stage-gate.mjs preliminary PROJECT --release ID [--site docs] [--preliminary preliminary-design] [--inputs cad/preliminary-design/releases] [--budget-minutes 45] [--workers N]';
     // --check MODULE is for the plugin's own tests: the default export of the module stands in for the layout check.
     check(mode === 'preliminary' && project && statSync(project, {throwIfNoEntry: false})?.isDirectory() && rest.length % 2 === 0, usage);
     for (let i = 0; i < rest.length; i += 2) {
-      const name = {'--release': 'release', '--site': 'site', '--preliminary': 'preliminary', '--inputs': 'inputs', '--budget-minutes': 'budgetMinutes', '--jobs': 'jobs', '--check': 'check'}[rest[i]];
+      const name = {'--release': 'release', '--site': 'site', '--preliminary': 'preliminary', '--inputs': 'inputs', '--budget-minutes': 'budgetMinutes', '--workers': 'workers', '--check': 'check'}[rest[i]];
       check(name, usage);
-      options[name] = ['budgetMinutes', 'jobs'].includes(name) ? Number(rest[i + 1]) : rest[i + 1];
+      options[name] = ['budgetMinutes', 'workers'].includes(name) ? Number(rest[i + 1]) : rest[i + 1];
     }
     check(options.release, usage);
     console.error('[gate] Running the full layout check on the committed design. Guideline: about ' + gateGuidelineMinutes + ' minutes.');

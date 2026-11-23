@@ -10,7 +10,6 @@ import {gunzipSync} from 'node:zlib';
 import {existsSync,readFileSync,statSync} from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
-import {planNameIn} from './layout-format.mjs';
 
 /** Every stage of the narrative cycle that needs a checked case. */
 export const cycleStages=['acquire','retain','transfer','deliver','reset','endgame','park','service'];
@@ -203,7 +202,7 @@ function risksResolved(plan,missions){
 export function effectiveReadiness(root,{release='',plan:planName,receipt:receiptName,missions:missionsName,design}={}){
   // A release folder inside the project holds the three files; pins still resolve from the project root.
   const within=name=>named(release)?path.posix.join(String(release).replace(/\\/g,'/'),name):name;
-  planName??=within(planNameIn(path.resolve(root,named(release)?String(release):'.')));receiptName??=within('receipt.json');missionsName??=within('missions.json');
+  planName??=within('judgement.json');receiptName??=within('receipt.json');missionsName??=within('missions.json');
   const plan=record(root,planName),receipt=record(root,receiptName),missions=record(root,missionsName);
   const unreadable=[plan.reason&&'Layout plan: '+plan.reason,receipt.reason&&'Receipt: '+receipt.reason,missions.reason&&'Missions: '+missions.reason].filter(Boolean);
   const p=plan.reason?null:plan.json,r=receipt.reason?null:receipt.json,m=missions.reason?null:missions.json;
@@ -250,7 +249,7 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
     else usage=true;
   }
   if(usage||root===undefined||!existsSync(root)||!statSync(root).isDirectory()){
-    console.error('Usage: effective-readiness PROJECT [--release FOLDER] [--plan layout.json] [--receipt receipt.json] [--missions missions.json] [--design "NAME MAJOR.MINOR"] [--json]');
+    console.error('Usage: effective-readiness PROJECT [--release FOLDER] [--plan judgement.json] [--receipt receipt.json] [--missions missions.json] [--design "NAME MAJOR.MINOR"] [--json]');
     process.exitCode=2;
   }else{
     const report=effectiveReadiness(path.resolve(root),options);

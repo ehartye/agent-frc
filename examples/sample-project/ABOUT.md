@@ -4,7 +4,7 @@ An invented project that shows what a robot project holds and how its own CI wor
 
 | Folder | Holds |
 | --- | --- |
-| `cad/preliminary-design/releases/1.0/` | The design's inputs: here one note that stands in for the plan, solids and budgets |
+| `cad/preliminary-design/releases/1.0/` | The design's inputs: here one note that stands in for the design source, the judgement file, the solids and the budgets |
 | `docs/` | The published site: a home page, the design index and the page of each design |
 | `scripts/ci/` | The project's two CI checks, each one file that needs only Node |
 | `.github/workflows/ci.yml` | The project's workflow: scan, site check and, on the default branch, publish `docs/` |

@@ -143,7 +143,7 @@ export function validateScene(scene) {
   }
   if (scene.fieldInteractions.length && !Object.values(bodies).some(b => b.fixture)) {
     warnings.push('Field interactions are linked but no case registers a field fixture, so Fit field interaction stays off. '
-      + 'If a field part is modeled as a package member it counts as robot; register it under the case fixtures in the motion study');
+      + 'If a field part is modeled as a package member it counts as robot; list it under fixtures in the design source');
   }
   if (!scene.required.length) warnings.push('No required roles are commissioned (presentation.required)');
   if (scene.mass && scene.mass.remainingKg < 0) warnings.push('Inspection weight exceeds the limit by ' + (-scene.mass.remainingKg).toFixed(3) + ' kg');

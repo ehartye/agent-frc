@@ -1,9 +1,6 @@
 /**
  * @lane merge
- * @subject scripts/layout_attachment.py
  * @subject scripts/mechanical_readiness.py
- * @subject scripts/package_budgets.py
- * @subject scripts/preliminary_design.py
  */
 import assert from 'node:assert/strict';
 import {execFile,execFileSync} from 'node:child_process';
@@ -27,7 +24,7 @@ const atOnce=Number(process.env.FRC_TEST_JOBS)||Math.max(1,Math.floor(availableP
 
 describe('complete mechanical review with geometry and adverse-case controls',{concurrency:atOnce},()=>{
   test('the CAD kernel and rendering controls',{skip:portable && 'Run the CAD kernel and rendering controls at the qualified station'},()=>{
-    assert.ok(Object.keys(classes).length>30,'the Python file lists its test classes');
+    assert.ok(Object.keys(classes).length>14,'the Python file lists its test classes');
   });
   for(const [name,count] of Object.entries(classes)) test(`${name}: ${count} Python tests`,async()=>{
     const {stderr}=await run(py,[hub,name],{maxBuffer:1<<26});

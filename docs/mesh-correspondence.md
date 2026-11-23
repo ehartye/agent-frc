@@ -22,7 +22,7 @@ When an older scene lacks per-part ranges, an optional `sampledScreen` with `tol
 
 ## Where this comparison applies
 
-A detailed design has [one published view, its design review](design-publication.md#one-viewer-for-one-design). The layout check builds that page's model from the same STEP it checks, so it needs no mesh comparison. The plugin no longer builds an orbit view from the STL, publishes an animated model or compares a delivered still pixel by pixel.
+A detailed design has [one published view, its design review](design-publication.md#one-viewer-for-one-design). The layout check builds that page's model from the same solids it checks, so it needs no mesh comparison.
 
 Use this command on its own when a project keeps a mesh for another purpose, such as a simulator scene or a print, and wants to know that it holds every installed solid of the STEP. For a GLB or glTF with clips, `pose` selects the clip and time to compare, and the matching posed STEP is the reference.
 

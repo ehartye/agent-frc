@@ -20,10 +20,10 @@ The handoff is the effective preliminary design's folder, `cad/preliminary-desig
 
 | Handed over | What you do with it |
 | --- | --- |
-| Blockout: the STEP that `layout.json` names | Bring it into Fusion as the reference (step 2) |
-| Robot frame and datums: `layout.json` `datum` and `mounts`, and the note | Put each joint origin on its datum (step 2) |
+| Blockout: `generated/design.step`, the solids the design library built from the design source | Bring it into Fusion as the reference (step 2) |
+| Robot frame and datums: the design source's `frame` and `mounts`, and the note | Put each joint origin on its datum (step 2) |
 | Envelopes in the note: frame, bumpers, parked height, reach | Draw each limit as a `Limit` body (step 2) |
-| Interfaces and allowances: `mounts`, declared fits and the note | One work item each. Draw every undrawn connection |
+| Interfaces and allowances: `mounts`, declared contacts and the note | One work item each. Draw every undrawn connection |
 | Motion cases, cycle and displaced control | Repeat them unchanged on every export (step 4) |
 | Mass and loaded-voltage budgets: `budgets.json` and its limits file | Charge every change against the stated reserve (step 4) |
 | Open risks and bench tests: `missions.json` `risks` and the note | A work-list row for each risk and a bench-test record (step 1) |
@@ -35,7 +35,8 @@ The handoff is the effective preliminary design's folder, `cad/preliminary-desig
 
 | The change | Run |
 | --- | --- |
-| Geometry, a motion, a tolerance or reserve, a fixture, a trial, a mass or voltage budget | The layout check, on the phases the change affects |
+| Geometry, a motion, a fixture | Generate the solids again, then the layout check, on the phases the change affects |
+| A tolerance or reserve, a trial, a mass or voltage budget | The layout check, on the phases the change affects |
 | The page, a title, a colour, a name, a version label, a status word, a document | `--view-only` when the page shows it, then the publication check. Never the layout check |
 | Publishing a draft | The publication check. A draft is published on its own layout check |
 | Marking a design effective | The command that marks it effective. It runs the stage gate itself: the full layout check on the committed design, once. Commit the design's inputs first |
@@ -71,24 +72,30 @@ If `iterations/active.json` or the project's Fusion register names a different a
 5. Put reserved volumes for wiring, tools, hands and service in a component named `Reservations`. Where the handoff reserves none, add the ones this design needs as you find them. Add each envelope limit the handoff gives as a number, such as a reach or a height, as a thin `Limit` body there. Keep them to the end.
 6. Resolve the palette with `python PLUGIN/scripts/component_palette.py .` and colour parts by role. [CAD colour convention](../../docs/cad-color-convention.md)
 
-Name components so the export maps back to the motion cases. The layout check knows a solid by its component's name, and every solid must be in exactly one group of the plan.
+Name components so the export maps back to the motion cases. The design source takes each solid from the export by its component's name, and every solid sits in exactly one group.
 
 | Rule | Why |
 | --- | --- |
 | One body in each leaf component | Two bodies export as `NAME [index]`, and the index moves with the browser order |
 | The main part that replaces a blockout solid keeps that solid's exact name | Mounts, cases and the displaced control still find it |
-| Every other part is named `BLOCKOUT NAME - part`, such as `Carriage plate - left bearing block` | Your script puts it in that solid's group and gives it that solid's moves in every case |
+| Every other part is named `BLOCKOUT NAME - part`, such as `Carriage plate - left bearing block` | Your script puts it in that solid's group, so it moves with that group in every motion |
 | A part placed several times keeps one component | Each copy exports as `NAME [index]`. List them again after reordering |
 
-Copy the preliminary design's check inputs to `cad/detailed-design/designs/ID/`. Rewrite each file reference for the new folder and point `layout.json` at the export. Keep the cases, cycle, displaced control and declared fits unchanged. The check matches exact names only, so every new solid needs its own entries. Generate them from the naming rule with a small project script kept beside the plan. Do not type them by hand.
+Copy the preliminary design's check inputs to `cad/detailed-design/designs/ID/` and rewrite each file reference for the new folder. In the design source, make every robot solid a `part` entry that takes the solid of that name from the export. The file is named from the design source's own folder:
+
+```json
+{"name": "Carriage plate", "group": "carriage", "part": {"file": "export-3/assembly.step", "solid": "Carriage plate"}}
+```
+
+Keep the groups, poses, motions and declared contacts of the design source, and the stages, cycle and displaced control of the judgement file, unchanged. Staging refuses a design source that places no solid from the registered Fusion export. The library matches exact names only, so every new solid needs its own entries. Generate them from the naming rule with a small project script kept beside the design source. Do not type them by hand.
 
 | File | Entry for each solid |
 | --- | --- |
-| `layout.json` | `groups` members; `presentation.components` purpose and rationale; `mounts` where a member has its own |
-| Motion study | `moves` and `initialPose` in every case that moves its group |
+| `design.json` | A `part` entry under `solids`, with its `group`; `mounts` where a solid has its own |
+| `judgement.json` | `presentation.components` purpose and rationale |
 | `budgets.json` | `masses` members |
 
-Export, run the layout check (step 4) and publish draft 1 (step 5) while the file still holds only the blockout. This proves the frame, the names and the publishing path. Compare the solid names in that export with the blockout's and fix any name that changed in the round trip.
+Export, generate the solids, run the layout check (step 4) and publish draft 1 (step 5) while the file still holds only the blockout. This proves the frame, the names and the publishing path. Compare the solid names in that export with the blockout's and fix any name that changed in the round trip.
 
 ### 3. Detail one subsystem at a time
 
@@ -109,16 +116,16 @@ When the real parts of a blockout solid are in place, delete that solid in the s
 
 ### 4. Keep the reservations checked
 
-After each subsystem, save, export and run all four checks. Fix or report every new failure before the next subsystem.
+After each subsystem, save, export, generate the solids and run all four checks. Fix or report every new failure before the next subsystem.
 
 | Reservation | How it is checked |
 | --- | --- |
-| Paths | The layout check sweeps the export through the preliminary motion cases. |
+| Paths | The layout check sweeps the solids taken from the export through the preliminary motion cases. |
 | Volumes | The `Reservations` bodies and the remaining blockout solids are solids in the same check. A part that enters one fails its case. |
 | Mass | Read mass and centre of mass from Fusion. Write each subsystem's range into `budgets.json` `masses`. The check compares the upper total with the limit. |
 | Loaded voltage | After a change of motor, gearing or load, update `batterySideA` and `loadedKg` in `budgets.json` `electricalCases`. The check compares every case with its minimum voltage. |
 
-Export from Fusion's Python environment into a new folder each time, such as `cad/detailed-design/designs/ID/export-3`. It writes `assembly.step` and `lineage.json`. Delete the previous export folder; Git keeps it. Then verify the export and run the check from a terminal:
+Export from Fusion's Python environment into a new folder each time, such as `cad/detailed-design/designs/ID/export-3`. It writes `assembly.step` and `lineage.json`. Delete the previous export folder; Git keeps it. Point each `part` entry of the design source at the new export. Then verify the export, generate the solids and run the check from a terminal:
 
 ```python
 fusion_authority.export_issue(app, project_root, register_path, new_export_folder)
@@ -126,22 +133,23 @@ fusion_authority.export_issue(app, project_root, register_path, new_export_folde
 
 ```sh
 python PLUGIN/scripts/fusion_authority.py . REGISTER EXPORT/lineage.json
-node PLUGIN/scripts/design.mjs preliminary-check . cad/detailed-design/designs/ID/layout.json --physics-only --fail-fast --jobs 4
-node PLUGIN/scripts/design.mjs preliminary-check . cad/detailed-design/designs/ID/layout.json --write-view --output cad/detailed-design/designs/ID/receipt.json --jobs 4
+python -m frc_design_kernel build cad/detailed-design/designs/ID/design.json --out cad/detailed-design/designs/ID/generated
+node PLUGIN/scripts/design.mjs preliminary-check . cad/detailed-design/designs/ID/judgement.json --physics-only --cases A,B --workers 4
+node PLUGIN/scripts/design.mjs preliminary-check . cad/detailed-design/designs/ID/judgement.json --write-view --output cad/detailed-design/designs/ID/receipt.json --workers 4
 ```
 
-Use the first check line while fixing and the second for the result you publish. [Mass, centre of mass and voltage](../../docs/fusion-design-checkpoints.md) · [Layout check](../../docs/preliminary-design.md)
+Use the first check line while fixing, with the stages you changed in place of `A,B`, and the second for the result you publish. [Mass, centre of mass and voltage](../../docs/fusion-design-checkpoints.md) · [Layout check](../../docs/preliminary-design.md)
 
 ### 5. Publish the draft as in-progress
 
-A detailed design publishes as `in-progress` on three things: a link to the effective preliminary design, an export that passes the layout check on that design's motion cases, and a mission animation on the detailed geometry. Keep the copied `missions.json` beside the plan; it names the mission cases to play. Rerun a physics trial when detailing changes a surface that touches the game piece.
+A detailed design publishes as `in-progress` on three things: a link to the effective preliminary design, a design source that takes its robot solids from the export and passes the layout check on that design's motion cases, and a mission animation on the detailed geometry. Keep the copied `missions.json` beside the judgement file; it names the mission cases to play. Rerun a physics trial when detailing changes a surface that touches the game piece.
 
 ```sh
 node PLUGIN/scripts/detailed-design-release.mjs stage . --design ID --inputs cad/detailed-design/designs/ID --preliminary VERSION --authority REGISTER --lineage EXPORT/lineage.json
 node PLUGIN/scripts/design-publication.mjs check .
 ```
 
-Stage the same ID after each subsystem. Commit the Fusion file, export, check inputs and published folder together, push, and open the published page. [Publish a detailed design](../../docs/design-publication.md#publish-a-detailed-design)
+Stage the same ID after each subsystem. Commit the Fusion file, export, check inputs, generated solids and published folder together, push, and open the published page. [Publish a detailed design](../../docs/design-publication.md#publish-a-detailed-design)
 
 ### 6. Take the readiness review
 
@@ -166,7 +174,7 @@ Return it when a reserved path, volume, mass or loaded-voltage figure cannot be 
 2. Record the failing pair, case and amount, or the budget line and shortfall, in the work list.
 3. Check in with the user.
 4. Open the next preliminary minor version as a draft and hand the record to `frc-preliminary-design`. After effective `1.0` that is `python PLUGIN/scripts/stage_preliminary_review.py --copy-inputs 1.0 1.1`. A different architecture is the next major version and a new detailed design.
-5. The detailed design stays `in-progress` and keeps its ID. When the new preliminary version is effective, copy its changed cases into the detailed plan, rerun the check and stage the same ID again with `--preliminary 1.1`. If no case changed, `node PLUGIN/scripts/detailed-design-release.mjs relink . --design ID --preliminary 1.1` re-points it.
+5. The detailed design stays `in-progress` and keeps its ID. When the new preliminary version is effective, copy its changed motions and stages into the detailed design source and judgement file, generate the solids, rerun the check and stage the same ID again with `--preliminary 1.1`. If no case changed, `node PLUGIN/scripts/detailed-design-release.mjs relink . --design ID --preliminary 1.1` re-points it.
 
 [When to return to an earlier phase](../../docs/design-phase-detail.md#when-to-return-to-an-earlier-phase) · [Start the next version](../../docs/design-publication.md#name-and-number-a-design)
 
@@ -182,7 +190,7 @@ Say in the result when one could not be done.
 
 **Parts**
 5. Nothing floats. Every real part is joined or fastened to something that traces to the frame. Clear each floating solid in the check's `[attachment]` lines, or list it with the reason. Blockout solids are exempt until replaced.
-6. Nothing overlaps unless it is a declared fit. Register press fits, threads and squeezed game pieces by pair with a limit.
+6. Nothing overlaps unless it is a declared contact. Declare press fits, threads and squeezed game pieces by pair under `contacts` in the design source, each with a note.
 7. Use the manufacturer's model for a purchased part. Where none exists, use a labelled stand-in and list what it leaves open.
 8. Give every moving part a joint with limits, and a hard stop or a stated reason it needs none.
 9. Author shapes in Fusion. An outside tool needs a written reason and a path back into the Fusion file.
@@ -213,15 +221,15 @@ Say in the result when one could not be done.
 
 ## When you see this, try this
 
-Likely causes for each row, and eleven rarer symptoms: [special cases](references/special-cases.md#symptoms-likely-causes).
+Likely causes for each row, and ten rarer symptoms: [special cases](references/special-cases.md#symptoms-likely-causes).
 
 | You see | First thing to try | Check in when |
 | --- | --- | --- |
-| The export fails the layout check | Read the first failing pair and case. `no group lists:` names solids the plan misses; fix names first. Then check one datum point. Look at geometry last. | Both parts were in the blockout and are unchanged |
-| Bolted parts fail a case only because they touch | A case with `minGapMm` above zero fails every mated pair. Set it to 0 in the detailed plan and say so in the stage's `allowanceBasis`. Keep each required running clearance as a body in `Reservations`. Overlap still fails. | A handoff clearance cannot be drawn as a body |
+| The export fails the layout check | Read the first failing pair and case. When the library stops with `has no solid named`, the design source asks for a solid the export lacks; fix names first. Then check one datum point. Look at geometry last. | Both parts were in the blockout and are unchanged |
+| Bolted parts fail a case only because they touch | A case with `minGapMm` above zero fails every mated pair. Set it to 0 in the detailed judgement file and say so in the stage's `allowanceBasis`. Keep each required running clearance as a body in `Reservations`. Overlap still fails. | A handoff clearance cannot be drawn as a body |
 | A part crosses a reserved volume or path | In order: flip or rotate the part, pick its shorter or flatter option, move the fastener or connector side. Rerun. | None works, or a neighbour must move past its allowance |
 | The mass reserve is used up | List the ten heaviest changes since the last budget. Check each material. Count each purchased assembly once, at supplier mass. | The upper estimate is inside the minimum reserve or over the limit |
-| A check is too slow | Use `--physics-only --fail-fast` while fixing. Set `--jobs`. Coarsen the path tolerance of cases with ample margin. | A whole-cycle check will pass 30 minutes |
+| A check is too slow | Use `--physics-only` with `--cases` for the stages you are fixing. Set `--workers`. Coarsen the path tolerance of cases with ample margin. | A whole-cycle check will pass 30 minutes |
 
 ## Scope guidelines and rare cases
 

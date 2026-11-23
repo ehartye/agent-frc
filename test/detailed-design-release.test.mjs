@@ -30,16 +30,16 @@ const detail = 'docs/detailed-design', prelim = 'docs/preliminary-design';
 function project(t, {status = 'effective'} = {}) {
   const root = mkdtempSync(path.join(os.tmpdir(), 'detailed-release-'));
   t.after(() => rmSync(root, {recursive: true, force: true}));
-  issueRelease(path.join(root, 'docs'), 'layout-001');
-  commitInputs(root, 'layout-001');
-  listing(path.join(root, 'docs'), 'layout-001', ['layout-001'], {'layout-001': status});
-  const published = path.join(root, prelim, 'releases/layout-001'), inputs = 'cad/detailed-design/designs/detail-001';
+  issueRelease(path.join(root, 'docs'), '1.0');
+  commitInputs(root, '1.0');
+  listing(path.join(root, 'docs'), '1.0', ['1.0'], {'1.0': status}, {1: {name: 'Tilting carriage'}});
+  const published = path.join(root, prelim, 'releases/1.0'), inputs = 'cad/detailed-design/designs/1.0';
   const receipt = read(path.join(published, 'receipt.json')), ledger = {...read(path.join(published, 'budgets.json')), requirements: {file: 'package-limits.json'}};
-  const plan = JSON.stringify({view: 'review/index.html', motion: {file: 'paths.json'}, budgets: {file: 'budgets.json'}});
-  write(root, inputs + '/layout.json', plan);
-  write(root, inputs + '/receipt.json', folderReceipt(root, inputs, receipt, plan, ledger, 'layout-001'));
+  const plan = JSON.stringify({view: 'review/index.html', source: {file: 'design.json'}, budgets: {file: 'budgets.json'}});
+  write(root, inputs + '/judgement.json', plan);
+  write(root, inputs + '/receipt.json', folderReceipt(root, inputs, receipt, plan, ledger, '1.0'));
   write(root, inputs + '/missions.json', {missionCases: read(path.join(published, 'release.json')).missionCases});
-  write(root, inputs + '/paths.json', readFileSync(path.join(published, 'motion.json')));
+  write(root, inputs + '/design.json', readFileSync(path.join(published, 'design.json')));
   write(root, inputs + '/budgets.json', ledger);
   write(root, inputs + '/package-limits.json', readFileSync(path.join(published, 'limits.json')));
   write(root, inputs + '/review/index.html', '<html>Detailed review</html>');
@@ -51,7 +51,7 @@ function project(t, {status = 'effective'} = {}) {
       findings: verdict === 'pass' ? [] : [{domain: 'service', status: 'open', subject: 'invented cover', reason: 'removal path not shown'}]});
     return 'cad/detailed-design/readiness-result.json';
   };
-  const stage = (options = {}) => stageInProgress({project: root, design: 'detail-001', inputs, preliminary: 'layout-001', authority: 'cad/fusion-authority.json',
+  const stage = (options = {}) => stageInProgress({project: root, design: '1.0', inputs, preliminary: '1.0', authority: 'cad/fusion-authority.json',
     lineage: 'cad/lineage.json', replay, ...options});
   return {root, inputs, receipt, stage, review, index: () => read(path.join(root, detail, 'designs.json'))};
 }
@@ -60,15 +60,15 @@ const passes = root => assert.deepEqual(checkProject(root, {log: () => {}}).erro
 test('stage publishes an in-progress design that the publication check accepts', t => {
   const p = project(t);
   const {report, revision, ...index} = p.stage();
-  assert.deepEqual(index, {schema: 'agent-frc/detailed-design-index@1', preliminaryIndex: '../preliminary-design/releases.json', current: 'detail-001', beside: null,
-    designs: ['detail-001'], designStatus: {'detail-001': 'in-progress'}, preliminary: {'detail-001': 'layout-001'}});
-  // An earlier ID carries no name; its publishes are counted as drafts like any other design's.
-  assert.equal(revision['detail-001'].number, 1);
-  assert.equal(report, 'Staged detailed design detail-001 (draft 1 · in progress)\nBefore pushing, run the publication check: node PLUGIN/scripts/design-publication.mjs check .\nOn push: the project\'s workflow publishes the page. Nothing is rerun.\n');
-  const dir = path.join(p.root, detail, 'designs/detail-001');
-  assert.deepEqual(read(path.join(dir, 'design.json')), {schema: 'agent-frc/detailed-design@1', design: 'detail-001', issue: p.receipt.issue,
-    preliminary: {release: 'layout-001'}, fusion: {archiveSha256: sha('archive'), stepSha256: p.receipt.step.sha256, configuration: 'Invented stowed assembly', revision: 'review-r1'},
-    check: {project: p.inputs, plan: 'layout.json'},
+  assert.deepEqual(index, {schema: 'agent-frc/detailed-design-index@1', preliminaryIndex: '../preliminary-design/releases.json', current: '1.0', beside: null,
+    designs: ['1.0'], architectures: {1: {name: 'Tilting carriage'}}, designStatus: {'1.0': 'in-progress'}, preliminary: {'1.0': '1.0'}});
+  // Its publishes are counted as drafts.
+  assert.equal(revision['1.0'].number, 1);
+  assert.equal(report, 'Staged detailed design Tilting carriage 1.0 (draft 1 · in progress)\nBefore pushing, run the publication check: node PLUGIN/scripts/design-publication.mjs check .\nOn push: the project\'s workflow publishes the page. Nothing is rerun.\n');
+  const dir = path.join(p.root, detail, 'designs/1.0');
+  assert.deepEqual(read(path.join(dir, 'design.json')), {schema: 'agent-frc/detailed-design@1', design: '1.0', issue: p.receipt.issue,
+    preliminary: {release: '1.0'}, fusion: {archiveSha256: sha('archive'), stepSha256: p.receipt.step.sha256, configuration: 'Invented stowed assembly', revision: 'review-r1'},
+    check: {project: p.inputs},
     missionCases: [{case: 'loaded-turn', kind: 'operating-case', accomplishes: 'delivered', objective: 'Carry the sample to the bin'}]});
   assert.equal(readFileSync(path.join(dir, 'index.html'), 'utf8'), '<html>Detailed review</html>');
   assert.ok(existsSync(path.join(p.root, detail, 'index.html')), 'the stock catalog is written when the tree has none');
@@ -80,40 +80,40 @@ test('stage publishes an in-progress design that the publication check accepts',
   assert.equal(readFileSync(path.join(dir, 'index.html'), 'utf8'), '<html>Corrected review</html>');
 });
 
-test('stage refuses a receipt on another STEP or a preliminary release that is not effective, and leaves the site as it was', t => {
+test('stage refuses a design source that places no solid from the Fusion export or a preliminary release that is not effective, and leaves the site as it was', t => {
   const p = project(t);
   assert.throws(() => p.stage({replay: () => ({archiveSha256: sha('archive'), stepSha256: sha('another export'), configuration: 'Invented'})}),
-    /layout check ran on a STEP other than the registered Fusion export/);
+    /The design source places no solid from the registered Fusion export/);
   const q = project(t, {status: 'in-progress'});
-  assert.throws(() => q.stage(), /detail-001 must name an effective preliminary release; layout-001 is in-progress/);
-  assert.ok(!existsSync(path.join(q.root, detail, 'designs.json')) && !existsSync(path.join(q.root, detail, 'designs/detail-001')));
+  assert.throws(() => q.stage(), /1\.0 must name an effective preliminary release; 1\.0 is in-progress/);
+  assert.ok(!existsSync(path.join(q.root, detail, 'designs.json')) && !existsSync(path.join(q.root, detail, 'designs/1.0')));
   assert.throws(() => p.stage({inputs: '../outside'}), /Detailed design input is missing|inside the project/);
 });
 
 test('effective is a status change that commits a passing readiness review and supersedes the earlier design', t => {
   const p = project(t);
   p.stage();
-  assert.throws(() => markEffective({project: p.root, design: 'detail-001', readiness: p.review('pass', sha('another step'))}), /readiness review is of a different STEP/);
+  assert.throws(() => markEffective({project: p.root, design: '1.0', readiness: p.review('pass', sha('another step'))}), /readiness review is of a different STEP/);
   // A review that does not pass is refused with its findings, and nothing changes.
-  assert.throws(() => markEffective({project: p.root, design: 'detail-001', readiness: p.review('open')}),
-    /detail-001 cannot be effective: its mechanical-readiness review reports open\n[\s\S]*Findings not passing: 1\n  - service: invented cover: open: removal path not shown/);
-  assert.deepEqual(p.index().designStatus, {'detail-001': 'in-progress'});
-  assert.ok(!existsSync(path.join(p.root, detail, 'designs/detail-001/readiness.json')));
-  const first = markEffective({project: p.root, design: 'detail-001', readiness: p.review('pass')});
+  assert.throws(() => markEffective({project: p.root, design: '1.0', readiness: p.review('open')}),
+    /1\.0 cannot be effective: its mechanical-readiness review reports open\n[\s\S]*Findings not passing: 1\n  - service: invented cover: open: removal path not shown/);
+  assert.deepEqual(p.index().designStatus, {'1.0': 'in-progress'});
+  assert.ok(!existsSync(path.join(p.root, detail, 'designs/1.0/readiness.json')));
+  const first = markEffective({project: p.root, design: '1.0', readiness: p.review('pass')});
   assert.match(first.report, /Showcase eligibility: pass\nFindings not passing: 0/);
-  assert.deepEqual(first.designStatus, {'detail-001': 'effective'});
-  assert.equal(first.current, 'detail-001');
-  assert.equal(read(path.join(p.root, detail, 'designs/detail-001/readiness.json')).showcaseEligibility, 'pass');
+  assert.deepEqual(first.designStatus, {'1.0': 'effective'});
+  assert.equal(first.current, '1.0');
+  assert.equal(read(path.join(p.root, detail, 'designs/1.0/readiness.json')).showcaseEligibility, 'pass');
   passes(p.root);
   // A design that was never shown in progress is recorded from its review.
-  const second = markEffective({project: p.root, design: 'detail-002', readiness: p.review('pass')});
-  assert.deepEqual(second.designStatus, {'detail-001': 'superseded', 'detail-002': 'effective'});
-  assert.deepEqual(second.supersededBy, {'detail-001': 'detail-002'});
-  assert.equal(second.current, 'detail-002');
-  assert.deepEqual(read(path.join(p.root, detail, 'designs/detail-002/design.json')).fusion,
+  const second = markEffective({project: p.root, design: '1.1', readiness: p.review('pass')});
+  assert.deepEqual(second.designStatus, {'1.0': 'superseded', '1.1': 'effective'});
+  assert.deepEqual(second.supersededBy, {'1.0': '1.1'});
+  assert.equal(second.current, '1.1');
+  assert.deepEqual(read(path.join(p.root, detail, 'designs/1.1/design.json')).fusion,
     {archiveSha256: sha('archive'), stepSha256: p.receipt.step.sha256, configuration: 'Invented stowed assembly'});
   passes(p.root);
-  assert.throws(() => markEffective({project: p.root, design: 'detail-001', readiness: p.review('pass')}), /Only a new or in-progress design can become effective/);
+  assert.throws(() => markEffective({project: p.root, design: '1.0', readiness: p.review('pass')}), /Only a new or in-progress design can become effective/);
 });
 
 test('a detailed design becomes effective end to end from the review command, with no key or variable',
@@ -128,12 +128,12 @@ test('a detailed design becomes effective end to end from the review command, wi
     const review = read(path.join(p.root, result));
     assert.deepEqual([review.showcaseEligibility, review.buildReadiness, review.findings], ['pass', 'pass', []]);
     // The status change records the design from its review: the reviewed STEP and archive.
-    const marked = spawnSync(process.execPath, [script, 'effective', p.root, '--design', 'detail-001', '--readiness', result], {encoding: 'utf8', env});
+    const marked = spawnSync(process.execPath, [script, 'effective', p.root, '--design', '1.0', '--readiness', result], {encoding: 'utf8', env});
     assert.equal(marked.status, 0, marked.stderr);
-    assert.deepEqual(p.index().designStatus, {'detail-001': 'effective'});
+    assert.deepEqual(p.index().designStatus, {'1.0': 'effective'});
     const checked = checkProject(p.root, {log: () => {}});
     assert.deepEqual(checked.errors, []);
-    assert.match(checked.reports.find(r => /detail-001/.test(r.title)).text, /Showcase eligibility: pass\nFindings not passing: 0/);
+    assert.match(checked.reports.find(r => /Detailed design/.test(r.title)).text, /Showcase eligibility: pass\nFindings not passing: 0/);
     // A failing duty in the same study is refused by the review command and by the status change.
     const study = read(path.join(mechanical, 'readiness-study.json'));
     study.duties.at(-1).max = .7;
@@ -141,28 +141,28 @@ test('a detailed design becomes effective end to end from the review command, wi
     const blocked = spawnSync(py, ['-B', reviewCommand, 'review', mechanical, 'blocked-study.json', '--require-publication', '--output', path.join(mechanical, 'blocked-result.json')], {encoding: 'utf8', env});
     assert.equal(blocked.status, 1, blocked.stderr);
     assert.equal(read(path.join(mechanical, 'blocked-result.json')).showcaseEligibility, 'fail');
-    assert.throws(() => markEffective({project: p.root, design: 'detail-002', readiness: 'cad/mechanical/blocked-result.json'}), /detail-002 cannot be effective: its mechanical-readiness review reports fail/);
+    assert.throws(() => markEffective({project: p.root, design: '1.1', readiness: 'cad/mechanical/blocked-result.json'}), /1\.1 cannot be effective: its mechanical-readiness review reports fail/);
   });
 
 test('withdraw is a status change: the index keeps the reason and the last commit, and the files leave with no archive', t => {
   const p = project(t);
   p.stage();
   const git = (...args) => execFileSync('git', ['-C', p.root, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', ...args], {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']}).trim();
-  git('init', '-q'); git('add', '-A'); git('commit', '-q', '-m', 'publish detail-001');
+  git('init', '-q'); git('add', '-A'); git('commit', '-q', '-m', 'publish 1.0');
   const published = git('rev-parse', 'HEAD');
   write(p.root, 'notes.md', 'unrelated');
   git('add', '-A'); git('commit', '-q', '-m', 'unrelated');
-  assert.throws(() => withdraw({project: p.root, design: 'detail-001'}), /Give the reason/);
-  const index = withdraw({project: p.root, design: 'detail-001', reason: 'Invented reason: the carrier changed.'});
-  assert.deepEqual(index.designStatus, {'detail-001': 'withdrawn'});
-  assert.deepEqual(index.reason, {'detail-001': 'Invented reason: the carrier changed.'});
-  assert.deepEqual(index.lastCommit, {'detail-001': published}, 'the commit where the published files can still be read');
-  assert.match(git('show', '--stat', '--format=', published), /designs\/detail-001\/design\.json/);
+  assert.throws(() => withdraw({project: p.root, design: '1.0'}), /Give the reason/);
+  const index = withdraw({project: p.root, design: '1.0', reason: 'Invented reason: the carrier changed.'});
+  assert.deepEqual(index.designStatus, {'1.0': 'withdrawn'});
+  assert.deepEqual(index.reason, {'1.0': 'Invented reason: the carrier changed.'});
+  assert.deepEqual(index.lastCommit, {'1.0': published}, 'the commit where the published files can still be read');
+  assert.match(git('show', '--stat', '--format=', published), /designs\/1\.0\/design\.json/);
   assert.equal(index.current, null);
-  assert.ok(!existsSync(path.join(p.root, detail, 'designs/detail-001')) && !existsSync(path.join(p.root, detail, 'archive')));
+  assert.ok(!existsSync(path.join(p.root, detail, 'designs/1.0')) && !existsSync(path.join(p.root, detail, 'archive')));
   passes(p.root);
-  assert.throws(() => withdraw({project: p.root, design: 'detail-001', reason: 'again'}), /already withdrawn/);
-  assert.throws(() => withdraw({project: p.root, design: 'detail-009', reason: 'x'}), /not in the index/);
+  assert.throws(() => withdraw({project: p.root, design: '1.0', reason: 'again'}), /already withdrawn/);
+  assert.throws(() => withdraw({project: p.root, design: '9.0', reason: 'x'}), /not in the index/);
 });
 
 test('a model published before the index is withdrawn by naming its files', t => {
@@ -172,15 +172,15 @@ test('a model published before the index is withdrawn by naming its files', t =>
   const git = (...args) => execFileSync('git', ['-C', p.root, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', ...args], {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']}).trim();
   git('init', '-q'); git('add', '-A'); git('commit', '-q', '-m', 'rough draft');
   const published = git('rev-parse', 'HEAD');
-  p.stage();
-  assert.throws(() => withdraw({project: p.root, design: 'draft-001', reason: 'x', files: 'docs/models/missing.glb'}), /No published file at docs\/models\/missing\.glb/);
-  assert.throws(() => withdraw({project: p.root, design: 'draft-001', reason: 'x', files: '../outside.glb'}), /No published file/);
-  assert.throws(() => withdraw({project: p.root, design: 'detail-001', reason: 'x', files: 'docs/models/robot.glb'}), /--files applies to a model the index does not list yet/);
-  const index = withdraw({project: p.root, design: 'draft-001', reason: 'Invented rough draft from before the status index.', files: 'docs/models/robot.glb, docs/media/robot-still.png'});
-  assert.deepEqual(index.designs, ['draft-001', 'detail-001'], 'the earlier model is listed first');
-  assert.deepEqual(index.designStatus, {'draft-001': 'withdrawn', 'detail-001': 'in-progress'});
-  assert.deepEqual(index.lastCommit, {'draft-001': published});
-  assert.equal(index.current, 'detail-001');
+  p.stage({design: '1.1'});
+  assert.throws(() => withdraw({project: p.root, design: '1.0', reason: 'x', files: 'docs/models/missing.glb'}), /No published file at docs\/models\/missing\.glb/);
+  assert.throws(() => withdraw({project: p.root, design: '1.0', reason: 'x', files: '../outside.glb'}), /No published file/);
+  assert.throws(() => withdraw({project: p.root, design: '1.1', reason: 'x', files: 'docs/models/robot.glb'}), /--files applies to a model the index does not list yet/);
+  const index = withdraw({project: p.root, design: '1.0', reason: 'Invented rough draft from before the status index.', files: 'docs/models/robot.glb, docs/media/robot-still.png'});
+  assert.deepEqual(index.designs, ['1.0', '1.1'], 'the earlier model is listed first');
+  assert.deepEqual(index.designStatus, {'1.0': 'withdrawn', '1.1': 'in-progress'});
+  assert.deepEqual(index.lastCommit, {'1.0': published});
+  assert.equal(index.current, '1.1');
   assert.ok(!existsSync(path.join(p.root, 'docs/models/robot.glb')) && !existsSync(path.join(p.root, 'docs/media/robot-still.png')));
   const result = checkProject(p.root, {log: () => {}});
   assert.deepEqual([result.errors, result.warnings], [[], []]);
@@ -189,9 +189,9 @@ test('a model published before the index is withdrawn by naming its files', t =>
 test('refresh recomputes the primary view of an index edited by hand', t => {
   const p = project(t);
   p.stage();
-  write(p.root, detail + '/designs.json', {...p.index(), current: null, beside: 'detail-001'});
-  assert.match(checkProject(p.root, {log: () => {}}).errors.join('\n'), /set current to detail-001 and beside to null/);
-  assert.equal(refresh({project: p.root}).current, 'detail-001');
+  write(p.root, detail + '/designs.json', {...p.index(), current: null, beside: '1.0'});
+  assert.match(checkProject(p.root, {log: () => {}}).errors.join('\n'), /set current to 1\.0 and beside to null/);
+  assert.equal(refresh({project: p.root}).current, '1.0');
   passes(p.root);
 });
 
@@ -199,13 +199,13 @@ test('the command line runs each command and reports a refusal', t => {
   const p = project(t);
   p.stage();
   const run = (...args) => spawnSync(process.execPath, [script, ...args], {encoding: 'utf8'});
-  const effective = run('effective', p.root, '--design', 'detail-001', '--readiness', p.review('pass'), '--check', gateCheck);
+  const effective = run('effective', p.root, '--design', '1.0', '--readiness', p.review('pass'), '--check', gateCheck);
   assert.equal(effective.status, 0, effective.stderr);
   assert.match(effective.stderr, /Showcase eligibility: pass/);
-  assert.equal(JSON.parse(effective.stdout).current, 'detail-001');
-  const withdrawn = run('withdraw', p.root, '--design', 'detail-001', '--reason', 'Invented reason.', '--site', 'docs');
-  assert.equal(JSON.parse(withdrawn.stdout).designStatus['detail-001'], 'withdrawn');
-  const refused = run('withdraw', p.root, '--design', 'detail-001', '--reason', 'again');
+  assert.equal(JSON.parse(effective.stdout).current, '1.0');
+  const withdrawn = run('withdraw', p.root, '--design', '1.0', '--reason', 'Invented reason.', '--site', 'docs');
+  assert.equal(JSON.parse(withdrawn.stdout).designStatus['1.0'], 'withdrawn');
+  const refused = run('withdraw', p.root, '--design', '1.0', '--reason', 'again');
   assert.equal(refused.status, 1);
   assert.match(refused.stderr, /already withdrawn[\s\S]*Usage: detailed-design-release\.mjs stage PROJECT/);
 });

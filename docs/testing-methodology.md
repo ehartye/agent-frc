@@ -36,7 +36,7 @@ A check runs when the change could break what the check protects. A change to a 
 
 A push only publishes. The project's CI runs no design check and no plugin: it scans, checks that the published site is whole and deploys it.
 
-A draft is work in progress. It is published on the designer's own layout check and carries the in-progress label. It cannot become effective without passing the stage gate, which the command that marks it effective runs. The gate never takes an earlier receipt for its result, and it refuses a design whose inputs are not committed.
+A draft is work in progress. It is published on the designer's own layout check and carries the in-progress label. It cannot become effective without passing the stage gate, which the command that marks it effective runs. The gate never takes a saved receipt for its result, and it refuses a design whose inputs are not committed.
 
 An effective design is frozen. Any change to its physics is a new draft, and that draft passes the stage gate before it replaces the baseline. This is how regression is prevented for designs: by the version scheme, not by rerunning the old design.
 
@@ -89,7 +89,7 @@ The coding agent has the plugin installed and runs its commands. A robot project
 
 The [sample project](../examples/sample-project/ABOUT.md) shows the whole of it: an invented project whose CI is those reference files, with nothing of the plugin in it.
 
-Building solids and measuring them belong to a separate library, `frc-design-kernel`, that a project and the plugin may both import. A project writes a design source as data; the library builds and measures it; the plugin judges the result. The library builds and measures and never says pass or fail. It has no pinned version: its main branch is the release, the plugin's own CI installs it from there, and a receipt records its version as information only. A project may depend on the library; whether its CI regenerates a design is the project's choice, and the reference CI does not. A design in the earlier format, with a layout plan and a builder program, keeps that format until it is rewritten as a design source. Physics trials as data are coming to the library.
+Building solids and measuring them belong to a separate library, `frc-design-kernel`, that a project and the plugin may both import. A project writes a design source as data; the library builds and measures it; the plugin judges the result. The library builds and measures and never says pass or fail. It has no pinned version: its main branch is the release, the plugin's own CI installs it from there, and a receipt records its version as information only. A project may depend on the library; whether its CI regenerates a design is the project's choice, and the reference CI does not. Physics trials as data are coming to the library.
 
 ## Rules for adding a test or a check
 

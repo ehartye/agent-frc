@@ -1,4 +1,4 @@
-"""Build a local solid-model player from the exact rigid trajectories being checked."""
+"""Write the review scene and page of a checked layout from its frames, results and presentation text."""
 import gzip
 import hashlib
 import json
@@ -9,7 +9,6 @@ from urllib.parse import urlsplit
 import zlib
 
 from atomic_file import write_atomic
-from mechanical_motion import transforms
 from mechanical_readiness import named, pinned, read, require, resolve_references
 
 CONTROL_ID = "package-displacement-control"
@@ -19,51 +18,6 @@ PAGE = Path(__file__).resolve().parents[1] / "templates/preliminary-review/revie
 SCENE_FILE = "review-scene.json.gz"
 UNITS = "Millimetres in the registered STEP world; kg, A, V"
 ROLE_COLOURS = {"drive": "mechanism", "payload": "game-piece", "battery": "electrical", "other": "reference", "service": "reserved-space"}
-
-
-def _composed(operations, t, start=None):
-    """The placement after the ordered operations at stroke fraction t, applied after an optional start placement."""
-    from OCP.gp import gp_Trsf
-    combined = gp_Trsf()
-    if start is not None:
-        combined.Multiply(start)
-    for operation in transforms(operations, t):
-        combined.PreMultiply(operation)
-    return combined
-
-
-def _same_placement(a, b):
-    return all(abs(a.Value(r, c) - b.Value(r, c)) < 1e-9 for r in (1, 2, 3) for c in (1, 2, 3, 4))
-
-
-def capture(case, scene, cache=None):
-    """One case's bodies with their display mesh and per-frame placement.
-
-    Each solid is tessellated in its placed STEP pose, before the case's start pose, and the start pose is
-    folded into every frame matrix. A `cache` shared across the cases of one study therefore holds one
-    tessellation per body, however many cases pose it differently."""
-    import package_mesh
-    from OCP.BRepCheck import BRepCheck_Analyzer
-    from OCP.TopLoc import TopLoc_Location
-    cache = {} if cache is None else cache
-    bodies = {}
-    for name, solid in sorted(scene.items()):
-        start = _composed(case.get("initialPose", {}).get(name, []), 1)
-        # Removing the start pose from the solid's placement recovers its placed STEP pose.
-        placed = TopLoc_Location(start.Inverted()).Multiplied(solid.Location())
-        entry = cache.get(name)
-        if entry is None or not entry["solid"].IsPartner(solid) or not _same_placement(
-                entry["solid"].Location().Transformation(), placed.Transformation()):
-            require(BRepCheck_Analyzer(solid).IsValid(), "Invalid package solid: " + name)
-            base = solid.Located(placed)
-            entry = cache[name] = dict(solid=base, mesh=package_mesh.surface_mesh(base))
-        moves = case["moves"].get(name, [])
-        matrices = []
-        for i in range(25 if moves else 1):
-            combined = _composed(moves, i / 24, start)
-            matrices.append([combined.Value(r, c) for r in (1, 2, 3) for c in (1, 2, 3, 4)])
-        bodies[name] = dict(**entry["mesh"], matrices=matrices)
-    return dict(id=case["id"], stage=case["stage"], bodies=bodies)
 
 
 def _round(values, places):
@@ -706,7 +660,6 @@ def build_scene(root, plan, scenes, observed, budgets, review):
         scene["attachment"] = attachment
     rows = replay_entries(root, plan, scene["meshes"], bodies, placed, palette)
     if rows:
-        # Absent without replays, so a release issued before replays existed rebuilds to the same scene bytes.
         scene["replays"] = rows
     cut = scene["cutaway"]
     if cut is not None:

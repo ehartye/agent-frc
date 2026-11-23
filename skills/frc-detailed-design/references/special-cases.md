@@ -16,11 +16,11 @@ Read a row only when its situation matches the work in front of you. The ordered
 
 ## Symptoms: likely causes
 
-The skill's "When you see this, try this" table gives the first thing to try. This table gives the likely causes, most likely first. The second table holds eleven rarer symptoms in full.
+The skill's "When you see this, try this" table gives the first thing to try. This table gives the likely causes, most likely first. The second table holds ten rarer symptoms in full.
 
 | You see | Likely causes |
 | --- | --- |
-| The Fusion export fails the layout check | 1. A solid is in no group, or a name changed. 2. The export frame differs from the layout datum. 3. A new part sits in a swept path. 4. A fit is not declared. 5. A real clash that the blockout hid. |
+| The Fusion export fails the layout check | 1. A `part` entry names a solid the export lacks, or a name changed. 2. The export frame differs from the layout datum. 3. A new part sits in a swept path. 4. A fit is not declared. 5. A real clash that the blockout hid. |
 | Bolted parts fail a case only because they touch | 1. The case keeps a clearance above zero from the blockout, where no two solids touched. 2. A fastener or bearing overlaps its hole and needs a declared fit. |
 | A detailed part crosses a reserved volume or path | 1. The part is larger than its block. 2. The block was drawn at one pose and the part sweeps. 3. A fastener head, motor tail or connector sticks out. 4. The reservation was too tight. |
 | The mass reserve is used up | 1. Fasteners and brackets were never in the estimate. 2. A material is wrong or left at the default. 3. A purchased assembly is counted at CAD mass and again at catalogue mass. 4. Real growth. |
@@ -39,7 +39,7 @@ The skill's "When you see this, try this" table gives the first thing to try. Th
 | You see | First thing to try | Check in when |
 | --- | --- | --- |
 | A supplier model and the installed body disagree | Compare part number and option, then bounding box, then volume at matched accuracy. | The supplier's current part differs from the one modelled |
-| The published model and the Fusion file disagree | Export again from the saved file, rerun the check and stage again. | The published design is effective |
+| The published model and the Fusion file disagree | Export again from the saved file, generate the solids, rerun the check and stage again. | The published design is effective |
 | A joint reaches its angle but the part is misplaced | Measure one named point at two joint values against the handoff. | The handoff datum is wrong |
 | A scripted placement is refused | Read `reason` in its result. [Read a refused placement](../../../docs/checked-placement.md#read-a-refused-placement) | Two attempts fail the same way |
 | A part must cross a `Limit` body | Confirm the limit's value and its source in the project before changing anything. | The limit comes from a rule you have not verified in the project |
@@ -47,7 +47,6 @@ The skill's "When you see this, try this" table gives the first thing to try. Th
 | A bench test has no owner | Map it to a part, a fixture or a software check. If the design removed the risk, close the risk with `closedBy` in the next preliminary version and seed the record again. | It needs a field element or a measurement the shop cannot make |
 | The same clash survives local fixes | Stop after the third fix. Write what failed each time. | Always |
 | Work must move to another computer | Save, export, commit the Fusion file, export and check inputs together, and push. | The cloud copy and the committed file differ |
-| The project still holds a `stage.py` | Delete it and run the plugin's staging command from the project root. [Take the plugin out of a project](../../../docs/design-publication-migration.md#take-the-plugin-out-of-a-project) | The plugin's command refuses `--copy-inputs` |
 | The voltage reserve is used up | Recompute the governing case with the new mass and ratio. Try a current limit or a staggered start before new hardware. | The weak-battery case still fails |
 
 ## Purchased parts and stand-ins

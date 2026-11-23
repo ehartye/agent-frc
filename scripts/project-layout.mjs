@@ -68,8 +68,6 @@ export function workflowRows(root, ref) {
 }
 
 const blockStart = '<!-- design-checks:start -->', blockEnd = '<!-- design-checks:end -->';
-// The marker lines an earlier version wrote. They named the plugin; a block between them is replaced, markers and all.
-const earlierStart = '<!-- agent-frc:design-checks:start -->', earlierEnd = '<!-- agent-frc:design-checks:end -->';
 /**
  * The standing instruction an agent in a robot project reads before any skill loads: what to run for which change.
  * It condenses the plugin's docs/testing-methodology.md, stands without a link to it and names no season, game, team or plugin.
@@ -81,7 +79,8 @@ export const designChecksBlock = [blockStart,
   '',
   '| The change touches | What the agent runs |',
   '| --- | --- |',
-  '| Geometry, a motion, a tolerance or reserve, a fixture, a trial, a mass or voltage budget | The layout check, on the phases the change affects |',
+  '| Geometry, a motion or a fixture in the design source | Regenerate the solids with the design library, then the layout check |',
+  '| A tolerance or reserve, a trial, a mass or voltage budget | The layout check |',
   '| The review page, a title, a colour, a name, a version label, a status word, a document | A view-only rebuild when the page shows it, then the publication check. Never the layout check |',
   '| A draft being published | The publication check. A draft is published on its own layout check |',
   '| A design being marked effective | The command that marks it effective. It runs the stage gate itself: the full layout check on the committed design, once. Commit the design\'s inputs first |',
@@ -98,7 +97,7 @@ export const designChecksBlock = [blockStart,
 /** Write the block into the project's AGENTS.md, or replace the one it holds. Returns 'written', 'updated' or 'current'. */
 export function writeDesignChecks(root) {
   const file = path.join(root, 'AGENTS.md'), held = existsSync(file) ? readFileSync(file, 'utf8') : null;
-  const earlier = held?.includes(earlierStart) ?? false, start = earlier ? earlierStart : blockStart, end = earlier ? earlierEnd : blockEnd;
+  const start = blockStart, end = blockEnd;
   const from = held?.indexOf(start) ?? -1, to = held?.indexOf(end) ?? -1;
   if (from >= 0 && to < from) throw Error('AGENTS.md holds an unfinished Design checks block: restore both marker lines, or delete the block');
   const next = held === null ? '# Agent instructions\n\n' + designChecksBlock + '\n'
