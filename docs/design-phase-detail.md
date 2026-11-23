@@ -4,11 +4,11 @@ Use the least detail that can answer the decision for the current phase. At each
 
 ## 1. Conceptual design
 
-Write the concept of operations (ConOps) for the proposed match role. Describe how the robot, partners and operators would carry out a scoring cycle in typical and adverse match scenarios. Use field rehearsal for a trade study of competing cycles. Represent the robot as a movable prism with rough length, width and height. Mark the proposed pickup and release zones relative to the robot. Keep the approach face independent of the direction the robot is driving. Represent the game piece, target and field obstacles at a scale that matters to the route.
+Write the concept of operations (ConOps) for the proposed match role. Describe how the robot, partners and operators would carry out a scoring cycle in typical and adverse match scenarios. Use field rehearsal for a trade study of competing cycles. Represent each candidate robot as a [concept bot](concept-bots.md): its frame, bumpers and heights, a swerve drive, the faces it picks pieces up with and the outputs that place or shoot them. Keep the approach face independent of the direction the robot is driving. Represent the game piece, target and its entry region, and the field obstacles, at a scale that matters to the route.
 
-Rehearse the same scoring opportunity with competing approaches. Show headings, clearance on the field, partner traffic, pickup and delivery heights, travel speed, acquisition time, release rate, reset time and the cost of retrying after a miss. Label each value as required, assumed or observed. Where pickup behavior is outside the rehearsal tool's support, record that assumption and leave its result open.
+Rehearse the same scoring opportunity with competing approaches. Show headings, clearance on the field, partner traffic, pickup and delivery heights, travel speed, acquisition time, release rate, reset time and the cost of retrying after a miss. Label each concept-bot value as required, assumed or observed, with its basis, and estimate mass as a range against the inspection limit. Check each concept against the rules model's robot limits and target entries. Where pickup behavior is outside the rehearsal tool's support, record that assumption and leave its result open.
 
-Move to **preliminary design** when the team can replay its chosen cycle, explain why it chose that approach and say how much slower, larger or less accurate the robot could be before the choice would change.
+Move to **preliminary design** when the team can replay its chosen cycle with the selected concept bot and explain why it chose that approach. It must also say, from the concept's labelled ranges, how much slower, larger or less accurate the robot could be before the choice would change.
 
 ## 2. Preliminary design
 
