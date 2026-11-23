@@ -309,3 +309,14 @@ The index keeps the status, the reason and the last commit that changed the publ
 - `gh variable list` shows none of the variables above.
 - The default-branch run after the merge reruns each in-progress and effective design once and deploys the site.
 - The site opens the same primary view as before, each withdrawn design shows its reason, and no link points at a deleted archive.
+
+## Move a design checked in its own folder to the repository root
+
+Before plugin 0.117.0 a design's folder was itself the project the check ran in. Such a design keeps verifying: a check without `--write-view` still reads a page and scene at that project root, the publication check reruns it in its folder, and published versions do not change. The stock `stage.py` publishes both forms and tells them apart by the view path in the receipt.
+
+To check its next version from the repository root:
+
+1. Prefix every `file` in `layout.json` and in the records it names (the motion study, budgets, premises, evidence and trials) with the design's folder. Delete the typed `sha256` keys while you are there, or refresh the ones you keep.
+2. Set `view` to the page's path in the design's folder.
+3. Drop any `relocations` entry and copied-in held file that existed only so a path resolved inside the folder. Name the held file where it lives in the repository. The held receipt itself stays in the design's folder.
+4. Run the check from the repository root with `--write-view` and `--output`, then publish.

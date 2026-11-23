@@ -1,56 +1,131 @@
 ---
 name: frc-preliminary-design
-description: "Use for preliminary design of the whole robot: compare architectures, establish a shared top-down assembly layout, check motion and review weight and loaded-voltage budgets."
+description: "Preliminary design of the whole robot: block out a layout of about 30 to 80 solids, check the whole mission cycle for clearance, weight and loaded voltage, run the few physics trials that decide the architecture, and publish it as one named, versioned design with one review page. Use when asked to start, revise, check, publish or review a preliminary design, blockout or robot layout; to compare robot architectures; when the layout check fails, is slow or returns provisional; when parts float, a trial result is unclear or a published page looks wrong; to mark a design effective or hand it to detailed design; or when detailed design sends a reservation back."
 ---
 
 # Preliminary design of the whole robot
 
-**Pre-read the current strategic narrative before sketching or revising the layout.** Read it end to end. Walk through the opening, repeated cycles, endgame, partner-dependent objectives and fallbacks that it calls for. Name the project narrative file in the review and record how each objective is represented, remains open, or was explicitly scoped out and why. Revisit this list at handoff. A subsystem experiment can cover a narrower question while the whole-robot review retains the other objectives.
+Preliminary design decides the robot's architecture with a blockout: one solid per functional volume, checked through the whole mission cycle, plus the few physics trials that could change the choice. It is lightweight, fast iteration. Publish early as a draft and revise that draft in place.
 
-For every placed member, write its **purpose** (the job it performs) and **rationale** (the requirement, interface, constraint or tradeoff that earns it space here). Include supports, controls, game pieces and service gauges. Use its placed ID in the [review presentation](references/presentation.md) so selecting it reveals both explanations.
+The phase ends when the user marks the design **effective**. By then the whole cycle is checked, every mission-critical interaction passes a physics trial, and each open risk is closed or listed as a bench test with pass and fail numbers. Detailed design builds on that design.
 
-When lifting or tipping a game piece, test retention separately from the animated path. At each change of support, project gravity into the holder frame, identify contacts that can push back, and sweep the entire piece toward a possible exit. Repeat with grip or power removed, including the worst loaded angle. Record a restraint, measured friction and preload, or an open retention finding. Use a free-piece simulation or load test to check dynamic capture, slip and release. [Contact and load evidence](../../docs/loaded-transfer.md)
+Existing CAD is a premise you may revise. Judge the design by what works for the mission. Carry an earlier interface forward only when the project selects it and records why.
 
-When a successful transfer might justify removing a part, [isolate its contribution](../../docs/preliminary-design.md#isolate-the-cause-of-a-successful-transfer) under nominal and adverse conditions. Identify which motions were imposed and where load could change the result.
+The figures here are guidelines: about 30 to 80 solids, clearances to about 10 mm, about ten minutes for a whole-cycle check and for a trial campaign. Work may go past one after a check-in and an agreed, bounded budget.
 
-During preliminary design, use a top-down assembly layout. Share one moving layout, its checked clearance, complete weight estimate and loaded-voltage range before distributing detailed CAD. [Engineering detail and exit criteria for the three phases](../../docs/design-phase-detail.md)
+## Words
 
-Build the review inside the season project or active iteration. Present it with the plugin's [stock preliminary design review](references/review-layout-template.md): one page for every season that reads a standardized, validated review scene. Supply the project's content as `presentation` data in the layout, not as page markup. Trace each moving group to a frame attachment, actuator, usable travel and service path before distributing its datum. Commit the project-relative launcher, local assets, data and evidence so another designer can run the same review after cloning. Keep the static review publishable from main, show the latest issue by default and preserve earlier releases at stable `?release=` links. Name and number the design: the release ID is its version, `MAJOR.MINOR`, and a short name in words stands for the architecture, given once with `stage.py 1.0 --design-name "NAME"`. The major number changes only when the team starts over or selects a different architecture, which also takes its own name. The minor number changes only when a revision is accepted as effective. Everything else is a draft: after an edit, rerun the check in the same release folder and stage the same ID, which revises the in-progress version in place and counts the draft. Drafts do not consume numbers; a new number is only for a new effective baseline or a new architecture. A design reads "NAME 1.0 · effective" and work toward the next baseline reads "NAME 1.1 · draft 3 · in progress". Use the name and version in titles, links and the README still caption. Keep an existing ID that is not a version, or [rename it cleanly](../../docs/design-publication-migration.md#rename-a-release-to-a-version). [Name and number a design](../../docs/design-publication.md#name-and-number-a-design) Preserve existing viewer controls and replay links during migration. A superseded project presentation can be issued as a labeled historical review with its known limitation and successor. Each release identifies itself as preliminary design, with a design status of in progress or effective (or, later, superseded or withdrawn). It need not be detail-ready, but it deploys only with a layout-checked receipt and a declared mission-task case that plays a represented narrative objective. Commit the release's check inputs: the project's CI reruns the layout check from them on every push. On a combined season site it stays secondary to the latest detailed design. [Publish a preliminary design release](../../docs/design-publication.md#publish-a-preliminary-design-release) Use the [presentation reference](references/presentation.md) to commission the interaction and physics checks.
+| Word | Meaning |
+| --- | --- |
+| design | One architecture with a name and a version, such as "Tilting carriage 1.0" |
+| version | `MAJOR.MINOR`. Major is the architecture; minor is its effective baseline. It names the folder under `releases/` |
+| draft | One publish of an in-progress version. Drafts are counted and take no number |
+| layout | The blockout geometry: the STEP and its named solids |
+| plan | `layout.json`: groups, mounts, cases, budgets and the `presentation` text |
+| case | One checked motion: operating, park or service |
+| check | The layout check, `preliminary-check` |
+| receipt | The saved result of a check, `receipt.json` |
+| review page | The one page that shows the design. Its motion list holds every case and replay |
+| trial | A physics run that decides an interaction. The project owns the runner; the plugin reads the record |
+| replay | A recorded trial, played in the review page's motion list |
 
-Start with the alliance role, scored event, reserve time and fallback. Walk one identifiable piece through approach, capture, retention, transfer, placement and reset. Include the robot's position, occupied volume, time, controls and energy. Mark the operations that can overlap and the shared resources that prevent overlap.
+## Order of work
 
-Before detailed CAD or purchase, name the premise most likely to invalidate the role. Set a modest work budget and a measurable stop condition for one nominal and one adverse test. Record the result, make a continue, revise or start-over decision, and commit the evidence. Mark common interfaces as provisional or verified with the loads, tolerances and changed conditions that reopen them. [Worked loaded-drivetrain decision](../../docs/whole-robot-comparison.md#decide-what-to-fix-before-detailing)
+Follow the steps in order. Steps 3 to 7 repeat on every edit. [Every command, in order](references/commands.md)
 
-For a greenfield review, start from the mission, field and game-piece geometry, legal envelope and operating requirements. Establish new frame, joint and mounting datums in the preliminary layout. Carry forward an earlier CAD interface only when the project explicitly selects it and records the reason. Qualify the new design against its own motion, weight and electrical budgets.
+1. **Read the strategic narrative end to end.** List each objective and fallback as represented, open or out of scope, with the reason. If no role or cycle is selected yet, use `frc-conceptual-design` first.
+2. **Find or start the design.** An in-progress design already exists: revise it. Otherwise pick the architecture, give it a short name in words and start version `1.0` from the starter. A different architecture takes the next major version and its own name.
+3. **Block out the layout.** Set the robot frame, floor and datums first. Place the largest constrained items, then the rest: about 30 to 80 solids. Add the field parts and game pieces the mission touches. Write a purpose and a rationale for every solid.
+4. **Write one coarse case for each mission phase** (acquire, retain, transfer, deliver, reset, endgame, park, service), starting near a 40 mm path tolerance, plus one displaced control. Estimate mass and battery current by subsystem, with a reserve.
+5. **Run the check.** Read the scope, attachment and budget lines and fix what they report. Repeat until the receipt reads `layout-checked`.
+6. **Publish the draft** and open the published page yourself. An in-progress design goes up as soon as it passes its coarse check, with its open risks listed. The site deploys when the pull request merges to the default branch.
+7. **Rank the risks. Run the few trials that decide the architecture.** Give each a control, brackets and one finer-timestep repeat. Add each recorded trial to the motion list as a replay. Republish the same version. [Trials and replays](references/trials.md)
+8. **Close each risk** with a design change, or list it as a bench test with pass and fail numbers. Run the readiness report until it reads 3 of 3.
+9. **Propose effective.** Write the [handoff note](references/commands.md#write-the-handoff-note), attach the readiness report and ask the user. The user decides.
 
-Sketch competing allocations of these functions before choosing purchased mechanisms. Use a simple baseline. Try removing a transfer, reversing a path, using passive geometry or arranging parallel functions. A change in material or supplier alone provides little architectural contrast. State what each candidate deliberately gives up.
+When more than one architecture is plausible at step 2, block out each one coarsely against the same frame, field, mass and power figures. Pick one, say what it gives up, then name it and carry on. Check in only when the comparison does not separate them. [Whole-robot comparison](../../docs/whole-robot-comparison.md)
 
-Create one editable blockout per plausible architecture in the project. Show the same drivetrain, datum, field targets, loaded mass and CG bounds, power source, wiring and service envelope. Mark the parts sharing a port, volume, current budget or driver action. Name the owner, trigger, clearance, failure behavior and recovery for each interface, including returning to a known state after servicing.
+## Defaults: do these without being asked
 
-After conceptual design and role selection, own the [shared package layout checkpoint](../../docs/preliminary-design.md). Resolve the active issue, fixed geometry, loaded and simultaneous motions, park and service paths before dividing detailed Fusion work among subsystem designers. Record each premise’s scenario, accepted limit, evidence, owner phase and dependent interfaces. When rollers or a lip move the payload without a rigid carrier, [declare the contact transport](../../docs/preliminary-design.md#move-a-payload-by-contact-transport) and name the trial that established its path. Reopen layout for a lost clearance. Reopen the matched field rehearsal when a changed capability violates its accepted approach, timing or height. Hold affected detailing until the current issue passes the repeat. When the held premise is a delivery position, move the scoring step in the field profile, re-run the series and [replay its stand-off](../../docs/preliminary-design.md#resume-a-held-delivery-position). Replay every attempt at the station when the held premise names no single step.
+These need no permission and no reminder. If you cannot do one, say so in your result.
 
-For intentional squeeze, [register the compressible game piece and its contacting surface](../../docs/preliminary-design.md#game-piece-compression). Compare the measured indentation and its motion bound with the specified allowance. Keep other pairs under their existing clearance checks.
+**Layout**
 
-Trace both the support path from each moving load to the frame and its drive path from the actuator to the load. Include the occupied shafts, bearings, carriers, stops and mounts that govern clearance. Nothing floats: every robot solid touches, or is mounted to, a solid that traces to the frame, so fix a floating solid without being asked or label it an unmounted allowance with a reason. Read the `[attachment]` section after each check and clear it. [Nothing floats](../../docs/preliminary-design.md#nothing-floats)
+1. **Nothing floats.** Every physical solid touches, or is mounted to, something that traces to the frame. A support you have not drawn yet is labelled under `attachment.unmounted` with its reason. Clear the `[attachment]` section after every check. [Nothing floats](../../docs/preliminary-design.md#nothing-floats)
+2. **Field parts are fixtures.** Register each field part as a fixture of the cases that use it, standing on the floor. Never file one in a robot group. Fixtures take the field colour.
+3. **Use the official field and game-piece models** when the project has them, and supplier CAD for purchased parts. Label any dimensioned stand-in.
+4. **Colours follow the component palette.** Bumper covers show the alliance colour set in `presentation.alliance`.
+5. **Leave out fasteners, bearings, shafts, lines and brackets** unless one is the risk being examined.
+6. **Mass follows geometry.** After a geometry change, re-estimate every mass and current line whose solids changed.
 
-Before fixing a mechanism footprint, choose its [attachment stock, pattern and tool side](../../docs/attachment-design.md). Sketch the signed load into the chassis, compare two placements on actual supporting members and reserve room for bracket stock, fasteners, tools and the complete removal path at the worst permitted combination of offsets.
+**One design, one page**
 
-At a meaningful CAD change or saved revision, [check the intended seats, loaded mass and CG, remaining reserve and worst concurrent voltage](../../docs/fusion-design-checkpoints.md). Record the controlling case and rerun the timed route if the change consumes its margin.
+7. **Revise in place.** An edit to an in-progress design republishes the same version as the next draft.
+8. **One review page, one motion list.** Checked cases first, then replays. Add no second page, tab, player or status banner. The page chip and the picker already show the status.
+9. **Everything generated stays in the design's own folder.** Nothing lands at the repository root.
+10. **A presentation edit uses `--view-only`.** Names, colours, explanations and grouping never need the cases rerun.
 
-Select one architecture for the review handoff. Animate every mission-critical interaction on that same revision with the project’s dimensioned field fixtures, finite game pieces and applicable rule observer. Derive the motion that decides the outcome from a phase-appropriate physical model. Show the actual result and the first failed requirement. [Field interactions and physics playback](references/presentation.md#field-interactions-and-physics-playback)
+**Checks and trials**
 
-**Keep it a blockout, and check in before going deeper.** These are guidelines. A preliminary layout uses one solid per functional volume, about 30 to 80 solids for a whole robot. Leave out fasteners, bearings, lines and brackets unless one is the risk being examined. Answer clearance questions to about 10 mm; a tighter fit becomes a listed interface with its allowance for detailed design. Keep mass and power as estimates by subsystem with a reserve. Run physics trials on the few interactions that decide the architecture. When the work is about to refine a path or clearance tolerance below 10 mm, or the layout is about to exceed 80 solids, stop and tell the user. Agree an extended budget before continuing: what extra detail is added, which question it answers, how much time or how many cases or solids it may use, and when it stops. This makes sure the work is not getting carried away. Continue once the budget is agreed, record it under `scopeGuidelines.extendedBudget` in the layout plan and check in again before going past it. A project may state its own figures under `scopeGuidelines` in the layout plan. Declare each case's `pathToleranceMm` in its stage and read the `[scope]` line the layout check prints: it gives the solid count and the finest tolerance in use and says when a guideline is passed. [Scope guidelines and the check-in](../../docs/preliminary-design.md#keep-the-layout-a-blockout)
+11. **Fit the plan to ten minutes before starting.** Estimate from the per-case seconds of the last run. Cut cases, coarsen tolerances or drop trials first.
+12. **Cap workers** at half the cores with `--jobs` when anything else is running. Cap your own trial scripts the same way.
+13. **Check the exit code** of every builder and script before using its output. A failed builder leaves old files behind.
+14. **Never idle on a background run.** Start it, then do work that does not depend on it: explanations, the risk list, the handoff note.
+15. **Record each trial to its settled end.** Keep the piece's position, attitude, velocity and spin at the deciding moment.
+16. **Stop when the decision is made.** A bracket ends at its first failing value. A bench-test question stays on the bench list.
 
-**Keep the loop fast.** Preliminary design is quick iteration, so [size the checks to the risk](../../docs/preliminary-design.md#size-the-checks-to-the-risk). Set a time budget of about ten minutes for the whole-cycle check and for a trial campaign, and let it set the case and trial counts. Rank the risks and write down the decision each trial could change before running it. Check the whole cycle at a coarse path tolerance and refine only a phase whose clearance is thinner than that tolerance. Use one nominal run, one control and brackets that stop at the first failure on each side; change one input at a time. After an edit to names, colours, explanations or grouping, rebuild the review with `preliminary-check ... --view-only`, which reuses the saved receipt's checked cases and refuses when the design, STEP, motion, control or budgets changed. Publish each in-progress increment as a draft of the same version.
+**Publishing**
 
-**Exit criteria for marking a preliminary design effective.** Work toward all three and judge them with the report, not by eye. (1) The whole mission cycle is checked for clearance, mass and loaded voltage: every narrative stage has a passing case (acquire, retain, transfer, deliver, reset, endgame, park, service), not a fragment. (2) Every mission-critical interaction passes a physics trial with a control, sensitivity brackets (a passing and a failing value) and a timestep check, and its mission animation is driven by that named trial, not by a prescribed path. (3) Every open risk is closed by a design change or recorded as a bench test with pass and fail numbers. Physical bench results are listed verification items and are not required. Run `node scripts/design.mjs effective-readiness PROJECT` and resolve each `not met` line before proposing the status change. [What to declare and how the report reads it](../../docs/preliminary-design.md#judge-readiness-to-be-marked-effective)
+17. **Commit and push** after the first passing check, after each trial result and after each publish.
+18. **Run the publication check locally before pushing.** CI runs on another operating system.
+19. **Open the published page in a browser after each push.** Confirm the model loads, each motion plays and the status is right. A green check alone does not show that.
+20. **Keep paths short and relative.** No drive letters, no home folders.
+21. **Take the obvious default** and say what you chose.
 
-Once a candidate is selected, [freeze its required articles and current functions](../../docs/article-functions.md) before opening a donor assembly. Give reused parts and fasteners a current interface and a planned physical site. Hand the approved roster to CAD with the architecture decision.
+**Tools**
 
-Run the [whole-robot comparison](../../docs/whole-robot-comparison.md) against common nominal and adverse conditions. Inspect integrated execution records and score the same external outcome. Reject an infeasible resource schedule even when its independent subsystems pass. Keep unresolved constraints visible and carry the most discriminating next experiment forward. Hand the selected assembly, rejected alternative, interface datums and measured margins to mechanism CAD and controls.
+22. **Build and check with one fixed plugin revision:** the one the project's workflow names. Use an installed copy or a worktree of your own at that commit, never a checkout another session can move. Record the revision with the result.
 
-Use the student’s [saved role and refinement comparison](../../docs/whole-robot-comparison.md#test-a-refinement-against-the-selected-role) when revising an architecture. Read the actual window stock and role criterion. Show the before and after piece witnesses under the same peer setup, clock and source. If a shorter bench test addresses one interface, preserve that finding alongside the open full-robot requirement.
+## Check in with the user before
 
-When a role relies on a partner, [compare the complete alliance service chain](../../docs/alliance-completion.md) before selecting the robot architecture. Track the same piece from finite supply through delivery and reset on the match clock. Change partner availability and inspect which design completes more cycles.
+- Refining a path or clearance tolerance below about 10 mm, or passing about 80 solids. Agree what detail, for which question, how much, and when it stops. Record it under `scopeGuidelines.extendedBudget`.
+- Starting a check or trial campaign that will still pass about ten minutes after you have cut it.
+- Dropping the architecture for another one, or starting over (`frc-start-over`).
+- Scoping a narrative objective out, or changing a premise that conceptual design chose.
+- Marking a design effective, superseded or withdrawn.
 
-For a project with `iterations/active.json`, follow its active design root before recovering older records. After a decision to start over, use `frc-start-over` to preserve the evidence and open a fresh numbered design. [Design iterations](../../docs/design-iterations.md)
+Ask only when the choices lead to different designs. Keep working on everything the answer does not affect.
+
+## When you see this, try this
+
+| You see | Likely causes, most likely first | Try first | Check in when |
+| --- | --- | --- | --- |
+| A pair fails after a coarse run | Path approximation; an undeclared joint or intended contact; real interference | Read the overlap and where on the path it occurs. Bodies meant to touch: [declare the interface](../../docs/preliminary-design.md#declare-an-intended-contact). Overlap smaller than the path tolerance: rerun that phase alone at half the tolerance. Larger, or growing as you refine: move a part | The phase needs a tolerance below 10 mm |
+| A sliver overlap, a near-zero gap, or a line overlapping its own end | Coincident faces; two solids that are one part | Treat it as contact. Merge the solids or declare the interface. Do not investigate | Never. It is not a design finding |
+| A soft piece exceeds its squeeze allowance | Path error spent against the allowance; no compression declared; a guessed allowance; real over-squeeze | [Declare the compression](../../docs/preliminary-design.md#game-piece-compression). Excess smaller than the path tolerance: list the squeeze as an interface with its allowance | The architecture depends on that squeeze |
+| The check stops before any case | A fixture no group lists; a named file that does not exist; a typed `sha256` that is stale; a view outside the design's folder | Read the message. It names the file or ID. Fix that one thing and rerun | The message names nothing you changed |
+| The receipt reads `provisional` | A missing purpose or rationale; an open narrative objective; a trial not named for a moved piece; no budgets | Read `missingInputs` and `decision.firstUnmet` in the receipt. Supply each one | An objective can only be closed by scoping it out |
+| The receipt reads `reopen` | A premise left its accepted range | [Follow the hold](../../docs/preliminary-design-holds.md) | The premise came from conceptual design |
+| The check is slow | Too many cases; tolerance finer than needed; too many solids; a full run where a partial one would do | In order: `--view-only`, `--fail-fast`, `--physics-only`, coarser tolerance where margin is ample, fewer solids, then `--jobs` | It still passes ten minutes |
+| Parts float, or field parts read as robot | A field part filed in a robot group; a support not drawn; a solid placed by eye | Read the `[attachment]` section. Refile field parts as fixtures. Move the solid onto its support, add the support, or label it under `attachment.unmounted` | Never |
+| The layout is past a scope guideline | Hardware crept in | Merge solids that move together and are not the risk. Remove hardware | A removed detail is the risk being examined |
+| A trial outcome is intermittent | Timestep; a start on a knife edge; contact settings; no funnel in the design | Halve the timestep once. If it still varies, run a few starts that span the variation and report the count. Look for geometry that makes the outcome insensitive before tuning inputs | A handful of runs still disagree |
+| A miss cannot be explained | The recording ended early; the deciding state was not kept | Rerun three misses to rest with the end state kept. Classify each: late, bounced out, never arrived | Three misses have three causes |
+| A rate is not met, or margin and outcome disagree | Operating point off-centre; variation wider than assumed; the margin is not what scores | The mission outcome decides. Step one input from the operating point and stop at the first result that settles it. State the margin cost and list it as a bench test | The best setting still misses |
+| The receipt or page differs between two runs with no input change | The plugin revision moved under the run; a builder that is not repeatable | Compare the plugin revision of both runs. Rerun from a fixed copy at the revision the workflow names | Both runs used the same revision |
+| A result did not change after an edit | The builder failed and left old files; the check ran on stale inputs | Check the builder's exit code. Rebuild, then rerun with `--output` in the design's folder | It survives a clean rebuild |
+| The published page is old, blank or differs from the local one | Not pushed or not deployed; browser cache; opened from `file://`; unchanged files republished | Confirm the commit is on the default branch and the deploy is green. Hard-reload. Serve the page over HTTP. Compare the two `receipt.json` files | The deploy is green and they still differ |
+| Publishing is refused | A second in-progress version of one architecture; an effective version edited; no mission case; no design name | Read the message. Revise the existing draft, or take the next version | You believe a new version is right |
+| CI fails and the local check passes | A path that differs by case or length; a moved plugin pin; a path or secret scan hit | Run the same command locally. Fix the path or pin. Leave the design alone | It fails twice in CI only |
+| Detailed design returns a reservation | A real part does not fit an envelope, allowance or reserve | Start the next minor version from the effective one with `--copy-inputs`, fix the layout, rerun the affected cases | The fix needs a different architecture |
+
+## Reference
+
+- [Commands in order, on Windows and in CI](references/commands.md)
+- [Trials and replays: sizing, records, retention, what moved the piece](references/trials.md)
+- [Review page: regions, scene data, replay format](references/review-layout-template.md)
+- [What the review page must let a reviewer do](references/presentation.md)
+- [The layout check: plan, cases, flags and output](../../docs/preliminary-design.md)
+- [Publishing, versions and statuses](../../docs/design-publication.md)
+- [Phases, statuses and the effective bar](../../docs/design-phase-detail.md)
+- [Rare: held premises and moved files](../../docs/preliminary-design-holds.md)

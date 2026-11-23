@@ -16,7 +16,11 @@ Develop a top-down assembly layout around agreed mounting and motion references.
 
 Animate gross mechanism motion through stow, acquisition, loaded transfer, release and reset. Show mechanisms that run together moving on the same clock. Show the piece entering, transferring and leaving. Include any service withdrawal that drives the layout. Use the animation to review the motion and a clearance check on the same geometry and trajectory to verify it between frames. Unrelated occupied volumes must remain separate with the required allowance. Identify intended contact at a particular interface and pose, such as a roller touching the piece.
 
-Enter **detailed design** when the shared issue includes the labeled layout, viewable motion, checked paths and the two whole-robot budgets below. Each passes for the proposed operating range. An unknown input that could overturn the decision keeps its dependent interface provisional.
+Keep the layout a blockout: as guidelines, about 30 to 80 solids, clearances answered to about 10 mm, and about ten minutes for a whole-cycle check or a trial campaign. Fasteners, bearings, shafts, lines and brackets wait for detailed design unless one is the risk being examined. [Scope guidelines and the check-in](preliminary-design.md#keep-the-layout-a-blockout)
+
+A preliminary design publishes as `in-progress` as soon as its layout check passes and it plays one mission case. It is then revised in place, draft by draft. The layout check covers the motion and the two whole-robot budgets below, each for the proposed operating range.
+
+Preliminary design ends, and **detailed design** begins, when the design is marked `effective` against the [exit criteria](#exit-criteria-for-an-effective-preliminary-design). There is one exit. An unknown input that could overturn the decision stays on the risk list with its bench test.
 
 | Budget | What the review must show |
 | --- | --- |
@@ -25,7 +29,7 @@ Enter **detailed design** when the shared issue includes the labeled layout, vie
 
 ## 3. Detailed design
 
-Use the current editable Fusion assembly. Use manufacturer CAD for purchased components in the selected revision and configuration wherever available. Identify any dimensional substitute, its source and uncertainty. Model fabricated parts with their actual material, joints, fasteners, tolerances and fabrication features. Resolve critical interfaces that a substitute cannot establish.
+Build on the effective preliminary design and its [handoff](#what-preliminary-design-hands-to-detailed-design). Use manufacturer CAD for purchased components in the selected revision and configuration wherever available. Identify any dimensional substitute, its source and uncertainty. Model fabricated parts with their actual material, joints, fasteners, tolerances and fabrication features. Resolve critical interfaces that a substitute cannot establish.
 
 A detailed design can publish as `in-progress` once it links the effective preliminary design, the STEP exported from the registered Fusion design passes the layout check on that design's motion cases, and a mission animation plays on the detailed geometry. It becomes `effective` in a reviewed pull request that carries a passing mechanical-readiness review. [Publish a detailed design](design-publication.md#publish-a-detailed-design)
 
@@ -37,29 +41,56 @@ The mechanical-readiness review can accept the fabrication package as **build-re
 
 ## When to return to an earlier phase
 
-If detailed design violates a reserved volume, path, mass allowance or loaded-voltage range, reopen the affected preliminary assembly layout and repeat its checks. If the revised layout changes a field assumption beyond its accepted range, repeat the conceptual trade study with the new height, approach, rate or speed. Pause the downstream decisions that rely on the failed assumption. Resume them when the revised shared issue passes and its consumers have adopted it.
+If detailed design cannot keep a reserved envelope, path, allowance, mass reserve or loaded-voltage margin, return it to preliminary design. An effective design does not change, so the fix is the next minor version of the same architecture, started from the effective one, with the affected cases rerun. A fix that needs a different architecture is the next major version. If the revised layout changes a field assumption beyond its accepted range, repeat the conceptual trade study with the new height, approach, rate or speed. Pause the downstream decisions that rely on the failed assumption. Resume them when the revised design is effective and detailed design has adopted it.
 
 ## Design status
 
-Every design phase uses the same four statuses for a published design. They apply to [preliminary design releases](design-publication.md#publish-a-preliminary-design-release) and to [detailed designs](design-publication.md#publish-a-detailed-design).
+Every design phase uses the same four statuses for a published design. They apply to [preliminary designs](design-publication.md#publish-a-preliminary-design-release) and to [detailed designs](design-publication.md#publish-a-detailed-design).
 
 | Status | Meaning |
 | --- | --- |
 | `in-progress` | Passes the phase's automated checks and may be shown, labelled as in progress. |
-| `effective` | The project has accepted it as the current design for that phase. At most one design per phase is effective; marking a new one effective marks the previous one `superseded` automatically. For preliminary design, an effective release is the handoff detailed design builds on. |
-| `superseded` | Replaced by a newer effective design, or an in-progress release replaced by a later listed release that is now current. It stays viewable as history. |
+| `effective` | The project has accepted it as the current design for that phase. At most one design per phase is effective; marking a new one effective marks the previous one `superseded` automatically. For preliminary design, the effective design is what detailed design builds on. |
+| `superseded` | Replaced by a newer effective design. An in-progress design that was never accepted is marked superseded by hand when a different one replaces it. It stays viewable as history. |
 | `withdrawn` | Pulled with no replacement. The index keeps its reason and the last commit that held its files. The files leave the site and stay in Git. It is never shown as current. |
 
 A design also has a name and a version, such as "Tilting carriage 1.0": the major number is the architecture, the minor number counts its effective baselines, and a draft is work in progress toward the next baseline. Drafts do not consume numbers; a new number is only for a new effective baseline or a new architecture. The status stays separate from the number. A detailed design takes the same name as its preliminary design, the same major number and its own minor number, so the catalog reads "Tilting carriage 1.0 · effective", built on preliminary design "Tilting carriage 1.1". [Name and number a design](design-publication.md#name-and-number-a-design)
 
-A new release enters `in-progress`. While it is in progress it is [revised in place](design-publication.md#revise-an-in-progress-release-in-place) under its one ID, each publish counted as a draft, and it stops changing when it is marked effective. A new version is for the design that follows an effective one, and a new major version is for a different architecture. The usual changes are in-progress to effective, effective to superseded (automatic), in-progress to superseded once a later listed release is current (`--set-status RELEASE superseded`) and any status to withdrawn. The status lives in the release index, never in a design's own record, so changing it never rewrites published evidence. Every status change is an index edit in a reviewed pull request, and Git history records it. [One check covers every published design](design-publication.md)
+A new design enters `in-progress`. While it is in progress it is [revised in place](design-publication.md#revise-an-in-progress-release-in-place) under its one version, each publish counted as a draft. It stops changing when it is marked effective. A new minor version is for the design that follows an effective one, and a new major version is for a different architecture.
+
+The usual changes are in-progress to effective, effective to superseded (automatic), in-progress to superseded once a different design is current (`--set-status VERSION superseded`) and any status to withdrawn.
+
+The status lives in the index, never in a design's own record, so changing it never rewrites published evidence. Every status change is an index edit in a reviewed pull request, and Git history records it. [One check covers every published design](design-publication.md)
 
 ### Exit criteria for an effective preliminary design
 
 A preliminary design is ready to be marked effective when all three hold:
 
-1. **Whole mission cycle.** Every stage of the narrative cycle has a passing case in a layout-checked receipt, so clearance, mass and loaded voltage are checked for the whole cycle: acquire, retain, transfer, deliver, reset, endgame, park and service. A fragment of the cycle does not qualify.
-2. **Trial-driven interactions.** Every mission-critical interaction passes a physics trial with a control, sensitivity brackets (a passing and a failing value) and a timestep check. The mission animation is driven by that pinned trial, not by a prescribed path.
+1. **Whole mission cycle.** Every phase of the mission cycle has a passing case in a layout-checked receipt, so clearance, mass and loaded voltage are checked for the whole cycle: acquire, retain, transfer, deliver, reset, endgame, park and service. A fragment of the cycle does not qualify. One coarse case for each phase is the starting plan.
+2. **Trial-driven interactions.** Every mission-critical interaction passes a physics trial with a control, sensitivity brackets (a passing and a failing value) and a timestep check. The motion shown for it comes from that trial, not from a prescribed path.
 3. **Risks resolved.** Every open risk is closed by a design change or recorded as a bench test with pass and fail numbers.
 
+The trial requirement is sized to stay small: one passing run, one control, the first failing value on each bracket, and the nominal run once more at half the timestep. [The smallest form of each part](../skills/frc-preliminary-design/references/trials.md#what-the-effective-bar-asks-of-each-trial)
+
+Publishing an in-progress draft asks less: a passing layout check and one mission case, which may follow a prescribed path.
+
 Physical bench results are not required. They are listed as verification items for the build, and detailed design takes each one up as a [bench-test record](design-publication.md#bench-tests-handed-over-from-preliminary-design): a result for the tests that gate the build and an owner and a plan for the tests run on the robot, before the detailed design is effective. The [effective-readiness report](preliminary-design.md#judge-readiness-to-be-marked-effective) lists each criterion as met or not met with the reason. It is informational: the publication check prints it and does not fail on it, and the decision stays with the reviewed pull request.
+
+### What preliminary design hands to detailed design
+
+The handoff is the effective preliminary design's folder plus one short note, `HANDOFF.md`, in that folder. The note says where each item is and what to do first.
+
+| Item | Where it is |
+| --- | --- |
+| The layout STEP, one named solid per functional volume | The design's folder |
+| Robot frame and datums: origin, forward, floor height, each pivot axis, travel and mounting face | The plan and the note |
+| Envelopes: frame perimeter, bumpers, parked height, greatest reach | The note |
+| Interfaces with allowances: each fit tighter than about 10 mm, each intended contact or squeeze, each connection not yet drawn | The plan and the note |
+| Operating point and windows: the setpoints the trials passed at, with the passing and failing value on each side | Trial records and the note |
+| Motion cases: the whole cycle, the displaced control and the path tolerance of each case | The motion study |
+| Budgets with reserve: mass by subsystem, loaded voltage by duty | The budget study |
+| Open risks, each closed by a design change or listed as a bench test with pass and fail numbers | `missions.json` |
+| Trials and replays, and which must be repeated on real parts | Trial records and the plan |
+| First work items, riskiest first | The note |
+
+Detailed design keeps the handoff's frame and datums, stays inside its envelopes, allowances and reserves, and takes up every open risk and bench test. [Write the handoff note](../skills/frc-preliminary-design/references/commands.md#write-the-handoff-note)
