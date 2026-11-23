@@ -70,6 +70,26 @@ def carried(inputs, case, stage):
     return bool(stage.get("carriedWith"))
 
 
+def squeezes(inputs, case, stage, missing):
+    """Judge the compression rules of a stage: each squeezed pair is a declared contact, and a named trial repeats the depth."""
+    declared = {frozenset(row["pair"]) for row in inputs.data.get("contacts", []) if "during" not in row or case["id"] in row["during"]}
+    payloads = {m for g in inputs.plan["groups"].values() if g["role"] == "payload" for m in g["members"]}
+    for rule in stage.get("payloadCompression", []):
+        pair = frozenset((rule["payload"], rule["contact"]))
+        require(rule["payload"] in payloads and rule["contact"] not in payloads, "A compression rule of " + case["id"]
+                + " names a solid of a payload group and the solid that presses into it")
+        require(pair in declared, "Declare " + rule["payload"] + " and " + rule["contact"] + " as a contact during " + case["id"]
+                + " in the design source: a squeezed pair shares volume, so it is judged by its depth and left out of the clearance test")
+        evidence = rule.get("evidence")
+        if evidence is None:
+            continue
+        require(isinstance(evidence, dict) and named(evidence.get("file")) and named(evidence.get("field")),
+                "Name the trial behind a compression depth as evidence: {file, field}")
+        measured = read(pinned(inputs.root, {k: v for k, v in evidence.items() if k != "field"})).get(evidence["field"])
+        if measured != rule["maxDepthMm"]:
+            missing.append("The compression depth of " + rule["payload"] + " in " + case["id"] + " is not the figure its trial records under " + evidence["field"])
+
+
 def coverage(inputs, missing):
     """Judge every stage. Returns (free paths, supports) by case, for the review's check list."""
     stages, covered, loaded = inputs.plan["stages"], set(), False
@@ -78,6 +98,7 @@ def coverage(inputs, missing):
         stage = stages[case["id"]]
         operating = stage["purpose"] == "operating"
         loaded |= carried(inputs, case, stage) and operating
+        squeezes(inputs, case, stage, missing)
         found = bound_paths(inputs, case, stage, missing)
         loaded |= operating and any(found.get("transportedBy", {}).values())
         if found.get("freePath"):

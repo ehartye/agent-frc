@@ -306,26 +306,6 @@ def safe_href(href):
         or not parts.scheme and not parts.netloc and not href.startswith("/") and ":" not in href.split("/")[0])
 
 
-def field_interactions(root, plan):
-    """Season-owned field-interaction or physics players linked from the review."""
-    rows = []
-    objectives = {o.get("objective") for o in (plan.get("narrativeReview") or {}).get("objectives", [])}
-    for item in plan.get("presentation", {}).get("fieldInteractions", []):
-        require(isinstance(item, dict) and named(item.get("title")) and named(item.get("href"))
-                and named(item.get("objective")), "Give each field interaction a title, href and mission objective")
-        href = item["href"]
-        require(safe_href(href), "Link a field interaction with a relative URL or https: " + repr(href))
-        evidence = item.get("evidence")
-        if isinstance(evidence, dict):
-            pinned(root, evidence)
-            evidence = dict(file=evidence["file"], sha256=evidence["sha256"])
-        else:
-            require(named(evidence), "Describe the evidence for field interaction " + item["title"] + " or name its file")
-        rows.append(dict(title=item["title"], href=href, objective=item["objective"], evidence=evidence,
-                         embed=bool(item.get("embed")), objectiveKnown=item["objective"] in objectives))
-    return rows
-
-
 VOLUME_TYPES = ("material", "envelope", "gauge")
 
 
@@ -637,7 +617,7 @@ def build_scene(root, plan, scenes, observed, budgets, review):
     scene = dict(schema=SCENE_SCHEMA, issue=plan["issue"], title=presentation.get("title"), context=presentation.get("context"),
                  architecture=presentation.get("architecture"), datum=(plan.get("datum") or {}).get("name"), units=UNITS,
                  links=presentation.get("links", []),
-                 sources=dict(design=plan.get("design"), step=plan["step"], motion=plan["motion"], narrative=narrative.get("source")),
+                 sources=dict(design=plan.get("design"), step=plan["step"], narrative=narrative.get("source")),
                  decision=dict(status=header["status"], firstUnmet=header["firstUnmet"]), palette=palette,
                  meshes=payload["meshes"], bodies=bodies, cases=cases,
                  animations=mission_animations(plan, [c["id"] for c in cases if c["id"] != CONTROL_ID]),
@@ -646,7 +626,7 @@ def build_scene(root, plan, scenes, observed, budgets, review):
                  required=[dict(role=k, ids=list(v)) for k, v in presentation.get("required", {}).items()],
                  narrativeReview=dict(source=narrative.get("source"), objectives=narrative.get("objectives", [])),
                  motionEvidence=motion_evidence(plan, study_cases, nominal, review.get("control"), control_case, review.get("freePaths"), review.get("supports")),
-                 returnCriteria=return_criteria(), fieldInteractions=field_interactions(root, plan),
+                 returnCriteria=return_criteria(),
                  focus=presentation.get("focus"), notes=presentation.get("notes"), cutaway=presentation.get("cutaway"))
     require(scene["openingCase"] in {c["id"] for c in cases}, "presentation.openingCase names a commissioned case")
     # The first tessellation of each placed body is the mesh a replay moves; replay-only field bodies join below.

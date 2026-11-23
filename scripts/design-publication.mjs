@@ -78,7 +78,7 @@ const trialDigests = stage => [...Object.values(stage?.transportedBy ?? {}), ...
 /** What a rerun must reproduce: the inputs by digest and every verdict. Measured values are left out; a kernel on another system may round them differently. */
 export function verdict(receipt) {
   return {
-    issue: receipt.issue, status: receipt.status, planSha256: receipt.planSha256, stepSha256: receipt.step?.sha256, motionSha256: receipt.motion?.sha256,
+    issue: receipt.issue, status: receipt.status, planSha256: receipt.planSha256, stepSha256: receipt.step?.sha256, designSha256: receipt.design?.sha256,
     cycle: list(receipt.cycle), cases: list(receipt.cases).map(c => [c.case, c.status]).sort(),
     stages: Object.entries(receipt.stages ?? {}).map(([name, stage]) => [name, stage?.purpose, trialDigests(stage).sort()]).sort(),
     objectives: list(receipt.narrativeReview?.objectives).map(o => [o?.objective, o?.disposition]).sort(),
@@ -109,9 +109,8 @@ export function checkEvidence(where, files, record) {
   check(!differ.length, where + ': the review scene shows results that differ from the receipt: ' + differ.join('; '));
   const shown = new Map(list(read.scene.cases).map(c => [c.id, c.status]));
   const represented = new Set(list(receipt.narrativeReview?.objectives).filter(o => o?.disposition === 'represented').map(o => o.objective));
-  // A trial counts only when the receipt names it: pinned by the case's stage, or as a scene interaction's evidence.
-  const sceneTrials = list(read.scene.fieldInteractions).map(r => r?.evidence?.sha256).filter(Boolean);
   const animations = read.scene.animations;
+  check(Array.isArray(animations), where + ': the review scene lists no animations, so the page cannot play it. Regenerate the review with --write-view');
   const missions = record.missionCases;
   check(Array.isArray(missions) && missions.length, where + ' declares no mission case');
   for (const m of missions) {
@@ -121,15 +120,13 @@ export function checkEvidence(where, files, record) {
     check(represented.has(m.objective), mission + ' must accomplish a represented narrative objective');
     check(receipt.stages?.[m.case]?.purpose === 'operating' && list(receipt.cycle).includes(m.case), mission + ' must be an operating case in the checked cycle');
     check(receipt.cases.some(c => c.case === m.case && c.status === 'pass') && shown.get(m.case) === 'pass', mission + ' needs passing evidence played in the review');
-    // An animation shows a mission phase; a case is one checked segment of it. A scene written before animations lists none.
-    check(!Array.isArray(animations) || animations.some(a => a?.mission === true && list(a.cases).includes(m.case)),
+    // An animation shows a mission phase; a case is one checked segment of it.
+    check(animations.some(a => a?.mission === true && list(a.cases).includes(m.case)),
       mission + ' is not played by a mission animation of the review. Its phase is marked "headline": false under presentation.phases; name a case of a headline phase');
     if (m.kind !== 'field-interaction-trial') continue;
-    const trial = m.player !== undefined ? list(record.fieldPlayers).find(p => p?.file === m.player)?.trial : m.trial;
-    check(object(trial) && named(trial.file) && files.has(trial.file), mission + ' must publish its trial file');
-    const digest = sha(files.get(trial.file));
-    check(trialDigests(receipt.stages[m.case]).includes(digest) || m.player !== undefined && sceneTrials.includes(digest),
-      mission + ': the published trial is not one the receipt names');
+    // A trial counts only when the receipt names it, pinned by the case's stage.
+    check(object(m.trial) && named(m.trial.file) && files.has(m.trial.file), mission + ' must publish its trial file');
+    check(trialDigests(receipt.stages[m.case]).includes(sha(files.get(m.trial.file))), mission + ': the published trial is not one the receipt names');
   }
   return receipt;
 }

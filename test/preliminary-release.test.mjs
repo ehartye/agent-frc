@@ -25,9 +25,9 @@ test('the season script publishes a checked release, records where its inputs ar
   const author = path.join(root, 'cad', 'preliminary-design');
   const site = path.join(root, 'docs', 'preliminary-design');
   await mkdir(author, { recursive: true });
-  async function fixture(id, {receipt = {}, scene: shown = {}, page = '<html>Project review of ' + id + '</html>'} = {}) {
+  async function fixture(id, {receipt = {}, scene: shown = {}, page = '<html>Project review of ' + id + '</html>', mission = {}} = {}) {
     const dir = path.join(author, 'releases', id);
-    await mkdir(path.join(dir, 'field'), { recursive: true });
+    await mkdir(dir, { recursive: true });
     async function pin(file, content) {
       await writeFile(path.join(dir, file), content);
       return { file, sha256: createHash('sha256').update(content).digest('hex') };
@@ -35,14 +35,13 @@ test('the season script publishes a checked release, records where its inputs ar
     const motion = await pin('design.json', '{"cases":[]}');
     await pin('viewer.html', page);
     const trial = await pin('lane-trial.json', '{"case":"turn"}');
-    await pin('field/lane.html', '<html>Invented lane</html>');
-    await pin('review-scene.json.gz', gzipSync(JSON.stringify({schema: 'agent-frc/preliminary-review-scene@1', issue: 'synthetic-' + id, fieldInteractions: [], ...shown})));
+    await pin('review-scene.json.gz', gzipSync(JSON.stringify({schema: 'agent-frc/preliminary-review-scene@1', issue: 'synthetic-' + id, ...shown})));
     const limits = await pin('package-limits.json', '{"inspectionLimitKg":14}');
     const budgets = await pin('budgets.json', JSON.stringify({requirements: limits, masses: [], electricalCases: {}}));
     const plan = await pin('judgement.json', JSON.stringify({source: motion, budgets, view: 'viewer.html'}));
     await pin('receipt.json', JSON.stringify({schema: 'agent-frc/preliminary-layout-result@1', missingInputs: [], reopen: [], cases: [{case: 'turn', status: 'pass'}], control: {witness: {status: 'fail'}},
       budgets: {massStatus: 'pass', electricalCases: [{case: 'weak', status: 'pass'}]}, planSha256: plan.sha256, issue: 'synthetic-' + id, status: 'layout-checked', ...receipt}));
-    await pin('missions.json', JSON.stringify({missionCases: [{case: 'turn', kind: 'operating-case', accomplishes: 'delivered', objective: 'Move the sample'}]}));
+    await pin('missions.json', JSON.stringify({missionCases: [{case: 'turn', kind: 'operating-case', accomplishes: 'delivered', objective: 'Move the sample', ...mission}]}));
     return {dir, trial};
   }
   const stage = (...args) => spawnSync(process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3'), [stagingCommand, '--base', author, ...args, ...(args.includes('effective') ? ['--gate-check', gateCheck] : [])], {encoding: 'utf8'});
@@ -79,13 +78,11 @@ test('the season script publishes a checked release, records where its inputs ar
     assert.ok(existsSync(path.join(site, 'releases', '1.0', name)), name);
   assert.deepEqual(await index(), {releases: ['1.0'], designs: {1: designs[1]}, revision: {'1.0': rev(1)}, designStatus: {'1.0': 'in-progress'}, current: '1.0'});
 
-  // A field player the review links ships with the trial behind it.
-  const b = await fixture('2.0', {scene: {fieldInteractions: [{title: 'Invented lane', href: 'field/lane.html', objective: 'Move the sample', evidence: {file: 'lane-trial.json'}}]}});
+  // A mission case's trial ships beside the review, named by its file in the release.
+  const b = await fixture('2.0', {mission: {kind: 'field-interaction-trial', trial: {file: 'lane-trial.json'}}});
   assert.equal(stage('2.0', '--design-name', 'Swinging arm').status, 0);
-  assert.deepEqual(JSON.parse(await readFile(path.join(site, 'releases', '2.0', 'release.json'))).fieldPlayers,
-    [{file: 'field/lane.html', trial: {file: 'lane-trial.json'}, objective: 'Move the sample'}]);
-  assert.equal(await readFile(path.join(site, 'releases', '2.0', 'field', 'lane.html'), 'utf8'), '<html>Invented lane</html>');
-  assert.ok(existsSync(path.join(site, 'releases', '2.0', b.trial.file)));
+  assert.deepEqual(JSON.parse(await readFile(path.join(site, 'releases', '2.0', 'release.json'))).missionCases[0].trial, {file: 'lane-trial.json'});
+  assert.equal(await readFile(path.join(site, 'releases', '2.0', b.trial.file), 'utf8'), '{"case":"turn"}');
   assert.deepEqual(await index(), {releases: ['1.0', '2.0'], designs, revision: {'1.0': rev(1), '2.0': rev(1)}, designStatus: {'1.0': 'in-progress', '2.0': 'in-progress'}, current: '2.0'});
 
   // An in-progress release is revised in place: the same ID, no new entry, and a revision counted in the index.

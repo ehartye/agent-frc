@@ -68,6 +68,8 @@ test('a change selects the tests that cover it, and everything when it cannot be
   assert.ok(pick('scripts/mechanical_readiness.py').tests.includes('mechanical-readiness.test.mjs'));
 
   for(const file of [...map.everything,'unmapped/new-tool.xyz']) assert.equal(pick(file).all,true,file+' runs every test');
+  // Listing a new test file in the map runs that file and the map's own test, not the whole suite.
+  assert.deepEqual(selectForChange([mapFile,'test/atomic-write.test.mjs'],{reached}).tests,['atomic-write.test.mjs','test-map.test.mjs']);
   assert.match(pick('unmapped/new-tool.xyz').reason,/no test is mapped to unmapped\/new-tool\.xyz/);
   // A deleted file runs the tests that still name it, and the documentation tests when nothing does. It never runs everything.
   const retired=['unmapped','retired-'+'tool.xyz'].join('/'); // assembled, so this file does not name it

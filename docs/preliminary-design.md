@@ -109,6 +109,7 @@ A stage holds:
 | `absent` | Solids taken out of the scene before the motion, such as a cover removed before a part is lifted out |
 | `extract` | `true` for a service withdrawal: the moved solids must end beyond the allowance of everything that stayed |
 | `requiredContacts` | Pairs that must come within `maxGapMm` in a `window` of the stroke, such as a hook seating on a bar |
+| `payloadCompression` | How deep a roller or guide may press into a ball or round-section game piece. [Judge a squeezed game piece](#judge-a-squeezed-game-piece) |
 | `depth` | How many times the search may halve the stroke before it reports a pair as open. Default 9 |
 | `carriedWith`, `transportedBy`, `freePath`, `supportedBy` | [What moved each payload](#move-a-payload-by-contact-transport), with its trial record |
 
@@ -118,7 +119,6 @@ A stage holds:
 
 - It runs no trial. A stage binds a recorded trial; trials written as data and run by the library are coming.
 - It has no early stop. It measures every case, or the ones named with `--cases`.
-- It has no rule for how deep a soft game piece may be squeezed. That rule is coming; until then, declare the squeezing surfaces as contacts and list the squeeze as a bench test.
 
 ## Work in three stages
 
@@ -141,7 +141,7 @@ Name every file by its project-relative path, as `{"file": "..."}`, and type no 
 "budgets": {"file": "cad/preliminary-design/releases/1.0/budgets.json"}
 ```
 
-The same form serves every reference in the judgement file and in the records it names: the budgets and their `requirements`, each premise acceptance, observation and `source`, `narrativeReview.source`, each `presentation.replays` entry and the `evidence` a replay lists, a field interaction's `evidence` and each trial behind `transportedBy`, `freePath` or `supportedBy`. The check reads each file and records its digest in the receipt. A `sha256` typed beside a file is verified, and a stale one stops the check with `Changed evidence: FILE`.
+The same form serves every reference in the judgement file and in the records it names: the budgets and their `requirements`, each premise acceptance, observation and `source`, `narrativeReview.source`, each `presentation.replays` entry and the `evidence` a replay lists, and each trial behind `transportedBy`, `freePath` or `supportedBy`. The check reads each file and records its digest in the receipt. A `sha256` typed beside a file is verified, and a stale one stops the check with `Changed evidence: FILE`.
 
 ### The displaced control
 
@@ -230,6 +230,18 @@ Declare the contact where the design is written, with the motions it holds in:
 ```
 
 Without `during` the contact holds in every motion. Declare only what the design intends. A declared contact removes that pair from the clearance test, so a real interference declared away is hidden.
+
+### Judge a squeezed game piece
+
+A roller or guide that squeezes a soft ball or a round-section ring shares volume with it by design. Declare the pair as a contact during that motion, then say in the stage how deep the squeeze may go:
+
+```json
+"payloadCompression": [{"payload": "sample", "contact": "pad", "maxDepthMm": 1, "basis": "Allowed one-sided squash of the piece"}]
+```
+
+The library measures how far the contact surface reaches inside the piece's section along the whole stroke, with a proven ceiling. The check judges it: `pass` when the deepest point stays within `maxDepthMm` and the ceiling is proven, `fail` past it, and `open` when the search reached its depth limit. A failing squeeze blocks the layout like a failing clearance case. `payload` is a solid of a payload group, `contact` is not, and `maxDepthMm` is above zero and less than the piece's section radius. When a trial gave the figure, add `"evidence": {"file": "...", "field": "maxDepthMm"}`; the check reports a missing input when the trial records a different figure. The check prints one `[squeeze]` line per rule.
+
+The allowed depth is a best guess with a basis, like every other input. Treat it as an assumption to cover with an adjustment, such as a slotted roller mount, and put the squeeze on the builder's bench-test list.
 
 ### Mass and voltage budgets
 
@@ -505,7 +517,7 @@ Preliminary design is fast iteration. A revised layout should be checked and bac
 
 Treat any pair whose clearance is smaller than the tolerance as unresolved. Rerun only the phase that holds that pair at a finer tolerance. Leave phases with ample margin coarse and record the tolerance each phase was checked at as `pathToleranceMm`. Before refining below about 10 mm, [check in and agree a budget](#check-in-before-going-deeper).
 
-**A squeezed soft piece is the usual reason to go finer, and it needs a budget like any other.** Where a soft game piece is squeezed against rollers or guides, path error is spent directly against the indentation allowance. The default is to list the squeeze as an interface with its allowance for detailed design. Refine that one phase below 10 mm only when the architecture depends on the squeeze, and only with an agreed budget that says how fine and for which phase. A wider stated squeeze allowance and a bench test of the squeeze are usually better than dozens of fine segments. However finely a phase is split, it stays [one animation](#animations-show-the-mission-the-check-list-shows-the-evidence): the segments are rows of the check results.
+**A squeezed soft piece is the usual reason to go finer, and it needs a budget like any other.** Where a soft game piece is squeezed against rollers or guides, path error is spent directly against the indentation allowance. Judge the depth with [`payloadCompression`](#judge-a-squeezed-game-piece) and list the squeeze as an interface with its allowance for detailed design. Refine that one phase below 10 mm only when the architecture depends on the squeeze, and only with an agreed budget that says how fine and for which phase. A wider stated squeeze allowance and a bench test of the squeeze are usually better than dozens of fine segments. However finely a phase is split, it stays [one animation](#animations-show-the-mission-the-check-list-shows-the-evidence): the segments are rows of the check results.
 
 Fewer cases are not always faster. A coarse case sweeps a longer move and takes longer, so judge the judgement file by its total time.
 
@@ -569,7 +581,7 @@ Declare what the report reads:
   | Note | What the files declare | Criterion 2 |
   | --- | --- | --- |
   | `motion driven by the trial` | The case's stage names the trial through `transportedBy`, `freePath` or `supportedBy`, so the layout check bound the checked path to the trial's record. | Counts |
-  | `animation played from the trial` | A review replay under `presentation.replays` names the trial as evidence, or a linked field interaction names it. The review plays the recorded run; the checked case motion is still prescribed. | Counts |
+  | `animation played from the trial` | A review replay under `presentation.replays` names the trial as evidence. The review plays the recorded run; the checked case motion is still prescribed. | Counts |
   | `prescribed motion with a trial attached` | Only the mission case's own `trial` reference, such as `{"file": "release-trial.json"}`, names the trial. The case moves on a prescribed stroke and nothing plays the trial. | `not met` |
   | `prescribed motion, no trial` | No trial is named. A case that only follows its carrier is a prescribed path. | `not met` |
 

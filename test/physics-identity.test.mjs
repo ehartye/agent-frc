@@ -25,7 +25,7 @@ function design({folder = 'cad/preliminary-design/releases/1.0', issue = 'invent
     'reach-accepted.json': {id: 'reach', issue: 'earlier-issue', value: 2.5, source: pin('estimate.json')},
     'reach-current.json': {id: 'reach', issue, value: 2.4, source: pin('estimate.json')},
     'carry-trial.json': {issue, transport: {case: 'loaded-turn', payload: 'sample', retained: true, frictionCoefficient: 0.4}},
-    'lane-trial.json': {issue, outcome: 'The invented sample leaves toward the lane'},
+    'replays.json': {schema: 'agent-frc/review-replays@1', replays: [{id: 'lane-run', evidence: [pin('carry-trial.json')]}]},
     'limits.json': {basis: 'Invented brief', inspectionLimitKg: 15, operatingMinV: 9, massLines: ['body']},
     'budgets.json': {issue, requirements: pin('limits.json'), step: pin('design.step'), runningPayloadKg: [0.2, 0.5], masses: [{id: 'body', members: ['head', 'rail'], kg: [9, 11], basis: 'Invented subtotal'}],
       electricalCases: {'loaded-turn-weak': {batterySideA: {drive: [20, 30]}, openCircuitV: [11.5, 12], resistanceOhm: [0.023, 0.03]}}},
@@ -42,7 +42,7 @@ function design({folder = 'cad/preliminary-design/releases/1.0', issue = 'invent
       control: {case: 'loaded-turn', displaced: 'rail', moving: 'head', offsetMm: [0, -50, 0], basis: 'Invented displacement'}, cycle: ['loaded-turn', 'park'],
       view: at('package-motion.html'), attachment: {unmounted: {rail: 'Invented note'}},
       narrativeReview: {source: pin('narrative.md'), objectives: [{objective: 'Carry the sample to the bin', disposition: 'represented', basis: 'Invented basis'}]},
-      presentation: {title, architecture: title + ' architecture', context: 'Synthetic teaching project', phases: {[phase]: {title: 'Invented phase'}}, fieldInteractions: [{href: 'field/lane.html', evidence: pin('lane-trial.json')}]},
+      presentation: {title, architecture: title + ' architecture', context: 'Synthetic teaching project', phases: {[phase]: {title: 'Invented phase'}}, replays: [pin('replays.json')]},
       budgets: pin('budgets.json'), premises: [{accepted: pin('reach-accepted.json'), current: pin('reach-current.json')}]}
   };
   for (const [name, change] of Object.entries(edit)) records[name] = typeof change === 'function' ? change(structuredClone(records[name])) : change;
@@ -51,7 +51,7 @@ function design({folder = 'cad/preliminary-design/releases/1.0', issue = 'invent
   const plan = records['judgement.json'], source = records['design.json'], recorded = name => ({...pin(name), sha256: sha(bytes(name))});
   // The receipt a check of these files would write: the digests it read, the judgement and the source it repeats and its verdicts.
   const receipt = {schema: 'agent-frc/preliminary-layout-result@1', issue, planSha256: sha(bytes('judgement.json')), status: 'layout-checked', design: recorded('design.json'),
-    step: recorded('design.step'), motion: recorded('design.json'), datum: {name: source.frame}, groups: source.groups, mounts: source.mounts, stages: plan.stages, cycle: plan.cycle,
+    step: recorded('design.step'), datum: {name: source.frame}, groups: source.groups, mounts: source.mounts, stages: plan.stages, cycle: plan.cycle,
     cases: [{case: 'loaded-turn', status: 'pass', pairs: [{pair: ['head', 'rail'], status: 'pass', lowerBoundMm: 6.87}]}, {case: 'park', status: 'pass', pairs: []}],
     control: {case: 'loaded-turn', displaced: 'rail', offsetMm: [0, -50, 0], witness: {pair: ['head', 'rail'], status: 'fail'}},
     narrativeReview: plan.narrativeReview, budgets: {source: recorded('budgets.json'), limits: recorded('limits.json'), massStatus: 'pass', remainingKg: 4,
@@ -68,7 +68,7 @@ test('a rename leaves the identity equal: a new ID, folder, issue name and title
   for (const name of ['judgement.json', 'design.json', 'budgets.json', 'reach-current.json', 'carry-trial.json', 'missions.json'])
     assert.notEqual(sha(before.files.get('cad/preliminary-design/releases/1.0/' + name)), sha(after.files.get('cad/preliminary-design/releases/1.1/' + name)), name);
   assert.notEqual(before.receipt.planSha256, after.receipt.planSha256);
-  assert.notEqual(before.receipt.motion.sha256, after.receipt.motion.sha256);
+  assert.notEqual(before.receipt.design.sha256, after.receipt.design.sha256);
   assert.notEqual(before.receipt.budgets.source.sha256, after.receipt.budgets.source.sha256);
   assert.deepEqual(differences(after, before), []);
   assert.deepEqual(after.identity().files, before.identity().files);
@@ -81,7 +81,7 @@ test('a rename leaves the identity equal: a new ID, folder, issue name and title
 
 test('a view-only rebuild leaves the identity equal: titles, phases, the page and the plan digest are labels', () => {
   const before = design(), after = design({title: 'Reworded title', phase: 'Invented delivery phase',
-    edit: {'judgement.json': plan => ({...plan, attachment: {unmounted: {rail: 'Reworded note'}}, presentation: {...plan.presentation, notes: ['Added note'], fieldInteractions: []}})}});
+    edit: {'judgement.json': plan => ({...plan, attachment: {unmounted: {rail: 'Reworded note'}}, presentation: {...plan.presentation, notes: ['Added note'], replays: []}})}});
   assert.notEqual(before.receipt.planSha256, after.receipt.planSha256);
   assert.notEqual(before.receipt.view.sha256, after.receipt.view.sha256);
   assert.deepEqual(differences(after, before), []);
@@ -135,7 +135,7 @@ test('a file that cannot be read is told from one that can, and a plan that is n
   assert.deepEqual(identityDifferences(bare(design()), bare(before)), []);
   assert.deepEqual(identityDifferences(bare(design({title: 'Reworded title', phase: 'Invented delivery phase'})), bare(before)), [], 'a view refresh keeps the issue name and every recorded digest');
   assert.deepEqual(identityDifferences(bare(design({edit: {'judgement.json': p => { p.stages['loaded-turn'].minGapMm = 0.5; return p; }}})), bare(before)), ['the recorded stages']);
-  assert.deepEqual(identityDifferences(bare(design({edit: {'design.json': d => { d.mounts[0].atMm = [0, 0, 7]; return d; }}})), bare(before)), ['the recorded design', 'the recorded motion', 'the recorded mounts']);
+  assert.deepEqual(identityDifferences(bare(design({edit: {'design.json': d => { d.mounts[0].atMm = [0, 0, 7]; return d; }}})), bare(before)), ['the recorded design', 'the recorded mounts']);
   // The ledger embeds the issue name, so a rename is not told from a change here: commit the plan to compare a rename.
   assert.deepEqual(identityDifferences(bare(design({issue: 'another-name'})), bare(before)), ['the recorded budgets']);
   assert.equal(receiptIdentity(before.receipt).step, before.receipt.step.sha256);

@@ -62,8 +62,6 @@ codex plugin add agent-frc@agent-frc-marketplace
 
 Commit tracked changes before staging. The staging command copies tracked files into `artifacts/local-plugin`, excluding project host configuration and repository automation. The export includes both marketplace files, so it is a complete marketplace. It records the source commit and the SHA-256 of every packaged file in `.agent-frc-stage.json`. Git history, untracked files, ignored build outputs and private local evidence are excluded. An existing export is replaced only when it has the staging command's ownership marker. After changing or pulling plugin files, rerun the staging and install commands, then start a new session.
 
-Earlier revisions used a different marketplace name. Run `codex plugin marketplace list` or `claude plugin marketplace list`, remove any earlier entry that points at this repository, then add `agent-frc-marketplace`.
-
 The project configuration in `.codex/config.toml` enables `agent-frc@agent-frc-marketplace` in a trusted checkout. A marketplace name maps to one source at a time. Codex refuses to add the same name from a different source until the configured marketplace is removed. Claude Code repoints the name and updates installed plugins from the new source.
 
 ## Check the install files

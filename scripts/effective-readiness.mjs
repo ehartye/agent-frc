@@ -113,7 +113,7 @@ function replayPins(root,plan){
 /** How a mission case's animation relates to its trial, strongest first. */
 export const motionKinds={
   bound:'motion driven by the trial (the layout check bound the checked path to it)',
-  played:'animation played from the trial (a review replay or a linked field player); the checked case motion is prescribed',
+  played:'animation played from the trial (a review replay); the checked case motion is prescribed',
   attached:'prescribed motion with a trial attached',
   prescribed:'prescribed motion, no trial'};
 
@@ -127,7 +127,7 @@ function trialDriven(root,plan,planBytes,receipt,missions){
   if(!cases.length)return {reasons:['No mission case: declare each mission-critical interaction under missionCases in missions.json'],notes,interactions};
   // A stage pin counts only from a whole, layout-checked receipt of this plan: that check bound the trial to the path.
   const checked=bound(receipt,planBytes);
-  const links=[...rows(object(plan.presentation)?plan.presentation.fieldInteractions:null).map(row=>row.evidence).filter(object),...replayPins(root,plan)];
+  const links=replayPins(root,plan);
   for(const m of cases){
     if(!named(m.case)){reasons.push('A mission case names no case');continue;}
     const where='Mission case '+m.case+(named(m.accomplishes)?' ('+m.accomplishes+')':'');
@@ -135,7 +135,7 @@ function trialDriven(root,plan,planBytes,receipt,missions){
     const pins=['transportedBy','freePath','supportedBy'].flatMap(k=>Object.values(object(stage[k])?stage[k]:{}))
       .map(s=>object(s)?s.evidence:null).filter(object).map(pin=>({...pin,kind:'bound'}));
     if(object(m.trial))pins.push({...m.trial,kind:'attached'});
-    // A replay or a linked field interaction plays the trial for this case only when its trial records the case.
+    // A replay plays the trial for this case only when its trial records the case.
     for(const pin of links){const trial=load(root,pin.file);if(!trial.reason&&trialCase(trial.json)===m.case)pins.push({...pin,kind:'played'});}
     // One entry per file, holding the strongest kind that names it; a reference that carries a SHA-256 is kept over one that names the path alone.
     const strength=['bound','played','attached'],byFile=new Map();
@@ -144,11 +144,11 @@ function trialDriven(root,plan,planBytes,receipt,missions){
       byFile.set(p.file,{...(!held||named(p.sha256)?p:held),kind});
     }
     const unique=[...byFile.values()];
-    // Strongest first: a stage reference binds the checked path to the trial, a replay or field player plays the trial, a mission reference only attaches it.
+    // Strongest first: a stage reference binds the checked path to the trial, a replay plays the trial, a mission reference only attaches it.
     const kind=strength.find(k=>unique.some(p=>p.kind===k))??'prescribed';
     interactions.push({case:m.case,motion:kind,trials:unique.map(p=>p.file)});
     if(!unique.length){
-      reasons.push(where+': the motion is prescribed; no trial is named through transportedBy, freePath, supportedBy, a mission trial, a review replay or a linked field interaction'
+      reasons.push(where+': the motion is prescribed; no trial is named through transportedBy, freePath, supportedBy, a mission trial or a review replay'
         +(checked?'':' (stage trials are read only from a layout-checked receipt of this plan)'));
       continue;
     }

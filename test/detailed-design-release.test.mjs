@@ -165,27 +165,6 @@ test('withdraw is a status change: the index keeps the reason and the last commi
   assert.throws(() => withdraw({project: p.root, design: '9.0', reason: 'x'}), /not in the index/);
 });
 
-test('a model published before the index is withdrawn by naming its files', t => {
-  const p = project(t);
-  write(p.root, 'docs/models/robot.glb', 'invented rough-draft model');
-  write(p.root, 'docs/media/robot-still.png', 'invented still');
-  const git = (...args) => execFileSync('git', ['-C', p.root, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', ...args], {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']}).trim();
-  git('init', '-q'); git('add', '-A'); git('commit', '-q', '-m', 'rough draft');
-  const published = git('rev-parse', 'HEAD');
-  p.stage({design: '1.1'});
-  assert.throws(() => withdraw({project: p.root, design: '1.0', reason: 'x', files: 'docs/models/missing.glb'}), /No published file at docs\/models\/missing\.glb/);
-  assert.throws(() => withdraw({project: p.root, design: '1.0', reason: 'x', files: '../outside.glb'}), /No published file/);
-  assert.throws(() => withdraw({project: p.root, design: '1.1', reason: 'x', files: 'docs/models/robot.glb'}), /--files applies to a model the index does not list yet/);
-  const index = withdraw({project: p.root, design: '1.0', reason: 'Invented rough draft from before the status index.', files: 'docs/models/robot.glb, docs/media/robot-still.png'});
-  assert.deepEqual(index.designs, ['1.0', '1.1'], 'the earlier model is listed first');
-  assert.deepEqual(index.designStatus, {'1.0': 'withdrawn', '1.1': 'in-progress'});
-  assert.deepEqual(index.lastCommit, {'1.0': published});
-  assert.equal(index.current, '1.1');
-  assert.ok(!existsSync(path.join(p.root, 'docs/models/robot.glb')) && !existsSync(path.join(p.root, 'docs/media/robot-still.png')));
-  const result = checkProject(p.root, {log: () => {}});
-  assert.deepEqual([result.errors, result.warnings], [[], []]);
-});
-
 test('refresh recomputes the primary view of an index edited by hand', t => {
   const p = project(t);
   p.stage();

@@ -34,7 +34,7 @@ async function season(t) {
     };
     const motion = await pin('design.json', '{"cases":[]}');
     await pin('viewer.html', page);
-    await pin('review-scene.json.gz', gzipSync(JSON.stringify({schema: 'agent-frc/preliminary-review-scene@1', issue: 'synthetic-' + id, fieldInteractions: []})));
+    await pin('review-scene.json.gz', gzipSync(JSON.stringify({schema: 'agent-frc/preliminary-review-scene@1', issue: 'synthetic-' + id})));
     const limits = await pin('package-limits.json', '{"inspectionLimitKg":14}');
     const budgets = await pin('budgets.json', JSON.stringify({requirements: limits, masses: [], electricalCases: {}}));
     const plan = await pin('judgement.json', JSON.stringify({source: motion, budgets, view: 'viewer.html'}));
@@ -192,11 +192,11 @@ test('the inputs of a release are copied to a new release folder with their pins
   const s = await season(t), sha = bytes => createHash('sha256').update(bytes).digest('hex');
   // A release checked from the repository root: its records name their own folder in every pin.
   const old = 'cad/preliminary-design/releases/1.0/', dir = path.join(s.root, old);
-  await mkdir(path.join(dir, 'field'), {recursive: true});
+  await mkdir(path.join(dir, 'notes'), {recursive: true});
   const put = async (name, content) => { await writeFile(path.join(dir, name), content); return {file: old + name, sha256: sha(content)}; };
   const step = await put('design.step', 'invented solid');
   const motion = await put('design.json', JSON.stringify({step, cases: []}));
-  await put('field/lane.html', '<html>Invented lane</html>');
+  await put('notes/lane.md', 'Invented lane note');
   await put('judgement.json', JSON.stringify({step, source: motion, view: old + 'viewer.html', outside: {file: 'README.md', sha256: 'f'.repeat(64)}}));
   await put('missions.json', JSON.stringify({missionCases: [], trial: step}));
   for (const name of ['viewer.html', 'review-scene.json.gz', 'receipt.json']) await put(name, 'written by the check for the old folder');
@@ -207,7 +207,7 @@ test('the inputs of a release are copied to a new release folder with their pins
   const fresh = 'cad/preliminary-design/releases/1.1/', at = name => path.join(s.root, fresh, name), json = async name => JSON.parse(await readFile(at(name), 'utf8'));
   for (const name of ['viewer.html', 'review-scene.json.gz', 'receipt.json']) assert.ok(!existsSync(at(name)), name + ' is left for the layout check to write');
   assert.equal(await readFile(at('design.step'), 'utf8'), 'invented solid');
-  assert.equal(await readFile(at('field/lane.html'), 'utf8'), '<html>Invented lane</html>');
+  assert.equal(await readFile(at('notes/lane.md'), 'utf8'), 'Invented lane note', 'a file in a subfolder is copied');
   const plan = await json('judgement.json'), paths = await json('design.json');
   assert.deepEqual(paths.step, {file: fresh + 'design.step', sha256: step.sha256});
   assert.deepEqual(plan.step, paths.step);

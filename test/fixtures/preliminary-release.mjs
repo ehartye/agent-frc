@@ -20,35 +20,27 @@ export const objectives=[
   {objective:'Hang from the bar',disposition:'open',basis:'No hanging mechanism selected yet'},
   {objective:'Return to the start box',disposition:'out-of-scope',basis:'Handled by the drive team'}];
 
-export const fieldPage='<!doctype html><html lang="en"><head>'+
-  '<meta charset="utf-8">'+
-  '<title>Invented lane trial</title><style>body{margin:0}</style></head><body><p>Preliminary design release</p><canvas></canvas>'+
-  '<script>const frames=[0,0.1,0.2];requestAnimationFrame(()=>frames.length);</script></body></html>';
-export const laneTrial=JSON.stringify({case:'loaded-turn',outcome:'The invented sample leaves the carrier toward the lane'});
-export const laneObjective='Carry the sample to the bin';
-/** `basis` names the release whose STEP and motion study this one was checked on: its own, unless it renames another. */
-export function issueRelease(site,id,{status='layout-checked',edit=r=>r,missions,trial,freePath=false,display=d=>d,field,basis=id}={}) {
+/** `basis` names the release whose STEP and design source this one was checked on: its own, unless it renames another. */
+export function issueRelease(site,id,{status='layout-checked',edit=r=>r,missions,trial,freePath=false,display=d=>d,basis=id}={}) {
   const dir=path.join(site,tree,'releases',id);
   const motion=JSON.stringify({cases:[{id:'loaded-turn'},{id:'park'}],issue:basis});
   // One invented robot: the scene, ledger files and receipt below all carry the same figures.
   const base=reviewScene(),[turn,control]=base.cases,duty={...base.power[0],case:'weak traverse',status:'pass'};
   const budgets=JSON.stringify({masses:base.mass.lines,electricalCases:{'weak traverse':{openCircuitV:[duty.openCircuitV,12],resistanceOhm:[0.02,duty.resistanceOhm],
     batterySideA:Object.fromEntries(duty.lines.map(l=>[l.name,l.amps]))}}}),limits=JSON.stringify({inspectionLimitKg:base.mass.limitKg});
-  const step={file:'design.step',sha256:sha('step '+basis)},motionPin={file:'design.json',sha256:sha(motion)};
+  const step={file:'design.step',sha256:sha('step '+basis)},sourcePin={file:'design.json',sha256:sha(motion)};
   // The scene the stock page reads repeats the receipt below: cases, control, objectives, mass and duties.
-  const scene=display({...base,issue:'synthetic-'+id,sources:{step,motion:motionPin},
+  const scene=display({...base,issue:'synthetic-'+id,sources:{step,design:sourcePin},
     cases:[{...turn,id:'loaded-turn',label:'loaded-turn (operating)'},{...turn,id:'park',label:'park (park)',stage:'park'},control],openingCase:'loaded-turn',
     animations:[{id:'loaded-turn',title:'Loaded turn',mission:true,cases:['loaded-turn']},{id:'park',title:'Park',mission:false,cases:['park']}],
     narrativeReview:{source:null,objectives},mass:{...base.mass,inspectionKg:[11,12],remainingKg:2},
-    power:[duty],
-    fieldInteractions:field?field.rows??[{title:'Invented lane',href:'field/lane.html',objective:laneObjective,
-      evidence:{file:'lane-trial.json',sha256:sha(laneTrial)},embed:true,objectiveKnown:true}]:[]});
+    power:[duty]});
   const content=Buffer.from(JSON.stringify(scene)),served=gzipSync(content),view=stockPage;
   const stages={'loaded-turn':{purpose:'operating'},park:{purpose:'park'}};
   if(trial&&freePath)stages['loaded-turn'].freePath={sample:{basis:'Invented free flight',evidence:{file:'acquire-trial.json',sha256:sha(trial)}}};
   else if(trial)stages['loaded-turn'].transportedBy={sample:{mechanisms:['carrier'],evidence:{file:'acquire-trial.json',sha256:sha(trial)}}};
   let receipt={schema:'agent-frc/preliminary-layout-result@1',issue:'synthetic-'+id,planSha256:sha('plan '+id),status,
-    missingInputs:[],reopen:[],step,motion:motionPin,design:motionPin,parts:[{file:'export.step',sha256:step.sha256,solids:1}],narrativeReview:{source:{file:'narrative.md',sha256:sha('narrative')},objectives},
+    missingInputs:[],reopen:[],step,design:sourcePin,parts:[{file:'export.step',sha256:step.sha256,solids:1}],narrativeReview:{source:{file:'narrative.md',sha256:sha('narrative')},objectives},
     stages,cycle:['loaded-turn','park'],cases:[{case:'loaded-turn',status:'pass',pairs:[]},{case:'park',status:'pass',pairs:[]}],
     control:{case:'loaded-turn',displaced:'rail',offsetMm:[0,-50,0],witness:{pair:['head','rail'],status:'fail'}},
     budgets:{source:{file:'budgets.json',sha256:sha(budgets)},limits:{file:'limits.json',sha256:sha(limits)},massStatus:'pass',inspectionKg:[11,12],remainingKg:2,runningKg:base.mass.runningKg,
@@ -65,12 +57,6 @@ export function issueRelease(site,id,{status='layout-checked',edit=r=>r,missions
     scene:{file:'design.json',sha256:sha(motion),stepSha256:step.sha256},
     missionCases:missions??[{case:'loaded-turn',kind:'operating-case',accomplishes:'delivered',objective:'Carry the sample to the bin'}]};
   if(trial)write(dir,'acquire-trial.json',trial);
-  if(field){
-    const page=field.page??fieldPage;
-    write(dir,'field/lane.html',page);write(dir,'lane-trial.json',laneTrial);
-    record.fieldPlayers=field.players??[{file:'field/lane.html',sha256:sha(page),trial:{file:'lane-trial.json',sha256:sha(laneTrial)},objective:laneObjective}];
-    for(const [name,bytes] of Object.entries(field.extra??{}))write(dir,name,bytes);
-  }
   write(dir,'release.json',record);
   return {dir,record};
 }

@@ -107,7 +107,7 @@
     ]
   },
   "pages": ["**/*.md", "**/*.html", "**/*.css", "docs/**", "skills/**", "worksheets/**", ".github/pages/**"],
-  "everything": ["package.json", "scripts/test-suite.mjs", "scripts/test-selection.mjs", "test/test-map.json"],
+  "everything": ["package.json", "scripts/test-suite.mjs", "scripts/test-selection.mjs"],
   "versionFiles": ["package.json", "plugin.json", ".claude-plugin/plugin.json", ".codex-plugin/plugin.json"],
   "versionTests": ["install-manifests.test.mjs", "runtime-identity.test.mjs", "skill-validation.test.mjs"],
   "covers": {
@@ -120,6 +120,7 @@
     "kernel-layout.test.mjs": ["scripts/kernel_layout/**", "scripts/layout_check.py", "examples/design-source/**"],
     "kernel-layout-size.test.mjs": ["scripts/kernel_layout/**", "scripts/layout_check.py", "examples/design-source/**"],
     "project-ci.test.mjs": ["templates/**", "examples/sample-project/**", "scripts/project-ci-audit.mjs"],
-    "test-map.test.mjs": ["test/durations.json"]
+    "test-map.test.mjs": ["test/durations.json", "test/test-map.json"],
+    "workflow-preflight.test.mjs": [".github/workflows/**"]
   }
 }
