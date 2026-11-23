@@ -1,0 +1,63 @@
+{
+  "schema": "agent-frc/concept-bot@1",
+  "id": "turret-shooter",
+  "name": "Turret shooter",
+  "basis": "Invented teaching concept for the training field: a front intake feeds a turreted shooter with an adjustable hood. Every number is a placeholder for the project to replace.",
+  "body": {
+    "frameLengthIn": {"value": 28, "label": "assumed", "basis": "Invented square frame for a block-bot rehearsal."},
+    "frameWidthIn": {"value": 28, "label": "assumed", "basis": "Invented square frame for a block-bot rehearsal."},
+    "bumperIn": {"value": 3, "label": "assumed", "basis": "Invented bumper depth: backing plus padding plus cover."},
+    "stowedHeightIn": {"value": 24, "label": "assumed", "basis": "Invented stowed height with the turret at rest."},
+    "maxHeightIn": {"value": 30, "label": "required", "basis": "Invented teaching cap on the raised hood height."},
+    "maxReachIn": {"value": 6, "label": "assumed", "basis": "The deployed intake extension beyond the frame perimeter."},
+    "frameProfile": {"kind": "rear-chamfer", "shortSideFractions": [0.1, 0.1]}
+  },
+  "drive": {
+    "type": "swerve",
+    "topSpeedInS": {"value": 180, "label": "assumed", "basis": "Default sweep bound 120–240 in/s: about 80% of COTS module free speed (https://www.swervedrivespecialties.com/products/mk4i-swerve-module, https://choreo.autos/document-settings/robot-configuration/). Replace with the project's module, gearing and current limits."},
+    "accelInS2": {"value": 250, "label": "assumed", "basis": "Default sweep bound 150–400 in/s²: below the traction limit once current limits apply (https://choreo.autos/document-settings/robot-configuration/, https://pathplanner.dev/robot-config.html). Replace with the project's current limits and wheel friction."},
+    "rotationDegS": {"value": 360, "label": "assumed", "basis": "Default sweep bound 180–540 deg/s: shipped planner and library rotation caps (https://raw.githubusercontent.com/mjansen4857/pathplanner/e02bbf3176588166e8fe5192ab8dea85f6d62f7a/lib/util/prefs.dart, https://raw.githubusercontent.com/wpilibsuite/allwpilib/v2026.2.1/wpilibjExamples/src/main/java/edu/wpi/first/wpilibj/examples/swervebot/Drivetrain.java). Replace with the project's tuned cap."}
+  },
+  "inputs": [
+    {
+      "id": "front-intake",
+      "face": "front",
+      "widthIn": {"value": 20, "label": "assumed", "basis": "Invented roller width, inside the bumpered front face."},
+      "extensionIn": {"value": 6, "label": "assumed", "basis": "Invented deploy distance beyond the bumper."},
+      "pieces": ["tile"],
+      "headingToleranceDeg": {"value": 15, "label": "assumed", "basis": "Invented misalignment the rollers still center."},
+      "acquireHeightIn": {"min": 0, "max": 4, "label": "assumed", "basis": "Invented floor pickup band."},
+      "secondsPerPiece": {"value": 0.5, "label": "assumed", "basis": "Invented touch-to-held time."},
+      "requiresStop": false
+    }
+  ],
+  "storage": {
+    "capacity": {"tile": {"value": 3, "label": "assumed", "basis": "Invented indexer that holds three pieces."}},
+    "transferS": {"value": 0.75, "label": "assumed", "basis": "Invented time to index a piece from the intake to the shooter."}
+  },
+  "outputs": [
+    {
+      "id": "shooter",
+      "face": "front",
+      "kind": "ranged",
+      "pieces": ["tile"],
+      "secondsPerPiece": {"value": 0.4, "label": "assumed", "basis": "Invented feed interval between shots."},
+      "requiresStop": false,
+      "successFraction": {"value": 0.8, "label": "assumed", "basis": "Invented share of stationary shots that score."},
+      "ranged": {
+        "releaseHeightIn": {"value": 22, "label": "assumed", "basis": "Invented exit height of the shooter wheels."},
+        "launchSpeedInS": {"min": 200, "max": 400, "label": "assumed", "basis": "Invented exit speed band of the flywheel."},
+        "elevationDeg": {"min": 20, "max": 60, "label": "assumed", "basis": "Invented adjustable hood travel.",
+          "slewDegS": {"value": 90, "label": "assumed", "basis": "Invented hood actuator rate."}},
+        "turret": {"min": -90, "max": 90, "label": "assumed", "basis": "Invented turret travel either side of the face normal.",
+          "slewDegS": {"value": 360, "label": "assumed", "basis": "Invented turret slew rate."}},
+        "aimToleranceDeg": {"value": 3, "label": "assumed", "basis": "Invented azimuth error that still scores."},
+        "firesWhileMoving": {
+          "maxRobotSpeedInS": {"value": 60, "label": "assumed", "basis": "Invented speed cap for moving shots."},
+          "successFraction": {"value": 0.6, "label": "assumed", "basis": "Invented share of moving shots that score."}
+        }
+      }
+    }
+  ],
+  "concurrency": {"intakeWhileScoring": true}
+}

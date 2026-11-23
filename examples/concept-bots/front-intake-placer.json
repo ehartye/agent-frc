@@ -1,0 +1,56 @@
+{
+  "schema": "agent-frc/concept-bot@1",
+  "id": "front-intake-placer",
+  "name": "Front intake placer",
+  "basis": "Invented teaching concept for the training field: one front intake and one front placer that sets a piece on a target at short range. Every number is a placeholder for the project to replace.",
+  "body": {
+    "frameLengthIn": {"value": 30, "label": "assumed", "basis": "Invented frame length for a block-bot rehearsal."},
+    "frameWidthIn": {"value": 26, "label": "assumed", "basis": "Invented frame width for a block-bot rehearsal."},
+    "bumperIn": {"value": 3, "label": "assumed", "basis": "Invented bumper depth: backing plus padding plus cover."},
+    "stowedHeightIn": {"value": 20, "label": "assumed", "basis": "Invented stowed height with the placer lowered."},
+    "maxHeightIn": {"value": 42, "label": "required", "basis": "Invented teaching cap on the raised placer height."},
+    "maxReachIn": {"value": 8, "label": "assumed", "basis": "The placer's reach beyond the frame perimeter."},
+    "frameProfile": {"kind": "rear-chamfer", "shortSideFractions": [0.1, 0.1]}
+  },
+  "massLb": {"min": 90, "max": 110, "label": "assumed", "basis": "Invented student estimate from a comparable earlier block-bot build."},
+  "drive": {
+    "type": "swerve",
+    "topSpeedInS": {"value": 150, "label": "assumed", "basis": "Default sweep bound 120–240 in/s: about 80% of COTS module free speed (https://www.swervedrivespecialties.com/products/mk4i-swerve-module, https://choreo.autos/document-settings/robot-configuration/). Replace with the project's module, gearing and current limits."},
+    "accelInS2": {"value": 300, "label": "assumed", "basis": "Default sweep bound 150–400 in/s²: below the traction limit once current limits apply (https://choreo.autos/document-settings/robot-configuration/, https://pathplanner.dev/robot-config.html). Replace with the project's current limits and wheel friction."},
+    "rotationDegS": {"value": 270, "label": "assumed", "basis": "Default sweep bound 180–540 deg/s: shipped planner and library rotation caps (https://raw.githubusercontent.com/mjansen4857/pathplanner/e02bbf3176588166e8fe5192ab8dea85f6d62f7a/lib/util/prefs.dart, https://raw.githubusercontent.com/wpilibsuite/allwpilib/v2026.2.1/wpilibjExamples/src/main/java/edu/wpi/first/wpilibj/examples/swervebot/Drivetrain.java). Replace with the project's tuned cap."}
+  },
+  "inputs": [
+    {
+      "id": "front-intake",
+      "face": "front",
+      "widthIn": {"value": 18, "label": "assumed", "basis": "Invented roller width, inside the bumpered front face."},
+      "extensionIn": {"value": 4, "label": "assumed", "basis": "Invented deploy distance beyond the bumper."},
+      "pieces": ["tile"],
+      "headingToleranceDeg": {"value": 10, "label": "assumed", "basis": "Invented misalignment the rollers still center."},
+      "acquireHeightIn": {"min": 0, "max": 3, "label": "assumed", "basis": "Invented floor pickup band."},
+      "secondsPerPiece": {"value": 0.8, "label": "assumed", "basis": "Invented touch-to-held time."},
+      "requiresStop": true
+    }
+  ],
+  "storage": {
+    "capacity": {"tile": {"value": 1, "label": "assumed", "basis": "Invented placer that holds one piece."}},
+    "transferS": {"value": 0.5, "label": "assumed", "basis": "Invented time to hand a piece from the intake to the placer."}
+  },
+  "outputs": [
+    {
+      "id": "placer",
+      "face": "front",
+      "kind": "place",
+      "pieces": ["tile"],
+      "secondsPerPiece": {"value": 1.2, "label": "assumed", "basis": "Invented time to raise, release and clear."},
+      "requiresStop": true,
+      "successFraction": {"value": 0.9, "label": "assumed", "basis": "Invented share of placements that score."},
+      "place": {
+        "standOffIn": {"min": 2, "max": 8, "label": "assumed", "basis": "Invented distance band from the face to the target."},
+        "headingToleranceDeg": {"value": 10, "label": "assumed", "basis": "Invented misalignment the placer still lands."},
+        "releaseHeightIn": {"min": 10, "max": 40, "label": "assumed", "basis": "Invented placer release height band."}
+      }
+    }
+  ],
+  "concurrency": {"intakeWhileScoring": false}
+}
