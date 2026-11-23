@@ -398,6 +398,12 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
   }
   // A piece taken at once is aboard now. One captured on the move (later) leaves the field now and lands aboard,
   // with its acquisition logged, on the first tick at or after secondsPerPiece; see land().
+  // Plan the current port leg again from the robot's present pose, keeping what it has already released.
+  function restartLeg(sim,r) {
+    const c=sim.game.concept[r.id];
+    c.leg={start:[...r.p],released:c.leg?.released};
+    if(r.pickup)delete r.pickup.rack;
+  }
   function take(sim,r,s,piece,port,timeS,later=false) {
     const g=sim.game,[cargo]=g.stock[s.id].splice(g.stock[s.id].findIndex(p=>p.id===piece.id),1);
     const entry={cargo,station:s.id,port:port.id,startedS:timeS,speedInS:r.currentSpeedInS,pose:{p:[...r.p],heading:r.heading}};
@@ -793,7 +799,7 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
       }
     }
   }
-  return {start,startObservations,observe,apply,replenish,move,seek,intake,mayDeliver,conceptStep,mouth};
+  return {start,startObservations,observe,apply,replenish,move,seek,intake,mayDeliver,conceptStep,restartLeg,mouth};
 }
 
 

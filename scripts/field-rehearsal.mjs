@@ -198,7 +198,7 @@ export function createFieldRehearsal(profile) {
     if(r.concept)turnTo=leg.requiredHeading;
     function finishLeg(){
       if(leg.release)release(sim,r,key);
-      r.leg++;r.dwell=0;r.waypoints=null;delete r.pickup;delete r.goal;turnTo=undefined;
+      r.leg++;r.dwell=0;r.waypoints=null;delete r.pickup;delete r.goal;delete r.makeRoom;turnTo=undefined;
       if(r.leg===legs.length){
         r.visits++;event(sim,r.id+' completed '+leg.action);
         if(program(r,sim).loop)r.leg=0;
@@ -208,6 +208,12 @@ export function createFieldRehearsal(profile) {
     // A concept robot's acquisitions and releases go through its ports; the game supplies each goal and heading.
     if(r.concept && leg.operation){
       portLeg=true;
+      // Making room to turn: drive to the clear pose at the present heading, then plan the leg again from there.
+      if(r.makeRoom){
+        r.action='Making room to turn';
+        if(r.target<r.waypoints.length)return drive(r);
+        delete r.makeRoom;delete r.goal;r.waypoints=null;game.restartLeg(sim,r);
+      }
       const next=game.conceptStep(sim,r,leg,sim.ticks*dt,dt);
       if(next.done)return finishLeg();
       turnTo=next.heading;
@@ -314,12 +320,19 @@ export function createFieldRehearsal(profile) {
         return hit;
       };
       let body=rotating?{...r,circleIn:geom.circumradius(r)}:r,hit=sweep(body);
-      // On a port leg the heading is the game's intent, not an authored step: when only a wall or obstacle stops
-      // the turn, the robot moves this tick at its present heading and turns once it is clear. An authored
-      // requiredHeading keeps the rule that a blocked rotation is a wait.
-      if(hit && rotating && portLeg && !sim.robots.some(p=>p.id===hit.name)){
-        const still=norm(a,b)<1e-9?null:sweep(r);
-        if(norm(a,b)>=1e-9 && !still){hit=null;body=r;heading=r.heading;rotating=false;}
+      // On a port leg the heading is the game's intent, not an authored step. When anything stops the turn, the
+      // robot makes this tick's move at its present heading if that sweep is clear, and turns once it is clear.
+      // A turn in place that anything blocks, or a turn another robot blocks with no clear move at the present
+      // heading either, sends it to the nearest reachable pose where its circle is clear (see roomToTurn), and the
+      // leg is planned again from there. Without this two robots can hold each other for ever, one unable to turn
+      // while the other is close and the other waiting for it to leave. An authored requiredHeading keeps the rule
+      // that a blocked rotation is a wait.
+      if(hit && rotating && portLeg){
+        if(norm(a,b)>=1e-9 && !sweep(r)){hit=null;body=r;heading=r.heading;rotating=false;}
+        else if((norm(a,b)<1e-9 || sim.robots.some(p=>p.id===hit.name)) && !r.makeRoom){
+          const room=roomToTurn(sim,r,i,ends);
+          if(room){r.makeRoom=true;r.goal=room.goal;r.waypoints=room.route;r.target=1;}
+        }
       }
       // Rejected motion stays at its starting point for this entire tick. Earlier
       // movers already cleared that stationary footprint. Clipping one mover after
@@ -338,6 +351,19 @@ export function createFieldRehearsal(profile) {
     resolveWaitCycles(sim);
     game.move(sim,dt,begins);
     terminal?.observe(sim,begins,sim.ticks*dt,(sim.ticks+1)*dt);
+  }
+  // The nearest pose, in 4 in rings out to 48 in, where a concept robot's circumscribed circle clears the walls,
+  // obstacles and every other robot's present footprint, with a route there around those footprints.
+  function roomToTurn(sim,r,i,ends) {
+    const circle={...r,circleIn:geom.circumradius(r)};
+    const others=sim.robots.filter((o,j)=>j!==i).map(o=>({...o,p:ends[sim.robots.indexOf(o)]}));
+    for(let d=4;d<=48;d+=4)for(let k=0;k<16;k++){
+      const q=[r.p[0]+d*Math.cos(k*Math.PI/8),r.p[1]+d*Math.sin(k*Math.PI/8)];
+      if(geom.hit(q,q,circle,sim.setup) || others.some(o=>geom.robotContact(q,q,circle,o.p,o.p,o)!==null))continue;
+      const route=geom.planAround(r.p,q,r,sim.setup,others);
+      if(route.length)return {goal:q,route};
+    }
+    return null;
   }
   // Robots blocked only by each other in a closed cycle never move again: each next proposal is unchanged.
   // A cycle that holds for waitCycleS is logged with its start and duration. When yielding is enabled, the
@@ -415,7 +441,7 @@ export function createFieldRehearsal(profile) {
     sim.phase=phases[++sim.phaseIndex].name;sim.ticks=0;sim.carry=0;sim.ended=false;sim.paused=true;sim.resources=reservations();
     sim.deadlocks=[];sim.waitCycles={};
     game.replenish(sim,0);
-    for(const r of sim.robots){delete r.goal;}
+    for(const r of sim.robots){delete r.goal;delete r.makeRoom;}
     for(const r of sim.robots)Object.assign(r,{pickup:null,leg:0,waypoints:null,target:0,dwell:0,wait:0,travelIn:0,visits:0,blocked:'',action:'',...(r.concept?{currentSpeedInS:0}:{})});
   }
   return {supported,behaviors,defaults,startingRoster,completeRoster,create,createProbe,advance,nextPhase,assessRoute,geom,waypoint,intake:game?.intake,mouth:game?.mouth,dt,periods:phases,terminal,

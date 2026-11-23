@@ -350,17 +350,15 @@ test('ports: a fixed rack hands stock only to an input face turned toward it',()
     const toward=Math.atan2(rack[1]-got.pose.p[1],rack[0]-got.pose.p[0])*180/Math.PI;
     assert.ok(Math.abs(wrapDeg(got.pose.heading-toward-(face==='back'?180:0)))<=10,face+' face: heading '+got.pose.heading+' for bearing '+toward);
   }
-  // Control: inside a rack radius beside a wall, a front face that must turn 90 degrees cannot (its circle
-  // meets the wall), so it takes nothing; the same robot in the open turns and takes.
-  const beside=y=>{
-    const p=arena({docs:[conceptDoc('front-ball',{inputs:[input('front')]})],steps:[{operation:'acquire',station:'side-rack',at:[250,y]}]});
-    p.rehearsal.stations.push({id:'side-rack',label:'Side rack',kind:'retrieval',side:'both',piece:'ball',at:[250,y],radiusIn:16,stock:3});
-    return play(p,[{concept:'front-ball',heading:90}],2,[[240,y]]);
+  // Control: inside a rack radius, a front face that must turn 90 degrees but turns at only 1 deg/s is never
+  // aligned in 2 s, so it takes nothing; the same robot turning at 180 deg/s takes.
+  const turning=rotation=>{
+    const p=arena({docs:[conceptDoc('front-ball',{rotation,inputs:[input('front')]})],steps:[{operation:'acquire',station:'side-rack',at:[250,60]}]});
+    p.rehearsal.stations.push({id:'side-rack',label:'Side rack',kind:'retrieval',side:'both',piece:'ball',at:[250,60],radiusIn:16,stock:3});
+    return play(p,[{concept:'front-ball',heading:90}],2,[[240,60]]);
   };
-  const walled=beside(19);
-  assert.equal(walled.events.filter(e=>e.outcome==='acquired').length,0);
-  assert.match(walled.sim.robots[0].blocked,/South guardrail/);
-  assert.ok(beside(60).events.some(e=>e.outcome==='acquired'));
+  assert.equal(turning(1).events.filter(e=>e.outcome==='acquired').length,0);
+  assert.ok(turning(180).events.some(e=>e.outcome==='acquired'));
 });
 
 test('ports: an input that need not stop collects on the move and finishes sooner',()=>{
@@ -485,4 +483,29 @@ test('ports: a place output that need not stop records a release on the move as 
   const shot=releases(run.events)[0];
   assert.ok(shot.speedInS>0,'released at '+shot.speedInS+' in/s');
   assert.equal(shot.moving,true);assert.equal(shot.successFraction,1);
+});
+
+test('ports: a concept robot sharing a rack is never held for ever by a turn another robot blocks',()=>{
+  // B1 and B2 both shuttle the blue rack (40 tiles) into the blue bay in both periods. A concept B1 standing at the
+  // rack must turn to shoot, and its circumscribed circle meets B2 queuing behind it, which waits for B1 to leave.
+  const doc=JSON.parse(readFileSync(new URL('../examples/concept-bots/fixed-shooter.json',import.meta.url)));
+  const match=concept=>{
+    const p=structuredClone(training);
+    p.rehearsal.stations.find(s=>s.id==='blue-supply').stock=40;
+    p.rehearsal.concepts=[{document:doc,record:compileConceptBot(applyProfileDefaults(doc,p))}];
+    const engine=createFieldRehearsal(p),shuttle={Opening:'shuttle','Main play':'shuttle'};
+    const roster=engine.completeRoster(engine.startingRoster().map(r=>r.id==='B1'?{...r,...(concept?{concept:doc.id}:{}),plans:shuttle}:r.id==='B2'?{...r,plans:shuttle}:r));
+    const sim=engine.create(roster);
+    sim.paused=false;engine.advance(sim,20);
+    const opening=sim.robots.find(r=>r.id==='B1').travelIn;
+    engine.nextPhase(sim);sim.paused=false;engine.advance(sim,60);
+    const credited=phase=>sim.game.events.filter(e=>e.robot==='B1' && e.phase===phase && e.outcome==='credited').length;
+    return {opening,main:sim.robots.find(r=>r.id==='B1').travelIn,credited:[credited('Opening'),credited('Main play')]};
+  };
+  const concept=match(true);
+  assert.ok(concept.opening>50,'concept B1 travelled '+concept.opening+' in during Opening');
+  assert.ok(concept.credited[0]>0 && concept.credited[1]>0,'concept B1 credited '+concept.credited.join(' then '));
+  // Control: two legacy robots on the same shuttle jam each other at the rack in this profile's report-only mode.
+  const legacy=match(false);
+  assert.equal(legacy.main,0);assert.deepEqual(legacy.credited,[0,0]);
 });
