@@ -43,8 +43,9 @@ def sideways(facts, g):
     return sorted(set(reasons))
 
 
-def three_d(facts, g):
-    """Reasons the answer may depend on what one section cannot show."""
+def three_d(facts, g, groups=None):
+    """Reasons the answer may depend on what one section cannot show. With groups, only those groups' movements count:
+    the field moving under a driving robot does not take the piece out of its section."""
     piece, normal, reasons = facts["piece"], facts["plane"]["normal"], []
     if not round_in_plane(piece, normal):
         reasons.append("the piece is " + piece["class"] + " and is not round in the section")
@@ -57,7 +58,7 @@ def three_d(facts, g):
         if row["curvedAcross"]:
             reasons.append(solid + " has " + " and ".join(row["curvedAcross"]))
     reasons += sideways(facts, g)
-    reasons += [row["group"] + " " + row["why"] + " in " + row["motion"] for row in facts["mechanismOutOfPlane"]]
+    reasons += [row["group"] + " " + row["why"] + " in " + row["motion"] for row in facts["mechanismOutOfPlane"] if groups is None or row["group"] in groups]
     if facts["piecesAtOnce"] > 1:
         reasons.append(f"{facts['piecesAtOnce']} pieces at once")
     if facts.get("targetOffPlane"):
@@ -78,9 +79,9 @@ def indicative(facts, g):
     return reasons
 
 
-def verdict(facts, g=GUIDELINES):
-    """(verdict, reasons) for one interaction's screen facts."""
-    deep, soft = three_d(facts, g), indicative(facts, g)
+def verdict(facts, g=GUIDELINES, groups=None):
+    """(verdict, reasons) for one interaction's screen facts. groups are the groups of the solids the piece meets."""
+    deep, soft = three_d(facts, g, groups), indicative(facts, g)
     if deep:
         return "needs 3D", deep + soft
     if soft:
@@ -154,11 +155,13 @@ def judge(inputs, measured, missing, say):
     found = inputs.records
     campaign = found.get("trials")
     state = measured.status(found["trials"][2] if campaign else found["measurements"][2]) if found else {}
+    owner = {s["name"]: s["group"] for s in [*inputs.data["solids"], *inputs.data["fixtures"]]}
     rows = []
     for name in sorted(declared):
         entry = judged.get(name)
         facts = measured.screen(name)
-        word, reasons = verdict(facts)
+        involved = [*declared[name]["solids"], *declared[name].get("guides", []), *([declared[name]["pieceSolid"]] if "pieceSolid" in declared[name] else [])]
+        word, reasons = verdict(facts, groups={owner[s] for s in involved if s in owner})
         row = dict(id=name, piece=facts["piece"]["name"], plane=facts["plane"], verdict=word, reasons=reasons)
         rows.append(row)
         say(f"[screen] {name}: {word}, because " + "; ".join(reasons))

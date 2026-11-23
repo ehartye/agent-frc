@@ -542,7 +542,7 @@ The guidelines, kept in the plugin, send an interaction to `needs 3D` when:
 - a meeting solid's section changes across the piece's width by more than about 5% of the piece's thickness, or 2 mm;
 - a meeting solid has a face curved across the plane, such as a funnel, a dome or a cone;
 - a side is unguided, or its gap is more than about a tenth of the piece's width. A ball counts only where a meeting solid ends inside its width;
-- a mechanism turns or slides out of the plane;
+- a mechanism the piece meets turns or slides out of the plane. The field moving under a driving robot does not count;
 - more than one piece is involved;
 - the target is off the plane;
 - the stated approach angle is beyond about 10 degrees.
