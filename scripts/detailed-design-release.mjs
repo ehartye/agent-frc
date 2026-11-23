@@ -26,7 +26,6 @@ import {benchFile, effectiveGate, summary as benchSummary, summaryText as benchT
 export const designSchema = 'agent-frc/detailed-design@1';
 export const indexSchema = 'agent-frc/detailed-design-index@1';
 const readinessSchema = 'agent-frc/mechanical-readiness-result@1';
-const receiptSchema = 'agent-frc/preliminary-layout-result@1';
 const judgementFile = 'judgement.json';
 const designId = releaseId, useVersion = 'Use a version as the design ID: MAJOR.MINOR, such as 1.0';
 const catalog = new URL('../templates/detailed-design-index.html', import.meta.url);
@@ -367,7 +366,6 @@ export function copyInputs({project, from, to, ...folders}) {
     done.add(name);
     let data;
     try { data = JSON.parse(readFileSync(path.join(target, name), 'utf8').replace(/^\uFEFF/, '')); } catch { return; }
-    if (data?.schema === receiptSchema) return;
     const was = JSON.stringify(data);
     (function walk(node) {
       if (Array.isArray(node)) { node.forEach(walk); return; }

@@ -467,7 +467,6 @@ def step_digest(site, release):
         return None
 
 
-RECEIPT = "agent-frc/preliminary-layout-result@1"
 
 
 def copy_inputs(season, base, old, new):
@@ -497,8 +496,6 @@ def copy_inputs(season, base, old, new):
         try:
             data = json.loads((target / name).read_bytes())
         except (OSError, ValueError):
-            return
-        if isinstance(data, dict) and data.get("schema") == RECEIPT:
             return
         was = json.dumps(data)
 

@@ -1,9 +1,14 @@
-/** @lane merge */
+/**
+ * @lane merge
+ * @subject scripts/atomic_file.py
+ */
 import assert from 'node:assert/strict';
+import {execFileSync} from 'node:child_process';
 import {existsSync,mkdirSync,mkdtempSync,readFileSync,readdirSync,rmSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import {fileURLToPath} from 'node:url';
 import {writeDirectoryAtomic,writeFileAtomic} from '../scripts/atomic-write.mjs';
 
 test('a file is replaced whole and a failed write keeps the previous bytes',t=>{
@@ -30,4 +35,18 @@ test('a directory appears complete or not at all',t=>{
   });
   assert.deepEqual(readdirSync(target),['receipt.json']);
   assert.deepEqual(readdirSync(root),['design-001']);
+});
+
+// The layout check and the review scene writer save the receipt and the scene through scripts/atomic_file.py.
+test('the Python writer replaces a file whole, keeps the previous bytes on a failed write and never replaces an exclusive target',t=>{
+  const root=mkdtempSync(path.join(tmpdir(),'atomic-py-'));t.after(()=>rmSync(root,{recursive:true,force:true}));
+  const file=path.join(root,'receipt.json');writeFileSync(file,'previous');
+  const python=process.env.PYTHON??(process.platform==='win32'?'python':'python3');
+  const code=['import sys','sys.path.insert(0, sys.argv[1])','from atomic_file import write_atomic','target = sys.argv[2]',
+    'write_atomic(target, b"next")','try:','    write_atomic(target, "not bytes")','except TypeError:','    pass',
+    'try:','    write_atomic(target, b"other", exclusive=True)','except FileExistsError:','    print("refused")'].join('\n');
+  const said=execFileSync(python,['-B','-c',code,fileURLToPath(new URL('../scripts/',import.meta.url)),file],{encoding:'utf8'});
+  assert.equal(said.trim(),'refused');
+  assert.equal(readFileSync(file,'utf8'),'next','the failed and the exclusive writes left the replaced bytes');
+  assert.deepEqual(readdirSync(root),['receipt.json'],'no temporary file is left');
 });

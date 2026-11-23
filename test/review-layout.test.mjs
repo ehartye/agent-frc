@@ -241,15 +241,16 @@ test('a version reads with its design name: a draft number while in progress, no
 });
 
 test('the same page staged for a detailed design reads its name, draft and status from designs.json and names its preliminary design', {skip}, async t => {
-  // Synthetic site: detailed "Tilting carriage" 1.0 is effective and 1.1 is at draft 2, built on preliminary 1.3.
+  // Synthetic site: detailed "Tilting carriage" 1.0 is effective and 1.1 is at draft 2, built on preliminary 1.3; "Swinging arm" 2.0 was superseded.
   const dir = site(t), tree = path.join(dir, 'detailed-design');
+  release(tree, '2.0', reviewScene(), {folder: 'designs'});
   release(tree, '1.1', reviewScene(), {folder: 'designs'});
   release(tree, '1.0', reviewScene(), {folder: 'designs'});
   mkdirSync(path.join(dir, 'preliminary-design'), {recursive: true});
   writeFileSync(path.join(dir, 'preliminary-design/releases.json'), JSON.stringify({current: '1.3', releases: ['1.3'], designs: {1: {name: 'Tilting carriage'}}, designStatus: {'1.3': 'effective'}}));
   writeFileSync(path.join(tree, 'designs.json'), JSON.stringify({schema: 'agent-frc/detailed-design-index@1', preliminaryIndex: '../preliminary-design/releases.json',
-    current: '1.0', beside: '1.1', designs: ['1.0', '1.1'], designStatus: {'1.0': 'effective', '1.1': 'in-progress'},
-    architectures: {1: {name: 'Tilting carriage'}}, preliminary: {'1.0': '1.3', '1.1': '1.3'}, revision: {'1.0': {number: 4, date: '2001-01-01'}, '1.1': {number: 2, date: '2001-02-02'}}}));
+    current: '1.0', beside: '1.1', designs: ['1.0', '1.1', '2.0'], designStatus: {'1.0': 'effective', '1.1': 'in-progress', '2.0': 'superseded'},
+    architectures: {1: {name: 'Tilting carriage'}, 2: {name: 'Swinging arm'}}, preliminary: {'1.0': '1.3', '1.1': '1.3', '2.0': '1.3'}, revision: {'1.0': {number: 4, date: '2001-01-01'}, '1.1': {number: 2, date: '2001-02-02'}}}));
   const shown = ready + `for(let i=0;i<40&&!/·/.test(document.querySelector('#state').textContent);i++)await new Promise(r=>setTimeout(r,50));
    return {chip:document.querySelector('#state').textContent,context:document.querySelector('#context').textContent,title:document.title,
     heading:document.querySelector('h1').textContent,basis:document.querySelector('#basisNote').textContent}`;
@@ -264,6 +265,8 @@ test('the same page staged for a detailed design reads its name, draft and statu
   const effective = await probePage(dir, 'detailed-design/designs/1.0/index.html', shown);
   assert.equal(effective.chip, 'Effective · layout-checked', 'an effective version shows no draft number');
   assert.match(effective.context, /Tilting carriage 1\.0　\/　Detailed design　\/　built on preliminary design Tilting carriage 1\.3$/);
+  const earlier = await probePage(dir, 'detailed-design/designs/2.0/index.html', shown);
+  assert.equal(earlier.chip, 'Superseded · layout-checked', 'a superseded design says so');
 });
 
 test('the animation list holds one entry per mission phase; the checked cases sit in the check results and jump the viewer to their pose', {skip}, async t => {

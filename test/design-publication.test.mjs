@@ -567,8 +567,9 @@ function example(t) {
   const git = (...args) => execFileSync('git', ['-C', season, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', '-c', 'core.autocrlf=false', ...args], {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']}).trim();
   const commit = message => { git('add', '-A'); git('commit', '-q', '-m', message); return git('rev-parse', 'HEAD'); };
   const status = id => read(path.join(season, prelim, 'releases.json')).designStatus[id];
+  const build = id => execFileSync(py, ['-m', 'frc_design_kernel', 'build', releases + id + '/design.json', '--out', releases + id + '/generated'], {cwd: season, stdio: 'pipe'});
   git('init', '-q');
-  return {season, releases, stage, layoutCheck, git, commit, status, check: base => checkProject(season, {base, log: () => {}})};
+  return {season, releases, stage, layoutCheck, build, git, commit, status, check: base => checkProject(season, {base, log: () => {}})};
 }
 
 test('marking a real release effective runs the stage gate, and refuses uncommitted inputs, a stale receipt and a forged one', kernel, t => {
@@ -606,6 +607,22 @@ test('marking a real release effective runs the stage gate, and refuses uncommit
   assert.equal(e.status('1.0'), 'in-progress');
   writeFileSync(plan, held); writeFileSync(receipt, issued);
   e.commit('restored');
+  // Generated solids regenerated from another source and left uncommitted: the gate runs only on what is committed.
+  const generated = path.join(e.season, authored, 'generated'), kept = path.join(e.season, '..', 'generated-kept');
+  cpSync(generated, kept, {recursive: true});
+  editJson(sourceFile, s => ({...s, parameters: {...s.parameters, slide: 11}}));
+  e.build('1.0');
+  writeFileSync(sourceFile, source);
+  refused = e.stage('--set-status', '1.0', 'effective');
+  assert.match(refused.said, /its inputs have uncommitted changes \([^)]*generated\//);
+  // Committed, they are stale: the layout check the gate runs refuses solids generated from another design source.
+  e.commit('stale solids');
+  refused = e.stage('--set-status', '1.0', 'effective');
+  assert.match(refused.said, /The generated solids are of an earlier design source[^]*Turning carrier 1\.0 is not marked effective: the layout check ended with an error/);
+  assert.equal(e.status('1.0'), 'in-progress');
+  rmSync(generated, {recursive: true, force: true});
+  cpSync(kept, generated, {recursive: true});
+  e.commit('regenerated');
   // The gate passes: the command reports what it ran and how long it took, prints the readiness report and sets the status.
   const accepted = e.stage('--set-status', '1.0', 'effective');
   assert.equal(accepted.status, 0, accepted.said);
