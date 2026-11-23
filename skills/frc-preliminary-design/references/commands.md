@@ -13,6 +13,7 @@ The commands that build and measure need the design library, `frc-design-kernel`
 - [Generate the solids](#generate-the-solids)
 - [Run the check](#run-the-check)
 - [Look at it locally](#look-at-it-locally)
+- [Run the design auditor](#run-the-design-auditor)
 - [Publish a draft](#publish-a-draft)
 - [Add trials and replays](#add-trials-and-replays)
 - [Judge readiness](#judge-readiness)
@@ -91,6 +92,14 @@ python PLUGIN/scripts/serve_preliminary_review.py
 ```
 
 Open `http://127.0.0.1:8000/`. The page cannot load its scene from `file://`. For a review on the local network, add `--bind LAN_ADDRESS --port 8000`.
+
+## Run the design auditor
+
+```sh
+node PLUGIN/scripts/design-audit.mjs .
+```
+
+Run it before you publish a draft and before you propose marking a design effective. It reports, by file and line, code that does the library's work outside `custom/`, generated files that do not regenerate from the source, custom shapes and laws that do more than their contract, and missing reasons, sources, controls and brackets. It is advice and blocks nothing. Take each finding to the owner as a check-in with what you propose; fix it, or declare it with its reason in `.design-audit.json`. [The design auditor](../../../docs/design-audit.md)
 
 ## Publish a draft
 

@@ -70,6 +70,12 @@ areas:
   - path: scripts/project-ci-audit.mjs
     tier: standard
     why: advice to the agent; a missed use lets a project go on running plugin code unnoticed
+  - path: scripts/design-audit.mjs
+    tier: standard
+    why: advice to the agent; a missed escape-hatch misuse or a stale output lets a design drift back toward a hand-written builder unnoticed
+  - path: scripts/design-audit/**
+    tier: standard
+    why: the design auditor's detectors; same risk as the auditor
   - path: scripts/published-content.mjs
     tier: standard
     why: advice to the agent; a missed file lets a withdrawn viewer or model be published with the folder

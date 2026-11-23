@@ -25,6 +25,7 @@
       "coupled-support.test.mjs",
       "decision-chain.test.mjs",
       "design-artifact.test.mjs",
+      "design-audit.test.mjs",
       "design-iterations.test.mjs",
       "design-methods.test.mjs",
       "design-versions.test.mjs",
@@ -100,6 +101,7 @@
     "browser": ["power-review.test.mjs", "review-layout.test.mjs", "theme-fonts.test.mjs"],
     "kernel": [
       "cad-appearance-render.test.mjs",
+      "design-audit-library.test.mjs",
       "design-publication.test.mjs",
       "detailed-design-release.test.mjs",
       "kernel-layout.test.mjs",
@@ -120,6 +122,8 @@
     "kernel-layout.test.mjs": ["scripts/kernel_layout/**", "scripts/layout_check.py", "examples/design-source/**"],
     "kernel-layout-size.test.mjs": ["scripts/kernel_layout/**", "scripts/layout_check.py", "examples/design-source/**"],
     "project-ci.test.mjs": ["templates/**", "examples/sample-project/**", "scripts/project-ci-audit.mjs"],
+    "design-audit.test.mjs": ["scripts/design-audit.mjs", "scripts/design-audit/**", "scripts/project-ci-audit.mjs"],
+    "design-audit-library.test.mjs": ["scripts/design-audit.mjs", "scripts/design-audit/**"],
     "test-map.test.mjs": ["test/durations.json", "test/test-map.json"],
     "workflow-preflight.test.mjs": [".github/workflows/**"]
   }

@@ -6,8 +6,8 @@ import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 
 export const folders = ['kickoff','cad','controls','sim','experiments','tests','scripts','docs','artifacts'];
-// .branch-scan.json is the ignore list of the path and secret scan. .project-ci-audit.json lists the folders the audit skips and its declared exceptions.
-const files = new Set(['README.md','LICENSE','LICENSE.md','AGENTS.md','.gitattributes','.gitignore','.branch-scan.json','.project-ci-audit.json',
+// .branch-scan.json is the ignore list of the path and secret scan. .project-ci-audit.json and .design-audit.json list the folders each audit skips and its declared exceptions.
+const files = new Set(['README.md','LICENSE','LICENSE.md','AGENTS.md','.gitattributes','.gitignore','.branch-scan.json','.project-ci-audit.json','.design-audit.json',
   'run.ps1','cad-showcase.json','highlights.json','project-layout.json','package.json','package-lock.json','pyproject.toml',
   'requirements.txt','pytest.ini','settings.gradle','build.gradle','gradlew','gradlew.bat']);
 const toolFolders = new Set(['iterations','.github','.vscode','.wpilib','src','gradle','vendordeps']);

@@ -157,11 +157,11 @@ Ask only when the choices lead to different designs. Keep working on everything 
 - Trials written as data in the design source and run by the library: until then, bind each recorded trial as [Trials and replays](references/trials.md) says.
 - The screen that says, from facts the library computes, whether an interaction needs a planar trial, a 3D trial or an adjustment.
 - Adjustments as design data, with a coverage campaign across each assumed range.
-- The auditor that reports project code which builds, measures or writes records outside the library.
 
 ## Reference
 
 - [Commands in order, on Windows](references/commands.md)
+- [The design auditor: run it before a draft and before effective; its findings are check-ins](../../docs/design-audit.md)
 - [Trials and replays: sizing, records, retention, what moved the piece](references/trials.md)
 - [Review page: regions, scene data, replay format](references/review-layout-template.md)
 - [What the review page must let a reviewer do](references/presentation.md)
