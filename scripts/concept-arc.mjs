@@ -255,13 +255,24 @@ export function createArcModel() {
     return {bands, feasibleAny:bands.length > 0};
   }
 
-  return {arcCheck, standOffBand, GRAVITY_IN_S2, ELEVATION_STEP_DEG};
+  // The one piece-radius rule, shared by the rehearsal and concept:check: the radiusIn of the first retrieval
+  // station of that piece type with a finite, positive floor or service radius. Otherwise the piece is a point (0).
+  function pieceRadiusFor(stations, pieceType) {
+    for (const s of stations ?? []) {
+      const radius = s?.kind === 'retrieval' && s.piece === pieceType ? (s.floor ?? s.service)?.radiusIn : undefined;
+      if (finite(radius) && radius > 0) return radius;
+    }
+    return 0;
+  }
+
+  return {arcCheck, standOffBand, pieceRadiusFor, GRAVITY_IN_S2, ELEVATION_STEP_DEG};
 }
 
 const model = createArcModel();
 export const GRAVITY_IN_S2 = model.GRAVITY_IN_S2;
 export const ELEVATION_STEP_DEG = model.ELEVATION_STEP_DEG;
 export function arcCheck(release, target, port, robotVelocity) { return model.arcCheck(release, target, port, robotVelocity); }
+export function pieceRadiusFor(stations, pieceType) { return model.pieceRadiusFor(stations, pieceType); }
 export function standOffBand(entry, pieceRadiusIn, port, releaseHeightIn, approachDeg) {
   return model.standOffBand(entry, pieceRadiusIn, port, releaseHeightIn, approachDeg);
 }

@@ -178,6 +178,12 @@ export function validateProfile(p) {
       if(l.maxHeightIn && l.startingHeightIn && l.maxHeightIn.value<l.startingHeightIn.value) {
         throw Error('rehearsal.robotLimits.maxHeightIn cannot be below startingHeightIn.');
       }
+      // limits {perimeter, height} and robotLimits state the same rules; where both are known they must agree.
+      for(const [older,newer,name] of [[p.limits.perimeter,l.perimeterIn,'perimeter'],[p.limits.height,l.startingHeightIn,'starting height']]) {
+        if(older!==null && newer!==null && older!==newer.value) {
+          throw Error('The '+name+' limit differs: limits gives '+older+' in and rehearsal.robotLimits gives '+newer.value+' in. Keep one value.');
+        }
+      }
     }
     // Embedded concept bots: {document, record}, where record is the document compiled against this profile.
     // A robot names one with concept: "<id>" on rehearsal.defaults or a roster row.
@@ -210,6 +216,13 @@ export function validateProfile(p) {
     if(terminal)for(const match of r.series?.matches ?? []){
       const robots=match.roster.map(row=>({...row,id:(row.side==='blue'?'B':'R')+row.slot}));
       terminal.start(robots,match.endgameAtRestAfterS,match.setup ?? r.setups[0]);
+    }
+    // A concept robot turns toward a step's requiredHeading, in field-frame degrees.
+    for(const [name,program] of Object.entries(r.programs))for(const steps of [program?.steps,...Object.values(program?.byPeriod ?? {})]) {
+      for(const step of Array.isArray(steps)?steps:[])if(step && Object.hasOwn(step,'requiredHeading') &&
+        !(Number.isFinite(step.requiredHeading) && Math.abs(step.requiredHeading)<=360)) {
+        throw Error('Program '+name+' step "'+step.label+'" needs requiredHeading in degrees between -360 and 360.');
+      }
     }
     for(const program of Object.values(r.programs)){
       if(!label(program.label) || !Array.isArray(program.steps) || !program.steps.every(waypoint) ||

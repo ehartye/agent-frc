@@ -185,3 +185,18 @@ test('kickoff embeds each --concept as its document and compiled record, and the
   const noConcepts=structuredClone(profile);noConcepts.rehearsal.defaults.concept='turret-shooter';
   assert.throws(()=>validateProfile(noConcepts),/turret-shooter/);
 });
+
+test('a program step requiredHeading is a finite angle, and the two robot-limit records must agree',()=>{
+  const variant=edit=>{const p=structuredClone(profile);edit(p);return p;};
+  const step=heading=>variant(p=>{p.rehearsal.programs.cross.steps[0].requiredHeading=heading;});
+  assert.doesNotThrow(()=>validateProfile(step(90)));
+  assert.doesNotThrow(()=>validateProfile(step(-360)));
+  for(const bad of ['north',Number.NaN,361,null])assert.throws(()=>validateProfile(step(bad)),/requiredHeading/,String(bad));
+  const byPeriod=variant(p=>{p.rehearsal.programs.cross.byPeriod={[p.rehearsal.periods[0].name]:[{...p.rehearsal.programs.cross.steps[0],requiredHeading:'north'}]};});
+  assert.throws(()=>validateProfile(byPeriod),/requiredHeading/);
+  // limits and rehearsal.robotLimits describe the same perimeter and starting height.
+  assert.equal(profile.limits.perimeter,profile.rehearsal.robotLimits.perimeterIn.value);
+  assert.throws(()=>validateProfile(variant(p=>{p.limits.perimeter=120;})),/perimeter/);
+  assert.throws(()=>validateProfile(variant(p=>{p.rehearsal.robotLimits.startingHeightIn.value=50;})),/height/);
+  assert.doesNotThrow(()=>validateProfile(variant(p=>{p.limits.perimeter=null;p.rehearsal.robotLimits.startingHeightIn=null;})),'an unknown on either side is not a conflict');
+});

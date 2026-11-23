@@ -113,3 +113,24 @@ test('the arc model is one self-contained factory that a page can inline from it
   assert.deepEqual(inlined.standOffBand(entry, 4, p, 24), standOffBand(entry, 4, p, 24));
   assert.throws(() => inlined.arcCheck({positionIn:[0, 0]}, ring, p), /Supply/);
 });
+
+test('one piece-radius rule: the first same-type retrieval station with a floor or service radius, else a point', async () => {
+  const {pieceRadiusFor} = await import('../scripts/concept-arc.mjs');
+  const station = (kind, piece, extra = {}) => ({id:kind + '-' + piece, kind, piece, ...extra});
+  const stations = [
+    station('scoring', 'disc', {floor:{radiusIn:9}}),                 // not a retrieval station
+    station('retrieval', 'cube', {floor:{radiusIn:5}}),               // another piece type
+    station('retrieval', 'disc'),                                     // a fixed rack: no physical radius
+    station('retrieval', 'disc', {floor:{radiusIn:0}}),               // not positive
+    station('retrieval', 'disc', {service:{radiusIn:'4'}}),           // not a number
+    station('retrieval', 'disc', {service:{radiusIn:4}}),             // the first that counts
+    station('retrieval', 'disc', {floor:{radiusIn:6}})
+  ];
+  assert.equal(pieceRadiusFor(stations, 'disc'), 4);
+  assert.equal(pieceRadiusFor(stations, 'cube'), 5);
+  assert.equal(pieceRadiusFor(stations, 'ball'), 0, 'no station: a point piece');
+  assert.equal(pieceRadiusFor(stations.slice(0, 5), 'disc'), 0, 'control: only stations that do not count');
+  assert.equal(pieceRadiusFor(new Map(stations.map((s, i) => [i, s])).values(), 'disc'), 4, 'any iterable of stations');
+  const inlined = new Function('return ' + createArcModel.toString())()();
+  assert.equal(inlined.pieceRadiusFor(stations, 'disc'), 4);
+});

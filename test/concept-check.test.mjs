@@ -104,3 +104,16 @@ test('each ranged output gets a stand-off band per entry station it can serve, o
   const other = variant(turret, c => { c.outputs[0].pieces = ['marker']; c.storage.capacity = {tile:c.storage.capacity.tile, marker:q(1)}; });
   assert.deepEqual(conceptCheck(other, profile).ports, [], 'no scoring station accepts its pieces');
 });
+
+test('stand-off bands use the shared piece radius and are measured from the output face', async () => {
+  const {pieceRadiusFor} = await import('../scripts/concept-arc.mjs');
+  const report = conceptCheck(turret, profile);
+  for (const row of report.ports) {
+    assert.equal(row.pieceRadiusIn, pieceRadiusFor(profile.rehearsal.stations, 'tile'));
+    assert.equal(row.measuredFrom, 'output face');
+  }
+  // A loose source gives the tile a physical radius; the band then shrinks the opening by it.
+  const loose = variant(profile, p => { p.rehearsal.stations.find(s => s.id === 'blue-supply').floor = {radiusIn:3, positions:[[60, 48], [62, 48], [64, 48], [66, 48], [68, 48], [70, 48]]}; });
+  const radius = conceptCheck(turret, loose).ports.map(r => r.pieceRadiusIn);
+  assert.deepEqual(radius, [3, 3]);
+});

@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { LABELS, applyProfileDefaults, compileConceptBot, validateConceptBot } from './concept-bot.mjs';
-import { standOffBand } from './concept-arc.mjs';
+import { pieceRadiusFor, standOffBand } from './concept-arc.mjs';
 import { framePlan } from './frame-profile.mjs';
 import { validateProfile } from './kickoff.mjs';
 import { loadScoreObservations } from './score-observations.mjs';
@@ -22,13 +22,6 @@ function countLabels(value, counts) {
 }
 
 const status = (value, limit) => value === null || !limit ? 'unresolved' : value <= limit.value + 1e-9 ? 'within' : 'exceeds';
-
-// A piece's radius is the radiusIn of a floor or service station that holds that piece type. Without one the
-// piece is treated as a point (0 in), so the band is the widest the opening allows.
-function pieceRadius(profile, piece) {
-  const station = profile.rehearsal?.stations?.find(s => s.piece === piece && (s.floor ?? s.service)?.radiusIn > 0);
-  return station ? (station.floor ?? station.service).radiusIn : 0;
-}
 
 /** The concept:check report for a concept document, against an optional rules-model profile. Throws on invalid input. */
 export function conceptCheck(document, profile) {
@@ -51,8 +44,10 @@ export function conceptCheck(document, profile) {
     const r = output.ranged;
     for (const station of (profile?.rehearsal?.stations ?? []).filter(s => s.kind === 'scoring' && output.pieces.includes(s.piece))) {
       if (!station.entry) { ports.push({output:output.id, station:station.id, status:'unresolved', reason:'no entry region'}); continue; }
-      const pieceRadiusIn = pieceRadius(profile, station.piece);
-      ports.push({output:output.id, station:station.id, pieceRadiusIn, releaseHeightIn:r.releaseHeightIn,
+      // The rehearsal's own piece-radius rule (concept-arc pieceRadiusFor): a point when the profile gives no radius.
+      const pieceRadiusIn = pieceRadiusFor(profile.rehearsal.stations, station.piece);
+      // Band distances run from the release point, which the rehearsal places on the output face at releaseHeightIn.
+      ports.push({output:output.id, station:station.id, pieceRadiusIn, releaseHeightIn:r.releaseHeightIn, measuredFrom:'output face',
         standOffBand:standOffBand(station.entry, pieceRadiusIn, {launchSpeedInS:r.launchSpeedInS, elevationDeg:r.elevationDeg}, r.releaseHeightIn)});
     }
   }
