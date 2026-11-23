@@ -219,7 +219,19 @@
         ],
         "radiusIn": 16,
         "points": 1,
-        "criterion": "A carried tile reaches the release area after the authored service dwell."
+        "criterion": "A carried tile reaches the release area after the authored service dwell.",
+        "entry": {
+          "centerIn": [
+            175,
+            194,
+            30
+          ],
+          "kind": "window",
+          "widthIn": 18,
+          "heightIn": 12,
+          "facingDeg": 180,
+          "factId": "blue-bay-entry"
+        }
       },
       {
         "id": "red-supply",
@@ -246,7 +258,19 @@
         ],
         "radiusIn": 16,
         "points": 1,
-        "criterion": "A carried tile reaches the release area after the authored service dwell."
+        "criterion": "A carried tile reaches the release area after the authored service dwell.",
+        "entry": {
+          "centerIn": [
+            305,
+            70,
+            30
+          ],
+          "kind": "window",
+          "widthIn": 18,
+          "heightIn": 12,
+          "facingDeg": 0,
+          "factId": "red-bay-entry"
+        }
       },
       {
         "id": "blue-desk",
@@ -694,6 +718,28 @@
         "receive",
         "patrol"
       ]
+    },
+    "robotLimits": {
+      "perimeterIn": {
+        "value": 116,
+        "factId": "robot-perimeter"
+      },
+      "startingHeightIn": {
+        "value": 46,
+        "factId": "robot-starting-height"
+      },
+      "maxHeightIn": {
+        "value": 60,
+        "factId": "robot-max-height"
+      },
+      "maxExtensionIn": {
+        "value": 12,
+        "factId": "robot-max-extension"
+      },
+      "massLb": {
+        "value": 100,
+        "factId": "robot-mass"
+      }
     },
     "programs": {
       "hold": {

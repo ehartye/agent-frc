@@ -15,6 +15,9 @@ import {framePlan,starterFrameProfile} from './frame-profile.mjs';
 import { fieldGeometry } from './field-rehearsal-geometry.mjs';
 import { createFieldRehearsal } from './field-rehearsal.mjs';
 import { fileURLToPath } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
+import { applyProfileDefaults, compileConceptBot, validateConceptBot } from './concept-bot.mjs';
+import { createArcModel } from './concept-arc.mjs';
 
 const plugin = new URL('../', import.meta.url);
 const positive = n => Number.isFinite(n) && n > 0;
@@ -147,6 +150,63 @@ export function validateProfile(p) {
     if(!d || ![d.length,d.width,d.height,d.speed].every(positive) || d.speed>500 ||
        !Number.isFinite(d.heading) || !nonnegative(d.bumper) || !Array.isArray(d.orders) || d.orders.length!==3 ||
        !d.orders.every(k=>Object.hasOwn(r.programs,k)))throw Error('Invalid rehearsal robot defaults.');
+    // Optional target entry regions and robot limits. A ranged output can score only through an entry; the arc
+    // check (scripts/concept-arc.mjs) reads it. Each factId names the rule-register fact that supports the value.
+    // entry: {centerIn:[x,y,z], kind:'window', widthIn, heightIn, facingDeg, factId} or {centerIn, kind:'ring', radiusIn, factId}.
+    // robotLimits: all five keys, each {value>0, factId} or null for unknown. A bare number is refused, so every
+    // limit stays traceable to its fact; massLb follows the same shape.
+    const only=(o,keys)=>o && typeof o==='object' && !Array.isArray(o) && Object.keys(o).every(k=>keys.includes(k) && o[k]!==undefined);
+    for(const s of r.stations ?? []){
+      if(s?.entry===undefined)continue;
+      const e=s.entry,c=e?.centerIn;
+      if(s.kind!=='scoring')throw Error('Only a scoring station may carry an entry region: '+s.id+'.');
+      const shape=e?.kind==='window' ? only(e,['centerIn','kind','widthIn','heightIn','facingDeg','factId']) &&
+          positive(e.widthIn) && positive(e.heightIn) && Number.isFinite(e.facingDeg) && Math.abs(e.facingDeg)<=360 :
+        e?.kind==='ring' && only(e,['centerIn','kind','radiusIn','factId']) && positive(e.radiusIn);
+      if(!shape || !label(e.factId) || !Array.isArray(c) || c.length!==3 || !c.every(Number.isFinite) ||
+         c[0]<0 || c[0]>p.field.length || c[1]<0 || c[1]>p.field.width || c[2]<0) {
+        throw Error('Give the entry of scoring station '+s.id+' a centerIn [x, y, z] on the field in inches, a factId and either ' +
+          'kind "window" with widthIn, heightIn and facingDeg or kind "ring" with radiusIn.');
+      }
+    }
+    if(r.robotLimits!==undefined){
+      const keys=['perimeterIn','startingHeightIn','maxHeightIn','maxExtensionIn','massLb'],l=r.robotLimits;
+      if(!only(l,keys) || !keys.every(k=>l[k]===null || only(l[k],['value','factId']) && positive(l[k].value) && label(l[k].factId))) {
+        throw Error('Give rehearsal.robotLimits perimeterIn, startingHeightIn, maxHeightIn, maxExtensionIn and massLb, ' +
+          'each {value, factId} with a positive value, or null for an unknown limit.');
+      }
+      if(l.maxHeightIn && l.startingHeightIn && l.maxHeightIn.value<l.startingHeightIn.value) {
+        throw Error('rehearsal.robotLimits.maxHeightIn cannot be below startingHeightIn.');
+      }
+      // limits {perimeter, height} and robotLimits state the same rules; where both are known they must agree.
+      for(const [older,newer,name] of [[p.limits.perimeter,l.perimeterIn,'perimeter'],[p.limits.height,l.startingHeightIn,'starting height']]) {
+        if(older!==null && newer!==null && older!==newer.value) {
+          throw Error('The '+name+' limit differs: limits gives '+older+' in and rehearsal.robotLimits gives '+newer.value+' in. Keep one value.');
+        }
+      }
+    }
+    // Embedded concept bots: {document, record}, where record is the document compiled against this profile.
+    // A robot names one with concept: "<id>" on rehearsal.defaults or a roster row.
+    const concepts=new Set();
+    if(r.concepts!==undefined){
+      if(!Array.isArray(r.concepts))throw Error('Give rehearsal.concepts as an array of {document, record}.');
+      r.concepts.forEach((c,i)=>{
+        const at='rehearsal.concepts['+i+']';
+        if(!only(c,['document','record']) || !c.document || !c.record)throw Error(at+' needs exactly a document and its compiled record.');
+        try{validateConceptBot(c.document);}catch(error){throw Error(at+'.document.'+error.message);}
+        if(concepts.has(c.document.id))throw Error(at+': duplicate concept ID '+c.document.id+'.');
+        concepts.add(c.document.id);
+        if(!isDeepStrictEqual(c.record,compileConceptBot(applyProfileDefaults(c.document,p)))) {
+          throw Error(at+'.record differs from concept '+c.document.id+' compiled against this profile. Embed it again with kickoff --concept.');
+        }
+      });
+    }
+    const rows=[['rehearsal.defaults',d],...(Array.isArray(d.roster)?d.roster:[]).map((row,i)=>['rehearsal.defaults.roster['+i+']',row]),
+      ...(Array.isArray(r.series?.matches)?r.series.matches:[]).flatMap((m,j)=>(Array.isArray(m?.roster)?m.roster:[])
+        .map((row,i)=>['rehearsal.series.matches['+j+'].roster['+i+']',row]))];
+    for(const [where,row] of rows)if(row?.concept!==undefined && !concepts.has(row.concept)) {
+      throw Error(where+'.concept names '+JSON.stringify(row.concept)+', which is not embedded in rehearsal.concepts.');
+    }
     const waypoint=w=>w && label(w.label) && (!w.frame || ['alliance','field'].includes(w.frame)) &&
       (w.lock===undefined || w.lock===true || label(w.lock)) && (w.release===undefined || w.release===true && Boolean(w.lock)) &&
       (w.dwell===undefined || nonnegative(w.dwell)) && (pt(w.at) || (w.at && (pt(w.at.blue) && pt(w.at.red) ||
@@ -157,6 +217,13 @@ export function validateProfile(p) {
       const robots=match.roster.map(row=>({...row,id:(row.side==='blue'?'B':'R')+row.slot}));
       terminal.start(robots,match.endgameAtRestAfterS,match.setup ?? r.setups[0]);
     }
+    // A concept robot turns toward a step's requiredHeading, in field-frame degrees.
+    for(const [name,program] of Object.entries(r.programs))for(const steps of [program?.steps,...Object.values(program?.byPeriod ?? {})]) {
+      for(const step of Array.isArray(steps)?steps:[])if(step && Object.hasOwn(step,'requiredHeading') &&
+        !(Number.isFinite(step.requiredHeading) && Math.abs(step.requiredHeading)<=360)) {
+        throw Error('Program '+name+' step "'+step.label+'" needs requiredHeading in degrees between -360 and 360.');
+      }
+    }
     for(const program of Object.values(r.programs)){
       if(!label(program.label) || !Array.isArray(program.steps) || !program.steps.every(waypoint) ||
          Object.entries(program.byPeriod || {}).some(([name,steps])=>!r.periods.some(p=>p.name===name) ||
@@ -164,6 +231,20 @@ export function validateProfile(p) {
     }
   }
   return p;
+}
+
+// Append concept-bot documents to rehearsal.concepts, each with its record compiled against this profile
+// (so a missing mass takes the profile's default). Duplicate IDs are refused.
+export function embedConcepts(profile, documents) {
+  if(!documents.length)return profile;
+  if(!profile.rehearsal)throw Error('A concept bot needs a profile with a rehearsal.');
+  const out=structuredClone(profile),list=out.rehearsal.concepts ??= [];
+  for(const document of documents){
+    validateConceptBot(document);
+    if(list.some(c=>c.document?.id===document.id))throw Error('Concept '+document.id+' is already embedded in rehearsal.concepts.');
+    list.push({document:structuredClone(document),record:compileConceptBot(applyProfileDefaults(document,out))});
+  }
+  return out;
 }
 
 export function rulesModel(profile) {
@@ -191,7 +272,7 @@ export async function buildLab(input, destination, comparison) {
         ({role,context,match,roster,focalId:(focal.side==='blue'?'B':'R')+focal.slot,ordinary,terminal,margin,regret,byRobot}))
     } : null).replaceAll('<','\\u003c'),
     PROFILE:json, SCENE:renderer, LAB:controls, 'ROUTE MODEL':routeStudy.toString(), 'WINDOW MODEL':analyzeWindow.toString(),
-    'REHEARSAL MODEL':[framePlan.toString(),starterFrameProfile.toString(),initialTrial.toString(),fieldGeometry.toString(),createFieldPieceMotion.toString(),allocateOpeningTasks.toString(),createScoreAssessment.toString(),createRehearsalGame.toString(),rehearsalFindings.toString(),createTerminalRehearsal.toString(),createFieldRehearsal.toString(),createMatchSeries.toString(),createRehearsalSetup.toString(),
+    'REHEARSAL MODEL':[framePlan.toString(),starterFrameProfile.toString(),initialTrial.toString(),fieldGeometry.toString(),createFieldPieceMotion.toString(),allocateOpeningTasks.toString(),createScoreAssessment.toString(),createArcModel.toString(),createRehearsalGame.toString(),rehearsalFindings.toString(),createTerminalRehearsal.toString(),createFieldRehearsal.toString(),createMatchSeries.toString(),createRehearsalSetup.toString(),
       'const rehearsal=createFieldRehearsal(profile); const rehearsalNotes=[];'].join('\n'),
     OPPORTUNITIES:opportunities, 'REHEARSAL UI':rehearsalUI, 'THEME FONTS':inlineThemeFonts()
   };
@@ -202,12 +283,26 @@ export async function buildLab(input, destination, comparison) {
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
-    const [option, input, out, destination, ...extra] = process.argv.slice(2);
-    if(option==='--season')throw Error('Supply a project-owned profile with --profile. A season number cannot identify the rules edition and geometry.');
-    if(!input || option!=='--profile' || !['--output','--model-output'].includes(out) || !destination || extra.length) {
-      throw Error('Usage: node scripts/kickoff.mjs --profile project.json (--model-output rules.json | --output field.html)');
+    const args=process.argv.slice(2),conceptFiles=[];
+    const usage='Usage: node scripts/kickoff.mjs --profile project.json [--concept concept.json ...] (--model-output rules.json | --output field.html)';
+    if(args[0]==='--season')throw Error('Supply a project-owned profile with --profile. A season number cannot identify the rules edition and geometry.');
+    let input,out,destination;
+    for(let i=0;i<args.length;i+=2){
+      const [option,value]=[args[i],args[i+1]];
+      if(value===undefined || value.startsWith('--'))throw Error(usage);
+      if(option==='--profile' && input===undefined)input=value;
+      else if(option==='--concept')conceptFiles.push(value);
+      else if(['--output','--model-output'].includes(option) && out===undefined)[out,destination]=[option,value];
+      else throw Error(usage);
     }
-    const profile=validateProfile(await loadScoreObservations(JSON.parse(await readFile(input,'utf8')),input));
+    if(!input || !out)throw Error(usage);
+    const documents=[];
+    for(const file of conceptFiles){
+      const document=JSON.parse(await readFile(file,'utf8'));
+      try{validateConceptBot(document);}catch(error){throw Error(file+': '+error.message);}
+      documents.push(document);
+    }
+    const profile=validateProfile(embedConcepts(validateProfile(await loadScoreObservations(JSON.parse(await readFile(input,'utf8')),input)),documents));
     if(out==='--model-output') {
       const pluginRoot=await realpath(fileURLToPath(plugin));
       const parent=await realpath(path.dirname(path.resolve(destination)));

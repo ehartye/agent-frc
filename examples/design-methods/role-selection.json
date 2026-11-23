@@ -2,7 +2,7 @@
   "schema": "agent-frc/role-selection@1",
   "profile": {
     "path": "examples/kickoff/training-field.json",
-    "sha256": "eda86b0431d2c790926a61d5d29c223d6cd9d264b7c191063cdf5d69e781505f"
+    "sha256": "f9c21b08ae0a7c7b8a2883dd08691a6e5dd7bcb92386e9a5dc2c770da6ed804f"
   },
   "study": {
     "path": "examples/design-methods/alliance.json",

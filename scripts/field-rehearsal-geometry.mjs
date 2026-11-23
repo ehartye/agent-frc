@@ -33,11 +33,18 @@ export function fieldGeometry(profile) {
     return result;
   }
   const boundary=planes.reduce(clip,rect(L/2,W/2,L,W));
+  // A body with circleIn occupies a polygon circumscribing that circle (a rotating robot), at any heading.
   function offsets(body) {
+    if(body.circleIn>0){
+      const n=24,r=body.circleIn/Math.cos(Math.PI/n);
+      return Array.from({length:n},(_,i)=>[r*Math.cos(2*Math.PI*i/n),r*Math.sin(2*Math.PI*i/n)]);
+    }
     const a=body.heading*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
     return framePlan(body.length,body.width,profileOf(body),body.bumper,25.4).outer
       .map(([x,y])=>[x*c-y*s,x*s+y*c]);
   }
+  // Radius of the circle that circumscribes the frame outline plus bumper, about the robot centre.
+  const circumradius=body=>Math.max(...framePlan(body.length,body.width,profileOf(body),body.bumper,25.4).outer.map(q=>Math.hypot(...q)));
   const footprint=(p,body)=>offsets(body).map(q=>add(p,q));
   // Counterclockwise convex hull for Minkowski expansion by a reflected footprint.
   function hull(points) {
@@ -93,7 +100,7 @@ export function fieldGeometry(profile) {
   }
   const cache=new Map();
   function space(body,setup) {
-    const key=[body.length,body.width,body.height,body.heading,body.bumper,JSON.stringify(profileOf(body)),setup].join('/');
+    const key=[body.length,body.width,body.height,body.heading,body.bumper,JSON.stringify(profileOf(body)),body.circleIn,setup].join('/');
     if(cache.has(key))return cache.get(key);
     const shape=offsets(body);
     const walls=planes.map(p=>({...p,offset:dot(p.normal,p.origin)-Math.min(...shape.map(q=>dot(q,p.normal)))}));
@@ -138,7 +145,7 @@ export function fieldGeometry(profile) {
   }
   function robotContact(a,b,body,c,d,peer) {
     const relativeA=minus(a,c),relativeB=minus(b,d);
-    const key='relative/'+[body.length,body.width,body.bumper,body.heading,JSON.stringify(profileOf(body)),peer.length,peer.width,peer.bumper,peer.heading,JSON.stringify(profileOf(peer))].join('/');
+    const key='relative/'+[body.length,body.width,body.bumper,body.heading,JSON.stringify(profileOf(body)),body.circleIn,peer.length,peer.width,peer.bumper,peer.heading,JSON.stringify(profileOf(peer)),peer.circleIn].join('/');
     if(!cache.has(key))cache.set(key,prepare(expand(offsets(peer),offsets(body))));
     return enter(relativeA,relativeB,cache.get(key));
   }
@@ -190,5 +197,5 @@ export function fieldGeometry(profile) {
     for(let i=prev[1];i!==undefined;i=prev[i])line.unshift(nodes[i]);
     return line;
   }
-  return {boundary,obstacles,footprint,hit,assessRoute,robotContact,plan,planAround,validBody};
+  return {boundary,obstacles,footprint,circumradius,hit,assessRoute,robotContact,plan,planAround,validBody};
 }

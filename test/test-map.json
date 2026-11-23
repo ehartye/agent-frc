@@ -20,6 +20,10 @@
       "checked-placement.test.mjs",
       "combined-setup.test.mjs",
       "component-palette.test.mjs",
+      "concept-arc.test.mjs",
+      "concept-bot.test.mjs",
+      "concept-check.test.mjs",
+      "concept-rehearsal.test.mjs",
       "contact-convergence.test.mjs",
       "context.test.mjs",
       "coupled-support.test.mjs",
@@ -98,7 +102,7 @@
       "season-terms.test.mjs",
       "skill-validation.test.mjs"
     ],
-    "browser": ["power-review.test.mjs", "review-layout.test.mjs", "theme-fonts.test.mjs"],
+    "browser": ["field-lab-concept.test.mjs", "power-review.test.mjs", "review-layout.test.mjs", "theme-fonts.test.mjs"],
     "kernel": [
       "cad-appearance-render.test.mjs",
       "design-audit-library.test.mjs",

@@ -15,6 +15,13 @@ node "<plugin>/scripts/kickoff.mjs" --profile rules.json --output field.html
 
 Open `field.html` in a browser. It runs offline. The model can omit unsupported geometry, optional scoring data and timed rehearsal. Leave unknown dimensions as open questions. The rectangle-and-prism preview supports early spatial comparisons. Apply a rectangular starting perimeter only when the source rules and the proposed shape support that screen. The team can also inspect the public lab with a fictional model. [Training lab](https://ehartye.github.io/agent-frc/field-lab.html)
 
+To rehearse candidate robots, describe each one as a concept bot and check it against the model first. Then add a `--concept` option for each file. Each robot card can then drive a concept, which rotates, accelerates and acquires and scores only through its declared faces. A robot without a concept keeps the fixed-heading prism. [Concept bots](concept-bots.md)
+
+```sh
+node "<plugin>/scripts/concept-check.mjs" turret.json --profile rules.json
+node "<plugin>/scripts/kickoff.mjs" --profile rules.json --concept turret.json --concept placer.json --output field.html
+```
+
 ## Explore a scoring opportunity
 
 Allocate the pieces available to one robot at the selected supply location, including any later delivery. Deduct setup, travel and service time. Check open scoring slots. Compare three delivery plans.
@@ -40,7 +47,7 @@ Save the route, affected mechanism, contact direction, supporting evidence and t
 
 ## From the field to a design decision
 
-1. Ask students to move, rotate and resize the box. Let them compare a real choice, such as approaching a target with the long side or short side leading. Capture what each student sees. Each observation records the box dimensions, pose and starting-size checks at that moment.
+1. Ask students to move, rotate and resize the box. Let them compare a real choice, such as approaching a target with the long side or short side leading. Once a candidate takes shape, write it as a concept bot and compare its faces, stand-off band and aim in the rehearsal. Capture what each student sees. Each observation records the box dimensions, pose and starting-size checks at that moment.
 2. Use their observations to draft two possible match stories. Which task could the team repeat, what would its partners handle, and what could it do if the approach failed? Record the proposed role, cycle and alternative in the lab. Where the geometry leaves a question open, name the experiment that could answer it.
 3. Download the Markdown narrative into the student project before closing the page. The draft includes the manual edition, observations, provisional capability and first experiment. Blank responses stay open. A partial draft lets the next discussion start from what the students actually saw.
 4. Use the [strategic narrative skill](../skills/frc-strategic-narrative/SKILL.md) to refine the draft. Record the team's choice and its supporting observation IDs. Trace the chosen narrative and capability into the [capability contract](../templates/capability-contract.md) with a measurable acceptance check before choosing a mechanism, control approach or fabrication method. When a trial changes the story, revise that link and revisit the affected requirements.
