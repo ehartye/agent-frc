@@ -25,6 +25,7 @@
       "concept-check.test.mjs",
       "concept-rehearsal.test.mjs",
       "concept-study.test.mjs",
+      "concept-tournament.test.mjs",
       "contact-convergence.test.mjs",
       "context.test.mjs",
       "coupled-support.test.mjs",
