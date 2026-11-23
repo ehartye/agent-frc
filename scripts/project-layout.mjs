@@ -6,7 +6,8 @@ import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 
 export const folders = ['kickoff','cad','controls','sim','experiments','tests','scripts','docs','artifacts'];
-const files = new Set(['README.md','LICENSE','LICENSE.md','AGENTS.md','.gitattributes','.gitignore',
+// .branch-scan.json is the plugin's own file: the ignore list of the path and secret scan.
+const files = new Set(['README.md','LICENSE','LICENSE.md','AGENTS.md','.gitattributes','.gitignore','.branch-scan.json',
   'run.ps1','cad-showcase.json','highlights.json','project-layout.json','package.json','package-lock.json','pyproject.toml',
   'requirements.txt','pytest.ini','settings.gradle','build.gradle','gradlew','gradlew.bat']);
 const toolFolders = new Set(['iterations','.github','.vscode','.wpilib','src','gradle','vendordeps']);
@@ -66,6 +67,42 @@ export function workflowRows(root, ref) {
   return rows;
 }
 
+const blockStart = '<!-- agent-frc:design-checks:start -->', blockEnd = '<!-- agent-frc:design-checks:end -->';
+/**
+ * The standing instruction an agent in a robot project reads before any skill loads: what to run for which change.
+ * It condenses the plugin's docs/testing-methodology.md and names no season, game or team.
+ */
+export const designChecksBlock = [blockStart,
+  '## Design checks',
+  '',
+  'Run a check only when the change could break what it protects. This block is written by the Agent FRC plugin; edit outside it. [Method](https://github.com/ehartye/agent-frc/blob/main/docs/testing-methodology.md)',
+  '',
+  '| The change touches | What to run |',
+  '| --- | --- |',
+  '| Geometry, a motion, a tolerance or reserve, a fixture, a trial, a mass or voltage budget | The local layout check, on the phases the change affects |',
+  '| The review page, a title, a colour, a name, a version label, a status word, a document | `--view-only` when the page shows it, then the publication check with `--skip-rerun`. Never the layout check |',
+  '| A draft being published | The publication check with `--skip-rerun`. A draft is published on its local check |',
+  '| A design being marked effective | Nothing more locally. CI reruns the full layout check once on the committed design. Make the status change the last commit of its pull request |',
+  '| The physics of an effective design | Do not edit it in place. Open the next minor version as a draft |',
+  '',
+  '- Time guidelines: about 1 minute while editing, 5 before merging, 15 at a stage gate.',
+  '- When a run is heading past its guideline, stop and tell the owner what is slow and why. Agree a budget before going on.',
+  '- Do not repeat a run whose inputs have not changed.',
+  '- Read what each command prints: it says what ran, what did not and what CI will do on push.',
+  blockEnd].join('\n');
+/** Write the block into the project's AGENTS.md, or replace the one it holds. Returns 'written', 'updated' or 'current'. */
+export function writeDesignChecks(root) {
+  const file = path.join(root, 'AGENTS.md'), held = existsSync(file) ? readFileSync(file, 'utf8') : null;
+  const from = held?.indexOf(blockStart) ?? -1, to = held?.indexOf(blockEnd) ?? -1;
+  if (from >= 0 && to < from) throw Error('AGENTS.md holds an unfinished Design checks block: restore both marker lines, or delete the block');
+  const next = held === null ? '# Agent instructions\n\n' + designChecksBlock + '\n'
+    : from >= 0 ? held.slice(0, from) + designChecksBlock + held.slice(to + blockEnd.length)
+    : held.replace(/\s*$/, '') + '\n\n' + designChecksBlock + '\n';
+  if (next === held) return 'current';
+  writeFileSync(file, next);
+  return from >= 0 ? 'updated' : 'written';
+}
+
 export function inspect(root) {
   const configFile = path.join(root,'project-layout.json');
   const config = existsSync(configFile) ? JSON.parse(readFileSync(configFile,'utf8')) : {};
@@ -96,7 +133,7 @@ export function inspect(root) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   const [mode, directory] = process.argv.slice(2);
-  if (!['init','check'].includes(mode) || !directory) throw Error('Usage: project-layout.mjs init|check PROJECT');
+  if (!['init','check','agents'].includes(mode) || !directory) throw Error('Usage: project-layout.mjs init|check|agents PROJECT');
   const root = path.resolve(directory);
   const checkout = execFileSync('git',['-C',root,'rev-parse','--show-toplevel'],{encoding:'utf8'}).trim();
   if (path.relative(root,checkout) || !statSync(root).isDirectory()) throw Error('Select the project checkout root');
@@ -107,7 +144,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
     if(newRobot)writeFileSync(path.join(root,'cad','frame-profile.json'),JSON.stringify(starterFrameProfile(),null,2)+'\n',{flag:'wx'});
     if (!existsSync(path.join(root,indexPath))) writeFileSync(path.join(root,indexPath),indexTemplate,{flag:'wx'});
   }
-  const issues = inspect(root).filter(issue => mode !== 'init' || issue !== 'Track the project workflow index at '+indexPath);
+  // The project's standing instruction on what to run for which change, kept current by init and by agents.
+  if (mode !== 'check') console.log('Design checks block in AGENTS.md: ' + writeDesignChecks(root) + '.');
+  const issues = mode === 'agents' ? [] : inspect(root).filter(issue => mode !== 'init' || issue !== 'Track the project workflow index at '+indexPath);
   if (issues.length) { console.error(issues.join('\n')); process.exitCode = 1; }
-  else console.log('Project layout passed.');
+  else if (mode !== 'agents') console.log('Project layout passed.');
 }

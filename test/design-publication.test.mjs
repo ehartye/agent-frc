@@ -9,6 +9,8 @@ import {gzipSync, gunzipSync} from 'node:zlib';
 import {checkProject, compareVerdicts, pluginVersion} from '../scripts/design-publication.mjs';
 import {issueRelease, listing, sha, write} from './fixtures/preliminary-release.mjs';
 
+// The project's stage.py is a few lines that call the plugin's staging command; this names the plugin for it.
+process.env.AGENT_FRC_PLUGIN = fileURLToPath(new URL('..', import.meta.url));
 // Synthetic teaching fixtures: invented releases, cases and objectives with no relation to any game.
 const script = fileURLToPath(new URL('../scripts/design-publication.mjs', import.meta.url));
 const prelim = 'docs/preliminary-design', detail = 'docs/detailed-design';
@@ -89,12 +91,12 @@ test('a draft is checked for what it publishes and is not rerun; a rerun on requ
   assert.deepEqual(pushed.warnings, []);
   assert.deepEqual(pushed.preliminary, {current: 'layout-001', releases: [{release: 'layout-001', status: 'in-progress', rerun: 'not needed'}]});
   assert.deepEqual(pushed.reruns, [{design: 'Preliminary release layout-001', status: 'in-progress', rerun: 'not needed',
-    why: 'It is in progress. A draft is not rerun here: its author runs the local layout check on what changed.'}]);
+    why: 'not rerun: draft. Its author runs the local layout check on what changed.'}]);
   assert.deepEqual(p.calls, []);
   const result = p.rerunAll();
   assert.deepEqual(result.errors, []);
   assert.deepEqual(result.preliminary, {current: 'layout-001', releases: [{release: 'layout-001', status: 'in-progress', rerun: 'pass'}]});
-  assert.equal(result.reruns[0].why, 'Rerun on request (--rerun all). The layout check ran on the committed inputs and reproduced the receipt.');
+  assert.equal(result.reruns[0].why, 'rerun: on request (--rerun all). It reproduced the committed receipt.');
   assert.deepEqual(p.calls, ['layout-001']);
   assert.equal(result.plugin, pluginVersion);
 });
@@ -150,7 +152,7 @@ test('a live release needs committed inputs; history is neither rerun nor requir
   assert.deepEqual(rerunsOf(result), [undefined, undefined, 'pass', 'pass']);
   // Without a base commit nothing reruns, and the report says how to ask for it.
   assert.deepEqual(rerunsOf(p.check()), [undefined, undefined, 'not needed', 'not needed']);
-  assert.match(whyOf(p.check(), 'layout-003'), /no base commit to compare with.*Pass --rerun all to rerun it on demand/);
+  assert.match(whyOf(p.check(), 'layout-003'), /^not rerun: no base commit to compare with\. Pass --rerun all to rerun on demand\.$/);
   assert.equal(p.calls.length, 2);
   assert.equal(result.reports.length, 1, 'the effective release prints its readiness report');
   assert.match(result.reports[0].title, /layout-003 \(effective\)/);
@@ -252,33 +254,39 @@ test('the layout check reruns once, when the change under check makes a design e
   const base = p.commit('base');
   // A draft increment: nothing reruns, whatever it edits.
   write(p.root, 'cad/preliminary-design/releases/layout-002/notes.md', 'changed input');
-  write(p.root, '.github/workflows/design-publication.yml', 'name: changed pins');
+  write(p.root, '.github/workflows/another.yml', 'name: a changed workflow');
   p.commit('draft increment and a workflow change');
   let result = p.check({base});
   assert.deepEqual([result.errors, rerunsOf(result), p.calls], [[], ['not needed', 'not needed'], []]);
-  assert.equal(whyOf(result, 'layout-001'), 'It was effective before this change, and the change leaves its physics as it was.');
-  assert.match(whyOf(result, 'layout-002'), /^It is in progress\. A draft is not rerun here/);
+  assert.equal(whyOf(result, 'layout-001'), 'not rerun: effective, physics unchanged.');
+  assert.match(whyOf(result, 'layout-002'), /^not rerun: draft\./);
   // The stage gate: the status change reruns the design that becomes effective, and only that one.
   p.setStatus({'layout-001': 'superseded', 'layout-002': 'effective'});
   const promoted = p.commit('mark effective');
   result = p.check({base});
   assert.deepEqual([result.errors, result.warnings, rerunsOf(result), p.calls], [[], [], [undefined, 'pass'], ['layout-002']]);
-  assert.equal(whyOf(result, 'layout-002'), 'This change makes it effective. The layout check ran on the committed inputs and reproduced the receipt.');
+  assert.equal(whyOf(result, 'layout-002'), 'rerun: becoming effective. It reproduced the committed receipt.');
   assert.equal(result.reports.length, 1, 'the readiness report is printed for the reviewer');
+  // A gate that runs past the guideline says so, as a warning for the owner. One inside it says nothing.
+  const clock = minutes => { let calls = 0; return () => calls++ * minutes * 60000; };
+  assert.deepEqual(p.check({base, now: clock(14)}).warnings, []);
+  assert.deepEqual(p.check({base, now: clock(22)}).warnings, ['Preliminary release layout-002: the layout check took 22 minutes, past the guideline of about 15 for a stage gate. ' +
+    'Tell the owner what is slow and agree a budget before the next gate. Method: https://github.com/ehartye/agent-frc/blob/main/docs/testing-methodology.md']);
+  p.calls.length = 1;
   // A gate that does not reproduce the receipt fails the change.
   assert.match(errorsOf(p.check({base, run: p.run(r => ({...r, cases: r.cases.map(c => ({...c, status: 'fail'}))}))})), /layout-002 \(rerun\) needs every clearance case to pass/);
   // The default branch after the merge: its base is the commit before, and it does not repeat the gate of the branch.
   p.calls.length = 0;
   result = p.check({base, skipRerun: true});
   assert.deepEqual([result.errors, rerunsOf(result), p.calls], [[], [undefined, 'skipped'], []]);
-  assert.equal(whyOf(result, 'layout-002'), 'This change makes it effective. Not rerun: --skip-rerun. The gate is the push of the branch that carries the change.');
+  assert.equal(whyOf(result, 'layout-002'), 'not rerun: becoming effective, with --skip-rerun. The gate is the push of the branch that carries the change.');
   // The next change finds it effective already.
   write(p.root, 'notes.md', 'unrelated');
   p.commit('unrelated');
   result = p.check({base: promoted});
   assert.deepEqual([result.errors, rerunsOf(result), p.calls], [[], [undefined, 'not needed'], []]);
   // A base that is not a commit is no base.
-  assert.match(whyOf(p.check({base: 'f'.repeat(40)}), 'layout-002'), /no base commit to compare with/);
+  assert.match(whyOf(p.check({base: 'f'.repeat(40)}), 'layout-002'), /^not rerun: no base commit to compare with/);
 });
 
 test('an effective design keeps its physics: labels and the view may change, the checked inputs and results may not', t => {
@@ -339,13 +347,13 @@ test('a rename keeps the design: the same physics under a new ID is not rerun', 
   p.commit('rename');
   let result = p.check({base});
   assert.deepEqual([result.errors, result.warnings, rerunsOf(result), p.calls], [[], [], ['not needed'], []]);
-  assert.equal(whyOf(result, '1.0'), 'It replaces layout-001, which was effective before this change, with the same physics under a new ID.');
+  assert.equal(whyOf(result, '1.0'), 'not rerun: effective, the same physics as layout-001 under a new ID.');
   // A rename that also changes the plan's physics is a new design, and the gate reruns it.
   authorPlan(p, '1.0', {purpose: 'park'});
   p.commit('renamed and changed');
   result = p.check({base});
   assert.deepEqual([result.errors, rerunsOf(result), p.calls], [[], ['pass'], ['1.0']]);
-  assert.match(whyOf(result, '1.0'), /^This change makes it effective\./);
+  assert.match(whyOf(result, '1.0'), /^rerun: becoming effective\./);
 });
 
 test('a project in a subfolder of its repository is compared by its own paths', t => {
@@ -478,18 +486,27 @@ test('the command reports every error, exits nonzero and passes a project with n
   const skipped = run('--skip-rerun');
   assert.equal(skipped.status, 0, skipped.stderr);
   assert.equal(JSON.parse(skipped.stdout).preliminary.releases[0].rerun, 'skipped');
-  assert.match(skipped.stderr, /\[rerun\] Preliminary release layout-001: skipped\. It is in progress\..* Not rerun: --skip-rerun\./);
-  // A workflow copied before results stopped being kept still passes --cache: it is accepted and ignored.
+  // The line an agent reads: one for each design, saying whether the layout check ran and why.
+  assert.match(skipped.stderr, /^\[layout check\] Preliminary release layout-001: not rerun: draft\. Its author runs the local layout check on what changed\.$/m);
+  // A workflow file from an earlier release passes --cache: one message says what to replace.
   const old = run('--cache', path.join(p.root, '.cache'), '--budget-minutes', '45');
-  assert.equal(old.status, 0, old.stderr);
-  assert.match(old.stderr, /Note: --cache is no longer used and is ignored/);
+  assert.equal(old.status, 2);
+  assert.match(old.stderr, /^--cache is no longer an option: nothing is kept between runs\. This workflow file is from an earlier plugin release\. Replace \.github\/workflows\/design-publication\.yml with the plugin's templates\/design-publication\.yml/);
   assert.ok(!existsSync(path.join(p.root, '.cache')));
-  assert.equal(JSON.parse(old.stdout).preliminary.releases[0].rerun, 'not needed');
   assert.equal(run('--rerun', 'sometimes').status, 2);
+  // Copies of plugin behaviour from an earlier release are named in one message, and the project's two thin callers pass.
+  write(p.root, '.github/workflows/design-publication.yml', 'name: Design publication\nenv:\n  AGENT_FRC_REF: an-earlier-pin\n');
+  write(p.root, 'cad/preliminary-design/stage.py', 'def stage(season, inputs, release):\n    pass\n');
+  const stale = run('--skip-rerun');
+  assert.equal(stale.status, 1);
+  assert.match(stale.stderr, /^Error: This project carries copies of plugin behaviour from an earlier release\. Replace \.github\/workflows\/design-publication\.yml with the plugin's templates\/design-publication\.yml, and cad\/preliminary-design\/stage\.py with the plugin's templates\/stage-preliminary-review\.py\. Each is now a few lines that call the plugin, so there is nothing to copy again\.$/m);
+  for (const [name, template] of [['.github/workflows/design-publication.yml', 'design-publication.yml'], ['cad/preliminary-design/stage.py', 'stage-preliminary-review.py']])
+    write(p.root, name, readFileSync(fileURLToPath(new URL('../templates/' + template, import.meta.url))));
+  assert.equal(run('--skip-rerun').status, 0);
   // The step summary says for each design whether the layout check reran, and why.
   const summary = path.join(p.root, 'summary.md');
   spawnSync(process.execPath, [script, 'check', p.root], {encoding: 'utf8', env: {...process.env, GITHUB_ACTIONS: '', GITHUB_STEP_SUMMARY: summary}});
-  assert.match(readFileSync(summary, 'utf8'), /### Layout check reruns\n\n\| Design \| Status \| Layout check \| Why \|\n.*\n\| Preliminary release layout-001 \| in-progress \| not rerun \(not needed\) \| It is in progress\./);
+  assert.match(readFileSync(summary, 'utf8'), /### Layout check\n\n\| Design \| Status \| Layout check \|\n.*\n\| Preliminary release layout-001 \| in-progress \| not rerun: draft\. Its author runs the local layout check on what changed\. \|\n\nMethod: https:\/\/github\.com\/ehartye\/agent-frc\/blob\/main\/docs\/testing-methodology\.md/);
   rmSync(summary);
   editJson(path.join(p.root, prelim, 'releases.json'), i => ({...i, current: 'layout-009'}));
   const failed = run('--skip-rerun');
@@ -591,7 +608,7 @@ test('on a real release a view refresh and a rename pass with no rerun, and a ch
     commit('view refresh');
     let result = pushed(effective);
     assert.deepEqual([result.errors, result.warnings, result.preliminary.releases[0].rerun], [[], [], 'not needed']);
-    assert.equal(result.reruns[0].why, 'It was effective before this change, and the change leaves its physics as it was.');
+    assert.equal(result.reruns[0].why, 'not rerun: effective, physics unchanged.');
     // A rename: the same design under another ID, folder and issue name, checked there and staged, and the earlier ID removed.
     stage('--copy-inputs', '1.0', '1.1');
     for (const name of ['layout.json', 'budgets.json', 'pickup-face-current.json', 'acquire-time-current.json']) {
@@ -606,7 +623,7 @@ test('on a real release a view refresh and a rename pass with no rerun, and a ch
     commit('rename');
     result = pushed(effective);
     assert.deepEqual([result.errors, result.warnings, result.preliminary.releases], [[], [], [{release: '1.1', design: 'Turning carrier 1.1', status: 'effective', rerun: 'not needed'}]]);
-    assert.equal(result.reruns[0].why, 'It replaces 1.0, which was effective before this change, with the same physics under a new ID.');
+    assert.equal(result.reruns[0].why, 'not rerun: effective, the same physics as 1.0 under a new ID.');
     const renamed = git('rev-parse', 'HEAD');
     // A change to the physics of the effective design: a tolerance in its motion study, with a receipt that agrees.
     editJson(path.join(season, releases, '1.1/paths.json'), study => ({...study, cases: study.cases.map((c, i) => i ? c : {...c, minGapMm: 0.5})}));

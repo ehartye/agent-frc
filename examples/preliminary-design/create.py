@@ -274,7 +274,8 @@ if __name__=="__main__":
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(templates / source, dest)
         create(author / "releases" / args.release, release_id=args.release, project=season, pins=args.pins)
-        subprocess.run([sys.executable, str(author / "stage.py"), args.release, *(["--design-name", args.design_name] if version else [])], check=True)
+        subprocess.run([sys.executable, str(author / "stage.py"), "--plugin", str(templates.parent), args.release,
+                        *(["--design-name", args.design_name] if version else [])], check=True)
     else:
         # The new directory stands for a repository: the package sits in a release folder inside it.
         create(args.new_directory.resolve() / RELEASES / args.release, project=args.new_directory.resolve(), pins=args.pins)

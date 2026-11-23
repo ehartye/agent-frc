@@ -137,7 +137,7 @@ class ViewLocation(unittest.TestCase):
 
     def test_staging_reads_pins_from_the_root_the_receipt_was_checked_in(self):
         import importlib.util
-        spec = importlib.util.spec_from_file_location("stage_review", SCRIPTS.parent / "templates/stage-preliminary-review.py")
+        spec = importlib.util.spec_from_file_location("stage_review", SCRIPTS / "stage_preliminary_review.py")
         stage = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(stage)
         view = lambda name: name

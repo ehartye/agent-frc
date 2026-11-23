@@ -184,6 +184,24 @@ export function runLayoutCheck({project, plan, previous, budgetMinutes = 45, job
 function findByDigest(dir, digest) {
   return namesUnder(dir).find(name => name.endsWith('.json') && sha(readFileSync(path.join(dir, name))) === digest) ?? null;
 }
+/** The time guideline for a stage gate, and the page that says when each check runs. */
+const gateGuidelineMinutes = 15;
+export const methodPage = 'Method: https://github.com/ehartye/agent-frc/blob/main/docs/testing-methodology.md';
+
+/**
+ * What a project still carries from an earlier plugin release, as one message that says what to change. A project
+ * holds data and two thin files that call the plugin; a copy of plugin behaviour is replaced, not kept working.
+ */
+export function outdatedFiles(root) {
+  const text = name => { try { return readFileSync(path.join(root, name), 'utf8'); } catch { return null; } };
+  const stale = [['.github/workflows/design-publication.yml', 'agent-frc/.github/workflows/design-publication.yml', 'templates/design-publication.yml'],
+    ['cad/preliminary-design/stage.py', 'stage_preliminary_review.py', 'templates/stage-preliminary-review.py']]
+    .filter(([name, marker]) => { const held = text(name); return held !== null && !held.includes(marker); });
+  return stale.length ? 'This project carries ' + (stale.length === 1 ? 'a copy' : 'copies') + ' of plugin behaviour from an earlier release. Replace ' +
+    stale.map(([name, , template]) => name + ' with the plugin\'s ' + template).join(', and ') +
+    '. Each is now a few lines that call the plugin, so there is nothing to copy again.' : null;
+}
+
 /** The files a receipt records by digest, each with the name a message gives it. */
 const receiptPins = receipt => [['STEP', receipt.step], ['motion study', receipt.motion], ['editable design', receipt.design],
   ['budget ledger', receipt.budgets?.source], ['limits', receipt.budgets?.limits]].filter(([, pin]) => named(pin?.file) && named(pin?.sha256));
@@ -199,9 +217,11 @@ const receiptPins = receipt => [['STEP', receipt.step], ['motion study', receipt
  */
 export function checkProject(root, options = {}) {
   const o = {site: 'docs', preliminary: 'preliminary-design', detailed: 'detailed-design', inputs: 'cad/preliminary-design/releases',
-    detailedInputs: 'cad/detailed-design/designs', run: runLayoutCheck, log: line => console.error(line), ...options};
+    detailedInputs: 'cad/detailed-design/designs', run: runLayoutCheck, log: line => console.error(line), now: () => Date.now(), ...options};
   const errors = [], warnings = [], reports = [], pending = [], reruns = [];
   const attempt = (what, body) => { try { return body(); } catch (error) { errors.push(error.message); return undefined; } };
+  const outdated = outdatedFiles(root);
+  if (outdated) errors.push(outdated);
   const base = baseReader(root, o.base);
   const rel = full => path.relative(root, full).split(path.sep).join('/');
   // A project file as it was at the base commit, parsed; null when it was not there.
@@ -374,10 +394,11 @@ export function checkProject(root, options = {}) {
   // Decide for each live design whether the layout check reruns, and hold an effective design to its physics.
   for (const item of pending) attempt(item.where, () => {
     const {where, entry, id, receipt, record, was} = item, project = item.inputs, effective = entry.status === 'effective';
-    const note = (rerun, why) => { entry.rerun = rerun; reruns.push({design: where, status: entry.status, rerun, why}); o.log('[rerun] ' + where + ': ' + rerun + '. ' + why); };
+    // One plain line for each design: whether the layout check reran, and why.
+    const note = (rerun, why) => { entry.rerun = rerun; reruns.push({design: where, status: entry.status, rerun, why}); o.log('[layout check] ' + where + ': ' + why); };
     let gate = false, why;
-    if (!effective) why = 'It is in progress. A draft is not rerun here: its author runs the local layout check on what changed.';
-    else if (!base) why = 'There is no base commit to compare with, so this check cannot tell whether the change makes it effective.';
+    if (!effective) why = 'not rerun: draft. Its author runs the local layout check on what changed.';
+    else if (!base) why = 'not rerun: no base commit to compare with. Pass --rerun all to rerun on demand.';
     else if (was.effective === id) {
       // Already effective: the reviewed physics stands. Labels and the view may change.
       const then = identityBefore(item, id), differ = then ? identityDifferences(identityNow(item), then) : [];
@@ -385,20 +406,22 @@ export function checkProject(root, options = {}) {
       check(!differ.length, where + ' is effective, and this change alters its physics: ' + differ.join(', ') + '. An effective design does not change in place. ' +
         (version ? 'Open ' + version.major + '.' + (version.minor + 1) + ' as a draft and make the change there.' : 'Publish the change as a new design, staged as a draft.') +
         ' A rename, a status or wording change and a rebuilt view pass, because they leave these files and results as they were.');
-      why = 'It was effective before this change, and the change leaves its physics as it was.';
+      why = 'not rerun: effective, physics unchanged.';
     } else {
       // A rename keeps the design: the effective design of the base commit is gone from the index and this one carries its physics.
       const from = was.effective && !item.ids.includes(was.effective) ? was.effective : null, then = from && identityBefore(item, from);
-      if (then && !identityDifferences(identityNow(item), then).length) why = 'It replaces ' + from + ', which was effective before this change, with the same physics under a new ID.';
-      else { gate = true; why = 'This change makes it effective.'; }
+      if (then && !identityDifferences(identityNow(item), then).length) why = 'not rerun: effective, the same physics as ' + from + ' under a new ID.';
+      else { gate = true; why = 'rerun: becoming effective.'; }
     }
     if (!receipt) return;
+    const skipped = () => gate ? 'not rerun: becoming effective, with --skip-rerun. The gate is the push of the branch that carries the change.'
+      : o.rerun === 'all' ? 'not rerun: --skip-rerun.' : why;
     const planName = record.check?.plan ?? 'layout.json', planFile = path.join(project, planName);
     if (!existsSync(planFile)) {
-      if (o.skipRerun) return note('skipped', why + ' Not rerun: --skip-rerun.');
+      if (o.skipRerun) return note('skipped', skipped());
       check(!item.required, where + ': commit its check inputs at ' + rel(project) + ' (' + planName + ' and every file it names) so the layout check can be rerun');
       warnings.push(where + ': the layout check cannot be rerun because its inputs are not committed at ' + rel(project));
-      note('not committed', why);
+      note('not committed', 'not rerun: its inputs are not committed.');
       return;
     }
     const planSha256 = sha(readFileSync(planFile));
@@ -412,19 +435,23 @@ export function checkProject(root, options = {}) {
     }
     if (absent.length) warnings.push(where + ': its receipt names files that are not committed (' + absent.join(', ') + '). The layout check cannot be rerun without them.');
     const all = o.rerun === 'all';
-    if (o.skipRerun) return note('skipped', why + ' Not rerun: --skip-rerun.' + (gate ? ' The gate is the push of the branch that carries the change.' : ''));
-    if (!gate && !all) return note('not needed', why + (effective && !base ? ' Pass --rerun all to rerun it on demand.' : ''));
+    if (o.skipRerun) return note('skipped', skipped());
+    if (!gate && !all) return note('not needed', why);
     const previous = receipt.previousCheckpointSha256 ? record.check?.previous ?? findByDigest(project, receipt.previousCheckpointSha256) : null;
     check(!receipt.previousCheckpointSha256 || previous, where + ': commit the held receipt it was checked against (SHA-256 ' + receipt.previousCheckpointSha256 + ') under ' + rel(project));
-    o.log('[rerun] ' + where + ': layout check on ' + rel(planFile));
-    const within = name => fromRoot ? rel(path.join(project, name)) : name;
+    o.log('[layout check] ' + where + ': running on ' + rel(planFile));
+    const within = name => fromRoot ? rel(path.join(project, name)) : name, began = o.now();
     let fresh;
     try { fresh = o.run({project: fromRoot ? root : project, plan: within(planName), previous: previous && within(previous), budgetMinutes: o.budgetMinutes, jobs: o.jobs}); }
     catch (error) { throw Error(where + ': ' + error.message); }
     checkPhysics(fresh, where + ' (rerun)', {rerun: true});
     const differ = compareVerdicts(receipt, fresh);
     check(!differ.length, where + ': the rerun differs from the committed receipt in ' + differ.join(', ') + '; publish the receipt of the committed inputs');
-    note('pass', (gate ? why : 'Rerun on request (--rerun all).') + ' The layout check ran on the committed inputs and reproduced the receipt.');
+    const minutes = (o.now() - began) / 60000;
+    // A gate that runs long is said aloud, never waited out in silence.
+    if (minutes > gateGuidelineMinutes) warnings.push(where + ': the layout check took ' + Math.round(minutes) + ' minutes, past the guideline of about ' + gateGuidelineMinutes +
+      ' for a stage gate. Tell the owner what is slow and agree a budget before the next gate. ' + methodPage);
+    note('pass', (gate ? why : 'rerun: on request (--rerun all).') + ' It reproduced the committed receipt.');
   });
   return {plugin: pluginVersion, preliminary, detailed, reruns, warnings, reports, errors};
 }
@@ -455,9 +482,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
     check(options.budgetMinutes === undefined || options.budgetMinutes > 0, usage);
     check(options.jobs === undefined || Number.isInteger(options.jobs) && options.jobs > 0, usage);
     check(options.rerun === undefined || ['all', 'gate'].includes(options.rerun), usage);
-    // Results are no longer kept between runs: an earlier copy of the workflow may still pass the folder.
-    if (options.cache !== undefined) console.error('Note: --cache is no longer used and is ignored. The layout check reruns only when a design becomes effective; copy the current workflow template.');
-    delete options.cache;
+    // Results are not kept between runs. Only an earlier copy of the workflow passes this option.
+    check(options.cache === undefined, '--cache is no longer an option: nothing is kept between runs. This workflow file is from an earlier plugin release. ' +
+      'Replace .github/workflows/design-publication.yml with the plugin\'s templates/design-publication.yml, a few lines that call the plugin\'s workflow.');
     // An all-zero or empty base, as a first push supplies, is no base.
     if (options.base !== undefined && /^0*$/.test(options.base)) delete options.base;
     const result = checkProject(path.resolve(project), options), actions = !!process.env.GITHUB_ACTIONS;
@@ -470,8 +497,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
     console.log(JSON.stringify(summary, null, 2));
     if (process.env.GITHUB_STEP_SUMMARY && (result.reports.length || result.reruns.length)) {
       const cell = text => String(text).replace(/\|/g, '\\|');
-      appendFileSync(process.env.GITHUB_STEP_SUMMARY, (result.reruns.length ? '### Layout check reruns\n\n| Design | Status | Layout check | Why |\n| --- | --- | --- | --- |\n' +
-        result.reruns.map(r => '| ' + [r.design, r.status, r.rerun === 'pass' ? 'reran and passed' : 'not rerun (' + r.rerun + ')', r.why].map(cell).join(' | ') + ' |\n').join('') + '\n' : '') +
+      appendFileSync(process.env.GITHUB_STEP_SUMMARY, (result.reruns.length ? '### Layout check\n\n| Design | Status | Layout check |\n| --- | --- | --- |\n' +
+        result.reruns.map(r => '| ' + [r.design, r.status, r.why].map(cell).join(' | ') + ' |\n').join('') + '\n' + methodPage + '\n\n' : '') +
         result.reports.map(r => '### ' + r.title + '\n\n```\n' + r.text + '```\n').join('\n'));
     }
     if (result.errors.length) process.exitCode = 1;

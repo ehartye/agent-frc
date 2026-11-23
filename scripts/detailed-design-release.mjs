@@ -146,6 +146,10 @@ function settled(index, design) {
     : 'Design ' + design + ' is ' + status + '; choose a new ID';
 }
 const report = lines => lines.length ? {report: lines.join('\n') + '\n'} : {};
+// What the project's CI does with the change just made, said after each command. The method: docs/testing-methodology.md.
+const onPush = {draft: 'On push: CI runs the publication checks. The layout check is not rerun for a draft; the local check you ran is its check.',
+  gate: 'On push: this is the stage gate. CI reruns the full layout check once on the committed design, on each push of the branch that carries this change. Make it the last commit of its pull request.',
+  labels: 'On push: CI runs the publication checks. The layout check is not rerun: no physics changed.'};
 
 /** Replay the Fusion authority register and export lineage: the archive and STEP the registered design exports to. */
 function fusionExport({project, authority, lineage, python}) {
@@ -227,7 +231,7 @@ export function stageInProgress({project, design, designName, inputs, preliminar
   if (backup) rmSync(backup, {recursive: true, force: true});
   check(!found.length, found.join('\n'));
   return {...saved, ...report([(number > 1 ? 'Revised ' + described(index, design) + ' in place' : 'Staged ' + described(index, design)) + ' (' + stateOf(index, design) + ')',
-    ...notes.map(n => 'Note: ' + n)])};
+    ...notes.map(n => 'Note: ' + n), onPush.draft])};
 }
 
 /** Whether a published folder holds exactly these files. */
@@ -259,7 +263,7 @@ export function relink({project, design, preliminary, ...folders}) {
   const saved = saveIndex(at, index), found = problems(at, design);
   if (found.length) { writeFileSync(recordFile, recordBefore); writeFileSync(at.indexFile, indexBefore); }
   check(!found.length, found.join('\n'));
-  return {...saved, ...report([sentence(described(index, design)) + ' is now built on preliminary ' + preliminary + (was && was !== preliminary ? ' (was ' + was + ')' : '') + ' and keeps its ID'])};
+  return {...saved, ...report([sentence(described(index, design)) + ' is now built on preliminary ' + preliminary + (was && was !== preliminary ? ' (was ' + was + ')' : '') + ' and keeps its ID', onPush.labels])};
 }
 
 /**
@@ -300,7 +304,7 @@ export function markEffective({project, design, designName, readiness, benchTest
   return {...saveIndex(at, index), report: readinessSummary(review) + (bench.record ? 'Bench tests: ' + benchText(benchSummary(bench.record)) + '\n' : '') +
     notes.map(n => 'Note: ' + n + '\n').join('') + (version ? 'Work toward the next baseline of ' +
     architectureName(index, design) + ' is ' + version.major + '.' + (version.minor + 1) + ', staged as drafts until it is accepted. A different architecture is ' +
-    (latest + 1) + '.0 with its own name.\n' : '')};
+    (latest + 1) + '.0 with its own name.\n' : '') + onPush.gate + '\n'};
 }
 
 /**

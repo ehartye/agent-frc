@@ -56,6 +56,19 @@ class LayoutScope(unittest.TestCase):
         stderr = self.baseline.stderr.splitlines()
         self.assertLess(stderr.index(lines[0]), next(i for i, l in enumerate(stderr) if l.startswith("[motion] ")))
 
+    def test_the_run_reports_its_time_against_the_guidelines(self):
+        lines = [line for line in self.baseline.stderr.splitlines() if line.startswith("[time] ")]
+        self.assertEqual(len(lines), 1, self.baseline.stderr)
+        self.assertRegex(lines[0], r"^\[time\] layout check in \d+ s\. Guidelines: about 1 minute while editing, 15 minutes at a stage gate\.$")
+        self.assertEqual(self.baseline.stderr.splitlines()[-1], lines[0], "the last line an agent reads")
+        self.assertNotIn("[time]", self.check(self.plan, "--quiet").stderr)
+        time_lines = runpy.run_path(str(SCRIPTS / "preliminary_design.py"), run_name="scope_time")["time_lines"]
+        self.assertEqual(len(time_lines(42)), 1)
+        self.assertIn("past the guideline for a check while editing", time_lines(200)[1])
+        self.assertIn("[time] layout check in 11.0 min.", time_lines(660)[0])
+        self.assertIn("this run passed ten minutes. Stop and tell the owner what is slow and why", time_lines(660)[1])
+        self.assertIn("[time] view rebuilt in 3 s.", time_lines(3, reused=True)[0])
+
     def test_passing_a_guideline_is_information_only(self):
         first, second = list(self.plan["stages"])[:2]
         def deeper(plan):

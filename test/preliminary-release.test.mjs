@@ -9,6 +9,8 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 
+// The project's stage.py is a few lines that call the plugin's staging command; this names the plugin for it.
+process.env.AGENT_FRC_PLUGIN = fileURLToPath(new URL('..', import.meta.url));
 // Synthetic teaching fixture: an invented layout with one case and one objective.
 test('the season script publishes a checked release, records where its inputs are and sets design statuses', async t => {
   const root = await mkdtemp(path.join(tmpdir(), 'preliminary-releases-'));
@@ -106,7 +108,8 @@ test('the season script publishes a checked release, records where its inputs ar
   const promoted = stage('--set-status', 'b', 'effective');
   assert.equal(promoted.status, 0, promoted.stderr);
   assert.match(promoted.stdout, /Preliminary release b is effective; the site opens b/);
-  assert.match(promoted.stdout, /effective-readiness/, 'the reviewer is pointed at the readiness report');
+  assert.match(promoted.stdout, /Effective-readiness report for synthetic-b/, 'the reviewer is shown the readiness report of the installed plugin');
+  assert.match(promoted.stdout, /On push: this is the stage gate\. CI reruns the full layout check once on the committed design/, 'the command says what CI will do');
   assert.deepEqual(await index(), {releases: ['a', 'b'], revision: counted, designStatus: {a: 'superseded', b: 'effective'}, accepted: {a: 'DATE', b: 'DATE'}, current: 'b'});
   assert.ok(existsSync(path.join(site, 'releases', 'a', 'receipt.json')), 'superseding a release keeps its published files');
   assert.match(stage('--set-status', 'b', 'paused').stderr, /in-progress, effective, superseded, withdrawn/);

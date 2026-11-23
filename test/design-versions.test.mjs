@@ -9,6 +9,8 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 
+// The project's stage.py is a few lines that call the plugin's staging command; this names the plugin for it.
+process.env.AGENT_FRC_PLUGIN = fileURLToPath(new URL('..', import.meta.url));
 // Synthetic teaching fixtures: two invented architectures, "Tilting carriage" and "Swinging arm", each a one-case layout.
 async function season(t) {
   const root = await mkdtemp(path.join(tmpdir(), 'design-versions-'));
@@ -51,7 +53,7 @@ test('a version is staged under MAJOR.MINOR and its architecture is named once',
   assert.match(s.stage('1.0').stderr, /Name design 1 with --design-name "NAME": a short name in words for the architecture/);
   assert.match(s.stage('1.0', '--design-name', ' ').stderr, /Give the design a short name in words/);
   assert.ok(!existsSync(path.join(s.site, 'releases')), 'an unnamed design publishes nothing');
-  assert.match(s.ok(s.stage('1.0', '--design-name', 'Tilting  carriage')), /^Staged preliminary design Tilting carriage 1\.0 \(draft 1, in progress\)\r?\n$/);
+  assert.match(s.ok(s.stage('1.0', '--design-name', 'Tilting  carriage')), /^Staged preliminary design Tilting carriage 1\.0 \(draft 1, in progress\)\r?\nOn push: CI runs the publication checks\. The layout check is not rerun for a draft; the local check you ran is its check\.\r?\n$/);
   assert.deepEqual(await s.index(), {releases: ['1.0'], designs: {1: {name: 'Tilting carriage'}}, revision: {'1.0': rev(1)},
     designStatus: {'1.0': 'in-progress'}, current: '1.0'});
   const record = JSON.parse(await readFile(path.join(s.site, 'releases', '1.0', 'release.json')));
@@ -82,12 +84,13 @@ test('drafts take no number: one in-progress version per architecture, and a new
   const accepted = s.ok(s.stage('--set-status', '1.0', 'effective'));
   assert.match(accepted, /Preliminary design Tilting carriage 1\.0 is effective; the site opens 1\.0/);
   assert.match(accepted, /Work toward the next baseline of Tilting carriage is 1\.1, staged as drafts until it is accepted\. A different architecture is 2\.0 with its own name\./);
-  assert.match(accepted, /effective-readiness \S+ --design "Tilting carriage 1\.0"/);
+  assert.match(accepted, /Effective-readiness report for Tilting carriage 1\.0 \(/);
+  assert.match(accepted, /On push: this is the stage gate\. CI reruns the full layout check once on the committed design, on each push of the branch that carries this change\. Make it the last commit of its pull request\./);
   await s.fixture('1.0', {page: '<html>Edited after acceptance</html>'});
   assert.match(s.stage('1.0').stderr, /Tilting carriage 1\.0 is effective and no longer changes\. Work toward its next baseline is 1\.1, staged as a draft/);
 
   // An accepted revision: 1.1 is drafted beside the effective 1.0, then supersedes it.
-  assert.match(s.ok(s.stage('1.1')), /^Staged preliminary design Tilting carriage 1\.1 \(draft 1, in progress\)\r?\n$/);
+  assert.match(s.ok(s.stage('1.1')), /^Staged preliminary design Tilting carriage 1\.1 \(draft 1, in progress\)\r?\nOn push: CI runs the publication checks\. The layout check is not rerun for a draft; the local check you ran is its check\.\r?\n$/);
   await s.fixture('1.1', {page: '<html>Second draft of 1.1</html>'});
   assert.match(s.ok(s.stage('1.1')), /\(draft 2, in progress\)/);
   assert.deepEqual([(await s.index()).designStatus, (await s.index()).current], [{'1.0': 'effective', '1.1': 'in-progress'}, '1.0']);
@@ -223,19 +226,22 @@ test('the view of an effective release is republished while its receipt records 
   // A draft is revised by staging it again; the refresh is for the release that no longer changes.
   assert.match(s.stage('--refresh-view', '1.0').stderr, /--refresh-view republishes the view of the effective release\. Preliminary design Tilting carriage 1\.0 is in-progress; stage it to publish or revise it: stage\.py 1\.0/);
   s.ok(s.stage('--set-status', '1.0', 'effective'));
-  const before = await readFile(path.join(s.site, 'releases.json'), 'utf8');
+  const before = await s.index();
   // A rebuilt review page on the same STEP: published, and the index keeps its status, accepted date and draft count.
   await s.fixture('1.0', {page: '<html>Rebuilt review of 1.0</html>'});
   assert.match(s.stage('1.0').stderr, /Tilting carriage 1\.0 is effective and no longer changes/);
-  assert.match(s.ok(s.stage('--refresh-view', '1.0')), /^Refreshed the view of preliminary design Tilting carriage 1\.0 \(effective\)\. Its physics, status and accepted date are unchanged\r?\n$/);
+  assert.match(s.ok(s.stage('--refresh-view', '1.0')), /^Refreshed the view of preliminary design Tilting carriage 1\.0 \(effective\)\. Its physics, status, accepted date and draft count are unchanged\r?\nOn push: CI runs the publication checks\. The layout check is not rerun: no physics changed\.\r?\n$/);
   assert.equal(await published('index.html'), '<html>Rebuilt review of 1.0</html>');
-  assert.equal(await readFile(path.join(s.site, 'releases.json'), 'utf8'), before);
+  // The refresh is recorded as a refresh. It is no draft: the status, the accepted date and the draft count stay.
+  const refreshed = {...before, refreshed: {'1.0': {date: 'DATE'}}};
+  assert.deepEqual([before.designStatus, before.accepted, before.revision], [{'1.0': 'effective'}, {'1.0': 'DATE'}, {'1.0': rev(1)}]);
+  assert.deepEqual(await s.index(), refreshed);
   assert.match(s.ok(s.stage('--refresh-view', '1.0')), /Preliminary design Tilting carriage 1\.0 is unchanged \(effective\)/);
   // A receipt of another STEP is a changed design: refused, with the version that work belongs to, and nothing is published.
   await s.fixture('1.0', {page: '<html>Review of a changed design</html>', step: 'a changed step'});
   assert.match(s.stage('--refresh-view', '1.0').stderr,
     /Tilting carriage 1\.0 is effective and this receipt differs from the published one in the STEP\. A view refresh keeps the physics\. Work that changes it belongs to 1\.1, staged as a draft/);
   assert.equal(await published('index.html'), '<html>Rebuilt review of 1.0</html>');
-  assert.equal(await readFile(path.join(s.site, 'releases.json'), 'utf8'), before);
+  assert.deepEqual(await s.index(), refreshed);
   assert.match(s.stage('--refresh-view', '1.0', '--design-name', 'Another name').stderr, /a view refresh changes no name/);
 });
