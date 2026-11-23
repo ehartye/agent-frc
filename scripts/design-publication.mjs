@@ -103,6 +103,7 @@ export function checkEvidence(where, files, record) {
   const represented = new Set(list(receipt.narrativeReview?.objectives).filter(o => o?.disposition === 'represented').map(o => o.objective));
   // A trial counts only when the receipt names it: pinned by the case's stage, or as a scene interaction's evidence.
   const sceneTrials = list(read.scene.fieldInteractions).map(r => r?.evidence?.sha256).filter(Boolean);
+  const animations = read.scene.animations;
   const missions = record.missionCases;
   check(Array.isArray(missions) && missions.length, where + ' declares no mission case');
   for (const m of missions) {
@@ -112,6 +113,9 @@ export function checkEvidence(where, files, record) {
     check(represented.has(m.objective), mission + ' must accomplish a represented narrative objective');
     check(receipt.stages?.[m.case]?.purpose === 'operating' && list(receipt.cycle).includes(m.case), mission + ' must be an operating case in the checked cycle');
     check(receipt.cases.some(c => c.case === m.case && c.status === 'pass') && shown.get(m.case) === 'pass', mission + ' needs passing evidence played in the review');
+    // An animation shows a mission phase; a case is one checked segment of it. A scene written before animations lists none.
+    check(!Array.isArray(animations) || animations.some(a => a?.mission === true && list(a.cases).includes(m.case)),
+      mission + ' is not played by a mission animation of the review. Its phase is marked "headline": false under presentation.phases; name a case of a headline phase');
     if (m.kind !== 'field-interaction-trial') continue;
     const trial = m.player !== undefined ? list(record.fieldPlayers).find(p => p?.file === m.player)?.trial : m.trial;
     check(object(trial) && named(trial.file) && files.has(trial.file), mission + ' must publish its trial file');

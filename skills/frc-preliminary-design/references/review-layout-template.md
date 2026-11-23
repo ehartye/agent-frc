@@ -12,7 +12,7 @@ Start from the stock page and keep its regions and controls unless the project h
 - [Versions, drafts and the published site](#versions-drafts-and-the-published-site)
 - [Page order](#page-order)
 - [Scene data and who supplies it](#scene-data-and-who-supplies-it)
-- [Play a recorded trial in the motion list](#play-a-recorded-trial-in-the-motion-list)
+- [Play a recorded trial in the animation list](#play-a-recorded-trial-in-the-animation-list)
 - [Shape the layout reviewers will inspect](#shape-the-layout-reviewers-will-inspect)
 - [Copyable review rows](#copyable-review-rows)
 - [Migrate an earlier design](#migrate-an-earlier-design)
@@ -52,7 +52,7 @@ cad/preliminary-design/
     review-scene.json.gz         the scene the page reads (ignored; see below)
     release-lane-trial.json      example trial record for a field interaction
     release-lane-run.json        example recorded run, synthetic
-    release-lane-replay.json     example replay set that plays the run in the motion list
+    release-lane-replay.json     example replay set that plays the run in the animation list
     field/release-lane.html      earlier separate field page, kept by the synthetic example; do not add one
 .github/workflows/
   design-publication.yml         scans each pushed branch, reruns the layout check, deploys from the default branch
@@ -128,12 +128,12 @@ The stock page has these regions, top to bottom. Each value comes from the scene
 | Region | What the page shows | Review action |
 | --- | --- | --- |
 | 1. Header and title | The navy header bar with any season links, which open in the top window. The page has no link back to the index: the stable index's version picker moves between versions, and links that leave the review open at the top or, for the receipt, in a new tab, so nothing loads a page inside the index's frame. A title block: the project, the design name and version from the index (the ID for one that is not a version) and "Preliminary design" above the title (`presentation.title`, else the plan's `issue` name), and a chip combining the draft number and design status from the index with the receipt decision, such as "Draft 3 · in progress · layout-checked" or "Effective · layout-checked". The first unmet requirement appears beside the chip only when there is one. A collapsed **Review basis** holds the selected architecture, datum, units, strategic narrative revision, current decision and first unmet requirement, so the page opens onto the model. | Read the chip and any unmet requirement; open the review basis and the narrative objectives. |
-| 2. Viewer row | **Viewer column**, in this order: (a) top bar with the pane title "Assembly layout", then view toggles and view buttons only: **Labels** (with callout paging when the callouts span pages), **Floor**, an optional data-driven cutaway toggle, **Fit robot**, **Fit field interaction** and **Expand**; (b) the canvas; (c) the control hint line; (d) the **playback row, directly below the canvas**: one motion selector that lists the checked cases and then any trial replays, **Play**, speed (1×, ¼×, 4×, 10×), the slider and its percent or seconds readout; (e) the live readout for the selected entry (its per-frame measure or result, the current event with numbered jump buttons when a replay records events, and its basis), with the reason whenever **Fit field interaction** is off; (f) the category legend. **Inspector column**, docked to the right: the component inspector (its heading, hint and search until a part is selected; then the part with Focus part, Show assembly and Locate in ledger), then the selection budget with Whole robot, Category, Subsystem and Custom subsystem groupings, the electrical duty and the allocation detail. | Orbit through 360° and underneath, pan, zoom, fit the robot or the field interaction, expand to full screen, pick a surface, search by name or ID, focus a part and show the assembly, locate a part in the ledgers, toggle labels and page the callouts, play and scrub each case and replay at any speed, and jump to a replay's events. |
+| 2. Viewer row | **Viewer column**, in this order: (a) top bar with the pane title "Assembly layout", then view toggles and view buttons only: **Labels** (with callout paging when the callouts span pages), **Floor**, an optional data-driven cutaway toggle, **Fit robot**, **Fit field interaction** and **Expand**; (b) the canvas; (c) the control hint line; (d) the **playback row, directly below the canvas**: one animation list that holds one entry per mission phase, then the other checked motions, the displaced control and any trial replays, **Play**, speed (1×, ¼×, 4×, 10×), the slider and its percent or seconds readout; (e) the live readout for the selected entry (its per-frame measure or result, the current event with numbered jump buttons when a replay records events, and its basis), with the reason whenever **Fit field interaction** is off; (f) the category legend. **Inspector column**, docked to the right: the component inspector (its heading, hint and search until a part is selected; then the part with Focus part, Show assembly and Locate in ledger), then the selection budget with Whole robot, Category, Subsystem and Custom subsystem groupings, the electrical duty and the allocation detail. | Orbit through 360° and underneath, pan, zoom, fit the robot or the field interaction, expand to full screen, pick a surface, search by name or ID, focus a part and show the assembly, locate a part in the ledgers, toggle labels and page the callouts, play and scrub each animation and replay at any speed, and jump to a replay's events. |
 | 3. Resource figures | Inspection weight against its limit, the loaded-bus minimum against its requirement, and battery-side demand against the pack budget at that floor, each linking to its ledger. | Choose a duty; the figures follow it. |
 | 4. Weight budget and power by load | The inspection allocation ruler and table with its total, and the running configuration with itemized running additions. Battery-current bars by circuit group, each with its envelope, sag contribution and consuming parts. | Select a row, bar or member to locate the parts in the model. |
 | 5. Required components | The strategic narrative review, then each required role with Present or Missing and the absent IDs, and a warning line that keeps overweight, low-voltage and missing-role findings visible beside the review focus. | Confirm every commissioned role is represented. |
 | 6. Clearance evidence and component inventory | Closed-mesh and parked-assembly counts; the evidence set (current motion or parked assembly), an outcome filter, selectable findings and the witness. The inventory lists every placed body and field fixture with category, subsystem, material and volume. | Select a finding to mark the pair and jump to its witness frame; select an inventory row to inspect it. |
-| 7. Motion evidence and decision | Each path with its starting pose, participating groups, environment, metric and units, limiting pair and time, clearance allowance, evidence method and result, including the playable displaced control and inhibited, adverse and uncovered cases. The receipt link and what returns the layout to preliminary or conceptual design. | Play a path, jump to its limiting pose, inspect both bodies and open the receipt. |
+| 7. Check results and decision | One row per mission phase: the cases checked, their results, the tightest clearance, the clearance allowance and the path tolerance used. A phase opens to its cases, each with its starting pose, participating groups, environment, metric and units, limiting pair and time, clearance allowance, evidence method and result. A phase with a failing or open case opens at once, those cases first. A last group holds the displaced control and the uncovered conditions, and replays follow. The receipt link and what returns the layout to preliminary or conceptual design. | Play a phase, open its cases, jump from the tightest or a failing case to its pose in the phase's animation, inspect both bodies and open the receipt. |
 | 8. Model basis and limits | The project's notes. | Read the modelling limits before relying on a result. |
 
 On a wide screen the viewer column and the inspector column sit side by side in one row: the viewer on the left as the largest pane, the inspector on the right in a `clamp(240px, 20vw, 330px)` column, top-aligned. They stack, inspector below the viewer, only when the page is 60rem (960 px at the default text size) wide or narrower. The resource figures start below that row. At phone width nothing scrolls sideways; the motion-evidence table scrolls within its own box.
@@ -156,18 +156,20 @@ The schema marks each field `plugin` (derived), `project` (authored under `prese
 | `mass.runningAdditions`, `mass.runningBasis` | project | `presentation.runningAdditions`: `[{name, kg: [low, high], members}]`, and `presentation.runningBasis`. |
 | `title`, `context`, `architecture`, `focus`, `notes` | project | `presentation.title` (the title shown as the heading), `presentation.context` (the project name above it), `presentation.architecture`, `presentation.focus` (what to look at first) and `presentation.notes` (model basis and limits). |
 | `cases[].kind` and uncovered rows | project | `presentation.caseKinds` (`nominal`, `inhibited` or `adverse`; the displaced control is added automatically) and `presentation.uncoveredCases` (`[{id, condition, reason}]`). Unrepresented narrative objectives are added automatically. |
+| `animations` | plugin | One entry per mission phase with `id`, `title`, `mission` and the `cases` it plays in order. A stage names its phase under `stages.CASE.phase`; without one the phase is the case ID less a trailing segment number. [Animations and check results](../../../docs/preliminary-design.md#animations-show-the-mission-the-check-list-shows-the-evidence) |
+| `animations[].title`, `mission` | optional | `presentation.phases[PHASE]` with `title` and `headline`. By default a phase is a mission animation when it holds an operating case of the cycle. |
 | `openingCase` | optional | `presentation.openingCase`; otherwise the first case in the cycle. |
 | `cases[].time`, `measure`, `positions` | optional | `presentation.caseTimelines[CASE_ID]` with one entry per frame: seconds, live-readout text and robot field position in millimetres. Without them the readout shows the percent of path and the case result. |
 | `cutaway` | optional | `presentation.cutaway`: `{label, hides: [fixture IDs], outline: [[x, y, z], ...]}`, for example a target aperture. |
 | `links` | optional | `presentation.links`: `[{label, href}]` header links to season pages, relative or `https:`. |
 | `fieldInteractions` | optional | `presentation.fieldInteractions`: links to an [earlier separate field page](#earlier-field-pages). Use `replays` for new work. |
-| `replays` | optional | `presentation.replays`: replay sets named as `[{file}]`; see [Play a recorded trial in the motion list](#play-a-recorded-trial-in-the-motion-list). |
+| `replays` | optional | `presentation.replays`: replay sets named as `[{file}]`; see [Play a recorded trial in the animation list](#play-a-recorded-trial-in-the-animation-list). |
 
 The limiting pair on each path comes from pairs that include a moving body: a failure or open interval first, then the smallest gap or interval lower bound. An interval bound has no single limiting pose, so **Jump to limiting pose** needs a witness time. The receipt's `decision` records the final `status` and `firstUnmet` requirement: clearance findings first, then weight, voltage, the displaced control, held reopen decisions and missing inputs. The conceptual-design return criteria list each accepted conceptual premise from the receipt.
 
-## Play a recorded trial in the motion list
+## Play a recorded trial in the animation list
 
-A replay plays a recorded physics trial in the review's own viewer. It is one more entry in the motion selector, after the checked cases, with the same Play, speed, slider and readout. `?case=ID` opens it, so replay and case IDs share one namespace. A replay is evidence playback and not a clearance case: the layout check neither runs nor credits it, the receipt's case set leaves it out, and the motion-evidence table lists only checked cases.
+A replay plays a recorded physics trial in the review's own viewer. It is one more entry in the animation list, after the mission animations and the other checked motions, with the same Play, speed, slider and readout. `?case=ID` opens it, so replay, animation and case IDs share one namespace. A replay is evidence playback and not a clearance case: the layout check neither runs nor credits it, the receipt's case set leaves it out, and the check results count only checked cases.
 
 Generate a replay set from the trial in the owning project, write it beside `layout.json`, as JSON or gzipped JSON, and name it under `presentation.replays` as `{"file": "..."}`. Type no hash: the check reads the file and records its digest in the scene. A set has the schema `agent-frc/review-replays@1`, a `replays` list and optional `fieldBodies`. This example is abbreviated:
 
@@ -255,20 +257,21 @@ After each publish, use the [short form](presentation.md#look-before-you-share).
 **Layout of the page**
 
 - At a desktop width (1280 px or wider) the inspector column sits beside the viewer in the same row. It stacks below the viewer only at 960 px or narrower.
-- The playback row (case, Play, speed, slider, readout) sits directly below the canvas and the view controls sit above it.
+- The playback row (animation, Play, speed, slider, readout) sits directly below the canvas and the view controls sit above it.
 - The header shows the architecture, design name and version, datum, units, narrative revision, receipt decision and first unmet requirement.
 - `review-scene.mjs validate` lists no unexpected warnings.
 
 **The model**
 
 - The opening view fits the robot on the floor. Nothing floats. **Fit field interaction** frames the fixtures.
-- Pick a surface and find a part by name. The inspector shows its identity, category, subsystem, motion group, material, volume, mass basis, support path, explanations, load lines and moving cases.
+- Pick a surface and find a part by name. The inspector shows its identity, category, subsystem, motion group, material, volume, mass basis, support path, explanations, load lines and the phases it moves in.
 - Focus it, show the assembly, locate it in the ledgers and select a ledger row.
 - Orbit underneath, pan, toggle labels and page the callouts.
 
 **Motion and evidence**
 
-- Play every entry in the motion list. Scrub a loaded case at two speeds.
+- Play every entry in the animation list. Each plays its whole phase in one clip. Scrub a loaded phase at two speeds.
+- Open a phase in the check results. Jump from its tightest case to that pose.
 - Play the displaced control, jump to its limiting pose and inspect both bodies.
 - Open the receipt link.
 
@@ -281,7 +284,7 @@ After each publish, use the [short form](presentation.md#look-before-you-share).
 
 Earlier projects showed a trial in a separate, self-contained page at `field/NAME.html`, linked under `presentation.fieldInteractions` and listed under `fieldPlayers` in `release.json`. The tools still publish such a page when a design has one, and the synthetic example still carries one.
 
-Do not add one. One design has one list of motions in one view: record the trial and play it as a [replay](#play-a-recorded-trial-in-the-motion-list). When you revise a design that has a field page, move its trial into a replay and drop the page.
+Do not add one. One design has one list of motions in one view: record the trial and play it as a [replay](#play-a-recorded-trial-in-the-animation-list). When you revise a design that has a field page, move its trial into a replay and drop the page.
 
 A project that keeps an earlier field page keeps it self-contained, with the Content-Security-Policy the starter gives it, and corrects it by publishing its design again.
 

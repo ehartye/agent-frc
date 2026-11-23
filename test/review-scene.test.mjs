@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { gzipSync } from 'node:zlib';
 import { checkSchema, validateScene, readScene, compareWithReceipt, compareWithLedger } from '../scripts/review-scene.mjs';
-import { reviewScene, replayScene } from './fixtures/review-scene.mjs';
+import { reviewScene, replayScene, phasedScene } from './fixtures/review-scene.mjs';
 
 test('the synthetic scene satisfies the schema and cross-checks', () => {
   const {errors, warnings} = validateScene(reviewScene());
@@ -172,4 +172,21 @@ test('a replay is playback: the receipt comparison still covers exactly the chec
   assert.deepEqual(compareWithReceipt(read, receipt, {pins: false}), [], 'a replay adds no case to compare');
   assert.ok(compareWithReceipt(read, {...receipt, cases: [...receipt.cases, {case: 'lane-run', status: 'pass'}]}, {pins: false})
     .includes('Scene case results differ from the receipt'), 'a receipt cannot credit a replay as a checked case');
+});
+
+test('animations play every checked case exactly once, by mission phase, and never the displaced control', () => {
+  assert.deepEqual(validateScene(phasedScene()).errors, []);
+  assert.deepEqual(validateScene(reviewScene()).errors, [], 'a scene written before the animation list still validates');
+  const broken = phasedScene();
+  broken.animations[0].cases = ['raise-01', 'raise-02', 'ghost'];
+  broken.animations[1].cases = ['lower', 'raise-01', 'package-displacement-control'];
+  broken.animations.push({id: 'raise', title: 'Again', mission: false, cases: ['lower']});
+  const {errors} = validateScene(broken);
+  for (const pattern of [/animations\/0\/cases names an unknown case: ghost/, /animations\/1\/cases repeats case raise-01 of animation raise/,
+    /animations\/1\/cases names the displaced control/, /animations\/2 repeats animation raise/, /animations plays no case raise-03/])
+    assert.ok(errors.some(e => pattern.test(e)), pattern + ' in ' + errors.join('\n'));
+  assert.ok(checkSchema({...phasedScene(), animations: [{id: 'raise', cases: ['raise-01']}]}).some(e => /animations\/0 is missing title/.test(e)));
+  const replay = replayScene();
+  replay.animations = [{id: 'lane-run', title: 'Raise', mission: true, cases: ['raise']}];
+  assert.ok(validateScene(replay).errors.some(e => /replays\/0 repeats case or replay lane-run/.test(e)), 'a replay may not take an animation ID');
 });

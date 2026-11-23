@@ -100,6 +100,7 @@ Give each operating, park and service case its own signed start and travel. Use 
 - Declare all groups that move at the same time.
 - Tie `minGapMm` to each case's `allowanceBasis`.
 - Record the path tolerance each case was split at as `pathToleranceMm` in its entry under `stages`.
+- When a phase is split into several cases, name it as `phase` in each of their `stages` entries. The review plays the phase as [one animation](#animations-show-the-mission-the-check-list-shows-the-evidence) and lists its cases in the check results.
 - Make the service case withdraw the complete group from the installed scene. A case that relies on a previous removal must name that proved extraction in the same history.
 - List the operating and park cases in performance order in `cycle`. The check compares each member's attained end pose with its next starting pose.
 
@@ -274,7 +275,7 @@ Two paths are refused, each with the expected path in the message:
 - A view outside the plan's folder.
 - With `--write-view`, a view at the project root. This happens when a design's folder is passed as `PROJECT`. Nothing generated lands at the top of a project.
 
-One design has one review page. A new case or a new trial is one more entry in that page's motion list. Do not write a second page for it.
+One design has one review page. A new mission phase or a new trial is one more entry in that page's animation list, and a new case is one more row of its check results. Do not write a second page for it.
 
 A design that was checked in its own folder by an earlier plugin version keeps verifying. To move one to the repository root for its next version, see the [migration guide](design-publication-migration.md#move-a-design-checked-in-its-own-folder-to-the-repository-root).
 
@@ -355,7 +356,7 @@ Serve the generated `package-motion.html` and its `review-scene.json.gz` over HT
 
 The page is the plugin's stock review page. It fetches and decompresses the scene, which holds every value it shows. Check a scene with `node PLUGIN/scripts/review-scene.mjs validate review-scene.json.gz --receipt RECEIPT.json`.
 
-Select a case, orbit and pan around its solids, then play or scrub the position on the path. The page uses the same starting poses and ordered rigid transformations as the check, including simultaneous motion. The frames illustrate the stroke. The receipt gives the numerical bound, obstruction or open interval.
+Select an animation, orbit and pan around its solids, then play or scrub the position on the path. The page uses the same starting poses and ordered rigid transformations as the check, including simultaneous motion. The frames illustrate the stroke. The receipt gives the numerical bound, obstruction or open interval.
 
 How the check counts pairs:
 
@@ -366,6 +367,45 @@ How the check counts pairs:
 The scene stores one tessellation per body in its placed STEP pose. Each case carries only its frame placements, so the scene grows with the number of bodies and frames, not with the number of cases.
 
 If one interface changes later, find its neighbours through the group roster. Recheck the affected loaded, park and withdrawal cases, repeat the displaced control and publish the result as the next draft.
+
+### Animations show the mission; the check list shows the evidence
+
+The review page keeps two things apart.
+
+- **The animation list** is what a reviewer plays to see the robot do its job. It holds one entry per mission phase, such as reset, acquire, lift, feed or climb. Each entry plays that phase's whole motion from start to end as one clip. The requirement that a published design plays a mission task is about these entries.
+- **The check results** are the evidence that the motion clears. A case is one straight segment of a path, so a phase checked at a fine tolerance has many cases. They sit in the "Check results and decision" section, one row per phase: the number of cases checked, their results, the tightest clearance, the allowance and the path tolerance used. Open a phase to see its cases. From the tightest or a failing case, jump the viewer to that pose inside the phase's animation.
+
+A segment is not an animation. Splitting a path more finely adds rows to the check results and adds nothing to the animation list.
+
+Name the phase of each case in its entry under `stages`, and give a phase a title under `presentation.phases`:
+
+```json
+{
+  "stages": {
+    "acquire-01": {"purpose": "operating", "phase": "acquire", "pathToleranceMm": 10},
+    "acquire-02": {"purpose": "operating", "phase": "acquire", "pathToleranceMm": 10},
+    "lift": {"purpose": "operating"}
+  },
+  "presentation": {
+    "phases": {
+      "acquire": {"title": "Acquire a piece from the floor"},
+      "lift": {"title": "Lift to the delivery height", "headline": true}
+    }
+  }
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `stages.CASE.phase` | The mission phase this case is a segment of. The cases of one phase are consecutive in `cycle`, because one animation plays one continuous motion. |
+| `presentation.phases.PHASE.title` | The name shown in the animation list and the check results. Without one, the phase ID is shown as words. |
+| `presentation.phases.PHASE.headline` | `true` lists the phase under **Mission animations**; `false` lists it under **Other checked motions**. Without it, a phase is a mission animation when it holds an operating case of the cycle. Park and service phases are other checked motions. |
+
+A plan that names no phase needs no edit. The phase of a case is then its ID without a trailing segment number, so `acquire-01`, `acquire-02` and `acquire_3` are one phase, `acquire`, when they follow one another. Only a number after `-`, `_`, `.` or a space counts: `lift-l2` stays `lift-l2`. A derived phase that returns later in the cycle becomes a second animation, `acquire-run-2`. When this still leaves more than twelve animations, the check writes a `[view]` note that asks for phase names. The note is information and does not change the result.
+
+The displaced control is listed once, under **Check control**. A replay is listed under **Trial replays**. A link to `?case=ID` opens an animation, a replay or a case; a case opens inside its animation at its own start.
+
+The scene carries the list as `animations`: each entry holds `id`, `title`, `mission` and the `cases` it plays in order. Each check row carries the `pathToleranceMm` its stage declares. A tolerance declared or changed in the plan therefore changes the scene: rebuild the view, and `--view-only` is enough when the cases themselves have not changed. A scene written before 0.137.0 has no `animations`; the page derives the phases from the case IDs the same way, so an issued design keeps working.
 
 ## Nothing floats
 
@@ -481,7 +521,7 @@ Preliminary design is fast iteration. A revised layout should be checked and bac
 
 Treat any pair whose clearance is smaller than the tolerance as unresolved. Rerun only the phase that holds that pair at a finer tolerance. Leave phases with ample margin coarse and record the tolerance each phase was checked at as `pathToleranceMm`. Before refining below about 10 mm, [check in and agree a budget](#check-in-before-going-deeper).
 
-**A squeezed soft piece is the usual reason to go finer, and it needs a budget like any other.** Where a soft game piece is squeezed against rollers or guides, path error is spent directly against the indentation allowance. The default is to list the squeeze as an interface with its allowance for detailed design. Refine that one phase below 10 mm only when the architecture depends on the squeeze, and only with an agreed budget that says how fine and for which phase.
+**A squeezed soft piece is the usual reason to go finer, and it needs a budget like any other.** Where a soft game piece is squeezed against rollers or guides, path error is spent directly against the indentation allowance. The default is to list the squeeze as an interface with its allowance for detailed design. Refine that one phase below 10 mm only when the architecture depends on the squeeze, and only with an agreed budget that says how fine and for which phase. A wider stated squeeze allowance and a bench test of the squeeze are usually better than dozens of fine segments. However finely a phase is split, it stays [one animation](#animations-show-the-mission-the-check-list-shows-the-evidence): the segments are rows of the check results.
 
 Fewer cases are not always faster. A coarse case sweeps a longer move and takes longer, so judge the plan by its total time.
 
@@ -583,5 +623,6 @@ A season pins a plugin revision and holds copies of some plugin files. After mov
 | 0.133.0 | Nothing to re-copy. The detailed-design tools [name files by path](design-publication-migration.md#drop-typed-hashes-rights-terms-and-outside-custody-on-the-detailed-path): the readiness study, a motion study run on its own, the article roster, checked placement, the public Fusion handoff and the highlights manifest need no typed `sha256`, and one that is typed is still verified. Rights terms on parts are no longer read. A Fusion archive is committed in the project and moves between computers with Git. |
 | 0.134.0 | The detailed design catalog `docs/detailed-design/index.html`. Detailed design keeps the bench tests its preliminary design hands over as [one record](design-publication.md#bench-tests-handed-over-from-preliminary-design), seeded with `bench-tests.mjs seed`. A detailed design becomes effective only when every `before-build` test has a recorded passing result and every `on-robot` test has an owner and a plan. A risk's `benchTest` may carry a `tag`. |
 | 0.136.0 | Nothing to re-copy. The preliminary design skill is an ordered workflow with a list of defaults and a table of what to try when something fails. Held premises moved to [their own page](preliminary-design-holds.md), and trial sizing to the skill's trials reference. `npm run validate` in the plugin now fails on text damaged by a wrong encoding. |
+| 0.137.0 | The local review page (delete it and rebuild it with `--view-only`). The page lists [one animation per mission phase](#animations-show-the-mission-the-check-list-shows-the-evidence) and moves the checked cases into the check results, grouped by phase. No plan edit is needed: cases whose IDs differ by a trailing segment number form one phase. A stage may name its `phase`, and `presentation.phases` gives a phase a title and a `headline` flag. The rebuilt scene carries `animations` and the declared path tolerances, so its content and digest change; an issued design keeps its scene, and the new page derives the phases of an earlier scene. A mission case must be played by a mission animation. |
 
 An in-progress design takes the new page when it is published again under its version. An effective, superseded or withdrawn design never changes.

@@ -15,7 +15,7 @@ A project that still runs the earlier gates moves to this workflow with the [mig
 | The layout obeys the checked physics | The plugin's layout check is rerun from the committed inputs. It must end `layout-checked`: every clearance case, the inspection mass and every loaded-voltage case pass, and the displaced control is rejected. |
 | The committed receipt is that check's result | The rerun's input digests and every verdict equal the committed receipt. |
 | The review shows the checked numbers | The cases, results, displaced control, objectives, mass and duties in the review scene equal the receipt. |
-| The design plays a mission task | The record names a mission case: a passing operating case in the checked cycle, for a narrative objective the receipt marks `represented`. A field-interaction trial must be one the receipt names. |
+| The design plays a mission task | The record names a mission case: a passing operating case in the checked cycle, for a narrative objective the receipt marks `represented`, played by a [mission animation](preliminary-design.md#animations-show-the-mission-the-check-list-shows-the-evidence) of the review. A field-interaction trial must be one the receipt names. |
 | A detailed design builds on an accepted layout | An in-progress detailed design names a preliminary release that is `effective`, its receipt is on the STEP its record names as the Fusion export, and it covers that release's motion cases, cycle and displaced control. |
 | An effective detailed design passed its review | The design carries its mechanical-readiness review result, for the STEP its record names, and the review reports `pass`. |
 | An effective detailed design resolved its bench tests | The design publishes its [bench-test record](#bench-tests-handed-over-from-preliminary-design). Every `before-build` test has a recorded passing result and every `on-robot` test has an owner and a plan. Every bench test its preliminary design hands over is in the record with the handed-over numbers. |
@@ -169,7 +169,7 @@ python cad/preliminary-design/stage.py 1.0 --design-name "Tilting carriage"
 node PLUGIN/scripts/design-publication.mjs check . --skip-rerun
 ```
 
-Staging copies the review page as it is, the scene, receipt, motion, budget and limit files and each trial a mission case names into `docs/preliminary-design/releases/ID/`. One design has one review page: a recorded trial plays in its motion list as a [replay](../skills/frc-preliminary-design/references/review-layout-template.md#play-a-recorded-trial-in-the-motion-list). It writes the release record and lists the release as `in-progress`, at draft 1. The ID is the [version](#name-and-number-a-design), and the name is given once.
+Staging copies the review page as it is, the scene, receipt, motion, budget and limit files and each trial a mission case names into `docs/preliminary-design/releases/ID/`. One design has one review page: a recorded trial plays in its animation list as a [replay](../skills/frc-preliminary-design/references/review-layout-template.md#play-a-recorded-trial-in-the-animation-list). It writes the release record and lists the release as `in-progress`, at draft 1. The ID is the [version](#name-and-number-a-design), and the name is given once.
 
 ### Revise an in-progress release in place
 
@@ -203,7 +203,7 @@ A release stops changing when it is marked `effective`, and stays unchanged as `
 }
 ```
 
-A mission case names a passing operating case, what it accomplishes (`acquired`, `delivered`, `scored` or `climb-held`) and a narrative objective the receipt marks `represented`. For a contact-transport, free-path or fixture-support trial use `"kind": "field-interaction-trial"` with `"trial": {"file": "acquire-trial.json"}`. The trial must be one the receipt names for that case. A design that still carries an [earlier separate field page](../skills/frc-preliminary-design/references/review-layout-template.md#earlier-field-pages) lists it under `fieldPlayers` and may name it with `"player"`; new work uses a replay. The record carries no digest of its sibling files: they are committed together, and the check compares their content.
+A mission case names a passing operating case, what it accomplishes (`acquired`, `delivered`, `scored` or `climb-held`) and a narrative objective the receipt marks `represented`. The case may be one segment of a longer motion: it counts when a mission animation of the review plays it, so a phase marked `"headline": false` cannot carry a mission case. For a contact-transport, free-path or fixture-support trial use `"kind": "field-interaction-trial"` with `"trial": {"file": "acquire-trial.json"}`. The trial must be one the receipt names for that case. A design that still carries an [earlier separate field page](../skills/frc-preliminary-design/references/review-layout-template.md#earlier-field-pages) lists it under `fieldPlayers` and may name it with `"player"`; new work uses a replay. The record carries no digest of its sibling files: they are committed together, and the check compares their content.
 
 Change a status in the same way, in a pull request:
 

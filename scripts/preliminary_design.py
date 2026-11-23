@@ -12,7 +12,7 @@ import layout_attachment
 from component_shape import proper_rotation
 from mechanical_motion import HEARTBEAT_SECONDS, evaluate, reuse, stderr_progress, transforms, vec
 from package_budgets import budget_review
-from package_view import CONTROL_ID, capture, first_unmet, parked_assembly, verify_view
+from package_view import CONTROL_ID, PHASE_GUIDE, capture, first_unmet, mission_animations, parked_assembly, verify_view
 from mechanical_readiness import digest, named, number, path_reference, pinned, project_path, read, require, resolve_references
 
 
@@ -649,6 +649,13 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
     result["scope"],scope_lines=scope_report(plan,stages,len(roster-case_fixtures),len(case_fixtures))
     if progress:
         for line in scope_lines:progress(line)
+    # A malformed phase stops the run here too. The animation list is short by design: one entry per mission phase.
+    listed=plan.get("cycle") or []
+    shown=mission_animations(plan,[k for k in listed if k in by_id]+[c["id"] for c in cases if c["id"] not in listed])
+    if progress and len(shown)>PHASE_GUIDE:
+        progress(f"[view] note: the review lists {len(shown)} animations for {len(cases)} cases. An animation shows one mission "
+                 "phase and a case is one checked segment of it. Name the phase of each case under stages.CASE.phase so the "
+                 "segments of one motion play as one animation. This is information and does not change the result.")
     # A malformed attachment label stops the run here, before any case is checked.
     layout_attachment.settings(plan,roster)
     opening=plan.get("presentation",{}).get("openingCase") or (plan.get("cycle") or [None])[0]

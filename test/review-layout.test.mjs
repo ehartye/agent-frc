@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { browser, probePage } from './headless-browser.mjs';
-import { reviewScene, replayScene } from './fixtures/review-scene.mjs';
+import { reviewScene, replayScene, phasedScene } from './fixtures/review-scene.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const page = readFileSync(path.join(root, 'templates/preliminary-review/review.html'));
@@ -263,4 +263,65 @@ test('the same page staged for a detailed design reads its name, draft and statu
   const earlier = await probePage(dir, 'detailed-design/designs/detail-001/index.html', shown);
   assert.equal(earlier.chip, 'Superseded · layout-checked');
   assert.match(earlier.context, /detail-001　\/　Detailed design　\/　built on preliminary release layout-001$/);
+});
+
+test('the animation list holds one entry per mission phase; the checked cases sit in the check results and jump the viewer to their pose', {skip}, async t => {
+  const dir = site(t), url = release(dir, 'a', phasedScene());
+  const probe = w => `const d=${w}.document,q=s=>d.querySelector(s),all=s=>[...d.querySelectorAll(s)],wait=ms=>new Promise(r=>setTimeout(r,ms)),motion=q('#motion'),time=q('#time');
+   for(let i=0;i<200&&/Loading|Verifying/.test(q('#sceneStatus').textContent);i++)await wait(50);await wait(100);
+   const button=(root,label)=>[...root.querySelectorAll('button')].find(b=>b.textContent===label);`;
+  const seen = await probePage(dir, url, probe('window') + `
+   const out={groups:all('#motion optgroup').map(g=>g.label+': '+[...g.children].map(o=>o.textContent).join(', ')),label:motion.getAttribute('aria-label'),
+    opening:[motion.value,time.value,time.max,q('#basis').textContent]};
+   q('#speed').value='10';q('#play').click();const segments=new Set();
+   for(let i=0;i<150&&q('#play').textContent==='Pause';i++){segments.add(String(1+Math.min(2,Math.floor(time.value/24))));await wait(16)}await wait(100);
+   out.played=[[...segments].sort(),time.value,q('#play').textContent,q('#fraction').textContent];
+   const rows=all('#evidenceTable>tbody>tr.phase');
+   out.phases=rows.map(r=>[...r.cells].slice(0,6).map(c=>c.textContent));out.hidden=all('tr.phase-cases').map(r=>r.hidden);
+   out.buttons=rows.map(r=>[...r.querySelectorAll('button')].map(b=>b.textContent));
+   button(rows[0],'Jump to tightest pose').click();await wait(100);
+   out.jump=[motion.value,time.value,q('#basis').textContent,q('#inspName').textContent];
+   const toggle=button(rows[0],'Show cases');toggle.click();
+   out.open=[toggle.getAttribute('aria-expanded'),toggle.getAttribute('aria-controls'),toggle.textContent,q('#checkCases0').hidden,all('#checkCases0 .case-table tbody tr').map(r=>r.cells[0].textContent.split(' — ')[0])];
+   all('#checkCases0 button').filter(b=>b.textContent==='Jump to limiting pose')[1].click();await wait(100);out.caseJump=[motion.value,time.value];
+   button(rows[2],'Jump to tightest pose').click();await wait(100);out.control=[motion.value,time.value,time.max];
+   button(rows[1],'Play').click();await wait(50);out.other=[motion.value,q('#play').textContent,new URLSearchParams(location.search).get('case')];
+   q('#set').selectedIndex=0;motion.value='raise';motion.dispatchEvent(new Event('change'));q('#filter').value='all';q('#filter').dispatchEvent(new Event('change'));
+   out.pairs=[q('#count').textContent,all('#findings thead th').map(c=>c.textContent),all('#findings tbody tr').map(r=>r.cells[1].textContent)];
+   all('#findings tbody tr')[1].click();await wait(100);out.pairJump=[motion.value,time.value];
+   return out`);
+  assert.deepEqual(seen.groups, ['Mission animations: Raise the arm', 'Other checked motions: Lower', 'Check control: package-displacement-control (displaced control)'],
+    'four checked cases and a control give three list entries, not five');
+  assert.equal(seen.label, 'Mission animation');
+  assert.deepEqual(seen.opening, ['raise', '0', '72', 'Checked segment 1 of 3 (raise-01). Invented: third 1 of the raise.']);
+  assert.deepEqual(seen.played, [['1', '2', '3'], '72', 'Play', '100%'], 'one press of Play runs the whole phase through every segment');
+  assert.deepEqual(seen.phases, [['Raise the arm', '3', '3 pass', 'arm / battery · gap 6.500 mm · t = 0.500 · in raise-03', '5.00 mm', '2.00 mm'],
+    ['Lower', '1', '1 pass', '—', '5.00 mm', 'Not declared'],
+    ['Displaced control and uncovered conditions', '2', '1 rejected as expected · 1 not evaluated', 'arm / battery · gap 0.000 mm, overlap 4100.0 mm³ · t = 0.500 · in package-displacement-control', '5.00 mm', '—']]);
+  assert.deepEqual(seen.hidden, [true, true, true], 'a passing check list stays compact');
+  assert.deepEqual(seen.buttons, [['Play', 'Jump to tightest pose', 'Show cases'], ['Play', 'Show cases'], ['Jump to tightest pose', 'Show cases']]);
+  assert.deepEqual(seen.jump, ['raise', '60', 'Checked segment 3 of 3 (raise-03). Invented: third 3 of the raise.', 'arm'], 'the tightest case opens at its limiting pose inside the phase animation');
+  assert.deepEqual(seen.open, ['true', 'checkCases0', 'Hide cases', false, ['raise-01', 'raise-02', 'raise-03']]);
+  assert.deepEqual(seen.caseJump, ['raise', '36']);
+  assert.deepEqual(seen.control, ['package-displacement-control', '12', '24']);
+  assert.deepEqual(seen.other, ['lower', 'Pause', 'lower'], 'the address names the animation');
+  assert.deepEqual(seen.pairs, ['Raise the arm · 3 checked cases · 3 pass', ['Pair', 'Case', 'Result', 'Witness'], ['raise-01', 'raise-02', 'raise-03']]);
+  assert.deepEqual(seen.pairJump, ['raise', '36'], 'a recorded pair opens its own segment at the witness pose');
+  // A failing case opens its phase at once, and the earlier scene format still loads with derived phases.
+  const failing = phasedScene();
+  Object.assign(failing.motionEvidence[1], {result: 'fail', limitingValue: {gapMm: 0, volumeMm3: 30}});
+  delete failing.animations;
+  const failed = await probePage(dir, release(dir, 'b', failing, {receipt: false}), probe('window') + `
+   const rows=all('#evidenceTable>tbody>tr.phase');
+   return {groups:all('#motion optgroup').map(g=>g.label+': '+[...g.children].map(o=>o.textContent).join(', ')),hidden:all('tr.phase-cases').map(r=>r.hidden),
+    attention:rows.map(r=>r.classList.contains('attention')),result:rows[0].cells[2].textContent,jump:[...rows[0].querySelectorAll('button')].map(b=>b.textContent)}`);
+  assert.deepEqual(failed.groups, ['Mission animations: raise', 'Other checked motions: lower', 'Check control: package-displacement-control (displaced control)']);
+  assert.deepEqual([failed.hidden, failed.attention, failed.result, failed.jump], [[false, true, true], [true, false, false], '2 pass · 1 fail', ['Play', 'Jump to failing case', 'Hide cases']]);
+  // Headless windows have a minimum width, so phone width is measured inside a 390 px frame. The frame also carries a link to one case.
+  writeFileSync(path.join(dir, 'phone.html'), '<!doctype html><body style="margin:0"><iframe src="' + url + '?case=raise-02" style="width:390px;height:900px;border:0"></iframe>');
+  const phone = await probePage(dir, 'phone.html', probe(`document.querySelector('iframe').contentWindow`) + `
+   const deep=[motion.value,time.value,q('#basis').textContent];button(q('tr.phase'),'Show cases').click();const w=d.defaultView;
+   return {deep,width:w.innerWidth,scroll:d.documentElement.scrollWidth,motion:motion.getBoundingClientRect().right,table:q('#motion-evidence .scroll').getBoundingClientRect().right}`);
+  assert.deepEqual(phone.deep, ['raise', '24', 'Checked segment 2 of 3 (raise-02). Invented: third 2 of the raise.'], 'a link to a case opens its animation at that case');
+  assert.ok(phone.width === 390 && phone.scroll <= 390 && phone.motion <= 390 && phone.table <= 390, '390 px: the list and the check results fit without sideways scrolling (' + JSON.stringify(phone) + ')');
 });

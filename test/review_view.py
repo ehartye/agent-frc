@@ -10,7 +10,7 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from package_view import (CONTROL_ID, PAGE, component_inspector, field_interactions, first_unmet, motion_evidence,  # noqa: E402
+from package_view import (CONTROL_ID, PAGE, component_inspector, field_interactions, first_unmet, mission_animations, motion_evidence,  # noqa: E402
                           parked_assembly, review_header, scene_payload)
 
 IDENTITY = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0]
@@ -80,6 +80,37 @@ class Regions(unittest.TestCase):
         with self.assertRaises(ValueError):
             motion_evidence(plan(caseKinds={"turn": "hopeful"}), study(), PASS)
         self.assertEqual(motion_evidence(plan(), study(), PASS, None, None)[2]["result"], "skipped")
+
+    def test_animations_follow_mission_phases_and_not_checked_segments(self):
+        stage = lambda purpose, **extra: dict(purpose=purpose, **extra)
+        ids = ["reset", "acquire-01", "acquire-02", "acquire-03", "lift_1", "lift_2", "feed", "park", "pull-battery"]
+        layout = dict(cycle=ids[:-1], stages={k: stage("park" if k in ("reset", "park") else "service" if k == "pull-battery" else "operating") for k in ids})
+        rows = mission_animations(layout, ids)
+        self.assertEqual([(r["id"], r["title"], r["mission"], len(r["cases"])) for r in rows],
+                         [("reset", "Reset", False, 1), ("acquire", "Acquire", True, 3), ("lift", "Lift", True, 2), ("feed", "Feed", True, 1),
+                          ("park", "Park", False, 1), ("pull-battery", "Pull battery", False, 1)],
+                         "numbered segments of one motion are one animation, with no change to the plan")
+        self.assertEqual(sorted(c for r in rows for c in r["cases"]), sorted(ids), "every case plays in exactly one animation")
+        # A stage names its phase, and the plan gives a phase a title and says whether it is a headline mission animation.
+        named_plan = dict(layout, stages={**layout["stages"], "lift_1": stage("operating", phase="raise"), "lift_2": stage("operating", phase="raise"),
+                                          "feed": stage("operating", phase="raise")},
+                          presentation=dict(phases={"raise": dict(title="Raise and feed the piece"), "acquire": dict(headline=False), "park": dict(headline=True)}))
+        by = {r["id"]: r for r in mission_animations(named_plan, ids)}
+        self.assertEqual((by["raise"]["title"], by["raise"]["cases"], by["raise"]["mission"]), ("Raise and feed the piece", ["lift_1", "lift_2", "feed"], True))
+        self.assertEqual((by["acquire"]["mission"], by["park"]["mission"]), (False, True))
+        # A derived name that returns later is a second run; a declared phase must be one continuous run.
+        again = dict(cycle=["lift-1", "feed", "lift-2"], stages={k: stage("operating") for k in ("lift-1", "feed", "lift-2")})
+        self.assertEqual([r["id"] for r in mission_animations(again, again["cycle"])], ["lift", "feed", "lift-run-2"])
+        for bad, message in ((dict(again, stages={**again["stages"], "lift-1": stage("operating", phase="lift"), "lift-2": stage("operating", phase="lift")}), "split in the cycle"),
+                             (dict(again, stages={**again["stages"], "feed": stage("operating", phase="")}), "Give the phase of feed"),
+                             (dict(again, presentation=dict(phases={"climb": dict(title="Climb")})), "The phases of this plan: feed, lift, lift-run-2"),
+                             (dict(again, presentation=dict(phases={"feed": dict(headline="yes")})), "presentation.phases maps")):
+            with self.assertRaises(ValueError) as caught:
+                mission_animations(bad, again["cycle"])
+            self.assertIn(message, str(caught.exception))
+        row = motion_evidence(dict(plan(), stages={"turn": dict(movingGroups=["arm group"], allowanceBasis="Invented reserve", pathToleranceMm=2),
+                                                   "hold": dict(movingGroups=["arm group"], allowanceBasis="Invented reserve")}), study(), PASS)
+        self.assertEqual((row[0].get("pathToleranceMm"), row[1].get("pathToleranceMm")), (2, None), "the check list carries the tolerance each case was split at")
 
     def test_header_reports_the_decision_and_first_unmet_requirement(self):
         layout = plan(architecture="Invented pivot arm")
@@ -188,6 +219,10 @@ class CompressedScene(unittest.TestCase):
             self.assertEqual(data["architecture"], plan["presentation"]["architecture"])
             self.assertEqual([r["kind"] for r in data["motionEvidence"]].count("displaced control"), 1)
             self.assertEqual(data["fieldInteractions"][0]["title"], "Synthetic release-lane interaction")
+            self.assertEqual([(a["id"], a["title"], a["mission"], a["cases"]) for a in data["animations"]],
+                             [("acquire", "Acquire", True, ["acquire"]), ("loaded-turn", "Turn the loaded carrier", True, ["loaded-turn"]),
+                              ("release", "Release", True, ["release"]), ("park-loaded", "Return to park with the sample held", False, ["park-loaded"]),
+                              ("remove-carrier", "Remove carrier", False, ["remove-carrier"])], "one animation per mission phase, the control in none")
             replay = data["replays"][0]
             self.assertEqual((replay["id"], len(replay["time"]), replay["bodies"]["lane"]["group"], replay["tubes"][0]["name"]),
                              ("release-lane-run", 61, None, "Supply hose"), "the recorded run joins the scene as a replay, not a case")

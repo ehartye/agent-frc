@@ -62,7 +62,8 @@ class LayoutScope(unittest.TestCase):
             plan["scopeGuidelines"] = dict(solids=3)
             plan["stages"][first]["pathToleranceMm"] = 40
             plan["stages"][second]["pathToleranceMm"] = 2.5
-        run = self.check(self.variant(deeper), "--require-checked")
+        # The review lists the tolerance of each phase in its check results, so a newly declared tolerance rewrites the view.
+        run = self.check(self.variant(deeper), "--require-checked", "--write-view")
         self.assertEqual(run.returncode, self.baseline.returncode, run.stderr)
         receipt, before = json.loads(run.stdout), json.loads(self.baseline.stdout)
         for key in ("status", "missingInputs", "reopen", "cases", "control", "budgets", "decision"):
@@ -79,6 +80,9 @@ class LayoutScope(unittest.TestCase):
         self.assertIn(second + " is checked to a 2.5 mm path tolerance, finer than the guideline of 10 mm", note)
         self.assertIn("does not change the result", note)
         self.assertIn("agree a bounded extended budget", note)
+        stale = self.check(self.plan, "--quiet")
+        self.assertIn("Generate the matching view of these checked trajectories with --write-view", json.loads(stale.stdout)["missingInputs"],
+                      "the view on disk now shows tolerances this plan does not declare")
         quiet = self.check(self.variant(deeper), "--quiet")
         self.assertEqual(quiet.stderr, "")
         self.assertEqual(json.loads(quiet.stdout)["scope"], scope)
@@ -90,7 +94,7 @@ class LayoutScope(unittest.TestCase):
             plan["scopeGuidelines"] = dict(solids=3, toleranceMm=50, extendedBudget=budget)
             for stage in plan["stages"].values():
                 stage["pathToleranceMm"] = 40
-        run = self.check(self.variant(agreed), "--require-checked")
+        run = self.check(self.variant(agreed), "--require-checked", "--write-view")
         self.assertEqual(run.returncode, self.baseline.returncode, run.stderr)
         scope = json.loads(run.stdout)["scope"]
         self.assertEqual(scope["passed"], ["solids", "pathTolerance"])
