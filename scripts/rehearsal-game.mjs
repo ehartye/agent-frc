@@ -73,6 +73,7 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
     }
   }
   function move(sim,dt,begins){
+    if(sim.game.concept)land(sim,(sim.ticks+1)*dt);
     if(sim.game.motion.pieces.length)motion.advance(sim.game.motion,dt,sim.robots.map((r,i)=>({...r,previousP:begins[i]})),sim.setup);
   }
   function elapsed(sim,t) {
@@ -363,7 +364,8 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
   const bearing=(a,b)=>Math.atan2(b[1]-a[1],b[0]-a[0])*180/Math.PI;
   const faceDepth=(r,face)=>(face==='front'||face==='back'?r.length:r.width)/2+r.bumper;
   const portsFor=(list,type)=>(Array.isArray(list)?list:[]).filter(p=>p.pieces?.includes(type));
-  const room=(g,r,type)=>(r.concept.storage?.capacity?.[type] ?? 0)-g.cargo[r.id].filter(p=>p.type===type).length;
+  const room=(g,r,type)=>(r.concept.storage?.capacity?.[type] ?? 0)-g.cargo[r.id].filter(p=>p.type===type).length-
+    (g.concept[r.id].landing ?? []).filter(x=>x.cargo.type===type).length;
   const notice=(g,text)=>{if(!g.notices.includes(text))g.notices.push(text);};
   // The radius of a piece type, by the rule concept:check shares (the arc model's pieceRadiusFor). A point piece (0)
   // flatters the arc check, so the narrative reports it once per robot and type.
@@ -394,30 +396,46 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
     if(![r.side,'both'].includes(s.side)){record(sim,r,s,leg.operation,'ineligible-position-or-alliance',[],timeS);return {done:true};}
     return leg.operation==='acquire'?conceptAcquire(sim,r,leg,s,timeS):conceptScore(sim,r,leg,s,c,timeS,dt);
   }
-  // doneS: when the acquisition completes, later than timeS for a piece captured on the move.
-  function take(sim,r,s,piece,port,timeS,doneS=timeS) {
+  // A piece taken at once is aboard now. One captured on the move (later) leaves the field now and lands aboard,
+  // with its acquisition logged, on the first tick at or after secondsPerPiece; see land().
+  function take(sim,r,s,piece,port,timeS,later=false) {
     const g=sim.game,[cargo]=g.stock[s.id].splice(g.stock[s.id].findIndex(p=>p.id===piece.id),1);
-    const event=record(sim,r,s,'acquire','acquired',[cargo],doneS);
-    Object.assign(event,{port:port.id,startedS:timeS,speedInS:r.currentSpeedInS,pose:{p:[...r.p],heading:r.heading}});
+    const entry={cargo,station:s.id,port:port.id,startedS:timeS,speedInS:r.currentSpeedInS,pose:{p:[...r.p],heading:r.heading}};
     if(piece.p){
-      event.contact={position:[...piece.p],radiusIn:piece.radiusIn,mouth:mouth(r,port).ends,robotPosition:[...r.p],heading:r.heading};
+      entry.contact={position:[...piece.p],radiusIn:piece.radiusIn,mouth:mouth(r,port).ends,robotPosition:[...r.p],heading:r.heading};
       motion.take(g.motion,piece.id);
     }
-    g.cargo[r.id].push(cargo);
-    g.ready[cargo.id]=elapsed(sim,doneS)+(r.concept.storage?.transferS ?? 0);
     r.pickup.count++;delete r.pickup.id;delete r.pickup.since;delete r.pickup.position;
+    if(later)(g.concept[r.id].landing??=[]).push({...entry,dueS:elapsed(sim,timeS)+port.secondsPerPiece});
+    else aboard(sim,r,entry,timeS);
+  }
+  function aboard(sim,r,{cargo,station,...witness},timeS) {
+    const g=sim.game;
+    Object.assign(record(sim,r,stations.get(station),'acquire','acquired',[cargo],timeS),witness);
+    g.cargo[r.id].push(cargo);
+    g.ready[cargo.id]=elapsed(sim,timeS)+(r.concept.storage?.transferS ?? 0);
+  }
+  function land(sim,timeS) {
+    for(const r of sim.robots){
+      const c=sim.game.concept?.[r.id];
+      if(!c?.landing?.length)continue;
+      const now=elapsed(sim,timeS),due=c.landing.filter(x=>x.dueS<=now+1e-9);
+      c.landing=c.landing.filter(x=>x.dueS>now+1e-9);
+      for(const {dueS,...entry} of due)aboard(sim,r,entry,timeS);
+    }
   }
   // Acquisition takes secondsPerPiece. With requiresStop the clock starts once the robot is still, and it holds
   // there. Without it, a floor piece is captured on contact at any speed and lands aboard secondsPerPiece later
   // while the robot drives on; the port takes its next piece only then. At a fixed source the clock runs on the move.
-  function acquiring(sim,r,s,piece,port,timeS,hold) {
+  function acquiring(sim,r,s,piece,port,timeS,hold,leg) {
     const c=sim.game.concept[r.id];
     if(timeS+1e-9<(c.free[port.id] ?? -Infinity))return hold;
     if(port.requiresStop && r.currentSpeedInS>1e-9)return hold;
     if(!port.requiresStop && piece.p){
       c.free[port.id]=timeS+port.secondsPerPiece;
-      take(sim,r,s,piece,port,timeS,timeS+port.secondsPerPiece);
-      return {};
+      take(sim,r,s,piece,port,timeS,true);
+      // Drive straight on toward the next pickup, without stopping.
+      return conceptAcquire(sim,r,leg,s,timeS);
     }
     r.pickup.since??=timeS;
     if(timeS-r.pickup.since+1e-9<port.secondsPerPiece)return {...hold,action:'Acquiring through '+port.id};
@@ -452,12 +470,13 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
       if(Math.abs(wrap(bearing(r.p,s.at)-r.heading-faceTurn[plan.port.face]))>plan.port.headingToleranceDeg+1e-9){
         delete pickup.since;return {...hold,action:'Turning '+plan.port.id+' to '+s.label};
       }
-      return acquiring(sim,r,s,g.stock[s.id][0],plan.port,timeS,hold);
+      return acquiring(sim,r,s,g.stock[s.id][0],plan.port,timeS,hold,leg);
     }
     const free=g.motion.pieces.filter(p=>p.station===s.id),current=free.find(p=>p.id===pickup.id);
     if(current){
-      const port=ports.find(p=>p.id===pickup.port),hold={heading:pickup.heading};
-      if(port && portContact(r,current,port))return acquiring(sim,r,s,current,port,timeS,hold);
+      // A port that must stop drives on to its pickup pose, where the trapezoid brings it to rest.
+      const port=ports.find(p=>p.id===pickup.port),hold={goal:pickup.goal,heading:pickup.heading};
+      if(port && portContact(r,current,port))return acquiring(sim,r,s,current,port,timeS,hold,leg);
       delete pickup.since;
       if(Math.hypot(current.p[0]-pickup.position[0],current.p[1]-pickup.position[1])<.25)
         return {goal:pickup.goal,heading:pickup.heading,action:'Seeking '+current.id};
@@ -483,26 +502,22 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
     if(!best)return g.cargo[r.id].some(p=>p.type===type) && !g.reserve[s.id]?.length?{done:true}:{waiting:'Waiting for reachable stock'};
     Object.assign(pickup,{id:best.piece.id,position:[...best.piece.p],port:best.port.id,heading:best.heading,goal:best.goal});
     delete pickup.since;
-    if(portContact(r,best.piece,best.port))return acquiring(sim,r,s,best.piece,best.port,timeS,{heading:best.heading});
+    if(portContact(r,best.piece,best.port))return acquiring(sim,r,s,best.piece,best.port,timeS,{goal:best.goal,heading:best.heading},leg);
     return {goal:best.goal,heading:best.heading,action:'Seeking '+best.piece.id};
   }
   // Plan a scoring leg once, from the robot's position at its start.
   function scoringPlan(sim,r,port,s,start) {
     const g=sim.game;
     if(port.kind==='place'){
-      const z=s.entry?.centerIn[2],h=port.place.releaseHeightIn;
-      if(z!==undefined && (z<h.min-1e-9 || z>h.max+1e-9)){
-        notice(g,r.id+' cannot place at '+s.label+' through '+port.id+': release height '+h.min+'–'+h.max+' in misses the entry at '+z+' in.');return null;
-      }
       const toward=Math.hypot(s.at[0]-start[0],s.at[1]-start[1])>1e-9?bearing(start,s.at):r.heading+faceTurn[port.face],n=unit(toward);
       const reach=port.place.standOffIn.min+faceDepth(r,port.face);
       return {goal:[s.at[0]-n[0]*reach,s.at[1]-n[1]*reach],heading:toward-faceTurn[port.face]};
     }
     const e=s.entry,E=e.centerIn,depth=faceDepth(r,port.face);
-    let away=[start[0]-E[0],start[1]-E[1]],d0=Math.hypot(...away)-depth;
+    let away=[start[0]-E[0],start[1]-E[1]],behind=false;
     if(e.kind==='window'){
       const n=unit(e.facingDeg);
-      if(away[0]*n[0]+away[1]*n[1]<=1e-9){away=n;d0=-Infinity;}  // behind the window: never inside a band
+      if(away[0]*n[0]+away[1]*n[1]<=1e-9){away=n;behind=true;}  // behind the window: never inside a band
     }
     if(Math.hypot(...away)<1e-9)away=unit(r.heading+180);
     // A window's band depends on the approach, so the band is keyed by a whole-degree approach and the goal is placed
@@ -513,21 +528,42 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
     if(e.kind==='window'){const n=unit(e.facingDeg),r1=unit(approach+180);w=r1[0]*n[0]+r1[1]*n[1]>1e-6?r1:n;}
     const key=[r.concept.digest,port.id,s.id,e.kind==='window'?approach:''].join('/');
     const R=port.ranged;
-    if(!bandCache.has(key))bandCache.set(key,arc.standOffBand(e,pieceRadius(s.piece),{launchSpeedInS:R.launchSpeedInS,elevationDeg:R.elevationDeg},R.releaseHeightIn,approach).bands);
-    const bands=bandCache.get(key);
+    const bands=bandCache.get(key) ?? bandCache.set(key,arc.standOffBand(e,pieceRadius(s.piece),{launchSpeedInS:R.launchSpeedInS,elevationDeg:R.elevationDeg},R.releaseHeightIn,approach).bands).get(key);
     if(!bands.length){notice(g,r.id+' has no feasible stand-off from '+s.label+' through '+port.id+'.');return null;}
-    // Distances are from the output face. Stay where the face already lies inside a band; otherwise stop with the face
-    // 1 in inside the nearest band edge. A shooter with firesWhileMoving has the same goal and may also release on the
-    // way whenever it is under its speed cap, on target and the arc passes, so the capability never delays a release.
-    let choice=null;
-    for(const b of bands){
-      const inside=d0>=b.minIn && d0<=b.maxIn,narrow=b.maxIn-b.minIn<2;
-      const lo=narrow?(b.minIn+b.maxIn)/2:b.minIn+1,hi=narrow?lo:b.maxIn-1;
-      const near=inside?d0:d0>b.maxIn?hi:lo,gap=Math.abs(near-d0);
-      if(!choice || gap<choice.gap)choice={gap,inside,distance:near};
+    // The heading to shoot from comes first; then the goal puts the face point at that heading on the approach line.
+    // Without a turret the face turns onto the target. A turret may keep the present heading when the bearing lies in
+    // its range (otherwise make the smallest turn that brings it in), but keeping it shifts the face sideways and can
+    // lengthen the drive; so a turret robot takes whichever of that heading and the face-on one shoots sooner.
+    const toward=Math.atan2(-w[1],-w[0])*180/Math.PI,faceOn=toward-faceTurn[port.face];
+    const candidates=[faceOn];
+    if(R.turret){
+      const off=wrap(toward-r.heading-faceTurn[port.face]),held=Math.min(R.turret.maxDeg,Math.max(R.turret.minDeg,off));
+      candidates.unshift(r.heading+off-held);
     }
-    const goal=choice.inside?[...start]:[E[0]+w[0]*(choice.distance+depth),E[1]+w[1]*(choice.distance+depth)];
-    return {goal,heading:bearing(goal,E)-faceTurn[port.face]};
+    const {topSpeedInS:v,accelInS2:a,rotationDegS}=r.concept.drive,turret=c=>c.aim[port.id]?.turretDeg ?? 0;
+    let best=null;
+    for(const heading of candidates){
+      const n=unit(heading+faceTurn[port.face]),face=[start[0]+n[0]*depth,start[1]+n[1]*depth];
+      // Distance from the face; a face that is not in front of a window counts as behind it.
+      const front=e.kind!=='window' || (face[0]-E[0])*Math.cos(e.facingDeg*Math.PI/180)+(face[1]-E[1])*Math.sin(e.facingDeg*Math.PI/180)>1e-9;
+      const d0=behind || !front?-Infinity:Math.hypot(face[0]-E[0],face[1]-E[1]);
+      // Stay where the face already lies inside a band; otherwise stop with the face 1 in inside the nearest band
+      // edge. A shooter with firesWhileMoving has the same goal and may also release on the way whenever it is under
+      // its speed cap, on target and the arc passes, so the capability never delays a release.
+      let choice=null;
+      for(const b of bands){
+        const inside=d0>=b.minIn && d0<=b.maxIn,narrow=b.maxIn-b.minIn<2;
+        const lo=narrow?(b.minIn+b.maxIn)/2:b.minIn+1,hi=narrow?lo:b.maxIn-1;
+        const near=inside?d0:d0>b.maxIn?hi:lo,gap=Math.abs(near-d0);
+        if(!choice || gap<choice.gap)choice={gap,inside,distance:near};
+      }
+      const goal=choice.inside?[...start]:[E[0]+w[0]*choice.distance-n[0]*depth,E[1]+w[1]*choice.distance-n[1]*depth];
+      const d=Math.hypot(goal[0]-start[0],goal[1]-start[1]),slew=R.turret?.slewDegS ?? Infinity;
+      const time=Math.max(d>=v*v/a?v/a+d/v:2*Math.sqrt(d/a),Math.abs(wrap(heading-r.heading))/rotationDegS,
+        Math.abs(wrap(toward-heading-faceTurn[port.face])-turret(g.concept[r.id]))/slew);
+      if(!best || time<best.time-1e-9)best={time,goal,heading};
+    }
+    return {goal:best.goal,heading:best.heading};
   }
   const bandCache=new Map(),arcCache=new Map();
   // A drag-free arc from the output face at the release height, cached per rounded face point, velocity and elevation.
@@ -553,8 +589,17 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
     if(!c.leg.port){
       const ports=portsFor(r.concept.outputs,type);
       if(!ports.length){notice(g,r.id+' has no output port for '+type+' at '+s.label+'.');return {done:true};}
-      const port=ports.find(p=>p.kind==='place' || s.entry);
-      if(!port){notice(g,r.id+' cannot score at '+s.label+' through '+ports.map(p=>p.id).join(', ')+': no entry region.');return {done:true};}
+      // The first output that can serve this target: a place output whose release-height range covers the entry
+      // (or with no entry to check), or a ranged output where an entry exists.
+      const z=s.entry?.centerIn[2];
+      const port=ports.find(p=>p.kind==='place'?z===undefined || z>=p.place.releaseHeightIn.min-1e-9 && z<=p.place.releaseHeightIn.max+1e-9:Boolean(s.entry));
+      if(!port){
+        for(const p of ports){
+          if(p.kind==='ranged')notice(g,r.id+' cannot score at '+s.label+' through '+p.id+': no entry region.');
+          else notice(g,r.id+' cannot place at '+s.label+' through '+p.id+': release height '+p.place.releaseHeightIn.min+'–'+p.place.releaseHeightIn.max+' in misses the entry at '+z+' in.');
+        }
+        return {done:true};
+      }
       if(port.kind==='ranged' && !pieceRadius(type))notice(g,r.id+' piece radius unknown for '+type+'; arc check assumes 0.');
       const plan=scoringPlan(sim,r,port,s,c.leg.start);
       if(!plan)return {done:true};
@@ -568,16 +613,20 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
       const normal=r.heading+faceTurn[port.face],f=unit(normal),depth=faceDepth(r,port.face);
       const gap=Math.hypot(s.at[0]-r.p[0]-f[0]*depth,s.at[1]-r.p[1]-f[1]*depth),band=port.place.standOffIn;
       fire=fire && gap>=band.min-1e-6 && gap<=band.max+1e-6 && Math.abs(wrap(bearing(r.p,s.at)-normal))<=port.place.headingToleranceDeg+1e-9;
-      if(fire)release(sim,r,leg,s,c,port,ready,timeS,false);
+      if(fire)release(sim,r,leg,s,c,port,ready,timeS,moving);
       return {goal:plan.goal,heading:plan.heading};
     }
     const R=port.ranged,aim=c.aim[port.id]??={turretDeg:0,elevationDeg:R.elevationDeg.min};
     const E=s.entry.centerIn,beta=bearing(r.p,E),normal=r.heading+faceTurn[port.face],off=wrap(beta-normal);
-    // Turn the face onto the target, or with a turret only as far as its range needs.
+    // Turn the face onto the target. A turret robot holds its planned shooting heading while the bearing from it
+    // lies in the turret's range, and otherwise turns only as far as the range needs.
     let heading=beta-faceTurn[port.face],turretGoal=0;
     if(R.turret){
-      turretGoal=Math.min(R.turret.maxDeg,Math.max(R.turret.minDeg,off));
-      heading=Math.abs(off-turretGoal)>1e-9?r.heading+off-turretGoal:undefined;
+      const clamp=x=>Math.min(R.turret.maxDeg,Math.max(R.turret.minDeg,x)),planned=wrap(beta-plan.heading-faceTurn[port.face]);
+      if(Math.abs(planned-clamp(planned))<1e-9)heading=plan.heading;
+      else heading=Math.abs(off-clamp(off))>1e-9?r.heading+off-clamp(off):undefined;
+      turretGoal=clamp(wrap(beta-(heading ?? r.heading)-faceTurn[port.face]));
+      if(heading!==undefined && Math.abs(wrap(heading-r.heading))<1e-9)heading=undefined;
     }
     const next=r.waypoints?.[r.target],toward=next && moving?Math.atan2(next[1]-r.p[1],next[0]-r.p[0]):0;
     const velocity=moving?[r.currentSpeedInS*Math.cos(toward),r.currentSpeedInS*Math.sin(toward)]:[0,0];
@@ -587,11 +636,18 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
     if(fire)release(sim,r,leg,s,c,port,ready,timeS,moving);
     // Slew after the check: the turret toward the bearing and the hood toward the best arc from this pose.
     if(R.turret)aim.turretDeg+=Math.sign(turretGoal-aim.turretDeg)*Math.min(Math.abs(turretGoal-aim.turretDeg),R.turret.slewDegS*dt);
+    let hood=true;
     if(R.elevationDeg.slewDegS && !fire){
       const best=arcAt(r,r,port,s,velocity,null),target=best.feasible?best.elevationDeg:c.leg.elevation??=arcAt({p:plan.goal,heading:plan.heading},r,port,s,[0,0],null).elevationDeg;
-      if(Number.isFinite(target))aim.elevationDeg+=Math.sign(target-aim.elevationDeg)*Math.min(Math.abs(target-aim.elevationDeg),R.elevationDeg.slewDegS*dt);
+      if(Number.isFinite(target)){
+        aim.elevationDeg+=Math.sign(target-aim.elevationDeg)*Math.min(Math.abs(target-aim.elevationDeg),R.elevationDeg.slewDegS*dt);
+        hood=Math.abs(target-aim.elevationDeg)<1e-6;
+      }
     }
-    if(!fire && arrived && !moving && ready && !arcAt(r,r,port,s,[0,0],null).feasible){
+    // Give up only from a settled pose: arrived and still, the body turned, the turret and the hood slewed.
+    const settled=(heading===undefined || Math.abs(wrap(heading-r.heading))<1e-9) && hood &&
+      (!R.turret || Math.abs(turretGoal-aim.turretDeg)<1e-9);
+    if(!fire && arrived && !moving && ready && settled && !arcAt(r,r,port,s,[0,0],null).feasible){
       notice(g,r.id+' found no arc into '+s.label+' from ['+r.p.map(v=>Math.round(v)).join(', ')+'] through '+port.id+'.');return {done:true};
     }
     return {goal:plan.goal,heading};
@@ -600,7 +656,8 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
     const g=sim.game;
     g.cargo[r.id]=g.cargo[r.id].filter(p=>p!==piece);
     c.free[port.id]=timeS+port.secondsPerPiece;c.leg.released=true;
-    const fraction=moving?port.ranged.firesWhileMoving.successFraction:port.successFraction;
+    // A moving ranged release scores the moving fraction; a place output has only its own.
+    const fraction=moving && port.ranged?.firesWhileMoving?port.ranged.firesWhileMoving.successFraction:port.successFraction;
     // Without a prescribed outcome a release is unresolved, exactly as for a legacy robot.
     const at=port.kind==='ranged'?[...facePoint(r,r,port),port.ranged.releaseHeightIn]:undefined;
     releaseAtTarget(sim,r,s,[piece],leg.outcome ?? 'unresolved',timeS,undefined,

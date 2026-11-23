@@ -161,13 +161,19 @@ export function createFieldRehearsal(profile) {
   function trapezoid(v,D,a,top) {
     if(D<=1e-9)return [D,0];
     v=Math.min(v,top);
-    // After a replan onto a shorter route, brake harder than accelInS2 rather than overrun the leg end.
-    const brake=Math.max(a,v*v/(2*D)), peak=Math.max(v,Math.min(top,Math.sqrt((2*a*brake*D+brake*v*v)/(a+brake))));
+    // Never brake harder than accelInS2. After a replan onto a route too short to stop on, the robot reaches the
+    // goal still moving and coasts past it (see poweredStep).
+    const brake=a, peak=Math.max(v,Math.min(top,Math.sqrt((2*a*brake*D+brake*v*v)/(a+brake))));
     const t1=(peak-v)/a, s1=(peak*peak-v*v)/(2*a), s3=peak*peak/(2*brake), s2=Math.max(0,D-s1-s3), t2=s2/peak, t3=peak/brake;
     if(dt<=t1)return [v*dt+a*dt*dt/2,v+a*dt];
     if(dt<=t1+t2)return [s1+peak*(dt-t1),peak];
     const t=dt-t1-t2;
-    return t<t3-1e-12?[Math.min(D,s1+s2+peak*t-brake*t*t/2),peak-brake*t]:[D,0];
+    if(t<t3-1e-12){
+      const covered=s1+s2+peak*t-brake*t*t/2;
+      // The goal is reached before the speed is spent: stop there at the speed left on arrival.
+      return covered<D?[covered,peak-brake*t]:[D,Math.sqrt(Math.max(0,peak*peak-2*brake*(D-s1-s2)))];
+    }
+    return [D,0];
   }
   function proposal(sim,r) {
     r.blocked='';turnTo=undefined;nextSpeed=0;portLeg=false;
@@ -284,8 +290,15 @@ export function createFieldRehearsal(profile) {
     // Each move reserves a continuous sweep. Earlier movers saw later peers stationary.
     // A later peer may move only if its simultaneous sweep also misses earlier movers.
     for(let i=0;i<sim.robots.length;i++) {
-      const r=sim.robots[i],a=begins[i],b=proposal(sim,r);
+      const r=sim.robots[i],a=begins[i];
+      let b=proposal(sim,r);
       r.waitFor=null;
+      // A moving concept robot told to hold, or to finish a leg, brakes at accelInS2 along its last direction of
+      // travel rather than stopping dead. Only a blocked move stops it at once.
+      if(r.concept && norm(a,b)<1e-9 && r.currentSpeedInS>1e-9 && r.motionDir){
+        const v=r.currentSpeedInS,after=Math.max(0,v-r.concept.drive.accelInS2*dt),along=(v+after)/2*dt;
+        b=[a[0]+r.motionDir[0]*along,a[1]+r.motionDir[1]*along];nextSpeed=after;
+      }
       let heading=r.concept && !r.blocked?turned(r,turnTo):r.heading, rotating=heading!==r.heading;
       if(r.concept)r.currentSpeedInS=0;
       if(norm(a,b)<1e-9 && !rotating){
@@ -318,7 +331,7 @@ export function createFieldRehearsal(profile) {
         continue;
       }
       ends[i]=b;bodies[i]=body;headings[i]=heading;
-      if(r.concept && norm(a,b)>=1e-9)r.currentSpeedInS=nextSpeed;
+      if(r.concept && norm(a,b)>=1e-9){r.currentSpeedInS=nextSpeed;r.motionDir=[(b[0]-a[0])/norm(a,b),(b[1]-a[1])/norm(a,b)];}
       if(r.waypoints?.[r.target] && norm(b,r.waypoints[r.target])<1e-8)r.target++;
     }
     sim.robots.forEach((r,i)=>{r.travelIn+=norm(begins[i],ends[i]);r.p=ends[i];r.heading=headings[i];});

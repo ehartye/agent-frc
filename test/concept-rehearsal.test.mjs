@@ -410,3 +410,79 @@ test('ports: a robot that cannot turn where it stands drives clear first, then t
   assert.equal(sim.game.events.filter(e=>e.robot==='B1' && e.outcome==='credited').length,6,'all six rack tiles placed');
   assert.ok(b1.wait*dt<1,'waited '+b1.wait*dt+' s: '+b1.blocked);
 });
+
+// Hardening 2. A concept robot's speed may change by at most accelInS2·dt per tick, except when a move is blocked.
+function speedTrace(engine,sim,seconds,id='B1'){
+  const trace=[];
+  for(let t=0;t<Math.round(seconds/dt);t++){engine.advance(sim,dt);const r=sim.robots.find(x=>x.id===id);trace.push({t:sim.ticks*dt,v:r.currentSpeedInS,blocked:r.blocked});}
+  return trace;
+}
+function assertAccelLimited(trace,accel,why){
+  let prev=0;
+  for(const {t,v,blocked} of trace){
+    if(!/Occupied by/.test(blocked))assert.ok(Math.abs(v-prev)<=accel*dt+1e-6,why+': speed '+prev+' -> '+v+' at '+t+' s');
+    prev=v;
+  }
+}
+// The ring at [340,60] is 80 in high; at 300-305 in/s and a fixed 45 degrees its band runs 117-151 in from the face.
+const narrowShooter=turret=>{const s=shooter({elevation:[45,45],turret});s.ranged.launchSpeedInS=span(300,305);return s;};
+
+test('ports: a turret shooter places its goal for the heading it will hold and fires no later than a fixed one',()=>{
+  const docs=[conceptDoc('turret',{outputs:[narrowShooter([-90,90,360])]}),conceptDoc('fixed',{outputs:[narrowShooter(null)]})];
+  const two={station:'test-rack',quantity:2};
+  for(const heading of [0,-30,-60,-85]){
+    const first=id=>releases(play(arena({docs,steps:[shoot]}),[{concept:id,heading,preload:two}],8,[[100,60]]).events)[0];
+    const turret=first('turret'),fixed=first('fixed');
+    assert.ok(fixed,'fixed shooter released from heading '+heading);
+    assert.ok(turret,'turret shooter released from heading '+heading);
+    assert.ok(turret.timeS<=fixed.timeS+1e-9,'heading '+heading+': turret '+turret.timeS+' s, fixed '+fixed.timeS+' s');
+  }
+});
+
+test('ports: a fixed shooter inside its band turns before it judges the arc',()=>{
+  const docs=[conceptDoc('fixed',{outputs:[narrowShooter(null)]})];
+  for(const heading of [0,-90,180]){
+    const p=arena({docs,steps:[shoot]});p.rehearsal.starts[0]=[190,60];
+    const engine=createFieldRehearsal(p);
+    const sim=engine.createProbe([{...engine.defaults('blue',1),plans:{Opening:'trial','Main play':'trial'},concept:'fixed',heading,preload}]);
+    sim.paused=false;
+    assertAccelLimited(speedTrace(engine,sim,4),250,'heading '+heading);
+    assert.equal(releases(sim.game.events).length,1,'heading '+heading+': '+sim.game.notices.join(' | '));
+  }
+});
+
+test('ports: a rolling collection keeps moving through each capture within its acceleration, and logs in time order',()=>{
+  const doc=conceptDoc('sweeper',{capacity:{ball:3},inputs:[input('front',{requiresStop:false,secondsPerPiece:q(0.3)})]});
+  const p=arena({docs:[doc],steps:[{operation:'acquire',station:'test-balls'}],balls:[[250,60],[290,60],[330,60]]});
+  p.rehearsal.starts[0]=[200,60];
+  const engine=createFieldRehearsal(p);
+  const sim=engine.createProbe([{...engine.defaults('blue',1),plans:{Opening:'trial','Main play':'trial'},concept:'sweeper'}]);
+  sim.paused=false;
+  const trace=speedTrace(engine,sim,4);
+  assertAccelLimited(trace,250,'rolling collection');
+  const got=sim.game.events.filter(e=>e.operation==='acquire' && e.outcome==='acquired');
+  assert.equal(got.length,3);
+  for(const e of got){
+    const at=trace.find(x=>Math.abs(x.t-e.startedS-dt)<1e-9);
+    assert.ok(e.speedInS>0 && at.v>0,'moving through the capture at '+e.startedS+' s');
+    // Logged on the tick the piece lands aboard, secondsPerPiece after contact.
+    assert.ok(e.timeS>=e.startedS+0.3-1e-9 && e.timeS<e.startedS+0.3+dt+1e-9,'landed at '+e.timeS+' for contact at '+e.startedS);
+  }
+  for(let i=1;i<sim.game.events.length;i++)assert.ok(sim.game.events[i].timeS>=sim.game.events[i-1].timeS-1e-9,'event times in order at '+i);
+});
+
+test('ports: the first output that can serve the target is used',()=>{
+  // The placer's 10-20 in release height cannot reach the ring 80 in up; the shooter listed second can.
+  const doc=conceptDoc('both',{outputs:[{...placer,id:'low-placer'},shooter()]});
+  const run=play(arena({docs:[doc],steps:[shoot]}),[{concept:'both',preload}],2,[[240,60]]);
+  assert.deepEqual(releases(run.events).map(e=>e.port),['shooter']);
+  assert.equal(run.sim.game.score.blue,2);
+});
+
+test('ports: a place output that need not stop records a release on the move as moving',()=>{
+  const rolling={...placer,requiresStop:false};
+  const run=play(arena({docs:[conceptDoc('placer',{outputs:[rolling]})],steps:[shoot],goal:[300,150],entry:null,points:1}),[{concept:'placer',preload}],4,[[200,150]]);
+  const shot=releases(run.events)[0];
+  assert.ok(shot.speedInS>0,'released at '+shot.speedInS+' in/s');
+  assert.equal(shot.moving,true);assert.equal(shot.successFraction,1);
+});
