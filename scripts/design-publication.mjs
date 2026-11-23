@@ -8,7 +8,8 @@
  *   2. The numbers the review scene shows equal the receipt.
  *   3. A mission case plays a represented objective on a passing operating case.
  *   4. An in-progress detailed design names an effective preliminary release and its receipt is on the Fusion export.
- *   5. One status index per phase, with at most one effective design and the primary view computed from it.
+ *   5. One status index per phase, with at most one effective design and the primary view computed from it. A
+ *      preliminary release whose ID is a version, MAJOR.MINOR, belongs to an architecture the index names.
  *
  * A design becomes effective by a status change in the index, in a reviewed pull request, and this check prints the
  * readiness report for its reviewer. A detailed design whose mechanical-readiness review does not pass cannot be
@@ -22,7 +23,7 @@ import {existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSyn
 import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 
-import {currentFor, designStatuses, statusOf} from './design-status.mjs';
+import {currentFor, designName, designStatuses, designTitle, releaseId, statusOf, versionOf} from './design-status.mjs';
 import {effectiveReadiness, readinessText} from './effective-readiness.mjs';
 import {compareWithReceipt, readScene} from './review-scene.mjs';
 
@@ -215,8 +216,13 @@ export function checkProject(root, options = {}) {
   let preliminary = null, prelimStatus = () => null;
   if (existsSync(prelimIndexFile)) attempt('preliminary index', () => {
     const index = parse(readFileSync(prelimIndexFile), 'preliminary release index'), ids = index?.releases;
-    check(object(index) && Array.isArray(ids) && ids.every(i => designId.test(i ?? '')) && new Set(ids).size === ids.length,
-      'The preliminary release index needs a list of unique release IDs');
+    check(object(index) && Array.isArray(ids) && ids.every(i => releaseId.test(i ?? '')) && new Set(ids).size === ids.length,
+      'The preliminary release index needs a list of unique release IDs: a version, MAJOR.MINOR, or an earlier ID of lowercase letters, digits and hyphens');
+    // The architecture each major number stands for. A version whose architecture has no name cannot be titled.
+    check(index.designs === undefined || object(index.designs) && Object.entries(index.designs).every(([major, d]) => /^[1-9][0-9]{0,3}$/.test(major) && object(d) && named(d.name)),
+      'designs maps each major number to its architecture name, as in {"1": {"name": "NAME"}}');
+    for (const major of new Set(ids.map(i => versionOf(i)?.major).filter(Boolean)))
+      check(named(index.designs?.[major]?.name), 'Design ' + major + ' has no name: add designs.' + major + '.name to the preliminary release index, or stage a version with --design-name');
     const map = index.designStatus;
     check(map === undefined || object(map) && Object.entries(map).every(([id, v]) => ids.includes(id) && designStatuses.includes(v)),
       'designStatus maps listed release IDs to ' + designStatuses.join(', '));
@@ -230,25 +236,31 @@ export function checkProject(root, options = {}) {
     const current = ids.length ? currentFor(index, historical) : undefined;
     check(index.current === current, 'The preliminary index must open the effective release, else the newest in-progress one: set current to ' + current);
     for (const id of dirs) attempt(id, () => check(ids.includes(id), 'Release directory ' + id + ' is not in the preliminary release index'));
+    // A draft takes no number, so one architecture holds one in-progress version.
+    const drafting = new Map();
+    for (const id of ids.filter(i => versionOf(i) && status(i) === 'in-progress')) drafting.set(versionOf(id).major, [...(drafting.get(versionOf(id).major) ?? []), id]);
+    for (const [major, several] of drafting) if (several.length > 1)
+      warnings.push(index.designs[major].name + ' has ' + several.length + ' in-progress versions (' + several.join(', ') + '). A draft takes no number: keep one, revise it in place and mark the others superseded.');
     preliminary = {current: index.current, releases: []};
     for (const id of ids) {
-      const entry = {release: id, status: status(id)};
+      const entry = {release: id, ...(designName(index, id) ? {design: designTitle(index, id)} : {}), status: status(id)};
       preliminary.releases.push(entry);
       if (!['in-progress', 'effective'].includes(entry.status)) {
         attempt(id, () => check(entry.status === 'withdrawn' || dirs.includes(id), 'Release ' + id + ' is listed but has no directory'));
-        if (entry.status === 'withdrawn') withdrawnNote('Preliminary release ' + id, index, id);
+        if (entry.status === 'withdrawn') withdrawnNote('Preliminary release ' + designTitle(index, id), index, id);
         continue;
       }
       attempt(id, () => {
-        const where = 'Preliminary release ' + id, dir = path.join(prelimTree, 'releases', id), record = records.get(id);
+        const where = versionOf(id) ? 'Preliminary design ' + designTitle(index, id) : 'Preliminary release ' + id, dir = path.join(prelimTree, 'releases', id), record = records.get(id);
         check(record?.schema === 'agent-frc/preliminary-release@1' && record.release === id, where + ' needs its release record (release.json)');
         const receipt = checkEvidence(where, filesUnder(dir), record);
         const inputs = inputsOf(where, record, path.join(o.inputs, id));
         pending.push({where, entry, receipt, record, inputs, siteDir: dir, index: prelimIndexFile, required: true});
         // Effective is the project's decision in a reviewed pull request. The report is for its reviewer.
         if (entry.status === 'effective') {
+          const design = entry.design;
           reports.push({title: where + ' (effective)',
-            text: existsSync(inputs) ? readinessText(checkedFromRoot(inputs, receipt) ? effectiveReadiness(root, {release: rel(inputs)}) : effectiveReadiness(inputs)) : 'No readiness report: the check inputs are not committed.\n'});
+            text: existsSync(inputs) ? readinessText(checkedFromRoot(inputs, receipt) ? effectiveReadiness(root, {release: rel(inputs), design}) : effectiveReadiness(inputs, {design})) : 'No readiness report: the check inputs are not committed.\n'});
           warnIfChanged(where, prelimIndexFile, id, [inputs, dir]);
         }
       });

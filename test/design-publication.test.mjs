@@ -109,6 +109,38 @@ test('the index holds at most one effective release, a computed current release 
   assert.deepEqual(p.calls.slice(-2), ['layout-001', 'layout-002']);
 });
 
+test('a version ID is checked with the name of its architecture; an earlier ID beside it is unchanged', t => {
+  // Synthetic index: an invented architecture, "Tilting carriage", with an effective 1.0 and a draft of 1.1.
+  const p = project(t, {'layout-004': {}, '1.0': {}, '1.1': {}}, {'layout-004': 'superseded', '1.0': 'effective', '1.1': 'in-progress'});
+  const file = path.join(p.root, prelim, 'releases.json');
+  editJson(file, i => ({...i, current: '1.0'}));
+  assert.match(errorsOf(p.check()), /Design 1 has no name: add designs\.1\.name to the preliminary release index, or stage a version with --design-name/);
+  editJson(file, i => ({...i, designs: {one: {name: 'Tilting carriage'}}}));
+  assert.match(errorsOf(p.check()), /designs maps each major number to its architecture name/);
+  editJson(file, i => ({...i, designs: {1: {name: 'Tilting carriage'}}, revision: {'1.1': {number: 3, date: '2001-02-03'}}, accepted: {'1.0': '2001-01-02'}}));
+  const result = p.check();
+  assert.deepEqual(result.errors, []);
+  assert.deepEqual(result.warnings, []);
+  assert.deepEqual(result.preliminary, {current: '1.0', releases: [{release: 'layout-004', status: 'superseded'},
+    {release: '1.0', design: 'Tilting carriage 1.0', status: 'effective', rerun: 'pass'}, {release: '1.1', design: 'Tilting carriage 1.1', status: 'in-progress', rerun: 'pass'}]});
+  assert.deepEqual(p.calls.slice(-2), ['1.0', '1.1'], 'the layout check is rerun in each version folder');
+  assert.equal(result.reports.length, 1);
+  assert.equal(result.reports[0].title, 'Preliminary design Tilting carriage 1.0 (effective)');
+  assert.match(result.reports[0].text, /^Effective-readiness report for Tilting carriage 1\.0 \(/);
+  // A failing version is named the same way.
+  editJson(p.receiptFile('1.1'), r => ({...r, status: 'provisional'}));
+  assert.match(errorsOf(p.check()), /Preliminary design Tilting carriage 1\.1 needs a layout-checked receipt/);
+  editJson(p.receiptFile('1.1'), r => ({...r, status: 'layout-checked'}));
+  // Two in-progress versions of one architecture are two drafts under two numbers: a warning for the reviewer.
+  editJson(file, i => ({...i, current: '1.1', designStatus: {...i.designStatus, '1.0': 'in-progress'}}));
+  const two = p.check();
+  assert.deepEqual(two.errors, []);
+  assert.match(two.warnings.join(' '), /Tilting carriage has 2 in-progress versions \(1\.0, 1\.1\)\. A draft takes no number/);
+  // An ID that is neither a version nor an earlier ID is refused.
+  editJson(file, i => ({...i, releases: [...i.releases, '1.0.1']}));
+  assert.match(errorsOf(p.check()), /unique release IDs: a version, MAJOR\.MINOR, or an earlier ID/);
+});
+
 test('the review scene must repeat the receipt and a mission case must play a represented objective', t => {
   const p = project(t, {'layout-001': {}, 'layout-002': {missions: []}, 'layout-003': {trial: '{"transport":{"case":"loaded-turn"}}',
     missions: [{case: 'loaded-turn', kind: 'field-interaction-trial', accomplishes: 'delivered', objective: 'Carry the sample to the bin',
@@ -327,29 +359,30 @@ test('the real layout check reruns a committed synthetic release and rejects a f
     t.after(() => rmSync(temp, {recursive: true, force: true}));
     const season = path.join(temp, 'season'), py = process.env.PYTHON ?? (process.platform === 'win32' ? 'python' : 'python3');
     execFileSync(py, ['-B', fileURLToPath(new URL('../examples/preliminary-design/create.py', import.meta.url)), season, '--project-review'], {stdio: 'pipe'});
+    // The starter publishes a version: the invented architecture "Turning carrier", 1.0.
     const result = checkProject(season, {budgetMinutes: 5});
     assert.deepEqual(result.errors, []);
-    assert.deepEqual(result.preliminary.releases, [{release: 'layout-001', status: 'in-progress', rerun: 'pass'}]);
+    assert.deepEqual(result.preliminary.releases, [{release: '1.0', design: 'Turning carrier 1.0', status: 'in-progress', rerun: 'pass'}]);
     // The readiness report of an effective release resolves its trial pins from the repository root, where the check ran.
-    editJson(path.join(season, prelim, 'releases.json'), i => ({...i, designStatus: {'layout-001': 'effective'}}));
+    editJson(path.join(season, prelim, 'releases.json'), i => ({...i, designStatus: {'1.0': 'effective'}}));
     const report = checkProject(season, {skipRerun: true}).reports.map(r => r.text).join(' ');
-    assert.match(report, /Effective-readiness report for synthetic-package-layout-001/);
-    assert.match(report, /trial cad\/preliminary-design\/releases\/layout-001\/release-lane-trial\.json has no qualification record/);
+    assert.match(report, /Effective-readiness report for Turning carrier 1\.0 \(synthetic-package-1\.0\)/);
+    assert.match(report, /trial cad\/preliminary-design\/releases\/1\.0\/release-lane-trial\.json has no qualification record/);
     assert.doesNotMatch(report, /the motion is prescribed/);
-    editJson(path.join(season, prelim, 'releases.json'), i => ({...i, designStatus: {'layout-001': 'in-progress'}}));
+    editJson(path.join(season, prelim, 'releases.json'), i => ({...i, designStatus: {'1.0': 'in-progress'}}));
     // An edit to the in-progress design is staged under the same ID: one entry, a counted revision, and the rerun on the revised inputs.
-    const folder = 'cad/preliminary-design/releases/layout-001';
+    const folder = 'cad/preliminary-design/releases/1.0';
     editJson(path.join(season, folder, 'layout.json'), l => ({...l, presentation: {...l.presentation, focus: 'Invented revised focus.'}}));
     execFileSync(process.execPath, [fileURLToPath(new URL('../scripts/design.mjs', import.meta.url)), 'preliminary-check', season, folder + '/layout.json',
       '--write-view', '--require-checked', '--quiet', '--output', folder + '/receipt.json'], {stdio: 'pipe'});
-    assert.match(execFileSync(py, ['-B', path.join(season, 'cad/preliminary-design/stage.py'), 'layout-001'], {encoding: 'utf8'}), /Revised preliminary release layout-001 in place \(in-progress, revision 2\)/);
+    assert.match(execFileSync(py, ['-B', path.join(season, 'cad/preliminary-design/stage.py'), '1.0'], {encoding: 'utf8'}), /Revised preliminary design Turning carrier 1\.0 in place \(draft 2, in progress\)/);
     const revised = checkProject(season, {budgetMinutes: 5});
     assert.deepEqual(revised.errors, []);
-    assert.deepEqual(revised.preliminary.releases, [{release: 'layout-001', status: 'in-progress', rerun: 'pass'}]);
-    assert.equal(JSON.parse(readFileSync(path.join(season, prelim, 'releases.json'))).revision['layout-001'].number, 2);
+    assert.deepEqual(revised.preliminary.releases, [{release: '1.0', design: 'Turning carrier 1.0', status: 'in-progress', rerun: 'pass'}]);
+    assert.equal(JSON.parse(readFileSync(path.join(season, prelim, 'releases.json'))).revision['1.0'].number, 2);
     // Move the displaced control so it no longer collides, then forge the receipt's plan digest by hand.
-    const plan = path.join(season, 'cad/preliminary-design/releases/layout-001/layout.json');
+    const plan = path.join(season, 'cad/preliminary-design/releases/1.0/layout.json');
     editJson(plan, l => ({...l, control: {...l.control, offsetMm: [0, 50, 0]}}));
-    editJson(path.join(season, prelim, 'releases/layout-001/receipt.json'), r => ({...r, planSha256: sha(readFileSync(plan))}));
-    assert.match(errorsOf(checkProject(season, {budgetMinutes: 5})), /layout-001 \(rerun\) needs a layout-checked receipt; found provisional/);
+    editJson(path.join(season, prelim, 'releases/1.0/receipt.json'), r => ({...r, planSha256: sha(readFileSync(plan))}));
+    assert.match(errorsOf(checkProject(season, {budgetMinutes: 5})), /Preliminary design Turning carrier 1\.0 \(rerun\) needs a layout-checked receipt; found provisional/);
   });

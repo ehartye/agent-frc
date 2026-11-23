@@ -236,10 +236,12 @@ if __name__=="__main__":
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("new_directory",type=Path)
     parser.add_argument("--project-review", action="store_true", help="Include a season-local review bundle and launcher")
-    parser.add_argument("--release", default="layout-001", help="Release ID: the package folder is cad/preliminary-design/releases/ID")
+    parser.add_argument("--release", default="1.0", help="Release ID, a version MAJOR.MINOR: the package folder is cad/preliminary-design/releases/ID")
+    parser.add_argument("--design-name", default="Turning carrier", help="The invented architecture's name, recorded the first time its major number is staged")
     args = parser.parse_args()
-    if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,63}", args.release):
-        parser.error("Use a lowercase release ID with letters, digits and hyphens")
+    version = re.fullmatch(r"[1-9][0-9]{0,3}\.(0|[1-9][0-9]{0,3})", args.release)
+    if not version and not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,63}", args.release):
+        parser.error("Use a version as the release ID: MAJOR.MINOR, such as 1.0")
     if args.project_review:
         season = args.new_directory.resolve()
         author = season / "cad/preliminary-design"
@@ -259,7 +261,7 @@ if __name__=="__main__":
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(templates / source, dest)
         create(author / "releases" / args.release, release_id=args.release, project=season)
-        subprocess.run([sys.executable, str(author / "stage.py"), args.release], check=True)
+        subprocess.run([sys.executable, str(author / "stage.py"), args.release, *(["--design-name", args.design_name] if version else [])], check=True)
     else:
         # The new directory stands for a repository: the package sits in a release folder inside it.
         create(args.new_directory.resolve() / RELEASES / args.release, project=args.new_directory.resolve())

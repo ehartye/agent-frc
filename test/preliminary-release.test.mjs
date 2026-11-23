@@ -60,7 +60,7 @@ test('the season script publishes a checked release, records where its inputs ar
   await fixture('a', {page: '<html>Our own review page</html>'});
   const staged = stage('a');
   assert.equal(staged.status, 0, staged.stderr);
-  assert.match(staged.stdout, /Staged preliminary release a \(in-progress, revision 1\)/);
+  assert.match(staged.stdout, /Staged preliminary release a \(draft 1, in progress\)/);
   assert.equal(await readFile(path.join(site, 'releases', 'a', 'index.html'), 'utf8'), '<html>Our own review page</html>');
   assert.deepEqual(JSON.parse(await readFile(path.join(site, 'releases', 'a', 'release.json'))), {
     schema: 'agent-frc/preliminary-release@1', release: 'a', issue: 'synthetic-a', phase: 'preliminary-design',
@@ -81,18 +81,18 @@ test('the season script publishes a checked release, records where its inputs ar
 
   // An in-progress release is revised in place: the same ID, no new entry, and a revision counted in the index.
   await fixture('a', {page: '<html>Corrected page</html>'});
-  assert.match(stage('a').stdout, /Revised preliminary release a in place \(in-progress, revision 2\)/);
+  assert.match(stage('a').stdout, /Revised preliminary release a in place \(draft 2, in progress\)/);
   assert.equal(await readFile(path.join(site, 'releases', 'a', 'index.html'), 'utf8'), '<html>Corrected page</html>');
   assert.deepEqual((await index()).releases, ['a', 'b']);
   assert.deepEqual((await index()).revision, {a: rev(2), b: rev(1)});
   // Staging the same files again changes nothing and counts nothing.
   const before = await readFile(listing, 'utf8');
-  assert.match(stage('a').stdout, /Preliminary release a is unchanged \(revision 2\)/);
+  assert.match(stage('a').stdout, /Preliminary release a is unchanged \(draft 2\)/);
   assert.equal(await readFile(listing, 'utf8'), before);
   // An index written before revisions were counted starts the count at the release it already published.
   await writeFile(listing, JSON.stringify({...JSON.parse(before), revision: undefined}));
   await fixture('b', {page: '<html>Edited b</html>'});
-  assert.match(stage('b').stdout, /Revised preliminary release b in place \(in-progress, revision 2\)/);
+  assert.match(stage('b').stdout, /Revised preliminary release b in place \(draft 2, in progress\)/);
   await writeFile(listing, JSON.stringify({...JSON.parse(before), revision: {a: {number: 2, date: '2000-01-01'}, b: {number: 2, date: '2000-01-01'}}}));
 
   // Status changes edit the index only. An effective release supersedes the one that was; the site opens the effective one.

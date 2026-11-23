@@ -228,7 +228,7 @@ function header(){
  const heading=scene.title||scene.issue;
  document.title=heading+' · Preliminary design review';
  $('heading').textContent=heading;
- $('context').textContent=[scene.context,releaseId(),'Preliminary design'].filter(Boolean).join('　/　');
+ context();
  for(const link of scene.links||[]){const url=followable(link.href,location.href);if(!url)continue;const a=text('a',link.label);a.href=url.href;a.target='_top';$('links').append(a)}
  const show=(id,value,what)=>value?($(id).textContent=value):$(id).replaceChildren(notSupplied(what));
  show('architecture',scene.architecture,'presentation.architecture');show('datum',scene.datum);$('units').textContent=scene.units;
@@ -236,9 +236,13 @@ function header(){
  decide(scene.decision.status,scene.decision.firstUnmet,'(at scene generation; awaiting the review receipt)');
  triggered(scene.decision.status==='blocked'&&scene.decision.firstUnmet?[scene.decision.firstUnmet.text]:[]);
 }
-let designStatus=null,revision='',decision='pending receipt';
+let designStatus=null,draft=0,designTitle='',decision='pending receipt';
 const releaseId=()=>decodeURIComponent(new URL('.',location.href).pathname.split('/').filter(Boolean).at(-1)||'');
-function chip(){const s=$('state');s.textContent=(designStatus?designStatus[0].toUpperCase()+designStatus.slice(1).replace('-',' ')+' · ':'')+revision+decision;s.className='chip '+decision}
+// A version reads NAME MAJOR.MINOR once the release index is read; until then, and for an earlier ID, the ID stands.
+function context(){$('context').textContent=[scene?.context,designTitle||releaseId(),'Preliminary design'].filter(Boolean).join('　/　')}
+function chip(){
+ const said=[draft?'draft '+draft:'',designStatus?designStatus.replace('-',' '):''].filter(Boolean).join(' · ');
+ const s=$('state');s.textContent=(said?said[0].toUpperCase()+said.slice(1)+' · ':'')+decision;s.className='chip '+decision}
 function decide(status,unmet,source){
  decision=status;$('decision').textContent=status;$('decision').className='chip '+status;chip();
  $('decisionSource').textContent=source;$('firstUnmet').textContent=unmet?unmet.text:'None. Every commissioned check passes.';
@@ -250,8 +254,11 @@ async function showDesignStatus(){
  const id=releaseId();
  try{const r=await fetch('../../releases.json',{cache:'no-store'});if(!r.ok)return;const index=await r.json();if(!index.releases?.includes(id))return;
   designStatus=index.designStatus?.[id]??'in-progress';
-  // An in-progress release is revised in place; the index counts its revisions.
-  const edited=index.revision?.[id]?.number;revision=Number.isInteger(edited)?'revision '+edited+' · ':'';chip()}catch{}
+  // An in-progress release is revised in place; the index counts each publish as a draft, under revision. An accepted one shows no draft.
+  const edited=index.revision?.[id]?.number;draft=designStatus==='in-progress'&&Number.isInteger(edited)?edited:0;
+  const major=/^([1-9]\d{0,3})\.(0|[1-9]\d{0,3})$/.exec(id)?.[1],name=major&&index.designs?.[major]?.name;
+  if(typeof name==='string'&&name.trim()){designTitle=name+' '+id;context();document.title=designTitle+' · '+document.title.replace(designTitle+' · ','')}
+  chip()}catch{}
 }
 async function bindReceipt(contentSha){
  let receipt=null;try{const r=await fetch('receipt.json',{cache:'no-store'});receipt=r.ok?await r.json():null}catch{}

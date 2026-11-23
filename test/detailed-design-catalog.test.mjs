@@ -54,6 +54,10 @@ test('the catalog loads with an in-progress design as the primary card, beside a
   assert.doesNotMatch(text(alone.current),/could not be loaded/);
   assert.equal(find(alone.current,link('detail-001')).length,1);
   assert.match(text(alone.current),/Built on preliminary release layout-001/);
+  // A version reads with the name of its architecture, from the preliminary index.
+  const versioned=await render({...base,designs:['detail-001'],designStatus:{'detail-001':'in-progress'},current:'detail-001',beside:null,
+    preliminary:{'detail-001':'1.0'}},{designStatus:{'1.0':'effective'},designs:{1:{name:'Tilting carriage'}}});
+  assert.match(text(versioned.current),/Built on preliminary design Tilting carriage 1\.0\./);
   const beside=await render({...base,designs:['detail-001','detail-002','detail-003'],
     designStatus:{'detail-001':'in-progress','detail-002':'effective','detail-003':'in-progress'},current:'detail-002',beside:'detail-003'},
     {designStatus:{}});
