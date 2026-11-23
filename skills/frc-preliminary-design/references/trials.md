@@ -79,6 +79,7 @@ The library's campaign does the method for every trial: the nominal run, the con
 | `passed` | Yes |
 | `covered by adjustment` | Yes, when each mechanical adjustment it names is measured at both ends with nothing closer than the allowance there |
 | `not covered`, `failed`, `control not rejected`, `not converged`, `incomplete` | No. Read the findings: they name the input and the two values between which the outcome changed |
+| Any word with a qualifier, such as `passed, on a hulled surface` | No. The outcome may rest on a surface that is not there: model the touched solid so the 3D engine runs its true shape |
 
 The record must be current: `python -m frc_design_kernel status design.json records` says which records are stale and why. A `needs 3D` verdict needs a 3D record. A `configurable` verdict needs the trial to name an adjustment.
 
@@ -95,7 +96,7 @@ A piece in a case is moved by one of four things. Declare which in the case's en
 | Has left every mechanism | [`freePath`](../../../docs/preliminary-design.md#a-free-payload-path) | Yes |
 | Rests on or rolls along a field fixture | [`supportedBy`](../../../docs/preliminary-design.md#a-payload-a-field-fixture-supports) | Yes |
 
-Name the library trial with `"trial": NAME` and copy its `fit` operation into the design source as the payload's move in that motion, so the animation is the trial's own path. List the case under the `cases` of the interaction the trial answers. A case that only follows its carrier is a prescribed path.
+Name the library trial with `"trial": NAME` and copy its `fit` operation into the design source as the payload's move in that motion, so the animation is the trial's own path. When one trial runs through several stages, give each stage a `"window": [fromS, toS]` between two of the fit's kept points (`fit.atS`). [One trial, several stages](../../../docs/preliminary-design.md#one-trial-several-stages) List the case under the `cases` of the interaction the trial answers. A case that only follows its carrier is a prescribed path.
 
 ## Play the recording as a replay
 

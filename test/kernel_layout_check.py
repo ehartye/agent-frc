@@ -186,50 +186,15 @@ class KernelLayoutCheck(unittest.TestCase):
         self.assertEqual(run.returncode, 2)
         self.assertIn("The attached payload diverges from its carrier in remove-carrier", run.stderr)
 
-    def test_a_payload_moves_on_a_free_path_or_a_fixture_only_with_the_trial_that_records_it(self):
-        judgement = self.copy(self.judgement)
-        trial = dict(case="acquire", payload="carried article", moves={"sample": slide([0, 10, 0])}, initialPose={"sample": slide([0, -10, 0])})
-        self.put("acquire-trial.json", dict(freePath=trial))
-        evidence = {"file": RELEASE + "/acquire-trial.json"}
-        judgement["stages"]["acquire"]["freePath"] = {"carried article": dict(basis="Invented: the article rolls down a ramp", evidence=evidence)}
-        self.put("judgement.json", judgement)
-        run, receipt = self.check("--physics-only", "--require-checked")
-        self.assertEqual(run.returncode, 0, json.dumps(receipt["missingInputs"]))
-        self.assertIn("carried article", receipt["stages"]["acquire"]["freePath"])
-        # A free path is not a loaded operating case: without the carried turn, no operating path moves the payload with a mechanism.
-        del judgement["stages"]["loaded-turn"]["carriedWith"]
-        self.put("judgement.json", judgement)
-        _, unloaded = self.check("--physics-only")
-        self.assertIn("No operating path includes the moving mechanism and finite payload", unloaded["missingInputs"])
-        # A field fixture supports the same path when the trial records the fixture; a robot solid cannot.
-        source, judgement = self.copy(self.source), self.copy(self.judgement)
-        source["groups"]["field"] = {"role": "fixture"}
-        source["fixtures"] = [dict(name="ramp", group="field", shape=dict(kind="box", fromMm=[34, -40, 0], toMm=[42, -14, 2]))]
-        self.explain(judgement, "ramp")
-        self.put("acquire-trial.json", dict(support=dict(trial, fixtures=["ramp"])))
-        judgement["stages"]["acquire"]["supportedBy"] = {"carried article": dict(fixtures=["ramp"], basis="Invented: the ramp guides the article",
-                                                                                 evidence=evidence)}
-        self.put("design.json", source)
-        self.put("judgement.json", judgement)
-        self.build()
-        run, supported = self.check("--physics-only", "--require-checked")
-        self.assertEqual(run.returncode, 0, json.dumps(supported["missingInputs"]))
-        judgement["stages"]["acquire"]["supportedBy"]["carried article"]["fixtures"] = ["rail"]
-        self.put("judgement.json", judgement)
-        refused, _ = self.check("--physics-only")
-        self.assertEqual(refused.returncode, 2)
-        self.assertIn("Only a field fixture present in acquire can support a payload: carried article", refused.stderr)
-
     def test_only_a_mechanism_transports_and_a_still_one_declares_its_drive(self):
         judgement = self.copy(self.judgement)
-        trial = dict(case="acquire", payload="carried article", mechanisms=["carrier"], moves={"sample": slide([0, 10, 0])},
-                     initialPose={"sample": slide([0, -10, 0])})
-        self.put("acquire-trial.json", dict(transport=trial))
         judgement["stages"]["acquire"]["transportedBy"] = {"carried article": dict(
-            mechanisms=["carrier"], basis="Invented: rollers pull the article in", evidence={"file": RELEASE + "/acquire-trial.json"})}
+            mechanisms=["carrier"], basis="Invented: rollers pull the article in", trial="invented pull-in")}
         self.put("judgement.json", judgement)
         _, receipt = self.check("--physics-only")
         self.assertIn("Declare the drive of stationary transporter carrier in acquire", receipt["missingInputs"])
+        self.assertIn("Run trial invented pull-in with the design library and name its record in the judgement file as trials: {file}",
+                      receipt["missingInputs"])
         self.assertEqual(receipt["status"], "provisional")
         judgement["stages"]["acquire"]["transportedBy"]["carried article"]["mechanisms"] = ["structure"]
         self.put("judgement.json", judgement)
@@ -286,13 +251,6 @@ class KernelLayoutCheck(unittest.TestCase):
         source["groups"]["field"] = {"role": "fixture"}
         source["fixtures"] = [dict(name="lane", group="field", shape=dict(kind="box", fromMm=[80, -20, 30], toMm=[120, 20, 34]))]
         self.explain(judgement, "lane")
-        # A recorded trial stands behind the acquire path, and repeats exactly what the source gives the article.
-        path = dict(case="acquire", payload="carried article", mechanisms=["carrier"], moves={"sample": slide([0, 10, 0])},
-                    initialPose={"sample": slide([0, -10, 0])})
-        self.put("acquire-trial.json", dict(transport=path))
-        judgement["stages"]["acquire"]["transportedBy"] = {"carried article": dict(
-            mechanisms=["carrier"], drive={"carrier": "Invented powered surface"}, basis="The article rolls in on the carrier",
-            evidence={"file": RELEASE + "/acquire-trial.json"})}
         self.put("design.json", source)
         self.put("judgement.json", judgement)
         self.build()
@@ -302,10 +260,8 @@ class KernelLayoutCheck(unittest.TestCase):
         self.assertEqual(receipt["stages"]["remove-carrier"]["movingGroups"], ["carried article", "carrier"])
         self.assertEqual([r["fixture"] for r in receipt["attachment"]["fixturesOffFloor"]], ["lane"])
         self.assertIn("[attachment] field fixture off the floor: lane", run.stderr)
-        # Controls: a labelled fixture is listed as suspended; a trial of another path is a missing input; a carrier that
-        # does not start where the last motion ended breaks the cycle.
+        # Controls: a labelled fixture is listed as suspended; a carrier that does not start where the last motion ended breaks the cycle.
         judgement["attachment"]["suspended"] = {"lane": "Invented: hung from a frame that is not drawn."}
-        self.put("acquire-trial.json", dict(transport=dict(path, moves={"sample": slide([0, 9, 0])})))
         source["poses"]["released"]["carrier"] = spin(80)
         self.put("design.json", source)
         self.put("judgement.json", judgement)
@@ -313,7 +269,6 @@ class KernelLayoutCheck(unittest.TestCase):
         _, changed = self.check("--physics-only")
         self.assertEqual(changed["attachment"]["fixturesOffFloor"], [])
         self.assertEqual([r["fixture"] for r in changed["attachment"]["suspendedFixtures"]], ["lane"])
-        self.assertIn("Contact-transport evidence for carried article in acquire does not record this payload path", changed["missingInputs"])
         self.assertIn("Discontinuous cycle: carrier between release and park-loaded", changed["missingInputs"])
         self.assertNotEqual(changed["status"], "layout-checked")
 

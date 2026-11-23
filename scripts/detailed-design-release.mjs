@@ -185,8 +185,7 @@ export function stageInProgress({project, design, designName, inputs, preliminar
     fusion: {archiveSha256: replay.archiveSha256, stepSha256: replay.stepSha256, configuration: replay.configuration, ...(replay.revision ? {revision: replay.revision} : {})},
     // Where the stage gate finds the committed inputs to rerun the layout check.
     check: {project: path.relative(project, source).split(path.sep).join('/')},
-    missionCases: (missions.missionCases ?? []).map(m => m?.trial?.file ? {...m, trial: {file: path.posix.basename(m.trial.file)}} : m)};
-  for (const m of missions.missionCases ?? []) if (m?.trial?.file) out.set(path.posix.basename(m.trial.file), need(m.trial.file));
+    missionCases: missions.missionCases ?? []};
   out.set('design.json', Buffer.from(JSON.stringify(record, null, 2) + '\n'));
   // The bench tests handed over by the preliminary design, published beside the review. A draft is not held to them.
   const bench = effectiveGate(project, design, {preliminary, file: path.join(source, benchFile), ...folders});
