@@ -69,5 +69,12 @@ test('a change selects the tests that cover it, and everything when it cannot be
 
   for(const file of [...map.everything,'unmapped/new-tool.xyz']) assert.equal(pick(file).all,true,file+' runs every test');
   assert.match(pick('unmapped/new-tool.xyz').reason,/no test is mapped to unmapped\/new-tool\.xyz/);
+  // A deleted file runs the tests that still name it, and the documentation tests when nothing does. It never runs everything.
+  const retired=['unmapped','retired-'+'tool.xyz'].join('/'); // assembled, so this file does not name it
+  const gone=file=>{const deleted=[file],choice=selectForChange(deleted,{deleted,reached:reach(tests,[...files,...deleted])});return {...choice,tests:choice.tests.filter(name=>name!=='test-map.test.mjs')};};
+  assert.deepEqual(gone(retired).tests,[...lane('docs')].sort(),'a deleted file that nothing names runs the documentation tests');
+  assert.equal(gone(retired).all,false);
+  assert.ok(gone('templates/project-ci/ci.yml').tests.includes('project-ci.test.mjs'),'a deleted file runs a test that names it');
+  assert.equal(gone('scripts/test-suite.mjs').all,true,'a deleted runner still runs everything');
   assert.deepEqual(selectForChange(['package.json'],{versionOnly:['package.json'],reached}).tests,[...map.versionTests].sort(),'a version number alone runs the manifest tests');
 });

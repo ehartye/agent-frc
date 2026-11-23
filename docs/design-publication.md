@@ -29,6 +29,18 @@ The check reads data. It does not inspect page markup, compare a page with the s
 
 The check needs no approved baseline, repository variable, signing key or policy file. It reads the checkout it is run on. It also runs the [path and secret scan](project-ci.md#the-path-and-secret-scan) and refuses a project that still carries a plugin file.
 
+### Published files that nothing links to
+
+Publishing a folder puts every file in it online. A withdrawn viewer or a model that was never published goes out with the rest, and no other check notices: every page that is linked still works. So the check ends its findings with advice, which blocks nothing:
+
+```text
+Advice: 14 published files that no page, index or listed design leads to. Publishing docs/ puts them online. Delete what was withdrawn or never meant to be published, and link what should be shown:
+  docs/models/earlier-viewer/ (12 files, 1 page, 2 model files)
+  docs/media/first-still.png
+```
+
+A file is linked when it can be reached from the site's home page or the project's README, through the relative paths in pages, scripts, style sheets and data files. A design index beside a linked page leads to the whole folder of every design it lists that is not withdrawn. A folder in which nothing is linked is listed once, with its count of pages and model files. Licence and notice files are never listed. Decide each line: delete it, or link it from a page.
+
 ## Which designs are checked
 
 A design that is `in-progress` or `effective` is checked, whatever else its record or the index says about it. A `superseded` or `withdrawn` design is history: it is not checked. A withdrawn design drops its published files; Git keeps them.
@@ -441,9 +453,9 @@ A rename runs the layout check twice: once under the new issue name, and once at
 
 ## The project's own CI
 
-A project runs its own CI: a path and secret scan, a check that the published site is whole and, on the default branch, publishing `docs/`. It runs no design check and names no plugin. The agent writes it from the references in `templates/project-ci/`. [Write the project's CI](project-ci.md#write-the-projects-ci)
+A project runs its own CI: a path and secret scan, a check that the published site is whole and, on the default branch, publishing `docs/`. It runs no design check, and nothing in it names, pins, checks out or calls the plugin. The agent writes it from the references in `templates/project-ci/`. [Write the project's CI](project-ci.md#write-the-projects-ci)
 
-When a project still carries a plugin file, such as a workflow that calls or checks out the plugin or a `stage.py`, the publication check fails with one message that names each file. [Take the plugin out of a project](design-publication-migration.md#take-the-plugin-out-of-a-project)
+When a project still carries a plugin file, such as a workflow that calls or checks out the plugin or a `stage.py`, the publication check fails with one message that names each file. The [audit](project-ci.md#audit-the-project-for-use-of-the-plugin) finds the rest: project code that runs or imports plugin code in any folder. [Take the plugin out of a project](design-publication-migration.md#take-the-plugin-out-of-a-project)
 
 ## What the check does not do
 

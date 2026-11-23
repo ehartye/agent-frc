@@ -18,24 +18,79 @@ Copy three files from [`templates/project-ci/`](../templates/project-ci/ci.yml) 
 | `site-check.mjs` | `scripts/ci/site-check.mjs` | Fails when a design index and its folders disagree, a file an index or record names is missing, or a relative link in a published page leads nowhere. Needs Node. |
 
 1. Check the default branch with `gh repo view --json defaultBranchRef --jq .defaultBranchRef.name`.
-2. For a site served from the `docs` folder of the default branch, delete the upload step and the `deploy` job. Otherwise enable GitHub Actions as the Pages source.
+2. Find out how the site is published with `gh api repos/OWNER/REPO/pages --jq .build_type`. `workflow` means GitHub Actions publishes it: keep the upload step and the `deploy` job. `legacy` means GitHub serves a branch folder itself: delete that step and that job. An error means Pages is off: enable it with GitHub Actions as the source.
 3. Add the project's own tests as steps that run the project's own commands, such as `./gradlew build` or `node tests/smoke.mjs`.
-4. Require the **Scan and site check** job on the default branch.
-5. Keep `on: push`. A `pull_request` trigger runs a stranger's code, which matters most on a self-hosted runner.
+4. Lint the workflow before the first push. The agent commits it and runs `node PLUGIN/scripts/project-checks.mjs PROJECT workflows FULL_COMMIT ABSOLUTE_PATH_TO_ACTIONLINT`. A YAML error stops GitHub from starting any job, and the run then shows only a failure with no log. [Check the workflows before pushing](#check-the-workflows-before-pushing)
+5. Require the **Scan and site check** job on the default branch.
+6. Keep `on: push`. A `pull_request` trigger runs a stranger's code, which matters most on a self-hosted runner.
 
 The [sample project](../examples/sample-project/ABOUT.md) is a complete invented project that uses these three files unchanged. The plugin's tests copy it to a folder that holds no plugin and run its checks there.
 
 The default project CI is publish, scan and site integrity. It runs no layout check and no physics: a design is checked by the agent before it is pushed, and its [stage gate](design-publication.md#the-stage-gate) runs when it is marked effective.
 
-## Audit the project's CI
+The site check ends with one line that says what it covered, such as `The published site is whole: checked 1 design index listing 3 designs, 3 design records, 12 pages and 148 relative links.` A count of zero pages or zero indexes means the check was pointed at the wrong folder.
 
-```sh
-node PLUGIN/scripts/project-ci-audit.mjs .
+### Steps on the hosted runner
+
+- **Python.** The hosted Linux runner has `python3` and no `python`. Write `python3` in a step, or add `actions/setup-python` with the version the project uses and then write `python`.
+- **A browser.** A step that opens a page needs a browser the runner does not hold. Install the one the project's own test uses in a step before it, for example `npx playwright install --with-deps chromium`, with Playwright in the project's own `package.json`.
+- **A large repository.** The checkout can take longer than every check: one adopter's took over four minutes for folders no step read. The scan reads every tracked file, so the scan job needs the whole tree. Give a job that reads a few folders a sparse checkout. The reference workflow carries this as a commented example:
+
+```yaml
+      - uses: actions/checkout@COMMIT
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            docs
+            scripts/ci
 ```
 
-The audit is advice for the agent. It always exits 0 and blocks nothing. It reports:
+## Audit the project for use of the plugin
 
-- a workflow or script in the project that names the plugin: its repository, a pin of it or a path into it;
+```sh
+node PLUGIN/scripts/project-ci-audit.mjs . [--skip FOLDER]... [--mentions]
+```
+
+The audit is advice for the agent. It always exits 0 and blocks nothing. It reads every text file of the project, in every folder, and reports in four groups:
+
+| Group | What it holds | A finding? |
+| --- | --- | --- |
+| Runs or imports plugin code | Each file, with the line and the form of every use | Yes |
+| Declared exceptions | Files the project declared, with the reason and every use | Listed on every run |
+| Not classified | Places where the audit cannot tell what is loaded or run | Read each one |
+| Mentions the plugin in prose or data | A count of files; `--mentions` lists them | No |
+
+It finds these forms of use:
+
+| Form | Example |
+| --- | --- |
+| A plugin folder from the environment, a command-line argument or a configuration value | `Path(os.environ["TOOL_PLUGIN"])`, `plugin = Path(sys.argv[1])`, `CONFIG['plugin']` |
+| That folder joined with `scripts` | `plugin / "scripts" / name`, `path.join(plugin, 'scripts', 'x.mjs')`, `$PLUGIN/scripts/x.mjs` |
+| That folder on the import path | `sys.path.insert(0, str(plugin / "scripts"))` |
+| An import of one of the plugin's modules that the project does not hold | `import mechanical_motion`, `from showcase_contacts import load_solids` |
+| A command that runs a plugin script | `subprocess.run(["node", plugin / "scripts" / "design.mjs"])`, `node "$PLUGIN/scripts/x.mjs"` in a shell line |
+| A dynamic import of a plugin script | `import(pathToFileURL(resolve(folder, 'scripts', 'design-artifact.mjs')))` |
+| A workflow that names the plugin's repository, a pin of it or a path into it | `uses:` or `repository:` with the plugin's repository |
+
+The audit takes the plugin's module and script names from its own `scripts/` folder when it runs. A project module that has the name of a plugin module is the project's own code and is not reported. A schema ID inside a record, such as `"agent-frc/NAME@1"`, is not a mention. Markdown, JSON and comments that name the plugin are mentions, not findings.
+
+The last line is the verdict. It never calls a project clear while a file runs or imports plugin code, declared or not. The line before it says what was read, which folders were skipped and which files were not read. Code loaded from a computed location, such as `importlib.import_module(name)` or `import(file)`, is listed as not classified unless the line names one of the project's own files.
+
+Skip a folder of frozen evidence with `--skip FOLDER`, or list it in `.project-ci-audit.json` at the project root. Declare a known exception there with its reason:
+
+```json
+{
+  "skip": ["evidence/"],
+  "exceptions": [
+    {"path": "cad/builder/", "reason": "The builder imports the measuring module until the shared library replaces it."}
+  ]
+}
+```
+
+A path that ends in `/` covers a folder. An exception hides nothing: every run lists it with its reason and what it covers, and an exception that covers nothing is reported so it can be removed. An entry without a reason covers nothing.
+
+The audit also reports the project's CI:
+
 - a missing scan or site check, or one that no workflow runs;
 - a workflow that publishes with no site check before it, or that runs pull requests on a self-hosted runner;
 - how the project's copies differ from the reference files, as a count of lines. A difference is information: the project may change its own files.
@@ -58,7 +113,7 @@ A fixture that shows a path or key on purpose can be listed in `.branch-scan.jso
 node PLUGIN/scripts/design-publication.mjs check .
 ```
 
-The [publication check](design-publication.md) verifies what the project publishes about its designs, holds an effective design to its physics, requires the record of the stage gate for a design that became effective, and runs the scan. It never runs the layout check. It ends by saying what a push will do.
+The [publication check](design-publication.md) verifies what the project publishes about its designs, holds an effective design to its physics, requires the record of the stage gate for a design that became effective, and runs the scan. It never runs the layout check. It ends by saying what a push will do. Before that line it lists, as advice, the [published files that nothing links to](design-publication.md#published-files-that-nothing-links-to).
 
 ## Project tests
 

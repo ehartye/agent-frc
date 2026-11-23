@@ -7,6 +7,9 @@
  *
  *   node site-check.mjs [SITE]        SITE is the published folder, docs by default
  *
+ * Its last line says what it covered: the design indexes, the designs they list, the design records, the pages and
+ * the relative links it checked.
+ *
  * This file stands alone: it needs Node and nothing else. Copy it into a project and it belongs to the project. It
  * checks that the site is whole. It does not judge a design.
  */
@@ -54,17 +57,23 @@ export function relativeLinks(html) {
 }
 
 /** The problems of a published site, each as one line. Empty when the site is whole. */
-export function checkSite(site) {
+export function checkSite(site) { return inspectSite(site).problems; }
+
+/** The problems of a published site and what was covered: {problems, covered: {indexes, designs, records, pages, links}}. */
+export function inspectSite(site) {
+  const covered = {indexes: 0, designs: 0, records: 0, pages: 0, links: 0};
   const problems = [], rel = full => path.relative(site, full).split(path.sep).join('/');
-  if (!isFolder(site)) return ['No published folder at ' + site];
+  if (!isFolder(site)) return {problems: ['No published folder at ' + site], covered};
   const files = filesUnder(site);
   const json = file => { try { return JSON.parse(readFileSync(file, 'utf8').replace(/^﻿/, '')); } catch { problems.push(rel(file) + ' is not readable JSON'); return null; } };
   for (const file of files) for (const [name, key, folder, recordName] of indexes) {
     if (path.basename(file) !== name) continue;
     const index = json(file), tree = path.dirname(file);
     if (!index) continue;
+    covered.indexes++;
     const ids = index[key];
     if (!Array.isArray(ids) || ids.some(id => typeof id !== 'string')) { problems.push(rel(file) + ' needs "' + key + '" as a list of design IDs'); continue; }
+    covered.designs += ids.length;
     if (new Set(ids).size !== ids.length) problems.push(rel(file) + ' lists a design twice');
     // A withdrawn design keeps its line in the index and may have left the site.
     const withdrawn = id => index.designStatus?.[id] === 'withdrawn';
@@ -77,25 +86,31 @@ export function checkSite(site) {
     for (const id of present) {
       const record = path.join(tree, folder, id, recordName);
       if (!isFile(record)) continue;
+      covered.records++;
       for (const named of namedFiles(json(record))) if (!isFile(path.resolve(path.dirname(record), named))) problems.push(rel(record) + ' names ' + named + ', which is missing');
     }
   }
-  for (const file of files.filter(name => /\.html?$/i.test(name))) for (const link of relativeLinks(readFileSync(file, 'utf8'))) {
+  const pages = files.filter(name => /\.html?$/i.test(name));
+  covered.pages = pages.length;
+  for (const file of pages) for (const link of relativeLinks(readFileSync(file, 'utf8'))) {
     let target;
     try { target = decodeURIComponent(link.split(/[?#]/)[0]); } catch { target = link.split(/[?#]/)[0]; }
     const full = target.startsWith('/') ? null : path.resolve(path.dirname(file), target);
     // A link from the site root depends on where the site is served, so it is left to the browser.
     if (!full || !target) continue;
+    covered.links++;
     if (!(isFile(full) || isFolder(full) && isFile(path.join(full, 'index.html')))) problems.push(rel(file) + ' links to ' + link + ', which is missing');
   }
-  return [...new Set(problems)].sort();
+  return {problems: [...new Set(problems)].sort(), covered};
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   const args = process.argv.slice(2);
   if (args.length > 1) { console.error('Usage: site-check.mjs [SITE]'); process.exit(2); }
-  const site = path.resolve(args[0] ?? 'docs'), problems = checkSite(site);
+  const site = path.resolve(args[0] ?? 'docs'), {problems, covered} = inspectSite(site), count = (n, one, many = one + 's') => n + ' ' + (n === 1 ? one : many);
+  const checked = count(covered.indexes, 'design index', 'design indexes') + ' listing ' + count(covered.designs, 'design') + ', ' + count(covered.records, 'design record') + ', ' +
+    count(covered.pages, 'page') + ' and ' + count(covered.links, 'relative link');
   for (const problem of problems) console.error(process.env.GITHUB_ACTIONS ? '::error title=Site check::' + problem : problem);
-  console.log(problems.length ? problems.length + ' problem(s) in the published site.' : 'The published site is whole.');
+  console.log(problems.length ? count(problems.length, 'problem') + ' in the published site. Checked ' + checked + '.' : 'The published site is whole: checked ' + checked + '.');
   if (problems.length) process.exitCode = 1;
 }

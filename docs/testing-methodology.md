@@ -82,8 +82,8 @@ The coding agent has the plugin installed and runs its commands. A robot project
 
 - The project holds data and published output: the plan, the solids, the trial records, the budgets, the index, the page.
 - The project holds its own CI: a workflow and two small checks, written from the references in [`templates/project-ci/`](../templates/project-ci/ci.yml) and then owned by the project. They check out only the project and run only the project's files.
-- Project code never runs plugin code. A project file names no plugin repository, commit, path or variable. It carries no copy of a plugin command and no wrapper around one.
-- The agent runs the plugin's commands on the project: the layout check, the staging commands, the stage gate, the publication check, and an [audit of the project's CI](project-ci.md#audit-the-projects-ci) that gives advice and blocks nothing.
+- Project code never runs plugin code. A project file names no plugin repository, commit, path or variable. It carries no copy of a plugin command and no wrapper around one. A schema ID inside a record, such as `"agent-frc/NAME@1"`, labels the record's format and is the one place the name appears.
+- The agent runs the plugin's commands on the project: the layout check, the staging commands, the stage gate, the publication check, and an [audit of the project for use of the plugin](project-ci.md#audit-the-project-for-use-of-the-plugin) that gives advice and blocks nothing.
 - A plugin release never forces a project to rerun a check. The project meets the new behaviour the next time the agent works on it.
 - There is no promise to keep old formats working. When a format changes, the agent's command says what to change in the project, in one message.
 

@@ -14,11 +14,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           # Set lfs: true when a published file is stored with Git LFS.
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+          # In a large repository the checkout can take longer than every check. The scan reads every tracked file, so
+          # this job needs the whole tree. A job that reads a few folders checks out only those:
+          # sparse-checkout: |
+          #   docs
+          #   scripts/ci
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
       # A personal machine path or a credential is public as soon as the branch is pushed.
@@ -28,9 +33,11 @@ jobs:
       - name: Check the published site
         run: node scripts/ci/site-check.mjs docs
       # Add the project's own tests here, as steps that run the project's own commands.
-      # A site served from the docs folder of the default branch needs no upload: delete this step and the deploy job.
+      # How the site is published: gh api repos/OWNER/REPO/pages --jq .build_type
+      #   workflow  GitHub Actions publishes it. Keep this step and the deploy job.
+      #   legacy    GitHub serves a branch folder itself. Delete this step and the deploy job.
       - if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
-        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: docs
 
@@ -51,4 +58,4 @@ jobs:
       cancel-in-progress: false
     steps:
       - id: publish
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

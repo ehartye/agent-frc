@@ -28,6 +28,7 @@ export function referenceReader(files=repoFiles()){
   const modules=name=>{const hits=named.get(name+'.py')??[],shipped=hits.filter(hit=>!hit.startsWith('test/'));return shipped.length?shipped:hits;};
   const references=file=>{
     if(direct.has(file)) return direct.get(file);
+    if(!existsSync(path.join(root,file))){direct.set(file,new Set());return direct.get(file);} // a deleted file refers to nothing
     const text=readFileSync(path.join(root,file),'utf8'),found=new Set(),folder=path.posix.dirname(file);
     if(file.endsWith('.py')) for(const [,module] of text.matchAll(/^\s*(?:from|import)\s+(\w+)/gm)) modules(module).forEach(hit=>found.add(hit));
     for(const [token] of text.matchAll(/[\w.\/-]+/g)){
@@ -56,7 +57,8 @@ export function reach(tests=allTests(),files=repoFiles()){
 }
 
 // The tests a set of changed files needs, or every test when a change cannot be attributed.
-export function selectForChange(changed,{tests=allTests(),map=readJson(mapFile),versionOnly=[],reached=reach(tests)}={}){
+// A deleted file selects the tests that still name it. They are the ones its absence can break.
+export function selectForChange(changed,{tests=allTests(),map=readJson(mapFile),versionOnly=[],deleted=[],reached=reach(tests,[...repoFiles(),...deleted])}={}){
   const covers=Object.entries(map.covers).map(([key,patterns])=>[map.lanes[key]??[key],patterns.map(glob)]); // a key is a test file or a lane
   const picked=new Set();
   for(const file of changed){
@@ -66,6 +68,8 @@ export function selectForChange(changed,{tests=allTests(),map=readJson(mapFile),
     for(const [covered,patterns] of covers) if(patterns.some(pattern=>pattern.test(file))) covered.forEach(test=>hits.add(test));
     // A document, page or style sheet never starts a CAD kernel test, and never runs everything: at least the docs lane checks it.
     if(map.pages.some(pattern=>glob(pattern).test(file))){map.lanes.kernel.forEach(test=>hits.delete(test));if(!hits.size) map.lanes.docs.forEach(test=>hits.add(test));}
+    // Nothing names a deleted file any more: the documentation tests check that no link to it is left.
+    if(!hits.size&&deleted.includes(file)) map.lanes.docs.forEach(test=>hits.add(test));
     if(!hits.size) return {all:true,tests,reason:`no test is mapped to ${file}`};
     hits.forEach(test=>picked.add(test));
   }
@@ -80,5 +84,5 @@ export function changedFiles(base='origin/main'){
   const versionOnly=changed.filter(file=>readJson(mapFile).versionFiles.includes(file)&&existsSync(path.join(root,file))).filter(file=>{
     try{return withoutVersion(execFileSync('git',['show',`${from}:${file}`],{cwd:root,encoding:'utf8'}))===withoutVersion(readFileSync(path.join(root,file),'utf8'));}catch{return false;}
   });
-  return {from,changed,versionOnly};
+  return {from,changed,versionOnly,deleted:changed.filter(file=>!existsSync(path.join(root,file)))};
 }

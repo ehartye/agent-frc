@@ -72,7 +72,10 @@ areas:
     why: proves the reference CI runs in a project that holds nothing of the plugin
   - path: scripts/project-ci-audit.mjs
     tier: standard
-    why: advice to the agent on a project's own CI
+    why: advice to the agent; a missed use lets a project go on running plugin code unnoticed
+  - path: scripts/published-content.mjs
+    tier: standard
+    why: advice to the agent; a missed file lets a withdrawn viewer or model be published with the folder
   # Publishing hygiene.
   - path: scripts/branch-scan.mjs
     tier: critical

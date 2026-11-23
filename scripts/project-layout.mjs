@@ -6,8 +6,8 @@ import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 
 export const folders = ['kickoff','cad','controls','sim','experiments','tests','scripts','docs','artifacts'];
-// .branch-scan.json is the plugin's own file: the ignore list of the path and secret scan.
-const files = new Set(['README.md','LICENSE','LICENSE.md','AGENTS.md','.gitattributes','.gitignore','.branch-scan.json',
+// .branch-scan.json is the ignore list of the path and secret scan. .project-ci-audit.json lists the folders the audit skips and its declared exceptions.
+const files = new Set(['README.md','LICENSE','LICENSE.md','AGENTS.md','.gitattributes','.gitignore','.branch-scan.json','.project-ci-audit.json',
   'run.ps1','cad-showcase.json','highlights.json','project-layout.json','package.json','package-lock.json','pyproject.toml',
   'requirements.txt','pytest.ini','settings.gradle','build.gradle','gradlew','gradlew.bat']);
 const toolFolders = new Set(['iterations','.github','.vscode','.wpilib','src','gradle','vendordeps']);
@@ -67,7 +67,9 @@ export function workflowRows(root, ref) {
   return rows;
 }
 
-const blockStart = '<!-- agent-frc:design-checks:start -->', blockEnd = '<!-- agent-frc:design-checks:end -->';
+const blockStart = '<!-- design-checks:start -->', blockEnd = '<!-- design-checks:end -->';
+// The marker lines an earlier version wrote. They named the plugin; a block between them is replaced, markers and all.
+const earlierStart = '<!-- agent-frc:design-checks:start -->', earlierEnd = '<!-- agent-frc:design-checks:end -->';
 /**
  * The standing instruction an agent in a robot project reads before any skill loads: what to run for which change.
  * It condenses the plugin's docs/testing-methodology.md, stands without a link to it and names no season, game, team or plugin.
@@ -96,10 +98,11 @@ export const designChecksBlock = [blockStart,
 /** Write the block into the project's AGENTS.md, or replace the one it holds. Returns 'written', 'updated' or 'current'. */
 export function writeDesignChecks(root) {
   const file = path.join(root, 'AGENTS.md'), held = existsSync(file) ? readFileSync(file, 'utf8') : null;
-  const from = held?.indexOf(blockStart) ?? -1, to = held?.indexOf(blockEnd) ?? -1;
+  const earlier = held?.includes(earlierStart) ?? false, start = earlier ? earlierStart : blockStart, end = earlier ? earlierEnd : blockEnd;
+  const from = held?.indexOf(start) ?? -1, to = held?.indexOf(end) ?? -1;
   if (from >= 0 && to < from) throw Error('AGENTS.md holds an unfinished Design checks block: restore both marker lines, or delete the block');
   const next = held === null ? '# Agent instructions\n\n' + designChecksBlock + '\n'
-    : from >= 0 ? held.slice(0, from) + designChecksBlock + held.slice(to + blockEnd.length)
+    : from >= 0 ? held.slice(0, from) + designChecksBlock + held.slice(to + end.length)
     : held.replace(/\s*$/, '') + '\n\n' + designChecksBlock + '\n';
   if (next === held) return 'current';
   writeFileSync(file, next);
