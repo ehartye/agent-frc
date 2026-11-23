@@ -142,6 +142,10 @@ Preliminary design is fast iteration. A revised layout should be checked and bac
 
 **Check the whole cycle coarsely, then refine where the margin is thin.** Split the recorded or planned path into as few cases as follow it within a stated tolerance, starting near 40 mm. The checker sweeps each case continuously, so a coarse case still covers its whole move. Treat any pair whose clearance is smaller than the tolerance as unresolved. Rerun only the phase that holds that pair at a finer tolerance. Leave phases with ample margin coarse and record the tolerance each phase was checked at.
 
+A phase where a soft game piece is squeezed against its rollers or guides needs a path tolerance well under its indentation allowance, often 1 mm, because the path error is spent directly against that allowance. Free travel through open structure rarely needs it. Fewer cases are not always faster: a coarse case sweeps a longer move and takes longer, so let `--jobs` spread the cases and their pairs across the cores and judge the plan by its total time.
+
+**Read a failure before changing the design.** A failing pair after a coarse run is one of three things. It may be a path approximation, which a finer tolerance in that phase removes. It may be an undeclared joint, such as a line running into its own termination, which the plan should declare. Otherwise it is a real interference, which the design must fix. Find out which before moving a part.
+
 **Size a trial to the question.**
 
 | Question | Smallest sound test |
@@ -155,6 +159,8 @@ Preliminary design is fast iteration. A revised layout should be checked and bac
 Change one input at a time from the operating point. A full grid of every input against every start costs the product of their counts and rarely changes the decision.
 
 **Stop when the decision is made.** A bracket is complete at its first failing value. A rate requirement is failed at the first result that puts it out of reach. Do not keep sampling a settled result to tighten an interval nobody will act on.
+
+**Record enough to explain a miss.** Observe each trial long enough to tell a late success from a failure, and keep the state that would explain one, such as the piece's attitude and spin where it meets the target. Watching a few misses to their end settles more than repeating the population. State the result as found. When some starts fail, report the count and what the failures share, and carry the open finding with its bench test.
 
 **Keep presentation separate from physics.** Names, colours, explanations and grouping do not change a clearance. `--write-view` checks every case before it writes the scene, so collect presentation edits and make them in one run, and use `--physics-only` while only the layout or motion is changing. A change to the release list or a status needs no check run at all.
 
