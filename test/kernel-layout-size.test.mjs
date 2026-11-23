@@ -42,12 +42,15 @@ test('no module of the library-based check passes 600 lines and no function pass
 });
 
 test('the library-based check holds no geometry or measuring code of its own', () => {
-  // The design library builds and measures. The one display helper named here stays until the library offers a mesh.
-  const allowed = {'scripts/kernel_layout/view.py': ['package_mesh']};
+  // The design library builds, measures and tessellates. Nothing here is excused.
+  const allowed = {};
+  // Only the library's public calls are used: no module reaches into how it builds or wraps the CAD kernel.
+  const internals = /frc_design_kernel\.(builder|kernel)\b/;
   const own = /^\s*(?:from|import)\s+(OCP|mechanical_motion|layout_attachment|showcase_contacts|payload_compression|package_mesh|component_shape|preliminary_design)\b/gm;
   assert.equal([...'import OCP.gp\nfrom mechanical_motion import evaluate\n'.matchAll(own)].length, 2, 'control: both imports are caught');
   for (const name of files.filter(name => name.endsWith('.py'))) {
     const found = [...text(name).matchAll(own)].map(match => match[1]).filter(module => !(allowed[name] ?? []).includes(module));
     assert.deepEqual(found, [], `${name} imports ${found.join(', ')}. Ask the design library for what is missing instead of building or measuring here`);
+    assert.doesNotMatch(text(name), internals, `${name} imports the design library's internals. Use its public calls, or ask for one`);
   }
 });

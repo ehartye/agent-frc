@@ -4,7 +4,7 @@ The design source is the library's and holds every solid, group, mount, contact,
 file is the plugin's and holds none of those. The joined plan repeats the source's groups and mounts so the
 receipt, the budgets and the review scene can name them.
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from mechanical_readiness import digest, named, number, pinned, read, require, resolve_references
@@ -40,6 +40,7 @@ class Inputs:
     cases: list         # one record per stage: what moves, from where, against what allowance
     fixtures: set       # the names of the fixture solids
     roster: set         # every solid and fixture name
+    volumes: dict = field(default_factory=dict)    # {solid: volume in mm3}, from the generated manifest
 
     @property
     def data(self):
@@ -192,5 +193,7 @@ def generated(inputs):
             "The generated solids are of an earlier design source. A generated file is never edited: regenerate them with " + build)
     step = path.with_name((manifest.get("files") or {}).get("design") or "design.step")
     require(step.is_file(), "The manifest names a STEP that is not beside it: " + step.name + ". Regenerate with " + build)
-    bounds = {row["name"]: row["boundsMm"] for row in [*manifest.get("solids", []), *manifest.get("fixtures", [])]}
+    rows = [*manifest.get("solids", []), *manifest.get("fixtures", [])]
+    bounds = {row["name"]: row["boundsMm"] for row in rows}
+    inputs.volumes.update({row["name"]: row["volumeMm3"] for row in rows})
     return dict(file=step.relative_to(inputs.root).as_posix(), sha256=digest(step)), bounds

@@ -3,9 +3,10 @@
 Nothing here measures: each function hands the library a question with the judgement's numbers (an allowance, a
 touching gap, a depth) and returns the library's plain rows. judge.py decides what they mean.
 """
-from dataclasses import replace
-
 from .inputs import library, start_pose
+
+# How far a display triangle may stand off the true surface. It affects the picture only: nothing is measured on a mesh.
+MESH_DEFLECTION_MM = 0.08
 
 
 class Measured:
@@ -53,17 +54,16 @@ class Measured:
     def displaced(self, case, spec):
         """The control: the clearance of the one commissioned pair with the named solid shifted by the offset.
 
-        The solid is shifted in a copy of the built design, so no variant source is written. Every other solid is
+        The library shifts the solid for this one question, so no variant source is written. Every other solid is
         left out of the scene: the control asks only whether the check rejects this pair."""
-        from frc_design_kernel.kernel.transform import moved
         from frc_design_kernel.measure import clearance
-        from frc_design_kernel.motion import matrix
-        solids = dict(self.assembly.solids)
-        solid = solids[spec["displaced"]]
-        solids[spec["displaced"]] = replace(solid, shape=moved(solid.shape, matrix.translation(spec["offsetMm"])))
-        others = sorted(set(solids) - {spec["displaced"], spec["moving"]})
-        return clearance.along(replace(self.assembly, solids=solids), case["id"], case["minGapMm"], absent=others, depth=case["depth"],
-                               include_still=True)
+        others = sorted(set(self.assembly.solids) - {spec["displaced"], spec["moving"]})
+        return clearance.along(self.assembly, case["id"], case["minGapMm"], absent=others, depth=case["depth"], include_still=True,
+                               displace={spec["displaced"]: spec["offsetMm"]})
+
+    def mesh(self, name):
+        """The display mesh of a solid as drawn: vertices and outward triangles, in millimetres."""
+        return self.assembly.mesh(name, MESH_DEFLECTION_MM)
 
     def attachment(self, case, gap, floor_z, ignore, base=None):
         """What touches what at the start of a case: connected sets, solids not connected to the base, fixtures off the floor."""
@@ -76,12 +76,11 @@ class Placements:
     """Where every group is along a motion, as the library places it: 12 numbers, three rows of rotation and shift."""
 
     def __init__(self, inputs):
-        from frc_design_kernel.builder import placement
         from frc_design_kernel.motion import matrix
-        self.data, self.placement, self.matrix = inputs.data, placement, matrix
+        self.design, self.kernel, self.matrix = inputs.design, library(), matrix
 
     def at(self, motion, t):
-        return self.placement.at_motion(self.data, motion, t)
+        return self.kernel.placements(self.design, motion=motion, t=t)
 
     def apart(self, left, right, tolerance_mm=1e-4):
         """The groups that do not start the right motion where the left one ended."""
