@@ -9,7 +9,7 @@ from time import perf_counter
 
 from atomic_file import write_atomic
 from component_shape import proper_rotation
-from mechanical_motion import HEARTBEAT_SECONDS, evaluate, stderr_progress, transforms, vec
+from mechanical_motion import HEARTBEAT_SECONDS, evaluate, reuse, stderr_progress, transforms, vec
 from package_budgets import budget_review
 from package_view import CONTROL_ID, capture, first_unmet, parked_assembly, verify_view
 from mechanical_readiness import digest, named, number, pinned, project_path, read, require
@@ -483,13 +483,29 @@ def verify_reopens(root, plan, prior, decisions, observations, missing, budget):
 
 
 def review(root, file, previous=None, *, write_view=False, fail_fast=False, progress=None, heartbeat_seconds=HEARTBEAT_SECONDS,
-           physics_only=False, jobs=1):
+           physics_only=False, jobs=1, view_only=None):
     """Check one package issue. progress receives stderr-only lines; fail_fast stops at the first non-passing nominal case.
     jobs worker processes share the motion cases, or as many as the cores and memory allow when it is None;
     the receipt does not depend on it.
 
     physics_only checks clearance, the displaced control and the budgets without reading or writing the review view.
-    A project's CI uses it to rerun a committed layout; its receipt is marked and is not one to publish."""
+    A project's CI uses it to rerun a committed layout; its receipt is marked and is not one to publish.
+
+    view_only names an earlier receipt of this layout. Its case results and displaced control are reused instead of
+    being checked again, and the review scene and page are rebuilt around them. That is refused, naming what changed,
+    unless the editable design, the STEP, the motion study, the displaced control and the budgets are the ones that
+    receipt recorded. Every other check runs as usual, so the receipt is the one a full check would write."""
+    held=None
+    if view_only is not None:
+        require(not (fail_fast or physics_only),"--view-only rebuilds the view; it cannot be combined with --fail-fast or --physics-only")
+        require(Path(view_only).is_file(),"--view-only needs the receipt of an earlier check of this layout; none at "
+                +Path(view_only).relative_to(root).as_posix()+". Name it with --from-receipt or run the full check with --write-view")
+        held=read(view_only)
+        require(isinstance(held,dict) and held.get("schema")=="agent-frc/preliminary-layout-result@1",
+                "--view-only needs an Agent FRC preliminary-check receipt")
+        require(not held.get("partial"),"--view-only cannot reuse a partial --fail-fast receipt: it did not check every case. "
+                "Run the full check with --write-view")
+        write_view=True
     plan_hash=digest(file)
     plan=read(file)
     require(plan["schema"]=="agent-frc/preliminary-layout@1" and named(plan["issue"]), "Select a package issue")
@@ -684,8 +700,29 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
         if not physics_only:frames.append(capture(case,scene,tessellations))
     # The displaced control is expected to fail, so it never stops a fail-fast run. It runs last and
     # only after every nominal case passed; otherwise it is skipped and the receipt cannot be checked.
-    observed=evaluate(root,study,mount_hosts={m["on"] for m in mounts},package_scene=inspect_scene,
-                      progress=progress,fail_fast=fail_fast,never_stop={control_id},heartbeat_seconds=heartbeat_seconds,jobs=jobs)
+    if held is not None:
+        # Only the inputs of the case evaluation decide whether its recorded results still stand; the rest is checked again below.
+        changed=[label for key,label in (("design","the editable design"),("step","the STEP"),("motion","the motion study"))
+                 if (held.get(key) or {}).get("sha256")!=plan[key]["sha256"]]
+        if held.get("issue")!=plan["issue"]:changed.append("the issue name")
+        recorded=held.get("control")
+        witness=(recorded or {}).get("witness")
+        if bool(control)!=bool(recorded) or control and (
+                [recorded.get("case"),recorded.get("displaced"),recorded.get("offsetMm")]!=[control["case"],displaced,list(shift)]
+                or witness and set(witness["pair"])!={moving,displaced}):
+            changed.append("the displaced control")
+        require(not changed,"--view-only reuses the checked cases of a receipt only while their inputs are unchanged. "
+                "Changed since that receipt: "+", ".join(changed)+". Run the full check with --write-view")
+        require(isinstance(held.get("cases"),list),"--view-only needs a receipt that checked the motion cases")
+        require(not control or witness,"--view-only cannot rebuild the displaced control of a receipt that did not reject it. "
+                "Run the full check with --write-view")
+        # The receipt keeps the control's rejecting pair, which is all the scene shows of that case.
+        rows=held["cases"]+([dict(case=control_id,status="fail",pairs=[witness])] if control else [])
+        if progress:progress(f"[view] reusing {len(held['cases'])} checked case(s) and the displaced control from the receipt; no case is rerun")
+        observed=reuse(root,study,rows,mount_hosts={m["on"] for m in mounts},package_scene=inspect_scene)
+    else:
+        observed=evaluate(root,study,mount_hosts={m["on"] for m in mounts},package_scene=inspect_scene,
+                          progress=progress,fail_fast=fail_fast,never_stop={control_id},heartbeat_seconds=heartbeat_seconds,jobs=jobs)
     partial=observed.get("partial",False)
     observations=observed["cases"]
     if control and partial:
@@ -710,6 +747,11 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
         if progress:progress("[budgets] start")
         began=perf_counter()
         result["budgets"]=budget_review(root,plan,missing)
+        if held is not None:
+            # Compared as JSON, the form the receipt was saved in.
+            require(json.loads(json.dumps(result["budgets"]))==held.get("budgets"),
+                    "--view-only reuses the checked cases of a receipt only while their inputs are unchanged. "
+                    "Changed since that receipt: the weight and voltage budgets. Run the full check with --write-view")
         if progress:
             b=result["budgets"]
             summary="none" if not b else "mass="+b["massStatus"]+" electrical="+(
@@ -808,6 +850,11 @@ if __name__=="__main__":
                         help="Stop at the first nominal case that does not pass and write a partial, never checked receipt")
     parser.add_argument("--physics-only",action="store_true",
                         help="Check clearance, the displaced control and the budgets without the review view; the receipt is marked and is not one to publish")
+    parser.add_argument("--view-only",action="store_true",
+                        help="Rebuild the review page and scene from an earlier receipt without rerunning the cases; refused when "
+                             "the design, STEP, motion study, displaced control or budgets differ from that receipt")
+    parser.add_argument("--from-receipt",metavar="FILE",
+                        help="With --view-only, the project-relative receipt to reuse (default: --output, or receipt.json beside the plan)")
     parser.add_argument("--output",metavar="FILE",
                         help="Write the receipt to the project-relative FILE through a temporary file and a rename instead of stdout; "
                              "a run that ends in an error leaves the previous FILE intact")
@@ -822,9 +869,14 @@ if __name__=="__main__":
         root=args.project.resolve()
         output=(root/args.output).resolve() if args.output else None
         require(not (args.physics_only and args.write_view),"Choose --physics-only or --write-view")
+        require(args.view_only or not args.from_receipt,"--from-receipt applies only with --view-only")
+        plan_file=project_path(root,args.plan)
+        held=None
+        if args.view_only:
+            held=project_path(root,args.from_receipt) if args.from_receipt else output or plan_file.with_name("receipt.json")
         require(output is None or not Path(args.output).is_absolute() and output.is_relative_to(root) and output.parent.is_dir()
                 and not output.is_dir(),"Save the receipt to a project-relative file in an existing folder")
-        result=review(root,project_path(root,args.plan),project_path(root,args.previous) if args.previous else None,
+        result=review(root,plan_file,project_path(root,args.previous) if args.previous else None,view_only=held,
                       write_view=args.write_view,fail_fast=args.fail_fast,progress=None if args.quiet else stderr_progress,
                       heartbeat_seconds=args.heartbeat,physics_only=args.physics_only,jobs=args.jobs)
         receipt=json.dumps(result,indent=2,allow_nan=False)+"\n"
