@@ -71,13 +71,20 @@ export function inspect(root) {
   const config = existsSync(configFile) ? JSON.parse(readFileSync(configFile,'utf8')) : {};
   // Permit individual toolchain paths. New top-level experiment folders require migration.
   const exceptions = new Set(config.toolchainFiles ?? []);
+  // Recorded evidence a design is checked from (trial inputs, traces, field models) may keep its own top-level
+  // folders, so the files stay at the paths their records pin.
+  const evidenceFolders = config.evidenceFolders ?? [];
+  if (!Array.isArray(evidenceFolders) || evidenceFolders.some(name => typeof name !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name)
+    || folders.includes(name) || toolFolders.has(name)))
+    throw Error('project-layout.json evidenceFolders must list new top-level folder names');
+  const evidence = new Set(evidenceFolders);
   const paths = execFileSync('git',['-C',root,'ls-files','-co','--exclude-standard','-z'],
     {encoding:'utf8', maxBuffer:64*1024*1024}).split('\0').filter(Boolean);
   const problems = new Set();
   for (const file of paths) {
     const [first] = file.split('/');
     if (first === 'artifacts') problems.add('Generated artifact in project inventory: ' + file);
-    else if (file.includes('/') ? !folders.includes(first) && !toolFolders.has(first) && !exceptions.has(file)
+    else if (file.includes('/') ? !folders.includes(first) && !toolFolders.has(first) && !evidence.has(first) && !exceptions.has(file)
       : !files.has(file) && !exceptions.has(file)) problems.add('Unexpected root entry: ' + first);
   }
   if (existsSync(path.join(root,indexPath))) {
