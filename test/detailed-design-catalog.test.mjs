@@ -15,10 +15,10 @@ function node(tag){
 const text=n=>typeof n==='string'?n:[n.textContent,...n.children.map(text)].join(' ').trim();
 const find=(n,test)=>typeof n==='string'?[]:[...(test(n)?[n]:[]),...n.children.flatMap(c=>find(c,test))];
 
-async function render(index,releases,staged=[]){
+async function render(index,releases,staged=[],extra={}){
   const ids={current:node('section'),archive:node('ul'),'archive-title':node('h2')};
   const document={createElement:node,getElementById:id=>ids[id]};
-  const files={'designs.json':index,[index.preliminaryIndex]:releases,...Object.fromEntries(staged.map(id=>['designs/'+id+'/index.html',{}]))};
+  const files={'designs.json':index,[index.preliminaryIndex]:releases,...Object.fromEntries(staged.map(id=>['designs/'+id+'/index.html',{}])),...extra};
   const fetch=async url=>files[url]?{ok:true,json:async()=>files[url]}:{ok:false,status:404};
   let done;
   const settled=new Promise(resolve=>{done=resolve;});
@@ -99,6 +99,19 @@ test('one viewer for one design: the effective and the in-progress card both lin
   const unstaged=await render(index,{designStatus:{}},['1.1']);
   assert.deepEqual([shown(unstaged,'1.0'),shown(unstaged,'1.1')],[0,1]);
   assert.equal(find(unstaged.current,n=>!n.hidden&&n.textContent==='No design review is staged for this design yet.').length,1);
+});
+
+test('a card states the bench tests of its design from the record published beside the review',async()=>{
+  // Synthetic record: one before-build test passed, one sits between its limits, one on-robot test is planned.
+  const record={schema:'agent-frc/bench-tests@1',tests:[
+    {id:'B1',measure:'Pull-out force',pass:40,fail:25,tag:'before-build',result:{value:46}},
+    {id:'B2',measure:'Drag at full tilt',pass:3,fail:6,tag:'before-build',result:{value:4.5,passed:true}},
+    {id:'B3',measure:'Samples retained',pass:9,fail:6,tag:'on-robot',owner:'Drive team',plan:'Ten releases'},
+    {id:'B4',measure:'Marking',pass:'none',fail:'any',tag:'on-robot',owner:'',plan:''}]};
+  const index={...base,designs:['1.0','1.1'],architectures:{1:{name:'Tilting carriage'}},designStatus:{'1.0':'effective','1.1':'in-progress'},current:'1.0',beside:'1.1'};
+  const ids=await render(index,{designStatus:{}},['1.0','1.1'],{'designs/1.1/bench-tests.json':record});
+  assert.match(text(ids.current.children[1]),/Bench tests: 1 of 2 before-build passed, 1 of 2 on-robot with an owner and a plan\./);
+  assert.doesNotMatch(text(ids.current.children[0]),/Bench tests/,'a design with no record says nothing');
 });
 
 test('a malformed index still reports the load failure',async()=>{
