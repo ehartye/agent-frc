@@ -1,0 +1,105 @@
+# Risk map for the plugin's own tests. Method: docs/testing-methodology.md.
+# First matching area wins, so specific areas come before broad ones.
+phase: dev
+# Robot projects follow the current release. No old format is kept working for them.
+consumers: []
+weights:
+  wait: 1
+  agent: 1
+  ci: 1
+  churn: 1
+lanes:
+  edit:
+    runs: affected-files
+    trigger: agent-edit
+  merge:
+    runs: critical+standard
+    trigger: local-pre-push
+  scheduled:
+    runs: all
+    trigger: cron
+    os:
+      - windows
+      - ubuntu
+  release:
+    runs: all+clean-install
+    trigger: tag
+    os:
+      - windows
+      - ubuntu
+areas:
+  # The layout check: a false pass is the worst failure.
+  - path: scripts/preliminary_design.py
+    tier: critical
+    why: the layout check; a false pass publishes a layout that interferes
+  - path: scripts/layout_attachment.py
+    tier: critical
+    why: reports floating parts
+  - path: scripts/package_budgets.py
+    tier: critical
+    why: mass and voltage budgets
+  # The stage gate.
+  - path: scripts/design-publication.mjs
+    tier: critical
+    why: publication checks and the stage gate
+  - path: scripts/effective-readiness.mjs
+    tier: critical
+    why: the readiness report read at the stage gate
+  - path: scripts/detailed-design-release.mjs
+    tier: critical
+    why: status changes for detailed designs
+  - path: scripts/mechanical_readiness.py
+    tier: critical
+    why: the review a detailed design needs to become effective
+  - path: scripts/bench-tests.mjs
+    tier: critical
+    why: bench-test records the detailed stage gate reads
+  - path: templates/stage-preliminary-review.py
+    tier: critical
+    why: staging and status changes for preliminary designs
+  - path: templates/design-publication.yml
+    tier: critical
+    why: the workflow that runs the gate and publishes
+  # Publishing hygiene.
+  - path: scripts/branch-scan.mjs
+    tier: critical
+    why: keeps personal paths and secrets out of public repositories
+  # The published page.
+  - path: templates/preliminary-review/**
+    tier: critical
+    why: the design review page a reviewer opens
+  - path: templates/preliminary-review-index.html
+    tier: critical
+    why: the picker
+  - path: scripts/review-scene.mjs
+    tier: critical
+    why: the scene the page plays
+  - path: scripts/package_view.py
+    tier: critical
+    why: writes the scene and the animations
+  # Low: presentation, examples and teaching material.
+  - path: examples/**
+    tier: low
+    why: examples
+  - path: worksheets/**
+    tier: low
+    why: teaching material
+  - path: docs/**
+    tier: low
+    why: documents; checked by the validator and the link tests
+  - path: .github/pages/**
+    tier: low
+    why: the public guide
+  # Everything else.
+  - path: scripts/**
+    tier: standard
+    why: tools
+  - path: templates/**
+    tier: standard
+    why: starting files a project uses
+  - path: skills/**
+    tier: standard
+    why: skill text; checked by the skill validator
+  - path: references/**
+    tier: standard
+    why: reference data
