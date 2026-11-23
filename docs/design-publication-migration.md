@@ -145,6 +145,20 @@ In the branch protection of the default branch, remove **Mechanical model eligib
 
 The reviewer's private signing key is no longer used. Remove it from the workstation that held it.
 
+The native station key is no longer used either. The mechanical-readiness review reads no key, signature or environment variable, and accepts each native observation as recorded. Remove the station key from the workstation that held it, and unset `FRC_NATIVE_WITNESS_PUBLIC_KEY`, `FRC_OPERATING_REQUIREMENTS` and `FRC_OPERATING_PROFILE` wherever a script or shell profile sets them. A `.native-signature.json` file beside an older native observation can stay or go. Nothing reads it.
+
+The station functions lost their key argument. Update a project script that calls them:
+
+| Call | Now |
+| --- | --- |
+| `export_current(app, project, new_issue, key)` | `export_current(app, project, new_issue)` |
+| `measure_pose(app, project, lineage, output, key, station_folder, ...)` | `measure_pose(app, project, lineage, output, station_folder, ...)` |
+| `fusion_retry_station.retry(..., pairs, key, station_folder)` | `fusion_retry_station.retry(..., pairs, station_folder)` |
+| `fusion_body_materials.capture(..., output, key)`, `fusion_joint_authority.capture(..., output, station_key)` | The same call without the last argument |
+| `fusion_link_calibration.capture(..., request, output, station_key)` | The same call without the last argument |
+
+A loaded-transfer study names its observed-execution inventory as a project file in `executionInventory`. `FRC_TRANSFER_EXECUTIONS` still works for a study without that field.
+
 ## Rename a release to a version
 
 A release published before 0.127.0 has an ID such as `layout-004`. It keeps working, and nothing forces a rename. To give it a [version](design-publication.md#name-and-number-a-design), publish the same design under the new ID and then remove the old one. The rename is clean: no redirect is left, and a link to `?release=layout-004` reports an unknown release afterwards.
