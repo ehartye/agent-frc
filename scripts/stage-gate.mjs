@@ -91,10 +91,10 @@ export function preliminaryGate({project, release, site = 'docs', preliminary = 
   const read = file => JSON.parse(readFileSync(file, 'utf8'));
   check(existsSync(path.join(published, 'release.json')), 'Release ' + release + ' is not published: stage it first');
   const index = read(path.join(tree, 'releases.json')), record = read(path.join(published, 'release.json'));
-  const where = versionOf(release) ? 'Preliminary design ' + designTitle(index, release) : 'Preliminary release ' + release;
+  const where = 'Preliminary design ' + designTitle(index, release);
   const folder = path.resolve(root, record.check?.project ?? path.join(inputs, release));
   const gate = stageGate({root, where, id: release, phase: 'preliminary-design', inputs: folder, published, record, ...options});
-  const receipt = read(path.join(published, 'receipt.json')), design = versionOf(release) ? designTitle(index, release) : undefined;
+  const receipt = read(path.join(published, 'receipt.json')), design = designTitle(index, release);
   const fromRoot = checkedFromRoot(root, folder, receipt), rel = path.relative(root, folder).split(path.sep).join('/');
   let report;
   try { report = readinessText(fromRoot ? effectiveReadiness(root, {release: rel, design}) : effectiveReadiness(folder, {design})); }

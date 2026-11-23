@@ -10,6 +10,7 @@
 
 Failure caught: the check passes a layout that interferes, floats or breaks a budget, or reads stale generated solids.
 Each control below changes one input of the passing example and must be rejected or reported."""
+import hashlib
 import json
 from pathlib import Path
 import runpy
@@ -84,6 +85,8 @@ class KernelLayoutCheck(unittest.TestCase):
         self.assertEqual(receipt["attachment"]["floating"], [])
         self.assertEqual([r["solid"] for r in receipt["attachment"]["unmountedAllowances"]], ["rail"])
         self.assertEqual(receipt["attachment"]["onUnmountedAllowance"], ["gate"])
+        # The first line names the judgement file and its digest, so a reader knows which inputs this run read.
+        self.assertIn("[inputs] judgement " + RELEASE + "/judgement.json sha256=" + hashlib.sha256((self.root / RELEASE / "judgement.json").read_bytes()).hexdigest(), run.stderr)
         self.assertRegex(run.stderr, r"\[time\] layout check of 5 case\(s\), the displaced control, attachment and budgets and the review view in \d+ s\. "
                                      r"Guidelines: about 1 minute while editing, 5 before merging, 15 at a stage gate\.")
         # A view-only rebuild measures nothing again and says so; a changed allowance refuses it.
@@ -201,6 +204,58 @@ class KernelLayoutCheck(unittest.TestCase):
         refused, _ = self.check("--physics-only")
         self.assertEqual(refused.returncode, 2)
         self.assertIn("Only mechanism groups transport a payload, each with a declared drive: carried article in acquire", refused.stderr)
+
+    def test_scope_guidelines_are_said_aloud_and_an_agreed_budget_is_recorded(self):
+        judgement = self.copy(self.judgement)
+        budget = dict(detail="Invented: the carrier drawn in four parts", question="Invented: does the head clear the gate",
+                      allowance="Invented: ten more solids", stopsWhen="Invented: the head clears by 1 mm")
+        judgement["scopeGuidelines"] = dict(solids=5, extendedBudget=budget)
+        self.put("judgement.json", judgement)
+        run, receipt = self.check("--physics-only", "--require-checked")
+        self.assertEqual(run.returncode, 0, run.stderr)
+        scope = receipt["scope"]
+        self.assertEqual((scope["passed"], scope["guideline"]["source"], scope["extendedBudget"]), (["solids"], "judgement file", budget))
+        self.assertIn("The judgement file records an agreed extended budget: Invented: the carrier drawn in four parts", run.stderr)
+        # Control: a guideline that is not a positive number stops the check with what to write.
+        judgement["scopeGuidelines"] = dict(solids=-1)
+        self.put("judgement.json", judgement)
+        bad, _ = self.check("--physics-only")
+        self.assertEqual(bad.returncode, 2)
+        self.assertIn("Give scopeGuidelines.solids as a positive number", bad.stderr)
+
+    def test_a_touching_solid_is_attached_and_a_gauge_is_left_out(self):
+        source, judgement, budgets = self.copy(self.source), self.copy(self.judgement), self.copy(self.budgets)
+        # A cleat that only touches the mount block is attached; a service gauge standing apart is not a robot part.
+        source["solids"] += [dict(name="cleat", group="structure", shape=dict(kind="box", fromMm=[-4, 8, 0], toMm=[4, 12, 4])),
+                             dict(name="reach gauge", group="structure", shape=dict(kind="box", fromMm=[-60, -4, 0], toMm=[-56, 4, 4]))]
+        self.explain(judgement, "cleat", "reach gauge")
+        judgement["presentation"]["components"]["reach gauge"]["volumeType"] = "gauge"
+        next(row for row in budgets["masses"] if row["id"] == "body")["members"] += ["cleat", "reach gauge"]
+        self.put("design.json", source)
+        self.put("judgement.json", judgement)
+        self.put("budgets.json", budgets)
+        self.build()
+        _, receipt = self.check("--physics-only")
+        self.assertEqual(receipt["attachment"]["floating"], [])
+        self.assertEqual(receipt["attachment"]["excluded"]["serviceAndGauges"], 1)
+        # Control: moved 5 mm off the block, past the touching gap, the cleat floats.
+        next(s for s in source["solids"] if s["name"] == "cleat")["shape"].update(fromMm=[-4, 13, 0], toMm=[4, 17, 4])
+        self.put("design.json", source)
+        self.build()
+        _, apart = self.check("--physics-only")
+        self.assertEqual([r["solid"] for r in apart["attachment"]["floating"]], ["cleat"])
+
+    def test_the_scene_stores_each_distinct_mesh_once(self):
+        sys.path.insert(0, str(PLUGIN / "scripts"))
+        from package_view import scene_payload
+        square = dict(vertices=[[0, 0, 0], [1, 0, 0], [0, 1, 0]], triangles=[[0, 1, 2]])
+        same = dict(vertices=[[0, 0, 0], [1, 0, 0], [0, 1, 0]], triangles=[[0, 1, 2]])
+        other = dict(vertices=[[0, 0, 0], [2, 0, 0], [0, 1, 0]], triangles=[[0, 1, 2]])
+        cases = [dict(id=c, stage="operating", bodies={"a": dict(square, matrices=[[1] * 12]), "b": dict(same, matrices=[[1] * 12]),
+                                                        "c": dict(other, matrices=[[1] * 12])}) for c in ("one", "two")]
+        payload = scene_payload(cases)
+        self.assertEqual(len(payload["meshes"]), 2, "equal tessellations are stored once, across bodies and cases")
+        self.assertEqual([payload["cases"][1]["bodies"][b]["mesh"] for b in "abc"], [0, 0, 1])
 
     def test_mass_over_the_limit_blocks_the_layout(self):
         budgets = self.copy(self.budgets)

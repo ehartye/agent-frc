@@ -141,7 +141,7 @@ class KernelInteractionsCheck(unittest.TestCase):
         self.refresh(source, trial=False, extremes=False)
         _, _, row = self.check()
         self.assertEqual(row["verdict"], "needs 3D")
-        self.assertIn("2 pieces at once", row["reasons"])
+        self.assertIn("2 pieces at once; guideline: one piece", row["reasons"])
         judgement = self.copy(self.judgement)
         judgement["interactions"]["tray stop"]["override"] = dict(verdict="planar is enough", reason="Invented: the second ball waits behind a gate")
         self.put("judgement.json", judgement)
@@ -158,7 +158,7 @@ class KernelInteractionsCheck(unittest.TestCase):
         self.refresh(source, trial=False, extremes=False)
         self.put("judgement.json", self.judgement)
         _, _, soft = self.check()
-        self.assertEqual((soft["verdict"], soft["reasons"]), ("configurable", ["tray is compliant"]))
+        self.assertEqual((soft["verdict"], soft["reasons"]), ("configurable", ["tray is compliant; guideline: rigid surfaces"]))
 
     def test_an_adjustment_end_that_closes_on_the_robot_is_a_finding(self):
         source = self.copy(self.source)

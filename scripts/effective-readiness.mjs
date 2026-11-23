@@ -84,7 +84,7 @@ export const passingResults=['passed','covered by adjustment'];
 function barReasons(row,adjustments){
   const where='Interaction '+row.id+' ('+(row.verdict??'no verdict')+')',t=object(row.trial)?row.trial:{},reasons=[];
   if(!named(t.name))return [where+': name its trial, or the reason it needs none, in the judgement file'];
-  if(t.state==='not run')return [where+': trial '+t.name+' has not been run. Run python -m frc_design_kernel try SOURCE --out RECORDS --trial "'+t.name+'"'];
+  if(t.state==='not run')return [where+': not run yet. It decides '+row.decides+'. Run python -m frc_design_kernel try SOURCE --out RECORDS --trial "'+t.name+'"'];
   if(t.state==='stale')reasons.push(where+': the record of trial '+t.name+' is stale ('+list(t.changes).join('; ')+'). Run it again with --trial "'+t.name+'"');
   if(row.verdict==='needs 3D'&&t.engine!=='mujoco')reasons.push(where+': the screen says the answer depends on what one section cannot show, so try it in 3D ("engine": "mujoco"); trial '+t.name+' ran '+t.engine);
   if(!passingResults.includes(t.result))reasons.push(where+': trial '+t.name+' is '+t.result+(list(t.findings).length?': '+list(t.findings).join('; '):''));
@@ -115,7 +115,7 @@ function interactionsMeetBar(planBytes,receipt,missions){
     if(named(row.noTrial)){notes.push(row.id+': '+row.verdict+'; no trial, because '+row.noTrial);continue;}
     const found=barReasons(row,receipt.adjustments);
     reasons.push(...found);
-    notes.push(row.id+': '+row.verdict+'; trial '+(t?.name??'none')+(t?.engine?' ('+t.engine+')':'')+': '+(t?.result??t?.state??'not run')
+    notes.push(row.id+': '+row.verdict+'; trial '+(t?.name??'none')+(t?.engine?' ('+t.engine+')':'')+': '+(t?.state==='not run'||!t?'not run yet; it decides '+row.decides:t.result)
       +(list(t?.sensitivity).length?'; leans most on '+t.sensitivity[0]:''));
     if(!found.length)for(const id of list(row.cases))met.add(id);
   }

@@ -100,7 +100,7 @@ test('an interaction meets its bar only on a current, passing trial of the engin
   const reasonsOf=edit=>judged(t,'interactions',d=>{edit(d.receipt.interactions[0]);}).reasons;
   const cases=[
     [i=>{i.trial.state='stale';i.trial.changes=['solid "belt" changed (boundsMm)'];},/Interaction pickup \(planar is enough\): the record of trial pickup is stale \(solid "belt" changed \(boundsMm\)\)\. Run it again with --trial "pickup"/],
-    [i=>{i.trial={name:'pickup',result:null,state:'not run'};},/trial pickup has not been run\. Run python -m frc_design_kernel try SOURCE --out RECORDS --trial "pickup"/],
+    [i=>{i.trial={name:'pickup',result:null,state:'not run'};},/Interaction pickup \(planar is enough\): not run yet\. It decides Whether the belt intake replaces the roller\. Run python -m frc_design_kernel try SOURCE --out RECORDS --trial "pickup"/],
     [i=>{i.trial.result='not covered';i.trial.findings=['Invented: the outcome changes inside the assumed range of "materials.tread.friction"'];},/trial pickup is not covered: Invented: the outcome changes/],
     [i=>{i.trial.result='control not rejected';},/trial pickup is control not rejected/],
     [i=>{i.verdict='needs 3D';},/the screen says the answer depends on what one section cannot show, so try it in 3D \("engine": "mujoco"\); trial pickup ran planar/],

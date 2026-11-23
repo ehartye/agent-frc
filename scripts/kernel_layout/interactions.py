@@ -34,10 +34,11 @@ def sideways(facts, g):
     for hold in facts["sidewaysHold"]:
         for side in ("plus", "minus"):
             found = hold[side]
+            guide = f"guideline: a guide within {limit:.0f} mm, a tenth of the piece's width"
             if found is None:
-                reasons.append("nothing guides the piece on the " + side + " side of the plane")
+                reasons.append("unguided on the " + side + " side of the plane; " + guide)
             elif found["gapMm"] > limit:
-                reasons.append(f"a {found['gapMm']:.0f} mm gap to {found['solid']} on the {side} side lets the piece drift or turn")
+                reasons.append(f"{found['gapMm']:.0f} mm to {found['solid']} on the {side} side; {guide}")
     if reasons and ends:
         reasons.append("sections of " + ", ".join(ends) + " end inside the piece's width")
     return sorted(set(reasons))
@@ -48,24 +49,26 @@ def three_d(facts, g, groups=None):
     the field moving under a driving robot does not take the piece out of its section."""
     piece, normal, reasons = facts["piece"], facts["plane"]["normal"], []
     if not round_in_plane(piece, normal):
-        reasons.append("the piece is " + piece["class"] + " and is not round in the section")
+        reasons.append("the piece is " + piece["class"] + " and is not round in the section; guideline: a round section")
     limit = max(g["sectionMm"], g["sectionShare"] * piece["thicknessInPlaneMm"])
     for solid, row in sorted(facts["sections"].items()):
         if not row["cutAtCentre"]:
-            reasons.append("the section plane misses " + solid)
+            reasons.append("the section plane misses " + solid + "; guideline: the plane cuts every solid the piece meets")
         elif row["largestDifferenceMm"] > limit:
-            reasons.append(f"the section of {solid} changes by {row['largestDifferenceMm']:.1f} mm across the piece's width")
+            reasons.append(f"the section of {solid} changes by {row['largestDifferenceMm']:.1f} mm across the piece's width; "
+                           f"guideline: within {limit:.1f} mm, the larger of {g['sectionMm']:g} mm and {100 * g['sectionShare']:g}% of its thickness")
         if row["curvedAcross"]:
-            reasons.append(solid + " has " + " and ".join(row["curvedAcross"]))
+            reasons.append(solid + " has " + " and ".join(row["curvedAcross"]) + "; guideline: faces square to the plane")
     reasons += sideways(facts, g)
-    reasons += [row["group"] + " " + row["why"] + " in " + row["motion"] for row in facts["mechanismOutOfPlane"] if groups is None or row["group"] in groups]
+    reasons += [row["group"] + " " + row["why"] + " in " + row["motion"] + "; guideline: mechanisms move in the plane"
+                for row in facts["mechanismOutOfPlane"] if groups is None or row["group"] in groups]
     if facts["piecesAtOnce"] > 1:
-        reasons.append(f"{facts['piecesAtOnce']} pieces at once")
+        reasons.append(f"{facts['piecesAtOnce']} pieces at once; guideline: one piece")
     if facts.get("targetOffPlane"):
-        reasons.append("the target is off the section plane")
+        reasons.append("the target is off the section plane; guideline: a target in the plane")
     angles = (facts.get("approach") or {}).get("angleDeg") or []
     if angles and max(abs(a) for a in angles) > g["approachDeg"]:
-        reasons.append(f"the piece may arrive up to {max(abs(a) for a in angles):g} degrees skewed")
+        reasons.append(f"the piece may arrive up to {max(abs(a) for a in angles):g} degrees skewed; guideline: within {g['approachDeg']:g} degrees")
     return reasons
 
 
@@ -74,8 +77,9 @@ def indicative(facts, g):
     reasons = []
     squeeze = facts["squeeze"]
     if squeeze.get("ratio") is not None and squeeze["ratio"] > g["squeezeRatio"]:
-        reasons.append(f"{squeeze['solid']} squeezes the piece by {100 * squeeze['ratio']:.0f}% of its thickness")
-    reasons += [row["solid"] + " is " + row["class"] for row in facts["notRigid"]]
+        reasons.append(f"{squeeze['solid']} squeezes the piece by {100 * squeeze['ratio']:.0f}% of its thickness; "
+                       f"guideline: a squeeze within {100 * g['squeezeRatio']:g}% is simulated well enough")
+    reasons += [row["solid"] + " is " + row["class"] + "; guideline: rigid surfaces" for row in facts["notRigid"]]
     return reasons
 
 

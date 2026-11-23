@@ -262,7 +262,7 @@ export function checkProject(root, options = {}) {
     // The architecture each major number stands for. A version whose architecture has no name cannot be titled.
     check(index.designs === undefined || object(index.designs) && Object.entries(index.designs).every(([major, d]) => /^[1-9][0-9]{0,3}$/.test(major) && object(d) && named(d.name)),
       'designs maps each major number to its architecture name, as in {"1": {"name": "NAME"}}');
-    for (const major of new Set(ids.map(i => versionOf(i)?.major).filter(Boolean)))
+    for (const major of new Set(ids.map(i => versionOf(i).major)))
       check(named(index.designs?.[major]?.name), 'Design ' + major + ' has no name: add designs.' + major + '.name to the preliminary release index, or stage a version with --design-name');
     const map = index.designStatus;
     check(map === undefined || object(map) && Object.entries(map).every(([id, v]) => ids.includes(id) && designStatuses.includes(v)),
@@ -279,7 +279,7 @@ export function checkProject(root, options = {}) {
     for (const id of dirs) attempt(id, () => check(ids.includes(id), 'Release directory ' + id + ' is not in the preliminary release index'));
     // A draft takes no number, so one architecture holds one in-progress version.
     const drafting = new Map();
-    for (const id of ids.filter(i => versionOf(i) && status(i) === 'in-progress')) drafting.set(versionOf(id).major, [...(drafting.get(versionOf(id).major) ?? []), id]);
+    for (const id of ids.filter(i => status(i) === 'in-progress')) drafting.set(versionOf(id).major, [...(drafting.get(versionOf(id).major) ?? []), id]);
     for (const [major, several] of drafting) if (several.length > 1)
       warnings.push(index.designs[major].name + ' has ' + several.length + ' in-progress versions (' + several.join(', ') + '). A draft takes no number: keep one, revise it in place and mark the others superseded.');
     preliminary = {current: index.current, releases: []};
@@ -292,7 +292,7 @@ export function checkProject(root, options = {}) {
         continue;
       }
       attempt(id, () => {
-        const where = versionOf(id) ? 'Preliminary design ' + designTitle(index, id) : 'Preliminary release ' + id, dir = path.join(prelimTree, 'releases', id), record = records.get(id);
+        const where = 'Preliminary design ' + designTitle(index, id), dir = path.join(prelimTree, 'releases', id), record = records.get(id);
         check(record?.schema === 'agent-frc/preliminary-release@1' && record.release === id, where + ' needs its release record (release.json)');
         const receipt = checkEvidence(where, filesUnder(dir), record);
         const inputs = inputsOf(where, record, path.join(o.inputs, id));
@@ -320,12 +320,12 @@ export function checkProject(root, options = {}) {
     // The architecture each major number stands for: the same name as its preliminary design.
     check(index.architectures === undefined || object(index.architectures) && Object.entries(index.architectures).every(([major, d]) => /^[1-9][0-9]{0,3}$/.test(major) && object(d) && named(d.name)),
       'architectures maps each major number to its architecture name, as in {"1": {"name": "NAME"}}');
-    for (const major of new Set(ids.map(i => versionOf(i)?.major).filter(Boolean)))
+    for (const major of new Set(ids.map(i => versionOf(i).major)))
       check(named(index.architectures?.[major]?.name), 'Detailed design ' + major + ' has no name: add architectures.' + major + '.name to the detailed design index, or stage a version with --design-name');
     check(ids.filter(i => index.designStatus[i] === 'effective').length <= 1, 'At most one detailed design is effective');
     // A draft takes no number, so one architecture holds one in-progress version.
     const drafting = new Map();
-    for (const id of ids.filter(i => versionOf(i) && index.designStatus[i] === 'in-progress')) drafting.set(versionOf(id).major, [...(drafting.get(versionOf(id).major) ?? []), id]);
+    for (const id of ids.filter(i => index.designStatus[i] === 'in-progress')) drafting.set(versionOf(id).major, [...(drafting.get(versionOf(id).major) ?? []), id]);
     for (const [major, several] of drafting) if (several.length > 1)
       warnings.push('Detailed design ' + index.architectures[major].name + ' has ' + several.length + ' in-progress versions (' + several.join(', ') + '). A draft takes no number: keep one, revise it in place and mark the others superseded.');
     const view = primaryView(index);
@@ -369,7 +369,7 @@ export function checkProject(root, options = {}) {
         if (entry.status === 'in-progress') {
           const link = record.preliminary?.release, linked = prelimStatus(link);
           check(named(link) && ['effective', 'superseded'].includes(linked), where + ' must name an effective preliminary release; ' + link + ' is ' + linked);
-          check(!versionOf(id) || !versionOf(link) || versionOf(id).major === versionOf(link).major,
+          check(versionOf(id).major === versionOf(link)?.major,
             where + ' names preliminary design ' + link + ', a different architecture. The major number is the architecture: a detailed design keeps the major number of its preliminary design');
           if (linked === 'superseded') warnings.push(where + ' names preliminary release ' + link + ', which is now superseded. Re-link it to the effective preliminary release: detailed-design-release.mjs relink PROJECT --design ' + id + ' --preliminary RELEASE.');
           const basisFile = path.join(prelimTree, 'releases', link, 'receipt.json');
@@ -398,7 +398,7 @@ export function checkProject(root, options = {}) {
       const then = identityBefore(item, id), differ = then ? identityDifferences(identityNow(item), then) : [];
       const version = versionOf(id);
       check(!differ.length, where + ' is effective, and this change alters its physics: ' + differ.join(', ') + '. An effective design does not change in place. ' +
-        (version ? 'Open ' + version.major + '.' + (version.minor + 1) + ' as a draft and make the change there.' : 'Publish the change as a new design, staged as a draft.') +
+        'Open ' + version.major + '.' + (version.minor + 1) + ' as a draft and make the change there.' +
         ' A rename, a status or wording change and a rebuilt view pass, because they leave these files and results as they were.');
       said = 'effective, physics unchanged since ' + since + '.';
     } else {
