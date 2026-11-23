@@ -113,7 +113,7 @@ node PLUGIN/scripts/design-publication.mjs check . --skip-rerun
 
 ### The workflow and Pages
 
-The starter copies the plugin's design publication workflow to `.github/workflows/design-publication.yml`. Set its plugin pin and kernel versions, enable GitHub Actions as the Pages source and require its two checks on the default branch. [Set up the workflow](../../../docs/design-publication.md#set-up-the-workflow)
+The starter copies the plugin's design publication workflow to `.github/workflows/design-publication.yml`. It is a few lines that call the plugin's workflow and names no plugin commit. Enable GitHub Actions as the Pages source and require its two checks on the default branch. [Set up the workflow](../../../docs/design-publication.md#set-up-the-workflow)
 
 The workflow deploys the complete `docs/` tree from the default branch after the checks pass. The stable URL is `/<repository>/preliminary-design/`.
 

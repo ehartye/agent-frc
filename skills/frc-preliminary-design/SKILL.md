@@ -30,6 +30,18 @@ The figures here are guidelines: about 30 to 80 solids, clearances to about 10 m
 | trial | A physics run that decides an interaction. The project owns the runner; the plugin reads the record |
 | replay | A recorded trial, played in the review page's animation list |
 
+## What to run for this change
+
+| The change | Run |
+| --- | --- |
+| Geometry, a motion, a tolerance or reserve, a fixture, a trial, a mass or voltage budget | The local layout check, on the phases the change affects |
+| The page, a title, a colour, a name, a version label, a status word, a document | `--view-only` when the page shows it, then the publication check with `--skip-rerun`. Never the layout check |
+| Publishing a draft | The publication check with `--skip-rerun`. A draft is published on its local check |
+| Marking a design effective | Nothing more locally. CI reruns the full layout check once, on the committed design |
+| The physics of an effective design | Never in place. Open the next minor version as a draft |
+
+Time guidelines: about 1 minute while editing, 5 before merging, 15 at a stage gate. When a run is heading past its guideline, stop and tell the user what is slow. Do not repeat a run whose inputs have not changed. Read the last lines each command prints: they say what ran, what did not and what CI will do on push. [Test by need and risk](../../docs/testing-methodology.md)
+
 ## Order of work
 
 Follow the steps in order. Steps 3 to 7 repeat on every edit. [Every command, in order](references/commands.md)
@@ -78,7 +90,7 @@ These need no permission and no reminder. If you cannot do one, say so in your r
 **Publishing**
 
 17. **Commit and push** after the first passing check, after each trial result and after each publish.
-18. **Run the publication check locally before pushing.** CI runs on another operating system.
+18. **Run the publication check locally before pushing, with `--skip-rerun`.** CI runs on another operating system and does not rerun a draft's layout check.
 19. **Open the published page in a browser after each push.** Confirm the model loads, each animation plays its whole phase and the status is right. A green check alone does not show that.
 20. **Keep paths short and relative.** No drive letters, no home folders.
 21. **Take the obvious default** and say what you chose.
@@ -119,7 +131,7 @@ Ask only when the choices lead to different designs. Keep working on everything 
 | The published page is old, blank or differs from the local one | Not pushed or not deployed; browser cache; opened from `file://`; unchanged files republished | Confirm the commit is on the default branch and the deploy is green. Hard-reload. Serve the page over HTTP. Compare the two `receipt.json` files | The deploy is green and they still differ |
 | The animation list holds many short clips of one motion | The segments of one phase share no name; an earlier copy of the review page | Name the phase of each case under `stages.CASE.phase` and rebuild with `--view-only`. For an earlier page, delete it and rebuild. [Animations and check results](../../docs/preliminary-design.md#animations-show-the-mission-the-check-list-shows-the-evidence) | Never |
 | Publishing is refused | A second in-progress version of one architecture; an effective version edited; no mission case; no design name | Read the message. Revise the existing draft, or take the next version | You believe a new version is right |
-| CI fails and the local check passes | A path that differs by case or length; a moved plugin pin; a path or secret scan hit; a committed file that is not the one the receipt checked; an effective design whose physics changed | Run the same command locally. Fix the path or pin, or rerun the layout check on the committed files and publish again. A change to an effective design goes in the next minor version. Leave the design alone otherwise | It fails twice in CI only |
+| CI fails and the local check passes | A path that differs by case or length; a workflow file or `stage.py` copied from an earlier release; a path or secret scan hit; a committed file that is not the one the receipt checked; an effective design whose physics changed | Run the same command locally. Fix the path, replace the file the message names, or rerun the layout check on the committed files and publish again. A change to an effective design goes in the next minor version. Leave the design alone otherwise | It fails twice in CI only |
 | Detailed design returns a reservation | A real part does not fit an envelope, allowance or reserve | Start the next minor version from the effective one with `--copy-inputs`, fix the layout, rerun the affected cases | The fix needs a different architecture |
 
 ## Reference

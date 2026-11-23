@@ -633,3 +633,23 @@ test('on a real release a view refresh and a rename pass with no rerun, and a ch
     commit('changed tolerance');
     assert.match(errorsOf(pushed(renamed)), /Preliminary design Turning carrier 1\.1 is effective, and this change alters its physics: paths\.json\. An effective design does not change in place\. Open 1\.2 as a draft and make the change there\./);
   });
+
+test('a project holds two thin callers: the workflow and the staging command live in the plugin', () => {
+  const text = name => readFileSync(fileURLToPath(new URL('../' + name, import.meta.url)), 'utf8');
+  const caller = text('templates/design-publication.yml'), workflow = text('.github/workflows/design-publication.yml'), stage = text('templates/stage-preliminary-review.py');
+  // The caller names the plugin's workflow on its default branch, and runs nothing itself.
+  assert.match(caller, /^    uses: ehartye\/agent-frc\/\.github\/workflows\/design-publication\.yml@main$/m);
+  assert.doesNotMatch(caller, /^\s*-? ?(run|steps):/m);
+  assert.doesNotMatch(caller, /^\s*pull_request/m, 'pushes only: a pull request from a fork must not reach a self-hosted runner');
+  // Neither file names a plugin commit, and nothing is kept between runs.
+  for (const file of [caller, workflow]) assert.doesNotMatch(file, /AGENT_FRC_REF|actions\/cache|--cache/);
+  assert.match(workflow, /^  workflow_call:$/m);
+  assert.match(workflow, /^    runs-on: \$\{\{ inputs\.runner \|\| 'ubuntu-latest' \}\}$/m);
+  assert.match(workflow, /^        shell: bash$/m);
+  // The default branch does not repeat the gate; a branch is compared with where it left the default branch.
+  assert.match(workflow, /"\$GITHUB_REF_NAME" == "\$DEFAULT_BRANCH" \]\]; then\n(?:\s+#.*\n)*\s+args\+=\(--skip-rerun\)/);
+  assert.match(workflow, /merge-base "origin\/\$DEFAULT_BRANCH" HEAD 2>\/dev\/null\); then args\+=\(--base "\$base"\)/);
+  // The project's stage.py holds no staging behaviour of its own.
+  assert.match(stage, /stage_preliminary_review\.py/);
+  assert.doesNotMatch(stage, /^def /m);
+});

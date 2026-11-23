@@ -48,7 +48,7 @@ function results(receipt) {
  * The identity a receipt carries on its own: the digests it recorded and the plan it repeats. It sees a change to the
  * STEP, the motion study, the budgets, the stages or the control. The budget ledger and the premise records embed the
  * issue name, so this form also changes on a rename; it is the one to use when the issue name stays, as in a view
- * refresh, and the fallback when the layout plan is not committed. templates/stage-preliminary-review.py repeats it.
+ * refresh, and the fallback when the layout plan is not committed. scripts/stage_preliminary_review.py repeats it.
  */
 export function receiptIdentity(receipt) {
   const r = receipt ?? {};

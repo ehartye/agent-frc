@@ -76,7 +76,7 @@ jobs:
           python-version: '3.13'
           cache: pip
           cache-dependency-path: .github/workflows/workflow-guide.yml # the pinned versions are in this file
-      # The same interpreter and kernel versions as templates/design-publication.yml, so the template's install is exercised here.
+      # The same interpreter and kernel versions as the defaults of .github/workflows/design-publication.yml, so that install is exercised here.
       - if: steps.reach.outputs.run == 'true'
         run: python -m pip install "cadquery-ocp==8.0.1.0.0" "numpy==2.5.3"
       # Builds a synthetic release with the real layout check, gates it as a project's CI does when it becomes effective,

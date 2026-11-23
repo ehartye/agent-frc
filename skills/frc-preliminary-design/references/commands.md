@@ -2,7 +2,7 @@
 
 Run every command from the repository root. `PLUGIN` stands for the installed plugin's folder and `1.0` for the design's version. The examples use invented names.
 
-`PLUGIN` must not change during a run. Point it at an installed copy, or at a worktree of your own, at the revision the project's workflow names as `AGENT_FRC_REF`. A shared checkout that another session updates mid-run spoils the result. Record the revision with each result.
+`PLUGIN` must not change during a run. Point it at an installed copy of the plugin's current release, or at a worktree of your own. A shared checkout that another session updates mid-run spoils the result. Record the revision with each result. Set `AGENT_FRC_PLUGIN` to the same folder: the project's `stage.py` is a few lines that call the plugin's staging command.
 
 ## Contents
 
@@ -134,7 +134,7 @@ Take each figure from the plan, the receipt, `missions.json` or a trial record, 
 ## Mark the design effective
 
 ```sh
-python cad/preliminary-design/stage.py --set-status 1.0 effective --readiness PLUGIN/scripts/effective-readiness.mjs
+python cad/preliminary-design/stage.py --set-status 1.0 effective
 ```
 
 Do this only after the user agrees. It is an index edit in a reviewed pull request, with the readiness report attached. Make it the last commit of its pull request: this is the stage gate, and CI reruns the layout check once on the committed inputs for each push that carries it. An effective design no longer changes. Only its view can be republished, with `stage.py --refresh-view 1.0` after a `--view-only` rebuild. [When the layout check reruns](../../../docs/design-publication.md#when-the-layout-check-reruns)

@@ -25,6 +25,12 @@ During adoption, move independent studies into their own directories. Move a his
 Use the [component palette](../../docs/cad-color-convention.md) during CAD setup. A new project inherits the plugin defaults. Keep project-specific role colors in version control at `cad/component-palette.json`. Reference that single mapping from native models and student-facing views.
 
 
+## Write the Design checks block
+
+`project-layout.mjs init` writes a short **Design checks** block into the project's `AGENTS.md`, between two marker lines. It tells any agent in the project what to run for which change, before a skill loads: the local layout check for geometry, motion and budgets; the publication check alone for a page, a name or a status; the full layout check once in CI when a design becomes effective; no edit in place to the physics of an effective design; and the time guidelines. Refresh it after a plugin update with `node <plugin>/scripts/project-layout.mjs agents <project>`. It replaces the block in place and leaves the rest of the file alone. [Test by need and risk](../../docs/testing-methodology.md)
+
+Copy `templates/design-publication.yml` to `.github/workflows/design-publication.yml` and `templates/stage-preliminary-review.py` to `cad/preliminary-design/stage.py`, once. Each is a few lines that call the plugin at its current release. [Set up the workflow](../../docs/design-publication.md#set-up-the-workflow)
+
 ## Version the workflow outputs
 
 Keep each completed analysis, strategic narrative, constraint register, design review and verification report in the project checkout, beside its subject. A private wiki can carry team history and research. Students should be able to read the deliverables from a clean checkout. Link the project workflow from the README and showcase.
