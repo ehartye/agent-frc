@@ -27,9 +27,11 @@ Use the [component palette](../../docs/cad-color-convention.md) during CAD setup
 
 ## Write the Design checks block
 
-`project-layout.mjs init` writes a short **Design checks** block into the project's `AGENTS.md`, between two marker lines. It tells any agent in the project what to run for which change, before a skill loads: the local layout check for geometry, motion and budgets; the publication check alone for a page, a name or a status; the full layout check once in CI when a design becomes effective; no edit in place to the physics of an effective design; and the time guidelines. Refresh it after a plugin update with `node <plugin>/scripts/project-layout.mjs agents <project>`. It replaces the block in place and leaves the rest of the file alone. [Test by need and risk](../../docs/testing-methodology.md)
+`project-layout.mjs init` writes a short **Design checks** block into the project's `AGENTS.md`, between two marker lines. It tells any agent in the project what to run for which change, before a skill loads: the layout check for geometry, motion and budgets; the publication check alone for a page, a name or a status; the stage gate, run by the command that marks a design effective; no edit in place to the physics of an effective design; and the time guidelines. It is instruction only and names no plugin. Refresh it with `node <plugin>/scripts/project-layout.mjs agents <project>`: it replaces the block in place and leaves the rest of the file alone.
 
-Copy `templates/design-publication.yml` to `.github/workflows/design-publication.yml` and `templates/stage-preliminary-review.py` to `cad/preliminary-design/stage.py`, once. Each is a few lines that call the plugin at its current release. [Set up the workflow](../../docs/design-publication.md#set-up-the-workflow)
+## Write the project's own CI
+
+A project runs CI that belongs to it. Write it from the references in `<plugin>/templates/project-ci/`: copy `ci.yml` to `.github/workflows/ci.yml`, and `scan.mjs` and `site-check.mjs` to `scripts/ci/`. On every push it scans for personal paths and secrets and checks that the published site is whole; on the default branch it publishes `docs/`. Add the project's own tests as steps that run the project's own commands. Project code never runs plugin code: no project file may name the plugin, a path into it or a pin of it, and the project carries no copy or wrapper of a plugin command. Then run `node <plugin>/scripts/project-ci-audit.mjs <project>`. It is advice and blocks nothing: it reports a file that names the plugin, a missing scan or site check and how the project's copies differ from the references. The plugin's `examples/sample-project/` is a complete invented project to compare with. [Write the project's CI](../../docs/project-ci.md#write-the-projects-ci)
 
 ## Version the workflow outputs
 
@@ -43,9 +45,9 @@ Keep the project’s [frame and bumper outline](../../docs/frame-profile.md) wit
 
 Use the [Fusion authority and revision handoff](../../docs/fusion-authority.md) to establish the one current saved native design, the STEP exported from that design and the identity of the engineering evidence. When resuming in another checkout or before replacing a published view, verify the selected register and lineage with `fusion_authority.py`. For a mechanical review, use `fusion_issue_inventory.capture` in Fusion for missing commissioned poses. [Resume a registered master](../../docs/fusion-authority.md#resume-a-registered-master)
 
-Add the [branch scan](../../docs/project-ci.md#scan-every-pushed-branch) so every pushed branch is checked for personal machine paths and credentials. Before pushing a workflow change, [check the committed caller and its local reusable workflows](../../docs/project-ci.md#check-the-workflows-before-pushing) with the approved actionlint executable.
+The project's CI runs the [path and secret scan](../../docs/project-ci.md#the-path-and-secret-scan) on every pushed branch. Before pushing a workflow change, [check the committed workflow](../../docs/project-ci.md#check-the-workflows-before-pushing) with the approved actionlint executable.
 
-Register the project’s changed and full test commands, verify the actual default branch and run the same commands locally and in CI. Choose branch-served or generated Pages when the team publishes CAD. [Set up project checks and release gates](../../docs/project-ci.md)
+Add the project’s own tests to its workflow as steps, verify the actual default branch and choose branch-served or generated Pages when the team publishes CAD. [A project's own CI](../../docs/project-ci.md)
 
 For a project with `iterations/active.json`, follow its active design root before recovering older records. After a decision to start over, use `frc-start-over` to preserve the evidence and open a fresh numbered design. [Design iterations](../../docs/design-iterations.md)
 

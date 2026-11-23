@@ -5,12 +5,11 @@ A new release takes a version as its ID, MAJOR.MINOR. The major number is the ar
 once with --design-name. The minor number counts the effective baselines of that architecture. A draft is a publish
 of an in-progress version and takes no number: staging the same ID again counts it.
 
-A project runs it through its own cad/preliminary-design/stage.py, a few lines that call this file in the installed
-plugin, or directly with --base cad/preliminary-design.
+The coding agent runs this file from the installed plugin, at the project root. A project holds no copy of it.
 
-This script only copies files and edits the release index. The project's Design publication workflow decides
-whether the result may merge. It reruns the layout check from the committed inputs once, when a release becomes
-effective, and holds an effective release to the physics it was accepted with.
+Staging copies files and edits the release index. Marking a release effective first runs the stage gate
+(stage-gate.mjs): the full layout check on the committed design, with the effective-readiness report. The status
+is set only when the gate passes, and the gate's record is written beside the published release.
 Withdrawing a release is a status change: the index keeps the reason and the last commit that held its published
 files, and the files leave the site."""
 import argparse
@@ -35,11 +34,10 @@ VERSION = re.compile(r"([1-9][0-9]{0,3})\.(0|[1-9][0-9]{0,3})")
 # An ID issued before versions: lowercase letters, digits and hyphens. It keeps working and carries no design name.
 EARLIER_ID = re.compile(r"[a-z0-9][a-z0-9-]{0,63}")
 PER_RELEASE = ("designStatus", "revision", "accepted", "refreshed", "reason", "lastCommit")
-# What the project's CI does with the change just made, said after each command. The method: docs/testing-methodology.md.
-ON_PUSH_DRAFT = "On push: CI runs the publication checks. The layout check is not rerun for a draft; the local check you ran is its check."
-ON_PUSH_GATE = ("On push: this is the stage gate. CI reruns the full layout check once on the committed design, on each push of the branch "
-                "that carries this change. Make it the last commit of its pull request.")
-ON_PUSH_LABELS = "On push: CI runs the publication checks. The layout check is not rerun: no physics changed."
+# What a push does with the change just made, said after each command. The method: docs/testing-methodology.md.
+ON_PUSH = "On push: the project's workflow publishes the page. Nothing is rerun."
+BEFORE_PUSH = "Before pushing, run the publication check: node PLUGIN/scripts/design-publication.mjs check ."
+GATE = "gate.json"
 
 
 def read(path):
@@ -319,7 +317,7 @@ def stage(season, inputs, release, design=None, refresh=False):
             if not listed or status_of(index, release) != "effective":
                 raise ValueError("--refresh-view republishes the view of the effective release. " + sentence(described(index, release)) + " is "
                                  + (status_of(index, release) if listed else "not listed")
-                                 + ("" if listed and status_of(index, release) != "in-progress" else "; stage it to publish or revise it: stage.py " + release))
+                                 + ("" if listed and status_of(index, release) != "in-progress" else "; stage it to publish or revise it: stage_preliminary_review.py " + release))
             try:
                 before = read(site / "releases" / release / "receipt.json")
             except (OSError, ValueError):
@@ -343,6 +341,9 @@ def stage(season, inputs, release, design=None, refresh=False):
             shutil.copyfile(source, staged / name)
         (staged / "release.json").write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
         destination = site / "releases" / release
+        if refresh and (destination / GATE).is_file():
+            # The record of the stage gate stays with the effective release: a view refresh changes no physics.
+            shutil.copyfile(destination / GATE, staged / GATE)
         destination.parent.mkdir(parents=True, exist_ok=True)
         replaced = destination.exists()
         if replaced and tree(destination) == tree(staged) and release in index["releases"]:
@@ -359,7 +360,8 @@ def stage(season, inputs, release, design=None, refresh=False):
             index.setdefault("refreshed", {})[release] = dict(date=datetime.date.today().isoformat(), **(dict(commit=commit) if commit else {}))
             save_index(index, site)
             print("Refreshed the view of " + described(index, release) + " (effective). Its physics, status, accepted date and draft count are unchanged")
-            print(ON_PUSH_LABELS)
+            print(BEFORE_PUSH)
+            print(ON_PUSH)
             return
         # One version keeps one ID: an edit counts a draft here, in the field named revision, and adds no entry to the picker.
         number = revision_of(index, release) + 1 if replaced or release in index["releases"] else 1
@@ -374,39 +376,26 @@ def stage(season, inputs, release, design=None, refresh=False):
           + " (" + state_of(index, release) + ")")
     for note in notes:
         print("Note: " + note)
-    print(ON_PUSH_DRAFT)
+    print(BEFORE_PUSH)
+    print(ON_PUSH)
 
 
 def sentence(text):
     return text[:1].upper() + text[1:]
 
 
-def readiness_report(inputs, reporter=None, season=None, design=None):
-    """Show the reviewer the plugin's effective-readiness report for a release's inputs. It never stops a status change."""
-    where = [inputs.as_posix()]
-    try:
-        # A release checked from the repository root resolves its trial pins from there.
-        if season is not None and project_root(season, inputs, read(inputs / "layout.json").get("view")) == season.resolve():
-            where = [season.as_posix(), "--release", inputs.resolve().relative_to(season.resolve()).as_posix()]
-    except (OSError, ValueError):
-        pass
-    if design:
-        where += ["--design", design]
-    command = "node PLUGIN/scripts/design.mjs effective-readiness " + " ".join('"' + w + '"' if " " in w else w for w in where)
-    if reporter is None:
-        print("Exit criteria for an effective preliminary design: run `" + command + "`, or pass --readiness "
-              "PLUGIN/scripts/effective-readiness.mjs to print the report here.")
-        return
-    try:
-        run = subprocess.run(["node", str(reporter), *where], capture_output=True)
-        report = run.stdout.decode("utf-8", errors="replace").rstrip()
-        if run.returncode != 0 or not report:
-            raise ValueError("no report")
-        # The console may not hold every character of the report; the status change is already made.
-        encoding = sys.stdout.encoding or "utf-8"
-        print(report.encode(encoding, errors="replace").decode(encoding))
-    except Exception:
-        print("Effective-readiness report unavailable for " + inputs.as_posix() + "; run `" + command + "`.")
+def stage_gate(season, release, budget_minutes=None, jobs=None, check=None):
+    """Run the stage gate of a release: the full layout check on the committed design, and its readiness report.
+
+    The gate is the plugin's stage-gate.mjs. It prints what it ran and how long it took, and writes its record beside
+    the published release. A release that does not pass keeps its status."""
+    command = ["node", str(Path(__file__).resolve().with_name("stage-gate.mjs")), "preliminary", str(season), "--release", release]
+    for flag, value in (("--budget-minutes", budget_minutes), ("--jobs", jobs), ("--check", check)):
+        if value is not None:
+            command += [flag, str(value)]
+    sys.stdout.flush()
+    if subprocess.run(command).returncode != 0:
+        raise ValueError("Release " + release + " keeps its status: the stage gate did not pass")
 
 
 def tree(folder):
@@ -480,11 +469,11 @@ def set_status(site, release, status, reason=None):
         statuses[release] = status
         save_index(record, site)
     print(sentence(described(record, release)) + " is " + status + "; the site opens " + str(record["current"]))
-    print(ON_PUSH_GATE if status == "effective" else ON_PUSH_LABELS)
     if version and status == "effective" and design_name(record, version[0]):
         latest = max(major_of(r) for r in record["releases"] if version_of(r))
         print("Work toward the next baseline of " + design_name(record, version[0]) + " is " + str(version[0]) + "." + str(version[1] + 1)
               + ", staged as drafts until it is accepted. A different architecture is " + str(latest + 1) + ".0 with its own name.")
+    print(ON_PUSH)
 
 
 def step_digest(site, release):
@@ -636,8 +625,9 @@ if __name__ == "__main__":
     parser.add_argument("--design-name", help="The architecture's name in words, given the first time a major number is staged, as in 1.0")
     parser.add_argument("--replaced-by", metavar="RELEASE", help="With --remove of a release that is or was effective: the effective release of the same STEP")
     parser.add_argument("--reason", help="Why the release is withdrawn, with --set-status RELEASE withdrawn")
-    parser.add_argument("--readiness", type=Path, default=Path(__file__).resolve().with_name("effective-readiness.mjs"),
-                        help="The effective-readiness reporter whose report --set-status RELEASE effective prints (default: this plugin's)")
+    parser.add_argument("--budget-minutes", type=float, help="With --set-status RELEASE effective: stop the stage gate's layout check after this many minutes (default 45)")
+    parser.add_argument("--jobs", type=int, help="With --set-status RELEASE effective: worker processes of the stage gate's layout check")
+    parser.add_argument("--gate-check", help=argparse.SUPPRESS)
     parser.add_argument("--base", type=Path, default=Path("cad/preliminary-design"),
                         help="The project's preliminary design folder, which holds releases/ (default: cad/preliminary-design under the current folder)")
     args = parser.parse_args()
@@ -648,17 +638,19 @@ if __name__ == "__main__":
         if args.design_name is not None and args.refresh_view:
             raise ValueError("--design-name goes with staging a version; a view refresh changes no name")
         if args.design_name is not None and not args.release:
-            raise ValueError("--design-name goes with staging a version, as in stage.py 1.0 --design-name \"NAME\"")
+            raise ValueError("--design-name goes with staging a version, as in stage_preliminary_review.py 1.0 --design-name \"NAME\"")
         if args.replaced_by is not None and not args.remove:
             raise ValueError("--replaced-by goes with --remove")
         if args.set_status:
             site = base.parents[1] / "docs/preliminary-design"
-            set_status(site, *args.set_status, reason=args.reason)
             if args.set_status[1] == "effective":
-                # Informational: the index is already updated, and the reviewer of the pull request judges the report.
-                release = args.set_status[0]
-                readiness_report(base / "releases" / release, args.readiness, base.parents[1],
-                                 design=title_of(load_index(site), release) if version_of(release) else None)
+                if args.set_status[0] not in load_index(site)["releases"]:
+                    raise ValueError("Unknown release: " + args.set_status[0])
+                if args.reason:
+                    raise ValueError("--reason applies to a withdrawal")
+                # The stage gate runs here, once, on the committed design. An earlier receipt is never taken for it.
+                stage_gate(base.parents[1], args.set_status[0], args.budget_minutes, args.jobs, args.gate_check)
+            set_status(site, *args.set_status, reason=args.reason)
         elif args.copy_inputs:
             copy_inputs(base.parents[1].resolve(), base, *args.copy_inputs)
         elif args.remove:

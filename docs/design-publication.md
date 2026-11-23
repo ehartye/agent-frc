@@ -1,6 +1,6 @@
 # Publish and check designs
 
-A project publishes a design, changes its status or withdraws it in one reviewed pull request. One command checks everything the project publishes about its designs, and the project's CI runs it on every push to every branch.
+A project publishes a design, changes its status or withdraws it in one reviewed pull request. The coding agent prepares that pull request with the plugin: it stages the design, runs the stage gate when a design is marked effective, and runs one command that checks everything the project publishes about its designs. The project runs none of this. [The plugin is a tool of the coding agent, not a dependency of the project](testing-methodology.md#the-plugin-is-a-tool-of-the-coding-agent-not-a-dependency-of-the-project).
 
 ```sh
 node PLUGIN/scripts/design-publication.mjs check PROJECT
@@ -14,7 +14,7 @@ A project that still runs the earlier gates moves to this workflow with the [mig
 | --- | --- |
 | The layout was checked | Each in-progress or effective design carries a `layout-checked` receipt: every clearance case, the inspection mass and every loaded-voltage case pass, and the displaced control is rejected. |
 | The receipt belongs to the committed files | The receipt is of the committed layout plan, and the STEP, motion study, editable design, budget ledger and limits it names by digest are the committed files. |
-| An effective design passed at the stage gate | The change that makes a design effective [reruns the plugin's layout check once](#when-the-layout-check-reruns) from the committed inputs. It must end `layout-checked`, and its input digests and every verdict must equal the committed receipt. |
+| An effective design passed its stage gate | A design this change makes effective carries the record of [its stage gate](#the-stage-gate), `gate.json`, for the physics its receipt records. The command that marks a design effective writes it after it has rerun the layout check on the committed design. |
 | An effective design keeps its physics | A design that was already effective is compared with itself before the change, labels left out. [A rename or a view refresh passes, and a change to its physics is refused](#a-change-to-an-effective-design). |
 | The review shows the checked numbers | The cases, results, displaced control, objectives, mass and duties in the review scene equal the receipt. |
 | The design plays a mission task | The record names a mission case: a passing operating case in the checked cycle, for a narrative objective the receipt marks `represented`, played by a [mission animation](preliminary-design.md#animations-show-the-mission-the-check-list-shows-the-evidence) of the review. A field-interaction trial must be one the receipt names. |
@@ -23,15 +23,15 @@ A project that still runs the earlier gates moves to this workflow with the [mig
 | An effective detailed design resolved its bench tests | The design publishes its [bench-test record](#bench-tests-handed-over-from-preliminary-design). Every `before-build` test has a recorded passing result and every `on-robot` test has an owner and a plan. Every bench test its preliminary design hands over is in the record with the handed-over numbers. |
 | One status per design, one primary view | Each index holds `in-progress`, `effective`, `superseded` or `withdrawn` for each design, at most one `effective`, and the primary view computed from the statuses. |
 
-The rerun at the gate compares digests and verdicts. The digests are the ones the layout check read and wrote into the receipt: the plan, the STEP, the motion study, the budgets and limits, and each trial a stage names. A plan [names its files by path](preliminary-design.md#name-files-by-path) and needs no typed hash for this, and an input that changed since the committed receipt still shows as a differing digest. It does not compare measured values digit for digit, because a CAD kernel on another operating system can round them differently.
+The stage gate compares digests and verdicts. The digests are the ones the layout check read and wrote into the receipt: the plan, the STEP, the motion study, the budgets and limits, and each trial a stage names. A plan [names its files by path](preliminary-design.md#name-files-by-path) and needs no typed hash for this, and an input that changed since the committed receipt shows as a differing digest. The gate does not compare measured values digit for digit, because a CAD kernel on another computer can round them differently.
 
 The check reads data. It does not inspect page markup, compare a page with the stock page or require any wording. A project may change its copy of the review page, the release index page and the design catalog. The pull request shows every change to them.
 
-The check needs no approved baseline, repository variable, signing key or policy file. It reads the branch as pushed.
+The check needs no approved baseline, repository variable, signing key or policy file. It reads the checkout it is run on. It also runs the [path and secret scan](project-ci.md#the-path-and-secret-scan) and refuses a project that still carries a plugin file.
 
 ## Which designs are checked
 
-A design that is `in-progress` or `effective` is checked, whatever else its record or the index says about it. A `superseded` or `withdrawn` design is history: it is not checked and never rerun. A withdrawn design drops its published files; Git keeps them.
+A design that is `in-progress` or `effective` is checked, whatever else its record or the index says about it. A `superseded` or `withdrawn` design is history: it is not checked. A withdrawn design drops its published files; Git keeps them.
 
 The check reads these folders. Pass the option to use another.
 
@@ -43,13 +43,13 @@ The check reads these folders. Pass the option to use another.
 | `--inputs` | `cad/preliminary-design/releases` | `ID/layout.json` and every file it names, for each preliminary release |
 | `--detailed-inputs` | `cad/detailed-design/designs` | The same, for each detailed design |
 
-A release checked from the repository root, whose receipt names its view inside the inputs folder from there, is rerun from the repository root. One checked in its own folder is rerun in that folder.
+A release checked from the repository root, whose receipt names its view inside the inputs folder from there, is checked at its stage gate from the repository root. One checked in its own folder is checked in that folder.
 
 A record can name its own inputs with `"check": {"project": "cad/robot", "plan": "layout.json"}`, both relative to the repository. `project` is the folder the layout check ran in and `plan` is the layout inside it. The staging commands below write this field.
 
-A preliminary release must have its inputs committed. Without them the check fails, because the stage gate could not rerun it. A detailed design whose Fusion export is not committed passes with a warning that says the layout check cannot be rerun. A file the receipt names that is not committed is a warning for the same reason; a STEP kept in Git LFS is compared by the digest its pointer names.
+A preliminary release must have its inputs committed. Without them the check fails, because the stage gate runs on them. A detailed design whose inputs are not committed passes with a warning that says its receipt was not compared with them. A file the receipt names that is not committed is a warning for the same reason; a STEP kept in Git LFS is compared by the digest its pointer names.
 
-If the receipt was checked against a held receipt with `--previous`, commit that held receipt inside the same inputs folder. The rerun finds it by digest.
+If the receipt was checked against a held receipt with `--previous`, commit that held receipt inside the same inputs folder. The stage gate finds it by digest.
 
 ## Design status
 
@@ -84,15 +84,15 @@ Three examples follow one invented design.
 3. **Start-over.** The team drops the carriage for an arm. The different architecture is `2.0` with its own name, and starts at "Swinging arm 2.0 · draft 1 · in progress".
 
 ```sh
-python cad/preliminary-design/stage.py 1.0 --design-name "Tilting carriage"
-python cad/preliminary-design/stage.py 1.0
-python cad/preliminary-design/stage.py --set-status 1.0 effective
-python cad/preliminary-design/stage.py 1.1
-python cad/preliminary-design/stage.py --set-status 1.1 effective
-python cad/preliminary-design/stage.py 2.0 --design-name "Swinging arm"
+python PLUGIN/scripts/stage_preliminary_review.py 1.0 --design-name "Tilting carriage"
+python PLUGIN/scripts/stage_preliminary_review.py 1.0
+python PLUGIN/scripts/stage_preliminary_review.py --set-status 1.0 effective
+python PLUGIN/scripts/stage_preliminary_review.py 1.1
+python PLUGIN/scripts/stage_preliminary_review.py --set-status 1.1 effective
+python PLUGIN/scripts/stage_preliminary_review.py 2.0 --design-name "Swinging arm"
 ```
 
-Start the next version from the inputs of the last one with `python cad/preliminary-design/stage.py --copy-inputs 1.0 1.1`. It copies the release folder, writes each pin that names the folder with the new path and digest, and leaves the page, scene and receipt for the layout check to write. Edit the design there, run the check and stage `1.1`.
+Start the next version from the inputs of the last one with `python PLUGIN/scripts/stage_preliminary_review.py --copy-inputs 1.0 1.1`. It copies the release folder, writes each pin that names the folder with the new path and digest, and leaves the page, scene and receipt for the layout check to write. Edit the design there, run the check and stage `1.1`.
 
 Give `--design-name` the first time a major number is staged. Staging refuses a new major number without it and does not ask again. The index holds the name once for each major number, under `designs`:
 
@@ -164,11 +164,11 @@ A design ID issued before versions, such as `detail-003`, keeps working in every
 
 ## Publish a preliminary design release
 
-Keep the release's checked inputs in the repository at `cad/preliminary-design/releases/ID/`: the layout, its STEP and motion study, the budgets and limits, the review page written by `--write-view` (or rebuilt by [`--view-only`](preliminary-design.md#rebuild-the-review-without-rerunning-the-cases) after a presentation edit), the `layout-checked` `receipt.json` and a `missions.json` that names at least one mission case. The scene is written beside the page and the starter's `.gitignore` leaves that input-side copy uncommitted: the published copy under `docs/` is the committed one. The project's `cad/preliminary-design/stage.py` is [a few lines](../templates/stage-preliminary-review.py) that call the plugin's staging command. Name the installed plugin for it once, with the environment variable `AGENT_FRC_PLUGIN` or `--plugin PATH`.
+Keep the release's checked inputs in the repository at `cad/preliminary-design/releases/ID/`: the layout, its STEP and motion study, the budgets and limits, the review page written by `--write-view` (or rebuilt by [`--view-only`](preliminary-design.md#rebuild-the-review-without-rerunning-the-cases) after a presentation edit), the `layout-checked` `receipt.json` and a `missions.json` that names at least one mission case. The scene is written beside the page and the starter's `.gitignore` leaves that input-side copy uncommitted: the published copy under `docs/` is the committed one. Run the plugin's staging command from the project root. The project keeps no copy of it and no wrapper around it. `--base FOLDER` names another design folder than `cad/preliminary-design`.
 
 ```sh
-python cad/preliminary-design/stage.py 1.0 --design-name "Tilting carriage"
-node PLUGIN/scripts/design-publication.mjs check . --skip-rerun
+python PLUGIN/scripts/stage_preliminary_review.py 1.0 --design-name "Tilting carriage"
+node PLUGIN/scripts/design-publication.mjs check .
 ```
 
 Staging copies the review page as it is, the scene, receipt, motion, budget and limit files and each trial a mission case names into `docs/preliminary-design/releases/ID/`. One design has one review page: a recorded trial plays in its animation list as a [replay](../skills/frc-preliminary-design/references/review-layout-template.md#play-a-recorded-trial-in-the-animation-list). It writes the release record and lists the release as `in-progress`, at draft 1. The ID is the [version](#name-and-number-a-design), and the name is given once.
@@ -179,10 +179,10 @@ One version keeps one release ID. An edit to an in-progress version is a draft o
 
 ```sh
 node PLUGIN/scripts/design.mjs preliminary-check . cad/preliminary-design/releases/1.1/layout.json --write-view --output cad/preliminary-design/releases/1.1/receipt.json
-python cad/preliminary-design/stage.py 1.1
+python PLUGIN/scripts/stage_preliminary_review.py 1.1
 ```
 
-Edit the inputs in the release's own folder, rerun the check there and stage the same ID. Staging replaces the published page, scene, receipt and evidence, and counts the draft in the index: `"revision": {"1.1": {"number": 4, "date": "DATE", "commit": "COMMIT"}}`, where the commit is the one the checkout was at. The picker and the review page show it as "draft 4". The picker gains no entry. CI does not rerun a draft: the check you just ran is its check, and the publication check confirms that the receipt is of the committed files. Staging unchanged files counts nothing. Push each draft to publish an in-progress design as it develops; Git keeps the earlier bytes.
+Edit the inputs in the release's own folder, rerun the check there and stage the same ID. Staging replaces the published page, scene, receipt and evidence, and counts the draft in the index: `"revision": {"1.1": {"number": 4, "date": "DATE", "commit": "COMMIT"}}`, where the commit is the one the checkout was at. The picker and the review page show it as "draft 4". The picker gains no entry. A draft is published on the layout check you just ran, and the publication check confirms that the receipt is of the committed files. Staging unchanged files counts nothing. Push each draft to publish an in-progress design as it develops; Git keeps the earlier bytes.
 
 | Situation | What to do |
 | --- | --- |
@@ -190,7 +190,7 @@ Edit the inputs in the release's own folder, rerun the check there and stage the
 | A change to an effective design | The next minor version, such as `1.1` after `1.0`. |
 | A different architecture or concept | The next major version, such as `2.0`, with its own name. |
 
-A release stops changing when it is marked `effective`, and stays unchanged as `superseded` or `withdrawn`: staging its ID is refused. Only [the view of the effective release](#refresh-the-view-of-an-effective-release) can be republished. When a new release replaces an in-progress one that was never accepted, mark the old one `superseded` with `python cad/preliminary-design/stage.py --set-status OLD-ID superseded`. It keeps its record in the index and opens from a link that names it, and the picker lists it no longer. The picker lists a superseded release only when the index holds the date it was accepted, under `accepted`, which `--set-status ID effective` records.
+A release stops changing when it is marked `effective`, and stays unchanged as `superseded` or `withdrawn`: staging its ID is refused. Only [the view of the effective release](#refresh-the-view-of-an-effective-release) can be republished. When a new release replaces an in-progress one that was never accepted, mark the old one `superseded` with `python PLUGIN/scripts/stage_preliminary_review.py --set-status OLD-ID superseded`. It keeps its record in the index and opens from a link that names it, and the picker lists it no longer. The picker lists a superseded release only when the index holds the date it was accepted, under `accepted`, which `--set-status ID effective` records.
 
 ```json
 {
@@ -213,17 +213,17 @@ An effective release keeps its physics. Its presentation can still improve: a ne
 
 ```sh
 node PLUGIN/scripts/design.mjs preliminary-check . cad/preliminary-design/releases/1.0/layout.json --view-only --output cad/preliminary-design/releases/1.0/receipt.json
-python cad/preliminary-design/stage.py --refresh-view 1.0
-node PLUGIN/scripts/design-publication.mjs check . --skip-rerun
+python PLUGIN/scripts/stage_preliminary_review.py --refresh-view 1.0
+node PLUGIN/scripts/design-publication.mjs check .
 ```
 
-`--refresh-view` replaces the published page, scene, receipt and evidence of the effective release. The status, the accepted date and the draft count stay. The index records the refresh under `refreshed`, with its date and commit; it is not a draft. There is no need to set the release back to `in-progress` to republish its view. It refuses a receipt that records another STEP, motion study, editable design, budget, stage, group, mount, control or verdict than the published one, and names what differs. That work is the next minor version. CI passes the refresh without a rerun.
+`--refresh-view` replaces the published page, scene, receipt and evidence of the effective release. The status, the accepted date and the draft count stay. The index records the refresh under `refreshed`, with its date and commit; it is not a draft. There is no need to set the release back to `in-progress` to republish its view. It refuses a receipt that records another STEP, motion study, editable design, budget, stage, group, mount, control or verdict than the published one, and names what differs. That work is the next minor version. The record of the stage gate stays with the release, and the publication check passes the refresh.
 
 Change a status in the same way, in a pull request:
 
 ```sh
-python cad/preliminary-design/stage.py --set-status 1.0 effective
-python cad/preliminary-design/stage.py --set-status 2.0 withdrawn --reason "The carrier moved to the other side."
+python PLUGIN/scripts/stage_preliminary_review.py --set-status 1.0 effective
+python PLUGIN/scripts/stage_preliminary_review.py --set-status 2.0 withdrawn --reason "The carrier moved to the other side."
 ```
 
 `--copy-inputs FROM TO` copies a release's inputs to a new release folder with their pins written for the new paths. `--remove ID` deletes a release's two folders and its index entry, and leaves no redirect. It is the last step of [renaming a release to a version](design-publication-migration.md#rename-a-release-to-a-version). It refuses a release that is or was effective unless `--replaced-by NEW` names the effective release checked on the same STEP.
@@ -252,7 +252,7 @@ The design ID is a [version, and the design takes the name of its preliminary de
 | `withdraw` | The status `withdrawn` with the reason. See [Withdraw a design](#withdraw-a-design). |
 | `refresh` | `current` and `beside` recomputed after a hand edit, and the stock catalog page when the tree has none. |
 
-Each command only edits files. The pull request and the check decide whether they merge.
+Each command only edits files, except `effective`, which first runs the [stage gate](#the-stage-gate). The pull request decides whether they merge.
 
 ```json
 {
@@ -336,14 +336,14 @@ More simulation never closes a bench test. If the design removed the risk, close
 
 ## Effective designs
 
-A design becomes effective when a reviewed pull request changes its status in the index. No signature is involved. The reviewer accepts the design by merging the pull request, and the check prints the evidence in the log and in the run summary.
+A design becomes effective when a reviewed pull request changes its status in the index. No signature is involved. The command that changes the status runs the [stage gate](#the-stage-gate) first and prints the evidence; the pull request carries the gate's record, and the reviewer accepts the design by merging it.
 
-- **Preliminary.** The check prints the [effective-readiness report](preliminary-design.md#judge-readiness-to-be-marked-effective) for the release's inputs, titled with the design name and version. The report is informational: the check does not fail on it.
+- **Preliminary.** The command prints the [effective-readiness report](preliminary-design.md#judge-readiness-to-be-marked-effective) for the release's inputs, titled with the design name and version. The report is informational: neither the gate nor the publication check fails on it. It is kept in the gate's record.
 - **Detailed.** The design carries the result of the [mechanical-readiness review](mechanical-readiness.md) as `designs/ID/readiness.json`. Save the output of `mechanical_readiness.py review` and pass it to `effective`. It must be a review of the STEP the design record names, and it must report a showcase eligibility of `pass`. Its [bench tests](#bench-tests-handed-over-from-preliminary-design) must be resolved: results for the ones that gate the build, an owner and a plan for the ones run on the robot. A review with any other verdict fails the check, so the design stays in progress until the findings are resolved. The check prints the build readiness, the showcase eligibility and each finding that does not pass.
 
 ### A change to an effective design
 
-An effective design keeps the physics it was accepted with. Whenever the check has a base commit, it compares each design that was effective there with the same design now, on its **physics identity**: what the layout check read and what it found.
+An effective design keeps the physics it was accepted with. The check compares with the default branch of the remote, as last fetched, or with `--base COMMIT`. When it has that base, it compares each design that was effective there with the same design now, on its **physics identity**: what the layout check read and what it found.
 
 | Part of the identity | Holds |
 | --- | --- |
@@ -354,8 +354,8 @@ Labels are left out: every `issue` field, the plan's `presentation`, `view` and 
 
 | The change | Result |
 | --- | --- |
-| A rename: a new ID, folder or issue name, made with `--copy-inputs`, a local check, staging and `--remove OLD --replaced-by NEW` | Passes with no rerun. The new ID is matched to the design that was effective at the base commit. |
-| A [view refresh](#refresh-the-view-of-an-effective-release), a reworded title or phase, a status word, a date | Passes with no rerun. |
+| A rename: a new ID, folder or issue name, made with `--copy-inputs`, a local check, staging and `--remove OLD --replaced-by NEW` | Passes. The new ID is matched to the design that was effective at the base commit. Marking the new ID effective runs its stage gate, as for any design. |
+| A [view refresh](#refresh-the-view-of-an-effective-release), a reworded title or phase, a status word, a date | Passes. No layout check runs. |
 | A change to any file or verdict in the table above | Fails. The message names the files and results that differ and the version the work belongs to: the next minor, opened as a draft. |
 
 ```text
@@ -366,7 +366,7 @@ A design that returns to `in-progress` in the same change may change again; that
 
 The identity has limits. State them when a result surprises you.
 
-- It does not include the plugin revision or the kernel versions. A new plugin release reruns nothing in a project; each design is rerun at its next gate.
+- It does not include the plugin revision or the kernel versions. A new plugin release runs nothing in a project.
 - It follows a file only where a record names it as `{"file": "PATH"}`. A file the layout check would read from a bare path string is not followed. The plan's `relocations` map is such a case; it applies only with `--previous`.
 - A file renamed inside the folder reads as a change.
 - A reworded basis or note inside a physics record reads as a change, because the identity does not judge which words matter.
@@ -377,7 +377,7 @@ The identity has limits. State them when a result surprises you.
 Withdrawing is one pull request. Run the command with the reason, update the entry page, README and selector for the new primary view, and open the pull request.
 
 ```sh
-python cad/preliminary-design/stage.py --set-status 2.0 withdrawn --reason "The carrier moved to the other side."
+python PLUGIN/scripts/stage_preliminary_review.py --set-status 2.0 withdrawn --reason "The carrier moved to the other side."
 node PLUGIN/scripts/detailed-design-release.mjs withdraw . --design draft-001 --reason "Rough draft published before the design-status process."
 ```
 
@@ -395,81 +395,55 @@ node PLUGIN/scripts/detailed-design-release.mjs withdraw . --design draft-001 --
 
 The command removes those files, lists the design first in the index as `withdrawn` and records the last commit that changed them.
 
-## When the layout check reruns
+## The stage gate
 
-[Test by need and risk](testing-methodology.md#in-a-robot-project) decides what runs for which change in a robot project. This section says how the publication check carries it out.
+[Test by need and risk](testing-methodology.md#in-a-robot-project) says what runs for which change in a robot project. The stage gate is the one moment the full layout check runs again: the agent runs it, once, when a design is marked effective.
 
-**The rule.** The layout check reruns for a design when the change under check makes it effective: it is `effective` now and was not `effective` at the base commit, given with `--base COMMIT`. Nothing else starts it. A draft, a rename, a page, a title, a status word, a document, a workflow file and a plugin release never do.
-
-| Run | Base commit | Layout check |
-| --- | --- | --- |
-| A push to a branch | Where the branch left the default branch | Reruns for each design the branch makes effective, on every push while that holds |
-| A push to the default branch | The commit before the push | Not rerun: `--skip-rerun`. The branch push was the gate. An effective design is still held to its [physics](#a-change-to-an-effective-design). |
-| A manual run, or a push with no usable base | None | Not rerun, unless `--rerun all` asks for every in-progress and effective design |
-
-The gate is the push of the branch, not the push to the default branch. A branch is checked before it merges, so a failing gate stops the pull request; a gate on the default branch would report after the status had already merged. Merge a branch only when its **Design publication** check is green, and rebase it first. A commit pushed straight to the default branch is not gated.
-
-Make the status change the last commit of its pull request, or give it a pull request of its own. Every later push to that branch reruns the gate, because the branch still makes the design effective.
-
-Each command says what ran, what did not and why. The publication check prints one line for each design, in the log and in the run summary:
-
-```text
-[layout check] Preliminary design Tilting carriage 1.1: not rerun: draft. Its author runs the local layout check on what changed.
-[layout check] Preliminary design Tilting carriage 1.0: rerun: becoming effective. It reproduced the committed receipt.
-[layout check] Detailed design Tilting carriage 1.0: not rerun: effective, physics unchanged.
+```sh
+python PLUGIN/scripts/stage_preliminary_review.py --set-status 1.0 effective
+node PLUGIN/scripts/detailed-design-release.mjs effective . --design 1.0 --readiness cad/detailed-design/readiness-result.json
 ```
 
-The staging and status commands end with what CI will do on push:
+The command runs the gate before it changes the status, and leaves the status alone when the gate fails.
+
+| The gate | Refuses when |
+| --- | --- |
+| Reads the committed design | The design's inputs folder has uncommitted changes. Commit it first: the reviewed pull request must hold the files that were checked. |
+| Compares the committed files with the published receipt | The receipt is of another plan, or a file it names by digest is not the committed file. An earlier receipt is never taken as the gate's result. |
+| Reruns the full layout check, with `--physics-only` | The check does not end `layout-checked`, a case, the mass or a loaded-voltage case does not pass, or the displaced control is not rejected. |
+| Compares the rerun with the published receipt | An input digest or a verdict differs. |
+
+When it passes it writes `gate.json` beside the published design, with the date, the commit, the time it took and a digest of the physics the receipt records. For a preliminary design it also prints the effective-readiness report and keeps it in the record. Commit the record with the status change. The publication check refuses a design that became effective with no matching record, so a status edited by hand does not pass.
 
 ```text
-On push: CI runs the publication checks. The layout check is not rerun for a draft; the local check you ran is its check.
-On push: this is the stage gate. CI reruns the full layout check once on the committed design, on each push of the branch that carries this change. Make it the last commit of its pull request.
-On push: CI runs the publication checks. The layout check is not rerun: no physics changed.
+[gate] Running the full layout check on the committed design. Guideline: about 15 minutes.
+[gate] Preliminary design Tilting carriage 1.0: the full layout check ran on the committed design and reproduced the published receipt in 42 s (guideline: about 15 minutes at a stage gate).
 ```
 
-The local layout check ends with its time against the [time guidelines](testing-methodology.md#time-guidelines), and says when to check in with the owner:
+A gate that runs past its [time guideline](testing-methodology.md#time-guidelines) says so in that line and asks for a check-in with the owner. `--budget-minutes` stops a check that runs too long; its default of 45 minutes is a backstop, not a target. `--jobs N` sets the worker processes.
+
+Every other command ends with what a push will do, and the publication check prints one line for each design:
+
+```text
+[publication] Preliminary design Tilting carriage 1.1: draft, published on its local layout check. The layout check is not run here.
+[publication] Preliminary design Tilting carriage 1.0: becoming effective. Its stage gate record matches the committed receipt.
+[publication] Detailed design Tilting carriage 1.0: effective, physics unchanged since origin/main.
+Ready to push. On push: the project's workflow publishes the page. Nothing is rerun.
+```
+
+The layout check itself ends with its time against the guidelines:
 
 ```text
 [time] layout check in 42 s. Guidelines: about 1 minute while editing, 15 minutes at a stage gate.
-[time] note: this run passed ten minutes. Stop and tell the owner what is slow and why, and agree a bounded budget before running it again.
 ```
 
-- **Gate time.** A rerun that takes longer than about 15 minutes adds a warning that says so and asks for a check-in with the owner. `--budget-minutes` stops one rerun that runs too long; its default of 45 minutes is a backstop, not a target. The rerun stops at the first clearance case that does not pass. It shares the motion cases between worker processes, one fewer than the runner's cores unless `--jobs N` sets the number.
-- **Physics only.** The rerun uses `--physics-only`, which skips building the review scene. A receipt from such a run is marked and cannot be published.
-- **On demand.** `--rerun all` reruns every in-progress and effective design.
-- **Locally.** Run the publication check before pushing with `--skip-rerun`: the layout check has just run.
+A rename runs the layout check twice: once under the new issue name, and once at the gate of the new ID.
 
-Nothing is kept between runs.
+## The project's own CI
 
-## Set up the workflow
+A project runs its own CI: a path and secret scan, a check that the published site is whole and, on the default branch, publishing `docs/`. It runs no design check and names no plugin. The agent writes it from the references in `templates/project-ci/`. [Write the project's CI](project-ci.md#write-the-projects-ci)
 
-Copy [the workflow](../templates/design-publication.yml) to `.github/workflows/design-publication.yml`, once. The file holds no behaviour: it calls [the plugin's workflow](../.github/workflows/design-publication.yml) at the plugin's current release. A project names no plugin commit and never copies the file again.
-
-1. For a site served from the `docs` folder of the default branch, set `deploy: false`.
-2. For a STEP or Fusion archive stored with Git LFS, set `lfs: true`.
-3. Enable GitHub Actions as the Pages source.
-4. Require the **designs / Design publication** and **designs / Paths and secrets** checks on the default branch.
-
-The workflow runs on every push to every branch, so a pull request shows the result for its latest commit. It needs no repository variable. Two are optional.
-
-| Repository variable | Default | Sets |
-| --- | --- | --- |
-| `DESIGN_CHECK_RUNNER` | A hosted runner | The runner of the **Design publication** job. Name the label of a self-hosted runner to run the stage gate on the project's own machine. |
-| `DESIGN_CHECK_JOBS` | Chosen by the layout check | The worker processes of a rerun, passed as `--jobs`. |
-
-The interpreter and kernel versions are the plugin's. A project that must hold another version passes `python-version`, `ocp-version` or `numpy-version` under `with:`.
-
-A self-hosted runner needs Git, Bash (Git Bash on Windows), and network access for `setup-node`, `setup-python` and the two Python packages. The steps run in `bash` on every runner. The workflow runs on pushes only, and only people with write access can push a branch. Keep it that way on a public repository: do not add a `pull_request` trigger, because that would run a stranger's code on the project's machine. **Paths and secrets** stays on a hosted runner.
-
-Run the workflow by hand from the Actions tab to recheck the published designs. Tick **rerun-all** to rerun the layout check for every in-progress and effective design; without it a manual run reruns nothing.
-
-When a project still carries a copy of plugin behaviour from an earlier release, the check fails with one message that names each file and what replaces it. [Move to the stage-gate rerun](design-publication-migration.md#move-to-the-stage-gate-rerun)
-
-- **Paths and secrets** runs the [branch scan](project-ci.md#scan-every-pushed-branch).
-- **Design publication** runs this check, then the project's [registered checks](project-ci.md#choose-the-checks).
-- **deploy** publishes the site from the default branch after both pass. A failed check leaves the current site online.
-
-The check reads the branch as pushed, not its merge with the default branch. Rebase before merging. The default branch is checked again after the merge and before the site deploys, without repeating the stage gate.
+When a project still carries a plugin file, such as a workflow that calls or checks out the plugin or a `stage.py`, the publication check fails with one message that names each file. [Take the plugin out of a project](design-publication-migration.md#take-the-plugin-out-of-a-project)
 
 ## What the check does not do
 
@@ -477,4 +451,4 @@ The check reads the branch as pushed, not its merge with the default branch. Reb
 - It does not compare the tessellated display solids with the STEP.
 - It does not verify that an animation shows what a mission case says it accomplishes. The reviewer of the pull request watches it.
 - It does not judge the effective-readiness report of a preliminary release. The reviewer does.
-- It does not rerun the layout check for a draft. [A draft is published on its local check and cannot become effective without the stage gate](testing-methodology.md#in-a-robot-project).
+- It does not run the layout check, for any design. [A draft is published on its own layout check and cannot become effective without the stage gate](testing-methodology.md#in-a-robot-project).

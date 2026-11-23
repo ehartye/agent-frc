@@ -57,6 +57,7 @@
       "placement-witness.test.mjs",
       "planar-observation.test.mjs",
       "preliminary-release.test.mjs",
+      "project-ci.test.mjs",
       "project-layout-evidence.test.mjs",
       "public-fusion-handoff.test.mjs",
       "refinement-evidence.test.mjs",
@@ -112,9 +113,10 @@
     "docs": ["**/*.md", "skills/**", "docs/**", "worksheets/**", "references/**", ".testing/**", "LICENSE"],
     "install-manifests.test.mjs": ["plugin.json", ".claude-plugin/**", ".codex-plugin/**", ".agents/**", ".codex/**", ".gitignore", ".gitattributes"],
     "skill-validation.test.mjs": ["plugin.json", ".claude-plugin/**", ".codex-plugin/**", ".agents/**"],
-    "design-publication.test.mjs": [".github/workflows/design-publication.yml", "templates/design-publication.yml", "templates/stage-preliminary-review.py", "scripts/stage_preliminary_review.py"],
-    "design-versions.test.mjs": ["templates/stage-preliminary-review.py", "scripts/stage_preliminary_review.py"],
-    "preliminary-release.test.mjs": ["templates/stage-preliminary-review.py", "scripts/stage_preliminary_review.py"],
+    "design-publication.test.mjs": ["scripts/stage-gate.mjs", "scripts/stage_preliminary_review.py", "examples/preliminary-design/**"],
+    "design-versions.test.mjs": ["scripts/stage_preliminary_review.py", "scripts/stage-gate.mjs"],
+    "preliminary-release.test.mjs": ["scripts/stage_preliminary_review.py", "scripts/stage-gate.mjs"],
+    "project-ci.test.mjs": ["templates/**", "examples/sample-project/**", "scripts/project-ci-audit.mjs"],
     "test-map.test.mjs": ["test/durations.json"]
   }
 }

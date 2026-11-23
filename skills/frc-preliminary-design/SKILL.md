@@ -34,13 +34,13 @@ The figures here are guidelines: about 30 to 80 solids, clearances to about 10 m
 
 | The change | Run |
 | --- | --- |
-| Geometry, a motion, a tolerance or reserve, a fixture, a trial, a mass or voltage budget | The local layout check, on the phases the change affects |
-| The page, a title, a colour, a name, a version label, a status word, a document | `--view-only` when the page shows it, then the publication check with `--skip-rerun`. Never the layout check |
-| Publishing a draft | The publication check with `--skip-rerun`. A draft is published on its local check |
-| Marking a design effective | Nothing more locally. CI reruns the full layout check once, on the committed design |
+| Geometry, a motion, a tolerance or reserve, a fixture, a trial, a mass or voltage budget | The layout check, on the phases the change affects |
+| The page, a title, a colour, a name, a version label, a status word, a document | `--view-only` when the page shows it, then the publication check. Never the layout check |
+| Publishing a draft | The publication check. A draft is published on its own layout check |
+| Marking a design effective | The command that marks it effective. It runs the stage gate itself: the full layout check on the committed design, once. Commit the design's inputs first |
 | The physics of an effective design | Never in place. Open the next minor version as a draft |
 
-Time guidelines: about 1 minute while editing, 5 before merging, 15 at a stage gate. When a run is heading past its guideline, stop and tell the user what is slow. Do not repeat a run whose inputs have not changed. Read the last lines each command prints: they say what ran, what did not and what CI will do on push. [Test by need and risk](../../docs/testing-methodology.md)
+You run every one of these with the plugin. The project runs none of them: its CI is its own files, and a push only publishes. Time guidelines: about 1 minute while editing, 5 before merging, 15 at a stage gate. When a run is heading past its guideline, stop and tell the user what is slow. Do not repeat a run whose inputs have not changed. Read the last lines each command prints: they say what ran, what did not and what a push will do. [Test by need and risk](../../docs/testing-methodology.md)
 
 ## Order of work
 
@@ -90,7 +90,7 @@ These need no permission and no reminder. If you cannot do one, say so in your r
 **Publishing**
 
 17. **Commit and push** after the first passing check, after each trial result and after each publish.
-18. **Run the publication check locally before pushing, with `--skip-rerun`.** CI runs on another operating system and does not rerun a draft's layout check.
+18. **Run the publication check before pushing.** It never runs the layout check, and the project's CI runs no design check: what you push is what is published.
 19. **Open the published page in a browser after each push.** Confirm the model loads, each animation plays its whole phase and the status is right. A green check alone does not show that.
 20. **Keep paths short and relative.** No drive letters, no home folders.
 21. **Take the obvious default** and say what you chose.
@@ -131,12 +131,13 @@ Ask only when the choices lead to different designs. Keep working on everything 
 | The published page is old, blank or differs from the local one | Not pushed or not deployed; browser cache; opened from `file://`; unchanged files republished | Confirm the commit is on the default branch and the deploy is green. Hard-reload. Serve the page over HTTP. Compare the two `receipt.json` files | The deploy is green and they still differ |
 | The animation list holds many short clips of one motion | The segments of one phase share no name; an earlier copy of the review page | Name the phase of each case under `stages.CASE.phase` and rebuild with `--view-only`. For an earlier page, delete it and rebuild. [Animations and check results](../../docs/preliminary-design.md#animations-show-the-mission-the-check-list-shows-the-evidence) | Never |
 | Publishing is refused | A second in-progress version of one architecture; an effective version edited; no mission case; no design name | Read the message. Revise the existing draft, or take the next version | You believe a new version is right |
-| CI fails and the local check passes | A path that differs by case or length; a workflow file or `stage.py` copied from an earlier release; a path or secret scan hit; a committed file that is not the one the receipt checked; an effective design whose physics changed | Run the same command locally. Fix the path, replace the file the message names, or rerun the layout check on the committed files and publish again. A change to an effective design goes in the next minor version. Leave the design alone otherwise | It fails twice in CI only |
+| The project's CI fails | A personal path or a secret in a tracked file; a design index that disagrees with its folders; a dead link in a published page | Read the message: it names the file. Run `node scripts/ci/scan.mjs .` and `node scripts/ci/site-check.mjs docs` in the project. Fix the file. Leave the design alone | It fails twice with no change of yours |
+| The publication check refuses the project | A workflow or `stage.py` left from an earlier layout; a receipt that is not of the committed files; an effective design whose physics changed; a status set by hand | Read the message. Delete the plugin file it names, rerun the layout check and publish again, take the next minor version, or mark the design effective with the command | You believe the refusal is wrong |
 | Detailed design returns a reservation | A real part does not fit an envelope, allowance or reserve | Start the next minor version from the effective one with `--copy-inputs`, fix the layout, rerun the affected cases | The fix needs a different architecture |
 
 ## Reference
 
-- [Commands in order, on Windows and in CI](references/commands.md)
+- [Commands in order, on Windows](references/commands.md)
 - [Trials and replays: sizing, records, retention, what moved the piece](references/trials.md)
 - [Review page: regions, scene data, replay format](references/review-layout-template.md)
 - [What the review page must let a reviewer do](references/presentation.md)

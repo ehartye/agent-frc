@@ -1,37 +1,33 @@
 /**
  * @lane merge
  * @subject scripts/design-publication.mjs
- * @subject templates/design-publication.yml
+ * @subject scripts/stage-gate.mjs
+ * @subject scripts/stage_preliminary_review.py
  * @subject templates/preliminary-review/review.html
  */
 import assert from 'node:assert/strict';
 import {execFileSync, spawnSync} from 'node:child_process';
-import {cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
+import {cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import {fileURLToPath} from 'node:url';
 import {gzipSync, gunzipSync} from 'node:zlib';
 import {checkProject, compareVerdicts, pluginVersion} from '../scripts/design-publication.mjs';
-import {issueRelease, listing, sha, write} from './fixtures/preliminary-release.mjs';
+import {gatePhysics, preliminaryGate, stageGate, writeGate} from '../scripts/stage-gate.mjs';
+import {commitInputs, issueRelease, listing, sha, write} from './fixtures/preliminary-release.mjs';
 
-// The project's stage.py is a few lines that call the plugin's staging command; this names the plugin for it.
-process.env.AGENT_FRC_PLUGIN = fileURLToPath(new URL('..', import.meta.url));
+// The staging command is the plugin's: an agent runs it from the plugin, at the project root.
+const stagingCommand = fileURLToPath(new URL('../scripts/stage_preliminary_review.py', import.meta.url));
 // Synthetic teaching fixtures: invented releases, cases and objectives with no relation to any game.
 const script = fileURLToPath(new URL('../scripts/design-publication.mjs', import.meta.url));
 const prelim = 'docs/preliminary-design', detail = 'docs/detailed-design';
 const read = file => JSON.parse(readFileSync(file, 'utf8'));
 
-/** Commit the inputs of a release: its plan and the files its receipt names, with the bytes the receipt recorded. */
-function commitInputs(root, id, options = {}) {
-  const folder = 'cad/preliminary-design/releases/' + id + '/', published = path.join(root, prelim, 'releases', id);
-  write(root, folder + 'layout.json', 'plan ' + id);
-  write(root, folder + 'package.step', 'step ' + (options.basis ?? id));
-  for (const [name, from] of [['paths.json', 'motion.json'], ['budgets.json', 'budgets.json'], ['limits.json', 'limits.json']]) write(root, folder + name, readFileSync(path.join(published, from)));
-}
 /**
- * A project with committed inputs for each release and a layout check that returns what `rerun` makes of the
- * published receipt. `check` runs the publication check as a push does; `rerunAll` reruns every live design.
+ * A project with committed inputs for each release. `check` runs the publication check; `run` is a layout check for
+ * the stage gate that returns what `rerun` makes of the published receipt; `gate` runs the gate of a release and
+ * writes its record, as the command that marks it effective does.
  */
 function project(t, releases = {'layout-001': {}}, statuses = undefined) {
   const root = mkdtempSync(path.join(os.tmpdir(), 'publication-'));
@@ -49,7 +45,8 @@ function project(t, releases = {'layout-001': {}}, statuses = undefined) {
     return rerun({...read(path.join(published, 'receipt.json')), physicsOnly: true}, plan);
   };
   const receiptFile = id => path.join(root, prelim, 'releases', id, 'receipt.json');
-  const check = (options = {}) => checkProject(root, {run: run(), log: () => {}, ...options});
+  const check = (options = {}) => checkProject(root, {log: () => {}, ...options});
+  const gate = (id, options = {}) => { const done = preliminaryGate({project: root, release: id, run: run(), ...options}); writeGate(done.published, done.gate); return done; };
   const git = (...args) => execFileSync('git', ['-C', root, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', '-c', 'core.autocrlf=false', ...args],
     {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']}).trim();
   /** Commit everything and return the commit, the base of a later check. */
@@ -59,12 +56,11 @@ function project(t, releases = {'layout-001': {}}, statuses = undefined) {
     const next = {...i, ...more, designStatus: {...i.designStatus, ...designStatus}}, of = s => next.releases.filter(r => (next.designStatus[r] ?? 'in-progress') === s);
     return {...next, current: of('effective')[0] ?? of('in-progress').at(-1) ?? next.releases.at(-1)};
   });
-  return {root, calls, run, receiptFile, check, rerunAll: (options = {}) => check({rerun: 'all', ...options}), commit, setStatus};
+  return {root, calls, run, receiptFile, check, gate, git, commit, setStatus};
 }
 const editJson = (file, edit) => writeFileSync(file, JSON.stringify(edit(read(file)), null, 2));
 const errorsOf = result => result.errors.join('\n');
-const rerunsOf = result => result.preliminary.releases.map(r => r.rerun);
-const whyOf = (result, name) => result.reruns.find(r => r.design.includes(name))?.why;
+const noteOf = (result, name) => result.designs.find(r => r.design.includes(name))?.note;
 /**
  * Write a release's layout plan as a record with labels and physics, and bind the published receipt to it. The
  * invented plan names its files by path, as an authored plan does.
@@ -76,50 +72,82 @@ function authorPlan(p, id, {issue = 'synthetic-' + id, title = 'Invented title',
   editJson(p.receiptFile(id), r => ({...r, planSha256: sha(plan)}));
 }
 
-test('the informational attachment report is no part of the verdict: an older receipt without it still reproduces', t => {
+test('the informational attachment report is no part of the verdict: an older receipt without it still reproduces at the gate', t => {
   const p = project(t);
   const report = {informational: true, case: 'raise', gapMm: 3, floating: [{solid: 'invented-panel', group: 'panel', nearest: 'frame', gapMm: 12}], fixturesOffFloor: []};
-  // The committed receipt predates the report; the rerun, from a newer plugin, carries it.
+  // The committed receipt predates the report; the gate, from a newer plugin, carries it.
   assert.equal(read(p.receiptFile('layout-001')).attachment, undefined);
-  assert.deepEqual(p.rerunAll({run: p.run(r => ({...r, attachment: report}))}).errors, []);
+  assert.equal(p.gate('layout-001', {run: p.run(r => ({...r, attachment: report}))}).gate.verdict, 'pass');
   // And the other way round: a committed receipt that lists floating solids is still one to publish.
   editJson(p.receiptFile('layout-001'), r => ({...r, attachment: report}));
-  assert.deepEqual(p.rerunAll({run: p.run(r => { const {attachment, ...rest} = r; return rest; })}).errors, []);
-  assert.equal(p.calls.length, 2);
+  assert.equal(p.gate('layout-001', {run: p.run(r => { const {attachment, ...rest} = r; return rest; })}).gate.verdict, 'pass');
   const receipt = read(p.receiptFile('layout-001'));
   assert.deepEqual(compareVerdicts(receipt, {...receipt, attachment: {...report, floating: []}}), []);
 });
 
-test('a draft is checked for what it publishes and is not rerun; a rerun on request reproduces the committed receipt', t => {
+test('a draft is checked for what it publishes; the publication check never runs the layout check', t => {
   const p = project(t);
-  const pushed = p.check();
-  assert.deepEqual(pushed.errors, []);
-  assert.deepEqual(pushed.warnings, []);
-  assert.deepEqual(pushed.preliminary, {current: 'layout-001', releases: [{release: 'layout-001', status: 'in-progress', rerun: 'not needed'}]});
-  assert.deepEqual(pushed.reruns, [{design: 'Preliminary release layout-001', status: 'in-progress', rerun: 'not needed',
-    why: 'not rerun: draft. Its author runs the local layout check on what changed.'}]);
-  assert.deepEqual(p.calls, []);
-  const result = p.rerunAll();
+  const result = p.check();
   assert.deepEqual(result.errors, []);
-  assert.deepEqual(result.preliminary, {current: 'layout-001', releases: [{release: 'layout-001', status: 'in-progress', rerun: 'pass'}]});
-  assert.equal(result.reruns[0].why, 'rerun: on request (--rerun all). It reproduced the committed receipt.');
-  assert.deepEqual(p.calls, ['layout-001']);
+  assert.deepEqual(result.warnings, []);
+  assert.deepEqual(result.preliminary, {current: 'layout-001', releases: [{release: 'layout-001', status: 'in-progress'}]});
+  assert.deepEqual(result.designs, [{design: 'Preliminary release layout-001', status: 'in-progress',
+    note: 'draft, published on its local layout check. The layout check is not run here.'}]);
+  assert.equal(result.comparedWith, null, 'a project outside Git has no default branch to compare with');
   assert.equal(result.plugin, pluginVersion);
+  // The check has no way to run the layout check: it takes no such option.
+  assert.deepEqual(checkProject(p.root, {log: () => {}, run: () => { throw Error('the layout check ran'); }}).errors, [], 'a layout check handed to it is never called');
 });
 
-test('fails when the rerun does not pass, the control is not rejected or a verdict differs', t => {
+test('the stage gate reruns the layout check on the committed design and refuses what does not reproduce', t => {
   const p = project(t);
-  const fails = (rerun, pattern) => assert.match(errorsOf(p.rerunAll({run: p.run(rerun)})), pattern);
-  fails(r => ({...r, status: 'blocked'}), /layout-001 \(rerun\) needs a layout-checked receipt; found blocked/);
-  fails(r => ({...r, cases: r.cases.map(c => ({...c, status: 'fail'}))}), /\(rerun\) needs every clearance case to pass/);
-  fails(r => ({...r, control: {...r.control, witness: null}}), /\(rerun\) needs the displaced control to be rejected/);
+  const done = p.gate('layout-001');
+  assert.deepEqual(p.calls, ['layout-001'], 'the gate ran the layout check itself');
+  const {elapsedSeconds, date, ...record} = read(path.join(p.root, prelim, 'releases/layout-001/gate.json'));
+  assert.deepEqual(record, {schema: 'agent-frc/stage-gate@1', phase: 'preliminary-design', design: 'layout-001', verdict: 'pass',
+    planSha256: read(p.receiptFile('layout-001')).planSha256, physics: gatePhysics(read(p.receiptFile('layout-001'))), readinessReport: done.report});
+  assert.match(done.report, /^Effective-readiness report for /);
+  const fails = (rerun, pattern) => assert.throws(() => p.gate('layout-001', {run: p.run(rerun)}), pattern);
+  fails(r => ({...r, status: 'blocked'}), /layout-001 \(stage gate\) needs a layout-checked receipt; found blocked\. It is not marked effective/);
+  fails(r => ({...r, cases: r.cases.map(c => ({...c, status: 'fail'}))}), /\(stage gate\) needs every clearance case to pass/);
+  fails(r => ({...r, control: {...r.control, witness: null}}), /\(stage gate\) needs the displaced control to be rejected/);
   fails(r => ({...r, partial: true}), /partial --fail-fast receipt/);
-  fails(r => ({...r, step: {...r.step, sha256: sha('another step')}}), /rerun differs from the committed receipt in stepSha256/);
-  fails(r => ({...r, cases: [...r.cases, {case: 'extra', status: 'pass'}]}), /rerun differs from the committed receipt in cases/);
-  fails(() => { throw Error('the layout check exceeded its 45 minute budget'); }, /layout-001: the layout check exceeded its 45 minute budget/);
+  fails(r => ({...r, step: {...r.step, sha256: sha('another step')}}), /the stage gate differs from the published receipt in stepSha256/);
+  fails(r => ({...r, cases: [...r.cases, {case: 'extra', status: 'pass'}]}), /the stage gate differs from the published receipt in cases/);
+  fails(() => { throw Error('the layout check exceeded its 45 minute budget'); }, /layout-001 is not marked effective: the layout check exceeded its 45 minute budget/);
+  // A stale receipt is not trusted: the gate compares the committed files with it before it runs anything.
+  const before = p.calls.length, folder = 'cad/preliminary-design/releases/layout-001/';
+  write(p.root, folder + 'paths.json', '{"cases":[],"edited":true}');
+  assert.throws(() => p.gate('layout-001'), /the committed motion study \(.*paths\.json\) is not the file its receipt checked/);
+  rmSync(path.join(p.root, folder + 'paths.json'));
+  assert.throws(() => p.gate('layout-001'), /is not marked effective: its receipt names files that are not in cad\/preliminary-design\/releases\/layout-001 \(paths\.json\)/);
+  assert.equal(p.calls.length, before);
+  // The gate says how long it took against its guideline, and says so when it ran long.
+  commitInputs(p.root, 'layout-001');
+  const clock = minutes => { let calls = 0; return () => calls++ ? minutes * 60000 : 0; };
+  assert.equal(p.gate('layout-001', {now: clock(22)}).gate.elapsedSeconds, 22 * 60);
 });
 
-test('a hand-edited receipt or a stale one is refused without a rerun', t => {
+test('the stage gate refuses a design whose inputs have uncommitted changes', t => {
+  const p = project(t), folder = 'cad/preliminary-design/releases/layout-001/';
+  p.commit('draft');
+  assert.equal(p.gate('layout-001').gate.commit.length, 40, 'the record names the commit the gate ran on');
+  // An edited input, and a new file, each stop the gate before it runs.
+  const calls = p.calls.length, plan = readFileSync(path.join(p.root, folder + 'layout.json'));
+  write(p.root, folder + 'notes.md', 'a new note');
+  assert.throws(() => p.gate('layout-001'), /layout-001 is not marked effective: its inputs have uncommitted changes \(\?\? cad\/preliminary-design\/releases\/layout-001\/notes\.md\)\. The stage gate runs on the committed design\. Commit cad\/preliminary-design\/releases\/layout-001, then mark it effective/);
+  p.commit('note');
+  write(p.root, folder + 'budgets.json', readFileSync(path.join(p.root, folder + 'budgets.json'), 'utf8') + ' ');
+  assert.throws(() => p.gate('layout-001'), /its inputs have uncommitted changes \(M cad\/preliminary-design\/releases\/layout-001\/budgets\.json\)/);
+  assert.equal(p.calls.length, calls);
+  assert.ok(plan.length);
+  // A change elsewhere in the project does not stop it.
+  p.git('checkout', '--', folder);
+  write(p.root, 'README.md', 'an unrelated edit');
+  assert.equal(p.gate('layout-001').gate.verdict, 'pass');
+});
+
+test('a hand-edited receipt or a stale one is refused', t => {
   const p = project(t), folder = 'cad/preliminary-design/releases/layout-001/';
   // The published receipt claims a plan that is not the committed one.
   write(p.root, folder + 'layout.json', 'an edited plan');
@@ -131,7 +159,7 @@ test('a hand-edited receipt or a stale one is refused without a rerun', t => {
   assert.match(errorsOf(p.check()), /layout-001: the committed motion study \(cad\/preliminary-design\/releases\/layout-001\/paths\.json\) is not the file its receipt checked/);
   write(p.root, folder + 'paths.json', study);
   write(p.root, folder + 'package.step', 'another step');
-  assert.match(errorsOf(p.check({skipRerun: true})), /the committed STEP \(.*package\.step\) is not the file its receipt checked/);
+  assert.match(errorsOf(p.check()), /the committed STEP \(.*package\.step\) is not the file its receipt checked/);
   // A STEP kept in Git LFS is compared by the digest its pointer names.
   write(p.root, folder + 'package.step', 'version https://git-lfs.github.com/spec/v1\noid sha256:' + sha('step layout-001') + '\nsize 14\n');
   assert.deepEqual(p.check().errors, []);
@@ -139,27 +167,22 @@ test('a hand-edited receipt or a stale one is refused without a rerun', t => {
   rmSync(path.join(p.root, folder + 'package.step'));
   const missing = p.check();
   assert.deepEqual(missing.errors, []);
-  assert.deepEqual(missing.warnings, ['Preliminary release layout-001: its receipt names files that are not committed (package.step). The layout check cannot be rerun without them.']);
-  assert.deepEqual(p.calls, []);
+  assert.deepEqual(missing.warnings, ['Preliminary release layout-001: its receipt names files that are not committed (package.step). The stage gate cannot run without them.']);
   // A receipt marked as a physics-only rerun is not one to publish.
   editJson(p.receiptFile('layout-001'), r => ({...r, physicsOnly: true}));
   assert.match(errorsOf(p.check()), /publish the receipt of a full check/);
 });
 
-test('a live release needs committed inputs; history is neither rerun nor required to keep its files', t => {
+test('a live release needs committed inputs; history is not required to keep its files', t => {
   const p = project(t, {'layout-001': {}, 'layout-002': {}, 'layout-003': {}, 'layout-004': {}},
     {'layout-001': 'withdrawn', 'layout-002': 'superseded', 'layout-003': 'effective', 'layout-004': 'in-progress'});
   editJson(path.join(p.root, prelim, 'releases.json'), i => ({...i, current: 'layout-003'}));
   for (const id of ['layout-001', 'layout-002']) rmSync(path.join(p.root, 'cad/preliminary-design/releases', id), {recursive: true});
   rmSync(path.join(p.root, prelim, 'releases/layout-001'), {recursive: true});
-  let result = p.rerunAll();
+  let result = p.check();
   assert.deepEqual(result.errors, []);
-  assert.deepEqual(p.calls, ['layout-003', 'layout-004']);
-  assert.deepEqual(rerunsOf(result), [undefined, undefined, 'pass', 'pass']);
-  // Without a base commit nothing reruns, and the report says how to ask for it.
-  assert.deepEqual(rerunsOf(p.check()), [undefined, undefined, 'not needed', 'not needed']);
-  assert.match(whyOf(p.check(), 'layout-003'), /^not rerun: no base commit to compare with\. Pass --rerun all to rerun on demand\.$/);
-  assert.equal(p.calls.length, 2);
+  assert.deepEqual(result.designs.map(d => d.design), ['Preliminary release layout-003', 'Preliminary release layout-004'], 'only live designs are checked');
+  assert.equal(noteOf(result, 'layout-003'), 'effective. No default branch of the remote to compare with, so its physics was not compared.');
   assert.equal(result.reports.length, 1, 'the effective release prints its readiness report');
   assert.match(result.reports[0].title, /layout-003 \(effective\)/);
   // A withdrawal is a status with a reason. The index also keeps the last commit that held the files.
@@ -186,8 +209,8 @@ test('the index holds at most one effective release, a computed current release 
   editJson(path.join(p.root, prelim, 'releases.json'), i => ({current: 'layout-002', releases: ['layout-001', 'layout-002'], legacy: ['layout-001'],
     designStatus: {'layout-001': 'in-progress', 'layout-002': 'in-progress'}}));
   editJson(path.join(p.root, prelim, 'releases/layout-002/release.json'), r => ({...r, status: 'historical-review'}));
-  assert.deepEqual(p.rerunAll().errors, []);
-  assert.deepEqual(p.calls.slice(-2), ['layout-001', 'layout-002']);
+  const live = p.check();
+  assert.deepEqual([live.errors, live.designs.map(d => d.status)], [[], ['in-progress', 'in-progress']]);
 });
 
 test('a version ID is checked with the name of its architecture; an earlier ID beside it is unchanged', t => {
@@ -199,12 +222,11 @@ test('a version ID is checked with the name of its architecture; an earlier ID b
   editJson(file, i => ({...i, designs: {one: {name: 'Tilting carriage'}}}));
   assert.match(errorsOf(p.check()), /designs maps each major number to its architecture name/);
   editJson(file, i => ({...i, designs: {1: {name: 'Tilting carriage'}}, revision: {'1.1': {number: 3, date: '2001-02-03'}}, accepted: {'1.0': '2001-01-02'}}));
-  const result = p.rerunAll();
+  const result = p.check();
   assert.deepEqual(result.errors, []);
   assert.deepEqual(result.warnings, []);
   assert.deepEqual(result.preliminary, {current: '1.0', releases: [{release: 'layout-004', status: 'superseded'},
-    {release: '1.0', design: 'Tilting carriage 1.0', status: 'effective', rerun: 'pass'}, {release: '1.1', design: 'Tilting carriage 1.1', status: 'in-progress', rerun: 'pass'}]});
-  assert.deepEqual(p.calls.slice(-2), ['1.0', '1.1'], 'the layout check is rerun in each version folder');
+    {release: '1.0', design: 'Tilting carriage 1.0', status: 'effective'}, {release: '1.1', design: 'Tilting carriage 1.1', status: 'in-progress'}]});
   assert.equal(result.reports.length, 1);
   assert.equal(result.reports[0].title, 'Preliminary design Tilting carriage 1.0 (effective)');
   assert.match(result.reports[0].text, /^Effective-readiness report for Tilting carriage 1\.0 \(/);
@@ -254,45 +276,50 @@ test('a mission case counts when a mission animation plays it; a scene written b
   assert.match(errorsOf(p.check()), new RegExp('mission case ' + mission + ' is not played by a mission animation of the review'));
 });
 
-test('the layout check reruns once, when the change under check makes a design effective', t => {
+test('a design this change makes effective carries the record of its stage gate', t => {
   const p = project(t, {'layout-001': {}, 'layout-002': {}}, {'layout-001': 'effective', 'layout-002': 'in-progress'});
   p.setStatus({});
   const base = p.commit('base');
-  // A draft increment: nothing reruns, whatever it edits.
+  // A draft increment: checked for what it publishes, whatever it edits.
   write(p.root, 'cad/preliminary-design/releases/layout-002/notes.md', 'changed input');
-  write(p.root, '.github/workflows/another.yml', 'name: a changed workflow');
-  p.commit('draft increment and a workflow change');
+  p.commit('draft increment');
   let result = p.check({base});
-  assert.deepEqual([result.errors, rerunsOf(result), p.calls], [[], ['not needed', 'not needed'], []]);
-  assert.equal(whyOf(result, 'layout-001'), 'not rerun: effective, physics unchanged.');
-  assert.match(whyOf(result, 'layout-002'), /^not rerun: draft\./);
-  // The stage gate: the status change reruns the design that becomes effective, and only that one.
+  assert.deepEqual([result.errors, result.designs.map(d => d.note)], [[], ['effective, physics unchanged since ' + base + '.', 'draft, published on its local layout check. The layout check is not run here.']]);
+  // The status set by hand, with no gate: refused, with the command that runs it.
   p.setStatus({'layout-001': 'superseded', 'layout-002': 'effective'});
-  const promoted = p.commit('mark effective');
+  p.commit('status by hand');
+  assert.match(errorsOf(p.check({base})), /^Preliminary release layout-002 is marked effective without a stage gate of this design\. Mark it effective with the plugin's command, which runs the full layout check on the committed design and writes docs\/preliminary-design\/releases\/layout-002\/gate\.json: python PLUGIN\/scripts\/stage_preliminary_review\.py --set-status layout-002 effective$/);
+  // The gate ran and wrote its record: the change passes, and the check runs nothing itself.
+  p.gate('layout-002');
+  const promoted = p.commit('gate record');
   result = p.check({base});
-  assert.deepEqual([result.errors, result.warnings, rerunsOf(result), p.calls], [[], [], [undefined, 'pass'], ['layout-002']]);
-  assert.equal(whyOf(result, 'layout-002'), 'rerun: becoming effective. It reproduced the committed receipt.');
-  assert.equal(result.reports.length, 1, 'the readiness report is printed for the reviewer');
-  // A gate that runs past the guideline says so, as a warning for the owner. One inside it says nothing.
-  const clock = minutes => { let calls = 0; return () => calls++ * minutes * 60000; };
-  assert.deepEqual(p.check({base, now: clock(14)}).warnings, []);
-  assert.deepEqual(p.check({base, now: clock(22)}).warnings, ['Preliminary release layout-002: the layout check took 22 minutes, past the guideline of about 15 for a stage gate. ' +
-    'Tell the owner what is slow and agree a budget before the next gate. Method: https://github.com/ehartye/agent-frc/blob/main/docs/testing-methodology.md']);
-  p.calls.length = 1;
-  // A gate that does not reproduce the receipt fails the change.
-  assert.match(errorsOf(p.check({base, run: p.run(r => ({...r, cases: r.cases.map(c => ({...c, status: 'fail'}))}))})), /layout-002 \(rerun\) needs every clearance case to pass/);
-  // The default branch after the merge: its base is the commit before, and it does not repeat the gate of the branch.
-  p.calls.length = 0;
-  result = p.check({base, skipRerun: true});
-  assert.deepEqual([result.errors, rerunsOf(result), p.calls], [[], [undefined, 'skipped'], []]);
-  assert.equal(whyOf(result, 'layout-002'), 'not rerun: becoming effective, with --skip-rerun. The gate is the push of the branch that carries the change.');
+  assert.deepEqual([result.errors, result.warnings], [[], []]);
+  assert.equal(noteOf(result, 'layout-002'), 'becoming effective. Its stage gate record matches the committed receipt.');
+  assert.equal(result.reports.length, 1, 'the readiness report is printed');
+  // A gate record of other physics is not this design's gate.
+  editJson(path.join(p.root, prelim, 'releases/layout-002/gate.json'), g => ({...g, physics: sha('another design')}));
+  assert.match(errorsOf(p.check({base})), /layout-002 is marked effective without a stage gate of this design/);
+  p.git('checkout', '--', prelim + '/releases/layout-002/gate.json');
   // The next change finds it effective already.
   write(p.root, 'notes.md', 'unrelated');
   p.commit('unrelated');
   result = p.check({base: promoted});
-  assert.deepEqual([result.errors, rerunsOf(result), p.calls], [[], [undefined, 'not needed'], []]);
-  // A base that is not a commit is no base.
-  assert.match(whyOf(p.check({base: 'f'.repeat(40)}), 'layout-002'), /^not rerun: no base commit to compare with/);
+  assert.deepEqual([result.errors, noteOf(result, 'layout-002')], [[], 'effective, physics unchanged since ' + promoted + '.']);
+});
+
+test('without --base the check compares with the default branch of the remote', t => {
+  const p = project(t, {'layout-001': {}}, {'layout-001': 'effective'});
+  authorPlan(p, 'layout-001');
+  p.commit('accepted');
+  // An invented remote: the commit above is its default branch, as last fetched.
+  p.git('update-ref', 'refs/remotes/origin/main', 'HEAD');
+  p.git('symbolic-ref', 'refs/remotes/origin/HEAD', 'refs/remotes/origin/main');
+  p.git('checkout', '-q', '-b', 'revision');
+  let result = p.check();
+  assert.deepEqual([result.errors, result.comparedWith, noteOf(result, 'layout-001')], [[], 'origin/main', 'effective, physics unchanged since origin/main.']);
+  authorPlan(p, 'layout-001', {purpose: 'park'});
+  p.commit('physics');
+  assert.match(errorsOf(p.check()), /layout-001 is effective, and this change alters its physics: layout\.json\./);
 });
 
 test('an effective design keeps its physics: labels and the view may change, the checked inputs and results may not', t => {
@@ -300,8 +327,8 @@ test('an effective design keeps its physics: labels and the view may change, the
   p.setStatus({}, {designs: {1: {name: 'Tilting carriage'}}});
   authorPlan(p, '1.0');
   const base = p.commit('base'), folder = 'cad/preliminary-design/releases/1.0/';
-  const passes = message => { p.commit(message); const result = p.check({base}); assert.deepEqual([result.errors, result.warnings, rerunsOf(result), p.calls], [[], [], [undefined, 'not needed'], []], message); };
-  const refused = (message, pattern) => { p.commit(message); assert.match(errorsOf(p.check({base})), pattern, message); assert.deepEqual(p.calls, []); };
+  const passes = message => { p.commit(message); const result = p.check({base}); assert.deepEqual([result.errors, result.warnings, noteOf(result, '1.0')], [[], [], 'effective, physics unchanged since ' + base + '.'], message); };
+  const refused = (message, pattern) => { p.commit(message); assert.match(errorsOf(p.check({base})), pattern, message); };
   // A presentation refresh: new titles and phases in the plan, a rebuilt page, and the receipt of that plan.
   authorPlan(p, '1.0', {title: 'Invented new title', phase: 'Invented phase'});
   write(p.root, prelim + '/releases/1.0/index.html', '<html>Rebuilt review page</html>');
@@ -337,7 +364,7 @@ test('an effective design keeps its physics: labels and the view may change, the
   assert.deepEqual(q.check({base: before}).errors, []);
 });
 
-test('a rename keeps the design: the same physics under a new ID is not rerun', t => {
+test('a rename keeps the design: the same physics under a new ID needs no gate of its own', t => {
   const p = project(t, {'layout-001': {}}, {'layout-001': 'effective'});
   authorPlan(p, 'layout-001');
   const base = p.commit('base');
@@ -352,33 +379,35 @@ test('a rename keeps the design: the same physics under a new ID is not rerun', 
   rename();
   p.commit('rename');
   let result = p.check({base});
-  assert.deepEqual([result.errors, result.warnings, rerunsOf(result), p.calls], [[], [], ['not needed'], []]);
-  assert.equal(whyOf(result, '1.0'), 'not rerun: effective, the same physics as layout-001 under a new ID.');
-  // A rename that also changes the plan's physics is a new design, and the gate reruns it.
+  assert.deepEqual([result.errors, result.warnings], [[], []]);
+  assert.equal(noteOf(result, '1.0'), 'effective, the same physics as layout-001 under a new ID.');
+  // A rename that also changes the plan's physics is a new design: it needs its own stage gate.
   authorPlan(p, '1.0', {purpose: 'park'});
   p.commit('renamed and changed');
-  result = p.check({base});
-  assert.deepEqual([result.errors, rerunsOf(result), p.calls], [[], ['pass'], ['1.0']]);
-  assert.match(whyOf(result, '1.0'), /^rerun: becoming effective\./);
+  assert.match(errorsOf(p.check({base})), /Tilting carriage 1\.0 is marked effective without a stage gate of this design/);
+  p.gate('1.0');
+  p.commit('gate');
+  assert.deepEqual(p.check({base}).errors, []);
 });
 
 test('a project in a subfolder of its repository is compared by its own paths', t => {
-  const p = project(t);
+  const p = project(t, {'layout-001': {}}, {'layout-001': 'effective'});
+  authorPlan(p, 'layout-001');
   const outer = mkdtempSync(path.join(os.tmpdir(), 'publication-repo-'));
   t.after(() => rmSync(outer, {recursive: true, force: true}));
   cpSync(p.root, path.join(outer, 'robot'), {recursive: true});
   const git = (...args) => execFileSync('git', ['-C', outer, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', ...args], {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']}).trim();
   git('init', '-q'); git('add', '-A'); git('commit', '-q', '-m', 'base');
   const base = git('rev-parse', 'HEAD'), root = path.join(outer, 'robot');
-  write(root, 'cad/preliminary-design/releases/layout-001/notes.md', 'changed input');
-  git('add', '-A'); git('commit', '-q', '-m', 'input');
-  const run = ({project: dir}) => ({...read(path.join(root, prelim, 'releases', path.basename(dir), 'receipt.json')), physicsOnly: true});
-  assert.deepEqual(rerunsOf(checkProject(root, {base, run, log: () => {}})), ['not needed']);
-  // The index at the base commit is read by the project's own path: the status change is seen and gated.
-  editJson(path.join(root, prelim, 'releases.json'), i => ({...i, designStatus: {'layout-001': 'effective'}}));
-  git('add', '-A'); git('commit', '-q', '-m', 'effective');
-  assert.deepEqual(rerunsOf(checkProject(root, {base, run, log: () => {}})), ['pass']);
-  assert.deepEqual(rerunsOf(checkProject(root, {base: git('rev-parse', 'HEAD'), run, log: () => {}})), ['not needed']);
+  write(root, 'notes.md', 'a change beside the design');
+  git('add', '-A'); git('commit', '-q', '-m', 'notes');
+  // The index and the inputs at the base commit are read by the project's own paths.
+  assert.deepEqual(checkProject(root, {base, log: () => {}}).designs.map(d => d.note), ['effective, physics unchanged since ' + base + '.']);
+  const plan = path.join(root, 'cad/preliminary-design/releases/layout-001/layout.json'), changed = readFileSync(plan, 'utf8').replace('"operating"', '"park"');
+  writeFileSync(plan, changed);
+  editJson(path.join(root, prelim, 'releases/layout-001/receipt.json'), r => ({...r, planSha256: sha(changed)}));
+  git('add', '-A'); git('commit', '-q', '-m', 'physics');
+  assert.match(errorsOf(checkProject(root, {base, log: () => {}})), /layout-001 is effective, and this change alters its physics: layout\.json\./);
 });
 
 /** Publish a detailed design from the files of a preliminary release. */
@@ -401,15 +430,15 @@ function design(root, id, status, {from = 'layout-001', record = r => r, index =
 test('an in-progress detailed design names an effective preliminary release and is checked on its Fusion export', t => {
   const p = project(t, {'layout-001': {}}, {'layout-001': 'effective'});
   design(p.root, 'detail-001', 'in-progress');
-  let result = p.rerunAll();
+  let result = p.check();
   assert.deepEqual(result.errors, []);
-  assert.deepEqual(result.detailed, {current: 'detail-001', beside: null, designs: [{design: 'detail-001', status: 'in-progress', rerun: 'pass'}]});
-  assert.equal(p.check().detailed.designs[0].rerun, 'not needed');
-  // Inputs not committed: the design still shows, with a warning that nothing can rerun.
+  assert.deepEqual(result.detailed, {current: 'detail-001', beside: null, designs: [{design: 'detail-001', status: 'in-progress'}]});
+  assert.equal(noteOf(result, 'detail-001'), 'draft, published on its local layout check. The layout check is not run here.');
+  // Inputs not committed: the design still shows, with a warning that its receipt was not compared.
   rmSync(path.join(p.root, 'cad/detailed-design'), {recursive: true});
   result = p.check();
   assert.deepEqual(result.errors, []);
-  assert.match(result.warnings.join('\n'), /detail-001: the layout check cannot be rerun because its inputs are not committed/);
+  assert.match(result.warnings.join('\n'), /detail-001: its inputs are not committed at cad\/detailed-design\/designs\/detail-001, so its receipt was not compared with them/);
   editJson(path.join(p.root, detail, 'designs/detail-001/design.json'), r => ({...r, fusion: {...r.fusion, stepSha256: sha('another export')}}));
   assert.match(errorsOf(p.check()), /detail-001: the layout check ran on a STEP other than the Fusion export/);
 });
@@ -444,14 +473,19 @@ test('an effective detailed design is a status change that carries its readiness
   // The same review beside an in-progress design blocks nothing.
   editJson(path.join(p.root, detail, 'designs.json'), i => ({...i, designStatus: {'detail-001': 'in-progress'}}));
   assert.deepEqual(p.check().errors, []);
-  // The stage gate of a detailed design: the change that makes it effective reruns its layout check.
+  // A detailed design this change makes effective needs the record of its stage gate, like a preliminary one.
   const base = p.commit('in progress');
   write(p.root, detail + '/designs/detail-001/readiness.json', review('pass')(read(p.receiptFile('layout-001'))));
   editJson(path.join(p.root, detail, 'designs.json'), i => ({...i, designStatus: {'detail-001': 'effective'}}));
-  const promoted = p.commit('effective');
+  p.commit('status by hand');
+  assert.match(errorsOf(p.check({base})), /Detailed design detail-001 is marked effective without a stage gate of this design\. .* node PLUGIN\/scripts\/detailed-design-release\.mjs effective \. --design detail-001 --readiness REVIEW_RESULT\.json$/);
+  const published = path.join(p.root, detail, 'designs/detail-001');
+  writeGate(published, stageGate({root: p.root, where: 'Detailed design detail-001', id: 'detail-001', phase: 'detailed-design', inputs: path.join(p.root, 'cad/detailed-design/designs/detail-001'),
+    published, record: read(path.join(published, 'design.json')), run: p.run()}));
+  const promoted = p.commit('gate');
   result = p.check({base});
-  assert.deepEqual([result.errors, result.detailed.designs, p.calls], [[], [{design: 'detail-001', status: 'effective', rerun: 'pass'}], ['detail-001']]);
-  assert.equal(rerunsOf(result)[0], 'not needed', 'the preliminary release was effective already');
+  assert.deepEqual([result.errors, result.detailed.designs, p.calls], [[], [{design: 'detail-001', status: 'effective'}], ['detail-001']]);
+  assert.equal(noteOf(result, 'layout-001'), 'effective, physics unchanged since ' + base + '.', 'the preliminary release was effective already');
   // Effective already, its STEP may not change in place.
   editJson(path.join(p.root, detail, 'designs/detail-001/receipt.json'), r => ({...r, cycle: ['loaded-turn']}));
   p.commit('changed result');
@@ -486,176 +520,182 @@ test('verdicts compare inputs and results, not measured values', () => {
   assert.deepEqual(compareVerdicts(receipt, rounded), ['massStatus']);
 });
 
-test('the command reports every error, exits nonzero and passes a project with nothing published', t => {
+test('the command says what it checked and what a push will do, and names what a project must not carry', t => {
   const p = project(t);
-  const run = (...args) => spawnSync(process.execPath, [script, 'check', p.root, ...args], {encoding: 'utf8', env: {...process.env, GITHUB_ACTIONS: '', GITHUB_STEP_SUMMARY: ''}});
-  const skipped = run('--skip-rerun');
-  assert.equal(skipped.status, 0, skipped.stderr);
-  assert.equal(JSON.parse(skipped.stdout).preliminary.releases[0].rerun, 'skipped');
-  // The line an agent reads: one for each design, saying whether the layout check ran and why.
-  assert.match(skipped.stderr, /^\[layout check\] Preliminary release layout-001: not rerun: draft\. Its author runs the local layout check on what changed\.$/m);
-  // A workflow file from an earlier release passes --cache: one message says what to replace.
-  const old = run('--cache', path.join(p.root, '.cache'), '--budget-minutes', '45');
-  assert.equal(old.status, 2);
-  assert.match(old.stderr, /^--cache is no longer an option: nothing is kept between runs\. This workflow file is from an earlier plugin release\. Replace \.github\/workflows\/design-publication\.yml with the plugin's templates\/design-publication\.yml/);
-  assert.ok(!existsSync(path.join(p.root, '.cache')));
-  assert.equal(run('--rerun', 'sometimes').status, 2);
-  // Copies of plugin behaviour from an earlier release are named in one message, and the project's two thin callers pass.
-  write(p.root, '.github/workflows/design-publication.yml', 'name: Design publication\nenv:\n  AGENT_FRC_REF: an-earlier-pin\n');
-  write(p.root, 'cad/preliminary-design/stage.py', 'def stage(season, inputs, release):\n    pass\n');
-  const stale = run('--skip-rerun');
-  assert.equal(stale.status, 1);
-  assert.match(stale.stderr, /^Error: This project carries copies of plugin behaviour from an earlier release\. Replace \.github\/workflows\/design-publication\.yml with the plugin's templates\/design-publication\.yml, and cad\/preliminary-design\/stage\.py with the plugin's templates\/stage-preliminary-review\.py\. Each is now a few lines that call the plugin, so there is nothing to copy again\.$/m);
-  for (const [name, template] of [['.github/workflows/design-publication.yml', 'design-publication.yml'], ['cad/preliminary-design/stage.py', 'stage-preliminary-review.py']])
-    write(p.root, name, readFileSync(fileURLToPath(new URL('../templates/' + template, import.meta.url))));
-  assert.equal(run('--skip-rerun').status, 0);
-  // The step summary says for each design whether the layout check reran, and why.
-  const summary = path.join(p.root, 'summary.md');
-  spawnSync(process.execPath, [script, 'check', p.root], {encoding: 'utf8', env: {...process.env, GITHUB_ACTIONS: '', GITHUB_STEP_SUMMARY: summary}});
-  assert.match(readFileSync(summary, 'utf8'), /### Layout check\n\n\| Design \| Status \| Layout check \|\n.*\n\| Preliminary release layout-001 \| in-progress \| not rerun: draft\. Its author runs the local layout check on what changed\. \|\n\nMethod: https:\/\/github\.com\/ehartye\/agent-frc\/blob\/main\/docs\/testing-methodology\.md/);
-  rmSync(summary);
+  const run = (...args) => spawnSync(process.execPath, [script, 'check', p.root, ...args], {encoding: 'utf8'});
+  const ready = run();
+  assert.equal(ready.status, 0, ready.stderr);
+  assert.deepEqual(JSON.parse(ready.stdout).preliminary.releases, [{release: 'layout-001', status: 'in-progress'}]);
+  // The lines an agent reads: one for each design, then what a push will do.
+  assert.match(ready.stderr, /^\[publication\] Preliminary release layout-001: draft, published on its local layout check\. The layout check is not run here\.$/m);
+  assert.match(ready.stderr, /Ready to push\. On push: the project's workflow publishes the page\. Nothing is rerun\.\r?\n$/);
+  // The options that ran or skipped a layout check in CI are gone, each with one message.
+  for (const option of [['--skip-rerun'], ['--rerun', 'all'], ['--cache', 'folder'], ['--budget-minutes', '45'], ['--jobs', '2']]) {
+    const gone = run(...option);
+    assert.equal(gone.status, 2, option[0]);
+    assert.match(gone.stderr, new RegExp('^' + option[0] + ' is no longer an option\\. This check never runs the layout check: the stage gate runs when a design is marked effective, and the project\'s CI runs no plugin\\.'));
+  }
+  // A project that still carries plugin files is told once what to delete and what to use.
+  write(p.root, '.github/workflows/design-publication.yml', 'jobs:\n  designs:\n    uses: ehartye/agent-frc/.github/workflows/design-publication.yml@main\n');
+  write(p.root, '.github/workflows/scan.yml', 'env:\n  AGENT_FRC_REF: an-earlier-pin\nsteps:\n  - run: node plugin/scripts/branch-scan.mjs project\n');
+  write(p.root, 'cad/preliminary-design/stage.py', 'import runpy\n');
+  const carried = run();
+  assert.equal(carried.status, 1);
+  assert.match(carried.stderr, /^Error: This project carries plugin files from an earlier layout: \.github\/workflows\/design-publication\.yml, \.github\/workflows\/scan\.yml, cad\/preliminary-design\/stage\.py\. The plugin is a tool of the coding agent, not a dependency of the project\. Delete them and write the project's own CI from the references in the plugin's templates\/project-ci\/, which name no plugin\. The agent runs staging, the stage gate and this check from the plugin\.$/m);
+  assert.match(carried.stderr, /Not ready to push: fix the 1 error above\.\r?\n$/);
+  // The project's own deploy workflow is no plugin file.
+  for (const name of ['.github/workflows/design-publication.yml', '.github/workflows/scan.yml', 'cad/preliminary-design/stage.py']) rmSync(path.join(p.root, name));
+  write(p.root, '.github/workflows/ci.yml', readFileSync(fileURLToPath(new URL('../templates/project-ci/ci.yml', import.meta.url))));
+  assert.equal(run().status, 0);
   editJson(path.join(p.root, prelim, 'releases.json'), i => ({...i, current: 'layout-009'}));
-  const failed = run('--skip-rerun');
+  const failed = run();
   assert.equal(failed.status, 1);
   assert.match(failed.stderr, /Error: The preliminary index must open/);
   rmSync(path.join(p.root, 'docs'), {recursive: true});
   const empty = run();
   assert.equal(empty.status, 0, empty.stderr);
   assert.deepEqual(JSON.parse(empty.stdout).preliminary, null);
-  assert.equal(spawnSync(process.execPath, [script, 'check', p.root, '--budget-minutes'], {encoding: 'utf8'}).status, 2);
+  assert.equal(run('--base').status, 2);
 });
 
-test('the real layout check reruns a committed synthetic release and rejects a forged receipt',
-  {skip: process.env.FRC_TEST_PROFILE === 'portable' && 'Run the CAD kernel checks at the qualified station'}, t => {
-    const temp = mkdtempSync(path.join(os.tmpdir(), 'publication-real-'));
-    t.after(() => rmSync(temp, {recursive: true, force: true}));
-    const season = path.join(temp, 'season'), py = process.env.PYTHON ?? (process.platform === 'win32' ? 'python' : 'python3');
-    execFileSync(py, ['-B', fileURLToPath(new URL('../examples/preliminary-design/create.py', import.meta.url)), season, '--project-review'], {stdio: 'pipe'});
-    // The starter publishes a version: the invented architecture "Turning carrier", 1.0.
-    const result = checkProject(season, {budgetMinutes: 5, rerun: 'all'});
-    assert.deepEqual(result.errors, []);
-    assert.deepEqual(result.preliminary.releases, [{release: '1.0', design: 'Turning carrier 1.0', status: 'in-progress', rerun: 'pass'}]);
-    // The example names every file by path: no author types a hash, and the receipt holds the digests the check read.
-    const authored = 'cad/preliminary-design/releases/1.0';
-    for (const name of ['layout.json', 'paths.json', 'budgets.json', 'missions.json', 'release-lane-replay.json'])
-      assert.doesNotMatch(readFileSync(path.join(season, authored, name), 'utf8'), /sha256/i, name);
-    assert.equal(read(path.join(season, prelim, 'releases/1.0/receipt.json')).motion.sha256, sha(readFileSync(path.join(season, authored, 'paths.json'))));
-    // The readiness report of an effective release resolves its trial pins from the repository root, where the check ran.
-    editJson(path.join(season, prelim, 'releases.json'), i => ({...i, designStatus: {'1.0': 'effective'}}));
-    const report = checkProject(season, {skipRerun: true}).reports.map(r => r.text).join(' ');
-    assert.match(report, /Effective-readiness report for Turning carrier 1\.0 \(synthetic-package-1\.0\)/);
-    assert.match(report, /trial cad\/preliminary-design\/releases\/1\.0\/release-lane-trial\.json has no qualification record/);
-    assert.doesNotMatch(report, /the motion is prescribed/);
-    assert.match(report, /release-lane-trial\.json \(read; no SHA-256 given to compare\)/);
-    // An input changed without a new check and stage: the plan bytes are the same, and the committed study is not the one
-    // the receipt recorded. No rerun is needed to see it.
-    const studyFile = path.join(season, authored, 'paths.json'), study = readFileSync(studyFile);
-    editJson(studyFile, s => ({...s, cases: s.cases.map((c, i) => i ? c : {...c, basis: 'Invented reworded basis'})}));
-    assert.match(errorsOf(checkProject(season, {log: () => {}, run: () => { throw Error('the layout check was rerun'); }})),
-      /Turning carrier 1\.0: the committed motion study \(cad\/preliminary-design\/releases\/1\.0\/paths\.json\) is not the file its receipt checked/);
-    writeFileSync(studyFile, study);
-    editJson(path.join(season, prelim, 'releases.json'), i => ({...i, designStatus: {'1.0': 'in-progress'}}));
-    // An edit to the in-progress design is staged under the same ID: one entry, a counted revision, and the rerun on the revised inputs.
-    const folder = 'cad/preliminary-design/releases/1.0';
-    editJson(path.join(season, folder, 'layout.json'), l => ({...l, presentation: {...l.presentation, focus: 'Invented revised focus.'}}));
-    execFileSync(process.execPath, [fileURLToPath(new URL('../scripts/design.mjs', import.meta.url)), 'preliminary-check', season, folder + '/layout.json',
-      '--write-view', '--require-checked', '--quiet', '--output', folder + '/receipt.json'], {stdio: 'pipe'});
-    assert.match(execFileSync(py, ['-B', path.join(season, 'cad/preliminary-design/stage.py'), '1.0'], {encoding: 'utf8'}), /Revised preliminary design Turning carrier 1\.0 in place \(draft 2, in progress\)/);
-    const revised = checkProject(season, {budgetMinutes: 5, rerun: 'all'});
-    assert.deepEqual(revised.errors, []);
-    assert.deepEqual(revised.preliminary.releases, [{release: '1.0', design: 'Turning carrier 1.0', status: 'in-progress', rerun: 'pass'}]);
-    assert.equal(JSON.parse(readFileSync(path.join(season, prelim, 'releases.json'))).revision['1.0'].number, 2);
-    // Move the displaced control so it no longer collides, then forge the receipt's plan digest by hand.
-    const plan = path.join(season, 'cad/preliminary-design/releases/1.0/layout.json');
-    editJson(plan, l => ({...l, control: {...l.control, offsetMm: [0, 50, 0]}}));
-    editJson(path.join(season, prelim, 'releases/1.0/receipt.json'), r => ({...r, planSha256: sha(readFileSync(plan))}));
-    assert.match(errorsOf(checkProject(season, {budgetMinutes: 5, rerun: 'all'})), /Preliminary design Turning carrier 1\.0 \(rerun\) needs a layout-checked receipt; found provisional/);
-  });
+test('the publication check scans tracked files for a personal path or a credential', t => {
+  const p = project(t);
+  p.commit('clean');
+  assert.deepEqual(p.check().errors, []);
+  // Invented values, assembled here so this file holds neither.
+  write(p.root, 'docs/notes.md', 'Built at ' + ['C:', 'Users', 'invented-student', 'robot'].join('\\') + '\n');
+  p.commit('a path');
+  assert.match(errorsOf(p.check()), /^docs\/notes\.md:1: a personal machine path; write paths relative to the repository: /);
+  assert.deepEqual(p.check({scan: false}).errors, []);
+});
 
-test('a release whose plan types its hashes still reruns, and a wrong typed hash still fails',
-  {skip: process.env.FRC_TEST_PROFILE === 'portable' && 'Run the CAD kernel checks at the qualified station'}, t => {
-    const temp = mkdtempSync(path.join(os.tmpdir(), 'publication-pins-'));
-    t.after(() => rmSync(temp, {recursive: true, force: true}));
-    const season = path.join(temp, 'season'), py = process.env.PYTHON ?? (process.platform === 'win32' ? 'python' : 'python3');
-    execFileSync(py, ['-B', fileURLToPath(new URL('../examples/preliminary-design/create.py', import.meta.url)), season, '--project-review', '--pins'], {stdio: 'pipe'});
-    const folder = path.join(season, 'cad/preliminary-design/releases/1.0');
-    assert.match(readFileSync(path.join(folder, 'layout.json'), 'utf8'), /"sha256"/);
-    assert.deepEqual(checkProject(season, {budgetMinutes: 5, rerun: 'all'}).errors, []);
-    // The narrative changes under its typed hash: the checker refuses the committed plan with "Changed evidence".
-    writeFileSync(path.join(folder, 'narrative.md'), 'Invented narrative, edited after the check.');
-    assert.match(errorsOf(checkProject(season, {budgetMinutes: 5, rerun: 'all'})), /Turning carrier 1\.0: the layout check ended with an error \(exit 2\)/);
-  });
+const kernel = {skip: process.env.FRC_TEST_PROFILE === 'portable' && 'Run the CAD kernel checks at the qualified station'};
+/** The synthetic example project in a Git repository, with the commands an agent runs on it. */
+function example(t, ...flags) {
+  const temp = mkdtempSync(path.join(os.tmpdir(), 'publication-real-'));
+  t.after(() => rmSync(temp, {recursive: true, force: true}));
+  const season = path.join(temp, 'season'), py = process.env.PYTHON ?? (process.platform === 'win32' ? 'python' : 'python3'), releases = 'cad/preliminary-design/releases/';
+  execFileSync(py, ['-B', fileURLToPath(new URL('../examples/preliminary-design/create.py', import.meta.url)), season, '--project-review', ...flags], {stdio: 'pipe'});
+  // Run from the project root, as an agent does. Both streams are returned: the commands speak on each.
+  const stage = (...args) => { const run = spawnSync(py, ['-B', stagingCommand, ...args], {cwd: season, encoding: 'utf8'}); return {...run, said: run.stdout + run.stderr}; };
+  const layoutCheck = (id, ...more) => execFileSync(process.execPath, [fileURLToPath(new URL('../scripts/design.mjs', import.meta.url)), 'preliminary-check', season, releases + id + '/layout.json',
+    '--write-view', '--require-checked', '--quiet', '--output', releases + id + '/receipt.json', ...more], {stdio: 'pipe'});
+  const git = (...args) => execFileSync('git', ['-C', season, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', '-c', 'core.autocrlf=false', ...args], {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']}).trim();
+  const commit = message => { git('add', '-A'); git('commit', '-q', '-m', message); return git('rev-parse', 'HEAD'); };
+  const status = id => read(path.join(season, prelim, 'releases.json')).designStatus[id];
+  git('init', '-q');
+  return {season, releases, stage, layoutCheck, git, commit, status, check: base => checkProject(season, {base, log: () => {}})};
+}
 
-test('on a real release a view refresh and a rename pass with no rerun, and a change to the physics is refused',
-  {skip: process.env.FRC_TEST_PROFILE === 'portable' && 'Run the CAD kernel checks at the qualified station'}, t => {
-    const temp = mkdtempSync(path.join(os.tmpdir(), 'publication-gate-'));
-    t.after(() => rmSync(temp, {recursive: true, force: true}));
-    const season = path.join(temp, 'season'), py = process.env.PYTHON ?? (process.platform === 'win32' ? 'python' : 'python3');
-    execFileSync(py, ['-B', fileURLToPath(new URL('../examples/preliminary-design/create.py', import.meta.url)), season, '--project-review'], {stdio: 'pipe'});
-    const releases = 'cad/preliminary-design/releases/', stage = (...args) => execFileSync(py, ['-B', path.join(season, 'cad/preliminary-design/stage.py'), ...args], {encoding: 'utf8'});
-    const layoutCheck = (id, ...flags) => execFileSync(process.execPath, [fileURLToPath(new URL('../scripts/design.mjs', import.meta.url)), 'preliminary-check', season, releases + id + '/layout.json',
-      '--write-view', '--require-checked', '--quiet', '--output', releases + id + '/receipt.json', ...flags], {stdio: 'pipe'});
-    const git = (...args) => execFileSync('git', ['-C', season, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', '-c', 'core.autocrlf=false', ...args], {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']}).trim();
-    const commit = message => { git('add', '-A'); git('commit', '-q', '-m', message); return git('rev-parse', 'HEAD'); };
-    // No layout check may run in what follows: each of these changes is decided from the committed files.
-    const pushed = base => checkProject(season, {base, log: () => {}, run: () => { throw Error('the layout check was rerun'); }});
-    git('init', '-q');
-    const draft = commit('draft');
-    // The stage gate, for comparison: the change that makes 1.0 effective reruns the real check once.
-    stage('--set-status', '1.0', 'effective');
-    const effective = commit('effective');
-    const gated = checkProject(season, {base: draft, budgetMinutes: 5, log: () => {}});
-    assert.deepEqual([gated.errors, gated.preliminary.releases[0].rerun], [[], 'pass']);
-    assert.equal(pushed(effective).preliminary.releases[0].rerun, 'not needed');
-    // A presentation refresh: reworded focus, the view rebuilt from the receipt, and the view republished.
-    editJson(path.join(season, releases, '1.0/layout.json'), l => ({...l, presentation: {...l.presentation, focus: 'Invented reworded focus.', title: 'Invented reworded title'}}));
-    layoutCheck('1.0', '--view-only');
-    assert.match(stage('--refresh-view', '1.0'), /Refreshed the view of preliminary design Turning carrier 1\.0 \(effective\)/);
-    commit('view refresh');
-    let result = pushed(effective);
-    assert.deepEqual([result.errors, result.warnings, result.preliminary.releases[0].rerun], [[], [], 'not needed']);
-    assert.equal(result.reruns[0].why, 'not rerun: effective, physics unchanged.');
-    // A rename: the same design under another ID, folder and issue name, checked there and staged, and the earlier ID removed.
-    stage('--copy-inputs', '1.0', '1.1');
-    for (const name of ['layout.json', 'budgets.json', 'pickup-face-current.json', 'acquire-time-current.json']) {
-      const file = path.join(season, releases, '1.1', name);
-      assert.equal(read(file).issue, 'synthetic-package-1.0', name);
-      editJson(file, record => ({...record, issue: 'invented-renamed-package'}));
-    }
-    layoutCheck('1.1');
-    stage('1.1');
-    stage('--set-status', '1.1', 'effective');
-    stage('--remove', '1.0', '--replaced-by', '1.1');
-    commit('rename');
-    result = pushed(effective);
-    assert.deepEqual([result.errors, result.warnings, result.preliminary.releases], [[], [], [{release: '1.1', design: 'Turning carrier 1.1', status: 'effective', rerun: 'not needed'}]]);
-    assert.equal(result.reruns[0].why, 'not rerun: effective, the same physics as 1.0 under a new ID.');
-    const renamed = git('rev-parse', 'HEAD');
-    // A change to the physics of the effective design: a tolerance in its motion study, with a receipt that agrees.
-    editJson(path.join(season, releases, '1.1/paths.json'), study => ({...study, cases: study.cases.map((c, i) => i ? c : {...c, minGapMm: 0.5})}));
-    layoutCheck('1.1');
-    assert.throws(() => execFileSync(py, ['-B', path.join(season, 'cad/preliminary-design/stage.py'), '--refresh-view', '1.1'], {encoding: 'utf8', stdio: 'pipe'}),
-      /Turning carrier 1\.1 is effective and this receipt differs from the published one in the motion study\. A view refresh keeps the physics\. Work that changes it belongs to 1\.2, staged as a draft/);
-    commit('changed tolerance');
-    assert.match(errorsOf(pushed(renamed)), /Preliminary design Turning carrier 1\.1 is effective, and this change alters its physics: paths\.json\. An effective design does not change in place\. Open 1\.2 as a draft and make the change there\./);
-  });
+test('marking a real release effective runs the stage gate, and refuses uncommitted inputs, a stale receipt and a forged one', kernel, t => {
+  const e = example(t), authored = e.releases + '1.0/';
+  // The project the starter writes holds data, published output and its own CI: no launcher or wrapper of the plugin.
+  assert.ok(!existsSync(path.join(e.season, 'cad/preliminary-design/stage.py')) && !existsSync(path.join(e.season, 'cad/preliminary-design/serve.py')));
+  assert.doesNotMatch(readFileSync(path.join(e.season, '.github/workflows/ci.yml'), 'utf8'), /agent-frc|plugin\//);
+  for (const check of [['scan.mjs', '.'], ['site-check.mjs', 'docs']]) execFileSync(process.execPath, [path.join(e.season, 'scripts/ci', check[0]), check[1]], {cwd: e.season, stdio: 'pipe'});
+  // The example names every file by path: no author types a hash, and the receipt holds the digests the check read.
+  for (const name of ['layout.json', 'paths.json', 'budgets.json', 'missions.json', 'release-lane-replay.json'])
+    assert.doesNotMatch(readFileSync(path.join(e.season, authored, name), 'utf8'), /sha256/i, name);
+  // Uncommitted inputs: the gate does not run, and the status stays.
+  let refused = e.stage('--set-status', '1.0', 'effective');
+  assert.notEqual(refused.status, 0);
+  assert.match(refused.said, /Preliminary design Turning carrier 1\.0 is not marked effective: its inputs have uncommitted changes .*The stage gate runs on the committed design\./);
+  assert.match(refused.said, /Release 1\.0 keeps its status: the stage gate did not pass/);
+  assert.equal(e.status('1.0'), 'in-progress');
+  const draft = e.commit('draft');
+  assert.deepEqual(e.check().errors, []);
+  // A stale receipt: an input changed and was committed with no new check. The gate does not trust the receipt.
+  const studyFile = path.join(e.season, authored, 'paths.json'), study = readFileSync(studyFile);
+  editJson(studyFile, s => ({...s, cases: s.cases.map((c, i) => i ? c : {...c, basis: 'Invented reworded basis'})}));
+  e.commit('edited study');
+  refused = e.stage('--set-status', '1.0', 'effective');
+  assert.match(refused.said, /the committed motion study \(cad\/preliminary-design\/releases\/1\.0\/paths\.json\) is not the file its receipt checked/);
+  assert.match(errorsOf(e.check()), /the committed motion study .* is not the file its receipt checked/, 'the publication check sees it too, with no layout check');
+  assert.equal(e.status('1.0'), 'in-progress');
+  writeFileSync(studyFile, study);
+  // A forged receipt: the displaced control moved so it no longer collides, and the receipt's plan digest edited by hand.
+  const plan = path.join(e.season, authored, 'layout.json'), held = readFileSync(plan), receipt = path.join(e.season, prelim, 'releases/1.0/receipt.json'), issued = readFileSync(receipt);
+  editJson(plan, l => ({...l, control: {...l.control, offsetMm: [0, 50, 0]}}));
+  editJson(receipt, r => ({...r, planSha256: sha(readFileSync(plan))}));
+  e.commit('forged');
+  refused = e.stage('--set-status', '1.0', 'effective');
+  assert.match(refused.said, /Turning carrier 1\.0 \(stage gate\) needs a layout-checked receipt; found provisional\. It is not marked effective/);
+  assert.equal(e.status('1.0'), 'in-progress');
+  writeFileSync(plan, held); writeFileSync(receipt, issued);
+  e.commit('restored');
+  // The gate passes: the command reports what it ran and how long it took, prints the readiness report and sets the status.
+  const accepted = e.stage('--set-status', '1.0', 'effective');
+  assert.equal(accepted.status, 0, accepted.said);
+  assert.match(accepted.said, /^\[gate\] Running the full layout check on the committed design\. Guideline: about 15 minutes\.$/m);
+  assert.match(accepted.said, /^\[gate\] Preliminary design Turning carrier 1\.0: the full layout check ran on the committed design and reproduced the published receipt in \d+ s \(guideline: about 15 minutes at a stage gate\)\.$/m);
+  assert.match(accepted.said, /Effective-readiness report for Turning carrier 1\.0 \(synthetic-package-1\.0\)/);
+  assert.match(accepted.said, /trial cad\/preliminary-design\/releases\/1\.0\/release-lane-trial\.json has no qualification record/);
+  assert.match(accepted.said, /Preliminary design Turning carrier 1\.0 is effective; the site opens 1\.0/);
+  assert.match(accepted.stdout, /On push: the project's workflow publishes the page\. Nothing is rerun\.\r?\n$/);
+  assert.equal(e.status('1.0'), 'effective');
+  const gate = read(path.join(e.season, prelim, 'releases/1.0/gate.json'));
+  assert.deepEqual([gate.verdict, gate.design, gate.commit], ['pass', '1.0', e.git('rev-parse', 'HEAD')]);
+  e.commit('effective');
+  const result = e.check(draft);
+  assert.deepEqual([result.errors, result.designs[0].note], [[], 'becoming effective. Its stage gate record matches the committed receipt.']);
+});
 
-test('a project holds two thin callers: the workflow and the staging command live in the plugin', () => {
-  const text = name => readFileSync(fileURLToPath(new URL('../' + name, import.meta.url)), 'utf8');
-  const caller = text('templates/design-publication.yml'), workflow = text('.github/workflows/design-publication.yml'), stage = text('templates/stage-preliminary-review.py');
-  // The caller names the plugin's workflow on its default branch, and runs nothing itself.
-  assert.match(caller, /^    uses: ehartye\/agent-frc\/\.github\/workflows\/design-publication\.yml@main$/m);
-  assert.doesNotMatch(caller, /^\s*-? ?(run|steps):/m);
-  assert.doesNotMatch(caller, /^\s*pull_request/m, 'pushes only: a pull request from a fork must not reach a self-hosted runner');
-  // Neither file names a plugin commit, and nothing is kept between runs.
-  for (const file of [caller, workflow]) assert.doesNotMatch(file, /AGENT_FRC_REF|actions\/cache|--cache/);
-  assert.match(workflow, /^  workflow_call:$/m);
-  assert.match(workflow, /^    runs-on: \$\{\{ inputs\.runner \|\| 'ubuntu-latest' \}\}$/m);
-  assert.match(workflow, /^        shell: bash$/m);
-  // The default branch does not repeat the gate; a branch is compared with where it left the default branch.
-  assert.match(workflow, /"\$GITHUB_REF_NAME" == "\$DEFAULT_BRANCH" \]\]; then\n(?:\s+#.*\n)*\s+args\+=\(--skip-rerun\)/);
-  assert.match(workflow, /merge-base "origin\/\$DEFAULT_BRANCH" HEAD 2>\/dev\/null\); then args\+=\(--base "\$base"\)/);
-  // The project's stage.py holds no staging behaviour of its own.
-  assert.match(stage, /stage_preliminary_review\.py/);
-  assert.doesNotMatch(stage, /^def /m);
+test('a release whose plan types its hashes passes the gate, and a wrong typed hash fails it', kernel, t => {
+  const e = example(t, '--pins'), folder = path.join(e.season, e.releases, '1.0');
+  assert.match(readFileSync(path.join(folder, 'layout.json'), 'utf8'), /"sha256"/);
+  e.commit('draft');
+  // The narrative changes under its typed hash: the checker refuses the committed plan with "Changed evidence".
+  const narrative = readFileSync(path.join(folder, 'narrative.md'));
+  writeFileSync(path.join(folder, 'narrative.md'), 'Invented narrative, edited after the check.');
+  e.commit('edited narrative');
+  const refused = e.stage('--set-status', '1.0', 'effective');
+  assert.match(refused.said, /Turning carrier 1\.0 is not marked effective: the layout check ended with an error \(exit 2\)/);
+  assert.equal(e.status('1.0'), 'in-progress');
+  writeFileSync(path.join(folder, 'narrative.md'), narrative);
+  e.commit('restored');
+  assert.equal(e.stage('--set-status', '1.0', 'effective').status, 0);
+});
+
+test('on a real release a draft revision, a view refresh and a rename are checked with no layout check, and a change to the physics is refused', kernel, t => {
+  const e = example(t), {season, releases} = e;
+  // An edit to the in-progress design is staged under the same ID: one entry and a counted draft.
+  editJson(path.join(season, releases, '1.0/layout.json'), l => ({...l, presentation: {...l.presentation, focus: 'Invented revised focus.'}}));
+  e.layoutCheck('1.0');
+  const revised = e.stage('1.0');
+  assert.match(revised.said, /^Revised preliminary design Turning carrier 1\.0 in place \(draft 2, in progress\)\r?\nBefore pushing, run the publication check: node PLUGIN\/scripts\/design-publication\.mjs check \.\r?\nOn push: the project's workflow publishes the page\. Nothing is rerun\.\r?\n$/);
+  assert.equal(read(path.join(season, prelim, 'releases.json')).revision['1.0'].number, 2);
+  e.commit('draft 2');
+  assert.equal(e.stage('--set-status', '1.0', 'effective').status, 0);
+  const effective = e.commit('effective');
+  // A presentation refresh: reworded focus, the view rebuilt from the receipt, and the view republished. The gate record stays.
+  editJson(path.join(season, releases, '1.0/layout.json'), l => ({...l, presentation: {...l.presentation, focus: 'Invented reworded focus.', title: 'Invented reworded title'}}));
+  e.layoutCheck('1.0', '--view-only');
+  assert.match(e.stage('--refresh-view', '1.0').said, /Refreshed the view of preliminary design Turning carrier 1\.0 \(effective\)/);
+  assert.ok(existsSync(path.join(season, prelim, 'releases/1.0/gate.json')));
+  e.commit('view refresh');
+  let result = e.check(effective);
+  assert.deepEqual([result.errors, result.warnings, result.designs[0].note], [[], [], 'effective, physics unchanged since ' + effective + '.']);
+  // A rename: the same design under another ID, folder and issue name, checked there, staged and marked effective, and the earlier ID removed.
+  e.stage('--copy-inputs', '1.0', '1.1');
+  for (const name of ['layout.json', 'budgets.json', 'pickup-face-current.json', 'acquire-time-current.json']) {
+    const file = path.join(season, releases, '1.1', name);
+    assert.equal(read(file).issue, 'synthetic-package-1.0', name);
+    editJson(file, record => ({...record, issue: 'invented-renamed-package'}));
+  }
+  e.layoutCheck('1.1');
+  e.stage('1.1');
+  e.commit('renamed draft');
+  assert.equal(e.stage('--set-status', '1.1', 'effective').status, 0);
+  e.stage('--remove', '1.0', '--replaced-by', '1.1');
+  const renamed = e.commit('rename');
+  result = e.check(effective);
+  assert.deepEqual([result.errors, result.warnings, result.preliminary.releases], [[], [], [{release: '1.1', design: 'Turning carrier 1.1', status: 'effective'}]]);
+  assert.equal(result.designs[0].note, 'effective, the same physics as 1.0 under a new ID.');
+  // A change to the physics of the effective design: a tolerance in its motion study, with a receipt that agrees.
+  editJson(path.join(season, releases, '1.1/paths.json'), study => ({...study, cases: study.cases.map((c, i) => i ? c : {...c, minGapMm: 0.5})}));
+  e.layoutCheck('1.1');
+  assert.match(e.stage('--refresh-view', '1.1').said,
+    /Turning carrier 1\.1 is effective and this receipt differs from the published one in the motion study\. A view refresh keeps the physics\. Work that changes it belongs to 1\.2, staged as a draft/);
+  e.commit('changed tolerance');
+  assert.match(errorsOf(e.check(renamed)), /Preliminary design Turning carrier 1\.1 is effective, and this change alters its physics: paths\.json\. An effective design does not change in place\. Open 1\.2 as a draft and make the change there\./);
 });

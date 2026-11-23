@@ -9,9 +9,9 @@ A check exists for one of four purposes. Each purpose has its own moment. A chec
 | Purpose | Question it answers | When it runs | Who runs it |
 |---|---|---|---|
 | Feedback | Does what I just changed work? | While editing, on what changed | The designer or agent, locally |
-| Stage gate | Does this meet the criteria for the next stage? | Once, when a design changes stage | CI, on the committed design |
+| Stage gate | Does this meet the criteria for the next stage? | Once, when a design changes stage | The agent, with the plugin, on the committed design |
 | Regression | Did this change break something already accepted? | When a change touches what the accepted result depends on | The cheapest check that can tell |
-| Publishing hygiene | Is what we publish intact and safe to show? | On every push | CI, in seconds |
+| Publishing hygiene | Is what we publish intact and safe to show? | Before every push, and on every push | The agent before pushing; the project's own CI on the push, in seconds |
 
 The stages of a design are draft to effective, effective preliminary design to detailed design, and detailed design to build.
 
@@ -25,16 +25,18 @@ A check runs when the change could break what the check protects. A change to a 
 
 ### In a robot project
 
-| The change touches | What runs |
-|---|---|
-| Geometry, a motion, a tolerance or reserve, a fixture, a trial, a mass or voltage budget | The local layout check on the phases the change affects |
-| The review page, titles, colours, the view, a design name, a version label, a status word, a document | The publication checks: index, receipt, scene, animation, links |
-| A draft being published | The publication checks. The layout check is not rerun |
-| A design being marked effective | The full layout check and the readiness report, once, on the committed design |
-| The physics of an effective design, edited in place | Refused. Open the next minor version as a draft |
-| Anything, on any branch | The scan for personal paths and secrets |
+| The change touches | What runs | Who runs it |
+|---|---|---|
+| Geometry, a motion, a tolerance or reserve, a fixture, a trial, a mass or voltage budget | The layout check on the phases the change affects | The agent |
+| The review page, titles, colours, the view, a design name, a version label, a status word, a document | The publication check: index, receipt, scene, animation | The agent, before pushing |
+| A draft being published | The publication check. The layout check is not run again | The agent, before pushing |
+| A design being marked effective | The stage gate: the full layout check and the readiness report, on the committed design | The agent, once, when the design is marked effective |
+| The physics of an effective design, edited in place | Refused by the publication check. Open the next minor version as a draft | The agent, before pushing |
+| Anything pushed, on any branch | The scan for personal paths and secrets, the site check and, on the default branch, publishing | The project's own CI |
 
-A draft is work in progress. It is published on the designer's own local check and carries the in-progress label. It cannot become effective without passing the stage gate.
+A push only publishes. The project's CI runs no design check and no plugin: it scans, checks that the published site is whole and deploys it.
+
+A draft is work in progress. It is published on the designer's own layout check and carries the in-progress label. It cannot become effective without passing the stage gate, which the command that marks it effective runs. The gate never takes an earlier receipt for its result, and it refuses a design whose inputs are not committed.
 
 An effective design is frozen. Any change to its physics is a new draft, and that draft passes the stage gate before it replaces the baseline. This is how regression is prevented for designs: by the version scheme, not by rerunning the old design.
 
@@ -74,14 +76,20 @@ A change that reaches the mechanical-review controls takes about 82 seconds in t
 
 These are guidelines. When a run is heading past its guideline, stop and tell the owner what is slow and why. Agree a bounded extended budget before going on. Do not wait out a long run in silence, and do not repeat a run whose inputs have not changed.
 
-## Keep the project and the plugin loosely coupled
+## The plugin is a tool of the coding agent, not a dependency of the project
 
-A robot project follows the plugin's current release. It does not name a plugin commit, and it does not carry copies of plugin behaviour that must be refreshed by hand.
+The coding agent has the plugin installed and runs its commands. A robot project does not. If the plugin changed, broke or disappeared, nothing in a project would change or stop working.
 
-- The project holds data: the plan, the solids, the trial records, the budgets, the index.
-- The plugin holds behaviour: the checks, the staging commands, the page, the workflow.
-- A plugin release never forces a project to rerun a check. The project meets the new behaviour at its next relevant change or its next stage gate.
-- There is no promise to keep old formats working. When a format changes, the check says what to change in the project, in one message.
+- The project holds data and published output: the plan, the solids, the trial records, the budgets, the index, the page.
+- The project holds its own CI: a workflow and two small checks, written from the references in [`templates/project-ci/`](../templates/project-ci/ci.yml) and then owned by the project. They check out only the project and run only the project's files.
+- Project code never runs plugin code. A project file names no plugin repository, commit, path or variable. It carries no copy of a plugin command and no wrapper around one.
+- The agent runs the plugin's commands on the project: the layout check, the staging commands, the stage gate, the publication check, and an [audit of the project's CI](project-ci.md#audit-the-projects-ci) that gives advice and blocks nothing.
+- A plugin release never forces a project to rerun a check. The project meets the new behaviour the next time the agent works on it.
+- There is no promise to keep old formats working. When a format changes, the agent's command says what to change in the project, in one message.
+
+The [sample project](../examples/sample-project/README.md) shows the whole of it: an invented project whose CI is those reference files, with nothing of the plugin in it.
+
+Building solids, measuring them and running physics trials are moving to a separate library, `frc-design-kernel`, that a project and the plugin both import. Until it exists, a project's builders stay as they are.
 
 ## Rules for adding a test or a check
 

@@ -14,8 +14,13 @@ import test from 'node:test';
 import {fileURLToPath} from 'node:url';
 import {effectiveProblems, handedOver, recordResult, seed, status, verdict} from '../scripts/bench-tests.mjs';
 import {checkProject} from '../scripts/design-publication.mjs';
-import {markEffective, stageInProgress} from '../scripts/detailed-design-release.mjs';
-import {folderReceipt, issueRelease, sha, write} from './fixtures/preliminary-release.mjs';
+import {markEffective as markEffectiveWithGate, stageInProgress} from '../scripts/detailed-design-release.mjs';
+import reproduces from './fixtures/gate-reproduces.mjs';
+
+// These invented designs hold no solid, so the layout check of the stage gate is stood in for: it reproduces the receipt.
+const gateCheck = fileURLToPath(new URL('./fixtures/gate-reproduces.mjs', import.meta.url));
+const markEffective = options => markEffectiveWithGate({run: reproduces, ...options});
+import {commitInputs, folderReceipt, issueRelease, sha, write} from './fixtures/preliminary-release.mjs';
 
 // Synthetic teaching fixtures: an invented "Tilting carriage" whose preliminary design hands over four invented bench tests.
 const script = fileURLToPath(new URL('../scripts/bench-tests.mjs', import.meta.url));
@@ -34,6 +39,7 @@ function project(t, {register = risks, stage = true} = {}) {
   const root = mkdtempSync(path.join(os.tmpdir(), 'bench-tests-'));
   t.after(() => rmSync(root, {recursive: true, force: true}));
   issueRelease(path.join(root, 'docs'), '1.0');
+  commitInputs(root, '1.0');
   write(root, prelim + '/releases.json', {releases: ['1.0'], designs: {1: {name: 'Tilting carriage'}}, designStatus: {'1.0': 'effective'}, current: '1.0'});
   const published = path.join(root, prelim, 'releases/1.0'), folder = 'cad/detailed-design/designs/1.0';
   if (register) write(root, 'cad/preliminary-design/releases/1.0/missions.json', {missionCases: read(path.join(published, 'release.json')).missionCases, risks: register});
@@ -135,27 +141,27 @@ test('the publication check holds an effective design to its bench-test record',
   seed({project: p.root, design: '1.0'});
   resolve(p);
   p.effective();
-  const passing = checkProject(p.root, {skipRerun: true});
+  const passing = checkProject(p.root, {log: () => {}});
   assert.deepEqual(passing.errors, []);
   assert.match(passing.reports.find(r => /^Detailed design Tilting carriage 1\.0/.test(r.title)).text, /Bench tests: 4 bench tests: 2 of 2 before-build passed/);
   const published = detail + '/designs/1.0/bench-tests.json', record = read(path.join(p.root, published));
   write(p.root, published, {...record, tests: record.tests.map(x => x.id === 'B2' ? {...x, result: null} : x)});
-  assert.match(checkProject(p.root, {skipRerun: true}).errors.join('\n'),
+  assert.match(checkProject(p.root, {log: () => {}}).errors.join('\n'),
     /Detailed design Tilting carriage 1\.0 cannot be effective until its bench tests are resolved: Bench test B2 \(before-build\) has no recorded result/);
   rmSync(path.join(p.root, published));
-  assert.match(checkProject(p.root, {skipRerun: true}).errors.join('\n'), /its preliminary design 1\.0 hands over 4 bench tests and the design publishes no record \(designs\/1\.0\/bench-tests\.json\)/);
+  assert.match(checkProject(p.root, {log: () => {}}).errors.join('\n'), /its preliminary design 1\.0 hands over 4 bench tests and the design publishes no record \(designs\/1\.0\/bench-tests\.json\)/);
   // An on-robot result recorded after the design is effective updates the published record too.
   write(p.root, published, record);
   recordResult({project: p.root, design: '1.0', test: 'B3', value: 10, date: '2001-03-04'});
   assert.equal(read(path.join(p.root, published)).tests.find(x => x.id === 'B3').result.value, 10);
-  assert.deepEqual(checkProject(p.root, {skipRerun: true}).errors, []);
+  assert.deepEqual(checkProject(p.root, {log: () => {}}).errors, []);
 });
 
 test('a design whose preliminary design hands over no bench test, and an in-progress draft, are not held to a record', t => {
   // No risk register is committed, as for a project from before the register: nothing is required.
   const legacy = project(t, {register: null});
   assert.equal(legacy.effective().designStatus['1.0'], 'effective');
-  assert.deepEqual(checkProject(legacy.root, {skipRerun: true}).errors, []);
+  assert.deepEqual(checkProject(legacy.root, {log: () => {}}).errors, []);
   // A register whose risks are all closed hands over nothing.
   const closed = project(t, {register: [risks[4]]});
   assert.equal(closed.effective().designStatus['1.0'], 'effective');
@@ -166,7 +172,7 @@ test('a design whose preliminary design hands over no bench test, and an in-prog
   const staged = draft.stage();
   assert.match(staged.report, /Note: bench tests: 4 bench tests: 0 of 1 before-build passed, 0 of 1 on-robot with an owner and a plan, 2 not tagged\. Before effective: 4 to resolve \(bench-tests\.mjs check\)\./);
   assert.ok(existsSync(path.join(draft.root, detail, 'designs/1.0/bench-tests.json')));
-  assert.deepEqual(checkProject(draft.root, {skipRerun: true}).errors, []);
+  assert.deepEqual(checkProject(draft.root, {log: () => {}}).errors, []);
 });
 
 test('a result is judged against the handed-over numbers, in either direction', t => {

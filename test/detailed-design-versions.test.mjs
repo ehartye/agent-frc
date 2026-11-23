@@ -12,8 +12,13 @@ import path from 'node:path';
 import test from 'node:test';
 import {fileURLToPath} from 'node:url';
 import {checkProject} from '../scripts/design-publication.mjs';
-import {copyInputs, markEffective, relink, remove, stageInProgress, supersede} from '../scripts/detailed-design-release.mjs';
-import {folderReceipt, issueRelease, sha, write} from './fixtures/preliminary-release.mjs';
+import {copyInputs, markEffective as markEffectiveWithGate, relink, remove, stageInProgress, supersede} from '../scripts/detailed-design-release.mjs';
+import reproduces from './fixtures/gate-reproduces.mjs';
+
+// These invented designs hold no solid, so the layout check of the stage gate is stood in for: it reproduces the receipt.
+const gateCheck = fileURLToPath(new URL('./fixtures/gate-reproduces.mjs', import.meta.url));
+const markEffective = options => markEffectiveWithGate({run: reproduces, ...options});
+import {commitInputs, folderReceipt, issueRelease, sha, write} from './fixtures/preliminary-release.mjs';
 
 // Synthetic teaching fixtures: two invented architectures, "Tilting carriage" and "Swinging arm", with no relation to any game.
 const script = fileURLToPath(new URL('../scripts/detailed-design-release.mjs', import.meta.url));
@@ -30,7 +35,7 @@ function project(t, {releases = {'1.0': 'effective'}, names = {1: {name: 'Tiltin
   t.after(() => rmSync(root, {recursive: true, force: true}));
   const listing = (statuses, designs = names) => write(root, prelim + '/releases.json', {releases: Object.keys(statuses), ...(designs ? {designs} : {}), designStatus: statuses,
     current: Object.keys(statuses).find(id => statuses[id] === 'effective') ?? Object.keys(statuses).at(-1)});
-  for (const id of Object.keys(releases)) issueRelease(path.join(root, 'docs'), id);
+  for (const id of Object.keys(releases)) { issueRelease(path.join(root, 'docs'), id); commitInputs(root, id); }
   listing(releases);
   /** Checked inputs for design `id`, on the layout and STEP of preliminary release `on`. `page` stands for an edit. */
   function inputs(id, {on = '1.0', page = '<html>Detailed review of ' + id + '</html>'} = {}) {
@@ -59,22 +64,22 @@ function project(t, {releases = {'1.0': 'effective'}, names = {1: {name: 'Tiltin
   };
   return {root, inputs, stage, review, listing, index: () => dated(read(path.join(root, detail, 'designs.json')))};
 }
-const errors = root => checkProject(root, {skipRerun: true}).errors;
+const errors = root => checkProject(root, {log: () => {}}).errors;
 
 test('a version is staged under MAJOR.MINOR and takes the name of its preliminary design', t => {
   const p = project(t);
   const staged = p.stage('1.0');
-  assert.equal(staged.report, 'Staged detailed design Tilting carriage 1.0 (draft 1 · in progress)\nOn push: CI runs the publication checks. The layout check is not rerun for a draft; the local check you ran is its check.\n');
+  assert.equal(staged.report, 'Staged detailed design Tilting carriage 1.0 (draft 1 · in progress)\nBefore pushing, run the publication check: node PLUGIN/scripts/design-publication.mjs check .\nOn push: the project\'s workflow publishes the page. Nothing is rerun.\n');
   assert.deepEqual(p.index(), {schema: 'agent-frc/detailed-design-index@1', preliminaryIndex: '../preliminary-design/releases.json', current: '1.0', beside: null,
     designs: ['1.0'], designStatus: {'1.0': 'in-progress'}, architectures: {1: {name: 'Tilting carriage'}}, preliminary: {'1.0': '1.0'}, revision: {'1.0': {number: 1, date: 'DATE'}}});
   const record = read(path.join(p.root, detail, 'designs/1.0/design.json'));
   assert.deepEqual([record.design, record.preliminary, record.check], ['1.0', {release: '1.0'}, {project: 'cad/detailed-design/designs/1.0', plan: 'layout.json'}]);
-  const checked = checkProject(p.root, {skipRerun: true});
+  const checked = checkProject(p.root, {log: () => {}});
   assert.deepEqual(checked.errors, []);
-  assert.deepEqual(checked.detailed.designs, [{design: '1.0', title: 'Tilting carriage 1.0', state: 'draft 1 · in progress', status: 'in-progress', rerun: 'skipped'}]);
+  assert.deepEqual(checked.detailed.designs, [{design: '1.0', title: 'Tilting carriage 1.0', state: 'draft 1 · in progress', status: 'in-progress'}]);
 
   // A draft is a publish of the same version: it counts in the index and takes no number.
-  assert.equal(p.stage('1.0', {page: '<html>Second draft</html>'}).report, 'Revised detailed design Tilting carriage 1.0 in place (draft 2 · in progress)\nOn push: CI runs the publication checks. The layout check is not rerun for a draft; the local check you ran is its check.\n');
+  assert.equal(p.stage('1.0', {page: '<html>Second draft</html>'}).report, 'Revised detailed design Tilting carriage 1.0 in place (draft 2 · in progress)\nBefore pushing, run the publication check: node PLUGIN/scripts/design-publication.mjs check .\nOn push: the project\'s workflow publishes the page. Nothing is rerun.\n');
   assert.equal(p.stage('1.0', {page: '<html>Second draft</html>'}).report, 'Detailed design Tilting carriage 1.0 is unchanged (draft 2)\n');
   assert.equal(p.stage('1.0', {page: '<html>Third draft</html>'}).revision['1.0'].number, 3);
   assert.deepEqual(p.index().designs, ['1.0']);
@@ -114,7 +119,7 @@ test('minor is the detailed effective baseline: a newly effective minor supersed
   const p = project(t);
   p.stage('1.0');
   const first = markEffective({project: p.root, design: '1.0', readiness: p.review()});
-  assert.match(first.report, /Work toward the next baseline of Tilting carriage is 1\.1, staged as drafts until it is accepted\. A different architecture is 2\.0 with its own name\.\nOn push: this is the stage gate\. CI reruns the full layout check once on the committed design, on each push of the branch that carries this change\. Make it the last commit of its pull request\.\n$/);
+  assert.match(first.report, /Work toward the next baseline of Tilting carriage is 1\.1, staged as drafts until it is accepted\. A different architecture is 2\.0 with its own name\.\nOn push: the project's workflow publishes the page\. Nothing is rerun\.\n$/);
   assert.deepEqual([first.designStatus, first.accepted && Object.keys(first.accepted)], [{'1.0': 'effective'}, ['1.0']]);
   // An effective design stops changing; work toward the next baseline is the next minor.
   assert.throws(() => p.stage('1.0', {page: '<html>Late edit</html>'}), /Detailed design Tilting carriage 1\.0 is effective and no longer changes\. Work toward its next baseline is 1\.1, staged as a draft/);
@@ -125,7 +130,7 @@ test('an accepted revision is 1.1; it supersedes 1.0, and an earlier number is r
   p.stage('1.0');
   markEffective({project: p.root, design: '1.0', readiness: p.review()});
   const draft = p.stage('1.1');
-  assert.equal(draft.report, 'Staged detailed design Tilting carriage 1.1 (draft 1 · in progress)\nOn push: CI runs the publication checks. The layout check is not rerun for a draft; the local check you ran is its check.\n');
+  assert.equal(draft.report, 'Staged detailed design Tilting carriage 1.1 (draft 1 · in progress)\nBefore pushing, run the publication check: node PLUGIN/scripts/design-publication.mjs check .\nOn push: the project\'s workflow publishes the page. Nothing is rerun.\n');
   assert.deepEqual([draft.current, draft.beside], ['1.0', '1.1']);
   assert.deepEqual(errors(p.root), []);
   const accepted = markEffective({project: p.root, design: '1.1', readiness: p.review()});
@@ -143,18 +148,19 @@ test('when the next preliminary baseline is accepted the detailed draft is re-li
   p.stage('1.0');
   // Preliminary 1.1 is accepted: 1.0 is superseded, and the check asks for a re-link.
   p.listing({'1.0': 'superseded', '1.1': 'effective'});
-  const before = checkProject(p.root, {skipRerun: true});
+  const before = checkProject(p.root, {log: () => {}});
   assert.deepEqual(before.errors, []);
   assert.match(before.warnings.join('\n'), /Detailed design Tilting carriage 1\.0 names preliminary release 1\.0, which is now superseded\. Re-link it[\s\S]*relink PROJECT --design 1\.0 --preliminary RELEASE/);
   const linked = relink({project: p.root, design: '1.0', preliminary: '1.1'});
-  assert.equal(linked.report, 'Detailed design Tilting carriage 1.0 is now built on preliminary 1.1 (was 1.0) and keeps its ID\nOn push: CI runs the publication checks. The layout check is not rerun: no physics changed.\n');
+  assert.equal(linked.report, 'Detailed design Tilting carriage 1.0 is now built on preliminary 1.1 (was 1.0) and keeps its ID\nOn push: the project\'s workflow publishes the page. Nothing is rerun.\n');
   assert.deepEqual([linked.designs, linked.preliminary, linked.revision['1.0'].number], [['1.0'], {'1.0': '1.1'}, 1]);
   assert.deepEqual(read(path.join(p.root, detail, 'designs/1.0/design.json')).preliminary, {release: '1.1'});
-  const after = checkProject(p.root, {skipRerun: true});
+  const after = checkProject(p.root, {log: () => {}});
   assert.deepEqual([after.errors, after.warnings], [[], []]);
   // A release that is not effective is refused and nothing changes.
   p.listing({'1.0': 'superseded', '1.1': 'effective', '1.2': 'in-progress'});
   issueRelease(path.join(p.root, 'docs'), '1.2');
+  commitInputs(p.root, '1.2');
   assert.throws(() => relink({project: p.root, design: '1.0', preliminary: '1.2'}), /must name an effective preliminary release; 1\.2 is in-progress/);
   assert.deepEqual(read(path.join(p.root, detail, 'designs/1.0/design.json')).preliminary, {release: '1.1'});
   assert.equal(p.index().preliminary['1.0'], '1.1');
@@ -168,7 +174,7 @@ test('a different architecture is the next major number with its own name', t =>
   p.listing({'1.0': 'superseded', '2.0': 'effective'}, {1: {name: 'Tilting carriage'}, 2: {name: 'Swinging arm'}});
   assert.throws(() => relink({project: p.root, design: '1.0', preliminary: '2.0'}), /Preliminary design 2\.0 is a different architecture\. The major number is the architecture: its detailed design is 2\.0/);
   const arm = p.stage('2.0', {on: '2.0'});
-  assert.match(arm.report, /^Staged detailed design Swinging arm 2\.0 \(draft 1 · in progress\)\nNote: Tilting carriage 1\.0 is still in progress\. If the team has left that architecture, mark it superseded or withdraw it\.\nOn push: CI runs the publication checks\. The layout check is not rerun for a draft; the local check you ran is its check\.\n$/);
+  assert.match(arm.report, /^Staged detailed design Swinging arm 2\.0 \(draft 1 · in progress\)\nNote: Tilting carriage 1\.0 is still in progress\. If the team has left that architecture, mark it superseded or withdraw it\.\nBefore pushing, run the publication check: node PLUGIN\/scripts\/design-publication\.mjs check \.\nOn push: the project's workflow publishes the page\. Nothing is rerun\.\n$/);
   assert.deepEqual(arm.architectures, {1: {name: 'Tilting carriage'}, 2: {name: 'Swinging arm'}});
   assert.equal(supersede({project: p.root, design: '1.0', by: '2.0'}).designStatus['1.0'], 'superseded');
   assert.deepEqual(errors(p.root), []);
@@ -177,15 +183,15 @@ test('a different architecture is the next major number with its own name', t =>
 test('an earlier free-form ID keeps working beside versions, with no name and no forced migration', t => {
   const p = project(t);
   const legacy = p.stage('detail-001');
-  assert.equal(legacy.report, 'Staged detailed design detail-001 (draft 1 · in progress)\nOn push: CI runs the publication checks. The layout check is not rerun for a draft; the local check you ran is its check.\n');
+  assert.equal(legacy.report, 'Staged detailed design detail-001 (draft 1 · in progress)\nBefore pushing, run the publication check: node PLUGIN/scripts/design-publication.mjs check .\nOn push: the project\'s workflow publishes the page. Nothing is rerun.\n');
   assert.equal(legacy.architectures, undefined);
   assert.equal(p.stage('detail-001', {page: '<html>Edit</html>'}).revision['detail-001'].number, 2);
   // An index written before drafts and names, with only the earlier fields, still passes the check and still stages.
   const file = detail + '/designs.json', {revision, ...earlier} = read(path.join(p.root, file));
   write(p.root, file, earlier);
-  const checked = checkProject(p.root, {skipRerun: true});
+  const checked = checkProject(p.root, {log: () => {}});
   assert.deepEqual([checked.errors, checked.warnings], [[], []]);
-  assert.deepEqual(checked.detailed.designs, [{design: 'detail-001', status: 'in-progress', rerun: 'skipped'}]);
+  assert.deepEqual(checked.detailed.designs, [{design: 'detail-001', status: 'in-progress'}]);
   assert.equal(p.stage('detail-001', {page: '<html>Another edit</html>'}).revision['detail-001'].number, 2, 'one staged before drafts were counted is at 1');
   markEffective({project: p.root, design: 'detail-001', readiness: p.review()});
   assert.throws(() => p.stage('detail-001', {page: '<html>Late</html>'}), /Design detail-001 is effective; choose a new ID/);
@@ -244,14 +250,14 @@ test('the check warns on two in-progress versions of one architecture and on a m
   cpSync(path.join(p.root, detail, 'designs/1.0'), path.join(p.root, detail, 'designs/1.1'), {recursive: true});
   write(p.root, detail + '/designs/1.1/design.json', {...read(path.join(p.root, detail, 'designs/1.0/design.json')), design: '1.1'});
   write(p.root, file, {...index, designs: ['1.0', '1.1'], designStatus: {'1.0': 'in-progress', '1.1': 'in-progress'}, current: '1.1'});
-  const two = checkProject(p.root, {skipRerun: true});
+  const two = checkProject(p.root, {log: () => {}});
   assert.deepEqual(two.errors, []);
   assert.match(two.warnings.join('\n'), /Detailed design Tilting carriage has 2 in-progress versions \(1\.0, 1\.1\)\. A draft takes no number/);
   cpSync(path.join(p.root, detail, 'designs/1.0'), path.join(p.root, detail, 'designs/2.0'), {recursive: true});
   write(p.root, detail + '/designs/2.0/design.json', {...read(path.join(p.root, detail, 'designs/1.0/design.json')), design: '2.0'});
   write(p.root, file, {...index, designs: ['1.0', '2.0'], designStatus: {'1.0': 'superseded', '2.0': 'in-progress'}, current: '2.0',
     architectures: {1: {name: 'Tilting carriage'}, 2: {name: 'Swinging arm'}}});
-  assert.match(checkProject(p.root, {skipRerun: true}).errors.join('\n'), /Detailed design Swinging arm 2\.0 names preliminary design 1\.0, a different architecture/);
+  assert.match(checkProject(p.root, {log: () => {}}).errors.join('\n'), /Detailed design Swinging arm 2\.0 names preliminary design 1\.0, a different architecture/);
 });
 
 test('the command line stages a version, re-links it and reports each refusal', t => {
@@ -263,7 +269,7 @@ test('the command line stages a version, re-links it and reports each refusal', 
   assert.equal(linked.status, 0, linked.stderr);
   assert.match(linked.stderr, /is now built on preliminary 1\.1 \(was 1\.0\) and keeps its ID/);
   assert.equal(JSON.parse(linked.stdout).preliminary['1.0'], '1.1');
-  const effective = run('effective', p.root, '--design', '1.0', '--readiness', p.review());
+  const effective = run('effective', p.root, '--design', '1.0', '--readiness', p.review(), '--check', gateCheck);
   assert.equal(effective.status, 0, effective.stderr);
   assert.match(effective.stderr, /Work toward the next baseline of Tilting carriage is 1\.1/);
   const refused = run('relink', p.root, '--design', '1.0', '--preliminary', '1.1');

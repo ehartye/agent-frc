@@ -56,10 +56,13 @@ test('the Design checks block is written into AGENTS.md once and refreshed in pl
   writeFileSync(file, '<!-- agent-frc:design-checks:start -->\nHalf a block.\n');
   assert.throws(() => writeDesignChecks(root), /unfinished Design checks block/);
   // The block says what to run for each kind of change, and never asks for the layout check on a page change.
-  for (const line of ['| Geometry, a motion, a tolerance or reserve, a fixture, a trial, a mass or voltage budget | The local layout check, on the phases the change affects |',
+  for (const line of ['| Geometry, a motion, a tolerance or reserve, a fixture, a trial, a mass or voltage budget | The layout check, on the phases the change affects |',
     'Never the layout check |', '| The physics of an effective design | Do not edit it in place. Open the next minor version as a draft |',
-    '- Time guidelines: about 1 minute while editing, 5 before merging, 15 at a stage gate.', 'docs/testing-methodology.md'])
+    'It runs the stage gate itself: the full layout check on the committed design, once.', 'a push only publishes.',
+    '- Time guidelines: about 1 minute while editing, 5 before merging, 15 at a stage gate.'])
     assert.ok(designChecksBlock.includes(line), line);
+  // The block stands alone in a project: it needs no link and names no plugin, repository or path.
+  assert.doesNotMatch(designChecksBlock.replace(/agent-frc:design-checks:(start|end)/g, ''), /https?:|agent-frc|plugin|PLUGIN|\.mjs|\.py/i);
   // A new project gets the file.
   const fresh = project();
   assert.equal(writeDesignChecks(fresh), 'written');

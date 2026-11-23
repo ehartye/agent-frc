@@ -95,4 +95,4 @@ Run the [full handoff check](review-layout-template.md#handoff-check) once, befo
 
 ## Share on a local network
 
-Serve only the review and its local assets, with `python cad/preliminary-design/serve.py --bind LAN_ADDRESS --port 8000`. Give the reviewer the URL, the design's name and version, and how to stop the server. Open the URL on the host, then on a second device when one is available. Private CAD and unrelated files stay outside the served folder.
+Serve only the review and its local assets, with `python PLUGIN/scripts/serve_preliminary_review.py --bind LAN_ADDRESS --port 8000`. Give the reviewer the URL, the design's name and version, and how to stop the server. Open the URL on the host, then on a second device when one is available. Private CAD and unrelated files stay outside the served folder.

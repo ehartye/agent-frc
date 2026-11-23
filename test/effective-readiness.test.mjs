@@ -1,7 +1,6 @@
 /**
  * @lane merge
  * @subject scripts/effective-readiness.mjs
- * @subject templates/stage-preliminary-review.py
  */
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
@@ -294,34 +293,4 @@ test('a release folder under the project root holds the three files while pins r
   assert.equal(titled.status,0,titled.stderr);
   assert.match(titled.stdout,/^Effective-readiness report for Tilting carriage 1\.0 \(\S+\)\r?\n/);
   assert.equal(effectiveReadiness(root,{release:folder,design:'Tilting carriage 1.0'}).design,'Tilting carriage 1.0');
-});
-
-test('stage.py prints the report when a release is marked effective',t=>{
-  const python=process.env.PYTHON||(process.platform==='win32'?'python':'python3');
-  const season=mkdtempSync(path.join(tmpdir(),'readiness-season-'));t.after(()=>rmSync(season,{recursive:true,force:true}));
-  const author=path.join(season,'cad','preliminary-design'),inputs=project(t,d=>{d.missions.risks[0].closedBy='Invented “interlock” — holds the turn';});
-  mkdirSync(path.join(author,'releases'),{recursive:true});
-  writeFileSync(path.join(author,'stage.py'),readFileSync(path.join(plugin,'scripts','stage_preliminary_review.py')));
-  const script=String.raw`
-import importlib.util, sys
-from pathlib import Path
-spec = importlib.util.spec_from_file_location("stage", sys.argv[1])
-stage = importlib.util.module_from_spec(spec); spec.loader.exec_module(stage)
-stage.readiness_report(Path(sys.argv[2]), Path(sys.argv[3]) if len(sys.argv) > 3 else None)
-`;
-  const run=(...args)=>spawnSync(python,['-c',script,path.join(author,'stage.py'),...args],{encoding:'utf8'});
-  const shown=run(inputs,path.join(plugin,'scripts','effective-readiness.mjs'));
-  assert.equal(shown.status,0,shown.stderr);
-  assert.match(shown.stdout,/Effective-readiness report for synthetic-issue/);
-  assert.match(shown.stdout,/Result: 3 of 3 criteria met\./);
-  const hint=run(inputs);
-  assert.equal(hint.status,0,hint.stderr);
-  assert.match(hint.stdout,/effective-readiness/);
-  assert.doesNotMatch(hint.stdout,/Result:/);
-  const absent=run(path.join(inputs,'absent'),path.join(plugin,'scripts','effective-readiness.mjs'));
-  assert.equal(absent.status,0,'a missing inputs folder never stops a status change');
-  assert.match(absent.stdout,/report unavailable/);
-  const broken=run(inputs,path.join(inputs,'no-such-reporter.mjs'));
-  assert.equal(broken.status,0,'a reporter that cannot run never stops a status change');
-  assert.match(broken.stdout,/report unavailable/);
 });

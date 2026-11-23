@@ -2,7 +2,7 @@
 
 Run every command from the repository root. `PLUGIN` stands for the installed plugin's folder and `1.0` for the design's version. The examples use invented names.
 
-`PLUGIN` must not change during a run. Point it at an installed copy of the plugin's current release, or at a worktree of your own. A shared checkout that another session updates mid-run spoils the result. Record the revision with each result. Set `AGENT_FRC_PLUGIN` to the same folder: the project's `stage.py` is a few lines that call the plugin's staging command.
+`PLUGIN` must not change during a run. Point it at an installed copy of the plugin, or at a worktree of your own. A shared checkout that another session updates mid-run spoils the result. Record the revision with each result. The project holds no plugin file: every plugin command here is one you run, from the project root.
 
 ## Contents
 
@@ -24,7 +24,7 @@ Run every command from the repository root. `PLUGIN` stands for the installed pl
 python PLUGIN/examples/preliminary-design/create.py . --project-review --release 1.0 --design-name "Tilting carriage"
 ```
 
-Run the starter once per project, with the plugin's geometry Python environment. It writes the project's publish script (`cad/preliminary-design/stage.py`), local server (`serve.py`), index page, fonts and CI workflow. It also writes a synthetic example design under `cad/preliminary-design/releases/1.0/`. Replace that example's inputs with the project's own.
+Run the starter once per project, with the plugin's geometry Python environment. It writes the design folder, the published index page and the project's own CI.py`), index page, fonts and CI workflow. It also writes a synthetic example design under `cad/preliminary-design/releases/1.0/`. Replace that example's inputs with the project's own.
 
 For a project with `iterations/active.json`, work in its active design root. [Design iterations](../../../docs/design-iterations.md)
 
@@ -76,7 +76,7 @@ The receipt's `status` is `layout-checked`, `provisional`, `blocked` or `reopen`
 ## Look at it locally
 
 ```sh
-python cad/preliminary-design/serve.py
+python PLUGIN/scripts/serve_preliminary_review.py
 ```
 
 Open `http://127.0.0.1:8000/`. The page cannot load its scene from `file://`. For a review on the local network, add `--bind LAN_ADDRESS --port 8000`.
@@ -84,15 +84,15 @@ Open `http://127.0.0.1:8000/`. The page cannot load its scene from `file://`. Fo
 ## Publish a draft
 
 ```sh
-python cad/preliminary-design/stage.py 1.0 --design-name "Tilting carriage"
-node PLUGIN/scripts/design-publication.mjs check . --skip-rerun
+python PLUGIN/scripts/stage_preliminary_review.py 1.0 --design-name "Tilting carriage"
+node PLUGIN/scripts/design-publication.mjs check .
 ```
 
 `--design-name` is given once, the first time a major number is published. Publishing needs a `layout-checked` receipt of a full check and at least one mission case in `missions.json`. A mission case names a passing operating case and a narrative objective the plan marks `represented`.
 
-Commit, push the branch and open a pull request. CI checks what the draft publishes on every pushed branch: the receipt is of the committed files, the page shows the receipt's numbers and a mission animation plays. It does not rerun the layout check for a draft. The run you just made is that check, so `--skip-rerun` above is right. The site deploys from the default branch, so the draft is published when the pull request merges. Then open the published URL, `/<repository>/preliminary-design/` on the project's Pages site, and play each motion.
+Commit, push the branch and open a pull request. The push runs the project's own CI: the path and secret scan and the site check. No design check runs there; the layout check and the publication check you just ran are the checks of a draft. The site deploys from the default branch, so the draft is published when the pull request merges. Then open the published URL, `/<repository>/preliminary-design/` on the project's Pages site, and play each motion.
 
-After any later edit, rerun the check in the same folder and run `stage.py 1.0` again. That publishes the next draft of the same version. [Versions, drafts and statuses](../../../docs/design-publication.md#name-and-number-a-design)
+After any later edit, rerun the check in the same folder and run the staging command for `1.0` again. That publishes the next draft of the same version. [Versions, drafts and statuses](../../../docs/design-publication.md#name-and-number-a-design)
 
 ## Add trials and replays
 
@@ -134,15 +134,15 @@ Take each figure from the plan, the receipt, `missions.json` or a trial record, 
 ## Mark the design effective
 
 ```sh
-python cad/preliminary-design/stage.py --set-status 1.0 effective
+python PLUGIN/scripts/stage_preliminary_review.py --set-status 1.0 effective
 ```
 
-Do this only after the user agrees. It is an index edit in a reviewed pull request, with the readiness report attached. Make it the last commit of its pull request: this is the stage gate, and CI reruns the layout check once on the committed inputs for each push that carries it. An effective design no longer changes. Only its view can be republished, with `stage.py --refresh-view 1.0` after a `--view-only` rebuild. [When the layout check reruns](../../../docs/design-publication.md#when-the-layout-check-reruns)
+Do this only after the user agrees, and after the design's inputs are committed. The command runs the stage gate itself: the full layout check on the committed design, once. It prints the time against the 15-minute guideline and the readiness report, writes `gate.json` beside the published design and sets the status only when the gate passes. Then run the publication check and open the pull request with the status change and the gate record. An effective design no longer changes. Only its view can be republished, with `python PLUGIN/scripts/stage_preliminary_review.py --refresh-view 1.0` after a `--view-only` rebuild. [The stage gate](../../../docs/design-publication.md#the-stage-gate)
 
 ## Start the next version
 
 ```sh
-python cad/preliminary-design/stage.py --copy-inputs 1.0 1.1
+python PLUGIN/scripts/stage_preliminary_review.py --copy-inputs 1.0 1.1
 ```
 
 | Situation | What to do |
@@ -156,6 +156,6 @@ python cad/preliminary-design/stage.py --copy-inputs 1.0 1.1
 - The commands run unchanged in PowerShell and in Git Bash. Use forward slashes in every path you write into a file.
 - Keep committed paths short. A deep folder plus a long file name passes the Windows path length and fails a clone.
 - Write no drive letter or home folder into a script, a plan or a record.
-- CI runs on Linux. It reruns the layout check only when a design becomes effective, and then compares digests and verdicts, not measured values digit for digit. Run `design-publication.mjs check . --skip-rerun` locally before every push: the layout check has just run, so do not run it a second time.
+- The project's CI runs on Linux and runs only the project's own scan and site check. Run `node PLUGIN/scripts/design-publication.mjs check .` before every push.
 - After a plugin update, the check keeps a review page that already exists. Delete `package-motion.html` in the design's folder and run the check with `--view-only` to take the new stock page.
 - Write browser-check captures to a scratch folder outside the checkout.

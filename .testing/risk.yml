@@ -1,7 +1,7 @@
 # Risk map for the plugin's own tests. Method: docs/testing-methodology.md.
 # First matching area wins, so specific areas come before broad ones.
 phase: dev
-# Robot projects follow the current release. No old format is kept working for them.
+# The plugin is a tool of the coding agent. No robot project depends on it, and no old format is kept working.
 consumers: []
 weights:
   wait: 1
@@ -15,9 +15,10 @@ lanes:
   merge:
     runs: critical+standard
     trigger: local-pre-push
+  # No scheduled run exists. A test tagged for this lane runs when someone asks for the full suite, and at a release.
   scheduled:
     runs: all
-    trigger: cron
+    trigger: on-request
     os:
       - windows
       - ubuntu
@@ -57,18 +58,21 @@ areas:
   - path: scripts/bench-tests.mjs
     tier: critical
     why: bench-test records the detailed stage gate reads
+  - path: scripts/stage-gate.mjs
+    tier: critical
+    why: the stage gate the agent runs when a design is marked effective
   - path: scripts/stage_preliminary_review.py
     tier: critical
     why: staging and status changes for preliminary designs
-  - path: .github/workflows/design-publication.yml
+  - path: templates/project-ci/**
     tier: critical
-    why: the workflow a project calls: it runs the gate and publishes
-  - path: templates/stage-preliminary-review.py
+    why: the scan, site check and workflow a project copies and then owns; they must stand with no plugin
+  - path: examples/sample-project/**
     tier: critical
-    why: staging and status changes for preliminary designs
-  - path: templates/design-publication.yml
-    tier: critical
-    why: the workflow that runs the gate and publishes
+    why: proves the reference CI runs in a project that holds nothing of the plugin
+  - path: scripts/project-ci-audit.mjs
+    tier: standard
+    why: advice to the agent on a project's own CI
   # Publishing hygiene.
   - path: scripts/branch-scan.mjs
     tier: critical

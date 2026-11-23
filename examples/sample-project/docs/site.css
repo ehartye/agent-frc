@@ -1,0 +1,4 @@
+body { margin: 0; font: 16px/1.5 system-ui, sans-serif; color: #17263a; background: #f6f8fb; }
+main { max-width: 44rem; margin: 0 auto; padding: 2rem 1rem; }
+table { border-collapse: collapse; }
+td, th { padding: 0.35rem 0.75rem; border-bottom: 1px solid #d4dce8; text-align: left; }

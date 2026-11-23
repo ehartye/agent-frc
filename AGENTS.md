@@ -39,8 +39,8 @@ Follow [Test by need and risk](docs/testing-methodology.md). It decides what run
 - `.testing/risk.yml` gives the tier of each area. Read it before adding or changing a test.
 - While editing, run `npm run validate` and `npm run test:changed`, which runs only the tests that cover the files you changed. Run everything (`npm test`) only before a release tag or when asked. [Commands and lanes](docs/project-ci.md#how-the-plugin-repository-tests-itself)
 - A change to a page, a title, a name, a status or a document never triggers a model evaluation.
-- Rerun a design's full layout check in CI only when the design changes stage. Publish a draft on its local check.
+- The stage gate is the full layout check on the committed design. The agent runs it, once, when the design is marked effective. A draft is published on its own layout check, and a push only publishes.
 - Name the failure a new test catches and keep a control that proves it can fail. One owner per invariant.
 - Do not digest, pin or byte-compare inputs to decide whether to run. Do not prove an unchanged result again.
 - When a run is heading past its time guideline (about 1 minute while editing, 5 before merging, 15 at a gate), stop and check in with the owner.
-- Keep a project loosely coupled to the plugin: it follows the current release and holds data, not copies of plugin behaviour.
+- The plugin is a tool of the coding agent, not a dependency of a project. Project code never runs plugin code: no file a project holds or copies from `templates/` may name the plugin's repository, a commit, a path or a variable of it. A project's CI is its own files, written from `templates/project-ci/`.

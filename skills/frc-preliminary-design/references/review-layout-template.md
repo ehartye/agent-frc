@@ -32,14 +32,13 @@ The example uses invented dimensions and duties. Replace them with the project's
 
 ```sh
 python PLUGIN/examples/preliminary-design/create.py . --project-review --release 1.0 --design-name "Turning carrier"
-python cad/preliminary-design/serve.py
+python PLUGIN/scripts/serve_preliminary_review.py
 ```
 
 Open `http://127.0.0.1:8000/`. For a LAN review pass `--bind LAN_ADDRESS --port 8000` using the host's LAN address. Stop the server with Ctrl+C. The launcher serves only the project-owned static site; the published site runs entirely in the browser.
 
 ```text
 cad/preliminary-design/
-  serve.py, stage.py             project-owned launcher and publish script
   .gitignore                     keeps the input-side compressed scene out of version control
   releases/1.0/
     design.json, layout.json     the editable design and the plan: datums, groups, member IDs, presentation fields
@@ -55,7 +54,7 @@ cad/preliminary-design/
     release-lane-replay.json     example replay set that plays the run in the animation list
     field/release-lane.html      earlier separate field page, kept by the synthetic example; do not add one
 .github/workflows/
-  design-publication.yml         scans and checks each pushed branch, reruns the layout check when a design becomes effective, deploys from the default branch
+  ci.yml                         the project's own CI: scan, site check, publish from the default branch
 docs/preliminary-design/
   index.html, releases.json      stable viewer, ordered index of versions, current version and design statuses
   fonts/                         bundled theme fonts, fonts.css and their OFL licenses
@@ -80,15 +79,15 @@ With `--write-view` the check writes a missing page or scene and replaces a stal
 
 A different Python or zlib build can compress the same content to different bytes. That does not matter to publishing: the publication check compares the scene's content with the receipt, not its compressed bytes.
 
-An active iteration can keep its editable inputs under its own design root. Keep its site and launch command reachable from the repository root. Commit the inputs the check reads, so the project's CI can rerun it. Leave out third-party material whose licence forbids redistribution.
+An active iteration can keep its editable inputs under its own design root. Keep its site and launch command reachable from the repository root. Commit the inputs the check reads: the stage gate runs on the committed design. Leave out third-party material whose licence forbids redistribution.
 
 ## Versions, drafts and the published site
 
-One design has one version folder and one review page. Publish it with the project's `stage.py`:
+One design has one version folder and one review page. Publish it with the plugin's staging command, from the project root:
 
 ```sh
-python cad/preliminary-design/stage.py 1.0 --design-name "Turning carrier"
-node PLUGIN/scripts/design-publication.mjs check . --skip-rerun
+python PLUGIN/scripts/stage_preliminary_review.py 1.0 --design-name "Turning carrier"
+node PLUGIN/scripts/design-publication.mjs check .
 ```
 
 **What publishing needs.** A `layout-checked` receipt of a full check and at least one mission case in `missions.json`. Each mission case names a passing operating case, its accomplishment (`acquired`, `delivered`, `scored` or `climb-held`) and a `represented` narrative objective. The design need not be ready for detailed design.
@@ -103,17 +102,17 @@ node PLUGIN/scripts/design-publication.mjs check . --skip-rerun
 | The design that follows an effective one | The next minor version |
 | A different architecture or concept | The next major version, with its own name |
 
-**Statuses.** When the user accepts the design, mark it `effective` with `python cad/preliminary-design/stage.py --set-status VERSION effective` in a reviewed pull request. The previous effective design becomes `superseded`. Withdraw one with `--set-status VERSION withdrawn --reason "…"`: the index keeps the reason and the last commit that held its files, and the files leave the site. [Design status](../../../docs/design-phase-detail.md#design-status)
+**Statuses.** When the user accepts the design, mark it `effective` with `python PLUGIN/scripts/stage_preliminary_review.py --set-status VERSION effective` in a reviewed pull request. The previous effective design becomes `superseded`. Withdraw one with `--set-status VERSION withdrawn --reason "…"`: the index keeps the reason and the last commit that held its files, and the files leave the site. [Design status](../../../docs/design-phase-detail.md#design-status)
 
 **What a visitor sees.** The stable URL opens the effective design, or the newest in-progress one when none is effective. The stable viewer shows only the version picker above the review page, and the picker names each design's status. Share another version with `?release=1.0`, and a named case with `?case=CASE_ID`. An unknown version names the requested ID and offers the picker.
 
-**The publication check.** The scene must repeat the receipt's STEP and motion digests, case results, displaced control, narrative objectives, parked-assembly result, each duty's figures and the mass figures. Its decision may never claim a checked result the receipt does not hold. The project's CI runs the same check on every push, and reruns the layout check from the committed inputs once, when the design becomes effective. [Publish and check designs](../../../docs/design-publication.md)
+**The publication check.** The scene must repeat the receipt's STEP and motion digests, case results, displaced control, narrative objectives, parked-assembly result, each duty's figures and the mass figures. Its decision may never claim a checked result the receipt does not hold. Run it before every push. The layout check runs again once, at the stage gate, when the design is marked effective. [Publish and check designs](../../../docs/design-publication.md)
 
 **A second workstation.** Pull before publishing. Resolve a conflict in `releases.json` by keeping every version and running `--set-status` again for the current one. Local publishing locks the index and releases the lock on process exit.
 
 ### The workflow and Pages
 
-The starter copies the plugin's design publication workflow to `.github/workflows/design-publication.yml`. It is a few lines that call the plugin's workflow and names no plugin commit. Enable GitHub Actions as the Pages source and require its two checks on the default branch. [Set up the workflow](../../../docs/design-publication.md#set-up-the-workflow)
+The starter writes the project's own CI from the plugin's references: `.github/workflows/ci.yml` and the two checks under `scripts/ci/`. They name no plugin. Enable GitHub Actions as the Pages source and require the **Scan and site check** job on the default branch. [Write the project's CI](../../../docs/project-ci.md#write-the-projects-ci)
 
 The workflow deploys the complete `docs/` tree from the default branch after the checks pass. The stable URL is `/<repository>/preliminary-design/`.
 
@@ -243,7 +242,7 @@ With 11.5 V open circuit, the modeled bus is **10.0 V**, or **+0.8 V** above a 9
 
 A design published before the stock review page and its scene has no scene to compare with its receipt. Regenerate it:
 
-1. Copy the plugin's `templates/stage-preliminary-review.py` over `cad/preliminary-design/stage.py`, `templates/preliminary-review-fonts/` to `docs/preliminary-design/fonts/` and `templates/preliminary-review-gitignore` to `cad/preliminary-design/.gitignore`.
+1. Copy the plugin's `templates/preliminary-review-fonts/` to `docs/preliminary-design/fonts/` and `templates/preliminary-review-gitignore` to `cad/preliminary-design/.gitignore`.
 2. Move any season-specific page content into the `presentation` fields above.
 3. Delete the input-side page and any old `*.geometry.json.gz`, then run the check with `--write-view`.
 4. Validate the scene and publish again under the same version while it is in progress.

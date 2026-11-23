@@ -1,12 +1,10 @@
 #!/usr/bin/env node
 /**
- * Check a season project's published designs. This is the whole publication gate:
+ * Check what a project publishes about its designs. The coding agent runs this before pushing; it is a tool of the
+ * agent and no part of the project's CI. It never runs the layout check:
  *
  *   1. Every in-progress or effective design carries a layout-checked receipt of its committed layout plan, and the
- *      files that receipt names are the committed ones. The layout check itself is rerun here only at the gate: when
- *      the change under check makes a design effective. It then runs once on the committed inputs: it passes, the
- *      displaced control is rejected, and its verdicts and input digests equal the committed receipt. A draft is
- *      not rerun here; its author runs the local check.
+ *      files that receipt names are the committed ones.
  *   2. The numbers the review scene shows equal the receipt.
  *   3. A mission case plays a represented objective on a passing operating case.
  *   4. An in-progress detailed design names an effective preliminary release and its receipt is on the Fusion export.
@@ -15,24 +13,27 @@
  *   6. One status index per phase, with at most one effective design and the primary view computed from it. A
  *      design whose ID is a version, MAJOR.MINOR, belongs to an architecture the index names, and a detailed version
  *      keeps the major number of the preliminary design it is built on.
+ *   7. A design that was effective on the default branch of the remote keeps its physics: a rename, a status or
+ *      wording change and a rebuilt view pass, and a change to what the layout check read or found is refused,
+ *      because that work belongs to the next minor version, opened as a draft.
+ *   8. A design this change makes effective carries the record of its stage gate (stage-gate.mjs), which the command
+ *      that marks it effective writes after running the full layout check on the committed design.
+ *   9. No tracked file holds a personal machine path or a credential, and the project carries no plugin file.
  *
- * A design becomes effective by a status change in the index, in a reviewed pull request, and this check prints the
- * readiness report for its reviewer. A detailed design whose mechanical-readiness review does not pass cannot be
- * effective. A design that was already effective keeps its physics: a rename, a status or wording change and a
- * rebuilt view pass with no rerun, and a change to what the layout check read or found is refused, because that work
- * belongs to the next minor version, opened as a draft. A withdrawn design is a status with a reason; its files may
- * leave the site. The check reads data only: it never inspects page markup.
+ * A detailed design whose mechanical-readiness review does not pass cannot be effective. A withdrawn design is a
+ * status with a reason; its files may leave the site. The check reads data only: it never inspects page markup.
  */
 import {createHash} from 'node:crypto';
 import {execFileSync, spawnSync} from 'node:child_process';
-import {existsSync, readFileSync, readdirSync, statSync, appendFileSync} from 'node:fs';
+import {existsSync, readFileSync, readdirSync, statSync} from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 
 import {architectureName, currentFor, designName, designStatuses, designTitle, detailedTitle, releaseId, stateOf, statusOf, versionOf} from './design-status.mjs';
 import {effectiveReadiness, readinessText} from './effective-readiness.mjs';
 import {compareWithReceipt, readScene} from './review-scene.mjs';
-import {contentSha, identityDifferences, physicsIdentity} from './physics-identity.mjs';
+import {contentSha, identityDifferences, physicsIdentity, receiptIdentity} from './physics-identity.mjs';
+import {scanTree} from '../templates/project-ci/scan.mjs';
 import {benchFile, effectiveProblems, handedOver, summary as benchSummary, summaryText as benchText} from './bench-tests.mjs';
 
 const receiptSchema = 'agent-frc/preliminary-layout-result@1';
@@ -181,25 +182,22 @@ export function runLayoutCheck({project, plan, previous, budgetMinutes = 45, job
 }
 
 /** A JSON file under `dir` with this digest, as a path relative to `dir`: the held receipt a check ran against. */
-function findByDigest(dir, digest) {
+export function findByDigest(dir, digest) {
   return namesUnder(dir).find(name => name.endsWith('.json') && sha(readFileSync(path.join(dir, name))) === digest) ?? null;
 }
-/** The time guideline for a stage gate, and the page that says when each check runs. */
-const gateGuidelineMinutes = 15;
-export const methodPage = 'Method: https://github.com/ehartye/agent-frc/blob/main/docs/testing-methodology.md';
-
 /**
- * What a project still carries from an earlier plugin release, as one message that says what to change. A project
- * holds data and two thin files that call the plugin; a copy of plugin behaviour is replaced, not kept working.
+ * What a project still carries from the plugin, as one message that says what to do. The plugin is a tool of the
+ * coding agent: a project names, calls, copies and wraps none of it.
  */
-export function outdatedFiles(root) {
+export function pluginFilesIn(root) {
   const text = name => { try { return readFileSync(path.join(root, name), 'utf8'); } catch { return null; } };
-  const stale = [['.github/workflows/design-publication.yml', 'agent-frc/.github/workflows/design-publication.yml', 'templates/design-publication.yml'],
-    ['cad/preliminary-design/stage.py', 'stage_preliminary_review.py', 'templates/stage-preliminary-review.py']]
-    .filter(([name, marker]) => { const held = text(name); return held !== null && !held.includes(marker); });
-  return stale.length ? 'This project carries ' + (stale.length === 1 ? 'a copy' : 'copies') + ' of plugin behaviour from an earlier release. Replace ' +
-    stale.map(([name, , template]) => name + ' with the plugin\'s ' + template).join(', and ') +
-    '. Each is now a few lines that call the plugin, so there is nothing to copy again.' : null;
+  const workflows = path.join(root, '.github', 'workflows');
+  const found = (existsSync(workflows) ? readdirSync(workflows) : []).filter(name => /\.ya?ml$/.test(name))
+    .filter(name => /ehartye\/agent-frc|AGENT_FRC|plugin\/scripts\//.test(text('.github/workflows/' + name) ?? '')).map(name => '.github/workflows/' + name);
+  for (const name of ['cad/preliminary-design/stage.py', 'cad/preliminary-design/serve.py']) if (text(name) !== null) found.push(name);
+  return found.length ? 'This project carries plugin files from an earlier layout: ' + found.join(', ') + '. The plugin is a tool of the coding agent, not a dependency of the project. ' +
+    'Delete ' + (found.length === 1 ? 'it' : 'them') + ' and write the project\'s own CI from the references in the plugin\'s templates/project-ci/, which name no plugin. ' +
+    'The agent runs staging, the stage gate and this check from the plugin.' : null;
 }
 
 /** The files a receipt records by digest, each with the name a message gives it. */
@@ -207,22 +205,47 @@ const receiptPins = receipt => [['STEP', receipt.step], ['motion study', receipt
   ['budget ledger', receipt.budgets?.source], ['limits', receipt.budgets?.limits]].filter(([, pin]) => named(pin?.file) && named(pin?.sha256));
 
 /**
+ * Whether a design was checked from the project root. Such a plan pins its files from there. The view sits in the
+ * plan's folder, so its recorded path tells the two forms apart; the STEP does for a receipt without a view.
+ */
+export function checkedFromRoot(root, project, receipt) {
+  const recorded = [receipt?.view?.file, receipt?.step?.file].find(named);
+  const pinnedFile = recorded ? path.resolve(root, recorded) : null, into = pinnedFile && path.relative(project, pinnedFile);
+  return project !== root && !!into && into !== '..' && !into.startsWith('..' + path.sep) && !path.isAbsolute(into) && existsSync(pinnedFile);
+}
+
+/**
+ * A receipt belongs to the committed files: it is of the layout plan in `project`, and each file it names by digest
+ * is that file. Throws on a stale receipt. Returns {fromRoot, absent}: the files it names that are not there.
+ */
+export function committedReceipt(root, project, planName, receipt, where) {
+  const rel = full => path.relative(root, full).split(path.sep).join('/'), planFile = path.join(project, planName);
+  check(existsSync(planFile), where + ': commit its check inputs at ' + rel(project) + ' (' + planName + ' and every file it names)');
+  check(receipt.planSha256 === sha(readFileSync(planFile)), where + ': the published receipt is of a different layout plan than ' + rel(planFile) + '; run the layout check and publish its receipt');
+  const fromRoot = checkedFromRoot(root, project, receipt), absent = [];
+  for (const [label, pin] of receiptPins(receipt)) {
+    const full = path.resolve(fromRoot ? root : project, pin.file);
+    if (!statSync(full, {throwIfNoEntry: false})?.isFile()) { absent.push(pin.file); continue; }
+    check(contentSha(readFileSync(full)) === pin.sha256, where + ': the committed ' + label + ' (' + rel(full) + ') is not the file its receipt checked. Run the layout check on the committed files and publish its receipt');
+  }
+  return {fromRoot, absent};
+}
+
+/**
  * Check a project. Options: site, preliminary, detailed (site folders), inputs, detailedInputs (folders of committed
- * check inputs, one per design ID), base (the commit this change is compared with: the layout check reruns for a
- * design the change makes effective, and an effective design is held to the physics it had there), rerun ('all'
- * reruns every in-progress and effective design on demand), budgetMinutes, jobs (worker processes of each rerun; the
- * layout check chooses when it is absent), skipRerun, log (progress lines), run (the layout check; replaced in tests).
- * Returns {preliminary, detailed, reruns, warnings, reports, errors}; errors is empty when the project passes.
- * reruns says for each live design whether the layout check reran and why, in words.
+ * check inputs, one per design ID), base (the commit to compare with; by default where this branch left the default
+ * branch of the remote, as last fetched), scan (false skips the path and secret scan), log (progress lines).
+ * Returns {preliminary, detailed, designs, comparedWith, warnings, reports, errors}; errors is empty when the project
+ * passes. designs says in words what was checked for each live design.
  */
 export function checkProject(root, options = {}) {
   const o = {site: 'docs', preliminary: 'preliminary-design', detailed: 'detailed-design', inputs: 'cad/preliminary-design/releases',
-    detailedInputs: 'cad/detailed-design/designs', run: runLayoutCheck, log: line => console.error(line), now: () => Date.now(), ...options};
-  const errors = [], warnings = [], reports = [], pending = [], reruns = [];
+    detailedInputs: 'cad/detailed-design/designs', scan: true, log: line => console.error(line), ...options};
+  const errors = [], warnings = [], reports = [], pending = [], designs = [];
   const attempt = (what, body) => { try { return body(); } catch (error) { errors.push(error.message); return undefined; } };
-  const outdated = outdatedFiles(root);
-  if (outdated) errors.push(outdated);
-  const base = baseReader(root, o.base);
+  const carried = pluginFilesIn(root);
+  if (carried) errors.push(carried);
+  const compared = o.base === undefined ? remoteBase(root) : o.base ? {commit: o.base, name: o.base} : null, base = baseReader(root, compared?.commit);
   const rel = full => path.relative(root, full).split(path.sep).join('/');
   // A project file as it was at the base commit, parsed; null when it was not there.
   const before = name => { try { return parse(base.at(name), name + ' at the base commit'); } catch { return null; } };
@@ -230,13 +253,6 @@ export function checkProject(root, options = {}) {
   const earlier = indexFile => {
     const index = base && before(rel(indexFile));
     return {effective: Object.entries(index?.designStatus ?? {}).find(([, status]) => status === 'effective')?.[0] ?? null};
-  };
-  // A release checked from the repository root pins its files from there. The view sits in the plan's folder, so its recorded
-  // path tells the two forms apart; the STEP does for a receipt without a view.
-  const checkedFromRoot = (project, receipt) => {
-    const recorded = [receipt?.view?.file, receipt?.step?.file].find(named);
-    const pinnedFile = recorded ? path.resolve(root, recorded) : null, into = pinnedFile && path.relative(project, pinnedFile);
-    return project !== root && !!into && into !== '..' && !into.startsWith('..' + path.sep) && !path.isAbsolute(into) && existsSync(pinnedFile);
   };
   // The physics identity of a design from its receipt, record and inputs folder, read through `read` by project-relative path.
   const identityOf = ({receipt, record, inputs, read}) => {
@@ -305,12 +321,13 @@ export function checkProject(root, options = {}) {
         const receipt = checkEvidence(where, filesUnder(dir), record);
         const inputs = inputsOf(where, record, path.join(o.inputs, id));
         pending.push({where, entry, id, receipt, record, inputs, required: true, tree: path.join(prelimTree, 'releases'), recordName: 'release.json',
-          fallback: other => rel(path.join(root, o.inputs, other)), was: earlier(prelimIndexFile), ids});
+          fallback: other => rel(path.join(root, o.inputs, other)), was: earlier(prelimIndexFile), ids,
+          command: release => 'python PLUGIN/scripts/stage_preliminary_review.py --set-status ' + release + ' effective'});
         // Effective is the project's decision in a reviewed pull request. The report is for its reviewer.
         if (entry.status === 'effective') {
           const design = entry.design;
           reports.push({title: where + ' (effective)',
-            text: existsSync(inputs) ? readinessText(checkedFromRoot(inputs, receipt) ? effectiveReadiness(root, {release: rel(inputs), design}) : effectiveReadiness(inputs, {design})) : 'No readiness report: the check inputs are not committed.\n'});
+            text: existsSync(inputs) ? readinessText(checkedFromRoot(root, inputs, receipt) ? effectiveReadiness(root, {release: rel(inputs), design}) : effectiveReadiness(inputs, {design})) : 'No readiness report: the check inputs are not committed.\n'});
         }
       });
     }
@@ -340,7 +357,8 @@ export function checkProject(root, options = {}) {
       'The primary view is the effective detailed design, else the newest in-progress one: set current to ' + view.current + ' and beside to ' + view.beside);
     detailed = {...view, designs: []};
     const held = (where, entry, id, record) => ({where, entry, id, record, inputs: inputsOf(where, record, path.join(o.detailedInputs, id)), required: false,
-      tree: path.join(detailTree, 'designs'), recordName: 'design.json', fallback: other => rel(path.join(root, o.detailedInputs, other)), was: earlier(detailIndexFile), ids});
+      tree: path.join(detailTree, 'designs'), recordName: 'design.json', fallback: other => rel(path.join(root, o.detailedInputs, other)), was: earlier(detailIndexFile), ids,
+      command: design => 'node PLUGIN/scripts/detailed-design-release.mjs effective . --design ' + design + ' --readiness REVIEW_RESULT.json'});
     for (const id of ids) {
       const entry = {design: id, ...(architectureName(index, id) ? {title: detailedTitle(index, id), state: stateOf(index, id)} : {}), status: index.designStatus[id]};
       detailed.designs.push(entry);
@@ -391,14 +409,14 @@ export function checkProject(root, options = {}) {
     }
   });
 
-  // Decide for each live design whether the layout check reruns, and hold an effective design to its physics.
+  // Say for each live design what was checked, and hold an effective design to its physics and its gate.
+  const since = compared?.name;
   for (const item of pending) attempt(item.where, () => {
     const {where, entry, id, receipt, record, was} = item, project = item.inputs, effective = entry.status === 'effective';
-    // One plain line for each design: whether the layout check reran, and why.
-    const note = (rerun, why) => { entry.rerun = rerun; reruns.push({design: where, status: entry.status, rerun, why}); o.log('[layout check] ' + where + ': ' + why); };
-    let gate = false, why;
-    if (!effective) why = 'not rerun: draft. Its author runs the local layout check on what changed.';
-    else if (!base) why = 'not rerun: no base commit to compare with. Pass --rerun all to rerun on demand.';
+    const note = text => { designs.push({design: where, status: entry.status, note: text}); o.log('[publication] ' + where + ': ' + text); };
+    let becoming = false, said;
+    if (!effective) said = 'draft, published on its local layout check. The layout check is not run here.';
+    else if (!base) said = 'effective. No default branch of the remote to compare with, so its physics was not compared.';
     else if (was.effective === id) {
       // Already effective: the reviewed physics stands. Labels and the view may change.
       const then = identityBefore(item, id), differ = then ? identityDifferences(identityNow(item), then) : [];
@@ -406,54 +424,46 @@ export function checkProject(root, options = {}) {
       check(!differ.length, where + ' is effective, and this change alters its physics: ' + differ.join(', ') + '. An effective design does not change in place. ' +
         (version ? 'Open ' + version.major + '.' + (version.minor + 1) + ' as a draft and make the change there.' : 'Publish the change as a new design, staged as a draft.') +
         ' A rename, a status or wording change and a rebuilt view pass, because they leave these files and results as they were.');
-      why = 'not rerun: effective, physics unchanged.';
+      said = 'effective, physics unchanged since ' + since + '.';
     } else {
       // A rename keeps the design: the effective design of the base commit is gone from the index and this one carries its physics.
       const from = was.effective && !item.ids.includes(was.effective) ? was.effective : null, then = from && identityBefore(item, from);
-      if (then && !identityDifferences(identityNow(item), then).length) why = 'not rerun: effective, the same physics as ' + from + ' under a new ID.';
-      else { gate = true; why = 'rerun: becoming effective.'; }
+      if (then && !identityDifferences(identityNow(item), then).length) said = 'effective, the same physics as ' + from + ' under a new ID.';
+      else { becoming = true; said = 'becoming effective. Its stage gate record matches the committed receipt.'; }
     }
-    if (!receipt) return;
-    const skipped = () => gate ? 'not rerun: becoming effective, with --skip-rerun. The gate is the push of the branch that carries the change.'
-      : o.rerun === 'all' ? 'not rerun: --skip-rerun.' : why;
-    const planName = record.check?.plan ?? 'layout.json', planFile = path.join(project, planName);
-    if (!existsSync(planFile)) {
-      if (o.skipRerun) return note('skipped', skipped());
-      check(!item.required, where + ': commit its check inputs at ' + rel(project) + ' (' + planName + ' and every file it names) so the layout check can be rerun');
-      warnings.push(where + ': the layout check cannot be rerun because its inputs are not committed at ' + rel(project));
-      note('not committed', 'not rerun: its inputs are not committed.');
-      return;
+    if (!receipt) return note(said);
+    const planName = record.check?.plan ?? 'layout.json';
+    if (!existsSync(path.join(project, planName))) {
+      check(!item.required, where + ': commit its check inputs at ' + rel(project) + ' (' + planName + ' and every file it names). The stage gate runs on them');
+      warnings.push(where + ': its inputs are not committed at ' + rel(project) + ', so its receipt was not compared with them');
+      return note(said);
     }
-    const planSha256 = sha(readFileSync(planFile));
-    check(receipt.planSha256 === planSha256, where + ': the published receipt is of a different layout plan than ' + rel(planFile) + '; rerun the check and publish its receipt');
     // The receipt names the files it read by digest. The committed ones must be those files.
-    const fromRoot = checkedFromRoot(project, receipt), absent = [];
-    for (const [label, pin] of receiptPins(receipt)) {
-      const full = path.resolve(fromRoot ? root : project, pin.file);
-      if (!statSync(full, {throwIfNoEntry: false})?.isFile()) { absent.push(pin.file); continue; }
-      check(contentSha(readFileSync(full)) === pin.sha256, where + ': the committed ' + label + ' (' + rel(full) + ') is not the file its receipt checked. Run the layout check on the committed files and publish its receipt');
-    }
-    if (absent.length) warnings.push(where + ': its receipt names files that are not committed (' + absent.join(', ') + '). The layout check cannot be rerun without them.');
-    const all = o.rerun === 'all';
-    if (o.skipRerun) return note('skipped', skipped());
-    if (!gate && !all) return note('not needed', why);
-    const previous = receipt.previousCheckpointSha256 ? record.check?.previous ?? findByDigest(project, receipt.previousCheckpointSha256) : null;
-    check(!receipt.previousCheckpointSha256 || previous, where + ': commit the held receipt it was checked against (SHA-256 ' + receipt.previousCheckpointSha256 + ') under ' + rel(project));
-    o.log('[layout check] ' + where + ': running on ' + rel(planFile));
-    const within = name => fromRoot ? rel(path.join(project, name)) : name, began = o.now();
-    let fresh;
-    try { fresh = o.run({project: fromRoot ? root : project, plan: within(planName), previous: previous && within(previous), budgetMinutes: o.budgetMinutes, jobs: o.jobs}); }
-    catch (error) { throw Error(where + ': ' + error.message); }
-    checkPhysics(fresh, where + ' (rerun)', {rerun: true});
-    const differ = compareVerdicts(receipt, fresh);
-    check(!differ.length, where + ': the rerun differs from the committed receipt in ' + differ.join(', ') + '; publish the receipt of the committed inputs');
-    const minutes = (o.now() - began) / 60000;
-    // A gate that runs long is said aloud, never waited out in silence.
-    if (minutes > gateGuidelineMinutes) warnings.push(where + ': the layout check took ' + Math.round(minutes) + ' minutes, past the guideline of about ' + gateGuidelineMinutes +
-      ' for a stage gate. Tell the owner what is slow and agree a budget before the next gate. ' + methodPage);
-    note('pass', (gate ? why : 'rerun: on request (--rerun all).') + ' It reproduced the committed receipt.');
+    const {absent} = committedReceipt(root, project, planName, receipt, where);
+    if (absent.length) warnings.push(where + ': its receipt names files that are not committed (' + absent.join(', ') + '). The stage gate cannot run without them.');
+    // The command that marks a design effective runs the gate and writes its record. A status set by hand has none.
+    const gatePath = path.join(item.tree, id, 'gate.json'), gate = existsSync(gatePath) ? parse(readFileSync(gatePath), 'gate record of ' + where) : null;
+    const physics = sha(JSON.stringify(receiptIdentity(receipt)));
+    if (becoming) check(gate?.schema === 'agent-frc/stage-gate@1' && gate.verdict === 'pass' && gate.physics === physics, where + ' is marked effective without a stage gate of this design. ' +
+      'Mark it effective with the plugin\'s command, which runs the full layout check on the committed design and writes ' + rel(gatePath) + ': ' + item.command(id));
+    note(said);
   });
-  return {plugin: pluginVersion, preliminary, detailed, reruns, warnings, reports, errors};
+  // A personal machine path or a credential is public as soon as the branch is pushed.
+  if (o.scan) attempt('scan', () => {
+    let scan;
+    try { scan = scanTree(root); } catch (error) { if (/git/i.test(error.message)) return; throw error; }
+    for (const f of scan.findings) errors.push(f.file + ':' + f.line + ': ' + (f.kind === 'machine-path' ? 'a personal machine path; write paths relative to the repository' : 'a credential; remove it and rotate it') + ': ' + f.text);
+  });
+  return {plugin: pluginVersion, preliminary, detailed, designs, comparedWith: since ?? null, warnings, reports, errors};
+}
+
+/** Where this branch left the default branch of the remote, as last fetched: {commit, name}, or null without one. */
+function remoteBase(root) {
+  const git = (...args) => execFileSync('git', ['-C', root, ...args], {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']}).trim();
+  let names = [];
+  try { names = [git('symbolic-ref', '-q', '--short', 'refs/remotes/origin/HEAD')]; } catch { /* the remote names no default branch */ }
+  for (const name of [...names, 'origin/main', 'origin/master']) try { return {commit: git('merge-base', name, 'HEAD'), name}; } catch { /* try the next */ }
+  return null;
 }
 
 /** Reads project files as they were at a base commit, or null when there is no usable base. */
@@ -467,40 +477,27 @@ function baseReader(root, base) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
-  const usage = 'Usage: design-publication.mjs check PROJECT [--site docs] [--preliminary preliminary-design] [--detailed detailed-design] ' +
-    '[--inputs cad/preliminary-design/releases] [--detailed-inputs cad/detailed-design/designs] [--base COMMIT] [--rerun all] [--budget-minutes 45] [--jobs N] [--skip-rerun]';
+  const usage = 'Usage: design-publication.mjs check PROJECT [--base COMMIT] [--site docs] [--preliminary preliminary-design] [--detailed detailed-design] ' +
+    '[--inputs cad/preliminary-design/releases] [--detailed-inputs cad/detailed-design/designs]';
   try {
     const [mode, project, ...rest] = process.argv.slice(2), options = {};
     check(mode === 'check' && project && statSync(project, {throwIfNoEntry: false})?.isDirectory(), usage);
     for (let i = 0; i < rest.length; i++) {
-      if (rest[i] === '--skip-rerun') { options.skipRerun = true; continue; }
-      const name = {'--site': 'site', '--preliminary': 'preliminary', '--detailed': 'detailed', '--inputs': 'inputs', '--detailed-inputs': 'detailedInputs',
-        '--cache': 'cache', '--base': 'base', '--rerun': 'rerun', '--budget-minutes': 'budgetMinutes', '--jobs': 'jobs'}[rest[i]];
+      check(!['--skip-rerun', '--rerun', '--cache', '--budget-minutes', '--jobs'].includes(rest[i]), rest[i] + ' is no longer an option. This check never runs the layout check: ' +
+        'the stage gate runs when a design is marked effective, and the project\'s CI runs no plugin. ' + usage);
+      const name = {'--site': 'site', '--preliminary': 'preliminary', '--detailed': 'detailed', '--inputs': 'inputs', '--detailed-inputs': 'detailedInputs', '--base': 'base'}[rest[i]];
       check(name && rest[i + 1] !== undefined, usage);
-      options[name] = ['budgetMinutes', 'jobs'].includes(name) ? Number(rest[++i]) : rest[++i];
+      options[name] = rest[++i];
     }
-    check(options.budgetMinutes === undefined || options.budgetMinutes > 0, usage);
-    check(options.jobs === undefined || Number.isInteger(options.jobs) && options.jobs > 0, usage);
-    check(options.rerun === undefined || ['all', 'gate'].includes(options.rerun), usage);
-    // Results are not kept between runs. Only an earlier copy of the workflow passes this option.
-    check(options.cache === undefined, '--cache is no longer an option: nothing is kept between runs. This workflow file is from an earlier plugin release. ' +
-      'Replace .github/workflows/design-publication.yml with the plugin\'s templates/design-publication.yml, a few lines that call the plugin\'s workflow.');
-    // An all-zero or empty base, as a first push supplies, is no base.
-    if (options.base !== undefined && /^0*$/.test(options.base)) delete options.base;
-    const result = checkProject(path.resolve(project), options), actions = !!process.env.GITHUB_ACTIONS;
+    const result = checkProject(path.resolve(project), options);
     for (const report of result.reports) console.log('== ' + report.title + ' ==\n' + report.text);
-    const line = (kind, text) => actions ? '::' + kind + ' title=Design publication::' + text.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A')
-      : kind[0].toUpperCase() + kind.slice(1) + ': ' + text;
-    for (const warning of result.warnings) console.error(line('warning', warning));
-    for (const error of result.errors) console.error(line('error', error));
+    for (const warning of result.warnings) console.error('Warning: ' + warning);
+    for (const error of result.errors) console.error('Error: ' + error);
     const {reports, ...summary} = result;
     console.log(JSON.stringify(summary, null, 2));
-    if (process.env.GITHUB_STEP_SUMMARY && (result.reports.length || result.reruns.length)) {
-      const cell = text => String(text).replace(/\|/g, '\\|');
-      appendFileSync(process.env.GITHUB_STEP_SUMMARY, (result.reruns.length ? '### Layout check\n\n| Design | Status | Layout check |\n| --- | --- | --- |\n' +
-        result.reruns.map(r => '| ' + [r.design, r.status, r.why].map(cell).join(' | ') + ' |\n').join('') + '\n' + methodPage + '\n\n' : '') +
-        result.reports.map(r => '### ' + r.title + '\n\n```\n' + r.text + '```\n').join('\n'));
-    }
+    // The last line an agent reads: what a push will do.
+    console.error(result.errors.length ? 'Not ready to push: fix the ' + result.errors.length + ' error' + (result.errors.length === 1 ? '' : 's') + ' above.'
+      : 'Ready to push. On push: the project\'s workflow publishes the page. Nothing is rerun.');
     if (result.errors.length) process.exitCode = 1;
   } catch (error) { console.error(error.message); process.exitCode = 2; }
 }
