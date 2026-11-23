@@ -81,10 +81,27 @@ export function validateScene(scene) {
     for (const key of ['time', 'measure', 'positions'])
       if (c[key] && c[key].length !== frames) errors.push(at + '/' + key + ' needs one entry per frame (' + frames + ')');
   }
-  // Replays share the motion list and its deep links with the cases, so their IDs share one namespace.
+  // An animation plays the cases of one mission phase end to end. Every checked case belongs to exactly one; the control to none.
+  const animationIds = new Set();
+  if (scene.animations) {
+    const placed = new Map();
+    for (const [i, a] of scene.animations.entries()) {
+      const at = '/animations/' + i;
+      if (animationIds.has(a.id) || a.id === controlCase) errors.push(at + ' repeats animation ' + a.id);
+      animationIds.add(a.id);
+      for (const id of a.cases) {
+        if (!caseIds.has(id) || id === controlCase) errors.push(at + '/cases names ' + (id === controlCase ? 'the displaced control' : 'an unknown case: ' + id));
+        else if (placed.has(id)) errors.push(at + '/cases repeats case ' + id + ' of animation ' + placed.get(id));
+        placed.set(id, a.id);
+      }
+    }
+    for (const id of caseIds) if (id !== controlCase && !placed.has(id)) errors.push('/animations plays no case ' + id);
+    for (const id of animationIds) if (caseIds.has(id) && placed.get(id) !== id) errors.push('/animations/' + id + ' takes the ID of a case that another animation plays');
+  }
+  // Replays share the animation list and its deep links with the animations and cases, so their IDs share one namespace.
   for (const [i, r] of (scene.replays || []).entries()) {
     const at = '/replays/' + i, frames = r.time.length;
-    if (caseIds.has(r.id)) errors.push(at + ' repeats case or replay ' + r.id);
+    if (caseIds.has(r.id) || animationIds.has(r.id)) errors.push(at + ' repeats case or replay ' + r.id);
     caseIds.add(r.id);
     known(Object.keys(r.bodies), at + '/bodies');
     for (const [id, b] of Object.entries(r.bodies)) {

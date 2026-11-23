@@ -2,13 +2,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { reviewScene, replayScene } from './fixtures/review-scene.mjs';
+import { reviewScene, replayScene, phasedScene } from './fixtures/review-scene.mjs';
 import { validateScene } from '../scripts/review-scene.mjs';
 
 // The stock page's pure helpers, loaded from the shipped template.
 const html = readFileSync(new URL('../templates/preliminary-review/review.html', import.meta.url), 'utf8');
 const source = html.split('<script id="review-logic">')[1].split('</script>')[0];
-const logic = new Function(source + '\nreturn {inspectorFields, attachmentNote, attachmentRows, visibleBodies, findComponent, partition, frameCount, massLinesFor, sha256Pure, digestHex, fieldFitState, replayMotion, eventAt, tubeTriangles, triangleValues, alongCenterline, carriedValues, MISSING, NOT_SUPPLIED};')();
+const logic = new Function(source + '\nreturn {inspectorFields, attachmentNote, attachmentRows, visibleBodies, findComponent, partition, frameCount, animationsOf, clipOf, clipFrame, clipSeek, checkGroups, massLinesFor, sha256Pure, digestHex, fieldFitState, replayMotion, eventAt, tubeTriangles, triangleValues, alongCenterline, carriedValues, MISSING, NOT_SUPPLIED};')();
 const field = (fields, label) => fields.find(f => f[0] === label);
 
 test('the inspector shows identity, classification, volume, mass basis, support, loads and moving cases from the scene', () => {
@@ -188,4 +188,48 @@ test('a field fixture shows its own category without a robot role', () => {
   assert.equal(field(logic.inspectorFields('target', scene), 'Category')[1], 'field');
   scene.bodies.arm.category = 'intake';
   assert.equal(field(logic.inspectorFields('arm', scene), 'Category')[1], 'intake (colour of role mechanism)');
+});
+
+test('an animation plays the segments of one mission phase end to end as one clip', () => {
+  const scene = phasedScene(), cases = new Map(scene.cases.map(c => [c.id, c]));
+  const [raise, lower] = logic.animationsOf(scene).map(a => logic.clipOf(a, a.cases.map(id => cases.get(id))));
+  assert.deepEqual([raise.id, raise.title, raise.mission, raise.segments.length], ['raise', 'Raise the arm', true, 3]);
+  assert.equal(raise.frames, 73, 'three segments of 25 frames share the frame where one ends and the next begins');
+  assert.deepEqual(raise.offsets, [0, 24, 48]);
+  assert.deepEqual([0, 23, 24, 47, 48, 72].map(t => logic.clipFrame(raise, t)), [[0, 0], [0, 23], [1, 0], [1, 23], [2, 0], [2, 24]]);
+  assert.deepEqual([logic.clipSeek(raise, 1, 0.5), logic.clipSeek(raise, 2, 1), logic.clipSeek(raise, 0, 7)], [36, 72, 24]);
+  assert.ok(raise.times.every((t, k) => !k || t > raise.times[k - 1]), 'the clip clock never stops at a joint');
+  assert.ok(Math.abs(raise.times.at(-1) - 6) < 1e-9, 'a long untimed clip plays in six seconds, however many segments it was checked in');
+  assert.ok(Math.abs(lower.times.at(-1) - 2.4) < 1e-9, 'a single untimed case keeps a tenth of a second a frame');
+  for (const k of [0, 1]) {
+    const end = raise.segments[k].bodies.arm.matrices.at(-1), next = raise.segments[k + 1].bodies.arm.matrices[0];
+    assert.ok(end.every((v, i) => Math.abs(v - next[i]) < 1e-12), 'the fixture is continuous at each joint');
+  }
+  const timed = logic.clipOf({id: 'timed'}, [{...cases.get('raise-01'), time: Array.from({length: 25}, (_, k) => 3 + k * 0.05)}, cases.get('raise-02')]);
+  assert.deepEqual([timed.times[0], +timed.times[24].toFixed(6), timed.timed], [3, 4.2, false], 'a segment keeps its own clock and the next continues from it');
+  assert.deepEqual(field(logic.inspectorFields('arm', scene), 'Moves in')[1], ['Raise the arm', 'Lower', 'package-displacement-control'], 'the inspector names phases, not segments');
+});
+
+test('a scene written before the animation list groups consecutive numbered cases into one phase', () => {
+  const scene = phasedScene();
+  delete scene.animations;
+  assert.deepEqual(logic.animationsOf(scene).map(a => [a.id, a.mission, a.cases]), [['raise', true, ['raise-01', 'raise-02', 'raise-03']], ['lower', false, ['lower']]]);
+  scene.cases = ['lift-l2', 'feed_1', 'feed_2', 'lift-l2', 'feed 3', 'seg12'].map(id => ({id, stage: 'operating', kind: 'nominal'}));
+  assert.deepEqual(logic.animationsOf(scene).map(a => [a.id, a.cases.length]), [['lift-l2', 1], ['feed', 2], ['lift-l2-run-2', 1], ['feed-run-2', 1], ['seg12', 1]],
+    'only a separated trailing number is a segment number, and a phase that returns is a second run');
+});
+
+test('check results group by phase: counts, the tightest clearance, the tolerance used and the case to jump to', () => {
+  const scene = phasedScene(), groups = logic.checkGroups(scene);
+  assert.deepEqual(groups.map(g => [g.title, g.rows.length, g.counts]), [['Raise the arm', 3, {pass: 3}], ['Lower', 1, {pass: 1}],
+    ['Displaced control and uncovered conditions', 2, {'rejected as expected': 1, 'not evaluated': 1}]]);
+  const [raise, lower, rest] = groups;
+  assert.deepEqual([raise.tightest.case, raise.focus.case, raise.allowanceMm, raise.pathToleranceMm, raise.undeclaredTolerance, raise.attention], ['raise-03', 'raise-03', [5, 5], [2, 2], 0, false]);
+  assert.deepEqual([lower.tightest, lower.pathToleranceMm, lower.undeclaredTolerance], [null, null, 1], 'a phase with no pair in range and no declared tolerance says so');
+  assert.deepEqual([rest.phase, rest.id, rest.attention], [false, null, false]);
+  scene.motionEvidence[0].result = 'fail';
+  scene.motionEvidence[0].limitingValue = {gapMm: 0, volumeMm3: 30};
+  const failed = logic.checkGroups(scene)[0];
+  assert.deepEqual([failed.counts, failed.attention, failed.focus.case, failed.tightest.case], [{fail: 1, pass: 2}, true, 'raise-01', 'raise-01'], 'an overlap is tighter than any gap, and a failing case is the one to jump to');
+  assert.deepEqual(logic.checkGroups(reviewScene()).map(g => [g.id, g.rows.length]), [['raise', 1], [null, 1]], 'an earlier scene groups the same way');
 });

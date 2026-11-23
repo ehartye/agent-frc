@@ -76,3 +76,24 @@ export function replayScene(overrides = {}) {
       {name: 'Banner', body: 'banner', mesh: 4, points: Array.from({length: frames}, (_, k) => line(k))}]}];
   return Object.assign(scene, overrides);
 }
+
+/** The same invented scene with the raise checked as three path segments, then a park return: two animations for four checked cases. */
+export function phasedScene(overrides = {}) {
+  const scene = reviewScene();
+  const [raise, control] = scene.cases, [row, controlRow] = scene.motionEvidence;
+  const {time, measure, ...untimed} = raise;
+  const part = n => ({...untimed, id: 'raise-0' + (n + 1), label: 'raise-0' + (n + 1) + ' (operating)', basis: 'Invented: third ' + (n + 1) + ' of the raise.',
+    bodies: {...raise.bodies, arm: {mesh: 1, matrices: Array.from({length: 25}, (_, k) => turn(8 * n + k / 3))}},
+    results: [{pair: ['arm', 'battery'], status: 'pass', witness: {t: 0.5, gapMm: 12.5 - 3 * n, volumeMm3: 0}}]});
+  const lower = {...untimed, id: 'lower', label: 'lower (park)', stage: 'park', basis: 'Invented: return the arm.',
+    bodies: {...raise.bodies, arm: {mesh: 1, matrices: Array.from({length: 25}, (_, k) => turn(24 - k))}}, results: []};
+  scene.cases = [part(0), part(1), part(2), lower, control];
+  scene.animations = [{id: 'raise', title: 'Raise the arm', mission: true, cases: ['raise-01', 'raise-02', 'raise-03']}, {id: 'lower', title: 'Lower', mission: false, cases: ['lower']}];
+  scene.openingCase = 'raise-01';
+  scene.power[0].stage = 'raise-02';
+  const evidence = (id, gap) => ({...row, case: id, limitingTime: 0.5, limitingValue: {gapMm: gap, volumeMm3: 0}, pathToleranceMm: 2});
+  scene.motionEvidence = [evidence('raise-01', 12.5), evidence('raise-02', 9.5), evidence('raise-03', 6.5),
+    {...row, case: 'lower', kind: 'inhibited', stage: 'park', limitingPair: null, limitingValue: null}, controlRow,
+    {case: 'arm-stalls', kind: 'uncovered', result: 'not evaluated', playable: false, note: 'Invented stall: no motor model'}];
+  return Object.assign(scene, overrides);
+}

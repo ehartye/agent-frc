@@ -172,6 +172,20 @@ test('the review scene must repeat the receipt and a mission case must play a re
   assert.match(errorsOf(p.check()), /layout-003 mission case loaded-turn: the published trial is not one the receipt names/);
 });
 
+test('a mission case counts when a mission animation plays it; a scene written before animations is unchanged', t => {
+  const p = project(t), scene = path.join(p.root, prelim, 'releases/layout-001/review-scene.json.gz');
+  const shown = JSON.parse(gunzipSync(readFileSync(scene)));
+  assert.equal(shown.animations, undefined, 'the fixture scene predates the animation list');
+  assert.equal(errorsOf(p.check()), '');
+  const mission = read(path.join(p.root, prelim, 'releases/layout-001/release.json')).missionCases[0].case;
+  const animations = (headline, cases = shown.cases.map(c => c.id).filter(id => id !== 'package-displacement-control')) =>
+    writeFileSync(scene, gzipSync(JSON.stringify({...shown, animations: [{id: 'cycle', title: 'Whole cycle', mission: headline, cases}]})));
+  animations(true);
+  assert.equal(errorsOf(p.check()), '', 'a headline phase that plays the case, among its other segments, is a mission animation');
+  animations(false);
+  assert.match(errorsOf(p.check()), new RegExp('mission case ' + mission + ' is not played by a mission animation of the review'));
+});
+
 test('a rerun result is cached by the digest of every input file and the plugin version', t => {
   const p = project(t), cache = path.join(p.root, '.cache');
   assert.deepEqual(p.check({cache}).preliminary.releases[0].rerun, 'pass');

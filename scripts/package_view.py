@@ -153,8 +153,62 @@ def _environment(case):
     return text + ("; removed: " + ", ".join(removed) if removed else "")
 
 
+PHASE_GUIDE = 12
+
+
+def _stem(case_id):
+    """A case ID without a trailing segment number: acquire-07 and acquire_7 both read acquire."""
+    return re.sub(r"[-_. ]\d+$", "", case_id) or case_id
+
+
+def mission_animations(plan, order):
+    """The entries of the review's animation list: one per mission phase, each playing its cases end to end.
+
+    A case is one checked path segment, so it is evidence and not an animation. A stage names its phase under `phase`;
+    without one the phase is the case ID less a trailing segment number. Consecutive cases of one phase, in the order
+    given, form one animation. `presentation.phases` gives a phase a title and says whether it is a headline mission
+    animation; by default a phase is one when it holds an operating case of the cycle."""
+    stages, cycle = plan.get("stages", {}), set(plan.get("cycle") or [])
+    for key in order:
+        require("phase" not in stages.get(key, {}) or named(stages[key]["phase"]), "Give the phase of " + key + " as a short name, such as acquire")
+    rows, seen = [], {}
+    for key in order:
+        stage = stages.get(key, {})
+        phase = stage.get("phase") or _stem(key)
+        last = rows[-1] if rows else None
+        if last and last["phase"] == phase and (key in cycle) == last["cycle"]:
+            last["cases"].append(key)
+            continue
+        require(phase not in seen or "phase" not in stage and "phase" not in stages.get(seen[phase], {}),
+                "Phase " + phase + " is split in the cycle: " + key + " does not follow " + str(seen.get(phase))
+                + ". One animation plays one continuous motion, so give each run its own phase")
+        seen[phase] = key
+        rows.append(dict(phase=phase, cycle=key in cycle, cases=[key]))
+    taken, out = set(), []
+    for row in rows:
+        # A derived name that returns later in the cycle is a second run of that motion.
+        name, run = row["phase"], 1
+        while name in taken or name == CONTROL_ID:
+            run += 1
+            name = row["phase"] + "-run-" + str(run)
+        taken.add(name)
+        words = re.sub(r"[-_.]+", " ", name).strip() or name
+        out.append(dict(id=name, title=words[:1].upper() + words[1:], cases=row["cases"],
+                        mission=any(c in cycle and stages.get(c, {}).get("purpose") == "operating" for c in row["cases"])))
+    said = plan.get("presentation", {}).get("phases", {})
+    require(isinstance(said, dict) and set(said) <= taken and all(
+        isinstance(v, dict) and set(v) <= {"title", "headline"} and ("title" not in v or named(v["title"]))
+        and isinstance(v.get("headline", True), bool) for v in said.values()),
+        "presentation.phases maps a phase to {title, headline}. The phases of this plan: " + ", ".join(sorted(taken)))
+    for row in out:
+        own = said.get(row["id"], {})
+        row["title"] = own.get("title", row["title"])
+        row["mission"] = own.get("headline", row["mission"])
+    return out
+
+
 def motion_evidence(plan, study_cases, observed_cases, control=None, control_case=None, free_paths=None, supports=None):
-    """Region 6 rows: nominal, inhibited, adverse, displaced-control and uncovered cases.
+    """The check list: nominal, inhibited, adverse, displaced-control and uncovered cases. The page groups it by phase.
 
     A case with a declared free payload path names the trial behind it in its method and under `freePath`.
     A case with a payload that a field fixture supports does the same under `supportedBy`."""
@@ -181,6 +235,8 @@ def motion_evidence(plan, study_cases, observed_cases, control=None, control_cas
                      limitingPair=(best or {}).get("pair"), limitingTime=_limit_time(best), limitingValue=value,
                      allowanceMm=case.get("minGapMm"), allowanceBasis=stage.get("allowanceBasis"),
                      method=_method(best), result=(observed or {}).get("status", "not run"), playable=True)
+        if "pathToleranceMm" in stage and kind != "displaced control":
+            entry["pathToleranceMm"] = stage["pathToleranceMm"]
         flights = [dict(payload=payload, basis=spec.get("basis"), evidence=spec.get("evidence"), bound=bound)
                    for payload, bound in ((free_paths or {}).get(case["id"]) or {}).items()
                    for spec in [stage["freePath"][payload]]] if kind != "displaced control" else []
@@ -621,6 +677,7 @@ def build_scene(root, plan, scenes, observed, budgets, review):
                  sources=dict(design=plan.get("design"), step=plan["step"], motion=plan["motion"], narrative=narrative.get("source")),
                  decision=dict(status=header["status"], firstUnmet=header["firstUnmet"]), palette=palette,
                  meshes=payload["meshes"], bodies=bodies, cases=cases,
+                 animations=mission_animations(plan, [c["id"] for c in cases if c["id"] != CONTROL_ID]),
                  openingCase=presentation.get("openingCase") or (cycle[0] if cycle else cases[0]["id"]),
                  parked=parked_assembly(nominal, study_cases, roster - fixtures), mass=mass, power=power,
                  required=[dict(role=k, ids=list(v)) for k, v in presentation.get("required", {}).items()],

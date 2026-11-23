@@ -212,6 +212,9 @@ def create(root, release_id=None, project=None, pins=False):
             time=[round(0.1 * k, 2) for k in range(frames)],
             measure=["Head at " + str(round(90 * k / (frames - 1))) + "° of the turn" for k in range(frames)])}
         plan["presentation"]["caseKinds"] = {"park-loaded": "inhibited"}
+        # The animation list shows one entry per mission phase. A phase takes a title here; its cases stay in the check results.
+        plan["presentation"]["phases"] = {"loaded-turn": dict(title="Turn the loaded carrier"),
+                                          "park-loaded": dict(title="Return to park with the sample held")}
         plan["presentation"]["uncoveredCases"] = [dict(id="gate-closes-mid-turn",
             condition="The gate closes while the loaded head is turning",
             reason="No interlock timing is modeled; the narrative stops before the turn instead")]
