@@ -201,4 +201,4 @@ if moving:
     save("private/overtravel.json",adverse)
 save("issue/readiness.json",study)
 save("delivery.json",dict(project="mechanical-coupon",scope="Original native teaching coupon and synthetic desk duties",files=[{"path":f} for f in files]))
-print("Prepared the native teaching issue. Use the private issuer with the operator's native station public key.")
+print("Prepared the native teaching issue. Run the mechanical-readiness review on issue/readiness.json.")

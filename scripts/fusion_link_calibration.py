@@ -5,7 +5,7 @@ import math
 from pathlib import Path
 
 
-def capture(app, project, lineage_file, request, output, station_key):
+def capture(app, project, lineage_file, request, output):
     import adsk
     import adsk.fusion
     root = Path(project).resolve()
@@ -89,5 +89,4 @@ def capture(app, project, lineage_file, request, output, station_key):
         if before and before.isValid:before.activate()
     if app.documents.count!=count:raise ValueError("Native document set changed")
     with output.open("x",encoding="utf8") as f:json.dump(result,f,allow_nan=False)
-    station.seal(root,output,station_key,"native-link-calibration",station.digest(register),issue["archiveSha256"],issue["stepSha256"])
     return result

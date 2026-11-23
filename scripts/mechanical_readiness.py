@@ -434,7 +434,7 @@ def evaluate_inputs(root,study, geometry=None):
                 drawing=read(pinned(root,article["materialSpecification"])) if article.get("materialSpecification") else None
                 pinned(root,article["drawing"])
                 if not drawing or not material_record:
-                    missing("identity",key,"Fabricated material needs a source stock specification and signed cold physical properties for each solid.")
+                    missing("identity",key,"Fabricated material needs a source stock specification and cold native physical properties for each solid.")
                 else:
                     from fusion_body_materials import verify_expected
                     require(len(occ["solids"])!=1 or {r.get("grade") for r in drawing["bodyMaterials"].values()}=={article["materialGrade"]},
@@ -838,15 +838,43 @@ def evaluate_inputs(root,study, geometry=None):
             "nativePoseReviews":pose_reviews,"spatialFits":spatial_results,"engineeringGeometry":publication,"showcaseEligibility":build,"buildReadiness":build,"findings":findings}
 
 
+def inspect_archive(path):
+    """Recognize the registered archive as a native Fusion design with BRep content."""
+    require(zipfile.is_zipfile(path),"Unrecognized Fusion archive")
+    with zipfile.ZipFile(path) as z:
+        names=z.namelist()
+        if path.suffix.lower()==".f3z":
+            require(any(n.lower().endswith(".f3d") for n in names),"Fusion distributed design contains no native design")
+            return
+        root="FusionAssetName[Active]/"
+        require(all(n in names and z.getinfo(n).file_size>0 for n in ("Manifest.dat",root+"Manifest.dat",root+"FusionDesignSegmentType1/BulkStream.dat"))
+                and any(n.startswith(root+"Breps.BlobParts/") and n.endswith((".smb",".smbh")) and z.getinfo(n).file_size>0 for n in names),
+                "Archive has no recognized native Fusion design and BRep content")
+
+
+def issue_scope(root,study):
+    """Identify the numbered design a passing review belongs to. Native observations are accepted as recorded."""
+    inspect_archive(pinned(root,study["archive"]))
+    from source_joint_roster import intended
+    intent=intended(root,study,read(pinned(root,study["reopen"])))
+    from fusion_authority import active_design
+    base,active=active_design(root)
+    if active:
+        scope=intent.get("publicationScope")
+        require(scope in ("whole-robot","subsystem"),"Commission the numbered design's publication scope")
+        return {"number":active["number"],"id":active["id"],"openingSha256":digest(base.parent/"iteration.json"),
+                "kind":scope,"authoritySha256":study["authority"]["sha256"],"lineageSha256":study["lineage"]["sha256"]}
+
+
 def review(root,study,geometry=None):
+    """The verdict rests on the registered evidence alone. No key, signature or environment variable takes part."""
     result=evaluate_inputs(root,study,geometry)
     if result["showcaseEligibility"]=="pass":
-        from native_station_verify import verify as verify_station
         try:
-            result["iteration"]=verify_station(root.resolve(),study)
+            result["iteration"]=issue_scope(root.resolve(),study)
         except (ValueError,KeyError,TypeError,OSError) as e:
             result["buildReadiness"]="open";result["showcaseEligibility"]="open"
-            result["findings"].append({"domain":"native","status":"open","subject":"trusted native witness","reason":str(e)})
+            result["findings"].append({"domain":"native","status":"open","subject":"native archive and design scope","reason":str(e)})
     return result
 
 
@@ -912,7 +940,7 @@ def verify_delivery(root,study,files):
             if path.suffix.lower()==".gltf":
                 from showcase_geometry import Glb
                 model=Glb.from_project(path)
-                require(set(model.dependencies)<=delivered,"External glTF buffers must be signed with the displayed geometry")
+                require(set(model.dependencies)<=delivered,"External glTF buffers must be delivered with the displayed geometry")
             checked_meshes.add(path)
 
 

@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 
-def capture(app,project,lineage_file,output,key):
+def capture(app,project,lineage_file,output):
     import adsk.fusion
     root=Path(project).resolve();output=Path(output).resolve()
     if not output.is_relative_to(root) or output.exists():raise ValueError("Use a fresh project-owned material receipt")
@@ -34,7 +34,6 @@ def capture(app,project,lineage_file,output,key):
         if before and before.isValid:before.activate()
     if app.documents.count!=count:raise ValueError("Native document set changed")
     with output.open("x",encoding="utf8") as f:json.dump(result,f,indent=2)
-    station.seal(root,output,key,"native-body-materials",station.digest(register),lineage["archiveSha256"],lineage["stepSha256"])
     return result
 
 

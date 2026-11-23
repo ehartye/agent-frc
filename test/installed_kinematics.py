@@ -74,23 +74,22 @@ class InstalledKinematics(unittest.TestCase):
             study.pop("jointAuthority")
             with self.assertRaises((KeyError,TypeError,ValueError)):native_model(root,study)
 
-    def test_external_operating_plan_and_profile_are_frozen(self):
+    def test_operating_plan_is_read_from_the_project_with_no_external_copy(self):
         import json,os
         from unittest.mock import patch
         from source_joint_roster import intended
-        with TemporaryDirectory() as t, TemporaryDirectory() as external:
+        with TemporaryDirectory() as t:
             root=Path(t);study=fixture(root);ref=study["operatingRequirements"]
             reopen=json.loads((root/study["reopen"]["file"]).read_bytes())
-            held=Path(external)/"commissioning.json";held.write_bytes((root/ref["file"]).read_bytes())
-            with patch.dict(os.environ,{"FRC_OPERATING_REQUIREMENTS":str(held),"FRC_OPERATING_PROFILE":"/operatingIntent"}):
-                intended(root,study,reopen,trusted=True)
+            with patch.dict(os.environ,{k:v for k,v in os.environ.items() if not k.startswith("FRC_OPERATING_")},clear=True):
+                intended(root,study,reopen)
                 study["operatingRequirements"]=dict(ref,pointer="/anotherDuty")
-                with self.assertRaisesRegex(ValueError,"approved plan"):intended(root,study,reopen,trusted=True)
+                with self.assertRaises(KeyError):intended(root,study,reopen)
                 study["operatingRequirements"]=ref
                 with self.assertRaisesRegex(ValueError,"commissioning scope"):
-                    intended(root,study,dict(reopen,transferMissions=["transfer"]),trusted=True)
-                held.write_text("{}")
-                with self.assertRaisesRegex(ValueError,"approved plan"):intended(root,study,reopen,trusted=True)
+                    intended(root,study,dict(reopen,transferMissions=["transfer"]))
+                (root/ref["file"]).write_text("{}")
+                with self.assertRaisesRegex(ValueError,"Changed evidence"):intended(root,study,reopen)
 
     def test_subassembly_filter_preserves_unresolved_and_crossing_pairs(self):
         from native_pair_scope import summarize
