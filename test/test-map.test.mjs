@@ -50,10 +50,16 @@ test('a change selects the tests that cover it, and everything when it cannot be
   for(const name of lane('docs')) assert.ok(words.tests.includes(name),name+' runs for a documentation change');
   assert.deepEqual(words.tests.filter(name=>lane('kernel').includes(name)),[],'a documentation change runs no CAD kernel test');
 
-  for(const page of ['templates/detailed-design-index.html','templates/preliminary-review/review.html','docs/preliminary-design.md']){
-    const chosen=pick(page);
-    assert.equal(chosen.all,false,page);
-    assert.deepEqual(chosen.tests.filter(name=>lane('kernel').includes(name)),[],page+' starts no CAD kernel test');
+  // Every document, page and style sheet in the repository, one at a time: none starts a CAD kernel test or the whole suite.
+  const files=repoFiles();
+  for(const pattern of map.pages){
+    const pages=files.filter(file=>glob(pattern).test(file));
+    assert.ok(pages.length,pattern+' matches a file');
+    for(const page of pages){
+      const chosen=pick(page);
+      assert.equal(chosen.all,false,page+' does not run every test');
+      assert.deepEqual(chosen.tests.filter(name=>lane('kernel').includes(name)),[],page+' starts no CAD kernel test');
+    }
   }
   assert.ok(pick('templates/preliminary-review/review.html').tests.includes('review-layout.test.mjs'),'the review page runs its browser test');
 

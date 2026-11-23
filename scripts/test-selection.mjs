@@ -64,9 +64,9 @@ export function selectForChange(changed,{tests=allTests(),map=readJson(mapFile),
     if(map.everything.some(pattern=>glob(pattern).test(file))) return {all:true,tests,reason:`${file} affects every test`};
     const hits=new Set(tests.filter(test=>reached.get(test).has(file)));
     for(const [covered,patterns] of covers) if(patterns.some(pattern=>pattern.test(file))) covered.forEach(test=>hits.add(test));
+    // A document, page or style sheet never starts a CAD kernel test, and never runs everything: at least the docs lane checks it.
+    if(map.pages.some(pattern=>glob(pattern).test(file))){map.lanes.kernel.forEach(test=>hits.delete(test));if(!hits.size) map.lanes.docs.forEach(test=>hits.add(test));}
     if(!hits.size) return {all:true,tests,reason:`no test is mapped to ${file}`};
-    // A document, page or style sheet never starts a CAD kernel test.
-    if(map.pages.some(pattern=>glob(pattern).test(file))) map.lanes.kernel.forEach(test=>hits.delete(test));
     hits.forEach(test=>picked.add(test));
   }
   return {all:false,tests:tests.filter(test=>picked.has(test)),reason:`${changed.length} changed file${changed.length===1?'':'s'}`};
