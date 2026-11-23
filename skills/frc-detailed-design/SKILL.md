@@ -141,10 +141,10 @@ Check in before this step. `effective` refuses a design while a bench test is un
 
 ```sh
 node PLUGIN/scripts/detailed-design-release.mjs effective . --design ID --readiness cad/detailed-design/readiness-result.json
-node PLUGIN/scripts/design-publication.mjs check .
+node PLUGIN/scripts/design-publication.mjs check . --skip-rerun
 ```
 
-Open one pull request with the status change, the review result, the entry page and the README still. The design is effective when it is reviewed and merged. [Effective designs](../../docs/design-publication.md#effective-designs)
+Open one pull request with the status change, the review result, the entry page and the README still. Make the status change its last commit. This is the stage gate: CI reruns the layout check once on the committed inputs for each push that carries the change, and never for a draft. [When the layout check reruns](../../docs/design-publication.md#when-the-layout-check-reruns) The design is effective when it is reviewed and merged. [Effective designs](../../docs/design-publication.md#effective-designs)
 
 ## Return a reservation to preliminary design
 

@@ -215,3 +215,27 @@ test('the inputs of a release are copied to a new release folder with their pins
   assert.ok(!existsSync(path.join(s.author, 'releases', '2.0')), 'a refused copy leaves no folder');
   assert.match(s.stage('--copy-inputs', 'absent', '2.0').stderr, /No layout plan at cad\/preliminary-design\/releases\/absent\/layout\.json/);
 });
+
+test('the view of an effective release is republished while its receipt records the same physics', async t => {
+  const s = await season(t), published = name => readFile(path.join(s.site, 'releases', '1.0', name), 'utf8');
+  await s.fixture('1.0');
+  s.ok(s.stage('1.0', '--design-name', 'Tilting carriage'));
+  // A draft is revised by staging it again; the refresh is for the release that no longer changes.
+  assert.match(s.stage('--refresh-view', '1.0').stderr, /--refresh-view republishes the view of the effective release\. Preliminary design Tilting carriage 1\.0 is in-progress; stage it to publish or revise it: stage\.py 1\.0/);
+  s.ok(s.stage('--set-status', '1.0', 'effective'));
+  const before = await readFile(path.join(s.site, 'releases.json'), 'utf8');
+  // A rebuilt review page on the same STEP: published, and the index keeps its status, accepted date and draft count.
+  await s.fixture('1.0', {page: '<html>Rebuilt review of 1.0</html>'});
+  assert.match(s.stage('1.0').stderr, /Tilting carriage 1\.0 is effective and no longer changes/);
+  assert.match(s.ok(s.stage('--refresh-view', '1.0')), /^Refreshed the view of preliminary design Tilting carriage 1\.0 \(effective\)\. Its physics, status and accepted date are unchanged\r?\n$/);
+  assert.equal(await published('index.html'), '<html>Rebuilt review of 1.0</html>');
+  assert.equal(await readFile(path.join(s.site, 'releases.json'), 'utf8'), before);
+  assert.match(s.ok(s.stage('--refresh-view', '1.0')), /Preliminary design Tilting carriage 1\.0 is unchanged \(effective\)/);
+  // A receipt of another STEP is a changed design: refused, with the version that work belongs to, and nothing is published.
+  await s.fixture('1.0', {page: '<html>Review of a changed design</html>', step: 'a changed step'});
+  assert.match(s.stage('--refresh-view', '1.0').stderr,
+    /Tilting carriage 1\.0 is effective and this receipt differs from the published one in the STEP\. A view refresh keeps the physics\. Work that changes it belongs to 1\.1, staged as a draft/);
+  assert.equal(await published('index.html'), '<html>Rebuilt review of 1.0</html>');
+  assert.equal(await readFile(path.join(s.site, 'releases.json'), 'utf8'), before);
+  assert.match(s.stage('--refresh-view', '1.0', '--design-name', 'Another name').stderr, /a view refresh changes no name/);
+});

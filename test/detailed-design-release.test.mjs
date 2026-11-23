@@ -7,7 +7,7 @@ import test from 'node:test';
 import {fileURLToPath} from 'node:url';
 import {checkProject} from '../scripts/design-publication.mjs';
 import {markEffective, refresh, stageInProgress, withdraw} from '../scripts/detailed-design-release.mjs';
-import {issueRelease, listing, sha, write} from './fixtures/preliminary-release.mjs';
+import {folderReceipt, issueRelease, listing, sha, write} from './fixtures/preliminary-release.mjs';
 
 // Synthetic teaching fixtures: invented releases, cases and objectives with no relation to any game.
 const script = fileURLToPath(new URL('../scripts/detailed-design-release.mjs', import.meta.url));
@@ -24,7 +24,7 @@ function project(t, {status = 'effective'} = {}) {
   const receipt = read(path.join(published, 'receipt.json')), ledger = {...read(path.join(published, 'budgets.json')), requirements: {file: 'package-limits.json'}};
   const plan = JSON.stringify({view: 'review/index.html', motion: {file: 'paths.json'}, budgets: {file: 'budgets.json'}});
   write(root, inputs + '/layout.json', plan);
-  write(root, inputs + '/receipt.json', {...receipt, planSha256: sha(plan), budgets: {...receipt.budgets}});
+  write(root, inputs + '/receipt.json', folderReceipt(root, inputs, receipt, plan, ledger, 'layout-001'));
   write(root, inputs + '/missions.json', {missionCases: read(path.join(published, 'release.json')).missionCases});
   write(root, inputs + '/paths.json', readFileSync(path.join(published, 'motion.json')));
   write(root, inputs + '/budgets.json', ledger);
@@ -64,7 +64,7 @@ test('stage publishes an in-progress design that the publication check accepts',
   // The rerun finds the committed inputs through the record.
   write(p.root, 'cad/preliminary-design/releases/layout-001/layout.json', 'plan layout-001');
   const committed = dir => existsSync(path.join(dir, 'receipt.json')) ? path.join(dir, 'receipt.json') : path.join(p.root, prelim, 'releases/layout-001/receipt.json');
-  const rerun = checkProject(p.root, {log: () => {}, run: ({project: dir}) => ({...read(committed(dir)), physicsOnly: true})});
+  const rerun = checkProject(p.root, {rerun: 'all', log: () => {}, run: ({project: dir}) => ({...read(committed(dir)), physicsOnly: true})});
   assert.deepEqual(rerun.errors, []);
   assert.equal(rerun.detailed.designs[0].rerun, 'pass');
   // Staging again after a fix replaces the design while it is in progress.

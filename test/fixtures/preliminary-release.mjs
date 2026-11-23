@@ -26,14 +26,15 @@ export const fieldPage='<!doctype html><html lang="en"><head>'+
   '<script>const frames=[0,0.1,0.2];requestAnimationFrame(()=>frames.length);</script></body></html>';
 export const laneTrial=JSON.stringify({case:'loaded-turn',outcome:'The invented sample leaves the carrier toward the lane'});
 export const laneObjective='Carry the sample to the bin';
-export function issueRelease(site,id,{status='layout-checked',edit=r=>r,missions,trial,freePath=false,display=d=>d,field}={}) {
+/** `basis` names the release whose STEP and motion study this one was checked on: its own, unless it renames another. */
+export function issueRelease(site,id,{status='layout-checked',edit=r=>r,missions,trial,freePath=false,display=d=>d,field,basis=id}={}) {
   const dir=path.join(site,tree,'releases',id);
-  const motion=JSON.stringify({cases:[{id:'loaded-turn'},{id:'park'}],issue:id});
+  const motion=JSON.stringify({cases:[{id:'loaded-turn'},{id:'park'}],issue:basis});
   // One invented robot: the scene, ledger files and receipt below all carry the same figures.
   const base=reviewScene(),[turn,control]=base.cases,duty={...base.power[0],case:'weak traverse',status:'pass'};
   const budgets=JSON.stringify({masses:base.mass.lines,electricalCases:{'weak traverse':{openCircuitV:[duty.openCircuitV,12],resistanceOhm:[0.02,duty.resistanceOhm],
     batterySideA:Object.fromEntries(duty.lines.map(l=>[l.name,l.amps]))}}}),limits=JSON.stringify({inspectionLimitKg:base.mass.limitKg});
-  const step={file:'package.step',sha256:sha('step '+id)},motionPin={file:'paths.json',sha256:sha(motion)};
+  const step={file:'package.step',sha256:sha('step '+basis)},motionPin={file:'paths.json',sha256:sha(motion)};
   // The scene the stock page reads repeats the receipt below: cases, control, objectives, mass and duties.
   const scene=display({...base,issue:'synthetic-'+id,sources:{step,motion:motionPin},
     cases:[{...turn,id:'loaded-turn',label:'loaded-turn (operating)'},{...turn,id:'park',label:'park (park)',stage:'park'},control],openingCase:'loaded-turn',
@@ -71,5 +72,14 @@ export function issueRelease(site,id,{status='layout-checked',edit=r=>r,missions
   }
   write(dir,'release.json',record);
   return {dir,record};
+}
+/**
+ * The receipt of a check of a detailed-design inputs folder: the published receipt bound to that folder's plan and to
+ * the ledger and limits it holds. Writes the STEP the receipt names, so the folder holds every file of its receipt.
+ */
+export function folderReceipt(root,folder,receipt,plan,ledger,basis) {
+  write(root,folder+'/package.step','step '+basis);
+  return {...receipt,planSha256:sha(plan),budgets:{...receipt.budgets,source:{file:'budgets.json',sha256:sha(JSON.stringify(ledger,null,2))},
+    limits:{...receipt.budgets.limits,file:'package-limits.json'}}};
 }
 export function listing(site,current,releases,designStatus){write(site,tree+'/releases.json',{current,releases,...(designStatus?{designStatus}:{})});}

@@ -62,7 +62,7 @@ A motion study, a budget ledger and an observation need not repeat a digest of t
 
 Git records what every file was. The checker reads each named file and writes the digest it found into the receipt and the review scene, so the receipt records what was checked.
 
-Those digests are how `--view-only`, the publication check and the CI rerun tell that a result belongs to its inputs, and they cost the author nothing. A renamed file is one edited path.
+Those digests are how `--view-only`, the publication check and the rerun at the stage gate tell that a result belongs to its inputs, and they cost the author nothing. A renamed file is one edited path.
 
 A `sha256` beside a `file` is optional. When one is present the checker verifies it exactly as before and stops with `Changed evidence: FILE` when the file differs. Plans and published designs that carry hashes keep working unchanged, and a plan may mix both forms.
 
@@ -328,7 +328,7 @@ The checker evaluates skipped cases only in a full run. With several workers the
 
 The displaced control is expected to collide, so it never stops a run. It is the last case of the study, and it counts only when every nominal case passes. A clean `--fail-fast` run therefore checks the control and returns the same full receipt as a run without the flag. After a stop, `control.status` is `skipped` and `control.witness` is `null`. Only a full run can show that the control rejects the displaced pair. A partial run never writes a review page and never credits an existing one. With `--write-view`, it reports on stderr that it did not write the view and records `view.verified: false`. Use a full run without `--fail-fast` for the receipt you publish, the control and the review page.
 
-To recheck the physics of a layout whose review is already written, add `--physics-only`. It checks every case, the displaced control and the budgets and does not read or write the review page or its scene. The receipt sets `"physicsOnly": true` and is not one to publish. A project's CI [reruns each published layout](design-publication.md) this way and compares the result with the committed receipt.
+To recheck the physics of a layout whose review is already written, add `--physics-only`. It checks every case, the displaced control and the budgets and does not read or write the review page or its scene. The receipt sets `"physicsOnly": true` and is not one to publish. A project's CI [reruns a layout this way when its design becomes effective](design-publication.md#when-the-layout-check-reruns) and compares the result with the committed receipt.
 
 ### Confirm the check read a fresh plan
 
@@ -421,11 +421,12 @@ Name the phase of each case in its entry under `stages`, and give a phase a titl
 | --- | --- |
 | `stages.CASE.phase` | The mission phase this case is a segment of. The cases of one phase are consecutive in `cycle`, because one animation plays one continuous motion. |
 | `presentation.phases.PHASE.title` | The name shown in the animation list and the check results. Without one, the phase ID is shown as words. |
+| `presentation.phases.package-displacement-control.title` | The name the displaced control takes in the animation list. Without one it reads "Displaced control". The control takes a title only. |
 | `presentation.phases.PHASE.headline` | `true` lists the phase under **Mission animations**; `false` lists it under **Other checked motions**. Without it, a phase is a mission animation when it holds an operating case of the cycle. Park and service phases are other checked motions. |
 
 A plan that names no phase needs no edit. The phase of a case is then its ID without a trailing segment number, so `acquire-01`, `acquire-02` and `acquire_3` are one phase, `acquire`, when they follow one another. Only a number after `-`, `_`, `.` or a space counts: `lift-l2` stays `lift-l2`. A derived phase that returns later in the cycle becomes a second animation, `acquire-run-2`. When this still leaves more than twelve animations, the check writes a `[view]` note that asks for phase names. The note is information and does not change the result.
 
-The displaced control is listed once, under **Check control**. A replay is listed under **Trial replays**. A link to `?case=ID` opens an animation, a replay or a case; a case opens inside its animation at its own start.
+The displaced control is listed once, under **Check control**, by its title. A replay is listed under **Trial replays**. A link to `?case=ID` opens an animation, a replay or a case; a case opens inside its animation at its own start.
 
 The scene carries the list as `animations`: each entry holds `id`, `title`, `mission` and the `cases` it plays in order. Each check row carries the `pathToleranceMm` its stage declares. A tolerance declared or changed in the plan therefore changes the scene: rebuild the view, and `--view-only` is enough when the cases themselves have not changed. A scene written before 0.137.0 has no `animations`; the page derives the phases from the case IDs the same way, so an issued design keeps working.
 
@@ -656,5 +657,6 @@ A season pins a plugin revision and holds copies of some plugin files. After mov
 | 0.136.0 | Nothing to re-copy. The preliminary design skill is an ordered workflow with a list of defaults and a table of what to try when something fails. Held premises moved to [their own page](preliminary-design-holds.md), and trial sizing to the skill's trials reference. `npm run validate` in the plugin now fails on text damaged by a wrong encoding. |
 | 0.137.0 | The local review page (delete it and rebuild it with `--view-only`). The page lists [one animation per mission phase](#animations-show-the-mission-the-check-list-shows-the-evidence) and moves the checked cases into the check results, grouped by phase. No plan edit is needed: cases whose IDs differ by a trailing segment number form one phase. A stage may name its `phase`, and `presentation.phases` gives a phase a title and a `headline` flag. The rebuilt scene carries `animations` and the declared path tolerances, so its content and digest change; an issued design keeps its scene, and the new page derives the phases of an earlier scene. A mission case must be played by a mission animation. |
 | 0.138.0 | Nothing to re-copy. The layout check names the plan it read on its first stderr line and warns when the plan is older than a `--built-from` source. The effective-readiness report no longer counts a mission case whose only trial is its own `trial` reference: it reports `prescribed motion with a trial attached` as `not met`. Bind the path in the stage or play the trial as a review replay. |
+| 0.139.0 | `.github/workflows/design-publication.yml` from `templates/design-publication.yml`, and `stage.py`. CI reruns the layout check only [when a design becomes effective](design-publication.md#when-the-layout-check-reruns): a draft, a rename and a view refresh are not rerun, and nothing is kept between runs. An effective design whose physics changes in place is refused. `stage.py --refresh-view ID` [republishes the view of the effective release](design-publication.md#refresh-the-view-of-an-effective-release). The runner of the check is a repository variable. The displaced control reads "Displaced control" in the animation list, or the title the plan gives it. [What to do](design-publication-migration.md#move-to-the-stage-gate-rerun) |
 
-An in-progress design takes the new page when it is published again under its version. An effective, superseded or withdrawn design never changes.
+An in-progress design takes the new page when it is published again under its version. An effective design takes it through a [view refresh](design-publication.md#refresh-the-view-of-an-effective-release), which leaves its physics as it was. A superseded or withdrawn design never changes.

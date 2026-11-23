@@ -10,7 +10,7 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from package_view import (CONTROL_ID, PAGE, component_inspector, field_interactions, first_unmet, mission_animations, motion_evidence,  # noqa: E402
+from package_view import (CONTROL_ID, PAGE, component_inspector, control_title, field_interactions, first_unmet, mission_animations, motion_evidence,  # noqa: E402
                           parked_assembly, review_header, scene_payload)
 
 IDENTITY = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0]
@@ -108,6 +108,14 @@ class Regions(unittest.TestCase):
             with self.assertRaises(ValueError) as caught:
                 mission_animations(bad, again["cycle"])
             self.assertIn(message, str(caught.exception))
+        # The displaced control reads as plain words, or as the title the plan gives it the way it titles a phase.
+        self.assertEqual(control_title(again), "Displaced control")
+        titled = dict(again, presentation=dict(phases={CONTROL_ID: dict(title="Rail moved into the arc"), "feed": dict(title="Feed")}))
+        self.assertEqual(control_title(titled), "Rail moved into the arc")
+        self.assertEqual([r["title"] for r in mission_animations(titled, again["cycle"])], ["Lift", "Feed", "Lift run 2"], "the control is no animation of the mission")
+        with self.assertRaises(ValueError) as caught:
+            mission_animations(dict(again, presentation=dict(phases={CONTROL_ID: dict(title="Rail moved", headline=True)})), again["cycle"])
+        self.assertIn("takes a title only", str(caught.exception))
         row = motion_evidence(dict(plan(), stages={"turn": dict(movingGroups=["arm group"], allowanceBasis="Invented reserve", pathToleranceMm=2),
                                                    "hold": dict(movingGroups=["arm group"], allowanceBasis="Invented reserve")}), study(), PASS)
         self.assertEqual((row[0].get("pathToleranceMm"), row[1].get("pathToleranceMm")), (2, None), "the check list carries the tolerance each case was split at")

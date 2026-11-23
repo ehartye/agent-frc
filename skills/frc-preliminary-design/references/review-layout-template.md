@@ -55,7 +55,7 @@ cad/preliminary-design/
     release-lane-replay.json     example replay set that plays the run in the animation list
     field/release-lane.html      earlier separate field page, kept by the synthetic example; do not add one
 .github/workflows/
-  design-publication.yml         scans each pushed branch, reruns the layout check, deploys from the default branch
+  design-publication.yml         scans and checks each pushed branch, reruns the layout check when a design becomes effective, deploys from the default branch
 docs/preliminary-design/
   index.html, releases.json      stable viewer, ordered index of versions, current version and design statuses
   fonts/                         bundled theme fonts, fonts.css and their OFL licenses
@@ -107,7 +107,7 @@ node PLUGIN/scripts/design-publication.mjs check . --skip-rerun
 
 **What a visitor sees.** The stable URL opens the effective design, or the newest in-progress one when none is effective. The stable viewer shows only the version picker above the review page, and the picker names each design's status. Share another version with `?release=1.0`, and a named case with `?case=CASE_ID`. An unknown version names the requested ID and offers the picker.
 
-**The publication check.** The scene must repeat the receipt's STEP and motion digests, case results, displaced control, narrative objectives, parked-assembly result, each duty's figures and the mass figures. Its decision may never claim a checked result the receipt does not hold. The project's CI runs the same check on every push and also reruns the layout check from the committed inputs. [Publish and check designs](../../../docs/design-publication.md)
+**The publication check.** The scene must repeat the receipt's STEP and motion digests, case results, displaced control, narrative objectives, parked-assembly result, each duty's figures and the mass figures. Its decision may never claim a checked result the receipt does not hold. The project's CI runs the same check on every push, and reruns the layout check from the committed inputs once, when the design becomes effective. [Publish and check designs](../../../docs/design-publication.md)
 
 **A second workstation.** Pull before publishing. Resolve a conflict in `releases.json` by keeping every version and running `--set-status` again for the current one. Local publishing locks the index and releases the lock on process exit.
 

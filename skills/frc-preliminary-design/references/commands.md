@@ -90,7 +90,7 @@ node PLUGIN/scripts/design-publication.mjs check . --skip-rerun
 
 `--design-name` is given once, the first time a major number is published. Publishing needs a `layout-checked` receipt of a full check and at least one mission case in `missions.json`. A mission case names a passing operating case and a narrative objective the plan marks `represented`.
 
-Commit, push the branch and open a pull request. CI reruns the check from the committed inputs on every pushed branch. The site deploys from the default branch, so the draft is published when the pull request merges. Then open the published URL, `/<repository>/preliminary-design/` on the project's Pages site, and play each motion.
+Commit, push the branch and open a pull request. CI checks what the draft publishes on every pushed branch: the receipt is of the committed files, the page shows the receipt's numbers and a mission animation plays. It does not rerun the layout check for a draft. The run you just made is that check, so `--skip-rerun` above is right. The site deploys from the default branch, so the draft is published when the pull request merges. Then open the published URL, `/<repository>/preliminary-design/` on the project's Pages site, and play each motion.
 
 After any later edit, rerun the check in the same folder and run `stage.py 1.0` again. That publishes the next draft of the same version. [Versions, drafts and statuses](../../../docs/design-publication.md#name-and-number-a-design)
 
@@ -137,7 +137,7 @@ Take each figure from the plan, the receipt, `missions.json` or a trial record, 
 python cad/preliminary-design/stage.py --set-status 1.0 effective --readiness PLUGIN/scripts/effective-readiness.mjs
 ```
 
-Do this only after the user agrees. It is an index edit in a reviewed pull request, with the readiness report attached. An effective design no longer changes.
+Do this only after the user agrees. It is an index edit in a reviewed pull request, with the readiness report attached. Make it the last commit of its pull request: this is the stage gate, and CI reruns the layout check once on the committed inputs for each push that carries it. An effective design no longer changes. Only its view can be republished, with `stage.py --refresh-view 1.0` after a `--view-only` rebuild. [When the layout check reruns](../../../docs/design-publication.md#when-the-layout-check-reruns)
 
 ## Start the next version
 
@@ -156,6 +156,6 @@ python cad/preliminary-design/stage.py --copy-inputs 1.0 1.1
 - The commands run unchanged in PowerShell and in Git Bash. Use forward slashes in every path you write into a file.
 - Keep committed paths short. A deep folder plus a long file name passes the Windows path length and fails a clone.
 - Write no drive letter or home folder into a script, a plan or a record.
-- CI runs the same check on Linux. It compares digests and verdicts, not measured values digit for digit. Run `design-publication.mjs check . --skip-rerun` locally before every push.
+- CI runs on Linux. It reruns the layout check only when a design becomes effective, and then compares digests and verdicts, not measured values digit for digit. Run `design-publication.mjs check . --skip-rerun` locally before every push: the layout check has just run, so do not run it a second time.
 - After a plugin update, the check keeps a review page that already exists. Delete `package-motion.html` in the design's folder and run the check with `--view-only` to take the new stock page.
 - Write browser-check captures to a scratch folder outside the checkout.

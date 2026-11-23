@@ -1,12 +1,13 @@
-"""Publish a checked preliminary design release into the season site, set a release's design status, copy a release's
-inputs to a new release folder, or remove a release.
+"""Publish a checked preliminary design release into the season site, set a release's design status, republish the view
+of an effective release, copy a release's inputs to a new release folder, or remove a release.
 
 A new release takes a version as its ID, MAJOR.MINOR. The major number is the architecture and carries its name, given
 once with --design-name. The minor number counts the effective baselines of that architecture. A draft is a publish
 of an in-progress version and takes no number: staging the same ID again counts it.
 
 This script only copies files and edits the release index. The project's Design publication workflow decides
-whether the result may merge: it reruns the layout check from the committed inputs and compares the receipt.
+whether the result may merge. It reruns the layout check from the committed inputs once, when a release becomes
+effective, and holds an effective release to the physics it was accepted with.
 Withdrawing a release is a status change: the index keeps the reason and the last commit that held its published
 files, and the files leave the site."""
 import argparse
@@ -208,11 +209,42 @@ def checked_id(release):
     return release
 
 
-def stage(season, inputs, release, design=None):
+def receipt_identity(receipt):
+    """What a receipt records of the physics: the digests of the files the check read, the plan it repeats and every
+    verdict. Labels, the view and measured values are left out. The plugin's scripts/physics-identity.mjs holds the
+    same form as receiptIdentity."""
+    def unlabelled(node):
+        if isinstance(node, dict):
+            return {k: unlabelled(v) for k, v in node.items() if k not in ("file", "phase")}
+        return [unlabelled(v) for v in node] if isinstance(node, list) else node
+
+    def digest(pin):
+        return (pin or {}).get("sha256")
+
+    def verdicts(rows, name, result="status"):
+        return sorted([str((row or {}).get(name)), str((row or {}).get(result))] for row in rows or [])
+
+    budgets, control = receipt.get("budgets") or {}, receipt.get("control") or {}
+    return {"the status": receipt.get("status"), "the STEP": digest(receipt.get("step")), "the motion study": digest(receipt.get("motion")),
+            "the editable design": digest(receipt.get("design")), "the budget ledger": digest(budgets.get("source")),
+            "the limits": digest(budgets.get("limits")), "the held receipt": receipt.get("previousCheckpointSha256"),
+            "the cycle": receipt.get("cycle") or [], "the case results": verdicts(receipt.get("cases"), "case"),
+            "the displaced control": [control.get("case"), control.get("displaced"), control.get("offsetMm"), (control.get("witness") or {}).get("status")],
+            "the mass result": budgets.get("massStatus"), "the loaded-voltage results": verdicts(budgets.get("electricalCases"), "case"),
+            "the narrative objectives": verdicts((receipt.get("narrativeReview") or {}).get("objectives"), "objective", "disposition"),
+            "the stages": unlabelled(receipt.get("stages") or {}), "the groups": receipt.get("groups"), "the mounts": receipt.get("mounts"),
+            "the datum": receipt.get("datum")}
+
+
+def stage(season, inputs, release, design=None, refresh=False):
     """Copy one release's checked files into the site and list it in the index as in progress.
 
     An in-progress release is revised in place: staging its ID again replaces its published files and counts a
-    draft in the index, under `revision`. A release stops changing when it is marked effective, and stays so afterwards."""
+    draft in the index, under `revision`. A release stops changing when it is marked effective, and stays so afterwards.
+
+    refresh republishes the view of the effective release: a new review page, new titles or a --view-only rebuild.
+    Its receipt must record the physics the published receipt records. The status, the accepted date and the draft
+    count stay as they are."""
     checked_id(release)
     if design is not None and not version_of(release):
         raise ValueError("--design-name names the architecture of a version ID, MAJOR.MINOR. Release " + release + " keeps its earlier ID and has no name")
@@ -273,8 +305,24 @@ def stage(season, inputs, release, design=None):
     site.mkdir(parents=True, exist_ok=True)
     with update_index(site), tempfile.TemporaryDirectory(dir=site.parent, prefix=".stage-") as tmp:
         index = load_index(site)
-        notes = place_version(index, release, design) if version_of(release) else []
-        if release in index["releases"] and status_of(index, release) != "in-progress":
+        notes = place_version(index, release, design) if version_of(release) and not refresh else []
+        if refresh:
+            listed = release in index["releases"]
+            if not listed or status_of(index, release) != "effective":
+                raise ValueError("--refresh-view republishes the view of the effective release. " + sentence(described(index, release)) + " is "
+                                 + (status_of(index, release) if listed else "not listed")
+                                 + ("" if listed and status_of(index, release) != "in-progress" else "; stage it to publish or revise it: stage.py " + release))
+            try:
+                before = read(site / "releases" / release / "receipt.json")
+            except (OSError, ValueError):
+                raise ValueError("Release " + release + " has no published receipt to compare with")
+            was, now = receipt_identity(before), receipt_identity(result)
+            changed = [name for name in now if now[name] != was[name]] + (["the issue name"] if before.get("issue") != result.get("issue") else [])
+            if changed:
+                following = (str(version_of(release)[0]) + "." + str(version_of(release)[1] + 1)) if version_of(release) else "a new release ID"
+                raise ValueError(sentence(title_of(index, release)) + " is effective and this receipt differs from the published one in " + ", ".join(changed)
+                                 + ". A view refresh keeps the physics. Work that changes it belongs to " + following + ", staged as a draft")
+        elif release in index["releases"] and status_of(index, release) != "in-progress":
             if version_of(release):
                 major, minor = version_of(release)
                 raise ValueError(title_of(index, release) + " is " + status_of(index, release) + " and no longer changes. Work toward its next baseline is "
@@ -290,12 +338,16 @@ def stage(season, inputs, release, design=None):
         destination.parent.mkdir(parents=True, exist_ok=True)
         replaced = destination.exists()
         if replaced and tree(destination) == tree(staged) and release in index["releases"]:
-            print(sentence(described(index, release)) + " is unchanged (draft " + str(revision_of(index, release)) + ")")
+            print(sentence(described(index, release)) + " is unchanged (" + ("effective" if refresh else "draft " + str(revision_of(index, release))) + ")")
             return
         if replaced:
             # Git holds the earlier bytes; the pull request shows what changed.
             shutil.rmtree(destination)
         staged.rename(destination)
+        if refresh:
+            # The index is left alone: the release keeps its status, its accepted date and its draft count.
+            print("Refreshed the view of " + described(index, release) + " (effective). Its physics, status and accepted date are unchanged")
+            return
         # One version keeps one ID: an edit counts a draft here, in the field named revision, and adds no entry to the picker.
         number = revision_of(index, release) + 1 if replaced or release in index["releases"] else 1
         commit = head_commit(season)
@@ -560,6 +612,9 @@ if __name__ == "__main__":
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("release", nargs="?")
     mode.add_argument("--set-status", nargs=2, metavar=("RELEASE", "STATUS"), help="Set a release " + ", ".join(STATUSES))
+    mode.add_argument("--refresh-view", metavar="RELEASE",
+                      help="Republish the view of the effective release from its folder: a new review page, new titles or a --view-only rebuild. "
+                           "Refused when its receipt records different physics than the published one")
     mode.add_argument("--remove", metavar="RELEASE", help="Delete a release's folders and index entry after it was staged again under a new ID; no redirect is left")
     mode.add_argument("--copy-inputs", nargs=2, metavar=("FROM", "TO"),
                       help="Copy a release's check inputs to a new release folder with their pins written for the new paths, to start the next version or rename a release")
@@ -570,6 +625,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     base = Path(__file__).resolve().parent
     try:
+        if args.design_name is not None and args.refresh_view:
+            raise ValueError("--design-name goes with staging a version; a view refresh changes no name")
         if args.design_name is not None and not args.release:
             raise ValueError("--design-name goes with staging a version, as in stage.py 1.0 --design-name \"NAME\"")
         if args.replaced_by is not None and not args.remove:
@@ -586,6 +643,8 @@ if __name__ == "__main__":
             copy_inputs(base.parents[1].resolve(), base, *args.copy_inputs)
         elif args.remove:
             remove(base.parents[1], base, args.remove, args.replaced_by)
+        elif args.refresh_view:
+            stage(base.parents[1], base / "releases" / args.refresh_view, args.refresh_view, refresh=True)
         else:
             stage(base.parents[1], base / "releases" / args.release, args.release, args.design_name)
     except (KeyError, ValueError, OSError) as error:

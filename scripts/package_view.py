@@ -196,15 +196,24 @@ def mission_animations(plan, order):
         out.append(dict(id=name, title=words[:1].upper() + words[1:], cases=row["cases"],
                         mission=any(c in cycle and stages.get(c, {}).get("purpose") == "operating" for c in row["cases"])))
     said = plan.get("presentation", {}).get("phases", {})
-    require(isinstance(said, dict) and set(said) <= taken and all(
+    require(isinstance(said, dict) and set(said) <= taken | {CONTROL_ID} and all(
         isinstance(v, dict) and set(v) <= {"title", "headline"} and ("title" not in v or named(v["title"]))
         and isinstance(v.get("headline", True), bool) for v in said.values()),
         "presentation.phases maps a phase to {title, headline}. The phases of this plan: " + ", ".join(sorted(taken)))
+    # The displaced control is a check, never a mission animation: it takes a title and nothing else.
+    require(set(said.get(CONTROL_ID, {})) <= {"title"}, "presentation.phases." + CONTROL_ID + " takes a title only")
     for row in out:
         own = said.get(row["id"], {})
         row["title"] = own.get("title", row["title"])
         row["mission"] = own.get("headline", row["mission"])
     return out
+
+
+def control_title(plan):
+    """What the review calls the displaced control: the title the plan gives it under presentation.phases, else plain words."""
+    said = (plan.get("presentation") or {}).get("phases") or {}
+    own = said.get(CONTROL_ID) if isinstance(said, dict) else None
+    return own["title"] if isinstance(own, dict) and named(own.get("title")) else "Displaced control"
 
 
 def motion_evidence(plan, study_cases, observed_cases, control=None, control_case=None, free_paths=None, supports=None):
@@ -641,7 +650,7 @@ def build_scene(root, plan, scenes, observed, budgets, review):
         frames = max(len(b["matrices"]) for b in placed["bodies"].values())
         row = observed_by_id.get(cid, {})
         results = ([witness] if witness else row.get("pairs", [])) if is_control else row.get("pairs", [])
-        case = dict(id=cid, label=cid + " (" + ("displaced control" if is_control else captured["stage"]) + ")",
+        case = dict(id=cid, label=control_title(plan) if is_control else cid + " (" + captured["stage"] + ")",
                     kind="displaced control" if is_control else kinds.get(cid, "nominal"), stage=captured["stage"],
                     basis=(control.get("basis") if is_control else study.get("basis")) or "",
                     status=row.get("status", "not run"), allowanceMm=study.get("minGapMm"),

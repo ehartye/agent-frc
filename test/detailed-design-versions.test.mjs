@@ -7,7 +7,7 @@ import test from 'node:test';
 import {fileURLToPath} from 'node:url';
 import {checkProject} from '../scripts/design-publication.mjs';
 import {copyInputs, markEffective, relink, remove, stageInProgress, supersede} from '../scripts/detailed-design-release.mjs';
-import {issueRelease, sha, write} from './fixtures/preliminary-release.mjs';
+import {folderReceipt, issueRelease, sha, write} from './fixtures/preliminary-release.mjs';
 
 // Synthetic teaching fixtures: two invented architectures, "Tilting carriage" and "Swinging arm", with no relation to any game.
 const script = fileURLToPath(new URL('../scripts/detailed-design-release.mjs', import.meta.url));
@@ -32,7 +32,7 @@ function project(t, {releases = {'1.0': 'effective'}, names = {1: {name: 'Tiltin
     const receipt = read(path.join(published, 'receipt.json')), ledger = {...read(path.join(published, 'budgets.json')), requirements: {file: 'package-limits.json'}};
     const plan = JSON.stringify({view: 'review/index.html', motion: {file: 'paths.json'}, budgets: {file: 'budgets.json'}});
     write(root, folder + '/layout.json', plan);
-    write(root, folder + '/receipt.json', {...receipt, planSha256: sha(plan)});
+    write(root, folder + '/receipt.json', folderReceipt(root, folder, receipt, plan, ledger, on));
     write(root, folder + '/missions.json', {missionCases: read(path.join(published, 'release.json')).missionCases});
     write(root, folder + '/paths.json', readFileSync(path.join(published, 'motion.json')));
     write(root, folder + '/budgets.json', ledger);
