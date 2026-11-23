@@ -16,6 +16,13 @@
   for(const setup of config.setups)byId('replaySetup').add(new Option(setup,setup));
   byId('replayBasis').textContent=config.basis+' '+config.boundsNote+
     ' The default bumper adds '+config.defaults.bumper+' in per side. Priorities follow request time, then robot ID for same-tick requests. Completed trips count arrivals and service, with scoring evaluated separately by the project station model.';
+  // Concept bots embedded in the profile. A card names one by id; the engine resolves it to the compiled record.
+  // The game's own mouth() places each port on its face, so the drawing and the contact test share one geometry.
+  const concepts=config.concepts ?? [], prisms=new Map();
+  const conceptRecord=r=>{const id=typeof r.concept==='string'?r.concept:r.concept?.id;return id?concepts.find(c=>c.record.concept.id===id):null;};
+  const ports=concepts.length?createRehearsalGame(profile,rehearsal.geom,createFieldPieceMotion(profile,rehearsal.geom)):null;
+  const points=x=>Math.round(x*1000)/1000;
+  if(concepts.length)canvas.parentElement.querySelector('figcaption').append(' Gold bars are input mouths and mint bars output faces. A dashed wedge is a turret’s travel, its solid ray the current aim, and the white arrow each concept robot’s heading.');
   const stations=config.stations ?? [], legend=byId('replayStations'), counters=new Map();
   let highlighted=null,expandedRobot=null;
   for(const [i,s] of stations.entries()){
@@ -58,7 +65,7 @@
     for(let y=36;y<W;y+=36)line([[0,y],[L,y]],'#446887');
     context.setLineDash([4,4]);for(const band of config.bands)line([band.from,band.to],'#c8d7e5');
     context.setLineDash([]);
-    const maxH=Math.max(0,...roster.map(r=>r.height));
+    const maxH=Math.max(0,...sim.robots.map(r=>r.height));
     for(const ob of rehearsal.geom.obstacles(setup)){
       if(ob.kind==='overlay' && maxH<ob.low)continue;
       const blocks=maxH>=ob.low;
@@ -122,20 +129,40 @@
         context.setLineDash([3,5]);line([r.p,...r.waypoints.slice(r.target)],r.side==='blue'?'#a3ccff':'#ffb7b3',1.5);context.setLineDash([]);
       }
     }
+    // Concept marks: gold input mouths, mint output faces, a dashed turret wedge with its current aim ray, a heading arrow.
+    function conceptMarks(r){
+      const toward=(from,deg,length)=>[from[0]+length*Math.cos(deg*Math.PI/180),from[1]+length*Math.sin(deg*Math.PI/180)];
+      for(const port of r.concept.inputs){const m=ports.mouth(r,port);line(m.ends,'#182d41',4);line(m.ends,'#ffdf85',2);}
+      for(const port of r.concept.outputs){
+        const span=(port.face==='front'||port.face==='back'?r.width:r.length)+2*r.bumper;
+        const m=ports.mouth(r,{face:port.face,extensionIn:0,widthIn:span*.6}),normal=Math.atan2(m.forward[1],m.forward[0])*180/Math.PI;
+        line(m.ends,'#182d41',4);line(m.ends,'#7ff0c8',2);
+        if(port.kind!=='ranged')continue;
+        const turret=port.ranged.turret,reach=Math.max(12,span*.6);
+        if(turret){
+          const wedge=Array.from({length:25},(_,k)=>toward(m.center,normal+turret.minDeg+(turret.maxDeg-turret.minDeg)*k/24,reach));
+          context.setLineDash([3,3]);line([m.center,...wedge,m.center],'#b8f5ff',1.2);context.setLineDash([]);
+        }
+        const aim=turret?sim.game.concept?.[r.id]?.aim?.[port.id]?.turretDeg ?? 0:0;
+        line([m.center,toward(m.center,normal+aim,reach)],'#7ff0c8',1.5);
+      }
+      const tip=toward(r.p,r.heading,r.length/2+r.bumper+6),wing=d=>toward(tip,r.heading+180+d,5);
+      for(const [color,width] of [['#182d41',3.5],['#ffffff',1.6]])line([wing(-28),tip,wing(28),tip,r.p],color,width);
+    }
     for(const r of sim.robots){
       const blue=r.side==='blue';
       line(rehearsal.geom.footprint(r.p,r),'#f7faff',1.3,blue?'#2867ab':'#af3849');
       line(rehearsal.geom.footprint(r.p,{...r,bumper:0}),blue?'#9ccbff':'#ffadaf',1,blue?'#22518a':'#8e3240');
-      if(r.intake){
-        const mouth=rehearsal.intake(r);
-        line(mouth.ends,'#182d41',4);line(mouth.ends,'#ffdf85',2);
-        const target=sim.game.motion.pieces.find(piece=>piece.id===r.pickup?.id);
-        if(target){
-          const [tx,ty]=at(target.p);
-          context.strokeStyle='#fff5c8';context.lineWidth=2;context.beginPath();
-          context.arc(tx,ty,Math.max(4,(target.radiusIn+2)*scale),0,Math.PI*2);context.stroke();
-          context.setLineDash([2,4]);line([mouth.center,target.p],'#ffe298');context.setLineDash([]);
-        }
+      const intake=r.intake?rehearsal.intake(r):null;
+      if(intake){line(intake.ends,'#182d41',4);line(intake.ends,'#ffdf85',2);}
+      if(r.concept)conceptMarks(r);
+      const port=r.concept?.inputs.find(p=>p.id===r.pickup?.port),mouth=intake ?? (port?ports.mouth(r,port):null);
+      const target=mouth && sim.game.motion.pieces.find(piece=>piece.id===r.pickup?.id);
+      if(target){
+        const [tx,ty]=at(target.p);
+        context.strokeStyle='#fff5c8';context.lineWidth=2;context.beginPath();
+        context.arc(tx,ty,Math.max(4,(target.radiusIn+2)*scale),0,Math.PI*2);context.stroke();
+        context.setLineDash([2,4]);line([mouth.center,target.p],'#ffe298');context.setLineDash([]);
       }
       const [x,y]=at(r.p);context.font='bold '+Math.max(10,Math.min(17,12*scale))+'px system-ui';
       context.textAlign='center';context.textBaseline='middle';context.fillStyle='white';context.fillText(r.id,x,y);
@@ -185,6 +212,13 @@
     listRoster();render();
   }
   function edit(id,patch){setRoster(roster.map(r=>r.id===id?{...r,...patch}:r));}
+  // Choosing a concept keeps the robot's plans; choosing none restores the prism it had, or the profile default prism.
+  function chooseConcept(r,id){
+    if(!conceptRecord(r))prisms.set(r.id,r);
+    const {orders,roster:rows,concept:named,...body}=config.defaults,{concept,...row}=r;
+    const prism=prisms.get(r.id) ?? {...row,...body,frameProfile:body.frameProfile??profile.frameProfile,heading:rehearsal.defaults(r.side,r.slot).heading};
+    setRoster(roster.map(x=>x.id!==r.id?x:id?{...row,concept:id}:{...prism,plans:r.plans,endgame:r.endgame}));
+  }
   function terminalEditor(r,card){
     const spec=config.endgame;if(!spec)return;
     const choices=[];
@@ -256,6 +290,14 @@
         for(const [value,text] of Object.entries(rehearsal.behaviors))sel.add(new Option(text,value));
         sel.value=r.plans[key];sel.onchange=()=>edit(r.id,{plans:{...r.plans,[key]:sel.value}});label.append(sel);card.append(label);
       }
+      const chosen=conceptRecord(r);
+      if(concepts.length){
+        const label=document.createElement('label'),sel=document.createElement('select');
+        label.append('Concept bot');sel.setAttribute('aria-label',r.id+' concept bot');
+        sel.add(new Option('None · prism robot',''));
+        for(const c of concepts)sel.add(new Option(c.record.concept.id+' · '+c.document.name,c.record.concept.id));
+        sel.value=chosen?.record.concept.id ?? '';sel.onchange=()=>chooseConcept(r,sel.value);label.append(sel);card.append(label);
+      }
       const o=document.createElement('output');o.id='replay-state-'+r.id;card.append(o);
       const configLine=document.createElement('div');configLine.className='replay-robot-actions';
       const addNumber=(text,value,min,max,step,patch)=>{
@@ -265,11 +307,19 @@
         i.onchange=()=>{if(i.checkValidity() && i.value!=='')edit(r.id,{[patch]:i.valueAsNumber});else i.reportValidity();};
         label.append(i);configLine.append(label);
       };
-      addNumber('Speed (in/s)',r.speed,1,500,1,'speed');
-      addNumber('Bumper per side (in)',r.bumper,0,12,.25,'bumper');
-      const apply=button('Use trial box',()=>edit(r.id,{length:state.length,width:state.width,height:state.height,heading:state.heading,frameProfile:state.frameProfile??{kind:'square'}}));
-      apply.setAttribute('aria-label','Use trial box for '+r.id);
-      configLine.append(apply);card.append(configLine);terminalEditor(r,card);group.append(card);
+      if(chosen){
+        // The concept file owns the body and the drive; the speed, bumper and trial-box edits would not change its motion.
+        const d=chosen.record.concept.drive,note=document.createElement('small');
+        note.textContent='Body and swerve drive from the concept file: '+d.topSpeedInS+' in/s top, '+d.accelInS2+' in/s², '+d.rotationDegS+'°/s turn.';
+        configLine.append(note);
+      }else{
+        addNumber('Speed (in/s)',r.speed,1,500,1,'speed');
+        addNumber('Bumper per side (in)',r.bumper,0,12,.25,'bumper');
+        const apply=button('Use trial box',()=>edit(r.id,{length:state.length,width:state.width,height:state.height,heading:state.heading,frameProfile:state.frameProfile??{kind:'square'}}));
+        apply.setAttribute('aria-label','Use trial box for '+r.id);
+        configLine.append(apply);
+      }
+      card.append(configLine);terminalEditor(r,card);group.append(card);
       }
     }
   }
@@ -283,7 +333,7 @@
     const began=Boolean(series) || sim.ticks>0 || sim.phaseIndex>0 || !sim.paused;
     for(const control of rosterBox.querySelectorAll('select,input,button'))control.disabled=began;
     byId('replaySetup').disabled=began;
-    byId('scoreBlue').textContent=sim.game.score.blue;byId('scoreRed').textContent=sim.game.score.red;
+    byId('scoreBlue').textContent=points(sim.game.score.blue);byId('scoreRed').textContent=points(sim.game.score.red);
     const end=sim.ended;
     byId('replayRun').disabled=!roster.length || (end && sim.phaseIndex===config.periods.length-1);
     if(series)byId('replayRun').disabled=true;
@@ -312,7 +362,8 @@
     for(const id of ['replayStep','replayFast'])byId(id).disabled=Boolean(series) || !sim.paused || end || !roster.length;
     for(const r of sim.robots){
       const o=byId('replay-state-'+r.id);
-      o.textContent=(r.length+2*r.bumper)+' × '+(r.width+2*r.bumper)+' in occupied, '+r.height+' in tall, heading '+r.heading+'°. '+
+      o.textContent=(r.length+2*r.bumper)+' × '+(r.width+2*r.bumper)+' in occupied, '+r.height+' in tall, heading '+
+        (r.concept?r.heading.toFixed(1)+'° (concept '+r.concept.id+')':r.heading+'°')+'. '+
         (r.blocked || r.action || 'At start')+' · '+sim.game.cargo[r.id].length+' aboard · '+(r.wait*rehearsal.dt).toFixed(2)+' s waiting · '+r.visits+' completed trips';
     }
     byId('replayQueue').textContent=queues()+' '+(end?'Period frozen. ':'')+'Trip counts are unscored.';
@@ -419,7 +470,8 @@
       sim.phase+' active time '+(sim.ticks*rehearsal.dt).toFixed(2)+' s; '+(sim.ended?'clock frozen':'snapshot')+
       '. Obstacle setup: '+setup+'. Sources: '+config.sources.join(', '),
       ...sim.robots.map(r=>r.id+' '+r.side+' · '+config.periods.map(p=>p.name+' '+rehearsal.behaviors[r.plans[p.name]]).join(', ')+
-        '; '+r.length+' × '+r.width+' × '+r.height+' in frame, bumper '+r.bumper+' in/side, heading '+r.heading+'°, '+r.speed+' in/s. '+
+        '; '+(r.concept?'concept '+r.concept.id+', ':'')+r.length+' × '+r.width+' × '+r.height+' in frame, bumper '+r.bumper+' in/side, heading '+
+        (r.concept?r.heading.toFixed(1):r.heading)+'°, '+r.speed+(r.concept?' in/s top':' in/s')+'. '+
         'Position '+r.p.map(x=>x.toFixed(2)).join(', ')+' in. '+r.visits+' completed trips, '+(r.wait*rehearsal.dt).toFixed(2)+
         ' s waiting; '+(r.blocked || r.action || 'at start')+'.'),
       queues()];
