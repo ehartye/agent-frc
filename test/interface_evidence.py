@@ -58,9 +58,7 @@ class InterfaceEvidence(unittest.TestCase):
             missing_case=dict(stepSha256=digest, interfaces=self.rows(cases=("stroke-1",))),
             missing_pair=dict(stepSha256=digest, interfaces=self.rows(pairs=(("peg", "block"),))),
             other_step=dict(stepSha256="0" * 64, interfaces=self.rows()),
-            no_step=dict(interfaces=self.rows()),
             open_row=dict(stepSha256=digest, interfaces=self.rows(status="open")),
-            row_step_only=dict(interfaces=[dict(row, stepSha256=digest) for row in self.rows()]),
             not_a_list=dict(stepSha256=digest, interfaces={"stroke-1": self.rows()}),
             string_pair=dict(stepSha256=digest, interfaces=[dict(case=c, pair="blockpeg", status="pass") for c in ("stroke-1", "stroke-2")]),
         )
@@ -68,6 +66,15 @@ class InterfaceEvidence(unittest.TestCase):
             evidence = write(self.root, tag + ".json", record)
             with self.assertRaisesRegex(ValueError, STALE, msg=tag):
                 self.run_cases(evidence)
+
+    def test_a_record_that_repeats_no_step_digest_is_accepted_and_one_that_repeats_another_is_refused(self):
+        """A study checked on its own needs no typed hash: the STEP digest a record repeats is compared when present."""
+        for tag, record in dict(no_step=dict(interfaces=self.rows()),
+                                row_step_only=dict(interfaces=[dict(row, stepSha256=self.step["sha256"]) for row in self.rows()])).items():
+            results = self.run_cases(write(self.root, tag + ".json", record))
+            self.assertEqual([c["status"] for c in results], ["pass", "pass"], tag)
+        with self.assertRaisesRegex(ValueError, STALE):
+            self.run_cases(write(self.root, "other.json", dict(stepSha256="0" * 64, interfaces=self.rows())))
 
 
 if __name__ == "__main__":
