@@ -20,7 +20,7 @@ A project that still runs the earlier gates moves to this workflow with the [mig
 | An effective detailed design passed its review | The design carries its mechanical-readiness review result, for the STEP its record names, and the review reports `pass`. |
 | One status per design, one primary view | Each index holds `in-progress`, `effective`, `superseded` or `withdrawn` for each design, at most one `effective`, and the primary view computed from the statuses. |
 
-The rerun compares digests and verdicts. It does not compare measured values digit for digit, because a CAD kernel on another operating system can round them differently.
+The rerun compares digests and verdicts. The digests are the ones the layout check read and wrote into the receipt: the plan, the STEP, the motion study, the budgets and limits, and each trial a stage names. A plan [names its files by path](preliminary-design.md#name-files-by-path) and needs no typed hash for this, and an input that changed since the committed receipt still shows as a differing digest. It does not compare measured values digit for digit, because a CAD kernel on another operating system can round them differently.
 
 The check reads data. It does not inspect page markup, compare a page with the stock page or require any wording. A project may change its copy of the review page, the release index page and the design catalog. The pull request shows every change to them.
 
@@ -37,10 +37,10 @@ The check reads these folders. Pass the option to use another.
 | `--site` | `docs` | The published site |
 | `--preliminary` | `preliminary-design` | `releases.json` and `releases/ID/` inside the site. A release ID is a [version](#name-and-number-a-design), as in `releases/1.0/`. |
 | `--detailed` | `detailed-design` | `designs.json` and `designs/ID/` inside the site |
-| `--inputs` | `cad/preliminary-design/releases` | `ID/layout.json` and every file it pins, for each preliminary release |
+| `--inputs` | `cad/preliminary-design/releases` | `ID/layout.json` and every file it names, for each preliminary release |
 | `--detailed-inputs` | `cad/detailed-design/designs` | The same, for each detailed design |
 
-A release checked from the repository root, whose receipt names its view inside the inputs folder from there, is rerun from the repository root. The rerun cache and the changed-designs test read the inputs folder only, so keep every file the plan pins inside it, or name a wider folder with `check.project`. One checked in its own folder is rerun in that folder.
+A release checked from the repository root, whose receipt names its view inside the inputs folder from there, is rerun from the repository root. The rerun cache and the changed-designs test read the inputs folder only, so keep every file the plan names inside it, or name a wider folder with `check.project`. One checked in its own folder is rerun in that folder.
 
 A record can name its own inputs with `"check": {"project": "cad/robot", "plan": "layout.json"}`, both relative to the repository. `project` is the folder the layout check ran in and `plan` is the layout inside it. The staging commands below write this field.
 

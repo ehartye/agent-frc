@@ -329,14 +329,14 @@ export function checkProject(root, options = {}) {
     const project = item.inputs;
     const planName = record.check?.plan ?? 'layout.json', planFile = path.join(project, planName);
     if (!existsSync(planFile)) {
-      check(!item.required, where + ': commit its check inputs at ' + rel(project) + ' (' + planName + ' and every file it pins) so the layout check can be rerun');
+      check(!item.required, where + ': commit its check inputs at ' + rel(project) + ' (' + planName + ' and every file it names) so the layout check can be rerun');
       warnings.push(where + ': the layout check was not rerun because its inputs are not committed at ' + rel(project));
       entry.rerun = 'not committed';
       return;
     }
     const planSha256 = sha(readFileSync(planFile));
     check(receipt.planSha256 === planSha256, where + ': the published receipt is of a different layout plan than ' + rel(planFile) + '; rerun the check and publish its receipt');
-    // The plan pins its inputs by digest, but only the layout check verifies those pins. Key the cache on the files themselves.
+    // The plan names its inputs by path, and only the layout check reads them. Key the cache on the files themselves.
     const key = o.cache && sha(inputsDigest(project) + '\n' + planName + '\n' + pluginVersion), cached = o.cache && path.join(o.cache, key + '.json');
     let fresh;
     if (cached && existsSync(cached)) { fresh = parse(readFileSync(cached), 'cached rerun'); entry.rerun = 'cached'; }

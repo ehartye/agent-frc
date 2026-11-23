@@ -29,7 +29,7 @@ The check reruns the layout check in CI, so every file the layout check reads mu
 
 For each preliminary release that is `in-progress` or `effective`, commit its inputs at `cad/preliminary-design/releases/ID/`:
 
-- `layout.json` and every file it pins: the STEP, the motion study, the budgets and limits, any fixture STEP and each trial file a stage or field interaction names.
+- `layout.json` and every file it names: the STEP, the motion study, the budgets and limits, any fixture STEP and each trial file a stage or field interaction names.
 - The held receipt, when the release was checked with `--previous`.
 - `missions.json`, the review page and `receipt.json`. The starter's `.gitignore` keeps the input-side `review-scene.json.gz` out of the repository; the published copy is the committed one.
 
@@ -107,7 +107,8 @@ Keep one workflow that deploys Pages. If another workflow still deploys the site
 | `scripts/prepare-showcase-release.mjs` | The build adapter for the approved site |
 | A served-file inventory, such as `served-docs.json` | The whole-site freeze |
 | A project content guard that holds a binary hash allowlist | Replaced by the branch scan |
-| A project script that only checks a README still, link line or page against a pinned hash | A page pin |
+| A project script that only checks a README still, link line or page against a pinned hash | A page pin. `cad-readmes.py` without options [checks the still by its block, image and caption](cad-color-convention.md#keep-the-readme-still-current) |
+| A project script that only keeps the `sha256` values of a layout plan and its records in step | Typed hashes. A plan [names its files by path](preliminary-design.md#name-files-by-path) |
 | `.gitattributes` rules that exist only to keep pinned pages, stills and archives byte-exact | Support for the pins |
 | A one-time exception coded into a project gate script | Already used |
 

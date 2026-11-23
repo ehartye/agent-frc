@@ -28,7 +28,7 @@ cad/preliminary-design/
     missions.json                mission-task cases this release plays
     package-motion.html          the review page: the stock page until the project changes it
     review-scene.json.gz         the scene the page reads (ignored; see below)
-    release-lane-trial.json      example pinned evidence for a field interaction
+    release-lane-trial.json      example evidence for a field interaction
     release-lane-run.json        example recorded run, synthetic
     release-lane-replay.json     example replay set that plays the run in the motion list
     field/release-lane.html      synthetic, self-contained season field player
@@ -50,7 +50,7 @@ docs/preliminary-design/
 
 The page fetches `review-scene.json.gz` beside it, decompresses it with `DecompressionStream` and hashes the content. It uses `crypto.subtle` where the browser allows it and a bundled SHA-256 otherwise, so a plain-http LAN review verifies the same way as `localhost` or HTTPS. It then loads `receipt.json` and shows the receipt's decision only when that receipt pins this exact scene content and issue. Otherwise it shows the findings recorded when the scene was built and says so. Over plain HTTP the page marks verified results as a consistency check only: they show that the page, scene and receipt agree, not that they arrived unaltered. In the receipt, `view.sha256` is the stock page the checker shipped, `view.scene.sha256` covers the compressed scene as the checker left it, and `view.scene.contentSha256` and `view.scene.bytes` cover the decompressed scene. The checker credits a view when the page exists and the scene decompresses to the expected content. It does not compare the page with the stock page. Serve the review over HTTP; a page opened from `file://` explains that it cannot load the scene.
 
-The season repository is the project the check runs in. Each release folder holds its layout plan, inputs, page and scene together, and every pin and the plan's `view` are written from the repository root, as in `cad/preliminary-design/releases/1.0/package-motion.html`. `--write-view` refuses a view at the project root. [Keep the view in its release folder](../../../docs/preliminary-design.md#keep-the-view-in-its-release-folder)
+The season repository is the project the check runs in. Each release folder holds its layout plan, inputs, page and scene together, and every file reference and the plan's `view` are written from the repository root, by path and [without a typed hash](../../../docs/preliminary-design.md#name-files-by-path), as in `cad/preliminary-design/releases/1.0/package-motion.html`. `--write-view` refuses a view at the project root. [Keep the view in its release folder](../../../docs/preliminary-design.md#keep-the-view-in-its-release-folder)
 
 The starter's `.gitignore` leaves the input-side scene uncommitted, so the published release holds the only committed copy. With `--write-view` the checker writes a missing page or scene and replaces a stale or unreadable scene whole, so a reader finds the previous scene or the new one. It never overwrites an existing page, which a project may have changed; delete a stale page before `--write-view`. Each written file appears whole through a temporary file and a rename; save the receipt the same way with `--output receipt.json`. A different Python or zlib build can compress the same content to different bytes. That does not matter to publishing: the publication check compares the scene's content with the receipt, not its compressed bytes.
 
@@ -102,17 +102,17 @@ The schema marks each field `plugin` (derived), `project` (authored under `prese
 | `cutaway` | optional | `presentation.cutaway`: `{label, hides: [fixture IDs], outline: [[x, y, z], ...]}`, for example a target aperture. |
 | `links` | optional | `presentation.links`: `[{label, href}]` header links to season pages, relative or `https:`. |
 | `fieldInteractions` | optional | `presentation.fieldInteractions`; see below. |
-| `replays` | optional | `presentation.replays`: pinned replay sets as `[{file, sha256}]`; see [Play a recorded trial in the motion list](#play-a-recorded-trial-in-the-motion-list). |
+| `replays` | optional | `presentation.replays`: replay sets named as `[{file}]`; see [Play a recorded trial in the motion list](#play-a-recorded-trial-in-the-motion-list). |
 
 The limiting pair on each path comes from pairs that include a moving body: a failure or open interval first, then the smallest gap or interval lower bound. An interval bound has no single limiting pose, so **Jump to limiting pose** needs a witness time. The receipt's `decision` records the final `status` and `firstUnmet` requirement: clearance findings first, then weight, voltage, the displaced control, held reopen decisions and missing inputs. The conceptual-design return criteria list each accepted conceptual premise from the receipt.
 
-Keep field-interaction and physics players project-owned. Each one is first-class preliminary evidence for its mission task. Put it in the release inputs at `field/NAME.html` beside the review page, link it with `{title, href: "field/NAME.html", objective, evidence: {file, sha256}, embed}` and pin its trial. Staging publishes the page and its trial in the release and lists them under `fieldPlayers` in `release.json`. Keep the page self-contained so it plays from the published folder and from a local copy. The starter makes the policy `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; base-uri 'none'; form-action 'none'">` the first element in `<head>`; keep it unless the page needs more. Inline everything the playback needs, including its trace, and name the preliminary design release the page belongs to. The publication check does not inspect the page: your project's pull request review does. Correct a player by staging its release again. The review re-checks each link and sandboxes an embedded player from another origin.
+Keep field-interaction and physics players project-owned. Each one is first-class preliminary evidence for its mission task. Put it in the release inputs at `field/NAME.html` beside the review page, link it with `{title, href: "field/NAME.html", objective, evidence: {file}, embed}` so the link names its trial. Staging publishes the page and its trial in the release and lists them under `fieldPlayers` in `release.json`. Keep the page self-contained so it plays from the published folder and from a local copy. The starter makes the policy `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; base-uri 'none'; form-action 'none'">` the first element in `<head>`; keep it unless the page needs more. Inline everything the playback needs, including its trace, and name the preliminary design release the page belongs to. The publication check does not inspect the page: your project's pull request review does. Correct a player by staging its release again. The review re-checks each link and sandboxes an embedded player from another origin.
 
 ## Play a recorded trial in the motion list
 
 A replay plays a recorded physics trial in the review's own viewer. It is one more entry in the motion selector, after the checked cases, with the same Play, speed, slider and readout. `?case=ID` opens it, so replay and case IDs share one namespace. A replay is evidence playback and not a clearance case: the layout check neither runs nor credits it, the receipt's case set leaves it out, and the motion-evidence table lists only checked cases.
 
-Generate a replay set from the trial in the owning project, write it beside `layout.json`, as JSON or gzipped JSON, and pin it under `presentation.replays` as `{file, sha256}`. A set has the schema `agent-frc/review-replays@1`, a `replays` list and optional `fieldBodies`. This example is abbreviated:
+Generate a replay set from the trial in the owning project, write it beside `layout.json`, as JSON or gzipped JSON, and name it under `presentation.replays` as `{"file": "..."}`. Type no hash: the check reads the file and records its digest in the scene. A set has the schema `agent-frc/review-replays@1`, a `replays` list and optional `fieldBodies`. This example is abbreviated:
 
 ```json
 {
@@ -121,7 +121,7 @@ Generate a replay set from the trial in the owning project, write it beside `lay
   "replays": [{
     "id": "lane-run", "label": "Lane run (recorded)", "basis": "What was recorded and under which model",
     "objective": "The narrative objective it plays",
-    "evidence": [{"file": "lane-run.json", "sha256": "...", "role": "recorded run"}],
+    "evidence": [{"file": "lane-run.json", "role": "recorded run"}],
     "recorded": ["Robot position"], "display": ["Hose shape"],
     "time": [0, 0.05, 0.1], "measure": ["...", "...", "..."], "events": [{"frame": 2, "label": "At the lane"}],
     "follow": "robot",
@@ -137,7 +137,7 @@ Generate a replay set from the trial in the owning project, write it beside `lay
 - `bodies` maps each shown ID, a placed member or a field body, to the rigid group it moves with. `null` keeps the body where its mesh was drawn. `groups` gives each group one row-major 3×4 transform per frame, in the field frame and in millimetres, applied to the mesh as drawn. A `null` frame hides the group. `follow` names the group the robot view tracks; it needs a transform in every frame.
 - `fieldBodies` adds field parts and loose pieces that only replays show. Each needs a `name` and a closed triangle `mesh`, and may give `category`, `color`, `subsystem`, `material`, `purpose` and `rationale`. A field body counts as a fixture and never as robot mass.
 - `tubes` draws flexible parts along a centerline. `points` holds one centerline for a fixed part or one per frame for a moving one, each with the same number of points. Give `radiusMm` and `color` to draw a round tube. Give `body` instead, naming a field body the replay does not otherwise place, and that body's mesh follows the centerline: each vertex moves with the nearest point on it, measured from the first centerline.
-- `evidence` pins every trial file the replay plays back. List what came from the trial under `recorded` and what was prescribed or interpolated under `display`; display motions carry no contact or load claim.
+- `evidence` names every trial file the replay plays back, by project-relative path. List what came from the trial under `recorded` and what was prescribed or interpolated under `display`; display motions carry no contact or load claim.
 
 In the scene, each replay appears under `replays[]` with the same fields, except that the plugin resolves each body to `{mesh, group}` and adds `mesh` to a tube that names a `body`. `review-scene.mjs validate` checks the frame counts, groups, event order and tube bodies. A scene without replays is unchanged.
 
