@@ -198,6 +198,21 @@ test('a live release needs committed inputs; history is not required to keep its
   assert.match(errorsOf(p.check()), /Release 2\.0 is listed but has no directory/);
 });
 
+test('an effective design this change leaves as it was stands on its published files, with no committed inputs', t => {
+  const p = project(t, {'1.0': {}}, {'1.0': 'effective'});
+  p.gate('1.0');
+  const effective = p.commit('effective');
+  // Its inputs leave the project, as for a design published before its inputs were kept: the published files stand.
+  rmSync(path.join(p.root, 'cad/preliminary-design/releases/1.0'), {recursive: true});
+  p.commit('inputs gone');
+  const result = p.check({base: effective});
+  assert.deepEqual(result.errors, []);
+  assert.match(noteOf(result, '1.0'), /effective, physics unchanged since .*Its published files stand; it needs no committed inputs until a change alters it\./);
+  // Control: a draft without its inputs is still refused.
+  p.setStatus({'1.0': 'in-progress'});
+  assert.match(errorsOf(p.check({base: effective})), /1\.0: commit its check inputs at cad\/preliminary-design\/releases\/1\.0/);
+});
+
 test('the index holds at most one effective release, a computed current release and every directory', t => {
   const p = project(t, {'1.0': {}, '2.0': {}}, {'1.0': 'effective', '2.0': 'effective'});
   assert.match(errorsOf(p.check()), /At most one preliminary design release is effective/);
@@ -247,9 +262,7 @@ test('a version ID is checked with the name of its architecture', t => {
 });
 
 test('the review scene must repeat the receipt and a mission case must play a represented objective', t => {
-  const p = project(t, {'1.0': {}, '2.0': {missions: []}, '3.0': {trial: '{"transport":{"case":"loaded-turn"}}',
-    missions: [{case: 'loaded-turn', kind: 'field-interaction-trial', accomplishes: 'delivered', objective: 'Carry the sample to the bin',
-      trial: {file: 'acquire-trial.json', sha256: sha('{"transport":{"case":"loaded-turn"}}')}}]},
+  const p = project(t, {'1.0': {}, '2.0': {missions: []}, '3.0': {trial: 'invented carry'},
     '4.0': {missions: [{case: 'loaded-turn', kind: 'operating-case', accomplishes: 'delivered', objective: 'Hang from the bar'}]}});
   const scene = path.join(p.root, prelim, 'releases/1.0/review-scene.json.gz');
   const shown = JSON.parse(gunzipSync(readFileSync(scene)));
@@ -259,9 +272,9 @@ test('the review scene must repeat the receipt and a mission case must play a re
   assert.match(errors, /2\.0 declares no mission case/);
   assert.match(errors, /4\.0 mission case loaded-turn must accomplish a represented narrative objective/);
   assert.doesNotMatch(errors, /Sliding gate 3\.0/);
-  // A trial the receipt does not name is not mission evidence.
-  write(p.root, prelim + '/releases/3.0/acquire-trial.json', '{"transport":{"case":"loaded-turn"},"edited":true}');
-  assert.match(errorsOf(p.check()), /3\.0 mission case loaded-turn: the published trial is not one the receipt names/);
+  // A mission case is an operating case: one kind, whatever moves the piece.
+  editJson(path.join(p.root, prelim, 'releases/3.0/release.json'), r => ({...r, missionCases: [{...r.missionCases[0], kind: 'trial'}]}));
+  assert.match(errorsOf(p.check()), /3\.0: each mission case needs a case, kind \(operating-case\)/);
 });
 
 test('a mission case counts when a mission animation plays it', t => {

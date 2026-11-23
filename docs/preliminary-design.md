@@ -113,7 +113,7 @@ A stage holds:
 | `requiredContacts` | Pairs that must come within `maxGapMm` in a `window` of the stroke, such as a hook seating on a bar |
 | `payloadCompression` | How deep a roller or guide may press into a ball or round-section game piece. [Judge a squeezed game piece](#judge-a-squeezed-game-piece) |
 | `depth` | How many times the search may halve the stroke before it reports a pair as open. Default 9 |
-| `carriedWith`, `transportedBy`, `freePath`, `supportedBy` | [What moved each payload](#move-a-payload-by-contact-transport), with its trial record |
+| `carriedWith`, `transportedBy`, `freePath`, `supportedBy` | [What moved each payload](#move-a-payload-by-contact-transport), by the name of the design library trial that moved it |
 
 `missions.json`, the mass and current ledger and its limits stay separate files beside the judgement file, because the readiness report and the review page read them on their own.
 
@@ -161,57 +161,48 @@ A missing explanation or an open narrative objective leaves the receipt `provisi
 
 ### Move a payload by contact transport
 
-A fixed pocket, powered rollers or a deployable lip can move the article while no mechanism moves rigidly with it. Give the payload group its own start pose and moves in the motion, and declare the transport in the stage:
+A fixed pocket, powered rollers or a deployable lip can move the article while no mechanism moves rigidly with it. Write the interaction's trial in the design source, run it with the library, and declare the transport in the stage with the trial's name:
 
 ```json
 "transportedBy": {
   "carried article": {
     "mechanisms": ["carrier"],
     "drive": {"carrier": "Roller surface held at a fixed powered speed"},
-    "evidence": {"file": "acquire-trial.json"},
+    "trial": "pickup",
     "basis": "The article rolls in on the powered carrier surface"
   }
 }
 ```
 
 - Each transporter must be a `mechanism` group. A transporter that does not move in the motion needs a named `drive`.
-- Name the contact trial that established the path, as `{"file": "..."}`. Its `transport` record must equal the stage name as `case`, the payload group, the sorted transporters and, for each solid of the payload, the exact `moves` and `initialPose` the design source gives its group, with `[]` for no start pose.
+- The payload's move in the motion must be the trial's fitted path: copy `trials.NAME.fit.operation` from the library's record into the design source as the move of every solid of the payload group. The judgement file names that record as `"trials": {"file": ".../records/trials.json"}`.
 - When every condition holds, an operating stage satisfies the loaded-operating requirement.
 
-A missing trial, a trial for another path or an undeclared stationary drive is listed in `missingInputs`, and the stage does not count. The check binds the declared path to its trial. It does not rerun the trial or evaluate contact forces, slip or drive capacity. [Find what moved the piece](../skills/frc-preliminary-design/references/trials.md#find-what-moved-the-piece)
+A trial not in the record, a move that is not its fitted path or an undeclared stationary drive is listed in `missingInputs`, and the stage does not count. The check binds the path to the trial; the trial's record says what it found. [Find what moved the piece](../skills/frc-preliminary-design/references/trials.md#find-what-moved-the-piece)
+
+### One trial, several stages
+
+One trial can run through several stages, such as a drop, a ride on a pocket and a seat. Give each stage a window of the trial: `"trial": "receive", "window": [0.42, 0.91]`. Both ends are times at which the fit kept a point, listed in the record as `fit.atS`. The stage's move is then the fitted path through the kept points inside the window. Set the trial's `fitToleranceMm` small enough that each stage boundary is a kept point.
 
 ### A free payload path
 
-A released, launched or dropped article is carried by nothing: its path comes from a trial. Give the payload group its own start pose and moves, and declare the free path in the stage:
+A released, launched or dropped article is carried by nothing: its path comes from a trial. Declare the free path in the stage with the trial's name, and write its fitted path as the payload's move:
 
 ```json
-"freePath": {
-  "carried article": {
-    "evidence": {"file": "release-trial.json"},
-    "basis": "The article leaves the carrier and flies free"
-  }
-}
+"freePath": {"carried article": {"trial": "release", "basis": "The article leaves the carrier and flies free"}}
 ```
-
-The trial's `freePath` record must equal the stage name as `case`, the payload group and the payload solids' exact `moves` and `initialPose`. A missing trial, or a trial for another path, is listed in `missingInputs`.
 
 A free path never satisfies the loaded-operating requirement by itself. Another operating stage, or a carried or transported payload in the same stage, must show the mechanism moving the article. The review scene names the trial in the case's evidence method.
 
 ### A payload a field fixture supports
 
-An article that rolls down a field chute or rests in a field target is supported by the field and moved by no mechanism. List the field part under `fixtures` in the design source, give the payload group its own start pose and moves, and declare the support in the stage:
+An article that rolls down a field chute or rests in a field target is supported by the field and moved by no mechanism. List the field part under `fixtures` in the design source and declare the support in the stage:
 
 ```json
-"supportedBy": {
-  "carried article": {
-    "fixtures": ["lane"],
-    "evidence": {"file": "lane-trial.json"},
-    "basis": "The article rolls down the lane"
-  }
-}
+"supportedBy": {"carried article": {"fixtures": ["lane"], "trial": "lane roll", "basis": "The article rolls down the lane"}}
 ```
 
-Each name in `fixtures` must be a fixture present in the stage. The trial's `support` record must equal the stage name as `case`, the payload group, the sorted fixture names and the payload solids' exact `moves` and `initialPose`. Like a free path, a supported path never satisfies the loaded-operating requirement by itself.
+Each name in `fixtures` must be a fixture present in the stage, and the payload's move is the trial's fitted path. Like a free path, a supported path never satisfies the loaded-operating requirement by itself.
 
 A payload is declared once in a stage: carried, transported, on a free path or supported.
 
@@ -241,7 +232,7 @@ A roller or guide that squeezes a soft ball or a round-section ring shares volum
 "payloadCompression": [{"payload": "sample", "contact": "pad", "maxDepthMm": 1, "basis": "Allowed one-sided squash of the piece"}]
 ```
 
-The library measures how far the contact surface reaches inside the piece's section along the whole stroke, with a proven ceiling. The check judges it: `pass` when the deepest point stays within `maxDepthMm` and the ceiling is proven, `fail` past it, and `open` when the search reached its depth limit. A failing squeeze blocks the layout like a failing clearance case. `payload` is a solid of a payload group, `contact` is not, and `maxDepthMm` is above zero and less than the piece's section radius. When a trial gave the figure, add `"evidence": {"file": "...", "field": "maxDepthMm"}`; the check reports a missing input when the trial records a different figure. The check prints one `[squeeze]` line per rule.
+The library measures how far the contact surface reaches inside the piece's section along the whole stroke, with a proven ceiling. The check judges it: `pass` when the deepest point stays within `maxDepthMm` and the ceiling is proven, `fail` past it, and `open` when the search reached its depth limit. A failing squeeze blocks the layout like a failing clearance case. `payload` is a solid of a payload group, `contact` is not, and `maxDepthMm` is above zero and less than the piece's section radius. The check prints one `[squeeze]` line per rule.
 
 The allowed depth is a best guess with a basis, like every other input. Treat it as an assumption to cover with an adjustment, such as a slotted roller mount, and put the squeeze on the builder's bench-test list.
 
@@ -553,7 +544,7 @@ It goes to `configurable` when a squeeze is deeper than about a tenth of the pie
 
 Write each trial as data in the design source and run it with the library: `python -m frc_design_kernel try design.json --out records`. The check reads its record and says, per interaction, the trial's result word, its engine, its stated and standing assumptions, every input with its source and range, the input it leans on most, and the adjustment windows the coverage campaign found. The check asks the library's `status` whether the record is current. A stale record is marked, with what changed. A stale or failing trial never blocks the layout; the readiness report holds it against the bar.
 
-To make a payload's motion the trial's own path, bind the stage to the trial instead of an evidence file:
+A stage binds a payload's motion to a trial by name, so the animation is the trial's own path:
 
 ```json
 "transportedBy": {"carried article": {"mechanisms": ["carrier"], "drive": {"carrier": "Belt at its set speed"}, "trial": "pickup", "basis": "The belt lifts the piece"}}

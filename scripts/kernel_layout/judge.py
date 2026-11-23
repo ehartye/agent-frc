@@ -28,8 +28,7 @@ def compression_row(rule, found):
     """A squeezed game piece: within its allowed depth with a proven ceiling, past it, or left open by the depth limit."""
     status = "fail" if found["deeperThanLimit"] else "pass" if found["proven"] else "open"
     return dict(payload=rule["payload"], contact=rule["contact"], maxDepthMm=rule["maxDepthMm"], basis=rule["basis"], status=status,
-                deepestMm=found["deepestMm"], t=found["t"], upperBoundMm=found["upperBoundMm"], sectionRadiusMm=found["sectionRadiusMm"],
-                **({"evidence": rule["evidence"]} if "evidence" in rule else {}))
+                deepestMm=found["deepestMm"], t=found["t"], upperBoundMm=found["upperBoundMm"], sectionRadiusMm=found["sectionRadiusMm"])
 
 
 def worst(rows):

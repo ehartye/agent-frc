@@ -43,7 +43,7 @@ import {benchFile, effectiveProblems, handedOver, summary as benchSummary, summa
 const receiptSchema = 'agent-frc/preliminary-layout-result@1', judgementFile = 'judgement.json';
 const readinessSchema = 'agent-frc/mechanical-readiness-result@1';
 const accomplishments = ['acquired', 'delivered', 'scored', 'climb-held'];
-const kinds = ['operating-case', 'field-interaction-trial'];
+const kinds = ['operating-case'];
 const sceneFile = 'review-scene.json.gz';
 export const pluginVersion = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
 
@@ -72,15 +72,15 @@ export function checkPhysics(receipt, where, {rerun = false} = {}) {
   check(duties.length && duties.every(r => r?.status === 'pass'), where + ' needs every loaded-voltage case to pass');
 }
 
-/** The trial evidence a stage names, by digest: a contact transport, an unsupported free path or a path a field fixture supports. */
-const trialDigests = stage => [...Object.values(stage?.transportedBy ?? {}), ...Object.values(stage?.freePath ?? {}), ...Object.values(stage?.supportedBy ?? {})].map(x => x?.evidence?.sha256).filter(Boolean);
+/** The trials a stage binds its payload paths to, by name: a contact transport, a free path or a path a field fixture supports. */
+const stageTrials = stage => [...Object.values(stage?.transportedBy ?? {}), ...Object.values(stage?.freePath ?? {}), ...Object.values(stage?.supportedBy ?? {})].map(x => x?.trial).filter(Boolean);
 
 /** What a rerun must reproduce: the inputs by digest and every verdict. Measured values are left out; a kernel on another system may round them differently. */
 export function verdict(receipt) {
   return {
     issue: receipt.issue, status: receipt.status, planSha256: receipt.planSha256, stepSha256: receipt.step?.sha256, designSha256: receipt.design?.sha256,
     cycle: list(receipt.cycle), cases: list(receipt.cases).map(c => [c.case, c.status]).sort(),
-    stages: Object.entries(receipt.stages ?? {}).map(([name, stage]) => [name, stage?.purpose, trialDigests(stage).sort()]).sort(),
+    stages: Object.entries(receipt.stages ?? {}).map(([name, stage]) => [name, stage?.purpose, stageTrials(stage).sort()]).sort(),
     objectives: list(receipt.narrativeReview?.objectives).map(o => [o?.objective, o?.disposition]).sort(),
     control: [receipt.control?.case, receipt.control?.displaced, receipt.control?.witness?.status],
     massStatus: receipt.budgets?.massStatus, budgetsSha256: receipt.budgets?.source?.sha256, limitsSha256: receipt.budgets?.limits?.sha256,
@@ -125,10 +125,6 @@ export function checkEvidence(where, files, record) {
     // An animation shows a mission phase; a case is one checked segment of it.
     check(animations.some(a => a?.mission === true && list(a.cases).includes(m.case)),
       mission + ' is not played by a mission animation of the review. Its phase is marked "headline": false under presentation.phases; name a case of a headline phase');
-    if (m.kind !== 'field-interaction-trial') continue;
-    // A trial counts only when the receipt names it, pinned by the case's stage.
-    check(object(m.trial) && named(m.trial.file) && files.has(m.trial.file), mission + ' must publish its trial file');
-    check(trialDigests(receipt.stages[m.case]).includes(sha(files.get(m.trial.file))), mission + ': the published trial is not one the receipt names');
   }
   return receipt;
 }
@@ -413,6 +409,9 @@ export function checkProject(root, options = {}) {
     }
     if (!receipt) return note(said);
     const planName = judgementFile;
+    // An effective design this change leaves as it was stands on its published files: the stage gate ran when it became effective.
+    const stands = effective && base && was.effective === id;
+    if (!existsSync(path.join(project, planName)) && stands) return note(said + ' Its published files stand; it needs no committed inputs until a change alters it.');
     if (!existsSync(path.join(project, planName))) {
       check(!item.required, where + ': commit its check inputs at ' + rel(project) + ' (' + planName + ' and every file it names). The stage gate runs on them');
       warnings.push(where + ': its inputs are not committed at ' + rel(project) + ', so its receipt was not compared with them');

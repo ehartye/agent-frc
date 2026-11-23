@@ -193,12 +193,60 @@ class KernelInteractionsCheck(unittest.TestCase):
         _, unfit, _ = self.check()
         self.assertIn("The move of carried article in acquire is not the path trial " + TRIAL + " fitted. Write its fit operation as the move in the design source",
                       unfit["missingInputs"])
+        fit = json.loads((self.root / RELEASE / "records/trials.json").read_text(encoding="utf-8"))["trials"][TRIAL]["fit"]
+        source = self.copy(self.source)
+        source["motions"]["acquire"]["moves"]["carried article"] = [fit["operation"]]
+        self.refresh(source, trial=False, extremes=False)
+        _, fitted, _ = self.check()
+        self.assertFalse(any("fitted" in gap for gap in fitted["missingInputs"]), fitted["missingInputs"])
+        # A window of the trial binds the stroke between two kept points of the fit; any other time is refused.
+        spec = judgement["stages"]["acquire"]["transportedBy"]["carried article"]
+        spec["window"] = [fit["atS"][0], fit["atS"][-1]]
+        self.put("judgement.json", judgement)
+        _, windowed, _ = self.check()
+        self.assertFalse(any("fitted" in gap for gap in windowed["missingInputs"]), windowed["missingInputs"])
+        spec["window"] = [fit["atS"][0], fit["atS"][-1] / 3]
+        self.put("judgement.json", judgement)
+        refused, _, _ = self.check()
+        self.assertEqual(refused.returncode, 2)
+        self.assertIn("The window of carried article in acquire runs between two kept points of the trial's fit", refused.stderr)
+
+    def test_a_free_path_or_a_fixture_moves_a_payload_only_on_its_trial_and_a_free_path_alone_is_not_loaded(self):
         fit = json.loads((self.root / RELEASE / "records/trials.json").read_text(encoding="utf-8"))["trials"][TRIAL]["fit"]["operation"]
         source = self.copy(self.source)
         source["motions"]["acquire"]["moves"]["carried article"] = [fit]
         self.refresh(source, trial=False, extremes=False)
-        _, fitted, _ = self.check()
-        self.assertFalse(any("fitted" in gap for gap in fitted["missingInputs"]), fitted["missingInputs"])
+        judgement = self.copy(self.judgement)
+        judgement["stages"]["acquire"]["freePath"] = {"carried article": dict(basis="Invented: the article rolls free", trial=TRIAL)}
+        self.put("judgement.json", judgement)
+        # The fitted path ends where the trial left the article, so the cycle after it is broken here; the path itself is bound.
+        cycle = ["Discontinuous cycle: carried article between acquire and loaded-turn"]
+        _, receipt, _ = self.check()
+        self.assertEqual(receipt["missingInputs"], cycle)
+        # A free path is not a loaded operating case: without the carried turn, no operating path moves the payload with a mechanism.
+        del judgement["stages"]["loaded-turn"]["carriedWith"]
+        self.put("judgement.json", judgement)
+        _, unloaded, _ = self.check()
+        self.assertIn("No operating path includes the moving mechanism and finite payload", unloaded["missingInputs"])
+        # A field fixture supports the same path; a robot solid cannot.
+        judgement = self.copy(self.judgement)
+        judgement["stages"]["acquire"]["supportedBy"] = {"carried article": dict(fixtures=["tray"], basis="Invented: the tray carries it", trial=TRIAL)}
+        self.put("judgement.json", judgement)
+        _, supported, _ = self.check()
+        self.assertEqual(supported["missingInputs"], cycle)
+        judgement["stages"]["acquire"]["supportedBy"]["carried article"]["fixtures"] = ["rail"]
+        self.put("judgement.json", judgement)
+        refused, _, _ = self.check()
+        self.assertEqual(refused.returncode, 2)
+        self.assertIn("Only a field fixture present in acquire can support a payload: carried article", refused.stderr)
+        # A stage names its trial: a path with no trial stops the check.
+        spec = judgement["stages"]["acquire"]["supportedBy"]["carried article"]
+        del spec["trial"]
+        spec["fixtures"] = ["tray"]
+        self.put("judgement.json", judgement)
+        unnamed, _, _ = self.check()
+        self.assertEqual(unnamed.returncode, 2)
+        self.assertIn("the design library trial that moves it, as trial: NAME: carried article", unnamed.stderr)
 
 
 if __name__ == "__main__":

@@ -37,8 +37,8 @@ export function issueRelease(site,id,{status='layout-checked',edit=r=>r,missions
     power:[duty]});
   const content=Buffer.from(JSON.stringify(scene)),served=gzipSync(content),view=stockPage;
   const stages={'loaded-turn':{purpose:'operating'},park:{purpose:'park'}};
-  if(trial&&freePath)stages['loaded-turn'].freePath={sample:{basis:'Invented free flight',evidence:{file:'acquire-trial.json',sha256:sha(trial)}}};
-  else if(trial)stages['loaded-turn'].transportedBy={sample:{mechanisms:['carrier'],evidence:{file:'acquire-trial.json',sha256:sha(trial)}}};
+  if(trial&&freePath)stages['loaded-turn'].freePath={sample:{basis:'Invented free flight',trial}};
+  else if(trial)stages['loaded-turn'].transportedBy={sample:{mechanisms:['carrier'],trial}};
   let receipt={schema:'agent-frc/preliminary-layout-result@1',issue:'synthetic-'+id,planSha256:sha('plan '+id),status,
     missingInputs:[],reopen:[],step,design:sourcePin,parts:[{file:'export.step',sha256:step.sha256,solids:1}],narrativeReview:{source:{file:'narrative.md',sha256:sha('narrative')},objectives},
     stages,cycle:['loaded-turn','park'],cases:[{case:'loaded-turn',status:'pass',pairs:[]},{case:'park',status:'pass',pairs:[]}],
@@ -56,7 +56,6 @@ export function issueRelease(site,id,{status='layout-checked',edit=r=>r,missions
     status:receipt.status,receipt:{file:'receipt.json',sha256:sha(receiptBytes)},view:{file:'index.html',sha256:sha(view)},
     scene:{file:'design.json',sha256:sha(motion),stepSha256:step.sha256},
     missionCases:missions??[{case:'loaded-turn',kind:'operating-case',accomplishes:'delivered',objective:'Carry the sample to the bin'}]};
-  if(trial)write(dir,'acquire-trial.json',trial);
   write(dir,'release.json',record);
   return {dir,record};
 }

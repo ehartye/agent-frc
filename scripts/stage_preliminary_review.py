@@ -276,22 +276,10 @@ def stage(season, inputs, release, design=None, refresh=False):
     files = {"index.html": viewer, SCENE: scene_file, "receipt.json": inputs / "receipt.json", "design.json": inside(root, plan["source"]["file"]), "budgets.json": ledger,
              "limits.json": inside(root, read(ledger)["requirements"]["file"])}
 
-    def publish(name, source):
-        if files.setdefault(name, source) != source:
-            raise ValueError("Two different release files share a name: " + name)
-
-    published = []
-    for mission in missions:
-        mission = dict(mission)
-        if mission.get("trial"):
-            trial = inside(root, mission["trial"]["file"])
-            publish(trial.name, trial)
-            mission["trial"] = dict(file=trial.name)
-        published.append(mission)
     record = dict(schema="agent-frc/preliminary-release@1", release=release, issue=result["issue"], phase="preliminary-design",
                   # Where the stage gate finds the committed inputs to rerun the layout check.
                   check=dict(project=inputs.relative_to(season.resolve()).as_posix()),
-                  missionCases=published)
+                  missionCases=missions)
     site.mkdir(parents=True, exist_ok=True)
     with update_index(site), tempfile.TemporaryDirectory(dir=site.parent, prefix=".stage-") as tmp:
         index = load_index(site)

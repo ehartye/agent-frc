@@ -170,11 +170,6 @@ def control_title(plan):
     return own["title"] if isinstance(own, dict) and named(own.get("title")) else "Displaced control"
 
 
-def trial_words(evidence):
-    """Where a bound path comes from: a library trial by name, or a pinned trial file."""
-    return "trial " + evidence["trial"] if "trial" in evidence else "pinned trial " + evidence["file"]
-
-
 def motion_evidence(plan, study_cases, observed_cases, control=None, control_case=None, free_paths=None, supports=None):
     """The check list: nominal, inhibited, adverse, displaced-control and uncovered cases. The page groups it by phase.
 
@@ -205,23 +200,23 @@ def motion_evidence(plan, study_cases, observed_cases, control=None, control_cas
                      method=_method(best), result=(observed or {}).get("status", "not run"), playable=True)
         if "pathToleranceMm" in stage and kind != "displaced control":
             entry["pathToleranceMm"] = stage["pathToleranceMm"]
-        flights = [dict(payload=payload, basis=spec.get("basis"), evidence=spec.get("evidence") or dict(trial=spec.get("trial")), bound=bound)
+        flights = [dict(payload=payload, basis=spec.get("basis"), trial=spec["trial"], bound=bound)
                    for payload, bound in ((free_paths or {}).get(case["id"]) or {}).items()
                    for spec in [stage["freePath"][payload]]] if kind != "displaced control" else []
         if flights:
             entry["freePath"] = flights
             entry["method"] += "".join(
-                " · Free path of " + f["payload"] + (" from " + trial_words(f["evidence"]) if f["bound"]
+                " · Free path of " + f["payload"] + (" from trial " + f["trial"] if f["bound"]
                                                      else " without a trial that records this path") for f in flights)
         rests = [dict(payload=payload, fixtures=sorted(spec.get("fixtures") or []), basis=spec.get("basis"),
-                      evidence=spec.get("evidence") or dict(trial=spec.get("trial")), bound=bound)
+                      trial=spec["trial"], bound=bound)
                  for payload, bound in ((supports or {}).get(case["id"]) or {}).items()
                  for spec in [stage["supportedBy"][payload]]] if kind != "displaced control" else []
         if rests:
             entry["supportedBy"] = rests
             entry["method"] += "".join(
                 " · " + r["payload"] + " supported by fixture " + ", ".join(r["fixtures"])
-                + (" from " + trial_words(r["evidence"]) if r["bound"] else " without a trial that records this path")
+                + (" from trial " + r["trial"] if r["bound"] else " without a trial that records this path")
                 for r in rests)
         entry.update(extra or {})
         rows.append(entry)

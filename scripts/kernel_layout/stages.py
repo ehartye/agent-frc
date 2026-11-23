@@ -1,36 +1,29 @@
-"""Judge the stages: what moved each game piece and on what evidence, and whether the cycle is whole.
+"""Judge the stages: what moved each game piece and on what trial, and whether the cycle is whole.
 
 A payload that moves in a stage is carried with a mechanism, transported by contact, on a free path or supported
-by a field fixture. The last three name a trial record, which must record this stage, this payload and the exact
-start and travel the design source gives it, so a path is never an arbitrary animation.
+by a field fixture. The last three name a trial of the design library, and the payload's move in that stage must be
+the path the trial fitted, whole or over a window of its kept points, so a path is never an arbitrary animation.
 """
-from mechanical_readiness import named, pinned, read, require
+from mechanical_readiness import named, number, require
 from .inputs import carried_chain, own_motion
 
-# How a stage says a payload moved, the field of the trial record that must repeat the path, and whether the
-# stage counts as a loaded operating case.
-PATHS = (("transportedBy", "transport", "contact-transport", True), ("freePath", "freePath", "free-path", False),
-         ("supportedBy", "support", "fixture-support", False))
-
-
-def expected_path(case, payload, members, extra):
-    return dict(case=case["id"], payload=payload, **extra, moves={m: case["moves"][m] for m in members},
-                initialPose={m: case["initialPose"].get(m, []) for m in members})
+# How a stage says a payload moved.
+PATHS = ("transportedBy", "freePath", "supportedBy")
 
 
 def bound_paths(inputs, case, stage, missing):
-    """{field: {payload: bound}} for each payload this stage moves on trial evidence. Unbound ones are named as missing."""
+    """{field: {payload: bound}} for each payload this stage moves on a trial. Unbound ones are named as missing."""
     groups, moving, key = inputs.plan["groups"], set(case["movingGroups"]), case["id"]
-    declared = [payload for field, *_ in PATHS for payload in stage.get(field, {})] + list(stage.get("carriedWith", {}))
+    declared = [payload for field in PATHS for payload in stage.get(field, {})] + list(stage.get("carriedWith", {}))
     require(len(declared) == len(set(declared)), "Declare each payload of " + key + " once: carried, transported, on a free path or supported")
     found = {}
-    for field, record_field, label, _ in PATHS:
+    for field in PATHS:
         entries = stage.get(field, {})
         require(isinstance(entries, dict), "List " + field + " of " + key + " by payload group")
         for payload, spec in entries.items():
-            require(payload in moving and groups.get(payload, {}).get("role") == "payload" and isinstance(spec, dict) and named(spec.get("basis")),
-                    "Under " + field + " of " + key + ", name a moving payload group and the basis of its path: " + payload)
-            extra = {}
+            require(payload in moving and groups.get(payload, {}).get("role") == "payload" and isinstance(spec, dict) and named(spec.get("basis"))
+                    and named(spec.get("trial")), "Under " + field + " of " + key + ", name a moving payload group, the basis of its path and the "
+                    "design library trial that moves it, as trial: NAME: " + payload)
             if field == "transportedBy":
                 mechanisms = spec.get("mechanisms") or []
                 drive = spec.get("drive", {})
@@ -38,37 +31,38 @@ def bound_paths(inputs, case, stage, missing):
                         and set(drive) <= set(mechanisms), "Only mechanism groups transport a payload, each with a declared drive: " + payload + " in " + key)
                 for still in sorted(set(mechanisms) - moving - set(drive)):
                     missing.append("Declare the drive of stationary transporter " + still + " in " + key)
-                extra = dict(mechanisms=sorted(mechanisms))
             if field == "supportedBy":
                 fixtures = spec.get("fixtures") or []
                 require(fixtures and set(fixtures) <= inputs.fixtures - set(case["removed"]),
                         "Only a field fixture present in " + key + " can support a payload: " + payload)
-                extra = dict(fixtures=sorted(fixtures))
-            bound = False
-            evidence = spec.get("evidence")
-            if named(spec.get("trial")):
-                require(evidence is None, "Bind " + payload + " in " + key + " to one trial: a library trial or an evidence file")
-                bound = fitted(inputs, case, payload, groups[payload]["members"], spec["trial"], missing)
-            elif not (isinstance(evidence, dict) and named(evidence.get("file"))):
-                missing.append("Name the " + label + " evidence file for " + payload + " in " + key)
-            elif (read(pinned(inputs.root, evidence)) or {}).get(record_field) != expected_path(case, payload, groups[payload]["members"], extra):
-                missing.append(label.capitalize() + " evidence for " + payload + " in " + key + " does not record this payload path")
-            else:
-                bound = True
-            found.setdefault(field, {})[payload] = bound
+            found.setdefault(field, {})[payload] = fitted(inputs, case, payload, groups[payload]["members"], spec, missing)
     return found
 
 
-def fitted(inputs, case, payload, members, trial, missing):
+def window_of(fit, window, where):
+    """The fitted path over a window of its kept points: both ends must be kept points of the fit, at their atS times."""
+    if window is None:
+        return fit["operation"]
+    times, points = fit["atS"], fit["operation"]["throughMm"]
+    require(isinstance(window, list) and len(window) == 2 and all(number(t) for t in window) and window[0] < window[1]
+            and window[0] in times and window[1] in times, "The window of " + where + " runs between two kept points of the trial's fit, "
+            "at its atS times: " + ", ".join(f"{t:g}" for t in times))
+    kept = [p for t, p in zip(times, points) if window[0] <= t <= window[1]]
+    return dict(fit["operation"], throughMm=kept)
+
+
+def fitted(inputs, case, payload, members, spec, missing):
     """Whether the payload's move in this case is the path the library's trial fitted, so the animation is the trial."""
+    trial, where = spec["trial"], payload + " in " + case["id"]
     record = (inputs.records.get("trials") or (None,))[0]
     found = (record or {}).get("trials", {}).get(trial)
     if found is None:
         missing.append("Run trial " + trial + " with the design library and name its record in the judgement file as trials: {file}")
         return False
-    path = [found["fit"]["operation"]]
+    path = [window_of(found["fit"], spec.get("window"), where)]
     if any(case["moves"].get(m) != path for m in members):
-        missing.append("The move of " + payload + " in " + case["id"] + " is not the path trial " + trial + " fitted. Write its fit operation as the move in the design source")
+        missing.append("The move of " + payload + " in " + case["id"] + " is not the path trial " + trial + " fitted"
+                       + (" over its window" if "window" in spec else "") + ". Write its fit operation as the move in the design source")
         return False
     return True
 
@@ -87,8 +81,8 @@ def carried(inputs, case, stage):
     return bool(stage.get("carriedWith"))
 
 
-def squeezes(inputs, case, stage, missing):
-    """Judge the compression rules of a stage: each squeezed pair is a declared contact, and a named trial repeats the depth."""
+def squeezes(inputs, case, stage):
+    """Judge the compression rules of a stage: each squeezed pair is a declared contact."""
     declared = {frozenset(row["pair"]) for row in inputs.data.get("contacts", []) if "during" not in row or case["id"] in row["during"]}
     payloads = {m for g in inputs.plan["groups"].values() if g["role"] == "payload" for m in g["members"]}
     for rule in stage.get("payloadCompression", []):
@@ -97,14 +91,6 @@ def squeezes(inputs, case, stage, missing):
                 + " names a solid of a payload group and the solid that presses into it")
         require(pair in declared, "Declare " + rule["payload"] + " and " + rule["contact"] + " as a contact during " + case["id"]
                 + " in the design source: a squeezed pair shares volume, so it is judged by its depth and left out of the clearance test")
-        evidence = rule.get("evidence")
-        if evidence is None:
-            continue
-        require(isinstance(evidence, dict) and named(evidence.get("file")) and named(evidence.get("field")),
-                "Name the trial behind a compression depth as evidence: {file, field}")
-        measured = read(pinned(inputs.root, {k: v for k, v in evidence.items() if k != "field"})).get(evidence["field"])
-        if measured != rule["maxDepthMm"]:
-            missing.append("The compression depth of " + rule["payload"] + " in " + case["id"] + " is not the figure its trial records under " + evidence["field"])
 
 
 def coverage(inputs, missing):
@@ -115,7 +101,7 @@ def coverage(inputs, missing):
         stage = stages[case["id"]]
         operating = stage["purpose"] == "operating"
         loaded |= carried(inputs, case, stage) and operating
-        squeezes(inputs, case, stage, missing)
+        squeezes(inputs, case, stage)
         found = bound_paths(inputs, case, stage, missing)
         loaded |= operating and any(found.get("transportedBy", {}).values())
         if found.get("freePath"):
