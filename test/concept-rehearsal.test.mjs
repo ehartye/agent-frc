@@ -3,6 +3,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createFieldRehearsal } from '../scripts/field-rehearsal.mjs';
+import { compileConceptBot, applyProfileDefaults } from '../scripts/concept-bot.mjs';
+import { rehearsalFindings } from '../scripts/rehearsal-game.mjs';
 
 const training=JSON.parse(await readFile(new URL('../examples/kickoff/training-field.json',import.meta.url)));
 const dt=0.05;
@@ -110,4 +112,180 @@ test('motion: per-robot validation checks only the concept drive',()=>{
     [{rotationDegS:-1},/rotationDegS/],[{rotationDegS:undefined},/rotationDegS/]])
     assert.throws(()=>ok(conceptOf(bad)),field);
   assert.throws(()=>ok({id:'no-drive'}),/concept\.drive/);
+});
+
+// Port cases. Invented concept documents compile through the concept-bot module, as kickoff embeds them.
+const q=value=>({value,label:'assumed',basis:'Invented test value.'});
+const span=(min,max,extra={})=>({min,max,label:'assumed',basis:'Invented test range.',...extra});
+function conceptDoc(id,{inputs=[],outputs=[],capacity={ball:2},transferS=0,top=120,accel=250,rotation=180}={}){
+  return {schema:'agent-frc/concept-bot@1',id,name:id,basis:'Invented test concept.',
+    body:{frameLengthIn:q(24),frameWidthIn:q(24),bumperIn:q(3),stowedHeightIn:q(24),maxHeightIn:q(30),maxReachIn:q(6)},
+    drive:{type:'swerve',topSpeedInS:q(top),accelInS2:q(accel),rotationDegS:q(rotation)},inputs,
+    storage:{capacity:Object.fromEntries(Object.entries(capacity).map(([k,v])=>[k,q(v)])),transferS:q(transferS)},
+    outputs,concurrency:{intakeWhileScoring:false}};
+}
+const input=(face,over={})=>({id:face+'-in',face,widthIn:q(16),extensionIn:q(2),pieces:['ball'],headingToleranceDeg:q(10),
+  acquireHeightIn:span(0,10),secondsPerPiece:q(0.2),requiresStop:true,...over});
+function shooter({elevation=[60,60],turret=null,moving=false,fraction=1}={}){
+  const [lo,hi]=elevation;
+  return {id:'shooter',face:'front',kind:'ranged',pieces:['ball'],secondsPerPiece:q(0.4),requiresStop:false,successFraction:q(fraction),
+    ranged:{releaseHeightIn:q(22),launchSpeedInS:span(200,400),elevationDeg:span(lo,hi,lo<hi?{slewDegS:q(360)}:{}),
+      turret:turret&&span(turret[0],turret[1],{slewDegS:q(turret[2])}),aimToleranceDeg:q(3),
+      firesWhileMoving:moving&&{maxRobotSpeedInS:q(moving[0]),successFraction:q(moving[1])}}};
+}
+const placer={id:'placer',face:'front',kind:'place',pieces:['ball'],secondsPerPiece:q(0.3),requiresStop:true,successFraction:q(1),
+  place:{standOffIn:span(2,6),headingToleranceDeg:q(10),releaseHeightIn:span(10,20)}};
+// The training field plus invented stations: a ball rack for preloads, loose balls and a ring goal 80 in high.
+function arena({docs,steps,goal=[340,60],entry='ring',points=2,balls=[[250,60]],cubes=[]}){
+  const p=structuredClone(training),r=p.rehearsal;
+  const floor=(id,piece,positions)=>({id,label:id,kind:'retrieval',side:'both',piece,at:positions[0]??[400,240],radiusIn:20,stock:positions.length,
+    floor:{positions,radiusIn:4,heightIn:8}});
+  r.stations.push({id:'test-rack',label:'Test rack',kind:'retrieval',side:'both',piece:'ball',at:[440,240],radiusIn:16,stock:6},
+    floor('test-balls','ball',balls),...(cubes.length?[floor('test-cubes','cube',cubes)]:[]),
+    {id:'test-goal',label:'Test goal',kind:'scoring',side:'both',piece:'ball',at:goal,radiusIn:16,points,criterion:'Invented test criterion.',
+      ...(entry==='ring'?{entry:{centerIn:[...goal,80],kind:'ring',radiusIn:12,factId:'test-goal-entry'}}:entry?{entry}:{})});
+  r.programs.trial={label:'Trial',steps:steps.map((s,i)=>({label:'Step '+i,frame:'field',at:goal,...s}))};
+  r.concepts=docs.map(d=>({document:d,record:compileConceptBot(applyProfileDefaults(d,p))}));
+  return p;
+}
+const shoot={operation:'attempt',station:'test-goal',outcome:'credited'};
+function play(profile,rows,seconds,starts=[]){
+  starts.forEach((s,i)=>{profile.rehearsal.starts[i]=s;});
+  const engine=createFieldRehearsal(profile);
+  const sim=engine.createProbe(rows.map((row,i)=>({...engine.defaults('blue',i+1),plans:{Opening:'trial','Main play':'trial'},...row})));
+  sim.paused=false;engine.advance(sim,seconds);
+  return {engine,sim,events:sim.game.events,notes:rehearsalFindings('trial','Invented trial',sim.game,profile.rehearsal.stations).join('\n')};
+}
+const releases=events=>events.filter(e=>e.operation==='attempt' && e.port);
+const preload={station:'test-rack',quantity:1};
+const wrapDeg=a=>((a%360)+540)%360-180;
+const close=(a,b,tol=1e-9)=>assert.ok(Math.abs(a-b)<=tol,a+' vs '+b);
+
+test('ports: a concept named by id takes its compiled body and drive; an unknown id is refused',()=>{
+  const doc=conceptDoc('named',{outputs:[shooter()]}),p=arena({docs:[doc],steps:[shoot]});
+  p.rehearsal.defaults.concept='named';
+  const engine=createFieldRehearsal(p),b1=engine.defaults('blue',1);
+  assert.equal(b1.concept.id,'named');assert.equal(b1.length,24);assert.equal(b1.speed,120);
+  assert.equal(engine.completeRoster([{side:'red',slot:2,concept:'named'}]).find(r=>r.id==='R2').concept.drive.accelInS2,250);
+  assert.throws(()=>engine.createProbe([{...engine.defaults('blue',1),concept:'missing'}]),/Unknown concept "missing"/);
+});
+
+test('ports: only the back input acquires, with the heading on the approach bearing + 180',()=>{
+  // The piece sits on the front mouth line of a robot at [200,60] facing 0 degrees.
+  const docs=[conceptDoc('back',{inputs:[input('back')]}),conceptDoc('front',{inputs:[input('front')]})];
+  const run=id=>play(arena({docs,steps:[{operation:'acquire',station:'test-balls'}],balls:[[220,60]]}),[{concept:id}],3,[[200,60]]);
+  const front=run('front').events.find(e=>e.operation==='acquire');
+  within(front.timeS,0.2,dt,'front contact plus secondsPerPiece');
+  const back=run('back').events.find(e=>e.operation==='acquire');
+  assert.ok(back.timeS>0.5,'the front face touching the piece is not a back-port contact');
+  assert.equal(back.port,'back-in');
+  // The turning robot nudges the piece, so the approach bearing is the one at contact, from robot to piece.
+  const approach=Math.atan2(back.contact.position[1]-back.contact.robotPosition[1],back.contact.position[0]-back.contact.robotPosition[0])*180/Math.PI;
+  assert.ok(Math.abs(wrapDeg(back.contact.heading-approach-180))<=10,'heading '+back.contact.heading+' for bearing '+approach);
+});
+
+test('ports: a turret fires after its slew without turning; a fixed shooter turns first',()=>{
+  // The robot faces -60 degrees and the goal bears 0 degrees, 100 in away: inside the fixed 60-degree arc band.
+  const docs=[conceptDoc('turret',{outputs:[shooter({turret:[-90,90,360]})]}),conceptDoc('fixed',{outputs:[shooter()]})];
+  const first=id=>{
+    const run=play(arena({docs,steps:[shoot]}),[{concept:id,heading:-60,preload}],2,[[240,60]]);
+    return releases(run.events)[0];
+  };
+  const turret=first('turret'),fixed=first('fixed');
+  within(turret.timeS,60/360,0.05,'turret slew');
+  assert.equal(turret.pose.heading,-60,'the turret robot keeps its heading');
+  within(fixed.timeS-turret.timeS,60/180-60/360,0.05,'rotation minus slew');
+  assert.ok(Math.abs(fixed.pose.heading)<=3);
+});
+
+test('ports: a fixed elevation is denied a pose that only an adjusted elevation reaches',()=>{
+  // At 100 in from the ring a 45-degree launch cannot pass (its band starts near 109 in); 20-60 degrees can.
+  const docs=[conceptDoc('fixed45',{outputs:[shooter({elevation:[45,45]})]}),conceptDoc('hood',{outputs:[shooter({elevation:[20,60]})]})];
+  const first=id=>releases(play(arena({docs,steps:[shoot]}),[{concept:id,preload}],4,[[240,60]]).events)[0];
+  assert.deepEqual(first('hood').pose.p,[240,60]);
+  const fixed=first('fixed45');
+  assert.ok(Math.hypot(fixed.pose.p[0]-340,fixed.pose.p[1]-60)>=109-1e-6,'fixed elevation released from '+fixed.pose.p);
+});
+
+test('ports: firing while moving obeys its speed cap and fraction; without it the robot stops first',()=>{
+  // Two preloaded balls, a long straight approach to a ring at [420,60]. Moving shots score 0.6, stationary 0.8.
+  const run=(top,moving)=>{
+    const doc=conceptDoc('mover',{top,accel:2000,outputs:[shooter({elevation:[20,60],moving,fraction:0.8})]});
+    return releases(play(arena({docs:[doc],steps:[shoot],goal:[420,60]}),[{concept:'mover',preload:{station:'test-rack',quantity:2}}],10,[[40,60]]).events);
+  };
+  const slow=run(50,[60,0.6]);
+  assert.ok(slow.length>=1);
+  assert.ok(slow[0].moving && Math.abs(slow[0].speedInS-50)<1e-6,'fires while passing at 50 in/s');
+  assert.equal(slow[0].successFraction,0.6);close(slow[0].points,2*0.6);
+  const fast=run(80,[60,0.6]);
+  assert.ok(fast.length>=1 && fast.every(e=>e.speedInS<=60+1e-9),'no release above the 60 in/s cap');
+  const stopping=run(50,false);
+  assert.ok(stopping.length>=1 && stopping.every(e=>e.speedInS===0 && !e.moving),'stops before firing');
+  assert.equal(stopping[0].successFraction,0.8);
+});
+
+test('ports: storage holds a piece for transferS and caps each piece type separately',()=>{
+  const steps=[{operation:'acquire',station:'test-balls'},shoot];
+  const run=transferS=>{
+    const doc=conceptDoc('feeder',{transferS,inputs:[input('front')],outputs:[shooter({elevation:[20,60]})]});
+    const ev=play(arena({docs:[doc],steps,goal:[350,60]}),[{concept:'feeder'}],4,[[200,60]]).events;
+    return {got:ev.find(e=>e.operation==='acquire'),shot:releases(ev)[0]};
+  };
+  const held=run(1);
+  assert.ok(held.shot.timeS>=held.got.timeS+1-1e-9 && held.shot.timeS<held.got.timeS+1.15,'released '+(held.shot.timeS-held.got.timeS)+' s after acquisition');
+  const quick=run(0);
+  assert.ok(quick.shot.timeS-quick.got.timeS<0.5,'control: no transfer delay');
+  // Capacity one ball and two cubes: three balls on offer still leave one ball aboard.
+  const doc=conceptDoc('sorter',{capacity:{ball:1,cube:2},inputs:[input('front',{pieces:['ball','cube']})]});
+  const {sim}=play(arena({docs:[doc],steps:[{operation:'acquire',station:'test-balls'},{operation:'acquire',station:'test-cubes'}],
+    balls:[[250,60],[250,90],[250,30]],cubes:[[300,180],[330,180],[360,180]]}),[{concept:'sorter'}],10,[[200,60]]);
+  const aboard=sim.game.cargo.B1.map(p=>p.type).sort();
+  assert.deepEqual(aboard,['ball','cube','cube']);
+});
+
+test('ports: a credited release scores the expected points, and step rates are ignored with a notice',()=>{
+  const doc=f=>conceptDoc('half',{outputs:[shooter({fraction:f})]});
+  // The step's own dwell and quantity would delay and batch the release; the port's rate governs instead.
+  const run=f=>play(arena({docs:[doc(f)],steps:[{...shoot,dwell:1,quantity:3}]}),[{concept:'half',preload}],2,[[240,60]]);
+  const half=run(0.5);
+  close(half.sim.game.score.blue,1);
+  assert.equal(releases(half.events)[0].timeS,0,'released without the step dwell');
+  assert.match(half.notes,/success fraction 0\.5/);
+  assert.match(half.notes,/ignores the step dwell and quantity/);
+  assert.match(half.notes,/B1 concept half · digest [0-9a-f]{64}/);
+  // Control: a fraction of 1 matches today's credit for the same target.
+  const full=run(1);
+  const legacy=play(arena({docs:[],steps:[{...shoot,dwell:0.1}]}),[{preload}],2,[[340,60]]);
+  assert.equal(full.sim.game.score.blue,2);assert.equal(legacy.sim.game.score.blue,2);
+});
+
+test('ports: a ranged concept scores nothing at a target without an entry region',()=>{
+  const run=play(arena({docs:[conceptDoc('blind',{outputs:[shooter()]})],steps:[shoot],entry:null}),[{concept:'blind',preload}],2,[[240,60]]);
+  assert.equal(run.sim.game.score.blue,0);
+  assert.equal(run.sim.game.cargo.B1.length,1,'the piece stays aboard');
+  assert.match(run.notes,/no entry region/);
+});
+
+test('ports: an unknown piece radius is reported once the arc check assumes a point piece',()=>{
+  // The radius-less ball rack comes before the loose balls, so the radius is the loose balls' 4 in.
+  const known=play(arena({docs:[conceptDoc('sized',{outputs:[shooter()]})],steps:[shoot]}),[{concept:'sized',preload}],1,[[240,60]]);
+  assert.doesNotMatch(known.notes,/piece radius unknown/);
+  const p=arena({docs:[conceptDoc('sized',{outputs:[shooter()]})],steps:[shoot]});
+  p.rehearsal.stations=p.rehearsal.stations.filter(s=>s.id!=='test-balls');
+  const unknown=play(p,[{concept:'sized',preload}],1,[[240,60]]);
+  assert.equal(unknown.notes.match(/B1 piece radius unknown for ball; arc check assumes 0\./g).length,1);
+});
+
+test('ports: a place output releases from its stand-off with the face toward the target',()=>{
+  const docs=[conceptDoc('placer',{outputs:[placer]})];
+  const run=play(arena({docs,steps:[shoot],goal:[300,150],entry:null,points:1}),[{concept:'placer',preload}],4,[[200,150]]);
+  const shot=releases(run.events)[0];
+  assert.equal(shot.port,'placer');assert.equal(run.sim.game.score.blue,1);
+  const face=shot.pose.p[0]+15;
+  assert.ok(300-face>=2-1e-6 && 300-face<=6+1e-6,'face point '+face);
+  assert.ok(Math.abs(wrapDeg(shot.pose.heading))<=10);
+  // A window above the release-height range cannot be served.
+  const high=play(arena({docs,steps:[shoot],goal:[300,150],points:1,entry:{centerIn:[300,150,40],kind:'window',widthIn:18,heightIn:12,facingDeg:180,factId:'high'}}),
+    [{concept:'placer',preload}],4,[[200,150]]);
+  assert.equal(high.sim.game.score.blue,0);assert.match(high.notes,/release height/);
 });

@@ -21,18 +21,27 @@ export function createFieldRehearsal(profile) {
   const sidePoint=(q,side)=>side==='blue'?[...q]:[model.mirror.redX?L-q[0]:q[0],model.mirror.redY?W-q[1]:q[1]];
   const assessRoute=(line,body,setup=model?.setups[0])=>supported?geom.assessRoute(line,body,setup):
     {status:'unknown',obstacle:null,segment:null};
+  // A robot that names concept: "<id>" takes the compiled record embedded in rehearsal.concepts: its body,
+  // speed and concept block. Its ports replace any directional intake or single capacity it inherited.
+  function withConcept(row) {
+    if(typeof row.concept!=='string')return row;
+    const found=(model.concepts ?? []).find(c=>c.record?.concept?.id===row.concept);
+    if(!found)throw Error('Unknown concept "'+row.concept+'": embed it in rehearsal.concepts.');
+    const {intake,capacity,...rest}=row;
+    return {...rest,...structuredClone(found.record)};
+  }
   function defaults(side,slot) {
     const {orders,roster:projectRoster,...body}=model.defaults,order=orders[slot-1];
     if(body.frameProfile===undefined&&profile.frameProfile!==undefined)body.frameProfile=profile.frameProfile;
     const heading=side==='red'?Math.atan2((model.mirror.redY?-1:1)*Math.sin(body.heading*Math.PI/180),
       (model.mirror.redX?-1:1)*Math.cos(body.heading*Math.PI/180))*180/Math.PI:body.heading;
     const plans=Object.fromEntries(phases.map(p=>[p.name,order]));
-    return {id:(side==='blue'?'B':'R')+slot,side,slot,plans,...body,heading};
+    return withConcept({id:(side==='blue'?'B':'R')+slot,side,slot,plans,...body,heading});
   }
   function completeRoster(rows=[]) {
     if(!Array.isArray(rows) || rows.some(r=>!sides.includes(r.side) || ![1,2,3].includes(r.slot)) ||
        new Set(rows.map(r=>r.side+'/'+r.slot)).size!==rows.length)throw Error('Use unique alliance slots 1 through 3.');
-    return sides.flatMap(side=>[1,2,3].map(slot=>({...defaults(side,slot),...rows.find(r=>r.side===side&&r.slot===slot)})));
+    return sides.flatMap(side=>[1,2,3].map(slot=>withConcept({...defaults(side,slot),...rows.find(r=>r.side===side&&r.slot===slot)})));
   }
   const sides=['blue','red'];
   function startingRoster(){
@@ -57,7 +66,8 @@ export function createFieldRehearsal(profile) {
     if(!model.setups.includes(setup))throw Error('Unknown obstacle setup.');
     if(!Array.isArray(roster) || roster.length>6)throw Error('Use up to three robots per alliance.');
     const robots=[];
-    for(const b of roster) {
+    for(const row of roster) {
+      const b=withConcept(row);
       if(!['blue','red'].includes(b.side) || ![1,2,3].includes(b.slot) ||
         b.id!==defaults(b.side,b.slot).id || robots.some(r=>r.id===b.id) ||
         !b.plans || !phases.every(p=>Object.hasOwn(behaviors,b.plans[p.name])) ||
@@ -182,12 +192,34 @@ export function createFieldRehearsal(profile) {
     if(r.concept)turnTo=leg.requiredHeading;
     function finishLeg(){
       if(leg.release)release(sim,r,key);
-      r.leg++;r.dwell=0;r.waypoints=null;delete r.pickup;turnTo=undefined;
+      r.leg++;r.dwell=0;r.waypoints=null;delete r.pickup;delete r.goal;turnTo=undefined;
       if(r.leg===legs.length){
         r.visits++;event(sim,r.id+' completed '+leg.action);
         if(program(r,sim).loop)r.leg=0;
       }
       return r.p;
+    }
+    // A concept robot's acquisitions and releases go through its ports; the game supplies each goal and heading.
+    if(r.concept && leg.operation){
+      const next=game.conceptStep(sim,r,leg,sim.ticks*dt,dt);
+      if(next.done)return finishLeg();
+      turnTo=next.heading;
+      if(next.action)r.action=next.action;
+      if(next.waiting){recordWait(sim,r,next.waiting);return r.p;}
+      if(!next.goal)return r.p;
+      if(!r.goal || norm(r.goal,next.goal)>.25){
+        r.goal=[...next.goal];r.target=1;
+        // With a turn still to make, plan for the circumscribed circle, which clears every heading on the way.
+        // Where the circle cannot pass, plan for the footprint at the goal heading (the turn usually ends first),
+        // then for the present footprint, and let each tick's check decide.
+        const route=body=>leg.straight?(geom.hit(r.p,r.goal,body,sim.setup)?[]:[r.p,r.goal]):geom.plan(r.p,r.goal,body,sim.setup);
+        const turning=Math.abs(turnLeft(r,turnTo))>1e-9;
+        r.waypoints=turning?route({...r,circleIn:geom.circumradius(r)}):[];
+        if(!r.waypoints.length && turning)r.waypoints=route({...r,heading:turnTo});
+        if(!r.waypoints.length)r.waypoints=route(r);
+      }
+      if(!r.waypoints.length){recordWait(sim,r,'No footprint-clear path · '+leg.action);return r.p;}
+      return r.target>=r.waypoints.length?r.p:drive(r);
     }
     const pursuit=game.seek(sim,r,leg);
     if(pursuit?.done)return finishLeg();
@@ -229,6 +261,9 @@ export function createFieldRehearsal(profile) {
       }
       return r.p;
     }
+    return drive(r);
+  }
+  function drive(r) {
     const dest=r.waypoints[r.target],d=norm(r.p,dest);
     let reach=r.speed*dt;
     if(r.concept){
@@ -350,6 +385,7 @@ export function createFieldRehearsal(profile) {
     sim.phase=phases[++sim.phaseIndex].name;sim.ticks=0;sim.carry=0;sim.ended=false;sim.paused=true;sim.resources=reservations();
     sim.deadlocks=[];sim.waitCycles={};
     game.replenish(sim,0);
+    for(const r of sim.robots){delete r.goal;}
     for(const r of sim.robots)Object.assign(r,{pickup:null,leg:0,waypoints:null,target:0,dwell:0,wait:0,travelIn:0,visits:0,blocked:'',action:'',...(r.concept?{currentSpeedInS:0}:{})});
   }
   return {supported,behaviors,defaults,startingRoster,completeRoster,create,createProbe,advance,nextPhase,assessRoute,geom,waypoint,intake:game?.intake,dt,periods:phases,terminal,

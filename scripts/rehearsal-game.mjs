@@ -2,6 +2,7 @@ import {fieldGeometry} from './field-rehearsal-geometry.mjs';
 import {createFieldPieceMotion} from './field-piece-motion.mjs';
 import {allocateOpeningTasks} from './auto-allocation.mjs';
 import {createScoreAssessment} from './score-assessment.mjs';
+import {createArcModel} from './concept-arc.mjs';
 
 /** Project-owned stations and finite stock for the fixed-step field rehearsal. */
 export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=createFieldPieceMotion(profile,geom)) {
@@ -167,7 +168,7 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
       const s=stations.get(item.target);
       const observedTime=result.reportAtS-assessment.phaseStart(sim.phase);
       dispose(sim,item.robot,s,[item.piece],result.status,observedTime,'Registered piece assessment',
-        {phase,seat:item.seat,vacatedS:row.observation?.vacatedS,activity:item.activity,observedAtS:result.reportAtS,releaseId:row.id,releasedAtS:row.releasedS,passageAtS:row.observation?.passageS??null});
+        {phase,seat:item.seat,vacatedS:row.observation?.vacatedS,activity:item.activity,observedAtS:result.reportAtS,releaseId:row.id,releasedAtS:row.releasedS,passageAtS:row.observation?.passageS??null},item.port);
       timeline.pending.splice(timeline.pending.indexOf(item),1);
     }
   }
@@ -199,14 +200,20 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
       stock[s.id]=Array.from({length:s.stock},(_,i)=>({id:s.id+'/'+(i+1),type:s.piece}));
       initial[s.id]=s.stock;
     }
+    const concept={},concepts={};
     for (const robot of robots) {
       cargo[robot.id]=[];
-      capacity[robot.id]=robot.capacity ?? model.defaults.capacity ?? 1;
+      // A concept robot's storage holds each piece type separately; its total bounds the legacy checks.
+      capacity[robot.id]=robot.concept?Object.values(robot.concept.storage?.capacity ?? {}).reduce((n,v)=>n+v,0):robot.capacity ?? model.defaults.capacity ?? 1;
       legal(count(capacity[robot.id]),'Invalid robot piece capacity');
+      if(robot.concept){
+        concept[robot.id]={aim:{},free:{},legKey:null,leg:null};
+        concepts[robot.id]={id:robot.concept.id,digest:robot.concept.digest};
+      }
       if (!robot.preload) continue;
       const {station:key,quantity}=robot.preload,s=stations.get(key);
       legal(s?.kind==='retrieval' && [robot.side,'both'].includes(s.side) && count(quantity) &&
-        quantity<=capacity[robot.id] && quantity<=stock[key].length,'Preload exceeds compatible source stock or robot capacity');
+        quantity<=(robot.concept?robot.concept.storage?.capacity?.[s.piece] ?? 0:capacity[robot.id]) && quantity<=stock[key].length,'Preload exceeds compatible source stock or robot capacity');
       cargo[robot.id]=stock[key].splice(0,quantity);
     }
     const reserve={},operators={},floor=[];
@@ -223,7 +230,8 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
     }
     const opening=openingTasks(robots,stock,cargo,floor,setup);
     const attempts=Object.fromEntries([...stations.values()].filter(s=>s.kind==='scoring').map(s=>[s.id,0]));
-    return {reserve,operators,motion:motion.start(floor),opening,stock,initial,cargo,capacity,score,attempts,occupied:{...attempts},returning:[],tieWinner,firstPeriodCount:{blue:0,red:0},terminal:[],events:[]};
+    return {reserve,operators,motion:motion.start(floor),opening,stock,initial,cargo,capacity,score,attempts,occupied:{...attempts},returning:[],tieWinner,firstPeriodCount:{blue:0,red:0},terminal:[],events:[],
+      ...(robots.some(r=>r.concept)?{concept,concepts,ready:{},notices:[]}:{})};
   }
   function openingTasks(robots,stock,cargo,floor,setup) {
     const phase=model.periods[0],places=new Map(floor.map(p=>[p.id,p.p]));
@@ -345,6 +353,219 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
     if(bay.length && candidates.length===free.length && !g.reserve[key]?.length)return {done:true};
     return {waiting:true};
   }
+  // Concept robots act only through their declared ports. A face's normal is the heading plus its turn.
+  // conceptStep returns {done} to end the leg, {waiting} for a recorded wait, or a field {goal} and a field-frame
+  // {heading} to drive and turn toward; an empty result holds. Every release or pickup is timed at the tick start.
+  const arc=createArcModel();
+  const faceTurn={front:0,left:90,back:180,right:-90};
+  const wrap=a=>((a%360)+540)%360-180;
+  const unit=d=>[Math.cos(d*Math.PI/180),Math.sin(d*Math.PI/180)];
+  const bearing=(a,b)=>Math.atan2(b[1]-a[1],b[0]-a[0])*180/Math.PI;
+  const faceDepth=(r,face)=>(face==='front'||face==='back'?r.length:r.width)/2+r.bumper;
+  const portsFor=(list,type)=>(Array.isArray(list)?list:[]).filter(p=>p.pieces?.includes(type));
+  const room=(g,r,type)=>(r.concept.storage?.capacity?.[type] ?? 0)-g.cargo[r.id].filter(p=>p.type===type).length;
+  const notice=(g,text)=>{if(!g.notices.includes(text))g.notices.push(text);};
+  // The radius of a piece type: the first same-type retrieval station with a floor or service radiusIn,
+  // otherwise a point, which the narrative reports once per robot and type because it flatters the arc check.
+  const pieceRadius=type=>[...stations.values()].map(s=>s.kind==='retrieval' && s.piece===type && (s.floor ?? s.service)?.radiusIn).find(Number.isFinite) ?? 0;
+  function mouth(r,port,heading=r.heading,p=r.p) {
+    const forward=unit(heading+faceTurn[port.face]),lateral=[-forward[1],forward[0]];
+    const offset=faceDepth(r,port.face)+port.extensionIn,center=p.map((v,i)=>v+offset*forward[i]);
+    return {center,forward,lateral,offset,ends:[-1,1].map(sign=>center.map((v,i)=>v+sign*port.widthIn/2*lateral[i]))};
+  }
+  const reachesHeight=(port,piece)=>port.acquireHeightIn.min<=(piece.heightIn ?? 2*piece.radiusIn)+1e-9 && port.acquireHeightIn.max>=-1e-9;
+  // The piece touches the face's mouth, and the face normal is within headingToleranceDeg of the bearing to it.
+  function portContact(r,piece,port) {
+    const m=mouth(r,port),d=piece.p.map((v,i)=>v-m.center[i]);
+    const ahead=d[0]*m.forward[0]+d[1]*m.forward[1],side=Math.abs(d[0]*m.lateral[0]+d[1]*m.lateral[1]);
+    return ahead>=-1e-6 && Math.hypot(ahead,Math.max(0,side-port.widthIn/2))<=piece.radiusIn+1e-6 && reachesHeight(port,piece) &&
+      Math.abs(wrap(bearing(r.p,piece.p)-r.heading-faceTurn[port.face]))<=port.headingToleranceDeg+1e-9;
+  }
+  function conceptStep(sim,r,leg,timeS,dt) {
+    const g=sim.game,c=g.concept[r.id],key=typeof leg.station==='string'?leg.station:leg.station[r.side],s=stations.get(key);
+    const legKey=sim.phase+'/'+r.leg+'/'+r.visits;
+    if(c.legKey!==legKey){
+      c.legKey=legKey;c.leg={start:[...r.p]};
+      const ignored=['dwell','quantity','deliveryRatePerS'].filter(k=>k==='dwell'?leg.dwell>0:leg[k]!==undefined);
+      if(ignored.length)notice(g,r.id+' ignores the step '+ignored.join(' and ')+' of "'+leg.action+'": the port secondsPerPiece governs.');
+    }
+    if(![r.side,'both'].includes(s.side)){record(sim,r,s,leg.operation,'ineligible-position-or-alliance',[],timeS);return {done:true};}
+    return leg.operation==='acquire'?conceptAcquire(sim,r,leg,s,timeS):conceptScore(sim,r,leg,s,c,timeS,dt);
+  }
+  function take(sim,r,s,piece,port,timeS) {
+    const g=sim.game,[cargo]=g.stock[s.id].splice(g.stock[s.id].findIndex(p=>p.id===piece.id),1);
+    const event=record(sim,r,s,'acquire','acquired',[cargo],timeS);
+    event.port=port.id;
+    if(piece.p){
+      event.contact={position:[...piece.p],radiusIn:piece.radiusIn,mouth:mouth(r,port).ends,robotPosition:[...r.p],heading:r.heading};
+      motion.take(g.motion,piece.id);
+    }
+    g.cargo[r.id].push(cargo);
+    g.ready[cargo.id]=elapsed(sim,timeS)+(r.concept.storage?.transferS ?? 0);
+    r.pickup.count++;delete r.pickup.id;delete r.pickup.since;delete r.pickup.position;
+  }
+  // Acquisition takes secondsPerPiece from first contact. requiresStop starts the clock only once the robot is still.
+  function acquiring(sim,r,s,piece,port,timeS,hold) {
+    if(port.requiresStop && r.currentSpeedInS>1e-9)return hold;
+    r.pickup.since??=timeS;
+    if(timeS-r.pickup.since+1e-9<port.secondsPerPiece)return {...hold,action:'Acquiring through '+port.id};
+    take(sim,r,s,piece,port,timeS);
+    return {};
+  }
+  function conceptAcquire(sim,r,leg,s,timeS) {
+    const g=sim.game,type=s.piece,ports=portsFor(r.concept.inputs,type);
+    if(!ports.length){notice(g,r.id+' has no input port for '+type+' at '+s.label+'.');return {done:true};}
+    if(room(g,r,type)<=0)return {done:true};
+    const pickup=r.pickup??={count:0};
+    if(!(s.floor || s.service)){
+      // A fixed source: the robot centre inside the station takes stock through its first compatible port.
+      if(!inStation(s,r))return {goal:leg.point};
+      if(!g.stock[s.id].length){record(sim,r,s,'acquire','empty-or-full',[],timeS);return {done:true};}
+      return acquiring(sim,r,s,g.stock[s.id][0],ports[0],timeS,{goal:leg.point});
+    }
+    const free=g.motion.pieces.filter(p=>p.station===s.id),current=free.find(p=>p.id===pickup.id);
+    if(current){
+      const port=ports.find(p=>p.id===pickup.port),hold={heading:pickup.heading};
+      if(port && portContact(r,current,port))return acquiring(sim,r,s,current,port,timeS,hold);
+      delete pickup.since;
+      if(Math.hypot(current.p[0]-pickup.position[0],current.p[1]-pickup.position[1])<.25)
+        return {goal:pickup.goal,heading:pickup.heading,action:'Seeking '+current.id};
+    }
+    // Choose the piece, port and heading that arrive soonest. The face normal lies on the approach bearing.
+    const others=new Set(sim.robots.filter(peer=>peer!==r).map(peer=>peer.pickup?.id));
+    if(sim.phaseIndex===0)for(const [id,opening] of Object.entries(g.opening))if(id!==r.id && id[0]===r.id[0])others.add(opening.piece);
+    const {topSpeedInS:v,accelInS2:a,rotationDegS}=r.concept.drive;
+    let best=null;
+    for(const piece of free){
+      if(others.has(piece.id))continue;
+      for(const port of ports){
+        if(!reachesHeight(port,piece))continue;
+        const toward=bearing(r.p,piece.p),heading=toward-faceTurn[port.face],n=unit(toward);
+        const reach=faceDepth(r,port.face)+port.extensionIn+piece.radiusIn*.85,goal=[piece.p[0]-n[0]*reach,piece.p[1]-n[1]*reach];
+        if(geom.hit(goal,goal,{...r,heading},sim.setup))continue;
+        const d=Math.hypot(goal[0]-r.p[0],goal[1]-r.p[1]);
+        const time=Math.max(d>=v*v/a?v/a+d/v:2*Math.sqrt(d/a),Math.abs(wrap(heading-r.heading))/rotationDegS);
+        if(!best || time<best.time-1e-9)best={time,piece,port,heading,goal};
+      }
+    }
+    if(!best)return g.cargo[r.id].some(p=>p.type===type) && !g.reserve[s.id]?.length?{done:true}:{waiting:'Waiting for reachable stock'};
+    Object.assign(pickup,{id:best.piece.id,position:[...best.piece.p],port:best.port.id,heading:best.heading,goal:best.goal});
+    delete pickup.since;
+    if(portContact(r,best.piece,best.port))return acquiring(sim,r,s,best.piece,best.port,timeS,{heading:best.heading});
+    return {goal:best.goal,heading:best.heading,action:'Seeking '+best.piece.id};
+  }
+  // Plan a scoring leg once, from the robot's position at its start.
+  function scoringPlan(sim,r,port,s,start) {
+    const g=sim.game;
+    if(port.kind==='place'){
+      const z=s.entry?.centerIn[2],h=port.place.releaseHeightIn;
+      if(z!==undefined && (z<h.min-1e-9 || z>h.max+1e-9)){
+        notice(g,r.id+' cannot place at '+s.label+' through '+port.id+': release height '+h.min+'–'+h.max+' in misses the entry at '+z+' in.');return null;
+      }
+      const toward=Math.hypot(s.at[0]-start[0],s.at[1]-start[1])>1e-9?bearing(start,s.at):r.heading+faceTurn[port.face],n=unit(toward);
+      const reach=port.place.standOffIn.min+faceDepth(r,port.face);
+      return {goal:[s.at[0]-n[0]*reach,s.at[1]-n[1]*reach],heading:toward-faceTurn[port.face]};
+    }
+    const e=s.entry,E=e.centerIn;
+    let away=[start[0]-E[0],start[1]-E[1]],d0=Math.hypot(...away);
+    if(e.kind==='window'){
+      const n=unit(e.facingDeg);
+      if(away[0]*n[0]+away[1]*n[1]<=1e-9){away=n;d0=0;}
+    }
+    if(Math.hypot(...away)<1e-9)away=unit(r.heading+180);
+    const w=away.map(x=>x/Math.hypot(...away)),approach=Math.round(Math.atan2(-w[1],-w[0])*180/Math.PI);
+    const key=[r.concept.digest,port.id,s.id,e.kind==='window'?approach:''].join('/');
+    const R=port.ranged;
+    if(!bandCache.has(key))bandCache.set(key,arc.standOffBand(e,pieceRadius(s.piece),{launchSpeedInS:R.launchSpeedInS,elevationDeg:R.elevationDeg},R.releaseHeightIn,approach).bands);
+    const bands=bandCache.get(key);
+    if(!bands.length){notice(g,r.id+' has no feasible stand-off from '+s.label+' through '+port.id+'.');return null;}
+    // Stay inside a band. Otherwise pick the band whose nearest edge is closest. A stationary shooter stops 1 in inside
+    // that nearest edge. A shooter with firesWhileMoving drives through the band to 1 in inside its far edge, releasing
+    // en route whenever it is at or below its speed cap, on target and the arc passes; at the near edge it would be
+    // inside the band for only its last inch, too briefly to fire while passing.
+    let choice=null;
+    for(const b of bands){
+      const inside=d0>=b.minIn && d0<=b.maxIn,narrow=b.maxIn-b.minIn<2;
+      const lo=narrow?(b.minIn+b.maxIn)/2:b.minIn+1,hi=narrow?lo:b.maxIn-1;
+      const near=inside?d0:d0>b.maxIn?hi:lo,far=d0>b.maxIn?lo:hi,gap=Math.abs(near-d0);
+      if(!choice || gap<choice.gap)choice={gap,inside,distance:inside?d0:R.firesWhileMoving?far:near};
+    }
+    return {goal:choice.inside?[...start]:[E[0]+w[0]*choice.distance,E[1]+w[1]*choice.distance]};
+  }
+  const bandCache=new Map(),arcCache=new Map();
+  // A drag-free arc from the robot centre at the release height, cached per rounded pose, velocity and elevation.
+  function arcAt(r,port,s,velocity,elevation) {
+    const R=port.ranged,key=[port.id,s.id,...r.p.map(v=>Math.round(v*4)),...velocity.map(v=>Math.round(v)),elevation===null?'':Math.round(elevation*100),
+      R.launchSpeedInS.min,R.launchSpeedInS.max,R.elevationDeg.min,R.elevationDeg.max,R.releaseHeightIn].join('/');
+    if(!arcCache.has(key)){
+      if(arcCache.size>20000)arcCache.clear();
+      arcCache.set(key,arc.arcCheck({positionIn:[r.p[0],r.p[1],R.releaseHeightIn]},{...s.entry,pieceRadiusIn:pieceRadius(s.piece)},
+        {launchSpeedInS:R.launchSpeedInS,elevationDeg:elevation===null?R.elevationDeg:{min:elevation,max:elevation}},velocity));
+    }
+    return arcCache.get(key);
+  }
+  function conceptScore(sim,r,leg,s,c,timeS,dt) {
+    const g=sim.game,type=s.piece,aboard=g.cargo[r.id].filter(p=>p.type===type);
+    if(!aboard.length){
+      if(c.leg.released)return {done:true};
+      // Like a legacy robot, an empty-handed robot reports at the step's point rather than looping in place.
+      if(Math.hypot(r.p[0]-leg.point[0],r.p[1]-leg.point[1])>1e-6)return {goal:leg.point};
+      record(sim,r,s,'attempt','no-compatible-cargo',[],timeS);return {done:true};
+    }
+    if(!c.leg.port){
+      const ports=portsFor(r.concept.outputs,type);
+      if(!ports.length){notice(g,r.id+' has no output port for '+type+' at '+s.label+'.');return {done:true};}
+      const port=ports.find(p=>p.kind==='place' || s.entry);
+      if(!port){notice(g,r.id+' cannot score at '+s.label+' through '+ports.map(p=>p.id).join(', ')+': no entry region.');return {done:true};}
+      if(port.kind==='ranged' && !pieceRadius(type))notice(g,r.id+' piece radius unknown for '+type+'; arc check assumes 0.');
+      const plan=scoringPlan(sim,r,port,s,c.leg.start);
+      if(!plan)return {done:true};
+      Object.assign(c.leg,{port,plan});
+    }
+    const port=c.leg.port,plan=c.leg.plan,now=elapsed(sim,timeS),moving=r.currentSpeedInS>1e-9;
+    const ready=aboard.find(p=>(g.ready[p.id] ?? -Infinity)<=now+1e-9),free=timeS+1e-9>=(c.free[port.id] ?? -Infinity);
+    const arrived=r.waypoints && r.target>=r.waypoints.length;
+    let fire=ready && free && (!moving || !port.requiresStop);
+    if(port.kind==='place'){
+      const normal=r.heading+faceTurn[port.face],f=unit(normal),depth=faceDepth(r,port.face);
+      const gap=Math.hypot(s.at[0]-r.p[0]-f[0]*depth,s.at[1]-r.p[1]-f[1]*depth),band=port.place.standOffIn;
+      fire=fire && gap>=band.min-1e-6 && gap<=band.max+1e-6 && Math.abs(wrap(bearing(r.p,s.at)-normal))<=port.place.headingToleranceDeg+1e-9;
+      if(fire)release(sim,r,leg,s,c,port,ready,timeS,false);
+      return {goal:plan.goal,heading:plan.heading};
+    }
+    const R=port.ranged,aim=c.aim[port.id]??={turretDeg:0,elevationDeg:R.elevationDeg.min};
+    const E=s.entry.centerIn,beta=bearing(r.p,E),normal=r.heading+faceTurn[port.face],off=wrap(beta-normal);
+    // Turn the face onto the target, or with a turret only as far as its range needs.
+    let heading=beta-faceTurn[port.face],turretGoal=0;
+    if(R.turret){
+      turretGoal=Math.min(R.turret.maxDeg,Math.max(R.turret.minDeg,off));
+      heading=Math.abs(off-turretGoal)>1e-9?r.heading+off-turretGoal:undefined;
+    }
+    const next=r.waypoints?.[r.target],toward=next && moving?Math.atan2(next[1]-r.p[1],next[0]-r.p[0]):0;
+    const velocity=moving?[r.currentSpeedInS*Math.cos(toward),r.currentSpeedInS*Math.sin(toward)]:[0,0];
+    const cap=R.firesWhileMoving?.maxRobotSpeedInS;
+    fire=fire && (!moving || cap!==undefined && r.currentSpeedInS<=cap+1e-9) &&
+      Math.abs(wrap(beta-normal-(R.turret?aim.turretDeg:0)))<=R.aimToleranceDeg+1e-9 && arcAt(r,port,s,velocity,aim.elevationDeg).feasible;
+    if(fire)release(sim,r,leg,s,c,port,ready,timeS,moving);
+    // Slew after the check: the turret toward the bearing and the hood toward the best arc from this pose.
+    if(R.turret)aim.turretDeg+=Math.sign(turretGoal-aim.turretDeg)*Math.min(Math.abs(turretGoal-aim.turretDeg),R.turret.slewDegS*dt);
+    if(R.elevationDeg.slewDegS && !fire){
+      const best=arcAt(r,port,s,velocity,null),target=best.feasible?best.elevationDeg:c.leg.elevation??=arcAt({p:plan.goal},port,s,[0,0],null).elevationDeg;
+      if(Number.isFinite(target))aim.elevationDeg+=Math.sign(target-aim.elevationDeg)*Math.min(Math.abs(target-aim.elevationDeg),R.elevationDeg.slewDegS*dt);
+    }
+    if(!fire && arrived && !moving && ready && !arcAt(r,port,s,[0,0],null).feasible){
+      notice(g,r.id+' found no arc into '+s.label+' from ['+r.p.map(v=>Math.round(v)).join(', ')+'] through '+port.id+'.');return {done:true};
+    }
+    return {goal:plan.goal,heading};
+  }
+  function release(sim,r,leg,s,c,port,piece,timeS,moving) {
+    const g=sim.game;
+    g.cargo[r.id]=g.cargo[r.id].filter(p=>p!==piece);
+    c.free[port.id]=timeS+port.secondsPerPiece;c.leg.released=true;
+    const fraction=moving?port.ranged.firesWhileMoving.successFraction:port.successFraction;
+    releaseAtTarget(sim,r,s,[piece],leg.outcome ?? 'credited',timeS,undefined,
+      {port:port.id,successFraction:fraction,moving,speedInS:r.currentSpeedInS,pose:{p:[...r.p],heading:r.heading}});
+  }
   function canReach(robot,p,physical){
     if(robot.intake)return contact(robot,{p,radiusIn:physical.radiusIn});
     const poly=geom.footprint(robot.p,robot);
@@ -401,7 +622,7 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
     g.cargo[robot.id]=bay.filter(p=>!used.has(p));
     releaseAtTarget(sim,robot,s,pieces,step.outcome ?? 'unresolved',timeS);
   }
-  function releaseAtTarget(sim,robot,s,pieces,prescribed,timeS,basis){
+  function releaseAtTarget(sim,robot,s,pieces,prescribed,timeS,basis,port){
     const g=sim.game;
     if(assessment && [...assessment.rules.values()].some(r=>r.target===s.id && r.phase===sim.phase)){
       const ledger=g.assessment,now=assessment.phaseStart(sim.phase)+timeS;
@@ -413,13 +634,14 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
         const {row,result}=choices[0];
         ledger.used.push(row.id);
         ledger.pending.push({row,result,releasePhase:sim.phase,activity:result.status==='inactive'?'inactive':'active',
-          target:s.id,robot:{id:robot.id,side:robot.side},piece});
+          target:s.id,robot:{id:robot.id,side:robot.side},piece,...(port?{port}:{})});
         const event=record(sim,robot,s,'release','awaiting-assessment',[piece],timeS);
         event.releaseId=row.id;event.releasedAtS=row.releasedS;
+        if(port)Object.assign(event,port);
       }
       return;
     }
-    dispose(sim,robot,s,pieces,prescribed,timeS,basis);
+    dispose(sim,robot,s,pieces,prescribed,timeS,basis,undefined,port);
   }
   function stationActivity(sim,s,timeS){
     if(!s.activeWindows)return 'active';
@@ -439,7 +661,8 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
     return s.areaIn?robot.p.every((v,i)=>v>=s.areaIn[0][i] && v<=s.areaIn[1][i]):
       Math.hypot(robot.p[0]-s.at[0],robot.p[1]-s.at[1])<=s.radiusIn;
   }
-  function dispose(sim,robot,s,pieces,prescribed,timeS,basis,observed){
+  // port: a concept release's port, pose and successFraction. A credited piece then scores points x fraction.
+  function dispose(sim,robot,s,pieces,prescribed,timeS,basis,observed,port){
     const g=sim.game,key=s.id;
     let outcome=prescribed;
     const activity=observed?.activity??stationActivity(sim,s,timeS);
@@ -452,8 +675,9 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
       const scoredPhase=observed?.phase??sim.phase;
       if(observed)Object.assign(event,{creditPhase:observed.phase,observedAtS:observed.observedAtS,
         releaseId:observed.releaseId,releasedAtS:observed.releasedAtS,passageAtS:observed.passageAtS});
-      const points=result==='credited'?batch.length*(typeof s.points==='number'?s.points:s.points[scoredPhase]):0;
+      const points=result==='credited'?batch.length*(typeof s.points==='number'?s.points:s.points[scoredPhase])*(port?.successFraction ?? 1):0;
       event.points=points;event.prescribedOutcome=prescribed;event.activity=activity;if(basis)event.basis=basis;
+      if(port)Object.assign(event,port);
       g.score[robot.side]+=points;
       if(g.endgame?.assessed)g.endgame.ordinaryScore[robot.side]+=points;
       if(result==='credited'){
@@ -472,13 +696,17 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
       }
     }
   }
-  return {start,startObservations,observe,apply,replenish,move,seek,intake,mayDeliver};
+  return {start,startObservations,observe,apply,replenish,move,seek,intake,mayDeliver,conceptStep,mouth};
 }
 
 
 export function rehearsalFindings(id,basis,game,stations) {
   if (!stations?.length && !game.endgame) return [id+' · '+basis+'. The profile has no registered stock or scoring criterion.'];
-  const lines=[id+' · '+basis+'. Modeled rehearsal score: Blue '+game.score.blue+', Red '+game.score.red+'.'];
+  // Concept credit is fractional (points x successFraction); show it to 0.001.
+  const round=x=>Math.round(x*1000)/1000;
+  const lines=[id+' · '+basis+'. Modeled rehearsal score: Blue '+round(game.score.blue)+', Red '+round(game.score.red)+'.'];
+  for(const [robot,c] of Object.entries(game.concepts ?? {}))lines.push(robot+' concept '+c.id+' · digest '+c.digest+'.');
+  lines.push(...game.notices ?? []);
   const terminal=game.endgame;
   if(terminal){
     lines.push(terminal.basis+'. Sources: '+terminal.sources.join(', ')+'. Powered cutoff '+terminal.activeCutoffS+' s; terminal assessment '+terminal.assessmentTimeS+' s. Terminal criteria represent project scenario assumptions, including continued support through assessment.');
@@ -497,11 +725,12 @@ export function rehearsalFindings(id,basis,game,stations) {
   }
   const groups=new Map();
   for(const ev of game.events){
-    const key=[ev.phase,ev.station,ev.robot,ev.outcome].join(' · ');
+    const key=[ev.phase,ev.station,ev.robot,ev.outcome,...(ev.port?['via '+ev.port]:[]),
+      ...(ev.successFraction!==undefined?['success fraction '+ev.successFraction]:[])].join(' · ');
     const existing=groups.get(key) ?? {count:0,pieces:0,points:0};
     existing.count++;existing.pieces+=ev.pieces.length;existing.points+=ev.points ?? 0;groups.set(key,existing);
   }
-  for(const [key,v] of groups)lines.push(key+': '+v.count+' actions, '+v.pieces+' pieces, '+v.points+' modeled points.');
+  for(const [key,v] of groups)lines.push(key+': '+v.count+' actions, '+v.pieces+' pieces, '+round(v.points)+' modeled points.');
   lines.push(Object.entries(game.cargo).map(([robot,pieces])=>robot+' '+pieces.length+' aboard').join(', ')+
     '; '+game.returning.length+' pieces awaiting a configured return.');
   return lines;
