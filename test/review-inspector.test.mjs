@@ -13,7 +13,7 @@ import { validateScene } from '../scripts/review-scene.mjs';
 // The stock page's pure helpers, loaded from the shipped template.
 const html = readFileSync(new URL('../templates/preliminary-review/review.html', import.meta.url), 'utf8');
 const source = html.split('<script id="review-logic">')[1].split('</script>')[0];
-const logic = new Function(source + '\nreturn {inspectorFields, attachmentNote, attachmentRows, visibleBodies, findComponent, partition, frameCount, animationsOf, clipOf, clipFrame, clipSeek, checkGroups, massLinesFor, sha256Pure, digestHex, fieldFitState, replayMotion, eventAt, tubeTriangles, triangleValues, alongCenterline, carriedValues, MISSING, NOT_SUPPLIED};')();
+const logic = new Function(source + '\nreturn {inspectorFields, attachmentNote, attachmentRows, visibleBodies, findComponent, partition, frameCount, animationsOf, clipOf, clipFrame, clipSeek, checkGroups, massLinesFor, sha256Pure, digestHex, fieldFitState, replayMotion, eventAt, tubeTriangles, triangleValues, alongCenterline, carriedValues, interactionRows, MISSING, NOT_SUPPLIED};')();
 const field = (fields, label) => fields.find(f => f[0] === label);
 
 test('the inspector shows identity, classification, volume, mass basis, support, loads and moving cases from the scene', () => {
@@ -226,4 +226,25 @@ test('check results group by phase: counts, the tightest clearance, the toleranc
   const failed = logic.checkGroups(scene)[0];
   assert.deepEqual([failed.counts, failed.attention, failed.focus.case, failed.tightest.case], [{fail: 1, pass: 2}, true, 'raise-01', 'raise-01'], 'an overlap is tighter than any gap, and a failing case is the one to jump to');
   assert.deepEqual(logic.checkGroups(reviewScene()).map(g => [g.id, g.rows.length]), [['raise', 1], [null, 1]], 'a scene of one phase groups the same way');
+});
+
+test('each interaction shows its verdict and why, its trial result, what it assumed and leans on, and its adjustment window', () => {
+  const scene = reviewScene();
+  scene.adjustments = [{name: 'lip height', kind: 'mechanical', input: 'parameters.lip', range: [10, 20], measured: true, findings: []}];
+  scene.interactions = [
+    {id: 'pickup', verdict: 'configurable', reasons: ['belt squeezes the piece by 15% of its thickness'], decides: 'Invented', cases: ['raise'],
+      trial: {name: 'pickup', engine: 'planar', result: 'covered by adjustment', state: 'stale', changes: ['solid "belt" changed (boundsMm)'],
+        assumptions: [{id: 'in-plane', text: 'Invented: the piece stays in the plane'}], inputs: [{path: 'materials.tread.friction', value: 0.6, source: 'assumed', range: [0.4, 0.8]}],
+        sensitivity: ['materials.tread.friction'], adjustments: ['lip height'],
+        coverage: [{input: 'materials.tread.friction', adjustment: 'lip height', someSettingPassesEach: true, oneSettingPassesBoth: true, setting: 14, atLow: [12, 20], atHigh: [10, 16]}]}},
+    {id: 'release', verdict: 'planar is enough', screened: 'needs 3D', override: 'Invented: guides are drawn later', reasons: ['Invented'], noTrial: 'Invented: no result changes the design'}];
+  const [pickup, release] = logic.interactionRows(scene);
+  assert.equal(pickup.stale, true);
+  assert.equal(pickup.trial, 'pickup · planar: covered by adjustment · stale: solid "belt" changed (boundsMm)');
+  assert.deepEqual(pickup.inputs, ['materials.tread.friction = 0.6, assumed 0.4 to 0.8']);
+  assert.deepEqual(pickup.sensitivity, ['materials.tread.friction']);
+  assert.deepEqual(pickup.adjustment, ['lip height on materials.tread.friction: low end 12 to 20, high end 10 to 16; 14 passes at both', 'lip height 10 to 20: clear at both ends']);
+  assert.equal(release.verdict, 'planar is enough (overridden from needs 3D: Invented: guides are drawn later)');
+  assert.equal(release.trial, 'No trial: Invented: no result changes the design');
+  assert.match(html, /<table id="interactionTable">/, 'the rows have a place on the page');
 });

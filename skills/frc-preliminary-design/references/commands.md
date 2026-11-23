@@ -116,11 +116,24 @@ After any later edit, regenerate the solids when the design source changed, reru
 
 ## Add trials and replays
 
-The plugin reads trial records. Trials written as data and run by the design library are coming; until then a project keeps the records of the trials it has run. For each trial that decides an interaction:
+For each interaction that decides the design:
 
-1. Name the trial file on the stage in the judgement file under `transportedBy`, `freePath` or `supportedBy`, whichever moved the piece.
-2. Write its `qualification`: the result, a control, brackets and the timestep repeat.
-3. Convert the recorded run to a replay set and name it under `presentation.replays`. Rebuild the review page with `--view-only`. If it refuses, it names the input that changed: run the full check.
+1. Declare it in the design source under `interactions`, with its `pieces`, `materials`, `drives` and any `adjustments`. In the judgement file, say what it `decides`, name its `trial` (or `noTrial` and why) and list the `cases` it stands behind. Run the layout check: it prints the screen verdict and its reasons on a `[screen]` line.
+2. Write the trial under `trials` in the design source, then run the campaign after reading its estimate:
+
+   ```powershell
+   python -m frc_design_kernel try cad/preliminary-design/releases/1.0/design.json --out cad/preliminary-design/releases/1.0/records --estimate
+   python -m frc_design_kernel try cad/preliminary-design/releases/1.0/design.json --out cad/preliminary-design/releases/1.0/records --trial pickup
+   ```
+3. Measure each mechanical adjustment at both ends, with the largest stage allowance:
+
+   ```powershell
+   python -m frc_design_kernel measure cad/preliminary-design/releases/1.0/design.json --out cad/preliminary-design/releases/1.0/records --extremes --min-gap 1
+   ```
+4. Name both records in the judgement file as `trials` and `measurements`, and run the layout check again. Each `[trial]` line gives the result word and says when a record is stale.
+5. Convert a recorded run to a replay set and name it under `presentation.replays`. Rebuild the review page with `--view-only`. If it refuses, it names the input that changed: run the full check.
+
+After any change, ask the library what it made stale and rerun only that: `python -m frc_design_kernel status cad/preliminary-design/releases/1.0/design.json cad/preliminary-design/releases/1.0/records`.
 
 [Trials and replays](trials.md)
 
@@ -130,7 +143,7 @@ The plugin reads trial records. Trials written as data and run by the design lib
 node PLUGIN/scripts/design.mjs effective-readiness . --release cad/preliminary-design/releases/1.0 --design "Tilting carriage 1.0"
 ```
 
-The report lists the three criteria as met or not met, each with the reason. It writes nothing and always exits 0. Under criterion 2 a note says how each mission case's animation relates to its trial. `prescribed motion with a trial attached` is `not met`: name the trial on the case's stage, or play it as a replay. [What it reads](../../../docs/preliminary-design.md#judge-readiness-to-be-marked-effective)
+The report lists the three criteria as met or not met, each with the reason. It writes nothing and always exits 0. Under criterion 2 a line for each interaction gives its verdict, its trial, the result and the input it leans on most. A mission case that no passing interaction lists is `not met`. [What it reads](../../../docs/preliminary-design.md#judge-readiness-to-be-marked-effective)
 
 ## Write the handoff note
 

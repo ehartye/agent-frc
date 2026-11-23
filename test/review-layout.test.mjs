@@ -294,6 +294,7 @@ test('the animation list holds one entry per mission phase; the checked cases si
    out.pairs=[q('#count').textContent,all('#findings thead th').map(c=>c.textContent),all('#findings tbody tr').map(r=>r.cells[1].textContent)];
    all('#findings tbody tr')[1].click();await wait(100);out.pairJump=[motion.value,time.value];
    return out`);
+  assert.ok(!seen.probeError, seen.probeError);
   assert.deepEqual(seen.groups, ['Mission animations: Raise the arm', 'Other checked motions: Lower', 'Check control: Displaced control'],
     'four checked cases and a control give three list entries, not five');
   assert.equal(seen.label, 'Mission animation');
@@ -327,4 +328,16 @@ test('the animation list holds one entry per mission phase; the checked cases si
    return {deep,width:w.innerWidth,scroll:d.documentElement.scrollWidth,motion:motion.getBoundingClientRect().right,table:q('#motion-evidence .scroll').getBoundingClientRect().right}`);
   assert.deepEqual(phone.deep, ['raise', '24', 'Checked segment 2 of 3 (raise-02). Invented: third 2 of the raise.'], 'a link to a case opens its animation at that case');
   assert.ok(phone.width === 390 && phone.scroll <= 390 && phone.motion <= 390 && phone.table <= 390, '390 px: the list and the check results fit without sideways scrolling (' + JSON.stringify(phone) + ')');
+});
+
+test('the check results list each interaction with its verdict, trial result and a stale record marked', {skip}, async t => {
+  const scene = reviewScene();
+  scene.interactions = [{id: 'pickup', verdict: 'needs 3D', reasons: ['Invented: 2 pieces at once'], decides: 'Invented', cases: ['raise'],
+    trial: {name: 'pickup', engine: 'mujoco', result: 'passed', state: 'stale', changes: ['Invented change'], assumptions: [], inputs: [], sensitivity: [], coverage: [], adjustments: []}}];
+  const dir = site(t), url = release(dir, '1.0', scene);
+  const shown = await probePage(dir, url, ready + `const rows=[...document.querySelectorAll('#interactionTable tr')];
+   return {cells:rows.map(r=>[...r.cells].slice(0,3).map(c=>c.textContent)),stale:rows.map(r=>r.className),none:document.querySelector('#interactionNone').hidden}`);
+  assert.ok(!shown.probeError, shown.probeError);
+  assert.deepEqual(shown.cells, [['Interaction', 'Screen verdict', 'Trial and result'], ['pickup', 'needs 3DInvented: 2 pieces at once', 'pickup · mujoco: passed · stale: Invented change']]);
+  assert.deepEqual([shown.stale, shown.none], [['', 'stale'], true]);
 });

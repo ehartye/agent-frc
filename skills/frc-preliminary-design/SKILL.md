@@ -30,7 +30,10 @@ The figures here are guidelines: about 30 to 80 solids, clearances to about 10 m
 | check | The layout check, `preliminary-check` |
 | receipt | The saved result of a check, `receipt.json` |
 | review page | The one page that shows the design. Its animation list holds one entry per mission phase and each replay. Its check results hold every case |
-| trial | A physics run that decides an interaction. The plugin reads its record |
+| interaction | A game piece meeting the robot or the field, declared in the design source: what a trial is about |
+| screen verdict | The check's word on an interaction before any trial: `planar is enough`, `needs 3D` or `configurable`, with its reasons |
+| trial | A physics run, written as data in the design source and run by the library, that decides an interaction |
+| adjustment | What the built robot can change, declared in the design source: a slot, a spring or a setpoint |
 | replay | A recorded trial, played in the review page's animation list |
 
 ## What to run for this change
@@ -56,7 +59,7 @@ The work has three stages, and each one settles before the next starts:
 2. **Planar trials.** Try each deciding interaction in its plane.
 3. **3D confirmation** on the settled layout, for the interactions a plane cannot show.
 
-A finding from a later stage is fixed in the design source and never in a generated file or scene. Then regenerate and rerun only what the change made stale: the check and the trials that read the changed solids. Two round trips on one interaction is a check-in.
+A finding from a later stage is fixed in the design source or the trial data, never in a generated file or scene. Sort a 3D finding first: is the design wrong, a mechanism setting wrong, or the 3D model wrong? Then regenerate and rerun only what `python -m frc_design_kernel status` reports stale, coming back up in order from the earliest stage it touches. Two round trips between planar and 3D on one interaction is a check-in. [Interactions, trials and adjustments](../../docs/preliminary-design.md#interactions-trials-and-adjustments)
 
 1. **Read the strategic narrative end to end.** List each objective and fallback as represented, open or out of scope, with the reason. If no role or cycle is selected yet, use `frc-conceptual-design` first.
 2. **Find or start the design.** An in-progress design already exists: revise it. Otherwise pick the architecture, give it a short name in words and start version `1.0` from the starter. A different architecture takes the next major version and its own name.
@@ -64,8 +67,8 @@ A finding from a later stage is fixed in the design source and never in a genera
 4. **Write one motion for each mission phase** (acquire, retain, transfer, deliver, reset, endgame, park, service) and its stage in the judgement file, plus one displaced control. A curved move is one motion: a path, or a move through poses. Estimate mass and battery current by subsystem, with a reserve.
 5. **Generate the solids and run the check.** Read the scope, attachment and budget lines and fix what they report, in the source or in the judgement file. Repeat until the receipt reads `layout-checked`.
 6. **Publish the draft** and open the published page yourself. An in-progress design goes up as soon as it passes its coarse check, with its open risks listed. The site deploys when the pull request merges to the default branch.
-7. **Rank the risks. Run the few trials that decide the architecture,** planar first. Give each a control, brackets and one finer-timestep repeat. Add each recorded trial to the animation list as a replay. Republish the same version. [Trials and replays](references/trials.md)
-8. **Close each risk** with a design change, or list it as a bench test with pass and fail numbers. Run the readiness report until it reads 3 of 3. A trial named only on the mission case is reported as `prescribed motion with a trial attached` and does not count: name it on the case's stage or play it as a replay.
+7. **Rank the risks. Declare each deciding interaction and read its screen verdict, then run the few trials that decide the architecture,** planar first and 3D only where the screen says so. Say in the judgement file what each interaction decides; skip a trial whose result could not change the design. Give each trial a control and brackets; the library adds the half-step repeat and the range ends. State every input as measured or assumed with a range, and declare the adjustment that covers an uncertain one. Add each recorded trial to the animation list as a replay. Republish the same version. [Trials and replays](references/trials.md)
+8. **Close each risk** with a design change, or list it as a bench test with pass and fail numbers. Run the readiness report until it reads 3 of 3. A mission case counts only when an interaction that meets its bar lists it.
 9. **Propose effective.** Write the [handoff note](references/commands.md#write-the-handoff-note), attach the readiness report and ask the user. The user decides.
 
 When more than one architecture is plausible at step 2, block out each one coarsely against the same frame, field, mass and power figures. Pick one, say what it gives up, then name it and carry on. Check in only when the comparison does not separate them. [Whole-robot comparison](../../docs/whole-robot-comparison.md)
@@ -132,6 +135,9 @@ Ask only when the choices lead to different designs. Keep working on everything 
 | A pair fails | An undeclared joint or intended contact; a path fitted too loosely to its trial; real interference | Read the overlap and where on the stroke it occurs. Bodies meant to touch: [declare the contact](../../docs/preliminary-design.md#declare-an-intended-contact) in the design source. Overlap smaller than the path tolerance: fit the path closer. Larger: move a part in the source | The phase needs a tolerance below 10 mm |
 | A sliver overlap or a near-zero gap | Coincident faces; two solids that are one part | Treat it as contact. Merge the solids, draw a small split or declare the contact. Do not investigate | Never. It is not a design finding |
 | A pair reads `open` | The search reached its depth limit before it could prove the pair clear | Raise `depth` on that stage by one or two. A pair is never passed as clear without the proof | It stays open at depth 12 |
+| The screen says `needs 3D` | The piece is not round in the section; a guide is missing or far; a surface changes across the plane; more than one piece; an off-plane target | Read the reasons. If a guide belongs there, draw it in the design source and check again; otherwise write a 3D trial on the settled layout. Override only with a reason a reviewer can check | You would override more than one interaction |
+| A trial is `not covered` | The outcome changes inside an assumed range and no declared adjustment reaches it | Read the sensitivity order and the edge the finding names. Declare an adjustment that reaches that input, or change the design so the range holds. Do not narrow the range to pass | The input cannot be reached by any adjustment |
+| A trial is stale | The design source changed something the trial used | Run `status` to see what changed, then rerun that trial alone with `try --trial NAME` | Two round trips on the same interaction |
 | A soft piece is squeezed against a roller or guide | The pair fails as an overlap because it is not declared as a contact | [Declare the squeezing surfaces as contacts](../../docs/preliminary-design.md#declare-an-intended-contact) and [state the allowed depth](../../docs/preliminary-design.md#judge-a-squeezed-game-piece) under `payloadCompression`. Cover the assumed depth with an adjustment and list the squeeze as a bench test | The architecture depends on that squeeze |
 | The check stops before any case | An error in the design source; solids generated from an earlier source; geometry written in the judgement file; a motion with no stage; a named file that does not exist | Read the message. It names the entry and says how to fix it. Fix that one thing, regenerate and rerun | The message names nothing you changed |
 | The check says the design library is missing | It is not installed in this Python, or an update changed a format | Run the `frc-setup` check for `preliminary-design`. It prints the install command. The library is in its settling period: after an update, fix the design source as the message says | The same source fails after an update and the message does not say why |
@@ -151,12 +157,6 @@ Ask only when the choices lead to different designs. Keep working on everything 
 | The project's CI fails | A personal path or a secret in a tracked file; a design index that disagrees with its folders; a dead link in a published page | Read the message: it names the file. Run `node scripts/ci/scan.mjs .` and `node scripts/ci/site-check.mjs docs` in the project. Fix the file. Leave the design alone | It fails twice with no change of yours |
 | The publication check refuses the project | A receipt that is not of the committed files; an effective design whose physics changed; a status set by hand | Read the message. Rerun the layout check and publish again, take the next minor version, or mark the design effective with the command | You believe the refusal is wrong |
 | Detailed design returns a reservation | A real part does not fit an envelope, allowance or reserve | Start the next minor version from the effective one with `--copy-inputs`, fix the layout, rerun the affected cases | The fix needs a different architecture |
-
-## Coming, not here yet
-
-- Trials written as data in the design source and run by the library: until then, bind each recorded trial as [Trials and replays](references/trials.md) says.
-- The screen that says, from facts the library computes, whether an interaction needs a planar trial, a 3D trial or an adjustment.
-- Adjustments as design data, with a coverage campaign across each assumed range.
 
 ## Reference
 
