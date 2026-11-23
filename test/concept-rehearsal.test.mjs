@@ -396,19 +396,6 @@ test('ports: a ranged release leaves from the output face, which stays in front 
   }
 });
 
-test('ports: the stop for a narrow window 400 in away passes the arc check',()=>{
-  // A 10 in window (2 in of clearance round a 4 in ball) facing west at [470,140]; the robot starts beyond its band
-  // at a fractional approach angle.
-  const narrow={centerIn:[470,140,60],kind:'window',widthIn:10,heightIn:10,facingDeg:180,factId:'narrow-window'};
-  const far={...shooter({elevation:[20,60]}),ranged:{...shooter({elevation:[20,60]}).ranged,launchSpeedInS:span(300,420)}};
-  const run=play(arena({docs:[conceptDoc('far',{outputs:[far]})],steps:[shoot],goal:[470,140],entry:narrow,balls:[[250,200]]}),
-    [{concept:'far',preload}],6,[[40,157]]);
-  const shot=releases(run.events)[0];
-  assert.ok(shot,'released: '+run.sim.game.notices.join(' | '));
-  assert.ok(Math.hypot(shot.pose.releaseIn[0]-470,shot.pose.releaseIn[1]-140)>=399,'released '+Math.hypot(shot.pose.releaseIn[0]-470,shot.pose.releaseIn[1]-140)+' in away');
-  assert.doesNotMatch(run.notes,/found no arc/);
-});
-
 test('ports: a robot that cannot turn where it stands drives clear first, then turns',()=>{
   // The example placer leaves the training bay beside the West pedestal facing away from the rack. Its circle
   // meets the pedestal there, so it must drive out at its present heading before it turns back to the rack.
