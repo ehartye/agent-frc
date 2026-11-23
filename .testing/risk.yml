@@ -30,24 +30,12 @@ lanes:
       - ubuntu
 areas:
   # The layout check: a false pass is the worst failure.
-  - path: scripts/preliminary_design.py
-    tier: critical
-    why: the layout check; a false pass publishes a layout that interferes
   - path: scripts/kernel_layout/**
     tier: critical
     why: the layout check on the design library; a false pass publishes a layout that interferes
   - path: scripts/layout_check.py
     tier: critical
     why: the command of the layout check on the design library
-  - path: scripts/layout-format.mjs
-    tier: critical
-    why: chooses which layout check a design is run through, at the stage gate too
-  - path: scripts/layout_attachment.py
-    tier: critical
-    why: reports floating parts
-  - path: scripts/package_budgets.py
-    tier: critical
-    why: mass and voltage budgets
   # The stage gate.
   - path: scripts/design-publication.mjs
     tier: critical

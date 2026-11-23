@@ -4,10 +4,10 @@ from pathlib import Path
 from time import perf_counter
 
 from mechanical_readiness import digest, named, read, require
-from package_budgets import budget_review
 from package_view import CONTROL_ID, PHASE_GUIDE, first_unmet, mission_animations, parked_assembly, verify_view
 
 from . import attachment, judge, premises, scope, stages
+from .budgets import budget_review
 from .inputs import generated, load
 from .measure import Measured, Placements
 
@@ -130,7 +130,7 @@ def prepare(inputs, measured, placements, missing, say):
     result["premises"] = premises.compare(inputs.root, plan, missing)
     result["reopen"] = [dict(phase=d["phase"], reason=d["id"], affected=d["interfaces"]) for d in result["premises"] if d["status"] == "reopen"]
     plan["step"], bounds = generated(inputs)
-    result.update(step=plan["step"], motion=plan["motion"])
+    result.update(step=plan["step"], motion=plan["motion"], parts=inputs.parts)
     hosts = structure(inputs, bounds, missing)
     result["scope"], lines = scope.report(plan, len(inputs.roster - inputs.fixtures), len(inputs.fixtures))
     for line in lines:

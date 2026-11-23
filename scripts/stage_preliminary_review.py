@@ -31,20 +31,12 @@ STATUSES = ("in-progress", "effective", "superseded", "withdrawn")
 SCENE = "review-scene.json.gz"
 FIELD = re.compile(r"field/[a-z0-9][a-z0-9._-]{0,110}\.html")
 VERSION = re.compile(r"([1-9][0-9]{0,3})\.(0|[1-9][0-9]{0,3})")
-# An ID issued before versions: lowercase letters, digits and hyphens. It keeps working and carries no design name.
-EARLIER_ID = re.compile(r"[a-z0-9][a-z0-9-]{0,63}")
 PER_RELEASE = ("designStatus", "revision", "accepted", "refreshed", "reason", "lastCommit")
 # What a push does with the change just made, said after each command. The method: docs/testing-methodology.md.
 ON_PUSH = "On push: the project's workflow publishes the page. Nothing is rerun."
 BEFORE_PUSH = "Before pushing, run the publication check: node PLUGIN/scripts/design-publication.mjs check ."
 GATE = "gate.json"
-# A design checked on the design library is staged from its judgement file; one in the earlier format from its layout plan.
-JUDGEMENT, PLAN = "judgement.json", "layout.json"
-
-
-def plan_name(folder):
-    """The file a release folder is checked from."""
-    return JUDGEMENT if (folder / JUDGEMENT).is_file() else PLAN
+JUDGEMENT = "judgement.json"
 
 
 def read(path):
@@ -120,7 +112,7 @@ def design_name(record, major):
 
 
 def title_of(record, release):
-    """A version reads NAME MAJOR.MINOR; an earlier ID reads as the ID."""
+    """A version reads NAME MAJOR.MINOR."""
     name = design_name(record, major_of(release)) if version_of(release) else None
     return name + " " + release if name else release
 
@@ -217,7 +209,7 @@ def project_root(season, inputs, view):
 
 
 def checked_id(release):
-    if not version_of(release) and not EARLIER_ID.fullmatch(release or ""):
+    if not version_of(release):
         raise ValueError("Use a version as the release ID: MAJOR.MINOR, such as 1.0")
     return release
 
@@ -238,9 +230,9 @@ def receipt_identity(receipt):
         return sorted([str((row or {}).get(name)), str((row or {}).get(result))] for row in rows or [])
 
     budgets, control = receipt.get("budgets") or {}, receipt.get("control") or {}
-    return {"the status": receipt.get("status"), "the STEP": digest(receipt.get("step")), "the motion study": digest(receipt.get("motion")),
-            "the editable design": digest(receipt.get("design")), "the budget ledger": digest(budgets.get("source")),
-            "the limits": digest(budgets.get("limits")), "the held receipt": receipt.get("previousCheckpointSha256"),
+    return {"the status": receipt.get("status"), "the generated solids": digest(receipt.get("step")),
+            "the design source": digest(receipt.get("design")), "the budget ledger": digest(budgets.get("source")),
+            "the limits": digest(budgets.get("limits")),
             "the cycle": receipt.get("cycle") or [], "the case results": verdicts(receipt.get("cases"), "case"),
             "the displaced control": [control.get("case"), control.get("displaced"), control.get("offsetMm"), (control.get("witness") or {}).get("status")],
             "the mass result": budgets.get("massStatus"), "the loaded-voltage results": verdicts(budgets.get("electricalCases"), "case"),
@@ -259,11 +251,9 @@ def stage(season, inputs, release, design=None, refresh=False):
     Its receipt must record the physics the published receipt records. The status, the accepted date and the draft
     count stay as they are."""
     checked_id(release)
-    if design is not None and not version_of(release):
-        raise ValueError("--design-name names the architecture of a version ID, MAJOR.MINOR. Release " + release + " keeps its earlier ID and has no name")
     site = season / "docs/preliminary-design"
     inputs = inputs.resolve()
-    plan_file = inside(inputs, plan_name(inputs))
+    plan_file = inside(inputs, JUDGEMENT)
     plan, result = read(plan_file), read(inside(inputs, "receipt.json"))
     if result.get("planSha256") != hashlib.sha256(plan_file.read_bytes()).hexdigest():
         raise ValueError("The receipt belongs to a different layout. Rerun the preliminary check and save its receipt")
@@ -282,9 +272,8 @@ def stage(season, inputs, release, design=None, refresh=False):
     if not scene_file.is_file():
         raise ValueError("Generate the review with --write-view: a release publishes the review page and its scene")
     ledger = inside(root, plan["budgets"]["file"])
-    # The published folder carries what was checked: the design source, or the motion study of the earlier format.
-    checked = {"design.json": inside(root, plan["source"]["file"])} if plan_file.name == JUDGEMENT else {"motion.json": inside(root, plan["motion"]["file"])}
-    files = {"index.html": viewer, SCENE: scene_file, "receipt.json": inputs / "receipt.json", **checked, "budgets.json": ledger,
+    # The published folder carries what was checked: the design source.
+    files = {"index.html": viewer, SCENE: scene_file, "receipt.json": inputs / "receipt.json", "design.json": inside(root, plan["source"]["file"]), "budgets.json": ledger,
              "limits.json": inside(root, read(ledger)["requirements"]["file"])}
 
     def publish(name, source):
@@ -314,7 +303,7 @@ def stage(season, inputs, release, design=None, refresh=False):
         published.append(mission)
     record = dict(schema="agent-frc/preliminary-release@1", release=release, issue=result["issue"], phase="preliminary-design",
                   # Where the project's CI finds the committed inputs to rerun the layout check.
-                  check=dict(project=inputs.relative_to(season.resolve()).as_posix(), plan=plan_file.name),
+                  check=dict(project=inputs.relative_to(season.resolve()).as_posix()),
                   missionCases=published, **(dict(fieldPlayers=players) if players else {}))
     site.mkdir(parents=True, exist_ok=True)
     with update_index(site), tempfile.TemporaryDirectory(dir=site.parent, prefix=".stage-") as tmp:
@@ -392,13 +381,13 @@ def sentence(text):
     return text[:1].upper() + text[1:]
 
 
-def stage_gate(season, release, budget_minutes=None, jobs=None, check=None):
+def stage_gate(season, release, budget_minutes=None, workers=None, check=None):
     """Run the stage gate of a release: the full layout check on the committed design, and its readiness report.
 
     The gate is the plugin's stage-gate.mjs. It prints what it ran and how long it took, and writes its record beside
     the published release. A release that does not pass keeps its status."""
     command = ["node", str(Path(__file__).resolve().with_name("stage-gate.mjs")), "preliminary", str(season), "--release", release]
-    for flag, value in (("--budget-minutes", budget_minutes), ("--jobs", jobs), ("--check", check)):
+    for flag, value in (("--budget-minutes", budget_minutes), ("--workers", workers), ("--check", check)):
         if value is not None:
             command += [flag, str(value)]
     sys.stdout.flush()
@@ -502,11 +491,11 @@ def copy_inputs(season, base, old, new):
     A record pins a file by path and SHA-256, and a release checked from the repository root names its own folder in
     those paths. Each such pin is verified against the source, written with the new path and given the digest of the
     copied file. The STEP and every other file that is not a pinning record keep their bytes. The review page, scene
-    and receipt are not copied: the layout check writes them for the new folder. A held receipt is copied unchanged."""
+    and receipt are not copied: the layout check writes them for the new folder."""
     source, target = base / "releases" / checked_id(old), base / "releases" / checked_id(new)
-    name = plan_name(source)
+    name = JUDGEMENT
     if not (source / name).is_file():
-        raise ValueError("No judgement file or layout plan at " + source.relative_to(season).as_posix())
+        raise ValueError("No judgement file at " + (source / name).relative_to(season).as_posix())
     if target.exists():
         raise ValueError(target.relative_to(season).as_posix() + " already exists. Choose a new release ID, or remove that folder first")
     before, after = source.relative_to(season).as_posix() + "/", target.relative_to(season).as_posix() + "/"
@@ -635,7 +624,7 @@ if __name__ == "__main__":
     parser.add_argument("--replaced-by", metavar="RELEASE", help="With --remove of a release that is or was effective: the effective release of the same STEP")
     parser.add_argument("--reason", help="Why the release is withdrawn, with --set-status RELEASE withdrawn")
     parser.add_argument("--budget-minutes", type=float, help="With --set-status RELEASE effective: stop the stage gate's layout check after this many minutes (default 45)")
-    parser.add_argument("--jobs", type=int, help="With --set-status RELEASE effective: worker processes of the stage gate's layout check")
+    parser.add_argument("--workers", type=int, help="With --set-status RELEASE effective: worker processes of the stage gate's layout check")
     parser.add_argument("--gate-check", help=argparse.SUPPRESS)
     parser.add_argument("--base", type=Path, default=Path("cad/preliminary-design"),
                         help="The project's preliminary design folder, which holds releases/ (default: cad/preliminary-design under the current folder)")
@@ -658,7 +647,7 @@ if __name__ == "__main__":
                 if args.reason:
                     raise ValueError("--reason applies to a withdrawal")
                 # The stage gate runs here, once, on the committed design. An earlier receipt is never taken for it.
-                stage_gate(base.parents[1], args.set_status[0], args.budget_minutes, args.jobs, args.gate_check)
+                stage_gate(base.parents[1], args.set_status[0], args.budget_minutes, args.workers, args.gate_check)
             set_status(site, *args.set_status, reason=args.reason)
         elif args.copy_inputs:
             copy_inputs(base.parents[1].resolve(), base, *args.copy_inputs)

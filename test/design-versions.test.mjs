@@ -32,16 +32,16 @@ async function season(t) {
       await writeFile(path.join(dir, file), content);
       return { file, sha256: createHash('sha256').update(content).digest('hex') };
     };
-    const motion = await pin('paths.json', '{"cases":[]}');
+    const motion = await pin('design.json', '{"cases":[]}');
     await pin('viewer.html', page);
     await pin('review-scene.json.gz', gzipSync(JSON.stringify({schema: 'agent-frc/preliminary-review-scene@1', issue: 'synthetic-' + id, fieldInteractions: []})));
     const limits = await pin('package-limits.json', '{"inspectionLimitKg":14}');
     const budgets = await pin('budgets.json', JSON.stringify({requirements: limits, masses: [], electricalCases: {}}));
-    const plan = await pin('layout.json', JSON.stringify({motion, budgets, view: 'viewer.html'}));
-    await pin('package.step', step);
+    const plan = await pin('judgement.json', JSON.stringify({source: motion, budgets, view: 'viewer.html'}));
+    await pin('design.step', step);
     await pin('receipt.json', JSON.stringify({schema: 'agent-frc/preliminary-layout-result@1', missingInputs: [], reopen: [], cases: [{case: 'turn', status: 'pass'}], control: {witness: {status: 'fail'}},
       budgets: {massStatus: 'pass', electricalCases: [{case: 'weak', status: 'pass'}]}, planSha256: plan.sha256, issue: 'synthetic-' + id, status: 'layout-checked',
-      step: {file: 'package.step', sha256: createHash('sha256').update(step).digest('hex')}}));
+      step: {file: 'design.step', sha256: createHash('sha256').update(step).digest('hex')}}));
     await pin('missions.json', JSON.stringify({missionCases: [{case: 'turn', kind: 'operating-case', accomplishes: 'delivered', objective: 'Move the sample'}]}));
     return dir;
   }
@@ -64,7 +64,7 @@ test('a version is staged under MAJOR.MINOR and its architecture is named once',
   assert.deepEqual(await s.index(), {releases: ['1.0'], designs: {1: {name: 'Tilting carriage'}}, revision: {'1.0': rev(1)},
     designStatus: {'1.0': 'in-progress'}, current: '1.0'});
   const record = JSON.parse(await readFile(path.join(s.site, 'releases', '1.0', 'release.json')));
-  assert.deepEqual([record.release, record.check], ['1.0', {project: 'cad/preliminary-design/releases/1.0', plan: 'layout.json'}]);
+  assert.deepEqual([record.release, record.check], ['1.0', {project: 'cad/preliminary-design/releases/1.0'}]);
 
   // A draft is a publish of the same version: it counts in the index and takes no number. The name is not asked for again.
   await s.fixture('1.0', {page: '<html>Second draft</html>'});
@@ -131,100 +131,99 @@ test('drafts take no number: one in-progress version per architecture, and a new
   assert.match(skipped, /Note: the next architecture after design 2 is 3\.0; 4\.1 skips a number\./);
 });
 
-test('an earlier ID is renamed to a version by staging it again and removing the old ID, with no redirect', async t => {
+test('a release is removed after its design is staged under another ID, with no redirect', async t => {
   const s = await season(t);
-  // An in-progress release under an earlier ID: stage the same design as 1.0, then remove the old ID.
-  await s.fixture('layout-004', {step: 'the carriage'});
-  s.ok(s.stage('layout-004'));
+  // An in-progress release: stage the same design as 2.0, then remove 1.0.
   await s.fixture('1.0', {step: 'the carriage'});
   s.ok(s.stage('1.0', '--design-name', 'Tilting carriage'));
-  assert.match(s.stage('--remove', 'layout-009').stderr, /Unknown release: layout-009/);
-  assert.match(s.stage('--remove', 'layout-004', '--replaced-by', 'layout-004').stderr, /--replaced-by names a listed release other than the one removed/);
-  assert.match(s.stage('1.0', '--replaced-by', 'layout-004').stderr, /--replaced-by goes with --remove/);
-  const removed = s.ok(s.stage('--remove', 'layout-004'));
-  assert.match(removed, /Removed preliminary release layout-004\. Its folders docs\/preliminary-design\/releases\/layout-004 and cad\/preliminary-design\/releases\/layout-004 are deleted and no redirect is left/);
-  assert.ok(!existsSync(path.join(s.site, 'releases', 'layout-004')) && !existsSync(path.join(s.author, 'releases', 'layout-004')));
-  assert.deepEqual(await s.index(), {releases: ['1.0'], designs: {1: {name: 'Tilting carriage'}}, revision: {'1.0': rev(1)},
-    designStatus: {'1.0': 'in-progress'}, current: '1.0'});
-  // Removing the last version of an architecture frees its number and name; an empty index names no current release.
-  s.ok(s.stage('--remove', '1.0'));
+  await s.fixture('2.0', {step: 'the carriage'});
+  s.ok(s.stage('2.0', '--design-name', 'Swinging arm'));
+  assert.match(s.stage('--remove', '9.0').stderr, /Unknown release: 9\.0/);
+  assert.match(s.stage('--remove', '1.0', '--replaced-by', '1.0').stderr, /--replaced-by names a listed release other than the one removed/);
+  assert.match(s.stage('2.0', '--replaced-by', '1.0').stderr, /--replaced-by goes with --remove/);
+  const removed = s.ok(s.stage('--remove', '1.0'));
+  assert.match(removed, /Removed preliminary design Tilting carriage 1\.0\. Its folders docs\/preliminary-design\/releases\/1\.0 and cad\/preliminary-design\/releases\/1\.0 are deleted and no redirect is left/);
+  assert.ok(!existsSync(path.join(s.site, 'releases', '1.0')) && !existsSync(path.join(s.author, 'releases', '1.0')));
+  // Removing the last version of an architecture frees its number and name.
+  assert.deepEqual(await s.index(), {releases: ['2.0'], designs: {2: {name: 'Swinging arm'}}, revision: {'2.0': rev(1)},
+    designStatus: {'2.0': 'in-progress'}, current: '2.0'});
+  // An empty index names no current release.
+  s.ok(s.stage('--remove', '2.0'));
   assert.deepEqual(await s.index(), {releases: []});
 
-  // An effective release under an earlier ID is removed only once the same STEP is effective under the new ID.
-  await s.fixture('layout-004', {step: 'the carriage'});
-  s.ok(s.stage('layout-004'));
-  s.ok(s.stage('--set-status', 'layout-004', 'effective'));
-  await s.edit(i => ({...i, accepted: {'layout-004': '2001-02-03'}}));
-  assert.match(s.stage('--remove', 'layout-004').stderr, /Preliminary release layout-004 is or was the effective design\. Remove it only to rename it/);
-  await s.fixture('1.0', {step: 'a changed carriage'});
-  s.ok(s.stage('1.0', '--design-name', 'Tilting carriage'));
-  assert.match(s.stage('--remove', 'layout-004', '--replaced-by', '1.0').stderr, /Release 1\.0 is in-progress\. Mark it effective before it replaces layout-004/);
-  s.ok(s.stage('--set-status', '1.0', 'effective'));
-  assert.equal((await s.index()).designStatus['layout-004'], 'superseded');
-  assert.match(s.stage('--remove', 'layout-004').stderr, /is or was the effective design/, 'a superseded baseline that was accepted is guarded too');
-  assert.match(s.stage('--remove', 'layout-004', '--replaced-by', '1.0').stderr, /checked on different STEP files/);
-  assert.ok(existsSync(path.join(s.site, 'releases', 'layout-004', 'receipt.json')), 'a refused removal deletes nothing');
-});
-
-test('an effective release is renamed once the same STEP is effective under its version', async t => {
-  const s = await season(t);
-  await s.fixture('layout-004', {step: 'the carriage'});
-  s.ok(s.stage('layout-004'));
-  s.ok(s.stage('--set-status', 'layout-004', 'effective'));
-  await s.edit(i => ({...i, accepted: {'layout-004': '2001-02-03'}}));
+  // An effective release is removed only once the same STEP is effective under the new ID.
   await s.fixture('1.0', {step: 'the carriage'});
   s.ok(s.stage('1.0', '--design-name', 'Tilting carriage'));
   s.ok(s.stage('--set-status', '1.0', 'effective'));
+  await s.edit(i => ({...i, accepted: {'1.0': '2001-02-03'}}));
+  assert.match(s.stage('--remove', '1.0').stderr, /Preliminary design Tilting carriage 1\.0 is or was the effective design\. Remove it only to rename it/);
+  await s.fixture('2.0', {step: 'a changed carriage'});
+  s.ok(s.stage('2.0', '--design-name', 'Swinging arm'));
+  assert.match(s.stage('--remove', '1.0', '--replaced-by', '2.0').stderr, /Release 2\.0 is in-progress\. Mark it effective before it replaces 1\.0/);
+  s.ok(s.stage('--set-status', '2.0', 'effective'));
+  assert.equal((await s.index()).designStatus['1.0'], 'superseded');
+  assert.match(s.stage('--remove', '1.0').stderr, /is or was the effective design/, 'a superseded baseline that was accepted is guarded too');
+  assert.match(s.stage('--remove', '1.0', '--replaced-by', '2.0').stderr, /checked on different STEP files/);
+  assert.ok(existsSync(path.join(s.site, 'releases', '1.0', 'receipt.json')), 'a refused removal deletes nothing');
+});
+
+test('an effective release is removed once the same STEP is effective under its new ID', async t => {
+  const s = await season(t);
+  await s.fixture('1.0', {step: 'the carriage'});
+  s.ok(s.stage('1.0', '--design-name', 'Tilting carriage'));
+  s.ok(s.stage('--set-status', '1.0', 'effective'));
+  await s.edit(i => ({...i, accepted: {'1.0': '2001-02-03'}}));
+  await s.fixture('2.0', {step: 'the carriage'});
+  s.ok(s.stage('2.0', '--design-name', 'Swinging arm'));
+  s.ok(s.stage('--set-status', '2.0', 'effective'));
   await mkdir(path.join(s.root, 'docs', 'detailed-design'), {recursive: true});
-  await writeFile(path.join(s.root, 'docs', 'detailed-design', 'designs.json'), JSON.stringify({preliminary: {'detail-001': 'layout-004'}}));
-  const renamed = s.ok(s.stage('--remove', 'layout-004', '--replaced-by', '1.0'));
-  assert.match(renamed, /Removed preliminary release layout-004, replaced by preliminary design Tilting carriage 1\.0\./);
-  assert.match(renamed, /Note: detailed design detail-001 names preliminary release layout-004\. Stage it again with --preliminary 1\.0\./);
+  await writeFile(path.join(s.root, 'docs', 'detailed-design', 'designs.json'), JSON.stringify({preliminary: {'1.0': '1.0'}}));
+  const renamed = s.ok(s.stage('--remove', '1.0', '--replaced-by', '2.0'));
+  assert.match(renamed, /Removed preliminary design Tilting carriage 1\.0, replaced by preliminary design Swinging arm 2\.0\./);
+  assert.match(renamed, /Note: detailed design 1\.0 names preliminary release 1\.0\. Stage it again with --preliminary 2\.0\./);
   const after = JSON.parse(await readFile(path.join(s.site, 'releases.json'), 'utf8'));
-  assert.deepEqual(after, {releases: ['1.0'], designs: {1: {name: 'Tilting carriage'}}, revision: after.revision,
-    designStatus: {'1.0': 'effective'}, accepted: {'1.0': '2001-02-03'}, current: '1.0'});
-  assert.ok(!JSON.stringify(after).includes('layout-004'), 'the index keeps no trace of the old ID');
-  assert.ok(!existsSync(path.join(s.site, 'releases', 'layout-004')) && !existsSync(path.join(s.author, 'releases', 'layout-004')));
+  assert.deepEqual(after, {releases: ['2.0'], designs: {2: {name: 'Swinging arm'}}, revision: after.revision,
+    designStatus: {'2.0': 'effective'}, accepted: {'2.0': '2001-02-03'}, current: '2.0'});
+  assert.deepEqual(Object.keys(after.revision), ['2.0'], 'the index keeps no entry of the removed release');
+  assert.ok(!existsSync(path.join(s.site, 'releases', '1.0')) && !existsSync(path.join(s.author, 'releases', '1.0')));
 });
 
 test('the inputs of a release are copied to a new release folder with their pins written for the new paths', async t => {
   const s = await season(t), sha = bytes => createHash('sha256').update(bytes).digest('hex');
   // A release checked from the repository root: its records name their own folder in every pin.
-  const old = 'cad/preliminary-design/releases/layout-004/', dir = path.join(s.root, old);
+  const old = 'cad/preliminary-design/releases/1.0/', dir = path.join(s.root, old);
   await mkdir(path.join(dir, 'field'), {recursive: true});
   const put = async (name, content) => { await writeFile(path.join(dir, name), content); return {file: old + name, sha256: sha(content)}; };
-  const step = await put('package.step', 'invented solid');
-  const motion = await put('paths.json', JSON.stringify({step, cases: []}));
-  const held = await put('held.json', JSON.stringify({schema: 'agent-frc/preliminary-layout-result@1', step}));
+  const step = await put('design.step', 'invented solid');
+  const motion = await put('design.json', JSON.stringify({step, cases: []}));
   await put('field/lane.html', '<html>Invented lane</html>');
-  await put('layout.json', JSON.stringify({step, motion, view: old + 'viewer.html', outside: {file: 'README.md', sha256: 'f'.repeat(64)}}));
+  await put('judgement.json', JSON.stringify({step, source: motion, view: old + 'viewer.html', outside: {file: 'README.md', sha256: 'f'.repeat(64)}}));
   await put('missions.json', JSON.stringify({missionCases: [], trial: step}));
   for (const name of ['viewer.html', 'review-scene.json.gz', 'receipt.json']) await put(name, 'written by the check for the old folder');
 
-  const copied = s.ok(s.stage('--copy-inputs', 'layout-004', '1.0'));
-  assert.match(copied, /Copied the inputs of release layout-004 to cad\/preliminary-design\/releases\/1\.0 and wrote 3 pinning records for the new paths\. The STEP is unchanged\./);
-  assert.match(copied, /preliminary-check \. cad\/preliminary-design\/releases\/1\.0\/layout\.json --write-view --require-checked --output cad\/preliminary-design\/releases\/1\.0\/receipt\.json/);
-  const fresh = 'cad/preliminary-design/releases/1.0/', at = name => path.join(s.root, fresh, name), json = async name => JSON.parse(await readFile(at(name), 'utf8'));
+  const copied = s.ok(s.stage('--copy-inputs', '1.0', '1.1'));
+  assert.match(copied, /Copied the inputs of release 1.0 to cad\/preliminary-design\/releases\/1\.1 and wrote 3 pinning records for the new paths\. The STEP is unchanged\./);
+  assert.match(copied, /preliminary-check \. cad\/preliminary-design\/releases\/1\.1\/judgement\.json --write-view --require-checked --output cad\/preliminary-design\/releases\/1\.1\/receipt\.json/);
+  const fresh = 'cad/preliminary-design/releases/1.1/', at = name => path.join(s.root, fresh, name), json = async name => JSON.parse(await readFile(at(name), 'utf8'));
   for (const name of ['viewer.html', 'review-scene.json.gz', 'receipt.json']) assert.ok(!existsSync(at(name)), name + ' is left for the layout check to write');
-  assert.equal(await readFile(at('package.step'), 'utf8'), 'invented solid');
+  assert.equal(await readFile(at('design.step'), 'utf8'), 'invented solid');
   assert.equal(await readFile(at('field/lane.html'), 'utf8'), '<html>Invented lane</html>');
-  assert.equal(sha(await readFile(at('held.json'))), held.sha256, 'a held receipt is evidence of an earlier check and keeps its bytes');
-  const plan = await json('layout.json'), paths = await json('paths.json');
-  assert.deepEqual(paths.step, {file: fresh + 'package.step', sha256: step.sha256});
+  const plan = await json('judgement.json'), paths = await json('design.json');
+  assert.deepEqual(paths.step, {file: fresh + 'design.step', sha256: step.sha256});
   assert.deepEqual(plan.step, paths.step);
-  assert.deepEqual(plan.motion, {file: fresh + 'paths.json', sha256: sha(await readFile(at('paths.json')))}, 'a rewritten record is pinned by its new digest');
-  assert.notEqual(plan.motion.sha256, motion.sha256);
+  assert.deepEqual(plan.source, {file: fresh + 'design.json', sha256: sha(await readFile(at('design.json')))}, 'a rewritten record is pinned by its new digest');
+  assert.notEqual(plan.source.sha256, motion.sha256);
   assert.equal(plan.view, fresh + 'viewer.html');
   assert.deepEqual(plan.outside, {file: 'README.md', sha256: 'f'.repeat(64)}, 'a pin outside the release folder is left as it is');
   assert.deepEqual((await json('missions.json')).trial, paths.step);
   assert.ok(existsSync(path.join(dir, 'receipt.json')), 'the source release is untouched');
 
   // An existing folder is not overwritten, and a pin that was already stale is not given a fresh digest.
-  assert.match(s.stage('--copy-inputs', 'layout-004', '1.0').stderr, /cad\/preliminary-design\/releases\/1\.0 already exists/);
-  await writeFile(path.join(dir, 'package.step'), 'a changed solid');
-  assert.match(s.stage('--copy-inputs', 'layout-004', '2.0').stderr, /pins cad\/preliminary-design\/releases\/layout-004\/package\.step, which is missing or differs from its pinned SHA-256\. Resolve it in release layout-004 before copying/);
+  assert.match(s.stage('--copy-inputs', '1.0', '1.1').stderr, /cad\/preliminary-design\/releases\/1\.1 already exists/);
+  await writeFile(path.join(dir, 'design.step'), 'a changed solid');
+  assert.match(s.stage('--copy-inputs', '1.0', '2.0').stderr, /pins cad\/preliminary-design\/releases\/1\.0\/design\.step, which is missing or differs from its pinned SHA-256\. Resolve it in release 1.0 before copying/);
   assert.ok(!existsSync(path.join(s.author, 'releases', '2.0')), 'a refused copy leaves no folder');
-  assert.match(s.stage('--copy-inputs', 'absent', '2.0').stderr, /No judgement file or layout plan at cad\/preliminary-design\/releases\/absent/);
+  assert.match(s.stage('--copy-inputs', '9.0', '2.0').stderr, /No judgement file at cad\/preliminary-design\/releases\/9\.0/);
 });
 
 test('the view of an effective release is republished while its receipt records the same physics', async t => {
@@ -249,7 +248,7 @@ test('the view of an effective release is republished while its receipt records 
   // A receipt of another STEP is a changed design: refused, with the version that work belongs to, and nothing is published.
   await s.fixture('1.0', {page: '<html>Review of a changed design</html>', step: 'a changed step'});
   assert.match(s.stage('--refresh-view', '1.0').stderr,
-    /Tilting carriage 1\.0 is effective and this receipt differs from the published one in the STEP\. A view refresh keeps the physics\. Work that changes it belongs to 1\.1, staged as a draft/);
+    /Tilting carriage 1\.0 is effective and this receipt differs from the published one in the generated solids. A view refresh keeps the physics\. Work that changes it belongs to 1\.1, staged as a draft/);
   assert.equal(await published('index.html'), '<html>Rebuilt review of 1.0</html>');
   assert.deepEqual(await s.index(), refreshed);
   assert.match(s.stage('--refresh-view', '1.0', '--design-name', 'Another name').stderr, /a view refresh changes no name/);

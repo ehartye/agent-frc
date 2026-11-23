@@ -28,7 +28,7 @@ test('the inspector shows identity, classification, volume, mass basis, support,
   assert.deepEqual(field(fields, 'Mass line and basis')[1], ['mechanisms: 3.00–3.60 kg · Invented estimate · Allocated to this component alone']);
   assert.equal(field(fields, 'Support and load path')[1], 'Pivot shaft into the frame plate.');
   assert.deepEqual(field(fields, 'Electrical load lines')[1], ['arm']);
-  assert.deepEqual(field(fields, 'Moves in')[1], ['raise', 'package-displacement-control']);
+  assert.deepEqual(field(fields, 'Moves in')[1], ['Raise', 'package-displacement-control']);
   assert.ok(fields.every(f => f[2] === false), 'a complete entry has no missing field');
 });
 
@@ -132,7 +132,7 @@ test('a replay becomes one entry of the animation list: frames from its clock, e
   assert.equal(logic.eventAt(motion.events, 1), null, 'no event before the first');
   assert.deepEqual(logic.eventAt(motion.events, 2), [1, 'Halfway']);
   assert.deepEqual(logic.eventAt(motion.events, 4), [2, 'At the target']);
-  assert.deepEqual(field(logic.inspectorFields('arm', scene), 'Moves in')[1], ['raise', 'package-displacement-control', 'lane-run']);
+  assert.deepEqual(field(logic.inspectorFields('arm', scene), 'Moves in')[1], ['Raise', 'package-displacement-control', 'lane-run']);
   assert.equal(field(logic.inspectorFields('target', scene), 'Moves in')[1], 'Stationary in every commissioned case', 'a body a replay keeps in place does not move');
 });
 
@@ -215,15 +215,6 @@ test('an animation plays the segments of one mission phase end to end as one cli
   assert.deepEqual(field(logic.inspectorFields('arm', scene), 'Moves in')[1], ['Raise the arm', 'Lower', 'package-displacement-control'], 'the inspector names phases, not segments');
 });
 
-test('a scene written before the animation list groups consecutive numbered cases into one phase', () => {
-  const scene = phasedScene();
-  delete scene.animations;
-  assert.deepEqual(logic.animationsOf(scene).map(a => [a.id, a.mission, a.cases]), [['raise', true, ['raise-01', 'raise-02', 'raise-03']], ['lower', false, ['lower']]]);
-  scene.cases = ['lift-l2', 'feed_1', 'feed_2', 'lift-l2', 'feed 3', 'seg12'].map(id => ({id, stage: 'operating', kind: 'nominal'}));
-  assert.deepEqual(logic.animationsOf(scene).map(a => [a.id, a.cases.length]), [['lift-l2', 1], ['feed', 2], ['lift-l2-run-2', 1], ['feed-run-2', 1], ['seg12', 1]],
-    'only a separated trailing number is a segment number, and a phase that returns is a second run');
-});
-
 test('check results group by phase: counts, the tightest clearance, the tolerance used and the case to jump to', () => {
   const scene = phasedScene(), groups = logic.checkGroups(scene);
   assert.deepEqual(groups.map(g => [g.title, g.rows.length, g.counts]), [['Raise the arm', 3, {pass: 3}], ['Lower', 1, {pass: 1}],
@@ -236,5 +227,5 @@ test('check results group by phase: counts, the tightest clearance, the toleranc
   scene.motionEvidence[0].limitingValue = {gapMm: 0, volumeMm3: 30};
   const failed = logic.checkGroups(scene)[0];
   assert.deepEqual([failed.counts, failed.attention, failed.focus.case, failed.tightest.case], [{fail: 1, pass: 2}, true, 'raise-01', 'raise-01'], 'an overlap is tighter than any gap, and a failing case is the one to jump to');
-  assert.deepEqual(logic.checkGroups(reviewScene()).map(g => [g.id, g.rows.length]), [['raise', 1], [null, 1]], 'an earlier scene groups the same way');
+  assert.deepEqual(logic.checkGroups(reviewScene()).map(g => [g.id, g.rows.length]), [['raise', 1], [null, 1]], 'a scene of one phase groups the same way');
 });

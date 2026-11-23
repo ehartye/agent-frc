@@ -38,10 +38,9 @@ import {compareWithReceipt, readScene} from './review-scene.mjs';
 import {contentSha, identityDifferences, physicsIdentity, receiptIdentity} from './physics-identity.mjs';
 import {scanTree} from '../templates/project-ci/scan.mjs';
 import {unlinkedAdvice} from './published-content.mjs';
-import {checkFor, planFile} from './layout-format.mjs';
 import {benchFile, effectiveProblems, handedOver, summary as benchSummary, summaryText as benchText} from './bench-tests.mjs';
 
-const receiptSchema = 'agent-frc/preliminary-layout-result@1';
+const receiptSchema = 'agent-frc/preliminary-layout-result@1', judgementFile = 'judgement.json';
 const readinessSchema = 'agent-frc/mechanical-readiness-result@1';
 const accomplishments = ['acquired', 'delivered', 'scored', 'climb-held'];
 const kinds = ['operating-case', 'field-interaction-trial'];
@@ -61,7 +60,7 @@ function parse(bytes, what) {
 export function checkPhysics(receipt, where, {rerun = false} = {}) {
   check(receipt?.schema === receiptSchema && named(receipt.issue), where + ' needs an Agent FRC preliminary-check receipt');
   check(receipt.status === 'layout-checked', where + ' needs a layout-checked receipt; found ' + receipt.status);
-  check(receipt.partial !== true, where + ': a partial --fail-fast receipt is not a checked layout');
+  check(receipt.partial !== true, where + ': a partial receipt is not a checked layout');
   check(rerun || receipt.physicsOnly !== true, where + ': publish the receipt of a full check, not a --physics-only rerun');
   check(list(receipt.missingInputs).length === 0, where + ' lists missing inputs');
   check(list(receipt.reopen).length === 0, where + ' holds a reopened premise');
@@ -80,7 +79,6 @@ const trialDigests = stage => [...Object.values(stage?.transportedBy ?? {}), ...
 export function verdict(receipt) {
   return {
     issue: receipt.issue, status: receipt.status, planSha256: receipt.planSha256, stepSha256: receipt.step?.sha256, motionSha256: receipt.motion?.sha256,
-    previousCheckpointSha256: receipt.previousCheckpointSha256 ?? null,
     cycle: list(receipt.cycle), cases: list(receipt.cases).map(c => [c.case, c.status]).sort(),
     stages: Object.entries(receipt.stages ?? {}).map(([name, stage]) => [name, stage?.purpose, trialDigests(stage).sort()]).sort(),
     objectives: list(receipt.narrativeReview?.objectives).map(o => [o?.objective, o?.disposition]).sort(),
@@ -144,7 +142,7 @@ export function readinessSummary(review) {
     ...open.slice(0, 20).map(f => '  - ' + [f.domain, f.subject, f.status, f.reason].filter(named).join(': '))].join('\n') + '\n';
 }
 
-/** How the check names a detailed design in its messages: by name and version, else by its earlier ID. */
+/** How the check names a detailed design in its messages: by name and version. */
 export const detailedWhere = (index, id) => 'Detailed design ' + detailedTitle(index, id);
 
 /** The primary view of the detailed designs: the effective design, else the newest in-progress one, which otherwise shows beside it. */
@@ -174,12 +172,10 @@ function inside(root, name, what) {
   return full;
 }
 
-/** Run the plugin's layout check on committed inputs, physics only, and return its receipt. `jobs` sets its worker processes. */
-export function runLayoutCheck({project, plan, previous, budgetMinutes = 45, jobs, python = process.env.PYTHON ?? (process.platform === 'win32' ? 'python' : 'python3')}) {
-  // A design checked on the design library is measured whole: its check has no early stop and holds no earlier receipt.
-  const {script, library} = checkFor(path.resolve(project, plan));
-  const args = ['-B', script, project, plan, '--physics-only', ...(library ? [] : ['--fail-fast']), ...(previous && !library ? ['--previous', previous] : []),
-    ...(jobs === undefined ? [] : ['--jobs', String(jobs)])];
+/** Run the layout check on committed inputs, physics only, and return its receipt. `workers` sets its worker processes. */
+export function runLayoutCheck({project, plan, budgetMinutes = 45, workers, python = process.env.PYTHON ?? (process.platform === 'win32' ? 'python' : 'python3')}) {
+  const script = fileURLToPath(new URL('./layout_check.py', import.meta.url));
+  const args = ['-B', script, project, plan, '--physics-only', ...(workers === undefined ? [] : ['--workers', String(workers)])];
   const run = spawnSync(python, args, {stdio: ['ignore', 'pipe', 'inherit'], maxBuffer: 1024 * 1024 * 1024, timeout: budgetMinutes * 60000});
   if (run.error?.code === 'ETIMEDOUT') throw Error('the layout check exceeded its ' + budgetMinutes + ' minute budget');
   if (run.error) throw Error('the layout check could not start (' + python + '): ' + run.error.message);
@@ -187,27 +183,8 @@ export function runLayoutCheck({project, plan, previous, budgetMinutes = 45, job
   return parse(run.stdout, 'rerun receipt');
 }
 
-/** A JSON file under `dir` with this digest, as a path relative to `dir`: the held receipt a check ran against. */
-export function findByDigest(dir, digest) {
-  return namesUnder(dir).find(name => name.endsWith('.json') && sha(readFileSync(path.join(dir, name))) === digest) ?? null;
-}
-/**
- * What a project still carries from the plugin, as one message that says what to do. The plugin is a tool of the
- * coding agent: a project names, calls, copies and wraps none of it.
- */
-export function pluginFilesIn(root) {
-  const text = name => { try { return readFileSync(path.join(root, name), 'utf8'); } catch { return null; } };
-  const workflows = path.join(root, '.github', 'workflows');
-  const found = (existsSync(workflows) ? readdirSync(workflows) : []).filter(name => /\.ya?ml$/.test(name))
-    .filter(name => /ehartye\/agent-frc|AGENT_FRC|plugin\/scripts\//.test(text('.github/workflows/' + name) ?? '')).map(name => '.github/workflows/' + name);
-  for (const name of ['cad/preliminary-design/stage.py', 'cad/preliminary-design/serve.py']) if (text(name) !== null) found.push(name);
-  return found.length ? 'This project carries plugin files from an earlier layout: ' + found.join(', ') + '. The plugin is a tool of the coding agent, not a dependency of the project. ' +
-    'Delete ' + (found.length === 1 ? 'it' : 'them') + ' and write the project\'s own CI from the references in the plugin\'s templates/project-ci/, which name no plugin. ' +
-    'The agent runs staging, the stage gate and this check from the plugin.' : null;
-}
-
 /** The files a receipt records by digest, each with the name a message gives it. */
-const receiptPins = receipt => [['STEP', receipt.step], ['motion study', receipt.motion], ['editable design', receipt.design],
+const receiptPins = receipt => [['generated STEP', receipt.step], ['design source', receipt.design],
   ['budget ledger', receipt.budgets?.source], ['limits', receipt.budgets?.limits]].filter(([, pin]) => named(pin?.file) && named(pin?.sha256));
 
 /**
@@ -249,8 +226,6 @@ export function checkProject(root, options = {}) {
     detailedInputs: 'cad/detailed-design/designs', scan: true, log: line => console.error(line), ...options};
   const errors = [], warnings = [], reports = [], pending = [], designs = [];
   const attempt = (what, body) => { try { return body(); } catch (error) { errors.push(error.message); return undefined; } };
-  const carried = pluginFilesIn(root);
-  if (carried) errors.push(carried);
   const compared = o.base === undefined ? remoteBase(root) : o.base ? {commit: o.base, name: o.base} : null, base = baseReader(root, compared?.commit);
   const rel = full => path.relative(root, full).split(path.sep).join('/');
   // A project file as it was at the base commit, parsed; null when it was not there.
@@ -262,7 +237,7 @@ export function checkProject(root, options = {}) {
   };
   // The physics identity of a design from its receipt, record and inputs folder, read through `read` by project-relative path.
   const identityOf = ({receipt, record, inputs, read}) => {
-    const planName = record?.check?.plan ?? planFile, recorded = [receipt?.view?.file, receipt?.step?.file].find(named);
+    const planName = judgementFile, recorded = [receipt?.view?.file, receipt?.step?.file].find(named);
     // A plan checked from the project root writes its paths from there; one checked in its own folder writes bare names.
     const fromRoot = !!inputs && named(recorded) && recorded.startsWith(inputs + '/'), within = name => inputs ? inputs + '/' + name : name;
     return physicsIdentity({receipt, plan: fromRoot ? within(planName) : planName, folder: fromRoot ? inputs : '', read: fromRoot ? read : name => read(within(name)), extra: ['missions.json']});
@@ -288,7 +263,7 @@ export function checkProject(root, options = {}) {
   if (existsSync(prelimIndexFile)) attempt('preliminary index', () => {
     const index = parse(readFileSync(prelimIndexFile), 'preliminary release index'), ids = index?.releases;
     check(object(index) && Array.isArray(ids) && ids.every(i => releaseId.test(i ?? '')) && new Set(ids).size === ids.length,
-      'The preliminary release index needs a list of unique release IDs: a version, MAJOR.MINOR, or an earlier ID of lowercase letters, digits and hyphens');
+      'The preliminary release index needs a list of unique release IDs, each a version MAJOR.MINOR');
     // The architecture each major number stands for. A version whose architecture has no name cannot be titled.
     check(index.designs === undefined || object(index.designs) && Object.entries(index.designs).every(([major, d]) => /^[1-9][0-9]{0,3}$/.test(major) && object(d) && named(d.name)),
       'designs maps each major number to its architecture name, as in {"1": {"name": "NAME"}}');
@@ -346,7 +321,7 @@ export function checkProject(root, options = {}) {
     const index = parse(readFileSync(detailIndexFile), 'detailed design index'), ids = index?.designs;
     check(object(index) && index.schema === 'agent-frc/detailed-design-index@1' && Array.isArray(ids) && ids.every(i => releaseId.test(i ?? '')) &&
       new Set(ids).size === ids.length && object(index.designStatus) && ids.every(i => designStatuses.includes(index.designStatus[i])),
-      'The detailed design index needs unique design IDs (a version, MAJOR.MINOR, or an earlier ID of lowercase letters, digits and hyphens), each with a designStatus (' + designStatuses.join(', ') + ')');
+      'The detailed design index needs unique design IDs (each a version MAJOR.MINOR), each with a designStatus (' + designStatuses.join(', ') + ')');
     // The architecture each major number stands for: the same name as its preliminary design.
     check(index.architectures === undefined || object(index.architectures) && Object.entries(index.architectures).every(([major, d]) => /^[1-9][0-9]{0,3}$/.test(major) && object(d) && named(d.name)),
       'architectures maps each major number to its architecture name, as in {"1": {"name": "NAME"}}');
@@ -395,7 +370,7 @@ export function checkProject(root, options = {}) {
           if (!files.has('receipt.json')) { pending.push({...held(where, entry, id, record), receipt: null}); return; }
         }
         const receipt = checkEvidence(where, files, record);
-        check(record.fusion?.stepSha256 === receipt.step?.sha256, where + ': the layout check ran on a STEP other than the Fusion export the record names');
+        check((receipt.parts ?? []).some(part => part?.sha256 === record.fusion?.stepSha256), where + ': the checked design source places no solid from the Fusion export the record names');
         if (entry.status === 'in-progress') {
           const link = record.preliminary?.release, linked = prelimStatus(link);
           check(named(link) && ['effective', 'superseded'].includes(linked), where + ' must name an effective preliminary release; ' + link + ' is ' + linked);
@@ -438,7 +413,7 @@ export function checkProject(root, options = {}) {
       else { becoming = true; said = 'becoming effective. Its stage gate record matches the committed receipt.'; }
     }
     if (!receipt) return note(said);
-    const planName = record.check?.plan ?? planFile;
+    const planName = judgementFile;
     if (!existsSync(path.join(project, planName))) {
       check(!item.required, where + ': commit its check inputs at ' + rel(project) + ' (' + planName + ' and every file it names). The stage gate runs on them');
       warnings.push(where + ': its inputs are not committed at ' + rel(project) + ', so its receipt was not compared with them');
@@ -491,8 +466,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
     const [mode, project, ...rest] = process.argv.slice(2), options = {};
     check(mode === 'check' && project && statSync(project, {throwIfNoEntry: false})?.isDirectory(), usage);
     for (let i = 0; i < rest.length; i++) {
-      check(!['--skip-rerun', '--rerun', '--cache', '--budget-minutes', '--jobs'].includes(rest[i]), rest[i] + ' is no longer an option. This check never runs the layout check: ' +
-        'the stage gate runs when a design is marked effective, and the project\'s CI runs no plugin. ' + usage);
       const name = {'--site': 'site', '--preliminary': 'preliminary', '--detailed': 'detailed', '--inputs': 'inputs', '--detailed-inputs': 'detailedInputs', '--base': 'base'}[rest[i]];
       check(name && rest[i + 1] !== undefined, usage);
       options[name] = rest[++i];

@@ -11,7 +11,7 @@ import {test} from 'node:test';
 const root = new URL('../', import.meta.url), text = name => readFileSync(new URL(name, root), 'utf8');
 // The check built on the design library, and the starter that writes its inputs. The earlier check is not held to these rules.
 const files = [...readdirSync(new URL('scripts/kernel_layout/', root)).filter(name => name.endsWith('.py')).map(name => 'scripts/kernel_layout/' + name),
-  'scripts/layout_check.py', 'scripts/layout-format.mjs', 'examples/design-source/create.py'];
+  'scripts/layout_check.py', 'examples/design-source/create.py'];
 const MODULE_LINES = 600, FUNCTION_LINES = 120;
 
 /** The longest function of a Python source, as {name, lines}: a def runs to the next line indented no deeper than it. */

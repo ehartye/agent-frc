@@ -82,7 +82,7 @@ Skip a folder of frozen evidence with `--skip FOLDER`, or list it in `.project-c
 {
   "skip": ["evidence/"],
   "exceptions": [
-    {"path": "cad/builder/", "reason": "The builder imports the measuring module until the shared library replaces it."}
+    {"path": "tools/", "reason": "The spreadsheet exporter calls the plugin's palette script to colour its charts."}
   ]
 }
 ```
@@ -103,7 +103,7 @@ A personal machine path or a credential is public as soon as its branch is pushe
 node scripts/ci/scan.mjs .
 ```
 
-The scan reads every tracked text file as it stands at the checked-out commit; it does not read earlier commits. It reports a home directory that names its owner, in Windows, macOS, Linux and shell spellings, and it reports private keys, common service tokens and a quoted password, secret, key or token assignment. It names the file, line and kind. It prints a machine path so the builder that wrote it can be found, and it never prints a credential. Placeholders such as `C:/Users/name/`, the robot controller's service account and hosted-runner homes pass. Write paths relative to the repository so a clone on another machine reproduces them. Rotate a reported credential; removing it from the branch does not remove it from history.
+The scan reads every tracked text file as it stands at the checked-out commit; it does not read earlier commits. It reports a home directory that names its owner, in Windows, macOS, Linux and shell spellings, and it reports private keys, common service tokens and a quoted password, secret, key or token assignment. It names the file, line and kind. It prints a machine path so the program that wrote it can be found, and it never prints a credential. Placeholders such as `C:/Users/name/`, the robot controller's service account and hosted-runner homes pass. Write paths relative to the repository so a clone on another machine reproduces them. Rotate a reported credential; removing it from the branch does not remove it from history.
 
 A fixture that shows a path or key on purpose can be listed in `.branch-scan.json` at the project root, as `{"ignore": ["tests/fixtures/paths/", "docs/example.log"]}`. A folder entry ends in `/`. The list is reviewed in the pull request like any other file.
 

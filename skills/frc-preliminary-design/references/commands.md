@@ -99,7 +99,7 @@ python PLUGIN/scripts/stage_preliminary_review.py 1.0 --design-name "Tilting car
 node PLUGIN/scripts/design-publication.mjs check .
 ```
 
-`--design-name` is given once, the first time a major number is published. Publishing needs a `layout-checked` receipt of a full check and at least one mission case in `missions.json`. A mission case names a passing operating case and a narrative objective the plan marks `represented`.
+`--design-name` is given once, the first time a major number is published. Publishing needs a `layout-checked` receipt of a full check and at least one mission case in `missions.json`. A mission case names a passing operating case and a narrative objective the judgement file marks `represented`.
 
 Commit, push the branch and open a pull request. The push runs the project's own CI: the path and secret scan and the site check. No design check runs there; the layout check and the publication check you just ran are the checks of a draft. The site deploys from the default branch, so the draft is published when the pull request merges. Then open the published URL, `/<repository>/preliminary-design/` on the project's Pages site, and play each motion.
 
@@ -148,7 +148,7 @@ Take each figure from the design source, the judgement file, the receipt, `missi
 python PLUGIN/scripts/stage_preliminary_review.py --set-status 1.0 effective
 ```
 
-Do this only after the user agrees, and after the design's inputs are committed. The command runs the stage gate itself: the full layout check on the committed design, once. It prints the time against the 15-minute guideline and the readiness report, writes `gate.json` beside the published design and sets the status only when the gate passes. Then run the publication check and open the pull request with the status change and the gate record. An effective design no longer changes. Only its view can be republished, with `python PLUGIN/scripts/stage_preliminary_review.py --refresh-view 1.0` after a `--view-only` rebuild. [The stage gate](../../../docs/design-publication.md#the-stage-gate)
+Do this only after the user agrees, and after the design's inputs are committed. The command runs the stage gate itself: the full layout check on the committed design, once. It prints the time against the 15-minute guideline and the readiness report, writes `gate.json` beside the published design and sets the status only when the gate passes. Then run the publication check and open the pull request with the status change and the gate record. An effective design does not change. Only its view can be republished, with `python PLUGIN/scripts/stage_preliminary_review.py --refresh-view 1.0` after a `--view-only` rebuild. [The stage gate](../../../docs/design-publication.md#the-stage-gate)
 
 ## Start the next version
 
@@ -166,7 +166,7 @@ python PLUGIN/scripts/stage_preliminary_review.py --copy-inputs 1.0 1.1
 
 - The commands run unchanged in PowerShell and in Git Bash. Use forward slashes in every path you write into a file.
 - Keep committed paths short. A deep folder plus a long file name passes the Windows path length and fails a clone.
-- Write no drive letter or home folder into a script, a plan or a record.
+- Write no drive letter or home folder into a script, a design file or a record.
 - The project's CI runs on Linux and runs only the project's own scan and site check. Run `node PLUGIN/scripts/design-publication.mjs check .` before every push.
 - A project may depend on the design library. Whether its own CI regenerates the solids is the project's choice; the reference CI does not.
 - After a plugin update, the check keeps a review page that already exists. Delete `package-motion.html` in the design's folder and run the check with `--view-only` to take the new stock page.

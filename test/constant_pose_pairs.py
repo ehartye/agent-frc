@@ -1,6 +1,5 @@
 # @lane merge
 # @subject scripts/mechanical_readiness.py
-# @subject scripts/preliminary_design.py
 """Cull and reuse constant-relative-pose pairs without changing any clearance finding."""
 from contextlib import contextmanager
 from copy import deepcopy
@@ -188,38 +187,6 @@ class ConstantPosePairs(unittest.TestCase):
         self.assertAlmostEqual(rows[("base", "edge")]["witness"]["gapMm"], 1.0005)
         self.assertNotIn(("base", "far"), rows)
         self.assertEqual(same_findings(self, case, reference, 1), 6)
-
-    def test_preliminary_example_keeps_every_finding_and_its_control(self):
-        import runpy
-        import preliminary_design
-        folder = self.root / "layout"
-        runpy.run_path(str(SCRIPTS.parent / "examples/preliminary-design/create.py"))["create"](folder)
-        captured = []
-        original = preliminary_design.evaluate
-        def record(*args, **kwargs):
-            captured.append(original(*args, **kwargs))
-            return captured[-1]
-        with patch("preliminary_design.evaluate", side_effect=record):
-            fast = preliminary_design.review(self.root, folder / "layout.json")
-            with exhaustive():
-                slow = preliminary_design.review(self.root, folder / "layout.json")
-        self.assertEqual(fast["status"], "layout-checked")
-        self.assertTrue(fast["control"]["witness"]["witness"]["volumeMm3"] > 50)
-        self.assertEqual(fast["control"], slow["control"])
-        observed, reference = captured
-        self.assertEqual({k: v for k, v in observed.items() if k != "cases"},
-                         {k: v for k, v in reference.items() if k != "cases"})
-        culled = 0
-        for case, before, motion in zip(observed["cases"], reference["cases"],
-                                        [*json.loads((folder / "paths.json").read_text())["cases"], None]):
-            cut = (motion or {"minGapMm": 1})["minGapMm"]
-            culled += same_findings(self, case, before, cut)
-        self.assertGreater(culled, 0)
-        ignored = ("view", "missingInputs", "status", "cases", "decision")
-        self.assertEqual({k: v for k, v in fast.items() if k not in ignored},
-                         {k: v for k, v in slow.items() if k not in ignored})
-        self.assertEqual(slow["missingInputs"], ["Generate the matching view of these checked trajectories with --write-view"])
-
 
 if __name__ == "__main__":
     unittest.main()

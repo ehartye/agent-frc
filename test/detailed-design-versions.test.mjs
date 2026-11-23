@@ -41,11 +41,11 @@ function project(t, {releases = {'1.0': 'effective'}, names = {1: {name: 'Tiltin
   function inputs(id, {on = '1.0', page = '<html>Detailed review of ' + id + '</html>'} = {}) {
     const published = path.join(root, prelim, 'releases', on), folder = 'cad/detailed-design/designs/' + id;
     const receipt = read(path.join(published, 'receipt.json')), ledger = {...read(path.join(published, 'budgets.json')), requirements: {file: 'package-limits.json'}};
-    const plan = JSON.stringify({view: 'review/index.html', motion: {file: 'paths.json'}, budgets: {file: 'budgets.json'}});
-    write(root, folder + '/layout.json', plan);
+    const plan = JSON.stringify({view: 'review/index.html', source: {file: 'design.json'}, budgets: {file: 'budgets.json'}});
+    write(root, folder + '/judgement.json', plan);
     write(root, folder + '/receipt.json', folderReceipt(root, folder, receipt, plan, ledger, on));
     write(root, folder + '/missions.json', {missionCases: read(path.join(published, 'release.json')).missionCases});
-    write(root, folder + '/paths.json', readFileSync(path.join(published, 'motion.json')));
+    write(root, folder + '/design.json', readFileSync(path.join(published, 'design.json')));
     write(root, folder + '/budgets.json', ledger);
     write(root, folder + '/package-limits.json', readFileSync(path.join(published, 'limits.json')));
     write(root, folder + '/review/index.html', page);
@@ -73,7 +73,7 @@ test('a version is staged under MAJOR.MINOR and takes the name of its preliminar
   assert.deepEqual(p.index(), {schema: 'agent-frc/detailed-design-index@1', preliminaryIndex: '../preliminary-design/releases.json', current: '1.0', beside: null,
     designs: ['1.0'], designStatus: {'1.0': 'in-progress'}, architectures: {1: {name: 'Tilting carriage'}}, preliminary: {'1.0': '1.0'}, revision: {'1.0': {number: 1, date: 'DATE'}}});
   const record = read(path.join(p.root, detail, 'designs/1.0/design.json'));
-  assert.deepEqual([record.design, record.preliminary, record.check], ['1.0', {release: '1.0'}, {project: 'cad/detailed-design/designs/1.0', plan: 'layout.json'}]);
+  assert.deepEqual([record.design, record.preliminary, record.check], ['1.0', {release: '1.0'}, {project: 'cad/detailed-design/designs/1.0'}]);
   const checked = checkProject(p.root, {log: () => {}});
   assert.deepEqual(checked.errors, []);
   assert.deepEqual(checked.detailed.designs, [{design: '1.0', title: 'Tilting carriage 1.0', state: 'draft 1 · in progress', status: 'in-progress'}]);
@@ -95,14 +95,15 @@ test('a version is staged under MAJOR.MINOR and takes the name of its preliminar
 });
 
 test('a name is required the first time a major number appears, and must equal the preliminary name', t => {
-  // The preliminary release keeps an earlier ID, so no name is known for design 1.
-  const p = project(t, {releases: {'layout-001': 'effective'}, names: null});
-  assert.throws(() => p.stage('1.0', {on: 'layout-001'}), /Name design 1 with --design-name "NAME": a short name in words for the architecture/);
-  assert.throws(() => p.stage('1.0', {on: 'layout-001', designName: ' '}), /Give the design a short name in words/);
+  // The preliminary index does not name design 1 yet, so no name is known for it.
+  const p = project(t, {names: null});
+  assert.throws(() => p.stage('1.0'), /Name design 1 with --design-name "NAME": a short name in words for the architecture/);
+  assert.throws(() => p.stage('1.0', {designName: ' '}), /Give the design a short name in words/);
   assert.ok(!existsSync(path.join(p.root, detail, 'designs.json')), 'an unnamed design publishes nothing');
-  assert.equal(p.stage('1.0', {on: 'layout-001', designName: 'Tilting  carriage'}).architectures[1].name, 'Tilting carriage');
+  // Once it does, the same name is accepted, written with single spaces.
+  p.listing({'1.0': 'effective'}, {1: {name: 'Tilting carriage'}});
+  assert.equal(p.stage('1.0', {designName: 'Tilting  carriage'}).architectures[1].name, 'Tilting carriage');
   assert.deepEqual(errors(p.root), []);
-  assert.throws(() => p.stage('detail-001', {on: 'layout-001', designName: 'Tilting carriage'}), /--design-name names the architecture of a version ID/);
 
   const q = project(t);
   assert.throws(() => q.stage('1.0', {designName: 'Sliding gate'}), /Preliminary design 1 is named "Tilting carriage"\. A detailed design takes the same name as its preliminary design and its own version/);
@@ -180,67 +181,47 @@ test('a different architecture is the next major number with its own name', t =>
   assert.deepEqual(errors(p.root), []);
 });
 
-test('an earlier free-form ID keeps working beside versions, with no name and no forced migration', t => {
+test('a design is removed after it is staged under another ID, with no redirect: copy the inputs, stage, mark effective, remove', t => {
   const p = project(t);
-  const legacy = p.stage('detail-001');
-  assert.equal(legacy.report, 'Staged detailed design detail-001 (draft 1 · in progress)\nBefore pushing, run the publication check: node PLUGIN/scripts/design-publication.mjs check .\nOn push: the project\'s workflow publishes the page. Nothing is rerun.\n');
-  assert.equal(legacy.architectures, undefined);
-  assert.equal(p.stage('detail-001', {page: '<html>Edit</html>'}).revision['detail-001'].number, 2);
-  // An index written before drafts and names, with only the earlier fields, still passes the check and still stages.
-  const file = detail + '/designs.json', {revision, ...earlier} = read(path.join(p.root, file));
-  write(p.root, file, earlier);
-  const checked = checkProject(p.root, {log: () => {}});
-  assert.deepEqual([checked.errors, checked.warnings], [[], []]);
-  assert.deepEqual(checked.detailed.designs, [{design: 'detail-001', status: 'in-progress'}]);
-  assert.equal(p.stage('detail-001', {page: '<html>Another edit</html>'}).revision['detail-001'].number, 2, 'one staged before drafts were counted is at 1');
-  markEffective({project: p.root, design: 'detail-001', readiness: p.review()});
-  assert.throws(() => p.stage('detail-001', {page: '<html>Late</html>'}), /Design detail-001 is effective; choose a new ID/);
-  // A version is staged beside it.
-  assert.deepEqual(p.stage('1.0').designStatus, {'detail-001': 'effective', '1.0': 'in-progress'});
-  assert.deepEqual(errors(p.root), []);
-});
-
-test('an earlier ID is renamed to a version with no redirect: copy the inputs, stage, mark effective, remove', t => {
-  const p = project(t);
-  p.stage('detail-001');
-  markEffective({project: p.root, design: 'detail-001', readiness: p.review()});
-  // The earlier inputs pin a file by a path that names their own folder, as a design checked from the repository root does.
-  const old = 'cad/detailed-design/designs/detail-001', pinned = readFileSync(path.join(p.root, old, 'paths.json'));
-  write(p.root, old + '/study.json', {motion: {file: old + '/paths.json', sha256: sha(pinned)}, note: 'invented'});
-  const copied = copyInputs({project: p.root, from: 'detail-001', to: '1.0'});
-  assert.deepEqual([copied.inputs, copied.rewritten], ['cad/detailed-design/designs/1.0', ['study.json']]);
-  assert.match(copied.report, /Now run the layout check there, then stage 1\.0:\n  node PLUGIN\/scripts\/design\.mjs preliminary-check \. cad\/detailed-design\/designs\/1\.0\/layout\.json --write-view --require-checked/);
-  const target = path.join(p.root, 'cad/detailed-design/designs/1.0');
-  assert.deepEqual(read(path.join(target, 'study.json')).motion, {file: 'cad/detailed-design/designs/1.0/paths.json', sha256: sha(pinned)});
+  p.stage('1.0');
+  markEffective({project: p.root, design: '1.0', readiness: p.review()});
+  // The inputs pin a file by a path that names their own folder, as a design checked from the repository root does.
+  const old = 'cad/detailed-design/designs/1.0', pinned = readFileSync(path.join(p.root, old, 'design.json'));
+  write(p.root, old + '/study.json', {source: {file: old + '/design.json', sha256: sha(pinned)}, note: 'invented'});
+  const copied = copyInputs({project: p.root, from: '1.0', to: '1.1'});
+  assert.deepEqual([copied.inputs, copied.rewritten], ['cad/detailed-design/designs/1.1', ['study.json']]);
+  assert.match(copied.report, /Now run the layout check there, then stage 1\.1:\n  node PLUGIN\/scripts\/design\.mjs preliminary-check \. cad\/detailed-design\/designs\/1\.1\/judgement\.json --write-view --require-checked/);
+  const target = path.join(p.root, 'cad/detailed-design/designs/1.1');
+  assert.deepEqual(read(path.join(target, 'study.json')).source, {file: 'cad/detailed-design/designs/1.1/design.json', sha256: sha(pinned)});
   assert.ok(!existsSync(path.join(target, 'receipt.json')) && !existsSync(path.join(target, 'review/index.html')) && existsSync(path.join(target, 'missions.json')),
     'the page, scene and receipt are left for the layout check to write');
-  assert.throws(() => copyInputs({project: p.root, from: 'detail-001', to: '1.0'}), /cad\/detailed-design\/designs\/1\.0 already exists/);
+  assert.throws(() => copyInputs({project: p.root, from: '1.0', to: '1.1'}), /cad\/detailed-design\/designs\/1\.1 already exists/);
   // A pin that no longer matches its file is refused before anything is copied.
-  write(p.root, old + '/study.json', {motion: {file: old + '/paths.json', sha256: sha('another file')}});
-  assert.throws(() => copyInputs({project: p.root, from: 'detail-001', to: '1.5'}), /pins cad\/detailed-design\/designs\/detail-001\/paths\.json, which is missing or differs from its pinned SHA-256/);
+  write(p.root, old + '/study.json', {source: {file: old + '/design.json', sha256: sha('another file')}});
+  assert.throws(() => copyInputs({project: p.root, from: '1.0', to: '1.5'}), /pins cad\/detailed-design\/designs\/1\.0\/design\.json, which is missing or differs from its pinned SHA-256/);
   assert.ok(!existsSync(path.join(p.root, 'cad/detailed-design/designs/1.5')));
 
   // The effective design is removed only once the same STEP is effective under the new ID.
-  assert.throws(() => remove({project: p.root, design: 'detail-001'}), /is or was the effective design\. Remove it only to rename it/);
-  p.stage('1.0');
-  assert.throws(() => remove({project: p.root, design: 'detail-001', replacedBy: '1.0'}), /Design 1\.0 is in-progress\. Mark it effective before it replaces detail-001/);
-  markEffective({project: p.root, design: '1.0', readiness: p.review()});
-  const removed = remove({project: p.root, design: 'detail-001', replacedBy: '1.0'});
-  assert.match(removed.report, /^Removed detailed design detail-001, replaced by detailed design Tilting carriage 1\.0\. Its folders docs\/detailed-design\/designs\/detail-001 and cad\/detailed-design\/designs\/detail-001 are deleted and no redirect is left/);
-  assert.deepEqual([removed.designs, removed.designStatus, removed.supersededBy, removed.current], [['1.0'], {'1.0': 'effective'}, undefined, '1.0']);
-  assert.ok(!existsSync(path.join(p.root, detail, 'designs/detail-001')) && !existsSync(path.join(p.root, old)));
+  assert.throws(() => remove({project: p.root, design: '1.0'}), /is or was the effective design\. Remove it only to rename it/);
+  p.stage('1.1');
+  assert.throws(() => remove({project: p.root, design: '1.0', replacedBy: '1.1'}), /Design 1\.1 is in-progress\. Mark it effective before it replaces 1\.0/);
+  markEffective({project: p.root, design: '1.1', readiness: p.review()});
+  const removed = remove({project: p.root, design: '1.0', replacedBy: '1.1'});
+  assert.match(removed.report, /^Removed detailed design Tilting carriage 1\.0, replaced by detailed design Tilting carriage 1\.1\. Its folders docs\/detailed-design\/designs\/1\.0 and cad\/detailed-design\/designs\/1\.0 are deleted and no redirect is left/);
+  assert.deepEqual([removed.designs, removed.designStatus, removed.supersededBy, removed.current], [['1.1'], {'1.1': 'effective'}, undefined, '1.1']);
+  assert.ok(!existsSync(path.join(p.root, detail, 'designs/1.0')) && !existsSync(path.join(p.root, old)));
   assert.deepEqual(errors(p.root), []);
   // A changed design is not a rename.
-  const q = project(t, {releases: {'1.0': 'effective', 'layout-001': 'superseded'}});
-  q.stage('detail-001');
-  markEffective({project: q.root, design: 'detail-001', readiness: q.review()});
-  q.listing({'layout-001': 'effective', '1.0': 'superseded'});
-  markEffective({project: q.root, design: 'detail-002', readiness: q.review('layout-001')});
-  assert.throws(() => remove({project: q.root, design: 'detail-001', replacedBy: 'detail-002'}), /are of different STEP files/);
+  const q = project(t, {releases: {'1.0': 'effective', '1.1': 'superseded'}});
+  q.stage('1.0');
+  markEffective({project: q.root, design: '1.0', readiness: q.review()});
+  q.listing({'1.1': 'effective', '1.0': 'superseded'});
+  markEffective({project: q.root, design: '1.1', readiness: q.review('1.1')});
+  assert.throws(() => remove({project: q.root, design: '1.0', replacedBy: '1.1'}), /are of different STEP files/);
   // An in-progress design that was never accepted is removed outright.
   const r = project(t);
-  r.stage('detail-001');
-  assert.deepEqual(remove({project: r.root, design: 'detail-001'}).designs, []);
+  r.stage('1.0');
+  assert.deepEqual(remove({project: r.root, design: '1.0'}).designs, []);
 });
 
 test('the check warns on two in-progress versions of one architecture and on a major number that differs from the preliminary design', t => {
@@ -277,5 +258,5 @@ test('the command line stages a version, re-links it and reports each refusal', 
   assert.match(refused.stderr, /Only an in-progress design is re-linked; work on a new preliminary baseline is detailed design 1\.1[\s\S]*Usage: detailed-design-release\.mjs stage PROJECT --design MAJOR\.MINOR \[--design-name "NAME"\]/);
   const copied = run('copy-inputs', p.root, '--from', '1.0', '--to', '1.1');
   assert.equal(copied.status, 0, copied.stderr);
-  assert.ok(existsSync(path.join(p.root, 'cad/detailed-design/designs/1.1/layout.json')));
+  assert.ok(existsSync(path.join(p.root, 'cad/detailed-design/designs/1.1/judgement.json')));
 });

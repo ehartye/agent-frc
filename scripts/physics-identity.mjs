@@ -2,7 +2,7 @@
  * The physics identity of a checked design: what the layout check read and what it found, with the labels left out.
  *
  * Two commits of one design have the same identity when a rerun of the layout check could not tell them apart: the
- * same STEP, editable design, motion study, stages, groups, mounts, displaced control, trials, fixtures, budgets and
+ * same generated solids, design source, stages, groups, mounts, displaced control, trials, fixtures, budgets and
  * limits, and the same verdicts. A rename, a moved folder, a reworded title and a rebuilt view leave it unchanged.
  *
  * Left out as labels: every `issue` field, the plan's `presentation`, `view` and `attachment` blocks, the `phase` a
@@ -39,14 +39,13 @@ function results(receipt) {
     status: r.status ?? null, cycle: list(r.cycle), cases: list(r.cases).map(c => [c?.case, c?.status]).sort(),
     control: [r.control?.case ?? null, r.control?.displaced ?? null, r.control?.offsetMm ?? null, r.control?.witness?.status ?? null],
     massStatus: r.budgets?.massStatus ?? null, electricalCases: list(r.budgets?.electricalCases).map(c => [c?.case, c?.status]).sort(),
-    objectives: list(r.narrativeReview?.objectives).map(o => [o?.objective, o?.disposition]).sort(),
-    previousCheckpointSha256: r.previousCheckpointSha256 ?? null
+    objectives: list(r.narrativeReview?.objectives).map(o => [o?.objective, o?.disposition]).sort()
   };
 }
 
 /**
  * The identity a receipt carries on its own: the digests it recorded and the plan it repeats. It sees a change to the
- * STEP, the motion study, the budgets, the stages or the control. The budget ledger and the premise records embed the
+ * generated solids, the design source, the budgets, the stages or the control. The budget ledger and the premise records embed the
  * issue name, so this form also changes on a rename; it is the one to use when the issue name stays, as in a view
  * refresh, and the fallback when the layout plan is not committed. scripts/stage_preliminary_review.py repeats it.
  */
@@ -98,7 +97,7 @@ export function physicsIdentity({receipt, read, plan, folder = '', extra = []}) 
     if (!bytes) { files[key] = !json && named(typed) ? typed : 'missing'; return key; }
     let data;
     if (json) try { data = JSON.parse(bytes.toString('utf8').replace(/^﻿/, '')); } catch { /* digested as bytes */ }
-    // A held receipt is evidence of an earlier check, compared whole.
+    // A receipt named as evidence is compared whole.
     if (!object(data) && !Array.isArray(data) || data?.schema === receiptSchema) { files[key] = contentSha(bytes); return key; }
     files[key] = sha(JSON.stringify(canonical(walk(strip ? strip(data) : data))));
     return key;

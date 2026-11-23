@@ -23,11 +23,10 @@ export function currentFor(index, historical = new Set(), ids = index.releases) 
 /**
  * A preliminary design release takes a version as its ID: MAJOR.MINOR. The major number is the architecture, named
  * once in the index under `designs`; the minor number counts that architecture's effective baselines. A publish of an
- * in-progress version is a draft, counted in the index under `revision`, and takes no number. An ID issued before
- * versions (lowercase letters, digits and hyphens) keeps working and carries no name.
+ * in-progress version is a draft, counted in the index under `revision`, and takes no number.
  */
 export const versionId = /^([1-9][0-9]{0,3})\.(0|[1-9][0-9]{0,3})$/;
-export const releaseId = /^(?:[a-z0-9][a-z0-9-]{0,63}|[1-9][0-9]{0,3}\.(?:0|[1-9][0-9]{0,3}))$/;
+export const releaseId = /^[1-9][0-9]{0,3}\.(?:0|[1-9][0-9]{0,3})$/;
 
 /** {major, minor} of a version ID, else null. */
 export function versionOf(id) {

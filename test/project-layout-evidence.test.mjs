@@ -51,19 +51,14 @@ test('the Design checks block is written into AGENTS.md once and refreshed in pl
   writeFileSync(file, '# Invented robot\n\n<!-- design-checks:start -->\nA changed block.\n<!-- design-checks:end -->\n\n## Pit rules\n');
   assert.equal(writeDesignChecks(root), 'updated');
   assert.equal(readFileSync(file, 'utf8'), '# Invented robot\n\n' + designChecksBlock + '\n\n## Pit rules\n');
-  // So is a block between the marker lines an earlier version wrote, which named the plugin: those lines go too.
-  writeFileSync(file, '# Invented robot\n\n<!-- agent-frc:design-checks:start -->\nAn earlier block.\n<!-- agent-frc:design-checks:end -->\n\n## Pit rules\n');
-  assert.equal(writeDesignChecks(root), 'updated');
-  assert.equal(readFileSync(file, 'utf8'), '# Invented robot\n\n' + designChecksBlock + '\n\n## Pit rules\n');
   assert.equal(readFileSync(file, 'utf8').split('design-checks:start').length, 2, 'one block');
   assert.equal(writeDesignChecks(root), 'current');
-  // A block with one marker missing is refused, not doubled, under either marker.
-  for (const start of ['<!-- design-checks:start -->', '<!-- agent-frc:design-checks:start -->']) {
-    writeFileSync(file, start + '\nHalf a block.\n');
-    assert.throws(() => writeDesignChecks(root), /unfinished Design checks block/);
-  }
+  // A block with one marker missing is refused, not doubled.
+  writeFileSync(file, '<!-- design-checks:start -->\nHalf a block.\n');
+  assert.throws(() => writeDesignChecks(root), /unfinished Design checks block/);
   // The block says what to run for each kind of change, and never asks for the layout check on a page change.
-  for (const line of ['| Geometry, a motion, a tolerance or reserve, a fixture, a trial, a mass or voltage budget | The layout check, on the phases the change affects |',
+  for (const line of ['| Geometry, a motion or a fixture in the design source | Regenerate the solids with the design library, then the layout check |',
+    '| A tolerance or reserve, a trial, a mass or voltage budget | The layout check |',
     'Never the layout check |', '| The physics of an effective design | Do not edit it in place. Open the next minor version as a draft |',
     'It runs the stage gate itself: the full layout check on the committed design, once.', 'a push only publishes.',
     '- Time guidelines: about 1 minute while editing, 5 before merging, 15 at a stage gate.'])

@@ -14,7 +14,7 @@ Use a consistent functional-role color convention whenever creating or revising 
 | Bumper cover, red alliance | Red #C8102E | B label / bumper outline with the alliance named |
 | Bumper cover, blue alliance | Blue #285BA3 | B label / bumper outline with the alliance named |
 
-The preliminary review applies the last three by itself. A field fixture takes the field colour whichever plan group lists it, and so does a field body that only a replay shows, so a field part never reads as a floating robot part. A game piece registered as a fixture stays a game piece. A `bumper` group takes the colour of the alliance the layout plan names under `presentation.alliance`: `red` or `blue`, and blue when the plan names none.
+The preliminary review applies the last three by itself. A field part listed under `fixtures` in the design source takes the field colour, and so does a field body that only a replay shows, so a field part never reads as a floating robot part. A game piece registered as a fixture stays a game piece. A `bumper` group takes the colour of the alliance the judgement file names under `presentation.alliance`: `red` or `blue`, and blue when it names none.
 
 ## Apply and explain
 

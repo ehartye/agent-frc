@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agent-frc/preliminary-review-scene@1",
   "title": "Agent FRC preliminary review scene",
-  "description": "The only input of the stock preliminary design review page. The plugin builds it from a checked preliminary package; seasons supply data, not markup. Each property's `x-supplier` says who provides it: `plugin` (derived from the plan, receipt, STEP, motion study or budgets), `project` (authored in layout.json presentation fields; a missing value renders as 'Not supplied in this review' and validates with a warning) or `optional` (a feature that hides cleanly when absent).",
+  "description": "The only input of the stock preliminary design review page. The plugin builds it from a checked preliminary package; seasons supply data, not markup. Each property's `x-supplier` says who provides it: `plugin` (derived from the design source, the judgement file, the receipt or the budgets), `project` (authored under presentation in the judgement file; a missing value renders as 'Not supplied in this review' and validates with a warning) or `optional` (a feature that hides cleanly when absent).",
   "type": "object",
   "required": [
     "schema",
@@ -20,6 +20,7 @@
     "required",
     "narrativeReview",
     "motionEvidence",
+    "animations",
     "returnCriteria",
     "fieldInteractions"
   ],

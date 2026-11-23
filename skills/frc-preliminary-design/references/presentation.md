@@ -1,8 +1,8 @@
 # Present a preliminary design
 
-The review page gives a reviewer an interactive whole-robot blockout and a decision they can inspect. The plugin's [stock review page](review-layout-template.md) already does everything on this page when the plan supplies the data. Use this page to decide what to supply and what to look at before sharing.
+The review page gives a reviewer an interactive whole-robot blockout and a decision they can inspect. The plugin's [stock review page](review-layout-template.md) already does everything on this page when the judgement file supplies the data. Use this page to decide what to supply and what to look at before sharing.
 
-The stock page is a consistent starting place. The project supplies data under `presentation` in the plan, not markup. A project may change its copy of the page when it has a reason. [The scene schema](../../../templates/preliminary-review/scene.schema.json) defines the data.
+The stock page is a consistent starting place. The project supplies data under `presentation` in the judgement file, not markup. A project may change its copy of the page when it has a reason. [The scene schema](../../../templates/preliminary-review/scene.schema.json) defines the data.
 
 ## Contents
 
@@ -47,7 +47,7 @@ Use one solid per functional volume. Leave out fasteners, bearings, shafts, line
 
 Open on the selected design with the finite piece in its intended seat and every drawn support present. Verify the pose before sharing it.
 
-Nothing floats. Every physical solid touches, or is mounted to, something that traces to the frame. A support that is not drawn yet is labelled under `attachment.unmounted` in the plan with its reason. The page draws it hatched and lists it under **Attachment: nothing floats**, so a reviewer can tell an undrawn support from a missing design. Read the `[attachment]` section after each check.
+Nothing floats. Every physical solid touches, or is mounted to, something that traces to the frame. A support that is not drawn yet is labelled under `attachment.unmounted` in the judgement file with its reason. The page draws it hatched and lists it under **Attachment: nothing floats**, so a reviewer can tell an undrawn support from a missing design. Read the `[attachment]` section after each check.
 
 If a coarse box appears to penetrate a piece, compare it with the shaped part in the same pose, keep the original control and check the whole path again. Do not move the piece to improve a picture.
 

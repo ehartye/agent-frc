@@ -57,15 +57,15 @@ const structure = ready + box + `
   scroll:document.documentElement.scrollWidth};`;
 
 test('the stock page keeps the reference region order, control placement, labels and fonts', {skip}, async t => {
-  const dir = site(t), url = release(dir, 'a', reviewScene());
-  writeFileSync(path.join(dir, 'releases.json'), JSON.stringify({current: 'a', releases: ['a'], designStatus: {a: 'effective'}}));
+  const dir = site(t), url = release(dir, '1.0', reviewScene());
+  writeFileSync(path.join(dir, 'releases.json'), JSON.stringify({current: '1.0', releases: ['1.0'], designs: {1: {name: 'Tilting carriage'}}, designStatus: {'1.0': 'effective'}}));
   const top = await probePage(dir, url, ready + `for(let i=0;i<40&&!/·/.test(document.querySelector('#state').textContent);i++)await new Promise(r=>setTimeout(r,50));
    return {chip:document.querySelector('#state').textContent,context:document.querySelector('#context').textContent,heading:document.querySelector('h1').textContent,
     basisOpen:document.querySelector('#review-basis').open,unmetShown:!document.querySelector('#unmetInline').hidden,canvasTop:document.querySelector('#stage').getBoundingClientRect().top,
     idle:{actions:document.querySelector('#inspActions').hidden,hint:document.querySelector('#inspId').textContent,search:!!document.querySelector('#componentSearch')},
     csp:!!document.querySelector('head>meta[http-equiv="Content-Security-Policy"]:first-child')}`, {width: 1680, height: 1000});
   assert.equal(top.chip, 'Effective · layout-checked', 'the chip shows the design status from the index and the receipt decision');
-  assert.equal(top.context, 'Synthetic project　/　a　/　Preliminary design');
+  assert.equal(top.context, 'Synthetic project　/　Tilting carriage 1.0　/　Preliminary design');
   assert.equal(top.heading, 'Invented arm raise and return', 'the heading is the release title');
   assert.equal(top.basisOpen, false, 'the review basis starts collapsed');
   assert.equal(top.unmetShown, false, 'no first unmet requirement, so none is shown in the title row');
@@ -133,7 +133,7 @@ test('gaps and failures stay visible: missing roles, overweight, low voltage and
   Object.assign(scene.power[0], {marginV: -0.4, status: 'fail', loadedBusV: [8.6, 10.2]});
   scene.bodies.frame.purpose = null;
   scene.bodies.frame.missing = ['purpose'];
-  const dir = site(t), url = release(dir, 'gaps', scene, {receipt: false});
+  const dir = site(t), url = release(dir, '1.0', scene, {receipt: false});
   const g = await probePage(dir, url, ready + `
    inspect('frame');
    const t=s=>document.querySelector(s).textContent;
@@ -157,15 +157,15 @@ test('the stable index shows the release picker and the review with no note betw
   t.after(() => rmSync(dir, {recursive: true, force: true}));
   writeFileSync(path.join(dir, 'index.html'), readFileSync(new URL('../templates/preliminary-review-index.html', import.meta.url), 'utf8'));
   // Synthetic index: one in-progress release whose page is a stub.
-  writeFileSync(path.join(dir, 'releases.json'), JSON.stringify({current: 'layout-001', releases: ['layout-001']}));
-  mkdirSync(path.join(dir, 'releases', 'layout-001'), {recursive: true});
-  writeFileSync(path.join(dir, 'releases', 'layout-001', 'index.html'), '<!doctype html><title>Stub review</title>');
+  writeFileSync(path.join(dir, 'releases.json'), JSON.stringify({current: '1.0', releases: ['1.0'], designs: {1: {name: 'Tilting carriage'}}}));
+  mkdirSync(path.join(dir, 'releases', '1.0'), {recursive: true});
+  writeFileSync(path.join(dir, 'releases', '1.0', 'index.html'), '<!doctype html><title>Stub review</title>');
   const shown = `const f=document.querySelector('iframe');for(let i=0;i<60&&f.hidden;i++)await new Promise(r=>setTimeout(r,50));
    const header=document.querySelector('header').getBoundingClientRect(),frame=f.getBoundingClientRect();
    return {body:[...document.body.children].filter(e=>!e.hidden&&e.tagName!=='SCRIPT').map(e=>e.tagName),
      option:document.querySelector('select').selectedOptions[0].textContent,
      gap:Math.round(frame.top-header.bottom),fills:Math.round(innerHeight-frame.bottom)}`;
-  assert.deepEqual(await probePage(dir, 'index.html', shown), {body: ['HEADER', 'IFRAME'], option: 'layout-001 · in progress · current',
+  assert.deepEqual(await probePage(dir, 'index.html', shown), {body: ['HEADER', 'IFRAME'], option: 'Tilting carriage 1.0 · in progress · current',
     gap: 0, fills: 0, viewportWidth: 1280}, 'the picker names the design status; the review fills the rest of the window');
 });
 
@@ -174,22 +174,22 @@ test('the stable index explains a withdrawn release instead of loading its remov
   t.after(() => rmSync(dir, {recursive: true, force: true}));
   writeFileSync(path.join(dir, 'index.html'), readFileSync(new URL('../templates/preliminary-review-index.html', import.meta.url), 'utf8'));
   // Synthetic index: the withdrawn release has no folder on the site.
-  writeFileSync(path.join(dir, 'releases.json'), JSON.stringify({current: 'layout-001', releases: ['layout-001'], designStatus: {'layout-001': 'withdrawn'},
-    reason: {'layout-001': 'Invented reason: the lane moved.'}, lastCommit: {'layout-001': '0123456789abcdef0123456789abcdef01234567'}}));
+  writeFileSync(path.join(dir, 'releases.json'), JSON.stringify({current: '1.0', releases: ['1.0'], designs: {1: {name: 'Tilting carriage'}}, designStatus: {'1.0': 'withdrawn'},
+    reason: {'1.0': 'Invented reason: the lane moved.'}, lastCommit: {'1.0': '0123456789abcdef0123456789abcdef01234567'}}));
   const shown = `const m=document.querySelector('#message');for(let i=0;i<60&&/Loading/.test(m.textContent);i++)await new Promise(r=>setTimeout(r,50));
    return {message:m.textContent,frameHidden:getComputedStyle(document.querySelector('iframe')).display==='none',
      option:document.querySelector('select').selectedOptions[0].textContent}`;
   assert.deepEqual(await probePage(dir, 'index.html', shown), {
-    message: 'Release layout-001 was withdrawn: Invented reason: the lane moved. Its files are in the repository history at commit 0123456789ab.',
-    frameHidden: true, option: 'layout-001 · withdrawn · current', viewportWidth: 1280});
+    message: 'Tilting carriage 1.0 was withdrawn: Invented reason: the lane moved. Its files are in the repository history at commit 0123456789ab.',
+    frameHidden: true, option: 'Tilting carriage 1.0 · withdrawn · current', viewportWidth: 1280});
 });
 
 test('an in-progress release shows its draft; the picker lists live designs first and earlier ones after', {skip}, async t => {
-  // Synthetic index: `draft` was superseded before it was ever accepted, `first` was effective and then superseded.
-  const dir = site(t), url = release(dir, 'second', reviewScene());
-  const index = {current: 'second', releases: ['draft', 'first', 'second'],
-    designStatus: {draft: 'superseded', first: 'superseded', second: 'in-progress'}, accepted: {first: '2001-02-03'},
-    revision: {draft: {number: 3, date: '2001-01-02'}, second: {number: 4, date: '2001-03-04', commit: '0123456789abcdef0123456789abcdef01234567'}}};
+  // Synthetic index: 1.0 was superseded before it was ever accepted, 2.0 was effective and then superseded.
+  const dir = site(t), url = release(dir, '3.0', reviewScene());
+  const index = {current: '3.0', releases: ['1.0', '2.0', '3.0'], designs: {1: {name: 'Tilting carriage'}, 2: {name: 'Swinging arm'}, 3: {name: 'Sliding gate'}},
+    designStatus: {'1.0': 'superseded', '2.0': 'superseded', '3.0': 'in-progress'}, accepted: {'2.0': '2001-02-03'},
+    revision: {'1.0': {number: 3, date: '2001-01-02'}, '3.0': {number: 4, date: '2001-03-04', commit: '0123456789abcdef0123456789abcdef01234567'}}};
   writeFileSync(path.join(dir, 'releases.json'), JSON.stringify(index));
   const chip = await probePage(dir, url, ready + `for(let i=0;i<40&&!/·/.test(document.querySelector('#state').textContent);i++)await new Promise(r=>setTimeout(r,50));
    return {chip:document.querySelector('#state').textContent}`);
@@ -199,12 +199,12 @@ test('an in-progress release shows its draft; the picker lists live designs firs
    return {options:[...s.options].map(o=>o.textContent),selected:s.value,revision:document.querySelector('#revision').textContent,
      groups:[...s.querySelectorAll('optgroup')].map(g=>g.label+': '+[...g.children].map(o=>o.value).join(', ')),title:document.title}`;
   assert.deepEqual(await probePage(dir, 'index.html', picker), {
-    options: ['second · draft 4 · in progress · current', 'first · superseded'], selected: 'second', groups: ['Earlier: first'],
-    revision: 'Draft 4, 2001-03-04, from commit 0123456', title: 'second · Preliminary design', viewportWidth: 1280});
+    options: ['Sliding gate 3.0 · draft 4 · in progress · current', 'Swinging arm 2.0 · superseded'], selected: '3.0', groups: ['Earlier: 2.0'],
+    revision: 'Draft 4, 2001-03-04, from commit 0123456', title: 'Sliding gate 3.0 · Preliminary design', viewportWidth: 1280});
   // The superseded draft keeps its record and is listed when it is the release being opened, as a link by ID does.
-  writeFileSync(path.join(dir, 'releases.json'), JSON.stringify({...index, current: 'draft'}));
+  writeFileSync(path.join(dir, 'releases.json'), JSON.stringify({...index, current: '1.0'}));
   const asked = await probePage(dir, 'index.html', picker);
-  assert.deepEqual([asked.options, asked.selected, asked.revision], [['second · draft 4 · in progress', 'draft · superseded · current', 'first · superseded'], 'draft', '']);
+  assert.deepEqual([asked.options, asked.selected, asked.revision], [['Sliding gate 3.0 · draft 4 · in progress', 'Tilting carriage 1.0 · superseded · current', 'Swinging arm 2.0 · superseded'], '1.0', '']);
 });
 
 test('a version reads with its design name: a draft number while in progress, none once effective', {skip}, async t => {
@@ -212,9 +212,9 @@ test('a version reads with its design name: a draft number while in progress, no
   const dir = site(t), url = release(dir, '1.2', reviewScene());
   release(dir, '1.1', reviewScene());
   const commit = '0123456789abcdef0123456789abcdef01234567';
-  const index = {current: '1.1', releases: ['layout-004', '1.0', '1.1', '1.2', '2.0'],
+  const index = {current: '1.1', releases: ['1.0', '1.1', '1.2', '2.0'],
     designs: {1: {name: 'Tilting carriage'}, 2: {name: 'Swinging arm'}},
-    designStatus: {'layout-004': 'superseded', '1.0': 'superseded', '1.1': 'effective', '1.2': 'in-progress', '2.0': 'in-progress'},
+    designStatus: {'1.0': 'superseded', '1.1': 'effective', '1.2': 'in-progress', '2.0': 'in-progress'},
     accepted: {'1.0': '2001-01-02', '1.1': '2001-02-03'},
     revision: {'1.0': {number: 5, date: '2001-01-01'}, '1.1': {number: 2, date: '2001-02-02', commit}, '1.2': {number: 3, date: '2001-03-04', commit}, '2.0': {number: 1, date: '2001-03-05'}}};
   writeFileSync(path.join(dir, 'releases.json'), JSON.stringify(index));
@@ -245,12 +245,11 @@ test('the same page staged for a detailed design reads its name, draft and statu
   const dir = site(t), tree = path.join(dir, 'detailed-design');
   release(tree, '1.1', reviewScene(), {folder: 'designs'});
   release(tree, '1.0', reviewScene(), {folder: 'designs'});
-  release(tree, 'detail-001', reviewScene(), {folder: 'designs'});
   mkdirSync(path.join(dir, 'preliminary-design'), {recursive: true});
   writeFileSync(path.join(dir, 'preliminary-design/releases.json'), JSON.stringify({current: '1.3', releases: ['1.3'], designs: {1: {name: 'Tilting carriage'}}, designStatus: {'1.3': 'effective'}}));
   writeFileSync(path.join(tree, 'designs.json'), JSON.stringify({schema: 'agent-frc/detailed-design-index@1', preliminaryIndex: '../preliminary-design/releases.json',
-    current: '1.0', beside: '1.1', designs: ['detail-001', '1.0', '1.1'], designStatus: {'detail-001': 'superseded', '1.0': 'effective', '1.1': 'in-progress'},
-    architectures: {1: {name: 'Tilting carriage'}}, preliminary: {'1.0': '1.3', '1.1': '1.3', 'detail-001': 'layout-001'}, revision: {'1.0': {number: 4, date: '2001-01-01'}, '1.1': {number: 2, date: '2001-02-02'}}}));
+    current: '1.0', beside: '1.1', designs: ['1.0', '1.1'], designStatus: {'1.0': 'effective', '1.1': 'in-progress'},
+    architectures: {1: {name: 'Tilting carriage'}}, preliminary: {'1.0': '1.3', '1.1': '1.3'}, revision: {'1.0': {number: 4, date: '2001-01-01'}, '1.1': {number: 2, date: '2001-02-02'}}}));
   const shown = ready + `for(let i=0;i<40&&!/·/.test(document.querySelector('#state').textContent);i++)await new Promise(r=>setTimeout(r,50));
    return {chip:document.querySelector('#state').textContent,context:document.querySelector('#context').textContent,title:document.title,
     heading:document.querySelector('h1').textContent,basis:document.querySelector('#basisNote').textContent}`;
@@ -265,13 +264,10 @@ test('the same page staged for a detailed design reads its name, draft and statu
   const effective = await probePage(dir, 'detailed-design/designs/1.0/index.html', shown);
   assert.equal(effective.chip, 'Effective · layout-checked', 'an effective version shows no draft number');
   assert.match(effective.context, /Tilting carriage 1\.0　\/　Detailed design　\/　built on preliminary design Tilting carriage 1\.3$/);
-  const earlier = await probePage(dir, 'detailed-design/designs/detail-001/index.html', shown);
-  assert.equal(earlier.chip, 'Superseded · layout-checked');
-  assert.match(earlier.context, /detail-001　\/　Detailed design　\/　built on preliminary release layout-001$/);
 });
 
 test('the animation list holds one entry per mission phase; the checked cases sit in the check results and jump the viewer to their pose', {skip}, async t => {
-  const dir = site(t), url = release(dir, 'a', phasedScene());
+  const dir = site(t), url = release(dir, '1.0', phasedScene());
   const probe = w => `const d=${w}.document,q=s=>d.querySelector(s),all=s=>[...d.querySelectorAll(s)],wait=ms=>new Promise(r=>setTimeout(r,ms)),motion=q('#motion'),time=q('#time');
    for(let i=0;i<200&&/Loading|Verifying/.test(q('#sceneStatus').textContent);i++)await wait(50);await wait(100);
    const button=(root,label)=>[...root.querySelectorAll('button')].find(b=>b.textContent===label);`;
@@ -312,15 +308,14 @@ test('the animation list holds one entry per mission phase; the checked cases si
   assert.deepEqual(seen.other, ['lower', 'Pause', 'lower'], 'the address names the animation');
   assert.deepEqual(seen.pairs, ['Raise the arm · 3 checked cases · 3 pass', ['Pair', 'Case', 'Result', 'Witness'], ['raise-01', 'raise-02', 'raise-03']]);
   assert.deepEqual(seen.pairJump, ['raise', '36'], 'a recorded pair opens its own segment at the witness pose');
-  // A failing case opens its phase at once, and the earlier scene format still loads with derived phases.
+  // A failing case opens its phase at once.
   const failing = phasedScene();
   Object.assign(failing.motionEvidence[1], {result: 'fail', limitingValue: {gapMm: 0, volumeMm3: 30}});
-  delete failing.animations;
-  const failed = await probePage(dir, release(dir, 'b', failing, {receipt: false}), probe('window') + `
+  const failed = await probePage(dir, release(dir, '1.1', failing, {receipt: false}), probe('window') + `
    const rows=all('#evidenceTable>tbody>tr.phase');
    return {groups:all('#motion optgroup').map(g=>g.label+': '+[...g.children].map(o=>o.textContent).join(', ')),hidden:all('tr.phase-cases').map(r=>r.hidden),
     attention:rows.map(r=>r.classList.contains('attention')),result:rows[0].cells[2].textContent,jump:[...rows[0].querySelectorAll('button')].map(b=>b.textContent)}`);
-  assert.deepEqual(failed.groups, ['Mission animations: raise', 'Other checked motions: lower', 'Check control: Displaced control']);
+  assert.deepEqual(failed.groups, ['Mission animations: Raise the arm', 'Other checked motions: Lower', 'Check control: Displaced control']);
   assert.deepEqual([failed.hidden, failed.attention, failed.result, failed.jump], [[false, true, true], [true, false, false], '2 pass · 1 fail', ['Play', 'Jump to failing case', 'Hide cases']]);
   // Headless windows have a minimum width, so phone width is measured inside a 390 px frame. The frame also carries a link to one case.
   writeFileSync(path.join(dir, 'phone.html'), '<!doctype html><body style="margin:0"><iframe src="' + url + '?case=raise-02" style="width:390px;height:900px;border:0"></iframe>');

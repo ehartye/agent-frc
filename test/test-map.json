@@ -103,8 +103,7 @@
       "design-publication.test.mjs",
       "detailed-design-release.test.mjs",
       "kernel-layout.test.mjs",
-      "mechanical-readiness.test.mjs",
-      "review-view.test.mjs"
+      "mechanical-readiness.test.mjs"
     ]
   },
   "pages": ["**/*.md", "**/*.html", "**/*.css", "docs/**", "skills/**", "worksheets/**", ".github/pages/**"],
@@ -115,11 +114,11 @@
     "docs": ["**/*.md", "skills/**", "docs/**", "worksheets/**", "references/**", ".testing/**", "LICENSE"],
     "install-manifests.test.mjs": ["plugin.json", ".claude-plugin/**", ".codex-plugin/**", ".agents/**", ".codex/**", ".gitignore", ".gitattributes"],
     "skill-validation.test.mjs": ["plugin.json", ".claude-plugin/**", ".codex-plugin/**", ".agents/**"],
-    "design-publication.test.mjs": ["scripts/stage-gate.mjs", "scripts/stage_preliminary_review.py", "examples/preliminary-design/**"],
+    "design-publication.test.mjs": ["scripts/stage-gate.mjs", "scripts/stage_preliminary_review.py", "examples/design-source/**"],
     "design-versions.test.mjs": ["scripts/stage_preliminary_review.py", "scripts/stage-gate.mjs"],
     "preliminary-release.test.mjs": ["scripts/stage_preliminary_review.py", "scripts/stage-gate.mjs"],
-    "kernel-layout.test.mjs": ["scripts/kernel_layout/**", "scripts/layout_check.py", "scripts/layout-format.mjs", "examples/design-source/**"],
-    "kernel-layout-size.test.mjs": ["scripts/kernel_layout/**", "scripts/layout_check.py", "scripts/layout-format.mjs", "examples/design-source/**"],
+    "kernel-layout.test.mjs": ["scripts/kernel_layout/**", "scripts/layout_check.py", "examples/design-source/**"],
+    "kernel-layout-size.test.mjs": ["scripts/kernel_layout/**", "scripts/layout_check.py", "examples/design-source/**"],
     "project-ci.test.mjs": ["templates/**", "examples/sample-project/**", "scripts/project-ci-audit.mjs"],
     "test-map.test.mjs": ["test/durations.json"]
   }

@@ -2,7 +2,6 @@
  * @lane merge
  * @subject scripts/layout_check.py
  * @subject scripts/kernel_layout/review.py
- * @subject scripts/layout-format.mjs
  * @subject examples/design-source/create.py
  */
 import {test} from 'node:test';

@@ -64,7 +64,7 @@ test('a change selects the tests that cover it, and everything when it cannot be
   assert.ok(pick('templates/preliminary-review/review.html').tests.includes('review-layout.test.mjs'),'the review page runs its browser test');
 
   // A Python helper named like a script stays with the test that runs it.
-  assert.deepEqual(pick('test/free_path.py').tests,['mechanical-readiness.test.mjs']);
+  assert.deepEqual(pick('test/mission_boundaries.py').tests,['mechanical-readiness.test.mjs']);
   assert.ok(pick('scripts/mechanical_readiness.py').tests.includes('mechanical-readiness.test.mjs'));
 
   for(const file of [...map.everything,'unmapped/new-tool.xyz']) assert.equal(pick(file).all,true,file+' runs every test');

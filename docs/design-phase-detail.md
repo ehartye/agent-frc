@@ -82,15 +82,15 @@ The handoff is the effective preliminary design's folder plus one short note, `H
 
 | Item | Where it is |
 | --- | --- |
-| The layout STEP, one named solid per functional volume | The design's folder |
-| Robot frame and datums: origin, forward, floor height, each pivot axis, travel and mounting face | The plan and the note |
+| The design source and the solids generated from it, one named solid per functional volume | The design's folder |
+| Robot frame and datums: origin, forward, floor height, each pivot axis, travel and mounting face | The design source and the note |
 | Envelopes: frame perimeter, bumpers, parked height, greatest reach | The note |
-| Interfaces with allowances: each fit tighter than about 10 mm, each intended contact or squeeze, each connection not yet drawn | The plan and the note |
+| Interfaces with allowances: each fit tighter than about 10 mm, each intended contact or squeeze, each connection not yet drawn | The design source, the judgement file and the note |
 | Operating point and windows: the setpoints the trials passed at, with the passing and failing value on each side | Trial records and the note |
-| Motion cases: the whole cycle, the displaced control and the path tolerance of each case | The motion study |
-| Budgets with reserve: mass by subsystem, loaded voltage by duty | The budget study |
+| Motion cases: the whole cycle, the displaced control and the path tolerance of each case | The design source and the judgement file |
+| Budgets with reserve: mass by subsystem, loaded voltage by duty | `budgets.json` and `limits.json` |
 | Open risks, each closed by a design change or listed as a bench test with pass and fail numbers | `missions.json` |
-| Trials and replays, and which must be repeated on real parts | Trial records and the plan |
+| Trials and replays, and which must be repeated on real parts | Trial records and the judgement file |
 | First work items, riskiest first | The note |
 
 Detailed design keeps the handoff's frame and datums, stays inside its envelopes, allowances and reserves, and takes up every open risk and bench test. [Write the handoff note](../skills/frc-preliminary-design/references/commands.md#write-the-handoff-note)

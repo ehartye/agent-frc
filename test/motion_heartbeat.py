@@ -12,7 +12,6 @@ import unittest
 
 from mechanical_fixture import SCRIPTS, pin, write
 from mechanical_motion import evaluate
-from checker_progress_failfast import PROGRESS
 
 HEARTBEAT = re.compile(r"^\[heartbeat\] motion (\d+)/(\d+) (\S+) pairs=(\d+)/(\d+) pair=(\S+)\|(\S+) depth=(\d+) "
                        r"samples=(\d+) case=\d+\.\d\ds total=\d+\.\d\ds$")
@@ -48,6 +47,9 @@ def solids_step(path, solids):
 def turn(origin, degrees, axis=(0, 0, 1)):
     return [dict(kind="rotation", axis=list(axis), originMm=list(origin), travelDeg=degrees)]
 
+
+PROGRESS = re.compile(r"^\[motion\] (\d+)/(\d+) (\S+) status=(\w+) failing=(\d+) open=(\d+) bounded=(\d+) "
+                      r"broadPhase=(\d+) constantPoseBroadPhase=(\d+) case=\d+\.\d\ds total=\d+\.\d\ds$")
 
 class MotionHeartbeat(unittest.TestCase):
     @classmethod
@@ -133,19 +135,6 @@ class MotionHeartbeat(unittest.TestCase):
         stale = run("stale.json", {"file": "scene.step", "sha256": "0" * 64})
         self.assertNotEqual(stale.returncode, 0)
         self.assertIn("Changed evidence: scene.step", stale.stderr)
-
-    def test_package_check_passes_the_interval_through(self):
-        layout = self.root / "layout"
-        plan = runpy.run_path(str(SCRIPTS.parent / "examples/preliminary-design/create.py"))["create"](layout)
-        write(layout, "trial.json", plan)
-        def run(*flags):
-            return subprocess.run(["node", str(SCRIPTS / "design.mjs"), "preliminary-check", str(self.root), "layout/trial.json", *flags],
-                                  capture_output=True, text=True)
-        loud, quiet = run("--heartbeat", "0"), run("--quiet")
-        self.assertEqual(loud.returncode, 0, loud.stderr)
-        self.assertEqual(loud.stdout, quiet.stdout)
-        self.assertTrue(any(HEARTBEAT.match(l) for l in loud.stderr.splitlines()))
-        self.assertEqual([l for l in loud.stderr.splitlines() if l.startswith("[heartbeat]") and not HEARTBEAT.match(l)], [])
 
     def test_rotation_of_a_solid_of_revolution_about_its_own_axis_warns(self):
         file = self.study("spin.json", "spin", "orbit", "quarter")

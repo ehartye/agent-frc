@@ -4,7 +4,6 @@ import {spawnSync} from 'node:child_process';
 import {checkDesignDestination} from './active-design.mjs';
 import {projectFrameProfile} from './project-frame-profile.mjs';
 import {frameDxf} from './frame-dxf.mjs';
-import {checkFor} from './layout-format.mjs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {createDesign,assertDesign,canonicalStringify,deriveGeometry,exportCad,frameReviewBasis,spatialChecks,rehearsalBudget,reviseDesign} from './design-artifact.mjs';
@@ -39,10 +38,10 @@ function handoff(a) {
 try{
  if(command==='new'){if(!input||rest.length)throw Error('Usage: design new output.json [project.json]');const project=out?readJson(out):{};const convention=projectFrameProfile(input);if(project.frameProfile===undefined&&convention!==undefined)project.frameProfile=convention;write(input,canonicalStringify(createDesign(project)));console.log('Created editable design artifact');}
  else if(command==='preliminary-check'){
-   if(!input||!out)throw Error('Usage: design preliminary-check PROJECT PLAN.json [--previous HOLD.json] [--require-checked] [--write-view] [--view-only [--from-receipt RECEIPT.json]] [--fail-fast] [--physics-only] [--jobs N] [--quiet] [--built-from PATH]... [--heartbeat SECONDS] [--output RECEIPT.json]');
+   if(!input||!out)throw Error('Usage: design preliminary-check PROJECT JUDGEMENT.json [--write-view] [--view-only [--from-receipt RECEIPT.json]] [--physics-only] [--cases A,B] [--require-checked] [--workers N] [--quiet] [--output RECEIPT.json]');
    // Inherited streams keep the receipt on stdout and let per-case progress reach stderr as each case finishes.
    const run=spawnSync(process.env.PYTHON||(process.platform==='win32'?'python':'python3'),
-     ['-B',checkFor(path.resolve(input,out)).script,input,out,...rest],{stdio:'inherit'});
+     ['-B',path.join(import.meta.dirname,'layout_check.py'),input,out,...rest],{stdio:'inherit'});
    if(run.error)throw run.error;
    process.exitCode=run.status??2;
  }

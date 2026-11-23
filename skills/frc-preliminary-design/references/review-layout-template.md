@@ -2,7 +2,7 @@
 
 Every season starts its review page from the same stock page. The plugin ships one page, [`templates/preliminary-review/review.html`](../../../templates/preliminary-review/review.html), and one data input, the review scene described by [`templates/preliminary-review/scene.schema.json`](../../../templates/preliminary-review/scene.schema.json) (`agent-frc/preliminary-review-scene@1`). The page reads only the scene.
 
-Projects supply data, not markup. The check builds the scene from the plan, its own results, the STEP, the motion study, the budgets and the `presentation` fields described below.
+Projects supply data, not markup. The check builds the scene from the judgement file, its own results, the generated solids, the motions of the design source, the budgets and the `presentation` fields described below.
 
 Start from the stock page and keep its regions and controls unless the project has a reason to differ. Your copy of the page is yours: the [publication check](../../../docs/design-publication.md) compares the scene with the receipt, never the page's markup or script, and the project's pull request shows any change you make to it.
 
@@ -15,9 +15,7 @@ Start from the stock page and keep its regions and controls unless the project h
 - [Play a recorded trial in the animation list](#play-a-recorded-trial-in-the-animation-list)
 - [Shape the layout reviewers will inspect](#shape-the-layout-reviewers-will-inspect)
 - [Copyable review rows](#copyable-review-rows)
-- [Migrate an earlier design](#migrate-an-earlier-design)
 - [Handoff check](#handoff-check)
-- [Earlier field pages](#earlier-field-pages)
 - [How the page verifies what it shows](#how-the-page-verifies-what-it-shows)
 
 The scene accepts only the fields the schema defines. Validate a scene, and compare it with its receipt, with `node PLUGIN/scripts/review-scene.mjs validate review-scene.json.gz --receipt receipt.json`. Errors make the scene unusable. Warnings name the project-authored fields the page will show as "Not supplied in this review", plus findings the page keeps visible, such as a missing required role, an overweight estimate or a low-voltage duty.
@@ -26,12 +24,12 @@ The scene accepts only the fields the schema defines. Validate a scene, and comp
 
 Run the starter once in the **owning season repository**. It writes the project files under `cad/preliminary-design/`, or under the active numbered iteration's design root. A teammate with a fresh checkout should be able to open the review page, spin the robot and trace a budget figure back to its source.
 
-From the repository root, run the installed plugin's [synthetic generator](../../../examples/preliminary-design/create.py) with its geometry Python environment, supplying its actual path in place of `PLUGIN`. The value of `--release` is the design's version, `MAJOR.MINOR`, and `--design-name` names its architecture once. [Name and number a design](../../../docs/design-publication.md#name-and-number-a-design)
+From the repository root, run the installed plugin's [synthetic generator](../../../examples/design-source/create.py) with its geometry Python environment, supplying its actual path in place of `PLUGIN`. The value of `--release` is the design's version, `MAJOR.MINOR`, and `--design-name` names its architecture once. [Name and number a design](../../../docs/design-publication.md#name-and-number-a-design)
 
 The example uses invented dimensions and duties. Replace them with the project's own.
 
 ```sh
-python PLUGIN/examples/preliminary-design/create.py . --project-review --release 1.0 --design-name "Turning carrier"
+python PLUGIN/examples/design-source/create.py . --project-review --release 1.0 --design-name "Turning carrier"
 python PLUGIN/scripts/serve_preliminary_review.py
 ```
 
@@ -44,16 +42,13 @@ cad/preliminary-design/
     design.json                  the design source: solids, groups, mounts, poses and motions
     judgement.json               the judgement file: stages, cycle, control and the presentation fields
     generated/                   the solids and manifest the design library wrote from the source
-    package-limits.json          inspection, running and electrical requirements
+    limits.json                  inspection, running and electrical requirements
     budgets.json, narrative.md   source estimates, duty cases and accepted objectives
+    role-cycle.json and others   the example's premise records: an accepted range and the current estimate
     receipt.json                 checker decision, parked-assembly result and scene digests
     missions.json                mission cases this design plays
     package-motion.html          the review page: the stock page until the project changes it
     review-scene.json.gz         the scene the page reads (ignored; see below)
-    release-lane-trial.json      example trial record for a field interaction
-    release-lane-run.json        example recorded run, synthetic
-    release-lane-replay.json     example replay set that plays the run in the animation list
-    field/release-lane.html      earlier separate field page, kept by the synthetic example; do not add one
 .github/workflows/
   ci.yml                         the project's own CI: scan, site check, publish from the default branch
 docs/preliminary-design/
@@ -62,9 +57,8 @@ docs/preliminary-design/
   releases/1.0/
     index.html                   the review page as published
     review-scene.json.gz         the only committed copy of this version's scene
-    motion.json, receipt.json    checked paths and the check's result
+    design.json, receipt.json    the design source and the check's result
     release.json                 phase, where the check inputs are and the mission cases
-    field/release-lane.html      the example's earlier field page
     budgets.json, limits.json    this version's resource accounts
   releases/1.1/                  work toward the next baseline of the same architecture; same structure
   releases/2.0/                  a different architecture, with its own name; same structure
@@ -72,7 +66,7 @@ docs/preliminary-design/
 
 Serve the review page over HTTP. A page opened from `file://` explains that it cannot load the scene. [How the page verifies what it shows](#how-the-page-verifies-what-it-shows)
 
-The repository is the project the check runs in. Each design's folder holds its plan, inputs, page and scene together, and the plan's `view` and every file reference are written from the repository root, by path and [without a typed hash](../../../docs/preliminary-design.md#name-files-by-path), as in `cad/preliminary-design/releases/1.0/package-motion.html`. `--write-view` refuses a view at the project root. [Keep the view in its release folder](../../../docs/preliminary-design.md#keep-the-view-in-its-release-folder)
+The repository is the project the check runs in. Each design's folder holds its design source, judgement file, generated solids, page and scene together, and the judgement file's `view` and every file reference are written from the repository root, by path and [without a typed hash](../../../docs/preliminary-design.md#name-files-by-path), as in `cad/preliminary-design/releases/1.0/package-motion.html`. `--write-view` refuses a view at the project root. [Keep the view in its release folder](../../../docs/preliminary-design.md#keep-the-view-in-its-release-folder)
 
 The starter's `.gitignore` leaves the input-side scene uncommitted, so the published folder under `docs/` holds the only committed copy.
 
@@ -95,7 +89,7 @@ node PLUGIN/scripts/design-publication.mjs check .
 
 **What publishing does.** It copies the page, scene and evidence to `docs/preliminary-design/releases/VERSION/`, writes `release.json` with the location of the committed inputs, lists the version as `in-progress` in `releases.json` and sets the current pointer.
 
-**Revise in place.** Publishing the same version again replaces the published files and counts a draft, shown as "NAME 1.1 · draft 3 · in progress". An edit to the same design never takes a new number. Git keeps the earlier files and the pull request shows the difference. [Revise an in-progress release in place](../../../docs/design-publication.md#revise-an-in-progress-release-in-place)
+**Revise in place.** Publishing the same version again replaces the published files and counts a draft, shown as "NAME 1.1 · draft 3 · in progress". An edit to the same design never takes a new number. Git keeps each draft's files and the pull request shows the difference. [Revise an in-progress release in place](../../../docs/design-publication.md#revise-an-in-progress-release-in-place)
 
 | Situation | Version |
 | --- | --- |
@@ -107,7 +101,7 @@ node PLUGIN/scripts/design-publication.mjs check .
 
 **What a visitor sees.** The stable URL opens the effective design, or the newest in-progress one when none is effective. The stable viewer shows only the version picker above the review page, and the picker names each design's status. Share another version with `?release=1.0`, and a named case with `?case=CASE_ID`. An unknown version names the requested ID and offers the picker.
 
-**The publication check.** The scene must repeat the receipt's STEP and motion digests, case results, displaced control, narrative objectives, parked-assembly result, each duty's figures and the mass figures. Its decision may never claim a checked result the receipt does not hold. Run it before every push. The layout check runs again once, at the stage gate, when the design is marked effective. [Publish and check designs](../../../docs/design-publication.md)
+**The publication check.** The scene must repeat the receipt's STEP digest, case results, displaced control, narrative objectives, parked-assembly result, each duty's figures and the mass figures. Its decision may never claim a checked result the receipt does not hold. Run it before every push. The layout check runs again once, at the stage gate, when the design is marked effective. [Publish and check designs](../../../docs/design-publication.md)
 
 **A second workstation.** Pull before publishing. Resolve a conflict in `releases.json` by keeping every version and running `--set-status` again for the current one. Local publishing locks the index and releases the lock on process exit.
 
@@ -119,7 +113,7 @@ The workflow deploys the complete `docs/` tree from the default branch after the
 
 For a project that also has a detailed design showcase, keep this tree under `preliminary-design/` in the same site and link it from the season index as a secondary page. Keep one deployment workflow for the combined site. The latest detailed design stays the primary view, README still and model selector.
 
-Use relative URLs for assets, links between versions and evidence. After the first deploy, open the stable URL, an earlier `?release=`, an unknown ID and a direct version URL under the repository subpath.
+Use relative URLs for assets, links between versions and evidence. After the first deploy, open the stable URL, another `?release=`, an unknown ID and a direct version URL under the repository subpath.
 
 ## Page order
 
@@ -127,7 +121,7 @@ The stock page has these regions, top to bottom. Each value comes from the scene
 
 | Region | What the page shows | Review action |
 | --- | --- | --- |
-| 1. Header and title | The navy header bar with any season links, which open in the top window. The page has no link back to the index: the stable index's version picker moves between versions, and links that leave the review open at the top or, for the receipt, in a new tab, so nothing loads a page inside the index's frame. A title block: the project, the design name and version from the index (the ID for one that is not a version) and "Preliminary design" above the title (`presentation.title`, else the plan's `issue` name), and a chip combining the draft number and design status from the index with the receipt decision, such as "Draft 3 · in progress · layout-checked" or "Effective · layout-checked". The first unmet requirement appears beside the chip only when there is one. A collapsed **Review basis** holds the selected architecture, datum, units, strategic narrative revision, current decision and first unmet requirement, so the page opens onto the model. | Read the chip and any unmet requirement; open the review basis and the narrative objectives. |
+| 1. Header and title | The navy header bar with any season links, which open in the top window. The page has no link back to the index: the stable index's version picker moves between versions, and links that leave the review open at the top or, for the receipt, in a new tab, so nothing loads a page inside the index's frame. A title block: the project, the design name and version from the index and "Preliminary design" above the title (`presentation.title`, else the judgement file's `issue` name), and a chip combining the draft number and design status from the index with the receipt decision, such as "Draft 3 · in progress · layout-checked" or "Effective · layout-checked". The first unmet requirement appears beside the chip only when there is one. A collapsed **Review basis** holds the selected architecture, datum, units, strategic narrative revision, current decision and first unmet requirement, so the page opens onto the model. | Read the chip and any unmet requirement; open the review basis and the narrative objectives. |
 | 2. Viewer row | **Viewer column**, in this order: (a) top bar with the pane title "Assembly layout", then view toggles and view buttons only: **Labels** (with callout paging when the callouts span pages), **Floor**, an optional data-driven cutaway toggle, **Fit robot**, **Fit field interaction** and **Expand**; (b) the canvas; (c) the control hint line; (d) the **playback row, directly below the canvas**: one animation list that holds one entry per mission phase, then the other checked motions, the displaced control and any trial replays, **Play**, speed (1×, ¼×, 4×, 10×), the slider and its percent or seconds readout; (e) the live readout for the selected entry (its per-frame measure or result, the current event with numbered jump buttons when a replay records events, and its basis), with the reason whenever **Fit field interaction** is off; (f) the category legend. **Inspector column**, docked to the right: the component inspector (its heading, hint and search until a part is selected; then the part with Focus part, Show assembly and Locate in ledger), then the selection budget with Whole robot, Category, Subsystem and Custom subsystem groupings, the electrical duty and the allocation detail. | Orbit through 360° and underneath, pan, zoom, fit the robot or the field interaction, expand to full screen, pick a surface, search by name or ID, focus a part and show the assembly, locate a part in the ledgers, toggle labels and page the callouts, play and scrub each animation and replay at any speed, and jump to a replay's events. |
 | 3. Resource figures | Inspection weight against its limit, the loaded-bus minimum against its requirement, and battery-side demand against the pack budget at that floor, each linking to its ledger. | Choose a duty; the figures follow it. |
 | 4. Weight budget and power by load | The inspection allocation ruler and table with its total, and the running configuration with itemized running additions. Battery-current bars by circuit group, each with its envelope, sag contribution and consuming parts. | Select a row, bar or member to locate the parts in the model. |
@@ -146,11 +140,11 @@ The schema marks each field `plugin` (derived), `project` (authored under `prese
 
 | Scene field | Supplier | Source |
 | --- | --- | --- |
-| `issue`, `datum`, `units`, `sources`, `decision`, `palette`, `meshes`, `cases` (bodies, frames, status, results, allowance), `parked`, `mass` (limit, inspection, running, lines), `power`, `narrativeReview`, `motionEvidence`, `returnCriteria` | plugin | The plan, the checker's results (the parked-assembly result is in the receipt as `parked`), the STEP tessellation, the motion study and the budgets. |
-| `bodies[ID]` category, role, colour, motion group, volume, closure, fixture flag, mass exclusion | plugin | Plan groups, fixtures, the palette and the STEP. |
+| `issue`, `datum`, `units`, `sources`, `decision`, `palette`, `meshes`, `cases` (bodies, frames, status, results, allowance), `parked`, `mass` (limit, inspection, running, lines), `power`, `narrativeReview`, `motionEvidence`, `returnCriteria` | plugin | The judgement file, the checker's results (the parked-assembly result is in the receipt as `parked`), the tessellation of the generated solids, the motions of the design source and the budgets. |
+| `bodies[ID]` category, role, colour, motion group, volume, closure, fixture flag, mass exclusion | plugin | The groups and fixtures of the design source, the palette and the generated solids. |
 | `bodies[ID]` name, subsystem, material, volume type, purpose, rationale | project | `presentation.components[ID]` with `name`, `category`, `subsystem`, `material`, `volumeType` (`material`, `envelope` or `gauge`), `purpose`, `rationale`. |
 | `bodies[ID].support` | project | `presentation.loadPaths[ID]`: the support and load path into the frame. |
-| `bodies[ID].mounts` | project | Plan `mounts` entries whose `member` is this ID: the host, the registered point and its basis. The inspector lists them first under Support and load path. A mount without `member` stands for its whole group and is not attributed to one part. |
+| `bodies[ID].mounts` | project | The `mounts` entries of the design source whose `member` is this ID: the host, the registered point and its basis. The inspector lists them first under Support and load path. A mount without `member` stands for its whole group and is not attributed to one part. |
 | `required` | project | `presentation.required`: `{ROLE: [IDs]}`. Absent IDs show as Missing. |
 | `power[].lines[].members` | project | `presentation.loadMembers`: `{SOURCE: [IDs]}`. An unassigned source says so. |
 | `mass.runningAdditions`, `mass.runningBasis` | project | `presentation.runningAdditions`: `[{name, kg: [low, high], members}]`, and `presentation.runningBasis`. |
@@ -162,10 +156,9 @@ The schema marks each field `plugin` (derived), `project` (authored under `prese
 | `cases[].time`, `measure`, `positions` | optional | `presentation.caseTimelines[CASE_ID]` with one entry per frame: seconds, live-readout text and robot field position in millimetres. Without them the readout shows the percent of path and the case result. |
 | `cutaway` | optional | `presentation.cutaway`: `{label, hides: [fixture IDs], outline: [[x, y, z], ...]}`, for example a target aperture. |
 | `links` | optional | `presentation.links`: `[{label, href}]` header links to season pages, relative or `https:`. |
-| `fieldInteractions` | optional | `presentation.fieldInteractions`: links to an [earlier separate field page](#earlier-field-pages). Use `replays` for new work. |
 | `replays` | optional | `presentation.replays`: replay sets named as `[{file}]`; see [Play a recorded trial in the animation list](#play-a-recorded-trial-in-the-animation-list). |
 
-The limiting pair on each path comes from pairs that include a moving body: a failure or open interval first, then the smallest gap or interval lower bound. An interval bound has no single limiting pose, so **Jump to limiting pose** needs a witness time. The receipt's `decision` records the final `status` and `firstUnmet` requirement: clearance findings first, then weight, voltage, the displaced control, held reopen decisions and missing inputs. The conceptual-design return criteria list each accepted conceptual premise from the receipt.
+The limiting pair on each path comes from pairs that include a moving body: a failure or open interval first, then the smallest gap or interval lower bound. An interval bound has no single limiting pose, so **Jump to limiting pose** needs a witness time. The receipt's `decision` records the final `status` and `firstUnmet` requirement: clearance findings first, then weight, voltage, the displaced control, premises outside their accepted range and missing inputs. The conceptual-design return criteria list each accepted conceptual premise from the receipt.
 
 ## Play a recorded trial in the animation list
 
@@ -214,7 +207,7 @@ Select primitives by mating and clearance geometry: a cylinder for a wheel or a 
 
 Use the project's official field and game-piece models at scale, or source dimensions when it has none. Keep floor, fixtures, carried pieces and service gauges identifiable and separately accounted.
 
-Register each field part as a fixture of the cases that use it (`fixtures` in the motion study) and not as an ordinary member. A member counts as robot in the opening fit and the robot bounds, and **Fit field interaction** stays off for a case without a fixture. The page states that reason beside the readout.
+List each field part under `fixtures` in the design source and not as a solid of a robot group. A robot solid counts as robot in the opening fit and the robot bounds, and **Fit field interaction** stays off for a case without a fixture. The page states that reason beside the readout.
 
 Animate operating, simultaneous loaded, returning, disabled and service paths. Label command playback, free-body physics and measured behavior each as what it is. A sampled gap carries its sampling scope. Distinguish intentional contact, verified clearance and unresolved contact. [Trials and replays](trials.md) covers retention and recorded physics.
 
@@ -238,17 +231,6 @@ For a synthetic 14.0 kg inspection limit, 11.9–12.9 kg inspection weight leave
 | Whole robot | 50 | 1.50 V | 500 W |
 
 With 11.5 V open circuit, the modeled bus is **10.0 V**, or **+0.8 V** above a 9.2 V floor. This pack model permits 76.7 A and about 705 W at that floor; compare breaker, wire, branch and thermal limits separately. Calculate power at one coincident voltage/current point. If only ranges are available, label the result a bound and preserve shared or unknown loads. Aggregate current and power by unique load ID. Voltage is common to parallel consumers. [Shared electrical accounting](../../../docs/shared-power-review.md)
-
-## Migrate an earlier design
-
-A design published before the stock review page and its scene has no scene to compare with its receipt. Regenerate it:
-
-1. Copy the plugin's `templates/preliminary-review-fonts/` to `docs/preliminary-design/fonts/` and `templates/preliminary-review-gitignore` to `cad/preliminary-design/.gitignore`.
-2. Move any season-specific page content into the `presentation` fields above.
-3. Delete the input-side page and any old `*.geometry.json.gz`, then run the check with `--write-view`.
-4. Validate the scene and publish again under the same version while it is in progress.
-
-A design that is effective or superseded no longer changes and keeps the page it was published with. Mark one the project no longer shows `superseded` or `withdrawn` in the index; the publication check leaves those alone. A project that published through the earlier workflow follows the [migration guide](../../../docs/design-publication-migration.md).
 
 ## Handoff check
 
@@ -279,14 +261,6 @@ After each publish, use the [short form](presentation.md#look-before-you-share).
 
 - Reconcile a custom subsystem against whole-robot mass and battery-side current.
 - An incomplete roster, an overweight or low-voltage case and an obstructed path each stay visible when present.
-
-## Earlier field pages
-
-Earlier projects showed a trial in a separate, self-contained page at `field/NAME.html`, linked under `presentation.fieldInteractions` and listed under `fieldPlayers` in `release.json`. The tools still publish such a page when a design has one, and the synthetic example still carries one.
-
-Do not add one. One design has one list of motions in one view: record the trial and play it as a [replay](#play-a-recorded-trial-in-the-animation-list). When you revise a design that has a field page, move its trial into a replay and drop the page.
-
-A project that keeps an earlier field page keeps it self-contained, with the Content-Security-Policy the starter gives it, and corrects it by publishing its design again.
 
 ## How the page verifies what it shows
 

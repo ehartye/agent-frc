@@ -91,7 +91,7 @@ function fieldFitState(ids,scene){
  if(ids.some(id=>scene.bodies[id].fixture))return {enabled:true,reason:''};
  if(Object.values(scene.bodies).some(b=>b.fixture))return {enabled:false,reason:'This case places no field fixture, so Fit field interaction is off.'};
  return {enabled:false,reason:'No case registers a field fixture, so Fit field interaction is off.'+((scene.fieldInteractions||[]).length?
-  ' A field part modeled as a package member counts as robot; register it under the case fixtures in the motion study.':'')};
+  ' A field part modeled as a package member counts as robot; list it under fixtures in the design source.':'')};
 }
 function massLinesFor(id,scene){
  const rows=(scene.mass?.lines||[]).filter(l=>l.members.includes(id)).map(l=>{const others=l.members.filter(m=>m!==id);
@@ -130,7 +130,7 @@ function inspectorFields(id,scene){
  const moving=new Set(scene.cases.filter(c=>c.bodies[id]?.matrices.length>1).map(c=>c.id)),phases=animationsOf(scene);
  // Named by mission phase: a phase moves a body when any of its cases does.
  const moves=[...phases.filter(a=>a.cases.some(c=>moving.has(c))).map(a=>a.title),...[...moving].filter(c=>!phases.some(a=>a.cases.includes(c))),...(scene.replays||[]).filter(r=>r.bodies[id]&&r.bodies[id].group!==null).map(r=>r.id)];
- // Mounts the plan registers against this member, ahead of the project's load-path text.
+ // Mounts the design source registers against this member, ahead of the project's load-path text.
  const note=attachmentNote(id,scene),mounts=(b.mounts||[]).map(m=>'Mounted on '+(scene.bodies[m.on]?.name||m.on)+' at ('+m.pointMm.map(v=>fmt(v,1)).join(', ')+') mm · '+m.basis);
  return [['Category',b.category+(b.category!==b.role&&!b.fixture?' (colour of role '+b.role+')':''),false,'swatch'],['Subsystem',...val('subsystem',b.subsystem)],['Motion group',b.motionGroup,false],
   ['Material',...val('material',b.material)],['Occupied volume',...volume],['Mass line and basis',...mass],
@@ -152,18 +152,8 @@ function partition(lines,selected,whole){
  return {included,shared};
 }
 function frameCount(c){return c.replay?c.time.length:Math.max(1,...Object.values(c.bodies).map(b=>b.matrices.length))}
-// The animation list of a scene: one entry per mission phase, each naming the cases it plays end to end. A scene written
-// before the list existed gets one entry per run of consecutive cases whose IDs differ only by a trailing segment number.
-function animationsOf(scene){
- if(scene.animations)return scene.animations;
- const out=[],taken=new Set();
- for(const c of scene.cases){if(c.kind==='displaced control')continue;
-  const phase=c.id.replace(/[-_. ]\d+$/,'')||c.id,last=out.at(-1);
-  if(last&&last.phase===phase){last.cases.push(c.id);last.mission=last.mission||c.stage==='operating';continue}
-  let id=phase,run=1;while(taken.has(id))id=phase+'-run-'+(++run);taken.add(id);
-  out.push({id,phase,title:id,mission:c.stage==='operating',cases:[c.id]})}
- return out;
-}
+// The animation list of a scene: one entry per mission phase, each naming the cases it plays end to end.
+function animationsOf(scene){return scene.animations}
 // One entry of the animation list as a single clip: its segments end to end, sharing the frame where one ends and the next begins.
 // A segment with no time of its own takes a tenth of a second a frame, shortened so the untimed part of a clip lasts six seconds at most.
 function clipOf(entry,segments){
@@ -312,7 +302,7 @@ function header(){
 }
 let designStatus=null,draft=0,designTitle='',phase='Preliminary design',builtOn='',decision='pending receipt';
 const releaseId=()=>decodeURIComponent(new URL('.',location.href).pathname.split('/').filter(Boolean).at(-1)||'');
-// A version reads NAME MAJOR.MINOR once the release index is read; until then, and for an earlier ID, the ID stands.
+// A version reads NAME MAJOR.MINOR once the release index is read; until then the ID stands.
 function context(){$('context').textContent=[scene?.context,designTitle||releaseId(),phase,builtOn].filter(Boolean).join('　/　')}
 function chip(){
  const said=[draft?'draft '+draft:'',designStatus?designStatus.replace('-',' '):''].filter(Boolean).join(' · ');
@@ -728,7 +718,7 @@ async function init(){
  // One short list: an animation per mission phase, then the other checked motions, the displaced control and the trial replays.
  // A checked case is a segment of its phase's animation. It is listed in the check results, never here.
  const caseOf=new Map(scene.cases.map(c=>[c.id,c])),phases=animationsOf(scene),clips=phases.map(a=>clipOf(a,a.cases.map(id=>caseOf.get(id))));
- // A scene written before the control took a title labels it by its case ID; it reads as plain words here.
+ // A control labelled by its case ID reads as plain words here.
  const controls=scene.cases.filter(c=>!phases.some(a=>a.cases.includes(c.id))).map(c=>clipOf({id:c.id,title:c.kind==='displaced control'&&c.label===c.id+' (displaced control)'?'Displaced control':c.label,mission:false},[c]));
  const replays=(scene.replays||[]).map(r=>clipOf({id:r.id,title:r.label,replay:true,objective:r.objective},[replayMotion(r)]));
  const lists=[['Mission animations',clips.filter(c=>c.mission)],['Other checked motions',clips.filter(c=>!c.mission)],['Check control',controls],['Trial replays',replays]].filter(l=>l[1].length);

@@ -27,7 +27,7 @@ function project(t,edit=x=>x){
   };
   const stageIds=['acquire','hold','pass-up','deliver','return','hang','park','remove-carrier'];
   const draft={
-    plan:{schema:'agent-frc/preliminary-layout@1',issue:'synthetic-issue',
+    plan:{schema:'agent-frc/layout-judgement@1',issue:'synthetic-issue',
       narrativeReview:{objectives:[{objective:'Invented cycle',disposition:'represented',basis:'Invented'}]},
       presentation:{uncoveredCases:[{id:'gate-closes-mid-turn',condition:'Invented',reason:'Invented'}]}},
     receipt:{schema:'agent-frc/preliminary-layout-result@1',issue:'synthetic-issue',status:'layout-checked',missingInputs:[],
@@ -46,7 +46,7 @@ function project(t,edit=x=>x){
   if(d.receipt&&d.files['intake-trial.json'])d.receipt.stages.acquire.transportedBy={sample:{mechanisms:['carrier'],evidence:d.pins?.intake??pin('intake-trial.json')}};
   if(d.receipt&&d.files['release-trial.json'])d.receipt.stages.deliver[d.relation??'freePath']={sample:{basis:'Invented',evidence:d.pins?.release??pin('release-trial.json')}};
   const planText=JSON.stringify(d.plan);
-  writeFileSync(path.join(root,'layout.json'),planText);
+  writeFileSync(path.join(root,'judgement.json'),planText);
   if(d.receipt){if(d.receipt.planSha256===undefined)d.receipt.planSha256=sha(planText);writeFileSync(path.join(root,'receipt.json'),JSON.stringify(d.receipt));}
   if(d.missions)writeFileSync(path.join(root,'missions.json'),JSON.stringify(d.missions));
   return root;
@@ -236,10 +236,10 @@ test('every open risk needs a closing design change or a bench test with pass an
 
 test('malformed inputs are findings: nothing is judged met and nothing throws',t=>{
   for(const text of ['[]','null','5','"plan"','{not json']){
-    const root=project(t);writeFileSync(path.join(root,'layout.json'),text);
+    const root=project(t);writeFileSync(path.join(root,'judgement.json'),text);
     const report=effectiveReadiness(root);
     assert.equal(report.met,0,text);
-    assert.ok(report.criteria.every(c=>c.reasons.some(r=>/^Layout plan: layout\.json is not/.test(r))),text);
+    assert.ok(report.criteria.every(c=>c.reasons.some(r=>/^Layout plan: judgement\.json is not/.test(r))),text);
   }
   const odd=effectiveReadiness(project(t,d=>{d.plan.presentation={fieldInteractions:5,uncoveredCases:'x'};d.plan.narrativeReview={objectives:{}};
     d.receipt.stages.acquire.transportedBy=7;d.missions.risks=[null,3,{id:'r',risk:'Invented',benchTest:{id:'other',measure:'pull',pass:1}}];}));
@@ -260,7 +260,7 @@ test('the command is informational: it prints the report, exits 0 and writes not
   assert.match(text.stdout,/\[not met\] 1\. Whole mission cycle[^\n]*\n\s+- Narrative stage endgame has no case/);
   assert.match(text.stdout,/\[met\]     2\./);
   assert.match(text.stdout,/Result: 1 of 3 criteria met\./);
-  const json=run(root,'--json','--plan','layout.json','--receipt','receipt.json','--missions','missions.json');
+  const json=run(root,'--json','--plan','judgement.json','--receipt','receipt.json','--missions','missions.json');
   assert.equal(json.status,0,json.stderr);
   assert.equal(JSON.parse(json.stdout).schema,'agent-frc/effective-readiness@1');
   assert.deepEqual(readFileSync(path.join(root,'receipt.json')),before);
@@ -268,16 +268,16 @@ test('the command is informational: it prints the report, exits 0 and writes not
   const empty=mkdtempSync(path.join(tmpdir(),'readiness-'));t.after(()=>rmSync(empty,{recursive:true,force:true}));
   const bare=run(empty);
   assert.equal(bare.status,0);
-  assert.match(bare.stdout,/Layout plan: missing file layout\.json/);
+  assert.match(bare.stdout,/Layout plan: missing file judgement\.json/);
   assert.match(bare.stdout,/Result: 0 of 3 criteria met\./);
   assert.equal(run(path.join(empty,'absent')).status,2);
   assert.equal(run().status,2);
 });
 
 test('a release folder under the project root holds the three files while pins resolve from the root',t=>{
-  const root=project(t),folder='cad/preliminary-design/releases/layout-002';
+  const root=project(t),folder='cad/preliminary-design/releases/1.0';
   mkdirSync(path.join(root,folder),{recursive:true});
-  for(const name of ['layout.json','receipt.json','missions.json'])
+  for(const name of ['judgement.json','receipt.json','missions.json'])
     {writeFileSync(path.join(root,folder,name),readFileSync(path.join(root,name)));rmSync(path.join(root,name));}
   assert.equal(effectiveReadiness(root).met,0,'the files are no longer at the project root');
   const report=effectiveReadiness(root,{release:folder});

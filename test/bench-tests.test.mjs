@@ -43,11 +43,11 @@ function project(t, {register = risks, stage = true} = {}) {
   write(root, prelim + '/releases.json', {releases: ['1.0'], designs: {1: {name: 'Tilting carriage'}}, designStatus: {'1.0': 'effective'}, current: '1.0'});
   const published = path.join(root, prelim, 'releases/1.0'), folder = 'cad/detailed-design/designs/1.0';
   if (register) write(root, 'cad/preliminary-design/releases/1.0/missions.json', {missionCases: read(path.join(published, 'release.json')).missionCases, risks: register});
-  const receipt = read(path.join(published, 'receipt.json')), ledger = {...read(path.join(published, 'budgets.json')), requirements: {file: 'package-limits.json'}}, plan = JSON.stringify({view: 'review/index.html', motion: {file: 'paths.json'}, budgets: {file: 'budgets.json'}});
-  write(root, folder + '/layout.json', plan);
+  const receipt = read(path.join(published, 'receipt.json')), ledger = {...read(path.join(published, 'budgets.json')), requirements: {file: 'package-limits.json'}}, plan = JSON.stringify({view: 'review/index.html', source: {file: 'design.json'}, budgets: {file: 'budgets.json'}});
+  write(root, folder + '/judgement.json', plan);
   write(root, folder + '/receipt.json', folderReceipt(root, folder, receipt, plan, ledger, '1.0'));
   write(root, folder + '/missions.json', {missionCases: read(path.join(published, 'release.json')).missionCases});
-  write(root, folder + '/paths.json', readFileSync(path.join(published, 'motion.json')));
+  write(root, folder + '/design.json', readFileSync(path.join(published, 'design.json')));
   write(root, folder + '/budgets.json', ledger);
   write(root, folder + '/package-limits.json', readFileSync(path.join(published, 'limits.json')));
   write(root, folder + '/review/index.html', '<html>Detailed review</html>');
