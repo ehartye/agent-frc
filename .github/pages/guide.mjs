@@ -49,7 +49,7 @@ export const purpose = {
   'frc-start-over': 'Archive the evidence, open a fresh design and justify individual imports.',
   'frc-preliminary-design': 'Compare original architectures under common constraints before selecting subsystems.',
   'frc-mechanism-hardening': 'Test the weakest load path and the repeatable match rate under perturbations and service recovery.',
-  'frc-robot-highlights': 'Rotate the CAD assembly, inspect printed markings and watch mechanism motion. Publish the styled showcase and its source evidence on GitHub Pages, with the effective design front and center and an in-progress design labelled beside it.',
+  'frc-robot-highlights': 'Open the design review to rotate the assembly, inspect its parts and watch mechanism motion. Publish the styled results page and its source evidence on GitHub Pages, linked to that one review, with the effective design front and center and an in-progress design labelled beside it.',
   'frc-swerve': 'Connect module geometry, two independent motions and feedback conventions to drivetrain verification.',
   'frc-season': 'Pin the season, applicable manual edition and source boundaries.',
   'frc-case-study': 'Trace game objectives through strategy, subsystems and engineering evidence.',
