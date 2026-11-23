@@ -18,7 +18,7 @@ Repeat the comparison at a plausible adverse value of the uncertain input that c
 
 ## Launch and share the season review
 
-Use the [whole-robot review layout template](../skills/frc-preliminary-design/references/review-layout-template.md) to place the viewer, resource figures, component ledgers and checked paths. Keep the UI, scene and evidence in the season project. From the season root run `python PLUGIN/examples/preliminary-design/create.py . --project-review --release layout-001`. Launch with `python cad/preliminary-design/serve.py` and open `http://127.0.0.1:8000/`. For a LAN review, supply the host address with `--bind`. The season-owned site under `docs/preliminary-design/` opens the latest issue. Select an archived issue with `?release=layout-001`. The starter includes the [design publication workflow](design-publication.md#set-up-the-workflow), which checks every pushed branch and deploys the site from the default branch. Each release identifies itself as preliminary design and carries a design status in the release index: in progress, effective, superseded or withdrawn. Staging requires a `layout-checked` receipt and a `missions.json` that names a passing operating case for a represented narrative objective. It writes `release.json`, which records where the committed inputs are so CI can rerun the layout check. On a site that also serves a detailed showcase, a [preliminary design release](design-publication.md#publish-a-preliminary-design-release) stays secondary while the detailed model stays front and center. A season field-interaction or physics player ships inside its release at `field/NAME.html` as mission-task evidence.
+Use the [whole-robot review layout template](../skills/frc-preliminary-design/references/review-layout-template.md) to place the viewer, resource figures, component ledgers and checked paths. Keep the UI, scene and evidence in the season project. From the season root run `python PLUGIN/examples/preliminary-design/create.py . --project-review --release 1.0 --design-name "Turning carrier"`. The release ID is the design's [version](design-publication.md#name-and-number-a-design), and the name stands for its architecture. Launch with `python cad/preliminary-design/serve.py` and open `http://127.0.0.1:8000/`. For a LAN review, supply the host address with `--bind`. The season-owned site under `docs/preliminary-design/` opens the latest issue. Select another version with `?release=1.0`. The starter includes the [design publication workflow](design-publication.md#set-up-the-workflow), which checks every pushed branch and deploys the site from the default branch. Each release identifies itself as preliminary design and carries a design status in the release index: in progress, effective, superseded or withdrawn. Staging requires a `layout-checked` receipt and a `missions.json` that names a passing operating case for a represented narrative objective. It writes `release.json`, which records where the committed inputs are so CI can rerun the layout check. On a site that also serves a detailed showcase, a [preliminary design release](design-publication.md#publish-a-preliminary-design-release) stays secondary while the detailed model stays front and center. A season field-interaction or physics player ships inside its release at `field/NAME.html` as mission-task evidence.
 
 Every season uses the same [stock review page](../skills/frc-preliminary-design/references/review-layout-template.md); the project supplies data, not markup. The review opens with the viewer column (view controls above the model, playback controls directly below it) and the inspector column side by side, with the resource figures below. They stack only on pages 960 px wide or narrower. [Page order and layout](../skills/frc-preliminary-design/references/review-layout-template.md#page-order)
 
@@ -28,10 +28,10 @@ With the pluginâ€™s geometry Python environment selected, create a new exam
 
 ```sh
 python examples/preliminary-design/create.py layout-trial
-node scripts/design.mjs preliminary-check layout-trial cad/preliminary-design/releases/layout-001/layout.json --require-checked
+node scripts/design.mjs preliminary-check layout-trial cad/preliminary-design/releases/1.0/layout.json --require-checked
 ```
 
-`layout-trial` stands for a repository. The package sits in the release folder `cad/preliminary-design/releases/layout-001/` inside it, with every pin written from `layout-trial`, and nothing is generated at its top level.
+`layout-trial` stands for a repository. The package sits in the release folder `cad/preliminary-design/releases/1.0/` inside it, with every pin written from `layout-trial`, and nothing is generated at its top level.
 
 The carrier rotates 90Â° with a finite article while a neighboring slide travels 12 mm. A separate park case returns the carrier and slide. The service case withdraws the group 80 mm. Each case reserves 1 mm between unrelated bodies. The proposed layout clears acquisition, the loaded turn, release, parking and service withdrawal. As a control, moving a fixed rail 50 mm into the arc leaves both operating endpoints clear and produces about 52.04 mmÂ³ shared material at half travel. Read the actual pair and path fraction in the receipt. The example uses invented figures and simple shapes.
 
@@ -135,7 +135,7 @@ To recheck the physics of a layout whose review is already written, add `--physi
 `--write-view` checks every case before it writes the scene. When only the presentation changed, add `--view-only` instead:
 
 ```sh
-node scripts/design.mjs preliminary-check REPOSITORY cad/preliminary-design/releases/layout-002/layout.json --view-only --output cad/preliminary-design/releases/layout-002/receipt.json
+node scripts/design.mjs preliminary-check REPOSITORY cad/preliminary-design/releases/1.0/layout.json --view-only --output cad/preliminary-design/releases/1.0/receipt.json
 ```
 
 The run reads the earlier receipt, reuses its case results and its displaced control, and rebuilds the page and scene around them. It reads the receipt at the `--output` path, or `receipt.json` beside the layout plan when the receipt is printed. Name another with `--from-receipt FILE`, relative to the project. A `--physics-only` receipt serves too, so a layout can be iterated with `--physics-only` and its review written afterwards without a second check.
@@ -249,10 +249,10 @@ The [exit criteria](design-phase-detail.md#exit-criteria-for-an-effective-prelim
 node scripts/design.mjs effective-readiness PROJECT
 ```
 
-`PROJECT` is the folder that holds `layout.json`, its saved `receipt.json`, `missions.json` and the pinned trial files. Name other files with `--plan`, `--receipt` and `--missions`, relative to that folder. When the project is the repository and the three files sit in a release folder, name it once: `effective-readiness REPOSITORY --release cad/preliminary-design/releases/layout-002`. Trial pins still resolve from the project. Add `--json` for the machine-readable report. The command writes nothing, never changes a receipt and exits 0 whatever it finds. Only an unusable project folder is an error.
+`PROJECT` is the folder that holds `layout.json`, its saved `receipt.json`, `missions.json` and the pinned trial files. Name other files with `--plan`, `--receipt` and `--missions`, relative to that folder. When the project is the repository and the three files sit in a release folder, name it once: `effective-readiness REPOSITORY --release cad/preliminary-design/releases/1.0`. Add `--design "NAME 1.0"` to title the report with the design name and version, as the publication check and `stage.py` do. Trial pins still resolve from the project. Add `--json` for the machine-readable report. The command writes nothing, never changes a receipt and exits 0 whatever it finds. Only an unusable project folder is an error.
 
 ```text
-Effective-readiness report for synthetic-package-layout-002
+Effective-readiness report for Turning carrier 1.0 (synthetic-package-1.0)
 Informational: marking a design effective stays a project decision in a reviewed pull request.
 [not met] 1. Whole mission cycle checked for clearance, mass and voltage
             - Narrative stage endgame has no case
@@ -301,6 +301,7 @@ A season pins a plugin revision and holds copies of some plugin files. After mov
 | 0.122.1 | The release index page `docs/preliminary-design/index.html` from `templates/preliminary-review-index.html`. The note under the header is gone: the release picker names each design status and the review page shows the rest. |
 | 0.123.0 | `stage.py`, the release index page and the local review page (delete `package-motion.html` and rerun the check with `--write-view`). Staging an in-progress release again revises it in place and counts a revision; an effective release is no longer restaged. Mark in-progress releases that a later release replaced `superseded`, and add `accepted` for a superseded release that was once effective. [Revise an in-progress release in place](design-publication.md#revise-an-in-progress-release-in-place) |
 | 0.125.0 | Nothing to re-copy. The layout check reports the solid count and the finest declared path tolerance beside the [scope guidelines](#keep-the-layout-a-blockout). A stage may declare `pathToleranceMm`, and the plan may state its own figures and an agreed budget under `scopeGuidelines`. |
+| 0.127.0 | `stage.py`, the release index page, the detailed design catalog and the local review page (delete `package-motion.html` and rebuild it with `--view-only`). A new release takes a version as its ID, `MAJOR.MINOR`, and its architecture is named once with `--design-name`; the pages show "NAME 1.1 · draft 3 · in progress". An existing ID keeps working. [Name and number a design](design-publication.md#name-and-number-a-design), [rename a release to a version](design-publication-migration.md#rename-a-release-to-a-version) |
 | 0.126.0 | Nothing to re-copy. `preliminary-check --view-only` [rebuilds the review page, scene and receipt](#rebuild-the-review-without-rerunning-the-cases) from the saved receipt after a presentation edit, without rerunning the cases. |
 
 An in-progress release takes the new page when it is staged again under its ID. An effective, superseded or withdrawn release never changes.
@@ -312,10 +313,10 @@ An in-progress release takes the new page when it is staged again under its ID. 
 The project is the repository. A release keeps its layout plan, its inputs, the review page and the scene together in one folder inside it, `cad/preliminary-design/releases/ID/` in the stock layout. The plan's `view` names the page from the repository root, in the plan's own folder, and the scene is written beside it:
 
 ```sh
-node scripts/design.mjs preliminary-check REPOSITORY cad/preliminary-design/releases/layout-002/layout.json --write-view --output cad/preliminary-design/releases/layout-002/receipt.json
+node scripts/design.mjs preliminary-check REPOSITORY cad/preliminary-design/releases/1.0/layout.json --write-view --output cad/preliminary-design/releases/1.0/receipt.json
 ```
 
-with `"view": "cad/preliminary-design/releases/layout-002/package-motion.html"` and every pin in the plan and its records written from the repository root. Save the receipt beside the page with `--output`, because the page reads `receipt.json` from its own folder. Held-receipt pins, evidence and field files then resolve from one root, and a file that a held receipt pins needs no copy into the package or `relocations` entry just to be found. Keep the held receipt passed with `--previous` in the release folder, where the [publication check](design-publication.md#which-designs-are-checked) looks for it.
+with `"view": "cad/preliminary-design/releases/1.0/package-motion.html"` and every pin in the plan and its records written from the repository root. Save the receipt beside the page with `--output`, because the page reads `receipt.json` from its own folder. Held-receipt pins, evidence and field files then resolve from one root, and a file that a held receipt pins needs no copy into the package or `relocations` entry just to be found. Keep the held receipt passed with `--previous` in the release folder, where the [publication check](design-publication.md#which-designs-are-checked) looks for it.
 
 Two paths are refused, each with the expected path in the message:
 

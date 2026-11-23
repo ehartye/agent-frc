@@ -62,7 +62,7 @@ Open `docs/preliminary-design/releases.json` and `docs/detailed-design/designs.j
 
 - Delete `effectiveHistory` and `legacy` from `releases.json`. Git history records every status a release has held.
 - Give every listed design a status under `designStatus`. A design the site no longer shows is `superseded` when a later design replaced it and `withdrawn` otherwise.
-- Mark each in-progress release that a later release replaced `superseded`, so the picker lists one entry per design. For a superseded release that was once effective, add the date it was accepted under `accepted`, as in `"accepted": {"layout-001": "DATE"}`, so it stays listed. From here on, [revise an in-progress release in place](design-publication.md#revise-an-in-progress-release-in-place) and do not take a new ID for an edit.
+- Mark each in-progress release that a later release replaced `superseded`, so the picker lists one entry per design. For a superseded release that was once effective, add the date it was accepted under `accepted`, as in `"accepted": {"layout-001": "DATE"}`, so it stays listed. From here on, [revise an in-progress release in place](design-publication.md#revise-an-in-progress-release-in-place) and do not take a new ID for an edit. New releases take a [version as their ID](design-publication.md#name-and-number-a-design); an existing ID keeps working, and can be [renamed to a version](#rename-a-release-to-a-version).
 - Give every withdrawn design a reason under `reason`. Add `lastCommit` when the commit that last held its files is known.
 - Delete each on-site archive of a withdrawn design, such as `docs/detailed-design/archive/`, and any archived copy of an earlier README kept only to satisfy a pin. Git keeps those files. Remove links to them.
 - Delete each published folder of a withdrawn design.
@@ -144,6 +144,52 @@ In the branch protection of the default branch, remove **Mechanical model eligib
 
 The reviewer's private signing key is no longer used. Remove it from the workstation that held it.
 
+## Rename a release to a version
+
+A release published before 0.127.0 has an ID such as `layout-004`. It keeps working, and nothing forces a rename. To give it a [version](design-publication.md#name-and-number-a-design), publish the same design under the new ID and then remove the old one. The rename is clean: no redirect is left, and a link to `?release=layout-004` reports an unknown release afterwards.
+
+Choose the version first. The design the project has accepted is `1.0`. A design that was never accepted is also `1.0`, still a draft. Earlier releases that were drafts of the same design take no number: remove them too, or leave them `superseded`.
+
+Do the rename in one pull request.
+
+1. **Rebuild the inputs in the new folder.**
+
+   ```sh
+   python cad/preliminary-design/stage.py --copy-inputs layout-004 1.0
+   ```
+
+   The command copies `cad/preliminary-design/releases/layout-004/` to `cad/preliminary-design/releases/1.0/`. The plan's `view` and every pin written from the repository root name the old folder, so it writes each of those pins with the new path and the digest of the copied file. It first verifies each pin against the old folder and refuses a stale one. The STEP keeps its bytes: its digest is what shows the design did not change. A held receipt keeps its bytes too. The page, scene and receipt are not copied, because they carry the old paths.
+2. **Check.** Run the layout check on the new folder, so the page, scene and receipt are written with the new paths. Do not edit a receipt by hand.
+
+   ```sh
+   node PLUGIN/scripts/design.mjs preliminary-check . cad/preliminary-design/releases/1.0/layout.json --write-view --require-checked --output cad/preliminary-design/releases/1.0/receipt.json
+   ```
+
+3. **Stage under the new ID** and name the architecture.
+
+   ```sh
+   python cad/preliminary-design/stage.py 1.0 --design-name "Tilting carriage"
+   ```
+
+4. **Carry the status.** When the old release is effective, mark the new one effective. The old one becomes superseded in the same edit.
+
+   ```sh
+   python cad/preliminary-design/stage.py --set-status 1.0 effective --readiness PLUGIN/scripts/effective-readiness.mjs
+   ```
+
+5. **Remove the old ID.**
+
+   ```sh
+   python cad/preliminary-design/stage.py --remove layout-004 --replaced-by 1.0
+   ```
+
+   The command deletes `docs/preliminary-design/releases/layout-004/` and `cad/preliminary-design/releases/layout-004/` and takes the ID out of every field of the index. For a release that is or was effective it requires `--replaced-by`, and it refuses unless that release is effective and its receipt names the same STEP digest. The new release then keeps the earlier accepted date. An in-progress release, or a superseded one that was never accepted, needs no `--replaced-by`.
+
+6. **Update what named the old ID.** Stage an in-progress detailed design again with `--preliminary 1.0`; the command names each one. Change links, the README still caption and any registered check that names the old folder.
+7. Run `node PLUGIN/scripts/design-publication.mjs check .`, commit and open the pull request.
+
+A changed design is not a rename. If the STEP differs, the old release stays in the index as superseded and the new design takes the next version.
+
 ## Withdraw a design in one pull request
 
 1. Branch from the default branch.
@@ -151,7 +197,7 @@ The reviewer's private signing key is no longer used. Remove it from the worksta
 
    ```sh
    node PLUGIN/scripts/detailed-design-release.mjs withdraw . --design detail-001 --reason "The lift changed to a two-stage carriage."
-   python cad/preliminary-design/stage.py --set-status layout-001 withdrawn --reason "The carrier moved to the other side."
+   python cad/preliminary-design/stage.py --set-status 2.0 withdrawn --reason "The carrier moved to the other side."
    ```
 
    For a model that was published before the design index existed, name its published files. The command removes them and lists the design:

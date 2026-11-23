@@ -1,4 +1,5 @@
-"""Publish a checked preliminary design release into the season site, set a release's design status, or remove a release.
+"""Publish a checked preliminary design release into the season site, set a release's design status, copy a release's
+inputs to a new release folder, or remove a release.
 
 A new release takes a version as its ID, MAJOR.MINOR. The major number is the architecture and carries its name, given
 once with --design-name. The minor number counts the effective baselines of that architecture. A draft is a publish
@@ -428,6 +429,78 @@ def step_digest(site, release):
         return None
 
 
+RECEIPT = "agent-frc/preliminary-layout-result@1"
+
+
+def copy_inputs(season, base, old, new):
+    """Copy a release's check inputs to a new release folder and write its pins for the new paths.
+
+    A record pins a file by path and SHA-256, and a release checked from the repository root names its own folder in
+    those paths. Each such pin is verified against the source, written with the new path and given the digest of the
+    copied file. The STEP and every other file that is not a pinning record keep their bytes. The review page, scene
+    and receipt are not copied: the layout check writes them for the new folder. A held receipt is copied unchanged."""
+    source, target = base / "releases" / checked_id(old), base / "releases" / checked_id(new)
+    if not (source / "layout.json").is_file():
+        raise ValueError("No layout plan at " + (source / "layout.json").relative_to(season).as_posix())
+    if target.exists():
+        raise ValueError(target.relative_to(season).as_posix() + " already exists. Choose a new release ID, or remove that folder first")
+    before, after = source.relative_to(season).as_posix() + "/", target.relative_to(season).as_posix() + "/"
+    digest = lambda file: hashlib.sha256(file.read_bytes()).hexdigest()
+    view = read(source / "layout.json").get("view")
+    left = {"receipt.json", SCENE, Path(view).name if isinstance(view, str) else SCENE, "__pycache__"}
+    done, rewritten = set(), []
+
+    def repin(name):
+        """Rewrite the pins in one copied record, after the records it pins."""
+        if name in done or not name.endswith(".json"):
+            return
+        done.add(name)
+        try:
+            data = json.loads((target / name).read_bytes())
+        except (OSError, ValueError):
+            return
+        if isinstance(data, dict) and data.get("schema") == RECEIPT:
+            return
+        was = json.dumps(data)
+
+        def walk(node):
+            if isinstance(node, dict):
+                file, pinned = node.get("file"), node.get("sha256")
+                if isinstance(file, str) and file.startswith(before):
+                    inner = file[len(before):]
+                    if isinstance(pinned, str) and (not (source / inner).is_file() or digest(source / inner) != pinned):
+                        raise ValueError(before + name + " pins " + file + ", which is missing or differs from its pinned SHA-256. Resolve it in release "
+                                         + old + " before copying")
+                    repin(inner)
+                    node["file"] = after + inner
+                    if isinstance(pinned, str) and (target / inner).is_file():
+                        node["sha256"] = digest(target / inner)
+                for value in node.values():
+                    walk(value)
+            elif isinstance(node, list):
+                for value in node:
+                    walk(value)
+
+        walk(data)
+        if isinstance(data, dict) and isinstance(data.get("view"), str) and data["view"].startswith(before):
+            data["view"] = after + data["view"][len(before):]
+        if json.dumps(data) != was:
+            (target / name).write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+            rewritten.append(name)
+
+    try:
+        shutil.copytree(source, target, ignore=lambda folder, names: [n for n in names if Path(folder) == source and n in left or n == "__pycache__"])
+        for file in sorted(target.rglob("*.json")):
+            repin(file.relative_to(target).as_posix())
+    except Exception:
+        shutil.rmtree(target, ignore_errors=True)
+        raise
+    plan = after + "layout.json"
+    print("Copied the inputs of release " + old + " to " + after.rstrip("/") + " and wrote " + str(len(rewritten)) + " pinning record"
+          + ("" if len(rewritten) == 1 else "s") + " for the new paths. The STEP is unchanged. Now run the layout check there, then stage " + new + ":\n"
+          "  node PLUGIN/scripts/design.mjs preliminary-check . " + plan + " --write-view --require-checked --output " + after + "receipt.json")
+
+
 def remove(season, base, release, replaced_by=None):
     """Take a release out of the index and delete its published folder and its inputs folder. No redirect is left.
 
@@ -488,6 +561,8 @@ if __name__ == "__main__":
     mode.add_argument("release", nargs="?")
     mode.add_argument("--set-status", nargs=2, metavar=("RELEASE", "STATUS"), help="Set a release " + ", ".join(STATUSES))
     mode.add_argument("--remove", metavar="RELEASE", help="Delete a release's folders and index entry after it was staged again under a new ID; no redirect is left")
+    mode.add_argument("--copy-inputs", nargs=2, metavar=("FROM", "TO"),
+                      help="Copy a release's check inputs to a new release folder with their pins written for the new paths, to start the next version or rename a release")
     parser.add_argument("--design-name", help="The architecture's name in words, given the first time a major number is staged, as in 1.0")
     parser.add_argument("--replaced-by", metavar="RELEASE", help="With --remove of a release that is or was effective: the effective release of the same STEP")
     parser.add_argument("--reason", help="Why the release is withdrawn, with --set-status RELEASE withdrawn")
@@ -507,6 +582,8 @@ if __name__ == "__main__":
                 release = args.set_status[0]
                 readiness_report(base / "releases" / release, args.readiness, base.parents[1],
                                  design=title_of(load_index(site), release) if version_of(release) else None)
+        elif args.copy_inputs:
+            copy_inputs(base.parents[1].resolve(), base, *args.copy_inputs)
         elif args.remove:
             remove(base.parents[1], base, args.remove, args.replaced_by)
         else:

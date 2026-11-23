@@ -175,3 +175,43 @@ test('an effective release is renamed once the same STEP is effective under its 
   assert.ok(!JSON.stringify(after).includes('layout-004'), 'the index keeps no trace of the old ID');
   assert.ok(!existsSync(path.join(s.site, 'releases', 'layout-004')) && !existsSync(path.join(s.author, 'releases', 'layout-004')));
 });
+
+test('the inputs of a release are copied to a new release folder with their pins written for the new paths', async t => {
+  const s = await season(t), sha = bytes => createHash('sha256').update(bytes).digest('hex');
+  // A release checked from the repository root: its records name their own folder in every pin.
+  const old = 'cad/preliminary-design/releases/layout-004/', dir = path.join(s.root, old);
+  await mkdir(path.join(dir, 'field'), {recursive: true});
+  const put = async (name, content) => { await writeFile(path.join(dir, name), content); return {file: old + name, sha256: sha(content)}; };
+  const step = await put('package.step', 'invented solid');
+  const motion = await put('paths.json', JSON.stringify({step, cases: []}));
+  const held = await put('held.json', JSON.stringify({schema: 'agent-frc/preliminary-layout-result@1', step}));
+  await put('field/lane.html', '<html>Invented lane</html>');
+  await put('layout.json', JSON.stringify({step, motion, view: old + 'viewer.html', outside: {file: 'README.md', sha256: 'f'.repeat(64)}}));
+  await put('missions.json', JSON.stringify({missionCases: [], trial: step}));
+  for (const name of ['viewer.html', 'review-scene.json.gz', 'receipt.json']) await put(name, 'written by the check for the old folder');
+
+  const copied = s.ok(s.stage('--copy-inputs', 'layout-004', '1.0'));
+  assert.match(copied, /Copied the inputs of release layout-004 to cad\/preliminary-design\/releases\/1\.0 and wrote 3 pinning records for the new paths\. The STEP is unchanged\./);
+  assert.match(copied, /preliminary-check \. cad\/preliminary-design\/releases\/1\.0\/layout\.json --write-view --require-checked --output cad\/preliminary-design\/releases\/1\.0\/receipt\.json/);
+  const fresh = 'cad/preliminary-design/releases/1.0/', at = name => path.join(s.root, fresh, name), json = async name => JSON.parse(await readFile(at(name), 'utf8'));
+  for (const name of ['viewer.html', 'review-scene.json.gz', 'receipt.json']) assert.ok(!existsSync(at(name)), name + ' is left for the layout check to write');
+  assert.equal(await readFile(at('package.step'), 'utf8'), 'invented solid');
+  assert.equal(await readFile(at('field/lane.html'), 'utf8'), '<html>Invented lane</html>');
+  assert.equal(sha(await readFile(at('held.json'))), held.sha256, 'a held receipt is evidence of an earlier check and keeps its bytes');
+  const plan = await json('layout.json'), paths = await json('paths.json');
+  assert.deepEqual(paths.step, {file: fresh + 'package.step', sha256: step.sha256});
+  assert.deepEqual(plan.step, paths.step);
+  assert.deepEqual(plan.motion, {file: fresh + 'paths.json', sha256: sha(await readFile(at('paths.json')))}, 'a rewritten record is pinned by its new digest');
+  assert.notEqual(plan.motion.sha256, motion.sha256);
+  assert.equal(plan.view, fresh + 'viewer.html');
+  assert.deepEqual(plan.outside, {file: 'README.md', sha256: 'f'.repeat(64)}, 'a pin outside the release folder is left as it is');
+  assert.deepEqual((await json('missions.json')).trial, paths.step);
+  assert.ok(existsSync(path.join(dir, 'receipt.json')), 'the source release is untouched');
+
+  // An existing folder is not overwritten, and a pin that was already stale is not given a fresh digest.
+  assert.match(s.stage('--copy-inputs', 'layout-004', '1.0').stderr, /cad\/preliminary-design\/releases\/1\.0 already exists/);
+  await writeFile(path.join(dir, 'package.step'), 'a changed solid');
+  assert.match(s.stage('--copy-inputs', 'layout-004', '2.0').stderr, /pins cad\/preliminary-design\/releases\/layout-004\/package\.step, which is missing or differs from its pinned SHA-256\. Resolve it in release layout-004 before copying/);
+  assert.ok(!existsSync(path.join(s.author, 'releases', '2.0')), 'a refused copy leaves no folder');
+  assert.match(s.stage('--copy-inputs', 'absent', '2.0').stderr, /No layout plan at cad\/preliminary-design\/releases\/absent\/layout\.json/);
+});

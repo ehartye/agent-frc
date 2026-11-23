@@ -35,7 +35,7 @@ The check reads these folders. Pass the option to use another.
 | Option | Default | Holds |
 | --- | --- | --- |
 | `--site` | `docs` | The published site |
-| `--preliminary` | `preliminary-design` | `releases.json` and `releases/ID/` inside the site |
+| `--preliminary` | `preliminary-design` | `releases.json` and `releases/ID/` inside the site. A release ID is a [version](#name-and-number-a-design), as in `releases/1.0/`. |
 | `--detailed` | `detailed-design` | `designs.json` and `designs/ID/` inside the site |
 | `--inputs` | `cad/preliminary-design/releases` | `ID/layout.json` and every file it pins, for each preliminary release |
 | `--detailed-inputs` | `cad/detailed-design/designs` | The same, for each detailed design |
@@ -57,43 +57,104 @@ Each phase keeps one index: `releases.json` for preliminary design and `designs.
 - At most one design per phase is `effective`. The commands below mark the earlier one `superseded` in the same edit.
 - The site opens the effective design, or the newest in-progress one when none is effective. The commands compute this, and the check fails an index that points elsewhere.
 
+## Name and number a design
+
+A preliminary design has a name, a version and a status. The name says which architecture it is. The version says which accepted baseline of that architecture it is. The status says whether the project has accepted it, and stays separate from the number.
+
+| Part | Meaning | Changes when |
+| --- | --- | --- |
+| Design name | The architecture, in words: a short name people can say | Never, for that architecture |
+| Major | Which architecture generation the robot is on | The team starts over or selects a different architecture |
+| Minor | Which effective baseline of that architecture | A revision is accepted as effective |
+| Draft | Work in progress toward the next baseline | Every in-place publish; it is not part of the version |
+
+The release ID is the version, `MAJOR.MINOR`. A design reads "Tilting carriage 1.0 · effective". Work toward the next baseline reads "Tilting carriage 1.1 · draft 3 · in progress". The folders are `cad/preliminary-design/releases/1.0/` and `docs/preliminary-design/releases/1.0/`.
+
+**Drafts do not consume numbers. A new number is only for a new effective baseline or a new architecture.**
+
+Three examples follow one invented design.
+
+1. **First effective design.** The team stages `1.0` and names it "Tilting carriage". Each publish while it is in progress is a draft of 1.0: draft 1, draft 2, draft 3. The pull request that marks it effective makes it "Tilting carriage 1.0 · effective". Everything before that was "1.0 draft N".
+2. **Accepted revision.** The carriage needs a longer stroke. The team stages `1.1`, which reads "Tilting carriage 1.1 · draft 1 · in progress" while 1.0 stays effective. When 1.1 is marked effective, 1.0 becomes superseded automatically.
+3. **Start-over.** The team drops the carriage for an arm. The different architecture is `2.0` with its own name, and starts at "Swinging arm 2.0 · draft 1 · in progress".
+
+```sh
+python cad/preliminary-design/stage.py 1.0 --design-name "Tilting carriage"
+python cad/preliminary-design/stage.py 1.0
+python cad/preliminary-design/stage.py --set-status 1.0 effective --readiness PLUGIN/scripts/effective-readiness.mjs
+python cad/preliminary-design/stage.py 1.1
+python cad/preliminary-design/stage.py --set-status 1.1 effective --readiness PLUGIN/scripts/effective-readiness.mjs
+python cad/preliminary-design/stage.py 2.0 --design-name "Swinging arm"
+```
+
+Start the next version from the inputs of the last one with `python cad/preliminary-design/stage.py --copy-inputs 1.0 1.1`. It copies the release folder, writes each pin that names the folder with the new path and digest, and leaves the page, scene and receipt for the layout check to write. Edit the design there, run the check and stage `1.1`.
+
+Give `--design-name` the first time a major number is staged. Staging refuses a new major number without it and does not ask again. The index holds the name once for each major number, under `designs`:
+
+```json
+{
+  "releases": ["1.0", "1.1"],
+  "designs": {"1": {"name": "Tilting carriage"}},
+  "designStatus": {"1.0": "effective", "1.1": "in-progress"},
+  "accepted": {"1.0": "DATE"},
+  "revision": {"1.0": {"number": 3, "date": "DATE", "commit": "COMMIT"}, "1.1": {"number": 1, "date": "DATE", "commit": "COMMIT"}},
+  "current": "1.0"
+}
+```
+
+`revision` holds the draft count of each release: its `number` is the "draft N" shown while the release is in progress. An effective release shows no draft number. The index page shows the date it was accepted and the commit it was staged from.
+
+Staging guides the order of versions. It refuses only what the index cannot hold.
+
+| Staged | Result |
+| --- | --- |
+| The version after effective `M.N` | `M.(N+1)` for the same architecture, or the next major number at `.0` for a different one. `--set-status ID effective` prints both. |
+| A second in-progress version of one architecture | Refused. Revise the existing draft in place. |
+| A version behind one already listed for its architecture | Refused. |
+| A different name for a major number that has one | Refused. Correct a spelling by editing `designs` in the index, in a pull request. |
+| A skipped number, or a first version that is not `.0` | Staged, with a note that names the expected version. |
+
+The index page lists the effective design and each in-progress version first, then earlier baselines and withdrawn designs under "Earlier". Title the README still, its caption and any link to the review with the name and version, as in "Tilting carriage 1.0, preliminary design". Leave the draft number out of file names and titles, so a new draft replaces the still without a rename.
+
+An ID issued before versions, such as `layout-002`, keeps working in staging, in-place revision, status changes and the check. It has no name and reads as its ID. [Rename a release to a version](design-publication-migration.md#rename-a-release-to-a-version)
+
 ## Publish a preliminary design release
 
 Keep the release's checked inputs in the repository at `cad/preliminary-design/releases/ID/`: the layout, its STEP and motion study, the budgets and limits, the review page and scene written by `--write-view` (or rebuilt by [`--view-only`](preliminary-design.md#rebuild-the-review-without-rerunning-the-cases) after a presentation edit), the `layout-checked` `receipt.json` and a `missions.json` that names at least one mission case. The project's `cad/preliminary-design/stage.py` is its copy of the plugin's [staging script](../templates/stage-preliminary-review.py).
 
 ```sh
-python cad/preliminary-design/stage.py layout-002
+python cad/preliminary-design/stage.py 1.0 --design-name "Tilting carriage"
 node PLUGIN/scripts/design-publication.mjs check . --skip-rerun
 ```
 
-Staging copies the review page as it is, the scene, receipt, motion, budget and limit files, each field player the scene links and each trial a mission case names into `docs/preliminary-design/releases/ID/`. It writes the release record and lists the release as `in-progress`.
+Staging copies the review page as it is, the scene, receipt, motion, budget and limit files, each field player the scene links and each trial a mission case names into `docs/preliminary-design/releases/ID/`. It writes the release record and lists the release as `in-progress`, at draft 1. The ID is the [version](#name-and-number-a-design), and the name is given once.
 
 ### Revise an in-progress release in place
 
-One design keeps one release ID. An edit to the same design is a revision of its release, not a new release:
+One version keeps one release ID. An edit to an in-progress version is a draft of it, not a new release:
 
 ```sh
-node PLUGIN/scripts/design.mjs preliminary-check . cad/preliminary-design/releases/layout-002/layout.json --write-view --output cad/preliminary-design/releases/layout-002/receipt.json
-python cad/preliminary-design/stage.py layout-002
+node PLUGIN/scripts/design.mjs preliminary-check . cad/preliminary-design/releases/1.1/layout.json --write-view --output cad/preliminary-design/releases/1.1/receipt.json
+python cad/preliminary-design/stage.py 1.1
 ```
 
-Edit the inputs in the release's own folder, rerun the check there and stage the same ID. Staging replaces the published page, scene, receipt and evidence, and counts the revision in the index: `"revision": {"layout-002": {"number": 4, "date": "DATE", "commit": "COMMIT"}}`, where the commit is the one the checkout was at. The picker and the review page show it as "revision 4". The picker gains no entry, and the publication check reruns the layout check on the revised inputs. Staging unchanged files counts nothing. Push each revision to publish an in-progress design as it develops; Git keeps the earlier bytes.
+Edit the inputs in the release's own folder, rerun the check there and stage the same ID. Staging replaces the published page, scene, receipt and evidence, and counts the draft in the index: `"revision": {"1.1": {"number": 4, "date": "DATE", "commit": "COMMIT"}}`, where the commit is the one the checkout was at. The picker and the review page show it as "draft 4". The picker gains no entry, and the publication check reruns the layout check on the revised inputs. Staging unchanged files counts nothing. Push each draft to publish an in-progress design as it develops; Git keeps the earlier bytes.
 
 | Situation | What to do |
 | --- | --- |
-| An edit, fix or refinement of an in-progress design | Stage the same release ID again. |
-| A different design: another architecture or concept | A new release ID. |
-| The design that follows an effective release | A new release ID. |
+| An edit, fix or refinement of an in-progress design | Stage the same version again. It becomes the next draft. |
+| A change to an effective design | The next minor version, such as `1.1` after `1.0`. |
+| A different architecture or concept | The next major version, such as `2.0`, with its own name. |
 
 A release stops changing when it is marked `effective`, and stays unchanged as `superseded` or `withdrawn`: staging its ID is refused. When a new release replaces an in-progress one that was never accepted, mark the old one `superseded` with `python cad/preliminary-design/stage.py --set-status OLD-ID superseded`. It keeps its record in the index and opens from a link that names it, and the picker lists it no longer. The picker lists a superseded release only when the index holds the date it was accepted, under `accepted`, which `--set-status ID effective` records.
 
 ```json
 {
   "schema": "agent-frc/preliminary-release@1",
-  "release": "layout-002",
-  "issue": "synthetic-package-layout-002",
+  "release": "1.0",
+  "issue": "synthetic-package-1.0",
   "phase": "preliminary-design",
-  "check": {"project": "cad/preliminary-design/releases/layout-002", "plan": "layout.json"},
+  "check": {"project": "cad/preliminary-design/releases/1.0", "plan": "layout.json"},
   "missionCases": [
     {"case": "release", "kind": "operating-case", "accomplishes": "delivered", "objective": "Acquire, turn and release"}
   ],
@@ -108,16 +169,18 @@ A mission case names a passing operating case, what it accomplishes (`acquired`,
 Change a status in the same way, in a pull request:
 
 ```sh
-python cad/preliminary-design/stage.py --set-status layout-002 effective --readiness PLUGIN/scripts/effective-readiness.mjs
-python cad/preliminary-design/stage.py --set-status layout-001 withdrawn --reason "The carrier moved to the other side."
+python cad/preliminary-design/stage.py --set-status 1.0 effective --readiness PLUGIN/scripts/effective-readiness.mjs
+python cad/preliminary-design/stage.py --set-status 2.0 withdrawn --reason "The carrier moved to the other side."
 ```
+
+`--copy-inputs FROM TO` copies a release's inputs to a new release folder with their pins written for the new paths. `--remove ID` deletes a release's two folders and its index entry, and leaves no redirect. It is the last step of [renaming a release to a version](design-publication-migration.md#rename-a-release-to-a-version). It refuses a release that is or was effective unless `--replaced-by NEW` names the effective release checked on the same STEP.
 
 ## Publish a detailed design
 
 Export the STEP from the registered Fusion design. Run the [layout check](preliminary-design.md) on a layout that names that STEP and repeats the motion cases, cycle and displaced control of the effective preliminary release. Keep the inputs, receipt and `missions.json` in the repository at `cad/detailed-design/designs/ID/`.
 
 ```sh
-node PLUGIN/scripts/detailed-design-release.mjs stage . --design detail-003 --inputs cad/detailed-design/designs/detail-003 --preliminary layout-002 --authority cad/fusion-authority.json --lineage cad/lineage.json
+node PLUGIN/scripts/detailed-design-release.mjs stage . --design detail-003 --inputs cad/detailed-design/designs/detail-003 --preliminary 1.0 --authority cad/fusion-authority.json --lineage cad/lineage.json
 node PLUGIN/scripts/detailed-design-release.mjs effective . --design detail-003 --readiness cad/detailed-design/readiness-result.json
 node PLUGIN/scripts/detailed-design-release.mjs withdraw . --design draft-001 --reason "Rough draft published before the design-status process."
 node PLUGIN/scripts/detailed-design-release.mjs refresh .
@@ -142,7 +205,7 @@ Each command only edits files. The pull request and the check decide whether the
   "designStatus": {"draft-001": "withdrawn", "detail-002": "effective", "detail-003": "in-progress"},
   "reason": {"draft-001": "Rough draft published before the design-status process."},
   "lastCommit": {"draft-001": "<commit that last held its published files>"},
-  "preliminary": {"detail-003": "layout-002"}
+  "preliminary": {"detail-003": "1.0"}
 }
 ```
 
@@ -154,7 +217,7 @@ When the preliminary release that an in-progress detailed design names is supers
 
 A design becomes effective when a reviewed pull request changes its status in the index. No signature is involved. The reviewer accepts the design by merging the pull request, and the check prints the evidence in the log and in the run summary.
 
-- **Preliminary.** The check prints the [effective-readiness report](preliminary-design.md#judge-readiness-to-be-marked-effective) for the release's inputs. The report is informational: the check does not fail on it.
+- **Preliminary.** The check prints the [effective-readiness report](preliminary-design.md#judge-readiness-to-be-marked-effective) for the release's inputs, titled with the design name and version. The report is informational: the check does not fail on it.
 - **Detailed.** The design carries the result of the [mechanical-readiness review](mechanical-readiness.md) as `designs/ID/readiness.json`. Save the output of `mechanical_readiness.py review` and pass it to `effective`. It must be a review of the STEP the design record names, and it must report a showcase eligibility of `pass`. A review with any other verdict fails the check, so the design stays in progress until the findings are resolved. The check prints the build readiness, the showcase eligibility and each finding that does not pass.
 
 ### A change to an effective design
@@ -168,7 +231,7 @@ The pull request that makes a design effective raises no warning for that design
 Withdrawing is one pull request. Run the command with the reason, update the entry page, README and selector for the new primary view, and open the pull request.
 
 ```sh
-python cad/preliminary-design/stage.py --set-status layout-001 withdrawn --reason "The carrier moved to the other side."
+python cad/preliminary-design/stage.py --set-status 2.0 withdrawn --reason "The carrier moved to the other side."
 node PLUGIN/scripts/detailed-design-release.mjs withdraw . --design draft-001 --reason "Rough draft published before the design-status process."
 ```
 
