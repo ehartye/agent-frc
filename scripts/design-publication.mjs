@@ -38,6 +38,7 @@ import {compareWithReceipt, readScene} from './review-scene.mjs';
 import {contentSha, identityDifferences, physicsIdentity, receiptIdentity} from './physics-identity.mjs';
 import {scanTree} from '../templates/project-ci/scan.mjs';
 import {unlinkedAdvice} from './published-content.mjs';
+import {checkFor, planFile} from './layout-format.mjs';
 import {benchFile, effectiveProblems, handedOver, summary as benchSummary, summaryText as benchText} from './bench-tests.mjs';
 
 const receiptSchema = 'agent-frc/preliminary-layout-result@1';
@@ -175,8 +176,9 @@ function inside(root, name, what) {
 
 /** Run the plugin's layout check on committed inputs, physics only, and return its receipt. `jobs` sets its worker processes. */
 export function runLayoutCheck({project, plan, previous, budgetMinutes = 45, jobs, python = process.env.PYTHON ?? (process.platform === 'win32' ? 'python' : 'python3')}) {
-  const script = fileURLToPath(new URL('./preliminary_design.py', import.meta.url));
-  const args = ['-B', script, project, plan, '--physics-only', '--fail-fast', ...(previous ? ['--previous', previous] : []),
+  // A design checked on the design library is measured whole: its check has no early stop and holds no earlier receipt.
+  const {script, library} = checkFor(path.resolve(project, plan));
+  const args = ['-B', script, project, plan, '--physics-only', ...(library ? [] : ['--fail-fast']), ...(previous && !library ? ['--previous', previous] : []),
     ...(jobs === undefined ? [] : ['--jobs', String(jobs)])];
   const run = spawnSync(python, args, {stdio: ['ignore', 'pipe', 'inherit'], maxBuffer: 1024 * 1024 * 1024, timeout: budgetMinutes * 60000});
   if (run.error?.code === 'ETIMEDOUT') throw Error('the layout check exceeded its ' + budgetMinutes + ' minute budget');
@@ -260,7 +262,7 @@ export function checkProject(root, options = {}) {
   };
   // The physics identity of a design from its receipt, record and inputs folder, read through `read` by project-relative path.
   const identityOf = ({receipt, record, inputs, read}) => {
-    const planName = record?.check?.plan ?? 'layout.json', recorded = [receipt?.view?.file, receipt?.step?.file].find(named);
+    const planName = record?.check?.plan ?? planFile, recorded = [receipt?.view?.file, receipt?.step?.file].find(named);
     // A plan checked from the project root writes its paths from there; one checked in its own folder writes bare names.
     const fromRoot = !!inputs && named(recorded) && recorded.startsWith(inputs + '/'), within = name => inputs ? inputs + '/' + name : name;
     return physicsIdentity({receipt, plan: fromRoot ? within(planName) : planName, folder: fromRoot ? inputs : '', read: fromRoot ? read : name => read(within(name)), extra: ['missions.json']});
@@ -436,7 +438,7 @@ export function checkProject(root, options = {}) {
       else { becoming = true; said = 'becoming effective. Its stage gate record matches the committed receipt.'; }
     }
     if (!receipt) return note(said);
-    const planName = record.check?.plan ?? 'layout.json';
+    const planName = record.check?.plan ?? planFile;
     if (!existsSync(path.join(project, planName))) {
       check(!item.required, where + ': commit its check inputs at ' + rel(project) + ' (' + planName + ' and every file it names). The stage gate runs on them');
       warnings.push(where + ': its inputs are not committed at ' + rel(project) + ', so its receipt was not compared with them');

@@ -30,6 +30,22 @@ node scripts/resolve-plugin-runtime.mjs pinned PATH_TO_REVIEWED_CHECKOUT FULL_CO
 
 Compare the recorded input hashes and toolchain versions separately. For a self-contained historical archive, use the project's archive verification and registered digest. Keep local paths in the private run record.
 
+## Check the design library
+
+The layout check of a preliminary design builds and measures with the design library, `frc-design-kernel`. Check it in the geometry Python environment:
+
+```sh
+node scripts/check-environment.mjs --task preliminary-design --python PYTHON_EXECUTABLE
+```
+
+The report lists the CAD kernel and the library, each with its version; the library also shows the commit it was installed at. Both are required for this task. When the library is missing, `nextSteps` gives the command that installs or updates it:
+
+```sh
+pip install --upgrade git+https://github.com/ehartye/frc-design-kernel
+```
+
+The library has no pinned version: its main branch is the release, and what runs on a machine is whatever was last installed there. Run the command again to update, with the owner's agreement, as for any change to an environment. While the library is in its settling period an update can change a format; its message then says what to fix in the design source. The check installs nothing itself. A receipt records the library's version and commit as information only.
+
 ## Check the selected toolchain
 
 For a project that uses VTK to render native CAD, read the exact versions from its lockfile and check them together in the rendering interpreter:
@@ -54,7 +70,7 @@ The Java profile runs only `bin/java -version` and `bin/javac -version` (`.exe` 
 
 Readiness covers the selected runtime/compiler major only. It does not verify a complete project toolchain, equal patch versions, a specific vendor, executable authenticity, Gradle cache completeness, WPILib/native dependencies or compilation. Only probe trusted executables. Follow the project's existing offline build command as a separate step and keep its fresh output distinct from this preflight. Windows and POSIX path construction has fixture coverage; actual platform execution must be recorded separately.
 
-Use npm run setup:check -- --task core for Node-only artifact/trace tools. No Python process is launched for core. Use --task physics --python PATH_OR_COMMAND for MuJoCo/NumPy imports, with Matplotlib optional. Use --task native-cad for the optional headless OCP workflow (cadquery-ocp distribution/OCP import); this does not test Fusion or replace a native Fusion deliverable. These are explicit profiles, not universal project requirements.
+Use `--task preliminary-design` for the layout check on the design library. Use npm run setup:check -- --task core for Node-only artifact/trace tools. No Python process is launched for core. Use --task physics --python PATH_OR_COMMAND for MuJoCo/NumPy imports, with Matplotlib optional. Use --task native-cad for the optional headless OCP workflow (cadquery-ocp distribution/OCP import); this does not test Fusion or replace a native Fusion deliverable. These are explicit profiles, not universal project requirements.
 
 Supply the project's actual Python executable, including its virtual-environment executable when applicable. The default command python means whichever that command resolves to here, not a claim it is the intended project environment. Output records sys.executable, Python version, prefix/basePrefix and virtual-environment status plus each selected installed distribution version, import health and module location. Imports execute installed package initialization; no installer, network call or hardware operation is requested by the probe. Only use trusted project environments. Each Python probe is bounded by a 20-second timeout and 1 MiB output limit.
 

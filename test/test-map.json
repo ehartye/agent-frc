@@ -39,6 +39,7 @@
       "frame-profile.test.mjs",
       "fusion-volume.test.mjs",
       "java-health.test.mjs",
+      "kernel-layout-size.test.mjs",
       "kickoff.test.mjs",
       "lift-path-faults.test.mjs",
       "loaded-route.test.mjs",
@@ -101,6 +102,7 @@
       "cad-appearance-render.test.mjs",
       "design-publication.test.mjs",
       "detailed-design-release.test.mjs",
+      "kernel-layout.test.mjs",
       "mechanical-readiness.test.mjs",
       "review-view.test.mjs"
     ]
@@ -116,6 +118,8 @@
     "design-publication.test.mjs": ["scripts/stage-gate.mjs", "scripts/stage_preliminary_review.py", "examples/preliminary-design/**"],
     "design-versions.test.mjs": ["scripts/stage_preliminary_review.py", "scripts/stage-gate.mjs"],
     "preliminary-release.test.mjs": ["scripts/stage_preliminary_review.py", "scripts/stage-gate.mjs"],
+    "kernel-layout.test.mjs": ["scripts/kernel_layout/**", "scripts/layout_check.py", "scripts/layout-format.mjs", "examples/design-source/**"],
+    "kernel-layout-size.test.mjs": ["scripts/kernel_layout/**", "scripts/layout_check.py", "scripts/layout-format.mjs", "examples/design-source/**"],
     "project-ci.test.mjs": ["templates/**", "examples/sample-project/**", "scripts/project-ci-audit.mjs"],
     "test-map.test.mjs": ["test/durations.json"]
   }

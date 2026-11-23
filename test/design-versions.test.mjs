@@ -224,7 +224,7 @@ test('the inputs of a release are copied to a new release folder with their pins
   await writeFile(path.join(dir, 'package.step'), 'a changed solid');
   assert.match(s.stage('--copy-inputs', 'layout-004', '2.0').stderr, /pins cad\/preliminary-design\/releases\/layout-004\/package\.step, which is missing or differs from its pinned SHA-256\. Resolve it in release layout-004 before copying/);
   assert.ok(!existsSync(path.join(s.author, 'releases', '2.0')), 'a refused copy leaves no folder');
-  assert.match(s.stage('--copy-inputs', 'absent', '2.0').stderr, /No layout plan at cad\/preliminary-design\/releases\/absent\/layout\.json/);
+  assert.match(s.stage('--copy-inputs', 'absent', '2.0').stderr, /No judgement file or layout plan at cad\/preliminary-design\/releases\/absent/);
 });
 
 test('the view of an effective release is republished while its receipt records the same physics', async t => {

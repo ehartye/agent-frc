@@ -4,10 +4,13 @@ Run every command from the repository root. `PLUGIN` stands for the installed pl
 
 `PLUGIN` must not change during a run. Point it at an installed copy of the plugin, or at a worktree of your own. A shared checkout that another session updates mid-run spoils the result. Record the revision with each result. The project holds no plugin file: every plugin command here is one you run, from the project root.
 
+The commands that build and measure need the design library, `frc-design-kernel`, in the geometry Python environment. Check it with `node PLUGIN/scripts/check-environment.mjs --task preliminary-design --python PYTHON`. The report names the installed version and commit, or the command that installs it. [Environment check](../../../docs/setup-health.md#check-the-design-library)
+
 ## Contents
 
 - [Start a design](#start-a-design)
-- [Build the inputs](#build-the-inputs)
+- [Write the inputs](#write-the-inputs)
+- [Generate the solids](#generate-the-solids)
 - [Run the check](#run-the-check)
 - [Look at it locally](#look-at-it-locally)
 - [Publish a draft](#publish-a-draft)
@@ -21,57 +24,65 @@ Run every command from the repository root. `PLUGIN` stands for the installed pl
 ## Start a design
 
 ```sh
-python PLUGIN/examples/preliminary-design/create.py . --project-review --release 1.0 --design-name "Tilting carriage"
+python PLUGIN/examples/design-source/create.py . --project-review --release 1.0 --design-name "Tilting carriage"
 ```
 
-Run the starter once per project, with the plugin's geometry Python environment. It writes the design folder, the published index page and the project's own CI.py`), index page, fonts and CI workflow. It also writes a synthetic example design under `cad/preliminary-design/releases/1.0/`. Replace that example's inputs with the project's own.
+Run the starter once per project, with the geometry Python environment. It writes the published index page, the fonts and the project's own CI, and an invented example design under `cad/preliminary-design/releases/1.0/`. It then generates the example's solids, checks it and stages it. Replace the example's design source, judgement file and records with the project's own.
 
 For a project with `iterations/active.json`, work in its active design root. [Design iterations](../../../docs/design-iterations.md)
 
-## Build the inputs
+## Write the inputs
 
-A design's folder, `cad/preliminary-design/releases/1.0/`, holds everything the check reads:
+A design's folder, `cad/preliminary-design/releases/1.0/`, holds everything the check reads. You write these files as data. No program builds them.
 
-| File | Holds |
-| --- | --- |
-| `design.json` | The editable design, its datum and units |
-| `package.step` | The layout: one named solid per functional volume, in millimetres |
-| `layout.json` | The plan: groups, mounts, cases, premises, the narrative list and `presentation` text |
-| `paths.json` | The motion study: each case's moves, fixtures and allowances |
-| `budgets.json`, `package-limits.json` | Mass and current estimates by subsystem, and what they are compared with |
-| `narrative.md` | The strategic narrative the design answers |
-| `missions.json` | Mission cases, the cycle map and the risk list |
+| File | Holds | Read by |
+| --- | --- | --- |
+| `design.json` | The design source: parameters, solids, groups, fixtures, mounts, contacts, poses and motions | The design library |
+| `judgement.json` | The judgement file: a stage for each motion, the cycle, the displaced control, attachment labels, premises, the narrative list and `presentation` text | The plugin |
+| `budgets.json`, `limits.json` | Mass and current estimates by subsystem, and what they are compared with | The plugin |
+| `missions.json` | Mission cases, the cycle map and the risk list | The plugin |
+| `narrative.md` | The strategic narrative the design answers | The plugin |
+| `generated/` | `design.step`, `fixtures.step` and `manifest.json`, written by the library. Never edited | Both |
 
-Generate these with one project builder script, not by hand. Model it on the starter: it runs the check itself and stops on a non-zero exit code. Give the builder named steps and make each one fail loudly.
+Keep the split: geometry and motion go in the design source, and every reason, allowance and label goes in the judgement file. The check refuses a judgement file that carries groups, mounts, poses or motions. [What goes where](../../../docs/preliminary-design.md#the-design-source-and-the-judgement-file)
 
-Name every file by its path from the repository root, as `{"file": "..."}`, and type no hash. The check reads each file and records its digest in the receipt. A typed `sha256` is optional; when one is present and stale the check stops with `Changed evidence: FILE`, so delete it or have the builder rewrite it. [Plan and case format](../../../docs/preliminary-design.md#write-the-plan)
+Name every file by its path from the repository root, as `{"file": "..."}`, and type no hash. The check reads each file and records its digest in the receipt.
+
+## Generate the solids
+
+```sh
+python -m frc_design_kernel validate cad/preliminary-design/releases/1.0/design.json
+python -m frc_design_kernel build cad/preliminary-design/releases/1.0/design.json --out cad/preliminary-design/releases/1.0/generated
+```
+
+`validate` checks the source without building it and names the entry that is wrong. `build` writes the STEP files and the manifest. Run `build` again after every edit to the design source: the layout check stops when the manifest is of an earlier source. Commit the generated folder with the source.
 
 ## Run the check
 
 ```sh
-node PLUGIN/scripts/design.mjs preliminary-check . cad/preliminary-design/releases/1.0/layout.json --write-view --output cad/preliminary-design/releases/1.0/receipt.json
+node PLUGIN/scripts/design.mjs preliminary-check . cad/preliminary-design/releases/1.0/judgement.json --write-view --output cad/preliminary-design/releases/1.0/receipt.json
 ```
 
 | While you are | Add | Effect |
 | --- | --- | --- |
-| Fixing a failing layout | `--fail-fast` | Stops at the first case that does not pass. The receipt is partial |
+| Changing one or two motions | `--cases A,B` | Measures only those stages. The receipt is partial |
 | Changing geometry or motion only | `--physics-only` | Checks every case and the budgets. Writes no review page |
-| Changing names, colours, explanations or grouping | `--view-only` in place of `--write-view` | Rebuilds the review page from the saved receipt in seconds. Reruns no case |
-| Running after a project builder | `--built-from PATH` | Warns when the plan is older than the builder's source file or folder. Repeat it for each source. Changes no result |
-| Sharing the machine | `--jobs N` | Sets the worker count. Use half the cores |
+| Changing names, colours, explanations or grouping | `--view-only` in place of `--write-view` | Rebuilds the review page from the saved receipt in seconds. Measures no case again |
+| Sharing the machine | `--workers N` | Sets the worker count. Use half the cores |
 | Publishing | `--write-view --output ...` | The full check. Only this receipt can be published |
 
 Read these lines on stderr:
 
-- `[plan]` comes first: the plan's path, when it was last written and its digest. A `[plan] warning` says the plan is older than a `--built-from` source: check the builder's exit code and rebuild before relying on the result. [Confirm the check read a fresh plan](../../../docs/preliminary-design.md#confirm-the-check-read-a-fresh-plan)
+- `[inputs]` comes first: the judgement file and its digest.
 - `[scope]` gives the solid count and the finest path tolerance beside the guidelines.
-- `[mounts] note` names members with no registered mount.
-- `[attachment]` lists each robot solid with no path to the frame and each field fixture off the floor. Clear every row: move the solid onto its support, draw the support, register its mount, or label it under `attachment.unmounted` in the plan with its reason. [Nothing floats](../../../docs/preliminary-design.md#nothing-floats)
-- `[motion]` gives each case's status and seconds as it finishes. Use those seconds to estimate the next run. `[budgets]` gives mass and voltage.
+- `[motion]` gives each case's status, how many pairs were measured and the closest pair.
+- `[control]` says whether the displaced control was rejected, as it must be.
+- `[attachment]` lists each robot solid with no path to the frame and each field fixture off the floor. Clear every row: move the solid onto its support, draw the support, add its mount in the design source, or label it under `attachment.unmounted` in the judgement file with its reason. [Nothing floats](../../../docs/preliminary-design.md#nothing-floats)
+- `[budgets]` gives mass and voltage.
+- `[result]` gives the status and the first unmet requirement.
+- `[time]` says what ran, what did not run and how long it took against the guidelines: about 1 minute while editing, 5 before merging, 15 at a stage gate.
 
-The check has no flag for one case. To refine one phase, change that case's entry and rerun with `--physics-only`. Every case runs again, so keep the case count small.
-
-The receipt's `status` is `layout-checked`, `provisional`, `blocked` or `reopen`. `missingInputs` and `decision.firstUnmet` say why. [Flags and output in full](../../../docs/preliminary-design.md#run-the-check)
+The receipt's `status` is `layout-checked`, `provisional`, `blocked` or `reopen`. `missingInputs` and `decision.firstUnmet` say why. Its `library` field records the design library's version and commit, as information. [Flags and output in full](../../../docs/preliminary-design.md#run-the-check)
 
 ## Look at it locally
 
@@ -92,13 +103,13 @@ node PLUGIN/scripts/design-publication.mjs check .
 
 Commit, push the branch and open a pull request. The push runs the project's own CI: the path and secret scan and the site check. No design check runs there; the layout check and the publication check you just ran are the checks of a draft. The site deploys from the default branch, so the draft is published when the pull request merges. Then open the published URL, `/<repository>/preliminary-design/` on the project's Pages site, and play each motion.
 
-After any later edit, rerun the check in the same folder and run the staging command for `1.0` again. That publishes the next draft of the same version. [Versions, drafts and statuses](../../../docs/design-publication.md#name-and-number-a-design)
+After any later edit, regenerate the solids when the design source changed, rerun the check in the same folder and run the staging command for `1.0` again. That publishes the next draft of the same version. [Versions, drafts and statuses](../../../docs/design-publication.md#name-and-number-a-design)
 
 ## Add trials and replays
 
-The plugin reads trial records. It does not run trials: the project owns its trial runner. For each trial that decides an interaction:
+The plugin reads trial records. Trials written as data and run by the design library are coming; until then a project keeps the records of the trials it has run. For each trial that decides an interaction:
 
-1. Name the trial file on the case's stage under `transportedBy`, `freePath` or `supportedBy`, whichever moved the piece.
+1. Name the trial file on the stage in the judgement file under `transportedBy`, `freePath` or `supportedBy`, whichever moved the piece.
 2. Write its `qualification`: the result, a control, brackets and the timestep repeat.
 3. Convert the recorded run to a replay set and name it under `presentation.replays`. Rebuild the review page with `--view-only`. If it refuses, it names the input that changed: run the full check.
 
@@ -118,7 +129,7 @@ Write `HANDOFF.md` in the design's folder before proposing effective. It tells d
 
 | Section | Contents |
 | --- | --- |
-| Design | Name, version, the STEP file and how its solids are named |
+| Design | Name, version, the design source, the generated STEP and how its solids are named |
 | Frame and datums | Origin, forward direction, floor height; each pivot axis, travel and mounting face, with coordinates |
 | Envelopes | Frame perimeter, bumpers, parked height, greatest reach |
 | Interfaces and allowances | Each fit tighter than about 10 mm, each intended contact or squeeze with its allowance, each connection still carrying an unmounted-allowance label |
@@ -129,7 +140,7 @@ Write `HANDOFF.md` in the design's folder before proposing effective. It tells d
 | Trials and replays | Which interactions were tried on blockout geometry and must be repeated on real parts |
 | First work items | A short list for detailed design, riskiest first |
 
-Take each figure from the plan, the receipt, `missions.json` or a trial record, and name the file. Do not retype a number that a file already holds without saying which file.
+Take each figure from the design source, the judgement file, the receipt, `missions.json` or a trial record, and name the file. Do not retype a number that a file already holds without saying which file.
 
 ## Mark the design effective
 
@@ -157,5 +168,6 @@ python PLUGIN/scripts/stage_preliminary_review.py --copy-inputs 1.0 1.1
 - Keep committed paths short. A deep folder plus a long file name passes the Windows path length and fails a clone.
 - Write no drive letter or home folder into a script, a plan or a record.
 - The project's CI runs on Linux and runs only the project's own scan and site check. Run `node PLUGIN/scripts/design-publication.mjs check .` before every push.
+- A project may depend on the design library. Whether its own CI regenerates the solids is the project's choice; the reference CI does not.
 - After a plugin update, the check keeps a review page that already exists. Delete `package-motion.html` in the design's folder and run the check with `--view-only` to take the new stock page.
 - Write browser-check captures to a scratch folder outside the checkout.

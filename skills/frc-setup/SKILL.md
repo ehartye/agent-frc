@@ -20,6 +20,8 @@ In Claude Code, when this plugin skill opens, run the command below. Claude Code
 node "${CLAUDE_PLUGIN_ROOT}/scripts/resolve-plugin-runtime.mjs" claude
 ```
 
+For preliminary design, check the CAD kernel and the design library, `frc-design-kernel`, with `setup:check -- --task preliminary-design --python PYTHON_EXECUTABLE`. The library is unpinned: its main branch is the release. Report the installed version and commit. When it is missing or an update is wanted, give the install command the report prints and run it only with the owner's agreement. [Check the design library](../../docs/setup-health.md#check-the-design-library)
+
 For CAD rendering, check OCP, NumPy and VTK together using `--task native-cad` and repeat `--expect distribution=version` for each project pin. An explicitly pinned library must import at the requested version.
 
 For a suite that imports native CAD and simulation packages together, use `setup:check -- --task cad-physics --python PYTHON_EXECUTABLE --cwd TEST_DIRECTORY`. Match the project's actual test import paths and retain the private diagnostic before running its tests.

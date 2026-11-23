@@ -36,3 +36,4 @@ test('native CAD pins require the selected bindings together for this invocation
   const unknown=parseArgs(['--task','native-cad','--expect','__proto__=1']);
   assert.throws(()=>inspectEnvironment(unknown),/native-cad: cadquery-ocp, numpy, vtk/);
 });
+test('the preliminary design task needs the design library and says how to install or update it',()=>{const missing=inspectEnvironment({task:'preliminary-design',run:fake({'frc-design-kernel':{importStatus:'failed',errorType:'ModuleNotFoundError',version:null}})});assert.equal(missing.ready,false);assert.match(missing.nextSteps[0].action,/pip install --upgrade git\+https:\/\/github\.com\/ehartye\/frc-design-kernel\. It has no pinned version: main is the release/);const found=inspectEnvironment({task:'preliminary-design',run:fake()});assert.equal(found.ready,true);assert.deepEqual(found.libraries.map(r=>r.module),['OCP','frc_design_kernel']);});

@@ -38,6 +38,13 @@ PER_RELEASE = ("designStatus", "revision", "accepted", "refreshed", "reason", "l
 ON_PUSH = "On push: the project's workflow publishes the page. Nothing is rerun."
 BEFORE_PUSH = "Before pushing, run the publication check: node PLUGIN/scripts/design-publication.mjs check ."
 GATE = "gate.json"
+# A design checked on the design library is staged from its judgement file; one in the earlier format from its layout plan.
+JUDGEMENT, PLAN = "judgement.json", "layout.json"
+
+
+def plan_name(folder):
+    """The file a release folder is checked from."""
+    return JUDGEMENT if (folder / JUDGEMENT).is_file() else PLAN
 
 
 def read(path):
@@ -256,7 +263,7 @@ def stage(season, inputs, release, design=None, refresh=False):
         raise ValueError("--design-name names the architecture of a version ID, MAJOR.MINOR. Release " + release + " keeps its earlier ID and has no name")
     site = season / "docs/preliminary-design"
     inputs = inputs.resolve()
-    plan_file = inside(inputs, "layout.json")
+    plan_file = inside(inputs, plan_name(inputs))
     plan, result = read(plan_file), read(inside(inputs, "receipt.json"))
     if result.get("planSha256") != hashlib.sha256(plan_file.read_bytes()).hexdigest():
         raise ValueError("The receipt belongs to a different layout. Rerun the preliminary check and save its receipt")
@@ -275,8 +282,9 @@ def stage(season, inputs, release, design=None, refresh=False):
     if not scene_file.is_file():
         raise ValueError("Generate the review with --write-view: a release publishes the review page and its scene")
     ledger = inside(root, plan["budgets"]["file"])
-    files = {"index.html": viewer, SCENE: scene_file, "receipt.json": inputs / "receipt.json",
-             "motion.json": inside(root, plan["motion"]["file"]), "budgets.json": ledger,
+    # The published folder carries what was checked: the design source, or the motion study of the earlier format.
+    checked = {"design.json": inside(root, plan["source"]["file"])} if plan_file.name == JUDGEMENT else {"motion.json": inside(root, plan["motion"]["file"])}
+    files = {"index.html": viewer, SCENE: scene_file, "receipt.json": inputs / "receipt.json", **checked, "budgets.json": ledger,
              "limits.json": inside(root, read(ledger)["requirements"]["file"])}
 
     def publish(name, source):
@@ -306,7 +314,7 @@ def stage(season, inputs, release, design=None, refresh=False):
         published.append(mission)
     record = dict(schema="agent-frc/preliminary-release@1", release=release, issue=result["issue"], phase="preliminary-design",
                   # Where the project's CI finds the committed inputs to rerun the layout check.
-                  check=dict(project=inputs.relative_to(season.resolve()).as_posix(), plan="layout.json"),
+                  check=dict(project=inputs.relative_to(season.resolve()).as_posix(), plan=plan_file.name),
                   missionCases=published, **(dict(fieldPlayers=players) if players else {}))
     site.mkdir(parents=True, exist_ok=True)
     with update_index(site), tempfile.TemporaryDirectory(dir=site.parent, prefix=".stage-") as tmp:
@@ -496,13 +504,14 @@ def copy_inputs(season, base, old, new):
     copied file. The STEP and every other file that is not a pinning record keep their bytes. The review page, scene
     and receipt are not copied: the layout check writes them for the new folder. A held receipt is copied unchanged."""
     source, target = base / "releases" / checked_id(old), base / "releases" / checked_id(new)
-    if not (source / "layout.json").is_file():
-        raise ValueError("No layout plan at " + (source / "layout.json").relative_to(season).as_posix())
+    name = plan_name(source)
+    if not (source / name).is_file():
+        raise ValueError("No judgement file or layout plan at " + source.relative_to(season).as_posix())
     if target.exists():
         raise ValueError(target.relative_to(season).as_posix() + " already exists. Choose a new release ID, or remove that folder first")
     before, after = source.relative_to(season).as_posix() + "/", target.relative_to(season).as_posix() + "/"
     digest = lambda file: hashlib.sha256(file.read_bytes()).hexdigest()
-    view = read(source / "layout.json").get("view")
+    view = read(source / name).get("view")
     left = {"receipt.json", SCENE, Path(view).name if isinstance(view, str) else SCENE, "__pycache__"}
     done, rewritten = set(), []
 
@@ -551,7 +560,7 @@ def copy_inputs(season, base, old, new):
     except Exception:
         shutil.rmtree(target, ignore_errors=True)
         raise
-    plan = after + "layout.json"
+    plan = after + name
     print("Copied the inputs of release " + old + " to " + after.rstrip("/") + " and wrote " + str(len(rewritten)) + " pinning record"
           + ("" if len(rewritten) == 1 else "s") + " for the new paths. The STEP is unchanged. Now run the layout check there, then stage " + new + ":\n"
           "  node PLUGIN/scripts/design.mjs preliminary-check . " + plan + " --write-view --require-checked --output " + after + "receipt.json")

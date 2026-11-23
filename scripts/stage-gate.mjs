@@ -24,6 +24,7 @@ import {checkPhysics, checkedFromRoot, committedReceipt, compareVerdicts, findBy
 import {designTitle, versionOf} from './design-status.mjs';
 import {effectiveReadiness, readinessText} from './effective-readiness.mjs';
 import {receiptIdentity} from './physics-identity.mjs';
+import {planFile} from './layout-format.mjs';
 
 export const gateFile = 'gate.json', gateSchema = 'agent-frc/stage-gate@1';
 /** The time guideline for a stage gate, in minutes. */
@@ -60,7 +61,7 @@ export function stageGate({root, where, id, phase, inputs, published, record, ru
     '). The stage gate runs on the committed design. Commit ' + rel(inputs) + ', then mark it effective');
   const receiptPath = path.join(published, 'receipt.json');
   check(existsSync(receiptPath), where + ' is not marked effective: it has no published receipt. Publish it as a draft first');
-  const receipt = JSON.parse(readFileSync(receiptPath, 'utf8')), planName = record?.check?.plan ?? 'layout.json';
+  const receipt = JSON.parse(readFileSync(receiptPath, 'utf8')), planName = record?.check?.plan ?? planFile;
   const {fromRoot, absent} = committedReceipt(root, inputs, planName, receipt, where);
   check(!absent.length, where + ' is not marked effective: its receipt names files that are not in ' + rel(inputs) + ' (' + absent.join(', ') + ')');
   const previous = receipt.previousCheckpointSha256 ? record?.check?.previous ?? findByDigest(inputs, receipt.previousCheckpointSha256) : null;

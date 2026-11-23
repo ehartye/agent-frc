@@ -13,6 +13,9 @@ for item in specs:
  row=dict(item)
  try: row['version']=importlib.metadata.version(item['distribution'])
  except importlib.metadata.PackageNotFoundError: row['version']=None
+ # A library installed from a Git repository records the commit it was installed at. Information only.
+ try: row['commit']=(json.loads(importlib.metadata.distribution(item['distribution']).read_text('direct_url.json') or '{}').get('vcs_info') or {}).get('commit_id')
+ except Exception: row['commit']=None
  try:
   with contextlib.redirect_stdout(io.StringIO()),contextlib.redirect_stderr(io.StringIO()):module=importlib.import_module(item['module'])
   row['importStatus']='ok';row['origin']=getattr(module,'__file__',None)

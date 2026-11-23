@@ -46,7 +46,7 @@ An effective design is frozen. Any change to its physics is a new draft, and tha
 |---|---|
 | Documents, skills, the guide | The validator, the document, skill and link tests, and the guide build |
 | One script or template | The tests that cover that file |
-| The layout check, attachment report, budgets, stage gate or secret scan | Their tests, including the ones that use the CAD kernel |
+| The layout check, attachment report, budgets, stage gate or secret scan | Their tests, including the ones that use the CAD kernel and the design library |
 | The test runner, the coverage map, the package manifest | Everything |
 | A merged change on the default branch | The full portable suite, in the hosted run |
 | A release tag, or when the owner asks | Everything, on the full station profile |
@@ -80,7 +80,7 @@ These are guidelines. When a run is heading past its guideline, stop and tell th
 
 The coding agent has the plugin installed and runs its commands. A robot project does not. If the plugin changed, broke or disappeared, nothing in a project would change or stop working.
 
-- The project holds data and published output: the plan, the solids, the trial records, the budgets, the index, the page.
+- The project holds data and published output: the design source, the judgement file, the generated solids, the trial records, the budgets, the index, the page.
 - The project holds its own CI: a workflow and two small checks, written from the references in [`templates/project-ci/`](../templates/project-ci/ci.yml) and then owned by the project. They check out only the project and run only the project's files.
 - Project code never runs plugin code. A project file names no plugin repository, commit, path or variable. It carries no copy of a plugin command and no wrapper around one. A schema ID inside a record, such as `"agent-frc/NAME@1"`, labels the record's format and is the one place the name appears.
 - The agent runs the plugin's commands on the project: the layout check, the staging commands, the stage gate, the publication check, and an [audit of the project for use of the plugin](project-ci.md#audit-the-project-for-use-of-the-plugin) that gives advice and blocks nothing.
@@ -89,7 +89,7 @@ The coding agent has the plugin installed and runs its commands. A robot project
 
 The [sample project](../examples/sample-project/ABOUT.md) shows the whole of it: an invented project whose CI is those reference files, with nothing of the plugin in it.
 
-Building solids, measuring them and running physics trials are moving to a separate library, `frc-design-kernel`, that a project and the plugin both import. Until it exists, a project's builders stay as they are.
+Building solids and measuring them belong to a separate library, `frc-design-kernel`, that a project and the plugin may both import. A project writes a design source as data; the library builds and measures it; the plugin judges the result. The library builds and measures and never says pass or fail. It has no pinned version: its main branch is the release, the plugin's own CI installs it from there, and a receipt records its version as information only. A project may depend on the library; whether its CI regenerates a design is the project's choice, and the reference CI does not. A design in the earlier format, with a layout plan and a builder program, keeps that format until it is rewritten as a design source. Physics trials as data are coming to the library.
 
 ## Rules for adding a test or a check
 

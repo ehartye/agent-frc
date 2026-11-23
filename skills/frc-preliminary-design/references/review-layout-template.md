@@ -41,8 +41,9 @@ Open `http://127.0.0.1:8000/`. For a LAN review pass `--bind LAN_ADDRESS --port 
 cad/preliminary-design/
   .gitignore                     keeps the input-side compressed scene out of version control
   releases/1.0/
-    design.json, layout.json     the editable design and the plan: datums, groups, member IDs, presentation fields
-    package.step, paths.json     the layout and its checked motions
+    design.json                  the design source: solids, groups, mounts, poses and motions
+    judgement.json               the judgement file: stages, cycle, control and the presentation fields
+    generated/                   the solids and manifest the design library wrote from the source
     package-limits.json          inspection, running and electrical requirements
     budgets.json, narrative.md   source estimates, duty cases and accepted objectives
     receipt.json                 checker decision, parked-assembly result and scene digests
@@ -141,7 +142,7 @@ The page uses the Agent FRC navy-and-gold engineering theme: navy `#102746` head
 
 ## Scene data and who supplies it
 
-The schema marks each field `plugin` (derived), `project` (authored under `presentation` in `layout.json`) or `optional`. A missing project field renders as "Not supplied in this review" in its panel and validates with a warning; an optional feature hides cleanly when absent.
+The schema marks each field `plugin` (derived), `project` (authored under `presentation` in the judgement file) or `optional`. A missing project field renders as "Not supplied in this review" in its panel and validates with a warning; an optional feature hides cleanly when absent.
 
 | Scene field | Supplier | Source |
 | --- | --- | --- |
@@ -170,7 +171,7 @@ The limiting pair on each path comes from pairs that include a moving body: a fa
 
 A replay plays a recorded physics trial in the review's own viewer. It is one more entry in the animation list, after the mission animations and the other checked motions, with the same Play, speed, slider and readout. `?case=ID` opens it, so replay, animation and case IDs share one namespace. A replay is evidence playback and not a clearance case: the layout check neither runs nor credits it, the receipt's case set leaves it out, and the check results count only checked cases.
 
-Generate a replay set from the trial in the owning project, write it beside `layout.json`, as JSON or gzipped JSON, and name it under `presentation.replays` as `{"file": "..."}`. Type no hash: the check reads the file and records its digest in the scene. A set has the schema `agent-frc/review-replays@1`, a `replays` list and optional `fieldBodies`. This example is abbreviated:
+Generate a replay set from the trial in the owning project, write it beside the judgement file, as JSON or gzipped JSON, and name it under `presentation.replays` as `{"file": "..."}`. Type no hash: the check reads the file and records its digest in the scene. A set has the schema `agent-frc/review-replays@1`, a `replays` list and optional `fieldBodies`. This example is abbreviated:
 
 ```json
 {
