@@ -101,7 +101,7 @@ A plan that declares no `supportedBy` keeps its receipt and scene.
 
 ### Follow progress and stop at the first blocking case
 
-While the check runs, it writes one line to stderr as each motion case finishes. The receipt on stdout is unchanged. Each line gives the case's position in the study, its ID and status, the failing and open pair rows, the `bounded`, `broadPhase` and `constantPoseBroadPhase` counts, and the case and total elapsed seconds. The displaced control is the last line. Lines mark the start and finish of the budget review. When 30 seconds pass inside a case, the next pair or sample writes a `[heartbeat]` line with the pairs visited, the active pair, its subdivision depth and samples; set the interval with `--heartbeat SECONDS`. A `[motion] warning` line names a body whose rotation cannot change its swept volume, or a body listed in the motion study's optional `sweptEnvelopes` whose rotation does change it. Add `--quiet` to omit all of these lines.
+While the check runs, it writes one line to stderr as each motion case finishes. The receipt on stdout is unchanged. Each line gives the case's position in the study, its ID and status, the failing and open pair rows, the `bounded`, `broadPhase` and `constantPoseBroadPhase` counts, and the case and total elapsed seconds. With one worker process the lines follow the study order and the displaced control is the last. Lines mark the start and finish of the budget review. When 30 seconds pass inside a case, the next pair or sample writes a `[heartbeat]` line with the pairs visited, the active pair, its subdivision depth and samples; set the interval with `--heartbeat SECONDS`. A `[motion] warning` line names a body whose rotation cannot change its swept volume, or a body listed in the motion study's optional `sweptEnvelopes` whose rotation does change it. Add `--quiet` to omit all of these lines.
 
 ```text
 [motion] 2/6 park-loaded status=pass failing=0 open=0 bounded=3 broadPhase=10 constantPoseBroadPhase=14 case=0.03s total=0.07s
@@ -110,15 +110,23 @@ While the check runs, it writes one line to stderr as each motion case finishes.
 [budgets] done mass=pass electrical=pass 0.00s
 ```
 
+The check shares the motion cases between worker processes. By default it starts one fewer than the machine's cores, and no more than the work and the free memory allow. Each worker loads the STEP file, so the check measures its own memory after loading and keeps the workers within four fifths of what is free. Set the number with `--jobs N`.
+
+```sh
+node scripts/design.mjs preliminary-check PROJECT layout.json --jobs 4
+```
+
+The receipt is the same, byte for byte, for every number of workers. A case with thousands of body pairs is divided between the workers, so one long case does not hold the others back; the slowest single pair of bodies sets the shortest possible run. Only the stderr lines differ. Cases report as they finish, in any order, and each line still gives the case's position in the study. A heartbeat line names the pair one of the case's workers is on. `--jobs 1` runs every case in order in one process. Use it to read the lines in study order, or when a worker ends for lack of memory.
+
 To revise a layout quickly, add `--fail-fast`.
 
 ```sh
 node scripts/design.mjs preliminary-check PROJECT layout.json --fail-fast
 ```
 
-The run stops after the first nominal case with a status other than `pass`. That status comes from a failing or open pair, a failing or unresolved required contact, a seat, a visibility check or an incomplete extraction. The remaining cases, the displaced control, the budgets and the view are skipped. The receipt sets `"partial": true` and lists `stoppedAt`, `checkedCases` and `skippedCases`. A stopping failure gives `blocked` and reopens the case as usual. An open finding gives `provisional`, or `reopen` when a premise already reopened. A missing-input entry names the skipped work, so a partial receipt can never be `layout-checked`. `--require-checked` exits non-zero for a partial receipt. The checker evaluates skipped cases only in a full run.
+The run stops after the first nominal case with a status other than `pass`. That status comes from a failing or open pair, a failing or unresolved required contact, a seat, a visibility check or an incomplete extraction. The remaining cases, the displaced control, the budgets and the view are skipped. The receipt sets `"partial": true` and lists `stoppedAt`, `checkedCases` and `skippedCases`. A stopping failure gives `blocked` and reopens the case as usual. An open finding gives `provisional`, or `reopen` when a premise already reopened. A missing-input entry names the skipped work, so a partial receipt can never be `layout-checked`. `--require-checked` exits non-zero for a partial receipt. The checker evaluates skipped cases only in a full run. With several workers the run stops at the same case and writes the same receipt as with one. Workers on later cases are cancelled once an earlier case is known not to pass. Stderr may already hold the line of a later case that finished first; that case is not in the receipt.
 
-The displaced control is expected to collide, so it never stops a run. It runs last, only when every nominal case passes. A clean `--fail-fast` run therefore checks the control and returns the same full receipt as a run without the flag. After a stop, `control.status` is `skipped` and `control.witness` is `null`. Only a full run can show that the control rejects the displaced pair. A partial run never writes a player and never credits an existing one. With `--write-view`, it reports on stderr that it did not write the view and records `view.verified: false`. Use a full run without `--fail-fast` for the issued receipt, the control and the player.
+The displaced control is expected to collide, so it never stops a run. It is the last case of the study, and it counts only when every nominal case passes. A clean `--fail-fast` run therefore checks the control and returns the same full receipt as a run without the flag. After a stop, `control.status` is `skipped` and `control.witness` is `null`. Only a full run can show that the control rejects the displaced pair. A partial run never writes a player and never credits an existing one. With `--write-view`, it reports on stderr that it did not write the view and records `view.verified: false`. Use a full run without `--fail-fast` for the issued receipt, the control and the player.
 
 To recheck the physics of a layout whose review is already written, add `--physics-only`. It checks every case, the displaced control and the budgets and does not read or write the review page or its scene. The receipt sets `"physicsOnly": true` and is not one to publish. A project's CI [reruns each published layout](design-publication.md) this way and compares the result with the committed receipt.
 

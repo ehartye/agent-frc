@@ -90,7 +90,8 @@ class CheckerProgressFailFast(unittest.TestCase):
         self.assertEqual(clean.stdout, self.motion("clear.json", "--quiet").stdout)
 
     def test_package_progress_is_stderr_only(self):
-        loud, quiet = self.package(self.plan), self.package(self.plan, "--quiet")
+        # One process reports the cases in study order; several report each case as it finishes.
+        loud, quiet = self.package(self.plan, "--jobs", "1"), self.package(self.plan, "--quiet")
         self.assertEqual(loud.returncode, 0, loud.stderr)
         self.assertEqual(loud.stdout, quiet.stdout)
         self.assertEqual(quiet.stderr, "")
@@ -109,7 +110,7 @@ class CheckerProgressFailFast(unittest.TestCase):
         def collide(cases):
             cases[1]["initialPose"] = {**cases[1]["initialPose"], "rail": [dict(kind="translation", travelMm=[-21, -72, -18])]}
         plan = self.variant("second-collides.json", collide)
-        run = self.package(plan, "--fail-fast", "--require-checked")
+        run = self.package(plan, "--fail-fast", "--require-checked", "--jobs", "1")
         self.assertEqual(run.returncode, 1, run.stderr)
         result = json.loads(run.stdout)
         cases = [c["id"] for c in json.loads((self.layout / "paths.json").read_text())["cases"]]

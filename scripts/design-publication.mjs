@@ -153,10 +153,11 @@ function inside(root, name, what) {
   return full;
 }
 
-/** Run the plugin's layout check on committed inputs, physics only, and return its receipt. */
-export function runLayoutCheck({project, plan, previous, budgetMinutes = 45, python = process.env.PYTHON ?? (process.platform === 'win32' ? 'python' : 'python3')}) {
+/** Run the plugin's layout check on committed inputs, physics only, and return its receipt. `jobs` sets its worker processes. */
+export function runLayoutCheck({project, plan, previous, budgetMinutes = 45, jobs, python = process.env.PYTHON ?? (process.platform === 'win32' ? 'python' : 'python3')}) {
   const script = fileURLToPath(new URL('./preliminary_design.py', import.meta.url));
-  const args = ['-B', script, project, plan, '--physics-only', '--fail-fast', ...(previous ? ['--previous', previous] : [])];
+  const args = ['-B', script, project, plan, '--physics-only', '--fail-fast', ...(previous ? ['--previous', previous] : []),
+    ...(jobs === undefined ? [] : ['--jobs', String(jobs)])];
   const run = spawnSync(python, args, {stdio: ['ignore', 'pipe', 'inherit'], maxBuffer: 1024 * 1024 * 1024, timeout: budgetMinutes * 60000});
   if (run.error?.code === 'ETIMEDOUT') throw Error('the layout check exceeded its ' + budgetMinutes + ' minute budget');
   if (run.error) throw Error('the layout check could not start (' + python + '): ' + run.error.message);
@@ -178,7 +179,7 @@ function inputsDigest(dir) {
 /**
  * Check a project. Options: site, preliminary, detailed (site folders), inputs, detailedInputs (folders of committed
  * check inputs, one per design ID), cache (folder of earlier rerun results), base (commit; rerun only designs changed
- * since it), budgetMinutes, skipRerun, log (progress lines), run (the layout check; replaced in tests).
+ * since it), budgetMinutes, jobs (worker processes of each rerun; the layout check chooses when it is absent), skipRerun, log (progress lines), run (the layout check; replaced in tests).
  * Returns {preliminary, detailed, warnings, reports, errors}; errors is empty when the project passes.
  */
 export function checkProject(root, options = {}) {
@@ -334,7 +335,7 @@ export function checkProject(root, options = {}) {
       o.log('[rerun] ' + where + ': layout check on ' + rel(planFile));
       const fromRoot = checkedFromRoot(project, receipt);
       const within = name => fromRoot ? rel(path.join(project, name)) : name;
-      try { fresh = o.run({project: fromRoot ? root : project, plan: within(planName), previous: previous && within(previous), budgetMinutes: o.budgetMinutes}); }
+      try { fresh = o.run({project: fromRoot ? root : project, plan: within(planName), previous: previous && within(previous), budgetMinutes: o.budgetMinutes, jobs: o.jobs}); }
       catch (error) { throw Error(where + ': ' + error.message); }
       entry.rerun = 'pass';
     }
@@ -365,18 +366,19 @@ function changedPaths(root, base) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   const usage = 'Usage: design-publication.mjs check PROJECT [--site docs] [--preliminary preliminary-design] [--detailed detailed-design] ' +
-    '[--inputs cad/preliminary-design/releases] [--detailed-inputs cad/detailed-design/designs] [--cache DIR] [--base COMMIT] [--budget-minutes 45] [--skip-rerun]';
+    '[--inputs cad/preliminary-design/releases] [--detailed-inputs cad/detailed-design/designs] [--cache DIR] [--base COMMIT] [--budget-minutes 45] [--jobs N] [--skip-rerun]';
   try {
     const [mode, project, ...rest] = process.argv.slice(2), options = {};
     check(mode === 'check' && project && statSync(project, {throwIfNoEntry: false})?.isDirectory(), usage);
     for (let i = 0; i < rest.length; i++) {
       if (rest[i] === '--skip-rerun') { options.skipRerun = true; continue; }
       const name = {'--site': 'site', '--preliminary': 'preliminary', '--detailed': 'detailed', '--inputs': 'inputs', '--detailed-inputs': 'detailedInputs',
-        '--cache': 'cache', '--base': 'base', '--budget-minutes': 'budgetMinutes'}[rest[i]];
+        '--cache': 'cache', '--base': 'base', '--budget-minutes': 'budgetMinutes', '--jobs': 'jobs'}[rest[i]];
       check(name && rest[i + 1] !== undefined, usage);
-      options[name] = name === 'budgetMinutes' ? Number(rest[++i]) : rest[++i];
+      options[name] = ['budgetMinutes', 'jobs'].includes(name) ? Number(rest[++i]) : rest[++i];
     }
     check(options.budgetMinutes === undefined || options.budgetMinutes > 0, usage);
+    check(options.jobs === undefined || Number.isInteger(options.jobs) && options.jobs > 0, usage);
     // An all-zero or unknown base, as a first push supplies, means every design is checked.
     if (options.base && /^0*$/.test(options.base)) delete options.base;
     const result = checkProject(path.resolve(project), options), actions = !!process.env.GITHUB_ACTIONS;
