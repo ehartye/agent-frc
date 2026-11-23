@@ -30,4 +30,17 @@ Keep season-specific language, game rules, dimensions, scoring tables, target na
 
 For a fresh kickoff, read the supplied game's release materials, identify the edition and evidence cutoff, and decompose the rules into a versioned, project-owned artifact outside the plugin. Record field boundaries and obstructions, alliance starts, pieces and supply, actions, scoring, match periods, restrictions, units, authority references, assumptions and unresolved facts. Have the generic plugin, pre-sim and narrative workflow interpret that artifact. Do not infer behavior by season number or fill missing facts from a historical game.
 
-Keep the public repository independent from any optional local vault. Never include private vault data, absolute user paths, credentials, team-private content or third-party assets without item-level permission. No robot operations or deployment tools. Do not install or publish beyond the repository operation expressly requested. Preserve source/version/freshness boundaries. Run npm test and npm run validate after relevant changes.
+Keep the public repository independent from any optional local vault. Never include private vault data, absolute user paths, credentials, team-private content or third-party assets without item-level permission. No robot operations or deployment tools. Do not install or publish beyond the repository operation expressly requested. Preserve source/version/freshness boundaries.
+
+## Test by need and risk
+
+Follow [Test by need and risk](docs/testing-methodology.md). It decides what runs for every change in this repository and in the projects that use it.
+
+- `.testing/risk.yml` gives the tier of each area. Read it before adding or changing a test.
+- While editing, run `npm run validate` and only the tests relevant to the files you changed. Run everything only before a release, on the weekly run or when asked.
+- A change to a page, a title, a name, a status or a document never triggers a model evaluation.
+- Rerun a design's full layout check in CI only when the design changes stage. Publish a draft on its local check.
+- Name the failure a new test catches and keep a control that proves it can fail. One owner per invariant.
+- Do not digest, pin or byte-compare inputs to decide whether to run. Do not prove an unchanged result again.
+- When a run is heading past its time guideline (about 1 minute while editing, 5 before merging, 15 at a gate), stop and check in with the owner.
+- Keep a project loosely coupled to the plugin: it follows the current release and holds data, not copies of plugin behaviour.
