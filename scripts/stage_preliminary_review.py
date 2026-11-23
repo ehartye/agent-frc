@@ -25,11 +25,9 @@ import subprocess
 import sys
 import tempfile
 import time
-import zlib
 
 STATUSES = ("in-progress", "effective", "superseded", "withdrawn")
 SCENE = "review-scene.json.gz"
-FIELD = re.compile(r"field/[a-z0-9][a-z0-9._-]{0,110}\.html")
 VERSION = re.compile(r"([1-9][0-9]{0,3})\.(0|[1-9][0-9]{0,3})")
 PER_RELEASE = ("designStatus", "revision", "accepted", "refreshed", "reason", "lastCommit")
 # What a push does with the change just made, said after each command. The method: docs/testing-methodology.md.
@@ -280,19 +278,6 @@ def stage(season, inputs, release, design=None, refresh=False):
         if files.setdefault(name, source) != source:
             raise ValueError("Two different release files share a name: " + name)
 
-    # Field-interaction players the review links, each with the trial behind it.
-    scene = json.loads(zlib.decompress(scene_file.read_bytes(), 16 + zlib.MAX_WBITS))
-    players = []
-    for row in scene.get("fieldInteractions") or []:
-        href = row.get("href") if isinstance(row.get("href"), str) else ""
-        name = href[2:] if href.startswith("./") else href
-        if not FIELD.fullmatch(name) or not isinstance(row.get("evidence"), dict):
-            raise ValueError("Link each field interaction to a page at field/NAME.html beside the view, with its trial evidence: " + str(href))
-        trial = inside(root, row["evidence"]["file"])
-        publish(name, inside(viewer.parent, name))
-        publish(trial.name, trial)
-        if all(p["file"] != name for p in players):
-            players.append(dict(file=name, trial=dict(file=trial.name), objective=row.get("objective")))
     published = []
     for mission in missions:
         mission = dict(mission)
@@ -302,9 +287,9 @@ def stage(season, inputs, release, design=None, refresh=False):
             mission["trial"] = dict(file=trial.name)
         published.append(mission)
     record = dict(schema="agent-frc/preliminary-release@1", release=release, issue=result["issue"], phase="preliminary-design",
-                  # Where the project's CI finds the committed inputs to rerun the layout check.
+                  # Where the stage gate finds the committed inputs to rerun the layout check.
                   check=dict(project=inputs.relative_to(season.resolve()).as_posix()),
-                  missionCases=published, **(dict(fieldPlayers=players) if players else {}))
+                  missionCases=published)
     site.mkdir(parents=True, exist_ok=True)
     with update_index(site), tempfile.TemporaryDirectory(dir=site.parent, prefix=".stage-") as tmp:
         index = load_index(site)

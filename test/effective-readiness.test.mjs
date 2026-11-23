@@ -170,7 +170,7 @@ test('a trial that drives the motion is told from a trial attached to a prescrib
       d.plan.presentation.replays=[{file:'replays.json',sha256:'0'.repeat(64)}];});
     assert.equal(replayed.met,true,replayed.reasons.join(' | '));
     assert.equal(motion(replayed,'deliver').motion,'played');
-    assert.ok(replayed.notes.some(n=>n.startsWith('deliver: animation played from the trial (a review replay or a linked field player); the checked case motion is prescribed: mission-trial.json')));
+    assert.ok(replayed.notes.some(n=>n.startsWith('deliver: animation played from the trial (a review replay); the checked case motion is prescribed: mission-trial.json')));
   }
   // A replay of another case's trial plays nothing for this one.
   const elsewhere=judged(t,'trial-driven',d=>{
@@ -178,20 +178,13 @@ test('a trial that drives the motion is told from a trial attached to a prescrib
     d.files['replays.json']=JSON.stringify({replays:[{id:'intake-run',evidence:[{file:'intake-trial.json',sha256:'0'.repeat(64)}]}]});
     d.plan.presentation.replays=[{file:'replays.json',sha256:'0'.repeat(64)}];});
   assert.equal(motion(elsewhere,'deliver').motion,'attached');
-  // A linked field player whose trial records the case plays it too.
-  const viaLink=judged(t,'trial-driven',d=>{
-    const record={case:'deliver',qualification:d.files['release-trial.json'].qualification},text=JSON.stringify(record);
-    d.files['lane-trial.json']=text;delete d.files['release-trial.json'];
-    d.plan.presentation.fieldInteractions=[{title:'Invented lane',href:'field/lane.html',objective:'Invented cycle',evidence:{file:'lane-trial.json',sha256:sha(text)}}];});
-  assert.equal(viaLink.met,true,viaLink.reasons.join(' | '));
-  assert.equal(motion(viaLink,'deliver').motion,'played');
   // No trial at all stays the plain prescribed finding.
   const none=judged(t,'trial-driven',d=>{delete d.files['release-trial.json'];});
   assert.equal(motion(none,'deliver').motion,'prescribed');
 });
 
 test('a trial named by path alone is read, and the report says no hash was compared',t=>{
-  // A mission trial and a linked interaction that name only their file: nothing typed to compare, so the files are read.
+  // A mission trial and a replayed run that name only their file: nothing typed to compare, so the files are read.
   const viaMission=judged(t,'trial-driven',d=>{
     d.files['mission-trial.json']=JSON.stringify(d.files['release-trial.json']);delete d.files['release-trial.json'];
     d.missions.missionCases[1].trial={file:'mission-trial.json'};});
@@ -201,7 +194,8 @@ test('a trial named by path alone is read, and the report says no hash was compa
     'deliver: prescribed motion with a trial attached: mission-trial.json (read; no SHA-256 given to compare)']);
   const viaLink=judged(t,'trial-driven',d=>{
     d.files['lane-trial.json']=JSON.stringify({case:'deliver',qualification:d.files['release-trial.json'].qualification});delete d.files['release-trial.json'];
-    d.plan.presentation.fieldInteractions=[{title:'Invented lane',href:'field/lane.html',objective:'Invented cycle',evidence:{file:'lane-trial.json'}}];});
+    d.files['replays.json']=JSON.stringify({replays:[{id:'lane-run',evidence:[{file:'lane-trial.json'}]}]});
+    d.plan.presentation.replays=[{file:'replays.json',sha256:'0'.repeat(64)}];});
   assert.equal(viaLink.met,true,viaLink.reasons.join(' | '));
   assert.ok(viaLink.notes.some(n=>n.startsWith('deliver: animation played from the trial')&&n.endsWith(': lane-trial.json (read; no SHA-256 given to compare)')),viaLink.notes.join(' | '));
   // The digest the layout check recorded in the receipt is kept over a path-only reference to the same file, and still compared.
@@ -241,7 +235,7 @@ test('malformed inputs are findings: nothing is judged met and nothing throws',t
     assert.equal(report.met,0,text);
     assert.ok(report.criteria.every(c=>c.reasons.some(r=>/^Layout plan: judgement\.json is not/.test(r))),text);
   }
-  const odd=effectiveReadiness(project(t,d=>{d.plan.presentation={fieldInteractions:5,uncoveredCases:'x'};d.plan.narrativeReview={objectives:{}};
+  const odd=effectiveReadiness(project(t,d=>{d.plan.presentation={replays:5,uncoveredCases:'x'};d.plan.narrativeReview={objectives:{}};
     d.receipt.stages.acquire.transportedBy=7;d.missions.risks=[null,3,{id:'r',risk:'Invented',benchTest:{id:'other',measure:'pull',pass:1}}];}));
   assert.equal(criterion(odd,'risks-resolved').met,false);
   assert.deepEqual(odd.verificationItems,[],'an incomplete bench test is not a verification item');

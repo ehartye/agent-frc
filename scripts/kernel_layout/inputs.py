@@ -14,7 +14,7 @@ INSTALL = "pip install --upgrade git+https://github.com/ehartye/frc-design-kerne
 ROLES = ("structure", "bumper", "drive", "battery", "mechanism", "payload", "service", "other", "fixture")
 PURPOSES = ("operating", "park", "service")
 # What belongs to the design source. A judgement file that carries one of these is refused, naming it.
-SOURCE_KEYS = ("groups", "mounts", "contacts", "solids", "fixtures", "poses", "motions", "datum", "step", "motion", "design")
+SOURCE_KEYS = ("groups", "mounts", "contacts", "solids", "fixtures", "poses", "motions", "datum", "step", "design")
 STAGE_KEYS = {"purpose", "phase", "basis", "minGapMm", "allowanceBasis", "pathToleranceMm", "depth", "absent", "extract",
               "requiredContacts", "payloadCompression", "carriedWith", "transportedBy", "freePath", "supportedBy"}
 DEFAULT_DEPTH = 9
@@ -181,7 +181,7 @@ def load(root, file):
         check_stage(key, stages[key], roster)
         cases.append(case_record(data, key, stages[key], {g: members.get(g, []) for g in data["groups"]}, fixtures))
     pin = dict(file=judgement["source"]["file"], sha256=design.sha256)
-    plan = dict(judgement, groups=groups, mounts=mounts, datum=dict(name=data["frame"]), design=pin, motion=pin,
+    plan = dict(judgement, groups=groups, mounts=mounts, datum=dict(name=data["frame"]), design=pin,
                 stages={c["id"]: dict(stages[c["id"]], movingGroups=c["movingGroups"]) for c in cases})
     return Inputs(root=root, file=Path(file), judgement=judgement, design=design, plan=plan, cases=cases, fixtures=fixtures, roster=roster)
 

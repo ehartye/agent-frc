@@ -21,8 +21,7 @@
     "narrativeReview",
     "motionEvidence",
     "animations",
-    "returnCriteria",
-    "fieldInteractions"
+    "returnCriteria"
   ],
   "properties": {
     "schema": {
@@ -83,17 +82,14 @@
       "type": "object",
       "x-supplier": "plugin",
       "required": [
-        "step",
-        "motion"
+        "design",
+        "step"
       ],
       "properties": {
         "design": {
           "$ref": "#/$defs/pin"
         },
         "step": {
-          "$ref": "#/$defs/pin"
-        },
-        "motion": {
           "$ref": "#/$defs/pin"
         },
         "narrative": {
@@ -425,26 +421,6 @@
         "preliminary",
         "conceptual"
       ]
-    },
-    "fieldInteractions": {
-      "type": "array",
-      "x-supplier": "optional",
-      "description": "presentation.fieldInteractions: season-owned field-interaction or physics players.",
-      "items": {
-        "type": "object",
-        "required": [
-          "title",
-          "href",
-          "objective",
-          "evidence"
-        ],
-        "properties": {
-          "href": {
-            "type": "string",
-            "pattern": "^(https://[A-Za-z0-9.-]+(/[^\\s\\\\]*)?|(?![A-Za-z][A-Za-z0-9+.-]*:)[^\\s\\\\/][^\\s\\\\]*)$"
-          }
-        }
-      }
     },
     "focus": {
       "type": [

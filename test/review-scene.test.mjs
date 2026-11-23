@@ -75,7 +75,7 @@ test('the scene must repeat the receipt results, however it was compressed', () 
   const scene = reviewScene();
   const content = Buffer.from(JSON.stringify(scene));
   const served = gzipSync(content);
-  const receipt = {issue: scene.issue, step: scene.sources.step, motion: scene.sources.motion, narrativeReview: scene.narrativeReview,
+  const receipt = {issue: scene.issue, step: scene.sources.step, design: scene.sources.design, narrativeReview: scene.narrativeReview,
     cases: [{case: 'raise', status: 'pass'}], control: {witness: {pair: ['arm', 'battery'], status: 'fail'}},
     budgets: {inspectionKg: scene.mass.inspectionKg, remainingKg: scene.mass.remainingKg, runningKg: scene.mass.runningKg,
       electricalCases: scene.power.map(({case: c, status, batteryCondition, requiredMinV, marginV, loadedBusV, batterySideA}) => ({case: c, status, batteryCondition, requiredMinV, marginV, loadedBusV, batterySideA}))},
@@ -99,7 +99,7 @@ test('links, extra fields and a misnamed or second displaced control are refused
     const errors = checkSchema(reviewScene({links: [{label: 'x', href}]}));
     assert.ok(errors.some(e => e.startsWith('/links/0/href must match')), href + ': ' + errors);
   }
-  for (const href of ['../../', 'https://example.org/season', 'field/lane.html']) assert.deepEqual(checkSchema(reviewScene({links: [{label: 'x', href}]})), [], href);
+  for (const href of ['../../', 'https://example.org/season', 'season/lane.html']) assert.deepEqual(checkSchema(reviewScene({links: [{label: 'x', href}]})), [], href);
   assert.ok(checkSchema({...reviewScene(), payload: 'extra'}).includes('/payload is not a scene field'));
   const scene = reviewScene();
   scene.cases.push({...scene.cases[1], id: 'second-control', status: 'pass'});
@@ -117,20 +117,6 @@ test('the ledger files must match the figures the page draws', () => {
   ledger.masses[0].kg = [1, 2];
   ledger.electricalCases['raise-weak'].batterySideA.arm = [5, 25];
   assert.deepEqual(compareWithLedger(scene, ledger, {inspectionLimitKg: 20}), ['Scene mass lines differ from budgets.json', 'Scene duty raise-weak differs from budgets.json']);
-});
-
-test('field interactions without any registered field fixture are reported', () => {
-  const linked = reviewScene();
-  linked.fieldInteractions = [{title: 'Invented lane', href: 'field/lane.html', objective: 'Invented objective', evidence: 'Invented trial'}];
-  const finding = /no case registers a field fixture/;
-  assert.ok(!validateScene(linked).warnings.some(w => finding.test(w)), 'a case that places a fixture has nothing to report');
-  for (const body of Object.values(linked.bodies)) body.fixture = false;
-  linked.cutaway = null;
-  const {errors, warnings} = validateScene(linked);
-  assert.deepEqual(errors, []);
-  assert.ok(warnings.some(w => finding.test(w) && /fixtures/.test(w)), warnings.join('\n'));
-  linked.fieldInteractions = [];
-  assert.ok(!validateScene(linked).warnings.some(w => finding.test(w)), 'no linked interaction, no finding');
 });
 
 test('a trial replay validates beside the cases and shares their ID namespace', () => {
@@ -171,7 +157,7 @@ test('a trial replay validates beside the cases and shares their ID namespace', 
 
 test('a replay is playback: the receipt comparison still covers exactly the checked cases', () => {
   const scene = replayScene(), content = Buffer.from(JSON.stringify(scene)), served = gzipSync(content), read = readScene(served);
-  const receipt = {issue: scene.issue, step: scene.sources.step, motion: scene.sources.motion, cases: [{case: 'raise', status: 'pass'}],
+  const receipt = {issue: scene.issue, step: scene.sources.step, design: scene.sources.design, cases: [{case: 'raise', status: 'pass'}],
     control: {witness: {}}, narrativeReview: scene.narrativeReview};
   assert.deepEqual(compareWithReceipt(read, receipt, {pins: false}), [], 'a replay adds no case to compare');
   assert.ok(compareWithReceipt(read, {...receipt, cases: [...receipt.cases, {case: 'lane-run', status: 'pass'}]}, {pins: false})

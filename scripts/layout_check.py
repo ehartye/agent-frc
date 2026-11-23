@@ -24,7 +24,7 @@ def arguments():
     parser.add_argument("--from-receipt", metavar="FILE", help="With --view-only, the project-relative receipt to reuse (default: --output, or receipt.json beside the judgement file)")
     parser.add_argument("--cases", metavar="A,B", help="Measure only these stages; the receipt is partial and is not one to publish")
     parser.add_argument("--output", metavar="FILE", help="Write the receipt to the project-relative FILE through a temporary file and a rename instead of stdout")
-    parser.add_argument("--workers", "--jobs", type=int, metavar="N", dest="workers", help="Worker processes that share the cases (default: half the cores)")
+    parser.add_argument("--workers", type=int, metavar="N", help="Worker processes that share the cases (default: half the cores)")
     parser.add_argument("--quiet", action="store_true", help="Omit the progress lines on stderr")
     return parser.parse_args()
 

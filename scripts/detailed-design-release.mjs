@@ -16,7 +16,6 @@ import {execFileSync} from 'node:child_process';
 import {cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync} from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
-import {gunzipSync} from 'node:zlib';
 
 import {writeDirectoryAtomic, writeFileAtomic} from './atomic-write.mjs';
 import {gateLine, stageGate, writeGate} from './stage-gate.mjs';
@@ -185,21 +184,10 @@ export function stageInProgress({project, design, designName, inputs, preliminar
   out.set('limits.json', need(JSON.parse(out.get('budgets.json')).requirements.file));
   const record = {schema: designSchema, design, issue: receipt.issue, preliminary: {release: preliminary},
     fusion: {archiveSha256: replay.archiveSha256, stepSha256: replay.stepSha256, configuration: replay.configuration, ...(replay.revision ? {revision: replay.revision} : {})},
-    // Where the project's CI finds the committed inputs to rerun the layout check.
+    // Where the stage gate finds the committed inputs to rerun the layout check.
     check: {project: path.relative(project, source).split(path.sep).join('/')},
     missionCases: (missions.missionCases ?? []).map(m => m?.trial?.file ? {...m, trial: {file: path.posix.basename(m.trial.file)}} : m)};
   for (const m of missions.missionCases ?? []) if (m?.trial?.file) out.set(path.posix.basename(m.trial.file), need(m.trial.file));
-  // Field-interaction players the review links, each with the trial behind it.
-  const players = [];
-  for (const row of JSON.parse(gunzipSync(out.get('review-scene.json.gz'))).fieldInteractions ?? []) {
-    const page = String(row?.href ?? '').replace(/^\.\//, '');
-    check(/^field\/[a-z0-9][a-z0-9._-]{0,110}\.html$/.test(page) && named(row?.evidence?.file), 'Link each field interaction to a page at field/NAME.html beside the view, with its trial evidence');
-    const trial = path.posix.basename(row.evidence.file);
-    out.set(page, need(path.posix.join(path.posix.dirname(viewName), page)));
-    out.set(trial, need(row.evidence.file));
-    if (!players.some(p => p.file === page)) players.push({file: page, trial: {file: trial}, objective: row.objective});
-  }
-  if (players.length) record.fieldPlayers = players;
   out.set('design.json', Buffer.from(JSON.stringify(record, null, 2) + '\n'));
   // The bench tests handed over by the preliminary design, published beside the review. A draft is not held to them.
   const bench = effectiveGate(project, design, {preliminary, file: path.join(source, benchFile), ...folders});
@@ -338,25 +326,15 @@ export function lastCommitOf(project, ...paths) {
 /**
  * Withdraw a design: a status change. The index keeps the reason and the last commit that held the design's
  * published files, and the files leave the site. Nothing is archived on the site; Git keeps them.
- *
- * A model published before the index existed has no entry. Name its published files with `files`, a comma-separated
- * list of project-relative paths: they are removed and the design is listed as withdrawn.
  */
-export function withdraw({project, design, reason, files, ...folders}) {
-  const at = layout(project, folders), index = loadIndex(at), listed = index.designs.includes(design);
+export function withdraw({project, design, reason, ...folders}) {
+  const at = layout(project, folders), index = loadIndex(at);
   check(designId.test(design ?? ''), useVersion);
-  check(listed || named(files), 'Design ' + design + ' is not in the index. For a model published before the index, name its published files with --files');
-  check(listed !== named(files), '--files applies to a model the index does not list yet');
+  check(index.designs.includes(design), 'Design ' + design + ' is not in the index');
   check(named(reason), 'Give the reason with --reason');
   check(index.designStatus[design] !== 'withdrawn', 'Design ' + design + ' is already withdrawn');
-  const published = listed ? [path.join(at.tree, 'designs', design)] : files.split(',').map(name => {
-    const full = path.resolve(project, name.trim()), rel = path.relative(project, full);
-    check(rel && !rel.startsWith('..') && !path.isAbsolute(rel) && existsSync(full), 'No published file at ' + name.trim());
-    return full;
-  });
-  const present = published.filter(p => existsSync(p)), commit = present.length ? lastCommitOf(project, ...present) : null;
-  for (const item of published) rmSync(item, {recursive: true, force: true});
-  if (!listed) index.designs.unshift(design);
+  const published = path.join(at.tree, 'designs', design), commit = existsSync(published) ? lastCommitOf(project, published) : null;
+  rmSync(published, {recursive: true, force: true});
   if (index.supersededBy) delete index.supersededBy[design];
   index.designStatus[design] = 'withdrawn';
   index.reason = {...index.reason, [design]: reason};
@@ -485,7 +463,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
   } catch (error) {
     console.error(error.message + '\nUsage: detailed-design-release.mjs stage PROJECT --design MAJOR.MINOR [--design-name "NAME"] --inputs FOLDER --preliminary RELEASE --authority REGISTER --lineage LINEAGE' +
       ' | relink PROJECT --design ID --preliminary RELEASE | effective PROJECT --design ID --readiness REVIEW_RESULT.json [--design-name "NAME"] [--bench-tests FILE] [--budget-minutes 45] [--workers N]' +
-      ' | supersede PROJECT --design ID [--by ID] | withdraw PROJECT --design ID --reason TEXT [--files PATH,PATH] | copy-inputs PROJECT --from ID --to ID' +
+      ' | supersede PROJECT --design ID [--by ID] | withdraw PROJECT --design ID --reason TEXT | copy-inputs PROJECT --from ID --to ID' +
       ' | remove PROJECT --design ID [--replaced-by ID] | refresh PROJECT' +
       '   [--site docs] [--detailed detailed-design] [--preliminary-tree preliminary-design] [--detailed-inputs cad/detailed-design/designs]');
     process.exitCode = 1;

@@ -275,6 +275,10 @@ test('a mission case counts when a mission animation plays it', t => {
   assert.equal(errorsOf(p.check()), '', 'a headline phase that plays the case, among its other segments, is a mission animation');
   animations(false);
   assert.match(errorsOf(p.check()), new RegExp('mission case ' + mission + ' is not played by a mission animation of the review'));
+  // Control: a scene without its animation list cannot load on the page, so it is refused.
+  const {animations: dropped, ...bare} = shown;
+  writeFileSync(scene, gzipSync(JSON.stringify(bare)));
+  assert.match(errorsOf(p.check()), /1\.0: the review scene lists no animations, so the page cannot play it/);
 });
 
 test('a design this change makes effective carries the record of its stage gate', t => {
@@ -366,7 +370,7 @@ test('a rename keeps the design: the same physics under a new ID needs no gate o
   const p = project(t, {'1.0': {}}, {'1.0': 'effective'});
   authorPlan(p, '1.0');
   const base = p.commit('base');
-  // The same STEP and motion study, staged under another version with its own issue name and folder; the first ID is removed.
+  // The same STEP and design source, staged under another version with its own issue name and folder; the first ID is removed.
   const rename = () => {
     issueRelease(path.join(p.root, 'docs'), '1.1', {basis: '1.0'});
     commitInputs(p.root, '1.1', {basis: '1.0'});
@@ -508,7 +512,7 @@ test('the detailed primary view is computed: the effective design, with the newe
 });
 
 test('verdicts compare inputs and results, not measured values', () => {
-  const receipt = {status: 'layout-checked', planSha256: 'a', step: {sha256: 'b'}, motion: {sha256: 'c'}, cycle: ['x'],
+  const receipt = {status: 'layout-checked', planSha256: 'a', step: {sha256: 'b'}, design: {sha256: 'c'}, cycle: ['x'],
     cases: [{case: 'x', status: 'pass', minimumGapMm: 4.2000001}], control: {case: 'x', displaced: 'rail', witness: {status: 'fail'}},
     budgets: {massStatus: 'pass', electricalCases: [{case: 'weak', status: 'pass', marginV: 0.31}]}};
   const rounded = structuredClone(receipt);

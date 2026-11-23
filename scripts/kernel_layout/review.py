@@ -133,7 +133,7 @@ def prepare(inputs, measured, placements, missing, say):
     result["premises"] = premises.compare(inputs.root, plan, missing)
     result["reopen"] = [dict(phase=d["phase"], reason=d["id"], affected=d["interfaces"]) for d in result["premises"] if d["status"] == "reopen"]
     plan["step"], bounds = generated(inputs)
-    result.update(step=plan["step"], motion=plan["motion"], parts=inputs.parts)
+    result.update(step=plan["step"], parts=inputs.parts)
     hosts = structure(inputs, bounds, missing)
     result["scope"], lines = scope.report(plan, len(inputs.roster - inputs.fixtures), len(inputs.fixtures))
     for line in lines:

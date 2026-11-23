@@ -141,14 +141,10 @@ export function validateScene(scene) {
     const absent = r.ids.filter(id => !ids.has(id));
     if (absent.length) warnings.push('Required role ' + r.role + ' is missing ' + absent.join(', '));
   }
-  if (scene.fieldInteractions.length && !Object.values(bodies).some(b => b.fixture)) {
-    warnings.push('Field interactions are linked but no case registers a field fixture, so Fit field interaction stays off. '
-      + 'If a field part is modeled as a package member it counts as robot; list it under fixtures in the design source');
-  }
   if (!scene.required.length) warnings.push('No required roles are commissioned (presentation.required)');
   if (scene.mass && scene.mass.remainingKg < 0) warnings.push('Inspection weight exceeds the limit by ' + (-scene.mass.remainingKg).toFixed(3) + ' kg');
   for (const d of scene.power) if (d.marginV < 0) warnings.push(d.case + ' falls ' + (-d.marginV).toFixed(2) + ' V below its required voltage');
-  if (!scene.mass) warnings.push('Weight and power budgets are not supplied (plan budgets)');
+  if (!scene.mass) warnings.push('Weight and power budgets are not supplied (name budgets.json in the judgement file)');
   else if (scene.mass.runningAdditions === null) warnings.push('Running additions are not itemized (presentation.runningAdditions)');
   for (const [key, source] of Object.entries(PROJECT_FIELDS)) if (scene[key] === null || scene[key] === undefined) warnings.push('Not supplied: ' + source);
   const gaps = {};
@@ -172,7 +168,7 @@ export function compareWithReceipt(read, receipt) {
   const same = (a, b) => canonical(a) === canonical(b);
   const s = read.scene;
   if (s.issue !== receipt.issue) errors.push('Scene issue differs from the receipt');
-  if (!same(s.sources?.step, receipt.step) || !same(s.sources?.motion, receipt.motion)) errors.push('Scene STEP or motion pin differs from the receipt');
+  if (!same(s.sources?.step, receipt.step) || !same(s.sources?.design, receipt.design)) errors.push('Scene STEP or design source pin differs from the receipt');
   const shown = Object.fromEntries((s.cases || []).filter(c => c.id !== controlCase).map(c => [c.id, c.status]));
   const checked = Object.fromEntries((receipt.cases || []).map(c => [c.case, c.status]));
   if (!same(Object.keys(shown).sort(), Object.keys(checked).sort()) || Object.keys(checked).some(k => shown[k] !== checked[k])) errors.push('Scene case results differ from the receipt');

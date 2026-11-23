@@ -18,7 +18,7 @@ export function reviewScene(overrides = {}) {
     schema: 'agent-frc/preliminary-review-scene@1', issue: 'synthetic-review-layout', title: 'Invented arm raise and return', context: 'Synthetic project',
     architecture: 'Invented pivoting arm on a fixed frame', datum: 'Invented frame datum, millimetres', units: 'Millimetres in the registered STEP world; kg, A, V',
     links: [{label: 'Season site', href: '../../../'}],
-    sources: {step: pin('design.step'), motion: pin('design.json'), narrative: pin('narrative.md')},
+    sources: {step: pin('design.step'), design: pin('design.json'), narrative: pin('narrative.md')},
     decision: {status: 'pending receipt', firstUnmet: null},
     palette: {structure: '#5e7da3', mechanism: '#2f9e8f', electrical: '#8e6bb8', reference: '#c9a227'},
     meshes: [box([-300, -250, 0], [300, 250, 60]), box([0, -40, 60], [420, 40, 120]), box([-200, 60, 60], [-60, 200, 180]), box([900, -300, 0], [1100, 300, 900])],
@@ -52,7 +52,7 @@ export function reviewScene(overrides = {}) {
         limitingTime: 0.5, limitingValue: {gapMm: 0, volumeMm3: 4100}, start: 'Commissioned start: battery displaced', groups: ['arm'], environment: 'Field fixtures: target',
         metric: 'Minimum surface gap; positive overlap volume', units: 'mm, mm³', allowanceMm: 5, allowanceBasis: 'Invented reserve', method: 'Exact distance and common volume at the witness pose'}],
     returnCriteria: {preliminary: ['A nominal path fails clearance or leaves an open interval'], conceptual: ['An accepted conceptual-design premise leaves its criterion']},
-    fieldInteractions: [], focus: 'Invented focus: check the arm clears the battery.', notes: ['Invented note on the model basis.'],
+    focus: 'Invented focus: check the arm clears the battery.', notes: ['Invented note on the model basis.'],
     cutaway: {label: 'Target cutaway', hides: ['target'], outline: [[900, -100, 300], [900, 100, 300], [900, 100, 500], [900, -100, 500]]}
   };
   return Object.assign(scene, overrides);

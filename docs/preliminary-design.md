@@ -141,7 +141,7 @@ Name every file by its project-relative path, as `{"file": "..."}`, and type no 
 "budgets": {"file": "cad/preliminary-design/releases/1.0/budgets.json"}
 ```
 
-The same form serves every reference in the judgement file and in the records it names: the budgets and their `requirements`, each premise acceptance, observation and `source`, `narrativeReview.source`, each `presentation.replays` entry and the `evidence` a replay lists, a field interaction's `evidence` and each trial behind `transportedBy`, `freePath` or `supportedBy`. The check reads each file and records its digest in the receipt. A `sha256` typed beside a file is verified, and a stale one stops the check with `Changed evidence: FILE`.
+The same form serves every reference in the judgement file and in the records it names: the budgets and their `requirements`, each premise acceptance, observation and `source`, `narrativeReview.source`, each `presentation.replays` entry and the `evidence` a replay lists, and each trial behind `transportedBy`, `freePath` or `supportedBy`. The check reads each file and records its digest in the receipt. A `sha256` typed beside a file is verified, and a stale one stops the check with `Changed evidence: FILE`.
 
 ### The displaced control
 
@@ -569,7 +569,7 @@ Declare what the report reads:
   | Note | What the files declare | Criterion 2 |
   | --- | --- | --- |
   | `motion driven by the trial` | The case's stage names the trial through `transportedBy`, `freePath` or `supportedBy`, so the layout check bound the checked path to the trial's record. | Counts |
-  | `animation played from the trial` | A review replay under `presentation.replays` names the trial as evidence, or a linked field interaction names it. The review plays the recorded run; the checked case motion is still prescribed. | Counts |
+  | `animation played from the trial` | A review replay under `presentation.replays` names the trial as evidence. The review plays the recorded run; the checked case motion is still prescribed. | Counts |
   | `prescribed motion with a trial attached` | Only the mission case's own `trial` reference, such as `{"file": "release-trial.json"}`, names the trial. The case moves on a prescribed stroke and nothing plays the trial. | `not met` |
   | `prescribed motion, no trial` | No trial is named. A case that only follows its carrier is a prescribed path. | `not met` |
 

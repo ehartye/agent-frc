@@ -52,7 +52,7 @@ function results(receipt) {
 export function receiptIdentity(receipt) {
   const r = receipt ?? {};
   return canonical({
-    ...results(r), step: r.step?.sha256 ?? null, motion: r.motion?.sha256 ?? null, design: r.design?.sha256 ?? null,
+    ...results(r), step: r.step?.sha256 ?? null, design: r.design?.sha256 ?? null,
     budgets: r.budgets?.source?.sha256 ?? null, limits: r.budgets?.limits?.sha256 ?? null,
     stages: Object.fromEntries(Object.entries(r.stages ?? {}).map(([name, stage]) => [name, stageOf(stage)])),
     groups: r.groups ?? null, mounts: r.mounts ?? null, datum: r.datum ?? null

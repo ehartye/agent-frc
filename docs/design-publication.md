@@ -15,7 +15,7 @@ node PLUGIN/scripts/design-publication.mjs check PROJECT
 | An effective design passed its stage gate | A design this change makes effective carries the record of [its stage gate](#the-stage-gate), `gate.json`, for the physics its receipt records. The command that marks a design effective writes it after it has rerun the layout check on the committed design. |
 | An effective design keeps its physics | A design that was already effective is compared with itself before the change, labels left out. [A rename or a view refresh passes, and a change to its physics is refused](#a-change-to-an-effective-design). |
 | The review shows the checked numbers | The cases, results, displaced control, objectives, mass and duties in the review scene equal the receipt. |
-| The design plays a mission task | The record names a mission case: a passing operating case in the checked cycle, for a narrative objective the receipt marks `represented`, played by a [mission animation](preliminary-design.md#animations-show-the-mission-the-check-list-shows-the-evidence) of the review. A field-interaction trial must be one the receipt names. |
+| The design plays a mission task | The record names a mission case: a passing operating case in the checked cycle, for a narrative objective the receipt marks `represented`, played by a [mission animation](preliminary-design.md#animations-show-the-mission-the-check-list-shows-the-evidence) of the review. A mission case backed by a trial (`field-interaction-trial`) publishes a trial the receipt names. |
 | A detailed design builds on an accepted layout | An in-progress detailed design names a preliminary release that is `effective`, its design source places solids from the STEP its record names as the Fusion export, and its receipt covers that release's motion cases, cycle and displaced control. |
 | An effective detailed design passed its review | The design carries its mechanical-readiness review result, for the STEP its record names, and the review reports `pass`. |
 | An effective detailed design resolved its bench tests | The design publishes its [bench-test record](#bench-tests-handed-over-from-preliminary-design). Every `before-build` test has a recorded passing result and every `on-robot` test has an owner and a plan. Every bench test its preliminary design hands over is in the record with the handed-over numbers. |
@@ -392,13 +392,7 @@ node PLUGIN/scripts/detailed-design-release.mjs withdraw . --design 2.0 --reason
 - The stock index and catalog pages list the design as withdrawn, with its reason and the commit.
 - The check adds a warning when a withdrawn design has no reason in the index.
 
-The check requires no declaration before a withdrawal. A published model that has no entry in `designs.json` is withdrawn the same way. Give it a version ID and name its published files:
-
-```sh
-node PLUGIN/scripts/detailed-design-release.mjs withdraw . --design 3.0 --reason "Published without a design review." --files docs/models/robot.glb,docs/media/robot-still.png
-```
-
-The command removes those files, lists the design first in the index as `withdrawn` and records the last commit that changed them.
+The check requires no declaration before a withdrawal.
 
 ## The stage gate
 
