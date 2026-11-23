@@ -281,7 +281,7 @@ export function reportLines(audit) {
   out.push('Not looked at: ' + notLookedAt.join(' '));
   const excepted = audit.exceptions.reduce((count, entry) => count + entry.covers.length, 0), files = new Set(findings.map(item => item.file)).size;
   out.push(findings.length ? plural(findings.length, 'finding') + ' in ' + plural(files, 'file') + (excepted ? ', and ' + excepted + ' under declared exceptions' : '') + '. This audit is advice: it blocks nothing.'
-    : 'No findings in what the audit read' + (excepted ? ', ' + plural(excepted, 'finding') + ' under declared exceptions' : '') + (coverage.notRun.length ? '; the library was not run, so outputs were compared by fingerprint only' : '') + '. This audit is advice: it blocks nothing.');
+    : 'No findings in what the audit read' + (excepted ? ', ' + plural(excepted, 'finding') + ' under declared exceptions' : '') + (!audit.sources.length ? '; the project has no design source' : coverage.notRun.length ? '; the library was not run, so outputs were compared by fingerprint only' : '') + '. This audit is advice: it blocks nothing.');
   return out;
 }
 
