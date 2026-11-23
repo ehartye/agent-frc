@@ -85,7 +85,7 @@ Edit the inputs in the release's own folder, rerun the check there and stage the
 | A different design: another architecture or concept | A new release ID. |
 | The design that follows an effective release | A new release ID. |
 
-A release stops changing when it is marked `effective`, and stays unchanged as `superseded` or `withdrawn`: staging its ID is refused. When a new release replaces an in-progress one that was never accepted, mark the old one `superseded`. It keeps its record in the index and opens from a link that names it, and the picker lists it no longer. The picker lists a superseded release only when the index holds the date it was accepted, under `accepted`, which `--set-status ID effective` records.
+A release stops changing when it is marked `effective`, and stays unchanged as `superseded` or `withdrawn`: staging its ID is refused. When a new release replaces an in-progress one that was never accepted, mark the old one `superseded` with `python cad/preliminary-design/stage.py --set-status OLD-ID superseded`. It keeps its record in the index and opens from a link that names it, and the picker lists it no longer. The picker lists a superseded release only when the index holds the date it was accepted, under `accepted`, which `--set-status ID effective` records.
 
 ```json
 {
