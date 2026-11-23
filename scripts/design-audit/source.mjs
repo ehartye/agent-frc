@@ -74,11 +74,13 @@ export function parameterValues(parameters = {}) {
   return known;
 }
 
-/** Plain numbers under a millimetre key in a trial: [{path, value}]. */
+/** Millimetre fields that set the method, not geometry: a tolerance such as fitToleranceMm is never a dimension. */
+const methodLength = /Tolerance\w*Mm$/;
+/** Plain numbers under a millimetre key in a trial that carries geometry: [{path, value}]. */
 function typedLengths(value, at = '') {
   if (Array.isArray(value)) return value.flatMap((item, i) => typedLengths(item, at + '[' + i + ']'));
   if (!value || typeof value !== 'object') return [];
-  return Object.entries(value).flatMap(([name, item]) => /Mm$/.test(name)
+  return Object.entries(value).filter(([name]) => !methodLength.test(name)).flatMap(([name, item]) => /Mm$/.test(name)
     ? numbers(item).map(number => ({path: at + '.' + name, value: number}))
     : typedLengths(item, at + '.' + name));
 }

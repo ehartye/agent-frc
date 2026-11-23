@@ -165,7 +165,8 @@ const cases = {
   'engine-setting-in-trial': [{edit: data => { data.trials.carry.surfaces[0].solref = [0.02, 1]; }}, {}],
   'custom-share': [{edit: data => { for (const name of ['arm brace', 'bumper front']) Object.assign(data.solids.find(solid => solid.name === name), {shape: {kind: 'custom', use: 'hook', parameters: {}}}); }}, {}],
   'custom-size': [replaceFile('design/custom/hook.py', hookWith(Array.from({length: 30}, (_, i) => '    reach = reach + 0\n').join(''))), {}],
-  'restated-dimension': [{edit: data => { data.trials.carry.piece.start.atMm = [240, 0, 400]; }}, {}],
+  // A fit tolerance equal to a parameter is a method setting, not a restated dimension.
+  'restated-dimension': [{edit: data => { data.trials.carry.piece.start.atMm = [240, 0, 400]; }}, {edit: data => { data.trials.carry.fitToleranceMm = 240; }}],
   'custom-listed-shape': [replaceFile('design/custom/hook.py', 'from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox\n\n\ndef build(parameters):\n    return BRepPrimAPI_MakeBox(parameters["xMm"], parameters["yMm"], parameters["zMm"]).Shape()\n'), {}],
   'override-no-reason': [replaceFile('design/judgement.json', JSON.stringify({schema: 'agent-frc/layout-judgement@1', interactions: {carry: {decides: 'Invented', trial: 'carry', override: {verdict: 'planar is enough'}}}})),
     replaceFile('design/judgement.json', JSON.stringify({schema: 'agent-frc/layout-judgement@1', interactions: {carry: {decides: 'Invented', trial: 'carry', override: {verdict: 'planar is enough', reason: 'The tote is carried flat; the arm holds it square to the plane.'}}}}))],
