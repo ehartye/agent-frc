@@ -24,6 +24,7 @@
       "concept-bot.test.mjs",
       "concept-check.test.mjs",
       "concept-rehearsal.test.mjs",
+      "concept-select.test.mjs",
       "concept-study.test.mjs",
       "concept-tournament.test.mjs",
       "contact-convergence.test.mjs",

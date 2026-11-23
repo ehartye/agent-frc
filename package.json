@@ -21,6 +21,7 @@
     "kickoff": "node scripts/kickoff.mjs",
     "concept:check": "node scripts/concept-check.mjs",
     "concept:study": "node scripts/concept-tournament.mjs",
+    "concept:select": "node scripts/concept-select.mjs",
     "native:export": "node scripts/check-native-export.mjs",
     "native:articulation": "node scripts/check-native-articulation.mjs",
     "context": "node scripts/context.mjs",
