@@ -117,6 +117,21 @@ class MotionHeartbeat(unittest.TestCase):
         self.assertTrue(any(HEARTBEAT.match(l) for l in loud.stderr.splitlines()))
         self.assertNotEqual(run("--heartbeat", "-1").returncode, 0)
 
+    def test_a_study_checked_on_its_own_names_its_step_by_path(self):
+        """A motion study run by this command alone needs no typed SHA-256; one that is typed is still verified."""
+        typed = json.loads((self.root / self.study("typed.json", "quarter")).read_text())
+        def run(name, step):
+            file = write(self.root, name, dict(typed, step=step))["file"]
+            return subprocess.run([sys.executable, "-B", str(SCRIPTS / "mechanical_motion.py"), str(self.root), file, "--quiet"],
+                                  capture_output=True, text=True)
+        plain, pinned = run("plain.json", {"file": "scene.step"}), run("pinned.json", typed["step"])
+        self.assertEqual(plain.returncode, 0, plain.stderr)
+        self.assertEqual(json.loads(plain.stdout), json.loads(pinned.stdout))
+        self.assertEqual(json.loads(plain.stdout)["stepSha256"], typed["step"]["sha256"])
+        stale = run("stale.json", {"file": "scene.step", "sha256": "0" * 64})
+        self.assertNotEqual(stale.returncode, 0)
+        self.assertIn("Changed evidence: scene.step", stale.stderr)
+
     def test_package_check_passes_the_interval_through(self):
         layout = self.root / "layout"
         plan = runpy.run_path(str(SCRIPTS.parent / "examples/preliminary-design/create.py"))["create"](layout)

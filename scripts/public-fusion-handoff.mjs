@@ -129,16 +129,19 @@ export function publicFusionHandoff(project) {
   requireValue(manifest.schema === 'agent-frc/public-fusion-handoff@1' && manifest.shareable === true &&
     text(manifest.revision), 'declare the revision and confirm redistribution');
   const {archive,reopen,components,joints} = manifest;
-  requireValue(/^cad\/.+\.f3[dz]$/i.test(archive?.file) && /^[a-f0-9]{64}$/.test(archive?.sha256), 'expected a pinned public CAD archive');
-  const file = trackedFile(root,archive.file);
-  requireValue(archiveDigest(file) === archive.sha256, 'downloaded archive hash differs');
+  // The manifest names the archive and the reopen receipt by path. A SHA-256 typed beside either is verified, and none is required.
+  const typed = value => value === undefined || /^[a-f0-9]{64}$/.test(value);
+  requireValue(/^cad\/.+\.f3[dz]$/i.test(archive?.file) && typed(archive?.sha256), 'expected a public CAD archive under cad/');
+  const file = trackedFile(root,archive.file), archiveSha256 = archiveDigest(file);
+  requireValue(archive.sha256 === undefined || archiveSha256 === archive.sha256, 'downloaded archive hash differs');
   const git = args => execFileSync('git',['-C',root,...args],{encoding:'utf8'}).trim();
   requireValue(git(['hash-object','--no-filters','--',archive.file]) === git(['rev-parse',':'+archive.file]),
     'tracked archive bytes differ from the download');
   const bytes = readFileSync(trackedFile(root,reopen?.file));
-  requireValue(digest(bytes) === reopen.sha256,'reopen receipt hash differs');
+  requireValue(reopen.sha256 === undefined || digest(bytes) === reopen.sha256,'reopen receipt hash differs');
   const obs = JSON.parse(bytes);
-  requireValue(obs.opened === true && obs.source === archive.file && obs.sha256 === archive.sha256,
+  // The reopen receipt is written at the reopen: its digest must be that of the archive offered now.
+  requireValue(obs.opened === true && obs.source === archive.file && obs.sha256 === archiveSha256,
     'reopen the exact student download and record its path and hash');
   requireValue(object(obs.components) && Array.isArray(components) && components.length && Array.isArray(joints), 'expected component inventory and explicit joint claim list');
   const installed = installedOccurrences(obs.components);
@@ -182,7 +185,7 @@ export function publicFusionHandoff(project) {
       const ref=j.direction;
       requireValue(ref?.file!==reopen.file && ref?.file!==manifestPath,'use independent direction reference');
       const data=readFileSync(trackedFile(root,ref?.file));
-      requireValue(digest(data)===ref.sha256,'changed direction reference');
+      requireValue(ref.sha256===undefined || digest(data)===ref.sha256,'changed direction reference');
       const rules=JSON.parse(data);
       requireValue(Object.hasOwn(rules,j.id) && object(rules[j.id]),'missing source direction for '+j.id);
       direction=rules[j.id]; signedJoints++;
@@ -191,7 +194,7 @@ export function publicFusionHandoff(project) {
     if (j.type!=='rigid') editable=true;
   }
   requireValue(editable,'identify a native edit feature or a verified moving joint');
-  return {revision:manifest.revision, file, name:archive.file, sha256:archive.sha256, components:ids.size, joints:jointIds.size, signedJoints};
+  return {revision:manifest.revision, file, name:archive.file, sha256:archiveSha256, components:ids.size, joints:jointIds.size, signedJoints};
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {

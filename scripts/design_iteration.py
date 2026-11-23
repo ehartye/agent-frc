@@ -100,7 +100,7 @@ def archive_file(file, digest, vault):
             except FileExistsError:
                 pass
     no_link(obj)
-    require(sha(obj) == digest, f"Private custody digest differs: {digest}")
+    require(sha(obj) == digest, f"Archived bytes differ from their digest: {digest}")
 
 
 def claims(rows, ids, keys):
@@ -123,8 +123,10 @@ def harvest(project, old, plan, vault):
         path = Path(row["file"])
         file = path if path.is_absolute() else source_file(project, row["file"])
         no_link(file)
-        archive_file(file, row["sha256"], vault)
-        evidence[key] = dict(kind=kind, source=label(row["source"]), sha256=row["sha256"])
+        # The plan names each file by path. A SHA-256 typed beside it is verified; without one the file is taken as read.
+        recorded = row.get("sha256") or sha(file)
+        archive_file(file, recorded, vault)
+        evidence[key] = dict(kind=kind, source=label(row["source"]), sha256=recorded)
     kinds = {r["kind"] for r in evidence.values()}
     require({"design","image","result"} <= kinds, "Archive the outgoing design, a visual and a result")
     require(any(evidence.get(k, {}).get("kind")=="image" for h in plan["highlights"] for k in h["evidence"]),
@@ -274,7 +276,6 @@ def carry_child(project,request_file,expected,vault):
     req=read(request_file)
     require(req["schema"]=="agent-frc/archived-occurrence-request@1","Wrong child selection request")
     vault=vault.resolve(strict=True)
-    require(not vault.is_relative_to(project) and not project.is_relative_to(vault),"Use the independent private custody")
     it=project/"iterations"
     with lease(it/"design-iterations",publication=True), TemporaryDirectory(dir=it,prefix=".selecting-") as t:
         temp=Path(t)
@@ -326,7 +327,6 @@ def carry_child(project,request_file,expected,vault):
 def cutover(project, plan, vault):
     require(plan["schema"]=="agent-frc/design-restart@1","Wrong restart plan")
     vault=vault.resolve()
-    require(not vault.is_relative_to(project) and not project.is_relative_to(vault), "Keep private custody outside the project")
     vault.mkdir(parents=True,exist_ok=True)
     it=project/"iterations"
     it.mkdir(exist_ok=True); no_link(it)
@@ -399,18 +399,25 @@ def seal_prototype(project, commit, vault):
         return result
 
 
+ARCHIVE="iterations/archive"
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
+    store="Folder that holds each retired file by its digest. Default: "+ARCHIVE+" inside the project, committed with it"
     sub=parser.add_subparsers(dest="action",required=True)
     for name in ("start","check","carry"):
         p=sub.add_parser(name);p.add_argument("project",type=Path)
         if name!="check":p.add_argument("input",type=Path)
-        if name!="carry":p.add_argument("--vault",type=Path,required=name=="start")
+        if name!="carry":p.add_argument("--vault",type=Path,help=store)
     s=sub.add_parser("seal");s.add_argument("project",type=Path)
-    s.add_argument("--from-commit",required=True);s.add_argument("--vault",type=Path,required=True)
+    s.add_argument("--from-commit",required=True);s.add_argument("--vault",type=Path,help=store)
     child=sub.add_parser("carry-child");child.add_argument("project",type=Path);child.add_argument("input",type=Path)
-    child.add_argument("--expected",required=True);child.add_argument("--vault",type=Path,required=True)
+    child.add_argument("--expected",required=True);child.add_argument("--vault",type=Path,help=store)
     args=parser.parse_args();project=args.project.resolve(strict=True)
+    # The archive store is a project folder, committed with the numbered records. A check reads it when it exists.
+    if getattr(args,"vault","absent") is None and (args.action!="check" or (project/ARCHIVE).is_dir()):
+        args.vault=project/ARCHIVE
     if args.action=="start":result=cutover(project,read(args.input),args.vault)
     elif args.action=="seal":result=seal_prototype(project,args.from_commit,args.vault)
     elif args.action=="carry-child":result=carry_child(project,args.input,args.expected,args.vault)

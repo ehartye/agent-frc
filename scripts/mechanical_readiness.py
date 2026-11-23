@@ -41,10 +41,36 @@ def project_path(root, name):
 
 
 def pinned(root, ref):
+    """The project file a reference names. A SHA-256 the author typed is verified; none is required.
+
+    A reference written as {"file": "..."} is given the digest of the file as read, so a result still records what
+    was checked."""
     require(isinstance(ref, dict), "Missing revision-bound file")
     target = project_path(root,ref.get("file"))
+    if ref.get("sha256") is None:
+        ref["sha256"] = digest(target)
+        return target
     require(digest(target)==ref.get("sha256"), "Changed evidence: "+ref["file"])
     return target
+
+
+def fill_digests(root, node):
+    """Give every file reference written without a SHA-256 the digest of the file it names, in place.
+
+    A study, roster or plan names its files by project-relative path. The checker reads each one here, before any
+    comparison, so the fields that repeat a digest downstream hold the one that was read."""
+    if isinstance(node, dict):
+        name = node.get("file")
+        if named(name) and node.get("sha256") is None and not Path(name).is_absolute():
+            target = (root/name).resolve()
+            if target.is_relative_to(root) and target.is_file():
+                node["sha256"] = digest(target)
+        for value in node.values():
+            fill_digests(root, value)
+    elif isinstance(node, list):
+        for value in node:
+            fill_digests(root, value)
+    return node
 
 
 # Keys that may sit beside `file` in a reference an author writes without a SHA-256.
@@ -129,6 +155,7 @@ def component_inputs(root,study):
 
 
 def scan(root, study):
+    fill_digests(root.resolve(), study)
     step = pinned(root,study["step"])
     tolerance=study["contactToleranceMm"]
     require(number(tolerance) and tolerance>=0, "Invalid contact reporting tolerance")
@@ -151,6 +178,7 @@ def scan(root, study):
 def evaluate_inputs(root,study, geometry=None):
     root=root.resolve()
     require(study.get("schema")=="agent-frc/mechanical-readiness@1","Unknown assembly review schema")
+    fill_digests(root, study)
     findings=[]
     def finding(domain,status,subject,reason):
         findings.append(dict(domain=domain,status=status,subject=subject,reason=reason))
@@ -373,10 +401,6 @@ def evaluate_inputs(root,study, geometry=None):
         if not article or row.get("transform")!=occ["worldTransform"] or article.get("id")!=occ.get("article") or not named(article.get("id")):
             missing("identity",key,"Exact installed article or expected world pose differs or is missing.")
             continue
-        if article.get("rights") not in ("exact-redistribution","derived-views-only","private-master"):
-            missing("identity",key,"Record item-level distribution scope and authority.")
-        if not named(article.get("rightsBasis")):
-            missing("identity",key,"No source for the granted asset rights.")
         errors=geometry.get("componentDifferences",{})
         policy=article.get("shapeResolutionMm3")
         if not article.get("neutral") or set(occ.get("sourceSolids",{}))!=set(occ["solids"]) or not number(policy) or policy<0:
@@ -425,8 +449,9 @@ def evaluate_inputs(root,study, geometry=None):
                     from fusion_body_materials import verify_expected
                     try:material_checks.extend(verify_expected(expected,material_record,occ))
                     except (ValueError,TypeError,KeyError) as e:finding("identity","fail",key,str(e))
-            if not all(named(article.get(k)) for k in ("manufacturer","partNumber","manufacturerSource","rights")) or article.get("representation")!="official-exact":
-                missing("identity",key,"Purchased part needs the official exact model and item-level rights.")
+            # Which supplier part and revision the model represents. Supplier CAD may be used and shown; no rights term is asked for.
+            if not all(named(article.get(k)) for k in ("manufacturer","partNumber","manufacturerSource")) or article.get("representation")!="official-exact":
+                missing("identity",key,"Purchased part needs the official exact model of its manufacturer, part number and source.")
         elif kind=="fabricated":
             if model.suffix.lower() not in (".f3d",".f3z") or not zipfile.is_zipfile(model) or not article.get("drawing") or not named(article.get("materialGrade")) or occ.get("editable") is not True:
                 missing("identity",key,"Manufactured part needs an editable Fusion design, controlled drawing and grade.")
@@ -767,7 +792,8 @@ def evaluate_inputs(root,study, geometry=None):
         observed=witness(scope)
         need={"sweep"} if disposition=="engineering" else required_domains
         expected=sorted(d["id"] for d in duties if d["domain"] in need)
-        if observed.get("criteriaSha256")!=scope_digest(study) or observed.get("kind")!="scope-review" or observed.get("scope")!=disposition or observed.get("complete") is not True or not named(observed.get("reviewer")) or not named(observed.get("basis")) or sorted(observed.get("bodies",[]))!=sorted(bodies) or sorted(observed.get("duties",[]))!=expected:
+        # A scope review may record the digest of the criteria it read. It is compared when present and never required.
+        if observed.get("criteriaSha256") not in (None,scope_digest(study)) or observed.get("kind")!="scope-review" or observed.get("scope")!=disposition or observed.get("complete") is not True or not named(observed.get("reviewer")) or not named(observed.get("basis")) or sorted(observed.get("bodies",[]))!=sorted(bodies) or sorted(observed.get("duties",[]))!=expected:
             missing(disposition,"coverage","Independent coverage did not reconcile all installed solids and registered duties.")
     motion_model=None
     if native and any(r["status"] in ("rejected","unavailable") for r in pose_reviews):

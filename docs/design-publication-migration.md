@@ -261,6 +261,27 @@ From 0.132.0 a detailed design has [one viewer](design-publication.md#one-viewer
 | `npm run viewer:controls` or `check-showcase-inventory.py` | Removed. | Remove the step. |
 | `FRC_VERIFIED_FIELD_ROOT` | No longer read. A results page with images or films builds from the project alone. | Delete the variable. |
 
+## Drop typed hashes, rights terms and outside custody on the detailed path
+
+From 0.133.0 the detailed-design tools read files by path, as the preliminary check has since 0.128.0. Nothing has to change in a project: a typed `sha256` is still verified wherever one is written. To stop maintaining them, delete the `sha256` keys.
+
+| Where | Before | Now |
+| --- | --- | --- |
+| Mechanical-readiness study and the records it names | `{"file", "sha256"}` on every reference | `{"file"}`. The review records the digests it read in its result |
+| Motion study run by `mechanical_motion.py` on its own | Typed hashes required | Path only; an interface qualification record needs no `stepSha256` |
+| Article roster in the commissioning plan | The printed SHA-256 typed beside the file | Path only. The result records `rosterSha256` |
+| `checked_placement(app, archive, sha256, …)` and a fit record | The accepted archive digest typed twice | Pass `None`. The receipt records `acceptedSha256` |
+| `cad/public-handoff.json` | Digests of the archive and the reopen receipt | Paths. The reopen receipt's own digest must equal the archive's |
+| Highlights manifest sources, `stylesheet`, `fieldLab` | `sha256` on each | Path only |
+| Restart plan evidence rows | `sha256` on each | Path only |
+| Study `articles[].rights`, `rightsBasis` | Required for every part | Not read. Manufacturer, part number, source and revision stay required |
+| Scope review `criteriaSha256` | Required | Compared when present |
+| Study `distribution` and its `approvedBy` | Required for `--deliver` | Not read |
+| Archive store of `design_iteration.py` | A folder outside the project, `--vault` required | `iterations/archive/` inside the project, committed. `--vault` optional |
+| `native_handoff.py check PROJECT MANIFEST SHA256` | A digest sent through a separate channel | The digest argument is optional. Commit the inventory |
+
+Move the files of an outside archive store into `iterations/archive/` and commit them. Delete any note that tells a teammate to fetch an archive from somewhere other than the repository.
+
 ## Withdraw a design in one pull request
 
 1. Branch from the default branch.

@@ -11,34 +11,30 @@
     "fusionId": "new-study"
   },
   "reason": "The measured handoff exhausted the role's service window.",
-  "preservation": "Record checked branches, active work, ignored results and private custody here.",
+  "preservation": "Record checked branches, active work and ignored results here.",
   "evidence": [
     {
       "id": "baseline",
       "kind": "design",
       "file": "saved-design.f3d",
-      "sha256": "REPLACE_WITH_SHA256",
       "source": "Identify the original revision and configuration"
     },
     {
       "id": "overview",
       "kind": "image",
       "file": "assembly.png",
-      "sha256": "REPLACE_WITH_SHA256",
       "source": "Identify the original revision and configuration"
     },
     {
       "id": "trial",
       "kind": "result",
       "file": "results.json",
-      "sha256": "REPLACE_WITH_SHA256",
       "source": "Identify the original revision and configuration"
     },
     {
       "id": "wheel",
       "kind": "element",
       "file": "wheel.step",
-      "sha256": "REPLACE_WITH_SHA256",
       "source": "Identify the original revision and configuration"
     }
   ],

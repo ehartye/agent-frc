@@ -226,6 +226,15 @@ class Placements(unittest.TestCase):
                     verify_fit(root,wrong,"a"*64)
             with self.assertRaisesRegex(ValueError,"Commissioned"):
                 verify_fit(root,rule,"b"*64)
+            # A fit record named by path, with no typed digest and no repeated archive digest, is accepted as read.
+            plain=dict(source);plain.pop("acceptedSha256")
+            (root/"plain-fit.json").write_bytes(json.dumps(plain).encode())
+            verify_fit(root,dict(plain,evidence=dict(file="plain-fit.json")),"b"*64)
+            with self.assertRaisesRegex(ValueError,"Commissioned"):
+                verify_fit(root,dict(plain,maxCommonMm3=100,evidence=dict(file="plain-fit.json")),"b"*64)
+            # A typed digest that no longer matches the record is still refused.
+            with self.assertRaisesRegex(ValueError,"Changed commissioned fit evidence"):
+                verify_fit(root,dict(plain,evidence=dict(file="plain-fit.json",sha256="0"*64)),"b"*64)
 
 if __name__=="__main__":
     unittest.main()

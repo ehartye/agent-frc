@@ -81,6 +81,50 @@ class ReadinessWithoutKey(unittest.TestCase):
         run = subprocess.run([*command, blocked, "--require-publication"], capture_output=True, text=True, env=dict(os.environ))
         self.assertEqual(run.returncode, 1, run.stderr)
 
+    def test_a_study_that_names_its_files_by_path_passes_with_no_typed_digest_rights_or_criteria_digest(self):
+        """An author names each file by its project path. No SHA-256, redistribution term or criteria digest is typed."""
+        def paths_only(node):
+            if isinstance(node, dict):
+                if isinstance(node.get("file"), str):
+                    node.pop("sha256", None)
+                for value in node.values():
+                    paths_only(value)
+            elif isinstance(node, list):
+                for value in node:
+                    paths_only(value)
+        scope = json.loads((self.root/"test-scope.json").read_bytes())
+        for observation in scope["observations"].values():
+            observation.pop("criteriaSha256")
+        (self.root/"test-scope.json").write_text(json.dumps(scope), encoding="utf-8")
+        self.study.pop("distribution", None)
+        for article in self.study["articles"].values():
+            article.pop("rights")
+            article.pop("rightsBasis")
+        paths_only(self.study)
+        self.assertNotIn("sha256", self.study["step"])
+        result = review(self.root, self.study)
+        self.assertEqual((result["showcaseEligibility"], result["buildReadiness"], result["findings"]), ("pass", "pass", []))
+        # The checker wrote the digests it read, so the result still says which files were reviewed.
+        self.assertEqual(result["stepSha256"], self.study["step"]["sha256"])
+        self.assertRegex(self.study["archive"]["sha256"], "^[0-9a-f]{64}$")
+        # The part and revision a model represents stay required.
+        self.study["articles"]["block"].pop("partNumber")
+        with self.assertRaisesRegex(ValueError, "Supplier evidence differs from selected part or option"):
+            review(self.root, self.study)
+
+    def test_a_typed_digest_is_still_verified_and_a_stale_criteria_digest_still_opens_the_scope(self):
+        scope = json.loads((self.root/"test-scope.json").read_bytes())
+        for observation in scope["observations"].values():
+            observation["criteriaSha256"] = "0" * 64
+        reviewed = write(self.root, "test-scope.json", scope)
+        self.study["coverage"] = {k: {**reviewed, "id": k} for k in scope["observations"]}
+        stale = review(self.root, self.study)
+        self.assertEqual(stale["showcaseEligibility"], "open")
+        self.assertEqual({f["subject"] for f in stale["findings"]}, {"coverage"})
+        self.study["step"]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(ValueError, "Changed evidence"):
+            review(self.root, self.study)
+
     def test_no_installed_script_reads_a_retired_key_or_signature(self):
         for file in sorted([*SCRIPTS.glob("*.py"), *SCRIPTS.glob("*.mjs")]):
             text = file.read_text(encoding="utf-8")

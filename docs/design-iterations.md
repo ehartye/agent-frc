@@ -6,16 +6,16 @@ Use a restart when the team has chosen to replace a design or reverse its premis
 
 Compare the outgoing design with its role. Which result is worth keeping? Which requirement failed, and under what conditions? What would the team change if it began today? Link each answer to the exact evidence. Save a still or screenshot and describe what it shows. Capture a failed trial beside the positive one if both influenced the decision.
 
-Stop editing the outgoing design. Check branches, active authors, live CAD jobs, saved Fusion versions, uncommitted files, ignored runs and private supplier assets. Save and reopen any unsaved work first. For an existing unnumbered project, enumerate the complete selected archives and working evidence to retain. For subsequent rollovers the helper also captures *every file* in the active design and prior import records. Record software commits, source identities and the applicable scope in the evidence list. Keep large and restricted files in private custody.
+Stop editing the outgoing design. Check branches, active authors, live CAD jobs, saved Fusion versions, uncommitted files and ignored runs. Save and reopen any unsaved work first. For an existing unnumbered project, enumerate the complete selected archives and working evidence to retain. For subsequent rollovers the helper also captures *every file* in the active design and prior import records. Record software commits, source identities and the applicable scope in the evidence list. Keep large and restricted files in private custody.
 
-Copy [the restart plan](../templates/design-restart.json) outside the reserved iteration directories. Fill it in with actual paths and SHA-256 digests. Each evidence ID names one physical artifact. Use the original revision or commit in its source description. Images, design masters and independent results each have their own entries. Pre-register known reusable elements individually. The team can select a proper child later from a sealed native design using the [private extraction workflow](#select-an-occurrence-after-cutover).
+Copy [the restart plan](../templates/design-restart.json) outside the reserved iteration directories. Fill it in with actual paths. A `sha256` beside a path is verified and not required. Each evidence ID names one physical artifact. Use the original revision or commit in its source description. Images, design masters and independent results each have their own entries. Pre-register known reusable elements individually. The team can select a proper child later from a sealed native design using the [private extraction workflow](#select-an-occurrence-after-cutover).
 
 ```text
-python <plugin>/scripts/design_iteration.py start PROJECT PLAN.json --vault PRIVATE-CUSTODY
-python <plugin>/scripts/design_iteration.py check PROJECT --vault PRIVATE-CUSTODY
+python <plugin>/scripts/design_iteration.py start PROJECT PLAN.json
+python <plugin>/scripts/design_iteration.py check PROJECT
 ```
 
-The first cutover archives the outgoing decision at `iterations/001/retrospective.json` and creates `iterations/002/design/` empty. It stores checked bytes by digest in the private custody folder. Keep that folder in protected, backed-up storage. A single atomic update to `iterations/active.json` switches everyone to the new design. Commit the numbered records and pointer together. The next restart advances from 002 to 003. Replaying an interrupted preparation with identical inputs can finish it. A competing or stale plan must read the current pointer again.
+The first cutover archives the outgoing decision at `iterations/001/retrospective.json` and creates `iterations/002/design/` empty. It stores each retired file by its digest in `iterations/archive/` inside the project. Commit that folder with the numbered records, so a clone on another computer can run `check` with nothing else. `--vault FOLDER` names another folder for a project that keeps large archives elsewhere. A single atomic update to `iterations/active.json` switches everyone to the new design. Commit the numbered records and pointer together. The next restart advances from 002 to 003. Replaying an interrupted preparation with identical inputs can finish it. A competing or stale plan must read the current pointer again.
 
 ## Work only in the active design
 
@@ -25,7 +25,7 @@ To bring forward one part, consult its archived evidence and decide whether it e
 
 ```text
 python <plugin>/scripts/design_iteration.py carry PROJECT ONE-IMPORT.json
-python <plugin>/scripts/design_iteration.py check PROJECT --vault PRIVATE-CUSTODY
+python <plugin>/scripts/design_iteration.py check PROJECT
 ```
 
 [Manual import record](../templates/design-import.json). The helper records the decision after the designer brings the file across. Checks compare archive hashes, numbered history and imported files. A new filename or changed bytes cannot prove original authorship, and an import record alone cannot establish that a mounted component remains qualified. Inspect the new native root and roster before release. Ordinary projects keep their existing layout until they choose a numbered restart.
@@ -56,11 +56,11 @@ The cold inventory reads joints and rigid groups in root assembly context. It ke
 3. Fill in the [child selection request](../templates/archived-occurrence-request.json). Its six input references identify the whole-parent inventory and terminal readback, the frozen extraction registration and project recipe, the terminal extraction result and its exact group manifest. Keep the child F3Ds beside that manifest as emitted. The project-owned request may reference private files. Have the reviewer independently record its SHA-256. Create the intended manifest folder under the active design.
 
    ```text
-   python <plugin>/scripts/design_iteration.py carry-child PROJECT REQUEST.json --expected REQUEST_SHA256 --vault PRIVATE-CUSTODY
-   python <plugin>/scripts/design_iteration.py check PROJECT --vault PRIVATE-CUSTODY
+   python <plugin>/scripts/design_iteration.py carry-child PROJECT REQUEST.json --expected REQUEST_SHA256
+   python <plugin>/scripts/design_iteration.py check PROJECT
    ```
 
-4. Inspect the new selection manifest. It lists each member's original full path, transform in centimetres, body names and private archive digest, along with internal joints, joints that connect to parts outside the selection, and affected rigid groups. The original F3Ds and raw evidence stay in private hash-addressed custody. Review metadata for supplier or team restrictions before sharing it. A checkout without custody reports private replay pending. Reuse of a previously named element still uses the ordinary `carry` command.
+4. Inspect the new selection manifest. It lists each member's original full path, transform in centimetres, body names and archive digest, along with internal joints, joints that connect to parts outside the selection, and affected rigid groups. The original F3Ds and raw evidence stay in the project's archive store, `iterations/archive/`, named by digest. A checkout without custody reports private replay pending. Reuse of a previously named element still uses the ordinary `carry` command.
 5. Import the chosen members manually into the fresh active Fusion design. Exporting component definitions separately drops assembly-level attachments. Re-establish these on the new mounting datums and check joint limits, signs and intended motion against the original source. Bind the cold successor and installed article roster, verify actual placements and qualify the new attachment, travel, load and service access. Selection alone leaves installed revalidation pending. The existing showcase continues to serve its last approved issue.
 
 The check requires a strict subset of the original solid identities. It also checks the union when more than one selection uses the same retired master. The collector supports solid-bearing leaf components; subdivide an assembly explicitly before requesting a compound selection. Its cold comparison records component identity and basic geometric properties. Use the installed shape and readiness methods for engineering qualification.
@@ -72,5 +72,5 @@ Commit the active pointer, opening and retired decisions, import receipts and em
 An early prototype saved the first retrospective before it included the opening digest. Its owner can seal the original committed cutover while keeping the original records byte-identical. Supply the independently retained original commit and its private custody directory.
 
 ```text
-python <plugin>/scripts/design_iteration.py seal PROJECT --from-commit ORIGINAL-CUTOVER-COMMIT --vault PRIVATE-CUSTODY
+python <plugin>/scripts/design_iteration.py seal PROJECT --from-commit ORIGINAL-CUTOVER-COMMIT
 ```

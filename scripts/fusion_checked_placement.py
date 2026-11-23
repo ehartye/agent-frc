@@ -74,9 +74,10 @@ def verify_fit(root, interface, accepted_sha256):
     require(not Path(ref["file"]).is_absolute() and basis.is_relative_to(root) and basis.is_file(),
             "Resolve the approved fit inside the project's evidence directory")
     data=basis.read_bytes()
-    require(sha256(data).hexdigest()==ref["sha256"], "Changed commissioned fit evidence")
+    # A SHA-256 typed beside the fit record, or the accepted archive digest repeated inside it, is verified when present.
+    require(ref.get("sha256") in (None,sha256(data).hexdigest()), "Changed commissioned fit evidence")
     record=json.loads(data)
-    require(record.get("schema")=="agent-frc/placement-fit@1" and record.get("acceptedSha256")==accepted_sha256
+    require(record.get("schema")=="agent-frc/placement-fit@1" and record.get("acceptedSha256") in (None,accepted_sha256)
             and sorted(record["bodies"])==sorted(interface["bodies"])
             and record.get("spatialFit")==interface.get("spatialFit")
             and all(record[k]==interface[k] for k in ("minCommonMm3","maxCommonMm3","basis")),
@@ -249,6 +250,10 @@ def checked_placement(app, accepted_archive, accepted_sha256, output_archive, re
     source=Path(accepted_archive).resolve()
     output=Path(output_archive).resolve()
     request=json.loads(json.dumps(request,allow_nan=False))
+    # Pass None for the accepted digest to use the archive as read; a digest that is given must match it.
+    if accepted_sha256 is None:
+        require(source.is_file(),"Supply an accepted self-contained F3D and a fresh successor F3D")
+        accepted_sha256=sha256(source.read_bytes()).hexdigest()
     for interface in request.get("interfaces",[]):
         if interface.get("kind")=="fit":
             root=Path(evidence_root or source.parent).resolve()

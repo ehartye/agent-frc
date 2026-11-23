@@ -9,7 +9,7 @@ import sys
 from time import perf_counter
 from itertools import combinations, product
 
-from mechanical_readiness import named,number,pinned,project_path,read,require,digest
+from mechanical_readiness import named,number,pinned,project_path,read,require,digest,fill_digests
 from showcase_contacts import load_solids,box_gap
 import payload_compression
 
@@ -412,7 +412,7 @@ def _share(run,case,share=(0,1),*,package=False,package_scene=None,verified=None
         record=read(evidence)
         # One record qualifies its own case and pair, and each row it lists under `interfaces`, all on its one STEP.
         listed=record.get("interfaces",[]) if isinstance(record,dict) else []
-        require(isinstance(record,dict) and isinstance(listed,list) and (record.get("stepSha256")==study["step"]["sha256"] or study.get("pathReferences") is True and "stepSha256" not in record)
+        require(isinstance(record,dict) and isinstance(listed,list) and record.get("stepSha256") in (None,study["step"]["sha256"])
                 and any(isinstance(row,dict) and row.get("case")==id and isinstance(row.get("pair"),list)
                         and set(row["pair"])=={a,b} and row.get("status")=="pass" for row in [record,*listed]),
                 "Interface qualification is stale or incomplete")
@@ -881,7 +881,8 @@ if __name__=="__main__":
     args=parser.parse_args()
     try:
         root=args.project.resolve()
-        res=evaluate(root,read(project_path(root,args.study)),progress=None if args.quiet else stderr_progress,fail_fast=args.fail_fast,
+        # A study checked on its own names its files by path; a typed SHA-256 is verified and none is required.
+        res=evaluate(root,fill_digests(root,read(project_path(root,args.study))),progress=None if args.quiet else stderr_progress,fail_fast=args.fail_fast,
                      heartbeat_seconds=args.heartbeat,jobs=args.jobs)
         print(json.dumps(res,indent=2,allow_nan=False))
         sys.exit(int(args.require_pass and (res.get("partial",False) or any(c["status"]!="pass" for c in res["cases"]))))
