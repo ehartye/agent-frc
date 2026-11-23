@@ -296,7 +296,7 @@ test('stage.py prints the report when a release is marked effective',t=>{
   const season=mkdtempSync(path.join(tmpdir(),'readiness-season-'));t.after(()=>rmSync(season,{recursive:true,force:true}));
   const author=path.join(season,'cad','preliminary-design'),inputs=project(t,d=>{d.missions.risks[0].closedBy='Invented “interlock” — holds the turn';});
   mkdirSync(path.join(author,'releases'),{recursive:true});
-  writeFileSync(path.join(author,'stage.py'),readFileSync(path.join(plugin,'templates','stage-preliminary-review.py')));
+  writeFileSync(path.join(author,'stage.py'),readFileSync(path.join(plugin,'scripts','stage_preliminary_review.py')));
   const script=String.raw`
 import importlib.util, sys
 from pathlib import Path

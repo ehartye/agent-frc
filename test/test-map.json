@@ -53,6 +53,7 @@
       "native-study-replay.test.mjs",
       "native-witness.test.mjs",
       "physics-evidence-gate.test.mjs",
+      "physics-identity.test.mjs",
       "placement-witness.test.mjs",
       "planar-observation.test.mjs",
       "preliminary-release.test.mjs",
@@ -110,6 +111,9 @@
     "docs": ["**/*.md", "skills/**", "docs/**", "worksheets/**", "references/**", ".testing/**", "LICENSE"],
     "install-manifests.test.mjs": ["plugin.json", ".claude-plugin/**", ".codex-plugin/**", ".agents/**", ".codex/**", ".gitignore", ".gitattributes"],
     "skill-validation.test.mjs": ["plugin.json", ".claude-plugin/**", ".codex-plugin/**", ".agents/**"],
+    "design-publication.test.mjs": [".github/workflows/design-publication.yml", "templates/design-publication.yml", "templates/stage-preliminary-review.py", "scripts/stage_preliminary_review.py"],
+    "design-versions.test.mjs": ["templates/stage-preliminary-review.py", "scripts/stage_preliminary_review.py"],
+    "preliminary-release.test.mjs": ["templates/stage-preliminary-review.py", "scripts/stage_preliminary_review.py"],
     "test-map.test.mjs": ["test/durations.json"]
   }
 }

@@ -37,7 +37,7 @@ A fixture that shows a path or key on purpose can be listed in `.branch-scan.jso
 
 ## Check published designs in CI
 
-A project that publishes design reviews runs one workflow, [design publication](../templates/design-publication.yml). On every push it scans the branch, reruns the layout check for each published design from its committed inputs and checks the status index. [What the check verifies and how it stays fast](design-publication.md) A project that ran the earlier showcase gates moves over with the [migration guide](design-publication-migration.md).
+A project that publishes design reviews runs one workflow, [design publication](../templates/design-publication.yml), a few lines that call the plugin's workflow at its current release. On every push it scans the branch, checks each published design's receipt, review and status index, and reruns the layout check once when a design becomes effective. [What the check verifies](design-publication.md) · [When the layout check reruns](design-publication.md#when-the-layout-check-reruns) A project that ran the earlier showcase gates moves over with the [migration guide](design-publication-migration.md).
 
 ## Check the workflows before pushing
 

@@ -42,6 +42,9 @@ areas:
   - path: scripts/design-publication.mjs
     tier: critical
     why: publication checks and the stage gate
+  - path: scripts/physics-identity.mjs
+    tier: critical
+    why: what an effective design is held to; a false match lets its physics change without a gate
   - path: scripts/effective-readiness.mjs
     tier: critical
     why: the readiness report read at the stage gate
@@ -54,6 +57,12 @@ areas:
   - path: scripts/bench-tests.mjs
     tier: critical
     why: bench-test records the detailed stage gate reads
+  - path: scripts/stage_preliminary_review.py
+    tier: critical
+    why: staging and status changes for preliminary designs
+  - path: .github/workflows/design-publication.yml
+    tier: critical
+    why: the workflow a project calls: it runs the gate and publishes
   - path: templates/stage-preliminary-review.py
     tier: critical
     why: staging and status changes for preliminary designs

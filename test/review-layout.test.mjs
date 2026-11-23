@@ -290,7 +290,7 @@ test('the animation list holds one entry per mission phase; the checked cases si
    out.pairs=[q('#count').textContent,all('#findings thead th').map(c=>c.textContent),all('#findings tbody tr').map(r=>r.cells[1].textContent)];
    all('#findings tbody tr')[1].click();await wait(100);out.pairJump=[motion.value,time.value];
    return out`);
-  assert.deepEqual(seen.groups, ['Mission animations: Raise the arm', 'Other checked motions: Lower', 'Check control: package-displacement-control (displaced control)'],
+  assert.deepEqual(seen.groups, ['Mission animations: Raise the arm', 'Other checked motions: Lower', 'Check control: Displaced control'],
     'four checked cases and a control give three list entries, not five');
   assert.equal(seen.label, 'Mission animation');
   assert.deepEqual(seen.opening, ['raise', '0', '72', 'Checked segment 1 of 3 (raise-01). Invented: third 1 of the raise.']);
@@ -315,7 +315,7 @@ test('the animation list holds one entry per mission phase; the checked cases si
    const rows=all('#evidenceTable>tbody>tr.phase');
    return {groups:all('#motion optgroup').map(g=>g.label+': '+[...g.children].map(o=>o.textContent).join(', ')),hidden:all('tr.phase-cases').map(r=>r.hidden),
     attention:rows.map(r=>r.classList.contains('attention')),result:rows[0].cells[2].textContent,jump:[...rows[0].querySelectorAll('button')].map(b=>b.textContent)}`);
-  assert.deepEqual(failed.groups, ['Mission animations: raise', 'Other checked motions: lower', 'Check control: package-displacement-control (displaced control)']);
+  assert.deepEqual(failed.groups, ['Mission animations: raise', 'Other checked motions: lower', 'Check control: Displaced control']);
   assert.deepEqual([failed.hidden, failed.attention, failed.result, failed.jump], [[false, true, true], [true, false, false], '2 pass · 1 fail', ['Play', 'Jump to failing case', 'Hide cases']]);
   // Headless windows have a minimum width, so phone width is measured inside a 390 px frame. The frame also carries a link to one case.
   writeFileSync(path.join(dir, 'phone.html'), '<!doctype html><body style="margin:0"><iframe src="' + url + '?case=raise-02" style="width:390px;height:900px;border:0"></iframe>');

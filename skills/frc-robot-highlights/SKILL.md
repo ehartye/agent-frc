@@ -23,6 +23,10 @@ Each design has one explorable view: its [design review](../../docs/design-publi
 
 Statuses, staging and withdrawal belong to [design publication](../../docs/design-publication.md). Update the entry page, README and selector in the pull request that changes a status.
 
+## What to run for a showcase change
+
+A showcase change is a page change. Build the page, open it and run the publication check with `--skip-rerun`. It never starts the layout check or a readiness review: those run when geometry, motion or a budget changes, and once in CI when a design becomes effective. The page build should take about a minute; when it is heading past that, stop and tell the user what is slow. [Test by need and risk](../../docs/testing-methodology.md)
+
 ## Order of work
 
 ### 1. Choose what to show

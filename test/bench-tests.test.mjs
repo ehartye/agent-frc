@@ -8,7 +8,7 @@ import {fileURLToPath} from 'node:url';
 import {effectiveProblems, handedOver, recordResult, seed, status, verdict} from '../scripts/bench-tests.mjs';
 import {checkProject} from '../scripts/design-publication.mjs';
 import {markEffective, stageInProgress} from '../scripts/detailed-design-release.mjs';
-import {issueRelease, sha, write} from './fixtures/preliminary-release.mjs';
+import {folderReceipt, issueRelease, sha, write} from './fixtures/preliminary-release.mjs';
 
 // Synthetic teaching fixtures: an invented "Tilting carriage" whose preliminary design hands over four invented bench tests.
 const script = fileURLToPath(new URL('../scripts/bench-tests.mjs', import.meta.url));
@@ -30,12 +30,12 @@ function project(t, {register = risks, stage = true} = {}) {
   write(root, prelim + '/releases.json', {releases: ['1.0'], designs: {1: {name: 'Tilting carriage'}}, designStatus: {'1.0': 'effective'}, current: '1.0'});
   const published = path.join(root, prelim, 'releases/1.0'), folder = 'cad/detailed-design/designs/1.0';
   if (register) write(root, 'cad/preliminary-design/releases/1.0/missions.json', {missionCases: read(path.join(published, 'release.json')).missionCases, risks: register});
-  const receipt = read(path.join(published, 'receipt.json')), plan = JSON.stringify({view: 'review/index.html', motion: {file: 'paths.json'}, budgets: {file: 'budgets.json'}});
+  const receipt = read(path.join(published, 'receipt.json')), ledger = {...read(path.join(published, 'budgets.json')), requirements: {file: 'package-limits.json'}}, plan = JSON.stringify({view: 'review/index.html', motion: {file: 'paths.json'}, budgets: {file: 'budgets.json'}});
   write(root, folder + '/layout.json', plan);
-  write(root, folder + '/receipt.json', {...receipt, planSha256: sha(plan)});
+  write(root, folder + '/receipt.json', folderReceipt(root, folder, receipt, plan, ledger, '1.0'));
   write(root, folder + '/missions.json', {missionCases: read(path.join(published, 'release.json')).missionCases});
   write(root, folder + '/paths.json', readFileSync(path.join(published, 'motion.json')));
-  write(root, folder + '/budgets.json', {...read(path.join(published, 'budgets.json')), requirements: {file: 'package-limits.json'}});
+  write(root, folder + '/budgets.json', ledger);
   write(root, folder + '/package-limits.json', readFileSync(path.join(published, 'limits.json')));
   write(root, folder + '/review/index.html', '<html>Detailed review</html>');
   cpSync(path.join(published, 'review-scene.json.gz'), path.join(root, folder, 'review/review-scene.json.gz'));

@@ -26,6 +26,10 @@ The review answers one question: can a team build this design from the Fusion fi
 - Collect the parts list, the work list, the bench-test record and any known defects from detailed design.
 - Write down the required travel and handoffs before looking at results.
 
+## When to run the review
+
+The review is a stage-gate check. Run it when the design is proposed as effective, on the committed Fusion export, and again only after a change to geometry, a part, a joint or a load. A change to a page, a title, a name, a status word or a document never needs the review or the layout check again. When a run is heading past about 15 minutes, stop and tell the user what is slow. [Test by need and risk](../../docs/testing-methodology.md)
+
 ## The review, in order
 
 ### 1. Identity: is every part the part it claims to be?

@@ -31,6 +31,18 @@ The handoff is the effective preliminary design's folder, `cad/preliminary-desig
 | Trials and replays | Repeat each trial the note lists, and any whose contact surfaces change (step 5) |
 | First work items in the note | The first rows of the work list (step 1) |
 
+## What to run for this change
+
+| The change | Run |
+| --- | --- |
+| Geometry, a motion, a tolerance or reserve, a fixture, a trial, a mass or voltage budget | The local layout check, on the phases the change affects |
+| The page, a title, a colour, a name, a version label, a status word, a document | `--view-only` when the page shows it, then the publication check with `--skip-rerun`. Never the layout check |
+| Publishing a draft | The publication check with `--skip-rerun`. A draft is published on its local check |
+| Marking a design effective | Nothing more locally. CI reruns the full layout check once, on the committed design |
+| The physics of an effective design | Never in place. Open the next minor version as a draft |
+
+Time guidelines: about 1 minute while editing, 5 before merging, 15 at a stage gate. When a run is heading past its guideline, stop and tell the user what is slow. Do not repeat a run whose inputs have not changed. Read the last lines each command prints: they say what ran, what did not and what CI will do on push. [Test by need and risk](../../docs/testing-methodology.md)
+
 ## Order of work
 
 ### 1. Read the handoff and write the work list
@@ -141,10 +153,10 @@ Check in before this step. `effective` refuses a design while a bench test is un
 
 ```sh
 node PLUGIN/scripts/detailed-design-release.mjs effective . --design ID --readiness cad/detailed-design/readiness-result.json
-node PLUGIN/scripts/design-publication.mjs check .
+node PLUGIN/scripts/design-publication.mjs check . --skip-rerun
 ```
 
-Open one pull request with the status change, the review result, the entry page and the README still. The design is effective when it is reviewed and merged. [Effective designs](../../docs/design-publication.md#effective-designs)
+Open one pull request with the status change, the review result, the entry page and the README still. Make the status change its last commit. This is the stage gate: CI reruns the layout check once on the committed inputs for each push that carries the change, and never for a draft. [When the layout check reruns](../../docs/design-publication.md#when-the-layout-check-reruns) The design is effective when it is reviewed and merged. [Effective designs](../../docs/design-publication.md#effective-designs)
 
 ## Return a reservation to preliminary design
 

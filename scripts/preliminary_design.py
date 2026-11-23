@@ -153,6 +153,28 @@ SCOPE_TOLERANCE_MM=10
 BUDGET_FIELDS=("detail","question","allowance","stopsWhen")
 
 
+# The time guidelines of docs/testing-methodology.md, in seconds: a check while editing, a stage gate, and the point at
+# which a run is said aloud instead of waited out.
+EDIT_GUIDELINE_SECONDS=60
+GATE_GUIDELINE_SECONDS=15*60
+CHECK_IN_SECONDS=10*60
+
+
+def time_lines(seconds, reused=False):
+    """What the run cost against the time guidelines, as stderr lines. Information: it never changes the result."""
+    took=f"{seconds:.0f} s" if seconds<120 else f"{seconds/60:.1f} min"
+    lines=[f"[time] {'view rebuilt' if reused else 'layout check'} in {took}. Guidelines: about 1 minute while editing, "
+           "15 minutes at a stage gate."]
+    if seconds>CHECK_IN_SECONDS:
+        lines.append("[time] note: this run passed ten minutes. Stop and tell the owner what is slow and why, and agree a bounded "
+                     "budget before running it again. Check the phase you changed with --physics-only, and do not repeat a run "
+                     "whose inputs have not changed.")
+    elif seconds>EDIT_GUIDELINE_SECONDS:
+        lines.append("[time] note: past the guideline for a check while editing. Fewer solids, fewer cases or a coarser path "
+                     "tolerance bring it back; after a change to names, titles or the page alone, use --view-only.")
+    return lines
+
+
 def scope_report(plan, stages, solids, fixtures):
     """Count the placed solids and find the finest declared path tolerance, and name each guideline the layout has passed.
 
@@ -943,6 +965,7 @@ if __name__=="__main__":
                         help="Worker processes that share the motion cases (default: one fewer than the cores, within the "
                              "work and the memory available). The receipt is the same for every N; 1 runs the cases in order in one process")
     args=parser.parse_args()
+    started=perf_counter()
     try:
         root=args.project.resolve()
         output=(root/args.output).resolve() if args.output else None
@@ -963,6 +986,8 @@ if __name__=="__main__":
         receipt=json.dumps(result,indent=2,allow_nan=False)+"\n"
         if args.output:write_atomic(output,receipt.encode("utf-8"))
         else:sys.stdout.write(receipt)
+        if not args.quiet:
+            for line in time_lines(perf_counter()-started,reused=args.view_only):stderr_progress(line)
         sys.exit(int(args.require_checked and (result.get("partial",False) or result["status"]!="layout-checked")))
     except (KeyError,IndexError,ValueError,TypeError,OSError,RuntimeError) as error:
         print(str(error),file=sys.stderr)
