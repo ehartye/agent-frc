@@ -46,7 +46,10 @@ def bound_paths(inputs, case, stage, missing):
                 extra = dict(fixtures=sorted(fixtures))
             bound = False
             evidence = spec.get("evidence")
-            if not (isinstance(evidence, dict) and named(evidence.get("file"))):
+            if named(spec.get("trial")):
+                require(evidence is None, "Bind " + payload + " in " + key + " to one trial: a library trial or an evidence file")
+                bound = fitted(inputs, case, payload, groups[payload]["members"], spec["trial"], missing)
+            elif not (isinstance(evidence, dict) and named(evidence.get("file"))):
                 missing.append("Name the " + label + " evidence file for " + payload + " in " + key)
             elif (read(pinned(inputs.root, evidence)) or {}).get(record_field) != expected_path(case, payload, groups[payload]["members"], extra):
                 missing.append(label.capitalize() + " evidence for " + payload + " in " + key + " does not record this payload path")
@@ -54,6 +57,20 @@ def bound_paths(inputs, case, stage, missing):
                 bound = True
             found.setdefault(field, {})[payload] = bound
     return found
+
+
+def fitted(inputs, case, payload, members, trial, missing):
+    """Whether the payload's move in this case is the path the library's trial fitted, so the animation is the trial."""
+    record = (inputs.records.get("trials") or (None,))[0]
+    found = (record or {}).get("trials", {}).get(trial)
+    if found is None:
+        missing.append("Run trial " + trial + " with the design library and name its record in the judgement file as trials: {file}")
+        return False
+    path = [found["fit"]["operation"]]
+    if any(case["moves"].get(m) != path for m in members):
+        missing.append("The move of " + payload + " in " + case["id"] + " is not the path trial " + trial + " fitted. Write its fit operation as the move in the design source")
+        return False
+    return True
 
 
 def carried(inputs, case, stage):

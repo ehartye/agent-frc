@@ -21,7 +21,9 @@
     "narrativeReview",
     "motionEvidence",
     "animations",
-    "returnCriteria"
+    "returnCriteria",
+    "interactions",
+    "adjustments"
   ],
   "properties": {
     "schema": {
@@ -631,6 +633,33 @@
         }
       },
       "additionalProperties": false
+    },
+    "interactions": {
+      "type": "array",
+      "x-supplier": "plugin",
+      "description": "The receipt's interactions: screen verdict and reasons, override, and the trial's result, assumptions, inputs, sensitivity, coverage and state.",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "verdict",
+          "reasons"
+        ]
+      }
+    },
+    "adjustments": {
+      "type": "array",
+      "x-supplier": "plugin",
+      "description": "The receipt's adjustments: kind, input, range and, for a mechanical one, whether both ends were measured and what came close there.",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "kind",
+          "range",
+          "measured"
+        ]
+      }
     }
   },
   "$defs": {

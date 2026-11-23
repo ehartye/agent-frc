@@ -67,6 +67,16 @@ class Measured:
         return clearance.along(self.assembly, case["id"], case["minGapMm"], absent=others, depth=case["depth"], include_still=True,
                                displace={spec["displaced"]: spec["offsetMm"]})
 
+    def screen(self, name):
+        """The library's screen facts for one declared interaction: plain facts, judged in interactions.py."""
+        from frc_design_kernel.measure import screen
+        return screen.facts(self.assembly, name)
+
+    def status(self, folder):
+        """Which of the library's records in a folder are current for this design source, and what changed in the others."""
+        from frc_design_kernel import status
+        return status.status(self.inputs.source, folder)
+
     def mesh(self, name):
         """The display mesh of a solid as drawn: vertices and outward triangles, in millimetres."""
         return self.assembly.mesh(name, MESH_DEFLECTION_MM)

@@ -178,6 +178,8 @@ export function compareWithReceipt(read, receipt) {
   if (receipt.parked && !same(s.parked, receipt.parked)) errors.push('Scene parked-assembly result differs from the receipt');
   if (!['pending receipt', 'blocked'].includes(s.decision?.status)) errors.push('Scene decision may not claim a checked result');
   if (!same(s.narrativeReview?.objectives ?? [], receipt.narrativeReview?.objectives ?? [])) errors.push('Scene narrative objectives differ from the receipt');
+  if (!same(s.interactions ?? [], receipt.interactions ?? []) || !same(s.adjustments ?? [], receipt.adjustments ?? []))
+    errors.push('Scene interactions or adjustments differ from the receipt');
   const budgets = receipt.budgets;
   if (budgets) {
     const duty = r => [r.case, r.status, r.batteryCondition, r.requiredMinV, r.marginV, r.loadedBusV, r.batterySideA];

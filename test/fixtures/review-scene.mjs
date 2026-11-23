@@ -52,7 +52,7 @@ export function reviewScene(overrides = {}) {
         limitingTime: 0.5, limitingValue: {gapMm: 0, volumeMm3: 4100}, start: 'Commissioned start: battery displaced', groups: ['arm'], environment: 'Field fixtures: target',
         metric: 'Minimum surface gap; positive overlap volume', units: 'mm, mm³', allowanceMm: 5, allowanceBasis: 'Invented reserve', method: 'Exact distance and common volume at the witness pose'}],
     returnCriteria: {preliminary: ['A nominal path fails clearance or leaves an open interval'], conceptual: ['An accepted conceptual-design premise leaves its criterion']},
-    focus: 'Invented focus: check the arm clears the battery.', notes: ['Invented note on the model basis.'],
+    interactions: [], adjustments: [], focus: 'Invented focus: check the arm clears the battery.', notes: ['Invented note on the model basis.'],
     cutaway: {label: 'Target cutaway', hides: ['target'], outline: [[900, -100, 300], [900, 100, 300], [900, 100, 500], [900, -100, 500]]}
   };
   return Object.assign(scene, overrides);

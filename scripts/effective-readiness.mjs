@@ -6,7 +6,6 @@
  * project folder. Marking a design effective stays a project decision in a reviewed pull request.
  */
 import {createHash} from 'node:crypto';
-import {gunzipSync} from 'node:zlib';
 import {existsSync,readFileSync,statSync} from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
@@ -78,94 +77,52 @@ function wholeCycle(planBytes,receipt,missions){
   return {reasons,notes};
 }
 
-/** What a trial record must show before its interaction counts as qualified. */
-function qualification(trial,name){
-  const q=object(trial)?trial.qualification:null,reasons=[];
-  if(!object(q))return ['trial '+name+' has no qualification record (result, control, brackets, timestep)'];
-  if(q.result!=='pass')reasons.push('trial '+name+' does not record a passing result');
-  if(!(object(q.control)&&named(q.control.condition)&&q.control.rejected===true))
-    reasons.push('trial '+name+' lacks a control: a named adverse or disabled condition that the trial rejects');
-  const brackets=list(q.brackets);
-  if(!brackets.length||!brackets.every(b=>object(b)&&named(b.input)&&named(b.unit)&&value(b.passing)&&value(b.failing)
-      &&typeof b.passing===typeof b.failing&&b.passing!==b.failing))
-    reasons.push('trial '+name+' lacks sensitivity brackets: each input with its unit, a passing value and a failing value');
-  const t=q.timestep;
-  if(!(object(t)&&typeof t.coarseS==='number'&&typeof t.fineS==='number'&&t.fineS>0&&t.coarseS>t.fineS&&t.sameOutcome===true))
-    reasons.push('trial '+name+' lacks a timestep check: a coarse and a finer step in seconds with the same outcome');
+/** The trial results that meet the effective bar. Every other word is a finding to act on. */
+export const passingResults=['passed','covered by adjustment'];
+
+/** Why one interaction's trial does not meet its bar: the engine its screen verdict asks for, a current record, a passing result, a declared and measured adjustment. */
+function barReasons(row,adjustments){
+  const where='Interaction '+row.id+' ('+(row.verdict??'no verdict')+')',t=object(row.trial)?row.trial:{},reasons=[];
+  if(!named(t.name))return [where+': name its trial, or the reason it needs none, in the judgement file'];
+  if(t.state==='not run')return [where+': trial '+t.name+' has not been run. Run python -m frc_design_kernel try SOURCE --out RECORDS --trial "'+t.name+'"'];
+  if(t.state==='stale')reasons.push(where+': the record of trial '+t.name+' is stale ('+list(t.changes).join('; ')+'). Run it again with --trial "'+t.name+'"');
+  if(row.verdict==='needs 3D'&&t.engine!=='mujoco')reasons.push(where+': the screen says the answer depends on what one section cannot show, so try it in 3D ("engine": "mujoco"); trial '+t.name+' ran '+t.engine);
+  if(!passingResults.includes(t.result))reasons.push(where+': trial '+t.name+' is '+t.result+(list(t.findings).length?': '+list(t.findings).join('; '):''));
+  const named_=list(t.adjustments);
+  if(row.verdict==='configurable'&&!named_.length)reasons.push(where+': a simulated result is only a best guess here. Declare the adjustment that covers the assumed range and name it under the trial\'s adjustments');
+  for(const name of named_){
+    const a=rows(adjustments).find(x=>x.name===name);
+    if(!a)reasons.push(where+': trial '+t.name+' names adjustment '+name+', which the receipt does not record');
+    else if(a.kind==='mechanical'&&!a.measured)reasons.push(where+': adjustment '+name+' is mechanical and is not measured at both ends. '+(a.hint??''));
+    else if(a.kind==='mechanical'&&list(a.findings).length)reasons.push(where+': adjustment '+name+' at its ends: '+list(a.findings).join('; '));
+  }
   return reasons;
 }
-/** The case a trial record says it ran. */
-const trialCase=trial=>object(trial)?trial.case??(object(trial.transport)?trial.transport.case:undefined)??(object(trial.freePath)?trial.freePath.case:undefined)??(object(trial.support)?trial.support.case:undefined):undefined;
-
-/** The trial pins each review replay plays back, from the pinned replay sets under presentation.replays. */
-function replayPins(root,plan){
-  const pins=[];
-  for(const ref of rows(object(plan.presentation)?plan.presentation.replays:null)){
-    if(!named(ref.file)||path.isAbsolute(ref.file))continue;
-    try{
-      const raw=readFileSync(path.resolve(root,ref.file));
-      const set=JSON.parse((raw[0]===31&&raw[1]===139?gunzipSync(raw):raw).toString('utf8'));
-      for(const replay of rows(set?.replays))pins.push(...rows(replay.evidence));
-    }catch{/* An unreadable replay set plays nothing the report can count. */}
-  }
-  return pins;
-}
-/** How a mission case's animation relates to its trial, strongest first. */
-export const motionKinds={
-  bound:'motion driven by the trial (the layout check bound the checked path to it)',
-  played:'animation played from the trial (a review replay); the checked case motion is prescribed',
-  attached:'prescribed motion with a trial attached',
-  prescribed:'prescribed motion, no trial'};
 
 /**
- * Criterion 2: every mission case moves on a named, qualified physics trial rather than a prescribed path.
- * A trial is named by its project-relative path and read. Its bytes are compared only when the reference carries
- * a SHA-256: one an author typed, or the one the layout check recorded in the receipt.
+ * Criterion 2: every interaction that decides the design meets the bar its screen verdict sets, and every mission
+ * case is backed by such an interaction. Read from a whole, layout-checked receipt of this plan, which records the
+ * verdicts and the library's trial results.
  */
-function trialDriven(root,plan,planBytes,receipt,missions){
-  const reasons=[],notes=[],interactions=[],cases=rows(missions?.missionCases);
-  if(!cases.length)return {reasons:['No mission case: declare each mission-critical interaction under missionCases in missions.json'],notes,interactions};
-  // A stage pin counts only from a whole, layout-checked receipt of this plan: that check bound the trial to the path.
-  const checked=bound(receipt,planBytes);
-  const links=replayPins(root,plan);
-  for(const m of cases){
-    if(!named(m.case)){reasons.push('A mission case names no case');continue;}
-    const where='Mission case '+m.case+(named(m.accomplishes)?' ('+m.accomplishes+')':'');
-    const stage=checked&&object(receipt.stages)&&object(receipt.stages[m.case])?receipt.stages[m.case]:{};
-    const pins=['transportedBy','freePath','supportedBy'].flatMap(k=>Object.values(object(stage[k])?stage[k]:{}))
-      .map(s=>object(s)?s.evidence:null).filter(object).map(pin=>({...pin,kind:'bound'}));
-    if(object(m.trial))pins.push({...m.trial,kind:'attached'});
-    // A replay plays the trial for this case only when its trial records the case.
-    for(const pin of links){const trial=load(root,pin.file);if(!trial.reason&&trialCase(trial.json)===m.case)pins.push({...pin,kind:'played'});}
-    // One entry per file, holding the strongest kind that names it; a reference that carries a SHA-256 is kept over one that names the path alone.
-    const strength=['bound','played','attached'],byFile=new Map();
-    for(const p of pins.filter(p=>named(p.file))){
-      const held=byFile.get(p.file),kind=held&&strength.indexOf(held.kind)<strength.indexOf(p.kind)?held.kind:p.kind;
-      byFile.set(p.file,{...(!held||named(p.sha256)?p:held),kind});
-    }
-    const unique=[...byFile.values()];
-    // Strongest first: a stage reference binds the checked path to the trial, a replay plays the trial, a mission reference only attaches it.
-    const kind=strength.find(k=>unique.some(p=>p.kind===k))??'prescribed';
-    interactions.push({case:m.case,motion:kind,trials:unique.map(p=>p.file)});
-    if(!unique.length){
-      reasons.push(where+': the motion is prescribed; no trial is named through transportedBy, freePath, supportedBy, a mission trial or a review replay'
-        +(checked?'':' (stage trials are read only from a layout-checked receipt of this plan)'));
-      continue;
-    }
-    if(kind==='attached')
-      reasons.push(where+': prescribed motion with a trial attached ('+unique.map(p=>p.file).join(', ')+'). The trial records this case, but the animation is not driven by it. '
-        +'Declare the payload path through transportedBy, freePath or supportedBy so the layout check binds the checked motion to the trial, or play the recorded run as a review replay'
-        +(checked?'':' (stage trials are read only from a layout-checked receipt of this plan)'));
-    for(const pin of unique){
-      const trial=load(root,pin.file);
-      if(trial.reason){reasons.push(where+': '+trial.reason);continue;}
-      if(pin.sha256!==undefined&&sha(trial.bytes)!==pin.sha256){reasons.push(where+': trial '+pin.file+' differs from its pinned SHA-256');continue;}
-      if(trialCase(trial.json)!==m.case){reasons.push(where+': trial '+pin.file+' records another case');continue;}
-      for(const reason of qualification(trial.json,pin.file))reasons.push(where+': '+reason);
-    }
-    notes.push(m.case+': '+motionKinds[kind]+': '+unique.map(p=>p.file+(p.sha256===undefined?' (read; no SHA-256 given to compare)':' (matches its recorded SHA-256)')).join(', '));
+function interactionsMeetBar(planBytes,receipt,missions){
+  const reasons=[],notes=[],cases=rows(missions?.missionCases);
+  if(!bound(receipt,planBytes))return {reasons:['Interactions are read from a whole, layout-checked receipt of this plan: run the layout check'],notes};
+  const met=new Set();
+  for(const row of rows(receipt.interactions)){
+    const t=object(row.trial)?row.trial:null;
+    if(!named(row.decides)){reasons.push('Interaction '+row.id+': say in the judgement file what it decides');continue;}
+    if(named(row.override))notes.push(row.id+': screened as '+row.screened+', taken as '+row.verdict+' because '+row.override);
+    if(named(row.noTrial)){notes.push(row.id+': '+row.verdict+'; no trial, because '+row.noTrial);continue;}
+    const found=barReasons(row,receipt.adjustments);
+    reasons.push(...found);
+    notes.push(row.id+': '+row.verdict+'; trial '+(t?.name??'none')+(t?.engine?' ('+t.engine+')':'')+': '+(t?.result??t?.state??'not run')
+      +(list(t?.sensitivity).length?'; leans most on '+t.sensitivity[0]:''));
+    if(!found.length)for(const id of list(row.cases))met.add(id);
   }
-  return {reasons,notes,interactions};
+  if(!cases.length)reasons.push('No mission case: declare each mission-critical interaction under missionCases in missions.json');
+  for(const m of cases)
+    if(named(m.case)&&!met.has(m.case))reasons.push('Mission case '+m.case+' is backed by no interaction that meets its bar: list it under the cases of the interaction whose trial decides it');
+  return {reasons,notes};
 }
 
 /** A bench test that states its measure, a pass value and a fail value. */
@@ -212,12 +169,12 @@ export function effectiveReadiness(root,{release='',plan:planName,receipt:receip
   const add=(id,title,run)=>{
     let result;
     if(!p)result={reasons:unreadable,notes:[]};
-    else try{const x=run();result={reasons:[...other,...x.reasons],notes:x.notes,...(x.interactions?{interactions:x.interactions}:{})};}
+    else try{const x=run();result={reasons:[...other,...x.reasons],notes:x.notes};}
     catch(error){result={reasons:[...other,'Could not judge this criterion from malformed input: '+error.message],notes:[]};}
-    criteria.push({id,title,met:result.reasons.length===0,reasons:result.reasons,notes:result.notes,...(result.interactions?{interactions:result.interactions}:{})});
+    criteria.push({id,title,met:result.reasons.length===0,reasons:result.reasons,notes:result.notes});
   };
   add('whole-cycle','Whole mission cycle checked for clearance, mass and voltage',()=>wholeCycle(plan.bytes,r,m));
-  add('trial-driven','Every mission-critical interaction driven by a qualified physics trial',()=>trialDriven(root,p,plan.bytes,r,m));
+  add('interactions','Every deciding interaction meets the bar its screen verdict sets, and backs every mission case',()=>interactionsMeetBar(plan.bytes,r,m));
   add('risks-resolved','Every open risk closed by a design change or carried as a bench test with numbers',()=>risksResolved(p,m));
   const verificationItems=rows(m?.risks).filter(x=>named(x.id)&&benchTest(x.benchTest)&&!named(x.closedBy)).map(x=>({...x.benchTest,id:x.id}));
   return {schema:'agent-frc/effective-readiness@1',issue:named(r?.issue)?r.issue:named(p?.issue)?p.issue:null,...(named(design)?{design:design.trim()}:{}),criteria,verificationItems,

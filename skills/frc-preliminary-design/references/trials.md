@@ -1,12 +1,11 @@
 # Trials and replays
 
-A trial is a physics run that decides whether an interaction works: a piece is acquired, held, passed, delivered, or the robot is lifted and stays up. The plugin reads the trial record, binds it to a case and plays the recording. It does not run a trial.
-
-Trials written as data in the design source and run by the design library are coming, planar first and then in 3D on the settled layout. Until this page says so, a project keeps the records of the trials it has run and binds them as described here.
+A trial is a physics run that decides whether an interaction works: a piece is acquired, held, passed, delivered, or the robot is lifted and stays up. Write it as data in the design source; the design library runs it, planar by default and in 3D with `"engine": "mujoco"`. The layout check screens each interaction, reads the trial record and binds it to its case. The readiness report holds it against the effective bar. [Interactions, trials and adjustments](../../../docs/preliminary-design.md#interactions-trials-and-adjustments)
 
 ## Contents
 
 - [Choose the trials](#choose-the-trials)
+- [Screen before you write a trial](#screen-before-you-write-a-trial)
 - [Size a trial to the question](#size-a-trial-to-the-question)
 - [Build the field area at scale](#build-the-field-area-at-scale)
 - [Record enough to explain a miss](#record-enough-to-explain-a-miss)
@@ -25,7 +24,21 @@ Before a trial runs, write down the decision it could change and the result that
 
 A question about the field or its instruments, or one the user has already decided, becomes a bench test with pass and fail numbers. Leave it on the bench list.
 
-Set a time budget of about ten minutes for the campaign. Let the budget set the number of runs. When the plan would pass it, cut the plan before starting, or check in.
+Set a time budget of about ten minutes for the campaign. Let the budget set the number of runs: `try --estimate` prints the cost before anything runs. When the plan would pass it, cut the plan before starting, or check in.
+
+## Screen before you write a trial
+
+Declare each interaction in the design source and say in the judgement file what it decides. The layout check gives its verdict before any trial runs:
+
+| Verdict | Write |
+| --- | --- |
+| `planar is enough` | A planar trial |
+| `needs 3D` | A 3D trial on the settled layout. Run a planar one first only when it is cheap and could change the layout |
+| `configurable` | A planar trial of the best guess, and an adjustment the robot is built with that covers the assumed range |
+
+Read the reasons before overriding a verdict. An override needs a reason a reviewer can check, such as a guide that is not drawn yet.
+
+Give every physical input its source: measured (and where) or assumed with a range. A best guess with a range is a complete input. Real measurement is never the bar for leaving design: build in an adjustment, a slot, a spring or a setpoint, and let the coverage campaign show a passing setting at each end of the range. Put the measurement on the builder's bench-test list.
 
 ## Size a trial to the question
 
@@ -59,25 +72,17 @@ State the result as found. When some starts fail, report the count and what the 
 
 ## What the effective bar asks of each trial
 
-Each mission-critical interaction needs a trial record with a `qualification`:
+The library's campaign does the method for every trial: the nominal run, the control, each assumed range at its ends, a run at half the step and, for each adjustment the trial names, the settings that pass at each end of each range. Its record gives one result word. The effective bar accepts:
 
-```json
-"qualification": {
-  "result": "pass",
-  "control": {"condition": "Roller unpowered", "rejected": true},
-  "brackets": [{"input": "roller speed", "unit": "rev/s", "passing": 20, "failing": 8}],
-  "timestep": {"coarseS": 0.002, "fineS": 0.001, "sameOutcome": true}
-}
-```
-
-| Part | Smallest form that satisfies it |
+| Result | Meets the bar |
 | --- | --- |
-| Result | One passing run at the operating point |
-| Control | One run with the feature disabled or an input far out of range, which the trial rejects |
-| Brackets | For each input that could change the decision, one passing value and the first failing value |
-| Timestep | The nominal run once more at half the step, with the same outcome |
+| `passed` | Yes |
+| `covered by adjustment` | Yes, when each mechanical adjustment it names is measured at both ends with nothing closer than the allowance there |
+| `not covered`, `failed`, `control not rejected`, `not converged`, `incomplete` | No. Read the findings: they name the input and the two values between which the outcome changed |
 
-That is four or five runs for an interaction with one uncertain input. The timestep repeat is one run, not a study. Check geometric sensitivity only where it can change the decision.
+The record must be current: `python -m frc_design_kernel status design.json records` says which records are stale and why. A `needs 3D` verdict needs a 3D record. A `configurable` verdict needs the trial to name an adjustment.
+
+Look at the sensitivity order before going to a fuller engine. The input at the top is the one an adjustment should reach first; a wider slot or a setpoint range is usually cheaper than a 3D trial.
 
 ## Bind the trial to its case
 
@@ -90,7 +95,7 @@ A piece in a case is moved by one of four things. Declare which in the case's en
 | Has left every mechanism | [`freePath`](../../../docs/preliminary-design.md#a-free-payload-path) | Yes |
 | Rests on or rolls along a field fixture | [`supportedBy`](../../../docs/preliminary-design.md#a-payload-a-field-fixture-supports) | Yes |
 
-The trial record repeats the case ID, the payload group and the exact start and moves the design source gives the payload, so the check can tell that the trial established this path. A case that only follows its carrier is a prescribed path and does not count as trial-driven.
+Name the library trial with `"trial": NAME` and copy its `fit` operation into the design source as the payload's move in that motion, so the animation is the trial's own path. List the case under the `cases` of the interaction the trial answers. A case that only follows its carrier is a prescribed path.
 
 ## Play the recording as a replay
 

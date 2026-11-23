@@ -6,7 +6,7 @@ from time import perf_counter
 from mechanical_readiness import digest, named, read, require
 from package_view import CONTROL_ID, PHASE_GUIDE, first_unmet, mission_animations, parked_assembly, verify_view
 
-from . import attachment, judge, premises, scope, stages
+from . import attachment, interactions, judge, premises, scope, stages
 from .budgets import budget_review
 from .inputs import generated, load
 from .measure import Measured, Placements
@@ -45,7 +45,7 @@ def physics_of(result, control):
     unlabelled = {key: {k: v for k, v in stage.items() if k not in STAGE_LABELS} for key, stage in (result.get("stages") or {}).items()}
     control = control or {}
     return {"the design source": (result.get("design") or {}).get("sha256"), "the generated solids": (result.get("step") or {}).get("sha256"),
-            "the issue name": result.get("issue"), "the stages": unlabelled, "the groups": result.get("groups"), "the mounts": result.get("mounts"),
+            "the issue name": result.get("issue"), "the stages": unlabelled, "the trial records": [result.get("trials"), result.get("measurements")], "the groups": result.get("groups"), "the mounts": result.get("mounts"),
             "the displaced control": [control.get("case"), control.get("displaced"), control.get("offsetMm")],
             # Compared as JSON, the form the receipt was saved in.
             "the weight and voltage budgets": json.loads(json.dumps(result.get("budgets")))}
@@ -133,6 +133,7 @@ def prepare(inputs, measured, placements, missing, say):
     result["premises"] = premises.compare(inputs.root, plan, missing)
     result["reopen"] = [dict(phase=d["phase"], reason=d["id"], affected=d["interfaces"]) for d in result["premises"] if d["status"] == "reopen"]
     plan["step"], bounds = generated(inputs)
+    inputs.records.update(interactions.records(inputs))
     result.update(step=plan["step"], parts=inputs.parts)
     hosts = structure(inputs, bounds, missing)
     result["scope"], lines = scope.report(plan, len(inputs.roster - inputs.fixtures), len(inputs.fixtures))
@@ -174,6 +175,8 @@ def review(root, file, *, write_view=False, physics_only=False, view_only=None, 
     for line in lines:
         say(line)
     result["budgets"] = budgets_of(inputs, missing, say)
+    result["interactions"], result["adjustments"], pins = interactions.judge(inputs, measured, missing, say)
+    result.update(pins)
     if held is not None:
         unchanged_since(held, result, spec)
     writes = []
@@ -184,7 +187,7 @@ def review(root, file, *, write_view=False, physics_only=False, view_only=None, 
         from .view import scenes
         observed = dict(cases=[*rows, *([control_case] if control_case else [])])
         extra = dict(control=control, missing=missing, studyCases=inputs.cases, fixtures=inputs.fixtures, freePaths=free, supports=supports,
-                     attachment=result["attachment"])
+                     attachment=result["attachment"], interactions=result["interactions"], adjustments=result["adjustments"])
         result["view"] = verify_view(root, plan, scenes(inputs, measured, placements, spec if control_case else None), write_view or held is not None,
                                      observed, result["budgets"], extra, deferred=writes, beside=inputs.file.resolve().parent)
         if not result["view"] or not result["view"]["verified"]:

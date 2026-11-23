@@ -10,21 +10,19 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import test from 'node:test';
-import {gzipSync} from 'node:zlib';
 import {cycleStages,effectiveReadiness,readinessText} from '../scripts/effective-readiness.mjs';
 
 const plugin=fileURLToPath(new URL('..',import.meta.url));
 const sha=text=>createHash('sha256').update(text).digest('hex');
 
-/** An invented, complete package: eight cycle stages, two trial-driven mission cases and a closed risk register. */
+/** A trial row as the layout check records it from the library's campaign: current and passed unless the edit says otherwise. */
+const trial=(name,more={})=>({name,engine:'planar',result:'passed',findings:[],assumptions:[{id:'in-plane',text:'Invented'}],
+  inputs:[{path:'materials.tread.friction',value:0.6,source:'assumed',range:[0.4,0.8]}],sensitivity:['materials.tread.friction'],coverage:[],adjustments:[],
+  touchedHulled:[],state:'current',changes:[],...more});
+
+/** An invented, complete package: eight cycle stages, two mission cases each backed by a deciding interaction, and a closed risk register. */
 function project(t,edit=x=>x){
   const root=mkdtempSync(path.join(tmpdir(),'readiness-'));t.after(()=>rmSync(root,{recursive:true,force:true}));
-  const qualification={result:'pass',control:{condition:'Invented roller unpowered',rejected:true},
-    brackets:[{input:'roller speed',unit:'rev/s',passing:20,failing:8}],timestep:{coarseS:0.002,fineS:0.001,sameOutcome:true}};
-  const files={
-    'intake-trial.json':{transport:{case:'acquire'},qualification},
-    'release-trial.json':{freePath:{case:'deliver'},qualification},
-  };
   const stageIds=['acquire','hold','pass-up','deliver','return','hang','park','remove-carrier'];
   const draft={
     plan:{schema:'agent-frc/layout-judgement@1',issue:'synthetic-issue',
@@ -33,18 +31,17 @@ function project(t,edit=x=>x){
     receipt:{schema:'agent-frc/preliminary-layout-result@1',issue:'synthetic-issue',status:'layout-checked',missingInputs:[],
       budgets:{massStatus:'pass',electricalCases:[{case:'invented weak traverse',status:'pass'}]},
       cases:stageIds.map(id=>({case:id,status:'pass'})),cycle:stageIds.slice(0,7),
-      stages:Object.fromEntries(stageIds.map(id=>[id,{purpose:id==='remove-carrier'?'service':id==='park'?'park':'operating'}]))},
+      stages:Object.fromEntries(stageIds.map(id=>[id,{purpose:id==='remove-carrier'?'service':id==='park'?'park':'operating'}])),
+      interactions:[
+        {id:'pickup',piece:'sample',verdict:'planar is enough',reasons:['Invented'],decides:'Whether the belt intake replaces the roller',cases:['acquire'],trial:trial('pickup')},
+        {id:'release',piece:'sample',verdict:'planar is enough',reasons:['Invented'],decides:'Whether the lip can stay fixed',cases:['deliver'],trial:trial('release')}],
+      adjustments:[{name:'lip height',kind:'mechanical',input:'parameters.lip',range:[10,20],measured:true,findings:[]}]},
     missions:{missionCases:[{case:'acquire',kind:'operating-case',accomplishes:'acquired',objective:'Invented cycle'},
-        {case:'deliver',kind:'field-interaction-trial',accomplishes:'delivered',objective:'Invented cycle'}],
+        {case:'deliver',kind:'operating-case',accomplishes:'delivered',objective:'Invented cycle'}],
       cycle:Object.fromEntries(cycleStages.map((stage,i)=>[stage,{cases:[stageIds[i]]}])),
       risks:[{id:'gate-closes-mid-turn',risk:'Invented gate closes during the turn',closedBy:'Invented interlock holds the turn'},
-        {id:'belt-slip',risk:'Invented belt slips when wet',benchTest:{measure:'pull at stall',unit:'N',pass:60,fail:40}}]},
-    files};
+        {id:'belt-slip',risk:'Invented belt slips when wet',benchTest:{measure:'pull at stall',unit:'N',pass:60,fail:40}}]}};
   const d=edit(draft)??draft;
-  for(const [name,body] of Object.entries(d.files))writeFileSync(path.join(root,name),typeof body==='string'||Buffer.isBuffer(body)?body:JSON.stringify(body));
-  const pin=name=>({file:name,sha256:sha(readFileSync(path.join(root,name)))});
-  if(d.receipt&&d.files['intake-trial.json'])d.receipt.stages.acquire.transportedBy={sample:{mechanisms:['carrier'],evidence:d.pins?.intake??pin('intake-trial.json')}};
-  if(d.receipt&&d.files['release-trial.json'])d.receipt.stages.deliver[d.relation??'freePath']={sample:{basis:'Invented',evidence:d.pins?.release??pin('release-trial.json')}};
   const planText=JSON.stringify(d.plan);
   writeFileSync(path.join(root,'judgement.json'),planText);
   if(d.receipt){if(d.receipt.planSha256===undefined)d.receipt.planSha256=sha(planText);writeFileSync(path.join(root,'receipt.json'),JSON.stringify(d.receipt));}
@@ -57,21 +54,13 @@ const judged=(t,id,edit)=>criterion(effectiveReadiness(project(t,edit)),id);
 test('a complete synthetic package meets every exit criterion',t=>{
   const report=effectiveReadiness(project(t));
   assert.deepEqual(report.criteria.map(c=>[c.id,c.met,c.reasons]),
-    [['whole-cycle',true,[]],['trial-driven',true,[]],['risks-resolved',true,[]]]);
+    [['whole-cycle',true,[]],['interactions',true,[]],['risks-resolved',true,[]]]);
   assert.equal(report.met,3);
   assert.deepEqual(report.verificationItems,[{id:'belt-slip',measure:'pull at stall',unit:'N',pass:60,fail:40}]);
   const text=readinessText(report);
   assert.match(text,/^Effective-readiness report for synthetic-issue\n/);
   assert.match(text,/\[met\]     1\. Whole mission cycle/);
   assert.match(text,/verification items .*: belt-slip\nResult: 3 of 3 criteria met\.\n$/);
-});
-
-test('a trial pinned through supportedBy drives its mission case, and one for another case does not',t=>{
-  const rest=d=>{const {freePath,...trial}=d.files['release-trial.json'];d.relation='supportedBy';return trial;};
-  const supported=effectiveReadiness(project(t,d=>{d.files['release-trial.json']={...rest(d),support:{case:'deliver',fixtures:['lane']}};}));
-  assert.equal(supported.met,3,supported.criteria.flatMap(c=>c.reasons).join(' | '));
-  const other=effectiveReadiness(project(t,d=>{d.files['release-trial.json']={...rest(d),support:{case:'acquire',fixtures:['lane']}};}));
-  assert.match(other.criteria.flatMap(c=>c.reasons).join(' | '),/Mission case deliver \(delivered\): trial release-trial\.json records another case/);
 });
 
 test('the whole cycle needs a passing case for every narrative stage in a layout-checked receipt',t=>{
@@ -107,106 +96,44 @@ test('the whole cycle needs a passing case for every narrative stage in a layout
   assert.deepEqual(exempt.notes,['endgame: not applicable, The invented game has no endgame task']);
 });
 
-test('each mission case needs a pinned trial with a pass, a control, brackets and a timestep check',t=>{
-  const q=(d,change)=>{const trial=d.files['release-trial.json'];trial.qualification={...trial.qualification,...change};};
+test('an interaction meets its bar only on a current, passing trial of the engine its screen verdict asks for',t=>{
+  const reasonsOf=edit=>judged(t,'interactions',d=>{edit(d.receipt.interactions[0]);}).reasons;
   const cases=[
-    [d=>{delete d.files['release-trial.json'];},/Mission case deliver \(delivered\): the motion is prescribed/],
-    [d=>{delete d.files['release-trial.json'].qualification;},/trial release-trial\.json has no qualification record/],
-    [d=>q(d,{result:'fail'}),/does not record a passing result/],
-    [d=>q(d,{control:{condition:'Invented',rejected:false}}),/lacks a control/],
-    [d=>q(d,{control:undefined}),/lacks a control/],
-    [d=>q(d,{brackets:[]}),/lacks sensitivity brackets/],
-    [d=>q(d,{brackets:[{input:'speed',unit:'rev/s',passing:20,failing:20}]}),/lacks sensitivity brackets/],
-    [d=>q(d,{brackets:[{input:'speed',unit:'rev/s',passing:20}]}),/lacks sensitivity brackets/],
-    [d=>q(d,{timestep:{coarseS:0.001,fineS:0.001,sameOutcome:true}}),/lacks a timestep check/],
-    [d=>q(d,{timestep:{coarseS:0.002,fineS:0.001,sameOutcome:false}}),/lacks a timestep check/],
-    [d=>{d.pins={release:{file:'release-trial.json',sha256:'0'.repeat(64)}};},/differs from its pinned SHA-256/],
-    [d=>{d.pins={release:{file:'gone.json',sha256:'0'.repeat(64)}};},/missing file gone\.json/],
-    [d=>{d.pins={release:{file:'../outside.json',sha256:'0'.repeat(64)}};},/not a project-relative file/],
-    [d=>{d.missions.missionCases=[];},/No mission case/],
-    [d=>{d.missions.missionCases[1]={kind:'operating-case'};},/A mission case names no case/],
-    [d=>q(d,{brackets:[{input:'speed',unit:'rev/s',passing:'20',failing:20}]}),/lacks sensitivity brackets/],
-    // A trial pinned for one case does not qualify another, through a stage pin or a mission trial pin.
-    [d=>{d.files['release-trial.json'].freePath.case='acquire';},/Mission case deliver \(delivered\): trial release-trial\.json records another case/],
-    [d=>{const text=JSON.stringify(d.files['intake-trial.json']);delete d.files['release-trial.json'];
-      d.missions.missionCases[1].trial={file:'intake-trial.json',sha256:sha(text)};},/trial intake-trial\.json records another case/],
-    // Stage pins are read only from a layout-checked receipt of this plan.
-    [d=>{d.receipt.status='provisional';},/Mission case deliver \(delivered\): the motion is prescribed.*layout-checked receipt/],
-    [d=>{d.receipt.planSha256='0'.repeat(64);},/Mission case acquire \(acquired\): the motion is prescribed/],
-  ];
+    [i=>{i.trial.state='stale';i.trial.changes=['solid "belt" changed (boundsMm)'];},/Interaction pickup \(planar is enough\): the record of trial pickup is stale \(solid "belt" changed \(boundsMm\)\)\. Run it again with --trial "pickup"/],
+    [i=>{i.trial={name:'pickup',result:null,state:'not run'};},/trial pickup has not been run\. Run python -m frc_design_kernel try SOURCE --out RECORDS --trial "pickup"/],
+    [i=>{i.trial.result='not covered';i.trial.findings=['Invented: the outcome changes inside the assumed range of "materials.tread.friction"'];},/trial pickup is not covered: Invented: the outcome changes/],
+    [i=>{i.trial.result='control not rejected';},/trial pickup is control not rejected/],
+    [i=>{i.verdict='needs 3D';},/the screen says the answer depends on what one section cannot show, so try it in 3D \("engine": "mujoco"\); trial pickup ran planar/],
+    [i=>{delete i.decides;},/Interaction pickup: say in the judgement file what it decides/],
+    [i=>{delete i.trial;},/Interaction pickup \(planar is enough\): name its trial/]];
   for(const [edit,reason] of cases){
-    const c=judged(t,'trial-driven',edit);
-    assert.equal(c.met,false,String(reason));
-    assert.ok(c.reasons.some(r=>reason.test(r)),String(reason)+' in '+c.reasons.join(' | '));
+    const found=reasonsOf(edit);
+    assert.ok(found.some(r=>reason.test(r)),String(reason)+' in '+found.join(' | '));
+    assert.ok(found.some(r=>/Mission case acquire is backed by no interaction that meets its bar/.test(r))||/decides/.test(String(reason)),found.join(' | '));
   }
+  // A 3D trial meets a needs-3D verdict; a result an adjustment covers meets the bar like a pass.
+  assert.deepEqual(reasonsOf(i=>{i.verdict='needs 3D';i.trial.engine='mujoco';}),[]);
+  assert.deepEqual(reasonsOf(i=>{i.trial.result='covered by adjustment';}),[]);
+  // An override is listed with its reason; an interaction with no trial is listed and backs no mission case.
+  const over=judged(t,'interactions',d=>{Object.assign(d.receipt.interactions[0],{screened:'needs 3D',verdict:'planar is enough',override:'Invented: the guides are drawn later'});});
+  assert.equal(over.met,true,over.reasons.join(' | '));
+  assert.ok(over.notes.includes('pickup: screened as needs 3D, taken as planar is enough because Invented: the guides are drawn later'),over.notes.join(' | '));
+  const none=judged(t,'interactions',d=>{const i=d.receipt.interactions[0];delete i.trial;i.noTrial='Invented: no result would change the design';});
+  assert.ok(none.notes.includes('pickup: planar is enough; no trial, because Invented: no result would change the design'));
+  assert.deepEqual(none.reasons,['Mission case acquire is backed by no interaction that meets its bar: list it under the cases of the interaction whose trial decides it']);
 });
 
-test('a trial that drives the motion is told from a trial attached to a prescribed motion',t=>{
-  const motion=(c,id)=>c.interactions.find(i=>i.case===id);
-  // A stage pin: the layout check bound the checked path to the trial.
-  const bound=judged(t,'trial-driven');
-  assert.equal(bound.met,true,bound.reasons.join(' | '));
-  assert.deepEqual(motion(bound,'deliver'),{case:'deliver',motion:'bound',trials:['release-trial.json']});
-  assert.ok(bound.notes.includes('deliver: motion driven by the trial (the layout check bound the checked path to it): release-trial.json (matches its recorded SHA-256)'),bound.notes.join(' | '));
-  // A qualified trial pinned on the mission case alone leaves the case's motion prescribed: reported, and not met.
-  const attach=d=>{
-    const text=JSON.stringify(d.files['release-trial.json']);d.files['mission-trial.json']=text;delete d.files['release-trial.json'];
-    d.missions.missionCases[1].trial={file:'mission-trial.json',sha256:sha(text)};return text;};
-  const attached=judged(t,'trial-driven',d=>{attach(d);});
-  assert.equal(attached.met,false);
-  assert.deepEqual(attached.reasons.filter(r=>r.startsWith('Mission case deliver')),
-    ['Mission case deliver (delivered): prescribed motion with a trial attached (mission-trial.json). The trial records this case, but the animation is not driven by it. '
-      +'Declare the payload path through transportedBy, freePath or supportedBy so the layout check binds the checked motion to the trial, or play the recorded run as a review replay']);
-  assert.deepEqual(motion(attached,'deliver'),{case:'deliver',motion:'attached',trials:['mission-trial.json']});
-  assert.equal(motion(attached,'acquire').motion,'bound');
-  const text=readinessText(effectiveReadiness(project(t,d=>{attach(d);})));
-  assert.match(text,/\[not met\] 2\.[^\n]*\n\s+- Mission case deliver \(delivered\): prescribed motion with a trial attached \(mission-trial\.json\)/);
-  assert.match(text,/· deliver: prescribed motion with a trial attached: mission-trial\.json/);
-  // The same pin counts once a review replay plays that trial: the animation is the recorded run.
-  for(const gzip of [false,true]){
-    const replayed=judged(t,'trial-driven',d=>{
-      const trial=attach(d),set=JSON.stringify({schema:'agent-frc/review-replays@1',replays:[{id:'lane-run',evidence:[{file:'mission-trial.json',sha256:sha(trial),role:'recorded run'}]}]});
-      d.files['replays.json']=gzip?gzipSync(set):set;
-      d.plan.presentation.replays=[{file:'replays.json',sha256:'0'.repeat(64)}];});
-    assert.equal(replayed.met,true,replayed.reasons.join(' | '));
-    assert.equal(motion(replayed,'deliver').motion,'played');
-    assert.ok(replayed.notes.some(n=>n.startsWith('deliver: animation played from the trial (a review replay); the checked case motion is prescribed: mission-trial.json')));
-  }
-  // A replay of another case's trial plays nothing for this one.
-  const elsewhere=judged(t,'trial-driven',d=>{
-    attach(d);
-    d.files['replays.json']=JSON.stringify({replays:[{id:'intake-run',evidence:[{file:'intake-trial.json',sha256:'0'.repeat(64)}]}]});
-    d.plan.presentation.replays=[{file:'replays.json',sha256:'0'.repeat(64)}];});
-  assert.equal(motion(elsewhere,'deliver').motion,'attached');
-  // No trial at all stays the plain prescribed finding.
-  const none=judged(t,'trial-driven',d=>{delete d.files['release-trial.json'];});
-  assert.equal(motion(none,'deliver').motion,'prescribed');
-});
-
-test('a trial named by path alone is read, and the report says no hash was compared',t=>{
-  // A mission trial and a replayed run that name only their file: nothing typed to compare, so the files are read.
-  const viaMission=judged(t,'trial-driven',d=>{
-    d.files['mission-trial.json']=JSON.stringify(d.files['release-trial.json']);delete d.files['release-trial.json'];
-    d.missions.missionCases[1].trial={file:'mission-trial.json'};});
-  // The mission trial is read and qualified, but it is only attached to a prescribed motion, so the criterion stays unmet.
-  assert.deepEqual(viaMission.reasons.map(r=>r.split('.')[0]),['Mission case deliver (delivered): prescribed motion with a trial attached (mission-trial']);
-  assert.deepEqual(viaMission.notes,['acquire: motion driven by the trial (the layout check bound the checked path to it): intake-trial.json (matches its recorded SHA-256)',
-    'deliver: prescribed motion with a trial attached: mission-trial.json (read; no SHA-256 given to compare)']);
-  const viaLink=judged(t,'trial-driven',d=>{
-    d.files['lane-trial.json']=JSON.stringify({case:'deliver',qualification:d.files['release-trial.json'].qualification});delete d.files['release-trial.json'];
-    d.files['replays.json']=JSON.stringify({replays:[{id:'lane-run',evidence:[{file:'lane-trial.json'}]}]});
-    d.plan.presentation.replays=[{file:'replays.json',sha256:'0'.repeat(64)}];});
-  assert.equal(viaLink.met,true,viaLink.reasons.join(' | '));
-  assert.ok(viaLink.notes.some(n=>n.startsWith('deliver: animation played from the trial')&&n.endsWith(': lane-trial.json (read; no SHA-256 given to compare)')),viaLink.notes.join(' | '));
-  // The digest the layout check recorded in the receipt is kept over a path-only reference to the same file, and still compared.
-  const changed=judged(t,'trial-driven',d=>{
-    d.pins={release:{file:'release-trial.json',sha256:'0'.repeat(64)}};d.missions.missionCases[1].trial={file:'release-trial.json'};});
-  assert.ok(changed.reasons.some(r=>/trial release-trial\.json differs from its pinned SHA-256/.test(r)),changed.reasons.join(' | '));
-  // A path-only trial is still held to the case it records and to its qualification.
-  const other=judged(t,'trial-driven',d=>{delete d.files['release-trial.json'];d.missions.missionCases[1].trial={file:'intake-trial.json'};});
-  assert.ok(other.reasons.some(r=>/trial intake-trial\.json records another case/.test(r)),other.reasons.join(' | '));
-  const gone=judged(t,'trial-driven',d=>{delete d.files['release-trial.json'];d.missions.missionCases[1].trial={file:'gone.json'};});
-  assert.ok(gone.reasons.some(r=>/missing file gone\.json/.test(r)),gone.reasons.join(' | '));
+test('a configurable interaction needs a declared adjustment, measured at both ends when it is mechanical',t=>{
+  const reasonsOf=(edit,adjust=()=>{})=>judged(t,'interactions',d=>{const i=d.receipt.interactions[1];i.verdict='configurable';edit(i.trial);adjust(d.receipt.adjustments[0]);}).reasons;
+  assert.ok(reasonsOf(()=>{}).some(r=>/Interaction release \(configurable\): a simulated result is only a best guess here\. Declare the adjustment/.test(r)));
+  assert.deepEqual(reasonsOf(x=>{x.adjustments=['lip height'];}),[]);
+  assert.ok(reasonsOf(x=>{x.adjustments=['lip height'];},a=>{a.measured=false;a.hint='Invented hint';}).some(r=>/adjustment lip height is mechanical and is not measured at both ends\. Invented hint/.test(r)));
+  assert.ok(reasonsOf(x=>{x.adjustments=['lip height'];},a=>{a.findings=['at 20: lip and frame come closer than 1 mm in deliver'];})
+    .some(r=>/adjustment lip height at its ends: at 20: lip and frame come closer than 1 mm in deliver/.test(r)));
+  assert.ok(reasonsOf(x=>{x.adjustments=['shim'];}).some(r=>/names adjustment shim, which the receipt does not record/.test(r)));
+  // A receipt of another plan, or one not checked, is not read for interactions.
+  const stale=judged(t,'interactions',d=>{d.receipt.planSha256='0'.repeat(64);});
+  assert.deepEqual(stale.reasons,['Interactions are read from a whole, layout-checked receipt of this plan: run the layout check']);
 });
 
 test('every open risk needs a closing design change or a bench test with pass and fail numbers',t=>{
@@ -235,9 +162,10 @@ test('malformed inputs are findings: nothing is judged met and nothing throws',t
     assert.equal(report.met,0,text);
     assert.ok(report.criteria.every(c=>c.reasons.some(r=>/^Layout plan: judgement\.json is not/.test(r))),text);
   }
-  const odd=effectiveReadiness(project(t,d=>{d.plan.presentation={replays:5,uncoveredCases:'x'};d.plan.narrativeReview={objectives:{}};
-    d.receipt.stages.acquire.transportedBy=7;d.missions.risks=[null,3,{id:'r',risk:'Invented',benchTest:{id:'other',measure:'pull',pass:1}}];}));
+  const odd=effectiveReadiness(project(t,d=>{d.plan.presentation={uncoveredCases:'x'};d.plan.narrativeReview={objectives:{}};
+    d.receipt.interactions=[null,7,{id:'odd',decides:'Invented',trial:5}];d.missions.risks=[null,3,{id:'r',risk:'Invented',benchTest:{id:'other',measure:'pull',pass:1}}];}));
   assert.equal(criterion(odd,'risks-resolved').met,false);
+  assert.ok(criterion(odd,'interactions').reasons.some(r=>/Interaction odd \(no verdict\): name its trial/.test(r)),'a malformed trial row is a finding');
   assert.deepEqual(odd.verificationItems,[],'an incomplete bench test is not a verification item');
   const missions=effectiveReadiness(project(t,d=>{d.missions=null;}));
   assert.ok(missions.criteria.every(c=>!c.met&&c.reasons.includes('Missions: missing file missions.json')));

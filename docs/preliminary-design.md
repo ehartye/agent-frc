@@ -23,6 +23,7 @@ The library builds and measures. The plugin judges. A design's end poses alone l
 - [Run the check](#run-the-check)
 - [Nothing floats](#nothing-floats)
 - [Keep the layout a blockout](#keep-the-layout-a-blockout)
+- [Interactions, trials and adjustments](#interactions-trials-and-adjustments)
 - [Size the checks to the risk](#size-the-checks-to-the-risk)
 - [Judge readiness to be marked effective](#judge-readiness-to-be-marked-effective)
 
@@ -96,6 +97,7 @@ Generate the solids with `python -m frc_design_kernel build SOURCE --out FOLDER`
 | `budgets` | The mass and current ledger, which names its limits. [Mass and voltage budgets](#mass-and-voltage-budgets) |
 | `premises`, `narrativeReview`, `missingInputs` | What the layout holds from upstream, the objectives it answers and what is still missing |
 | `presentation` | Everything the review page says: `components` with a purpose and rationale for each solid, titles, phases, replays and notes |
+| `interactions`, `trials`, `measurements` | What each interaction decides and its trial, and the library's records. [Interactions, trials and adjustments](#interactions-trials-and-adjustments) |
 
 A stage holds:
 
@@ -117,7 +119,7 @@ A stage holds:
 
 ### What the check does not do
 
-- It runs no trial. A stage binds a recorded trial; trials written as data and run by the library are coming.
+- It runs no trial. The library runs them; the check reads their record. [Interactions, trials and adjustments](#interactions-trials-and-adjustments)
 - It has no early stop. It measures every case, or the ones named with `--cases`.
 
 ## Work in three stages
@@ -507,6 +509,70 @@ Record the path tolerance each case was split at as `pathToleranceMm` in its ent
 
 The receipt carries the same figures in its `scope` field: `solids`, `fieldFixtures`, the `guideline` figures and whether they came from the plugin default or the judgement file, `finestPathToleranceMm` with its case, the number of cases with no declared tolerance, the guidelines `passed`, and the agreed `extendedBudget` when one is recorded. The report is information. It never changes a status, a missing input or an exit code, and the publication check does not read it. A plan that sets none of these keys is checked as before; its receipt gains only the `scope` field. `--quiet` omits the stderr lines and keeps the field.
 
+## Interactions, trials and adjustments
+
+An **interaction** is a game piece meeting the robot or the field: a pickup, a hand-off, a hold, a launch. The design source declares each one with its piece, its section plane, the solids it meets and where the piece sits, and the trials and adjustments that go with it. The library computes plain facts about each interaction and runs each trial; the layout check judges what those facts mean and records it in the receipt. [The library's interactions, trials and adjustments](https://github.com/ehartye/frc-design-kernel/blob/main/DESIGN.md)
+
+Say in the judgement file what each interaction decides and which trial answers it:
+
+```json
+"interactions": {
+  "pickup": {"decides": "Whether the belt intake can replace the roller intake", "trial": "pickup", "cases": ["acquire-1"]},
+  "staging": {"decides": "Nothing: the hopper floor holds the piece whatever the friction", "noTrial": "No result would change the hopper floor", "cases": []}
+},
+"trials": {"file": "cad/preliminary-design/releases/1.0/records/trials.json"},
+"measurements": {"file": "cad/preliminary-design/releases/1.0/records/measurements.json"}
+```
+
+`decides` is the decision the trial could change. Never run a trial whose outcome could not change a decision: give `noTrial` and the reason instead. `cases` are the stages whose motion the interaction stands behind; a mission case counts toward being effective only when an interaction that meets its bar lists it. `trials` and `measurements` name the library's records, in one folder. An interaction the judgement file does not explain is a missing input: what it decides is settled at the arrangement stage, before any trial runs.
+
+### The screen verdict
+
+At the arrangement stage, before a trial is written, the check reads the library's screen facts for each interaction and gives one verdict with its reasons in plain words:
+
+| Verdict | When | What a trial must show |
+| --- | --- | --- |
+| `planar is enough` | The piece is round in the section, every meeting solid is the same across its width, and nothing leaves the plane | A planar trial: control rejected, brackets held, half step agrees |
+| `needs 3D` | The answer may depend on what one section cannot show | A 3D trial (`"engine": "mujoco"`) |
+| `configurable` | A simulated result is only a best guess: a deep squeeze, or a compliant or flexible surface | The best-guess case passes and a declared adjustment covers the assumed range |
+
+The guidelines, kept in the plugin, send an interaction to `needs 3D` when:
+
+- the piece is not round in the section;
+- a meeting solid's section changes across the piece's width by more than about 5% of the piece's thickness, or 2 mm;
+- a meeting solid has a face curved across the plane, such as a funnel, a dome or a cone;
+- a side is unguided, or its gap is more than about a tenth of the piece's width. A ball counts only where a meeting solid ends inside its width;
+- a mechanism the piece meets turns or slides out of the plane. The field moving under a driving robot does not count;
+- more than one piece is involved;
+- the target is off the plane;
+- the stated approach angle is beyond about 10 degrees.
+
+It goes to `configurable` when a squeeze is deeper than about a tenth of the piece's thickness or a meeting solid is compliant or flexible. These are guidelines. When the author knows better, override the verdict with the reason: `"override": {"verdict": "planar is enough", "reason": "The second ball waits behind the gate"}`. The receipt keeps the screened verdict beside the override, and the review page and the readiness report list every override.
+
+### Trials, records and what is stale
+
+Write each trial as data in the design source and run it with the library: `python -m frc_design_kernel try design.json --out records`. The check reads its record and says, per interaction, the trial's result word, its engine, its stated and standing assumptions, every input with its source and range, the input it leans on most, and the adjustment windows the coverage campaign found. The check asks the library's `status` whether the record is current. A stale record is marked, with what changed. A stale or failing trial never blocks the layout; the readiness report holds it against the bar.
+
+To make a payload's motion the trial's own path, bind the stage to the trial instead of an evidence file:
+
+```json
+"transportedBy": {"carried article": {"mechanisms": ["carrier"], "drive": {"carrier": "Belt at its set speed"}, "trial": "pickup", "basis": "The belt lifts the piece"}}
+```
+
+The payload's move in that motion must then be the trial's `fit` operation, copied into the design source as it is. A move that differs is a missing input.
+
+### Adjustments
+
+What the built robot can change is design data in the source: a slotted mount (`mechanical`), a preload (`spring`) or a set speed (`setpoint`). A trial names the adjustments that apply to it, and the campaign reports the settings that pass at each end of each assumed range. Measure a mechanical adjustment at both ends: `python -m frc_design_kernel measure design.json --out records --extremes --min-gap N`, with `N` the largest stage allowance. The check records each adjustment, whether its ends were measured, and every pair that comes closer than the allowance only at an end.
+
+### Work in order, and come back up in order
+
+1. Arrange and measure: the layout check, with each interaction declared and screened.
+2. Planar trials, for the interactions that are `planar is enough` or `configurable`.
+3. 3D trials on the settled layout, for `needs 3D`.
+
+Fix a finding from a later stage in the design source or the trial data, never in a generated scene. Sort a 3D finding before changing anything: the design is wrong, a mechanism setting is wrong, or the 3D model is wrong. Then rerun only what `status` reports stale, starting from the earliest stage it touches. Two round trips between planar and 3D on one interaction is a check-in with the owner.
+
 ## Size the checks to the risk
 
 Preliminary design is fast iteration. A revised layout should be checked and back in front of a reviewer in minutes, so decide how much checking a question deserves before running anything. A slow loop hides design problems behind queue time.
@@ -556,8 +622,9 @@ Effective-readiness report for Turning carrier 1.0 (synthetic-package-1.0)
 Informational: marking a design effective stays a project decision in a reviewed pull request.
 [not met] 1. Whole mission cycle checked for clearance, mass and voltage
             - Narrative stage endgame has no case
-[met]     2. Every mission-critical interaction driven by a qualified physics trial
-            · acquire: motion driven by the trial (the layout check bound the checked path to it): intake-trial.json (matches its recorded SHA-256)
+[not met] 2. Every deciding interaction meets the bar its screen verdict sets, and backs every mission case
+            - Interaction pickup (configurable): trial pickup is not covered: the outcome changes inside the assumed range of "materials.bumper.friction": it holds at 0.3 and changes at 0.2; no adjustment declared for this trial has a setting that passes at each end
+            · pickup: configurable; trial pickup (planar): not covered; leans most on materials.bumper.friction
 [not met] 3. Every open risk closed by a design change or carried as a bench test with numbers
             - Risk belt-slip has neither a closing design change (closedBy) nor a bench test with a measure, a pass value and a fail value
 Bench tests to carry as verification items (results are not required to mark the design effective): none listed
@@ -569,34 +636,22 @@ Publishing a draft and being marked effective ask different things of the motion
 | To | The motion must be |
 | --- | --- |
 | Publish an in-progress draft | At least one mission case: a passing operating case for a represented objective. A prescribed path is enough |
-| Be marked effective | For every mission-critical interaction, a case the report counts as trial-driven: its motion comes from a qualified trial, as listed under Trials below |
+| Be marked effective | Every mission case backed by an interaction that meets the bar its screen verdict sets, as listed under Interactions below |
 
 Declare what the report reads:
 
 - **Cycle map.** In `missions.json`, map each mission phase (the report calls it a narrative stage) to its checked cases: `"cycle": {"acquire": {"cases": ["acquire"]}, "retain": {"cases": ["loaded-turn"]}, ...}` for `acquire`, `retain`, `transfer`, `deliver`, `reset`, `endgame`, `park` and `service`. Each case must pass in a whole `layout-checked` receipt of this exact plan, with no missing inputs, a passing inspection weight and passing loaded-voltage cases, so supply the budgets.
 
   The `service` stage needs a case checked as `service`, `park` a case checked as `park`, and every other stage an `operating` case. When the game has no such stage, state it alone: `{"notApplicable": "reason"}`. The report shows the reason.
-- **Trials.** The report tells how each mission case's animation relates to its trial and says so in a note under the criterion:
+- **Interactions.** Criterion 2 reads the receipt's interactions. Each one that decides the design meets its bar when:
 
-  | Note | What the files declare | Criterion 2 |
-  | --- | --- | --- |
-  | `motion driven by the trial` | The case's stage names the trial through `transportedBy`, `freePath` or `supportedBy`, so the layout check bound the checked path to the trial's record. | Counts |
-  | `animation played from the trial` | A review replay under `presentation.replays` names the trial as evidence. The review plays the recorded run; the checked case motion is still prescribed. | Counts |
-  | `prescribed motion with a trial attached` | Only the mission case's own `trial` reference, such as `{"file": "release-trial.json"}`, names the trial. The case moves on a prescribed stroke and nothing plays the trial. | `not met` |
-  | `prescribed motion, no trial` | No trial is named. A case that only follows its carrier is a prescribed path. | `not met` |
+  | Its verdict | It needs |
+  | --- | --- |
+  | `planar is enough` | A current trial record, planar or 3D, that is `passed` or `covered by adjustment` |
+  | `needs 3D` | The same, from the 3D engine (`"engine": "mujoco"`) |
+  | `configurable` | The same, and the trial names at least one declared adjustment |
 
-  The exit criterion requires the mission animation to be driven by the named trial, so a qualified trial attached to a prescribed motion is reported as `not met` with the line `prescribed motion with a trial attached (FILE)`. Bind the payload path in the stage, or play the recorded run as a review replay. With `--json`, the criterion lists each case under `interactions` with `motion` set to `bound`, `played`, `attached` or `prescribed` and its trial files. Stage trials count only from a `layout-checked` receipt of this plan, and each trial record must name the mission case it ran (`case`, or the `case` inside its `transport`, `freePath` or `support` record). Each trial record carries its qualification:
-
-  ```json
-  "qualification": {
-    "result": "pass",
-    "control": {"condition": "Roller unpowered", "rejected": true},
-    "brackets": [{"input": "roller speed", "unit": "rev/s", "passing": 20, "failing": 8}],
-    "timestep": {"coarseS": 0.002, "fineS": 0.001, "sameOutcome": true}
-  }
-  ```
-
-  The control is an adverse or disabled condition that the trial rejects. Each bracket names an input, its unit, a value that passes and a value that fails. The timestep check repeats the nominal run once at a finer step with the same outcome. [The smallest form of each part](../skills/frc-preliminary-design/references/trials.md#what-the-effective-bar-asks-of-each-trial)
+  A mechanical adjustment the trial names must be measured at both ends with no pair closer than the allowance there. An interaction with `noTrial` is listed with its reason and backs no mission case. Every mission case in `missions.json` must be listed under the `cases` of an interaction that meets its bar. Each line under the criterion names the interaction, its verdict, its trial, the result and the input it leans on most; an override is listed with its reason. Interactions count only from a whole `layout-checked` receipt of this plan.
 - **Risk register.** In `missions.json`, list every open risk under `risks`, each with an `id` and the `risk`. Give `closedBy` for a design change that closes it, or `benchTest` with a `measure`, a `pass` value, a `fail` value and optionally a `unit` and a `tag` (`before-build` or `on-robot`). Detailed design [takes each one up as a record](design-publication.md#bench-tests-handed-over-from-preliminary-design). An empty list states that no risk remains. Every `presentation.uncoveredCases` ID needs an entry, and a narrative objective still marked `open` keeps the criterion unmet.
 
-The report trusts the declarations it reads. It reads each trial file by its path. Where a reference carries a SHA-256, typed by an author or recorded in the receipt by the layout check, the file is also compared with it. Each note says which: `(matches its recorded SHA-256)` or `(read; no SHA-256 given to compare)`. It does not rerun a trial. The command that marks a release effective prints the report after the stage gate. Attach the report to the pull request that marks the release effective. Staging ignores the `cycle` and `risks` keys.
+The report trusts the receipt it reads, and the receipt pins the trial and measurement records by digest. It does not rerun a trial. The command that marks a release effective prints the report after the stage gate. Attach the report to the pull request that marks the release effective. Staging ignores the `cycle` and `risks` keys.

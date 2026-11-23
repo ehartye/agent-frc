@@ -67,10 +67,10 @@ The status lives in the index, never in a design's own record, so changing it ne
 A preliminary design is ready to be marked effective when all three hold:
 
 1. **Whole mission cycle.** Every phase of the mission cycle has a passing case in a layout-checked receipt, so clearance, mass and loaded voltage are checked for the whole cycle: acquire, retain, transfer, deliver, reset, endgame, park and service. A fragment of the cycle does not qualify. One coarse case for each phase is the starting plan.
-2. **Trial-driven interactions.** Every mission-critical interaction passes a physics trial with a control, sensitivity brackets (a passing and a failing value) and a timestep check. The motion shown for it comes from that trial, not from a prescribed path.
+2. **Interactions meet their bar.** Every interaction that decides the design meets the bar its screen verdict sets: a planar trial where one section answers it, a 3D trial where it does not, and, where a simulated result is only a best guess, a passing best-guess case with a declared adjustment that covers the assumed range. Each trial rejects its control, holds across its ranges and agrees at half the step. Every mission case is backed by one of these interactions.
 3. **Risks resolved.** Every open risk is closed by a design change or recorded as a bench test with pass and fail numbers.
 
-The trial requirement is sized to stay small: one passing run, one control, the first failing value on each bracket, and the nominal run once more at half the timestep. [The smallest form of each part](../skills/frc-preliminary-design/references/trials.md#what-the-effective-bar-asks-of-each-trial)
+The library's campaign does the method for each trial: the nominal run, the control, each assumed range at its ends, the half step and the coverage of each adjustment. [The effective bar](../skills/frc-preliminary-design/references/trials.md#what-the-effective-bar-asks-of-each-trial)
 
 Publishing an in-progress draft asks less: a passing layout check and one mission case, which may follow a prescribed path.
 
