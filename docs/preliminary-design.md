@@ -130,6 +130,26 @@ The displaced control is expected to collide, so it never stops a run. It is the
 
 To recheck the physics of a layout whose review is already written, add `--physics-only`. It checks every case, the displaced control and the budgets and does not read or write the review page or its scene. The receipt sets `"physicsOnly": true` and is not one to publish. A project's CI [reruns each published layout](design-publication.md) this way and compares the result with the committed receipt.
 
+### Rebuild the review without rerunning the cases
+
+`--write-view` checks every case before it writes the scene. When only the presentation changed, add `--view-only` instead:
+
+```sh
+node scripts/design.mjs preliminary-check REPOSITORY cad/preliminary-design/releases/layout-002/layout.json --view-only --output cad/preliminary-design/releases/layout-002/receipt.json
+```
+
+The run reads the earlier receipt, reuses its case results and its displaced control, and rebuilds the page and scene around them. It reads the receipt at the `--output` path, or `receipt.json` beside the layout plan when the receipt is printed. Name another with `--from-receipt FILE`, relative to the project. A `--physics-only` receipt serves too, so a layout can be iterated with `--physics-only` and its review written afterwards without a second check.
+
+The case results stand only while the inputs that produced them are unchanged. The run compares the editable design, the STEP, the motion study and the issue name with the digests and name in the receipt, the displaced control with the one the receipt recorded, and the weight and voltage budgets with the receipt's budget result. Fixtures and pinned evidence are read against their digests as usual. When one differs the run stops, writes nothing and names it:
+
+```text
+--view-only reuses the checked cases of a receipt only while their inputs are unchanged. Changed since that receipt: the motion study. Run the full check with --write-view
+```
+
+Everything else is checked again as in a full run: the groups and their roles, mounts, stages, payload relations and their trial pins, the cycle, premises, the narrative review, component explanations and the view itself. A reworded clearance basis, a renamed group or a new component explanation is therefore accepted, and a missing explanation still leaves the receipt provisional. For the same files the receipt and the scene are the ones a full `--write-view` check writes, byte for byte, so staging and the publication check accept them unchanged. A project's CI still [reruns the cases](design-publication.md) of every published layout and compares the result with the committed receipt.
+
+`--view-only` is refused with `--fail-fast` or `--physics-only`, for a partial `--fail-fast` receipt, and for a receipt whose displaced control was not rejected. It stays one process, so `--jobs` has no effect.
+
 Give every downstream designer the issue name, design and STEP hashes, host and mount points, motion study, status and open inputs. If one interface changes, identify its neighbors through the group roster. Recheck the affected loaded, park and withdrawal paths on the revised package, repeat the adverse control and issue the updated receipt before another designer takes the old clearance as available. The executable rechecks every commissioned case. Detailed seat geometry, loads, tolerances, retention, actuator dynamics and physical performance require their own commissioned evidence.
 
 ## Keep the layout a blockout
@@ -215,7 +235,7 @@ Change one input at a time from the operating point. A full grid of every input 
 
 **Record enough to explain a miss.** Observe each trial long enough to tell a late success from a failure, and keep the state that would explain one, such as the piece's attitude and spin where it meets the target. Watching a few misses to their end settles more than repeating the population. State the result as found. When some starts fail, report the count and what the failures share, and carry the open finding with its bench test.
 
-**Keep presentation separate from physics.** Names, colours, explanations and grouping do not change a clearance. `--write-view` checks every case before it writes the scene, so collect presentation edits and make them in one run, and use `--physics-only` while only the layout or motion is changing. A change to the release list or a status needs no check run at all.
+**Keep presentation separate from physics.** Names, colours, explanations and grouping do not change a clearance. After such an edit, [rebuild the review with `--view-only`](#rebuild-the-review-without-rerunning-the-cases): it reuses the checked cases of the saved receipt and writes the scene and a new receipt in seconds. Use `--physics-only` while only the layout or motion is changing, then `--view-only` to write the review from that receipt. A change to the release list or a status needs no check run at all.
 
 **Share the machine.** Cap worker processes below the core count when other work is running. Commit results as each stage finishes so an interrupted campaign keeps what it found.
 
@@ -281,6 +301,7 @@ A season pins a plugin revision and holds copies of some plugin files. After mov
 | 0.122.1 | The release index page `docs/preliminary-design/index.html` from `templates/preliminary-review-index.html`. The note under the header is gone: the release picker names each design status and the review page shows the rest. |
 | 0.123.0 | `stage.py`, the release index page and the local review page (delete `package-motion.html` and rerun the check with `--write-view`). Staging an in-progress release again revises it in place and counts a revision; an effective release is no longer restaged. Mark in-progress releases that a later release replaced `superseded`, and add `accepted` for a superseded release that was once effective. [Revise an in-progress release in place](design-publication.md#revise-an-in-progress-release-in-place) |
 | 0.125.0 | Nothing to re-copy. The layout check reports the solid count and the finest declared path tolerance beside the [scope guidelines](#keep-the-layout-a-blockout). A stage may declare `pathToleranceMm`, and the plan may state its own figures and an agreed budget under `scopeGuidelines`. |
+| 0.126.0 | Nothing to re-copy. `preliminary-check --view-only` [rebuilds the review page, scene and receipt](#rebuild-the-review-without-rerunning-the-cases) from the saved receipt after a presentation edit, without rerunning the cases. |
 
 An in-progress release takes the new page when it is staged again under its ID. An effective, superseded or withdrawn release never changes.
 

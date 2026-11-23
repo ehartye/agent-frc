@@ -848,6 +848,25 @@ def evaluate(root,study,*,mount_hosts=(),package_scene=None,progress=None,fail_f
     return result
 
 
+def reuse(root,study,results,*,mount_hosts=(),package_scene=None):
+    """The result evaluate returns for this study, with the case results an earlier run of the same study recorded.
+
+    No pair is checked. The STEP and each case's fixtures are loaded and every scene is built at its start pose
+    for the package_scene callback, as evaluate builds them. The caller answers for the study, the STEP and the
+    fixtures being the ones those results came from; every pinned file is still read against its digest."""
+    require(study.get("schema")=="agent-frc/mechanical-motion@1","Unknown motion study")
+    run=_open(root,study)
+    shapes=run["shapes"]
+    cases=study["cases"]
+    require([c.get("id") for c in cases]==[r.get("case") for r in results],"The recorded results do not cover the cases of this study in order")
+    for case in cases:
+        scene,_=_scene(dict(run),case)
+        if package_scene is not None:package_scene(case,scene)
+    return {"schema":"agent-frc/mechanical-motion-result@1","stepSha256":digest(run["original"]),"occurrences":run["identities"],
+            "nonSolidLeafCount":len(run["non_solids"]),"mountHostBoundsMm":{n:bounds(shapes[n]) for n in sorted(mount_hosts) if n in shapes},
+            "cases":list(results)}
+
+
 def stderr_progress(line):
     print(line,file=sys.stderr,flush=True)
 
