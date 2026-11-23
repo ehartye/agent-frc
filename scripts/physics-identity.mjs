@@ -39,7 +39,8 @@ function results(receipt) {
     status: r.status ?? null, cycle: list(r.cycle), cases: list(r.cases).map(c => [c?.case, c?.status]).sort(),
     control: [r.control?.case ?? null, r.control?.displaced ?? null, r.control?.offsetMm ?? null, r.control?.witness?.status ?? null],
     massStatus: r.budgets?.massStatus ?? null, electricalCases: list(r.budgets?.electricalCases).map(c => [c?.case, c?.status]).sort(),
-    objectives: list(r.narrativeReview?.objectives).map(o => [o?.objective, o?.disposition]).sort()
+    objectives: list(r.narrativeReview?.objectives).map(o => [o?.objective, o?.disposition]).sort(),
+    interactions: list(r.interactions).map(i => [i?.id, i?.verdict, i?.trial?.result ?? null]).sort()
   };
 }
 
@@ -54,6 +55,7 @@ export function receiptIdentity(receipt) {
   return canonical({
     ...results(r), step: r.step?.sha256 ?? null, design: r.design?.sha256 ?? null,
     budgets: r.budgets?.source?.sha256 ?? null, limits: r.budgets?.limits?.sha256 ?? null,
+    trials: r.trials?.sha256 ?? null, measurements: r.measurements?.sha256 ?? null,
     stages: Object.fromEntries(Object.entries(r.stages ?? {}).map(([name, stage]) => [name, stageOf(stage)])),
     groups: r.groups ?? null, mounts: r.mounts ?? null, datum: r.datum ?? null
   });

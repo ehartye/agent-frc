@@ -84,7 +84,9 @@ export function verdict(receipt) {
     objectives: list(receipt.narrativeReview?.objectives).map(o => [o?.objective, o?.disposition]).sort(),
     control: [receipt.control?.case, receipt.control?.displaced, receipt.control?.witness?.status],
     massStatus: receipt.budgets?.massStatus, budgetsSha256: receipt.budgets?.source?.sha256, limitsSha256: receipt.budgets?.limits?.sha256,
-    electricalCases: list(receipt.budgets?.electricalCases).map(r => [r.case, r.status]).sort()
+    electricalCases: list(receipt.budgets?.electricalCases).map(r => [r.case, r.status]).sort(),
+    trialsSha256: receipt.trials?.sha256, measurementsSha256: receipt.measurements?.sha256,
+    interactions: list(receipt.interactions).map(i => [i?.id, i?.verdict, i?.trial?.result ?? null, i?.trial?.state ?? null]).sort()
   };
 }
 /** The fields in which a rerun's verdict differs from the committed receipt. */
@@ -182,7 +184,7 @@ export function runLayoutCheck({project, plan, budgetMinutes = 45, workers, pyth
 
 /** The files a receipt records by digest, each with the name a message gives it. */
 const receiptPins = receipt => [['generated STEP', receipt.step], ['design source', receipt.design],
-  ['budget ledger', receipt.budgets?.source], ['limits', receipt.budgets?.limits]].filter(([, pin]) => named(pin?.file) && named(pin?.sha256));
+  ['budget ledger', receipt.budgets?.source], ['limits', receipt.budgets?.limits], ['trial campaign', receipt.trials], ['measurements', receipt.measurements]].filter(([, pin]) => named(pin?.file) && named(pin?.sha256));
 
 /**
  * Whether a design was checked from the project root. Such a plan pins its files from there. The view sits in the

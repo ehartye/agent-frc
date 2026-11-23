@@ -42,6 +42,7 @@ class Inputs:
     roster: set         # every solid and fixture name
     volumes: dict = field(default_factory=dict)    # {solid: volume in mm3}, from the generated manifest
     parts: list = field(default_factory=list)      # the STEP files the source places solids from, each with its digest
+    records: dict = field(default_factory=dict)    # {"trials" | "measurements": (record, pin, folder)}: the library's records the judgement names
 
     @property
     def data(self):

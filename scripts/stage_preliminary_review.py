@@ -236,7 +236,9 @@ def receipt_identity(receipt):
             "the mass result": budgets.get("massStatus"), "the loaded-voltage results": verdicts(budgets.get("electricalCases"), "case"),
             "the narrative objectives": verdicts((receipt.get("narrativeReview") or {}).get("objectives"), "objective", "disposition"),
             "the stages": unlabelled(receipt.get("stages") or {}), "the groups": receipt.get("groups"), "the mounts": receipt.get("mounts"),
-            "the datum": receipt.get("datum")}
+            "the datum": receipt.get("datum"), "the trial campaign": digest(receipt.get("trials")),
+            "the adjustment measurements": digest(receipt.get("measurements")),
+            "the interactions": sorted([str(i.get("id")), str(i.get("verdict")), str((i.get("trial") or {}).get("result"))] for i in receipt.get("interactions") or [])}
 
 
 def stage(season, inputs, release, design=None, refresh=False):

@@ -104,6 +104,7 @@
       "design-audit-library.test.mjs",
       "design-publication.test.mjs",
       "detailed-design-release.test.mjs",
+      "kernel-interactions.test.mjs",
       "kernel-layout.test.mjs",
       "mechanical-readiness.test.mjs"
     ]
@@ -120,6 +121,7 @@
     "design-versions.test.mjs": ["scripts/stage_preliminary_review.py", "scripts/stage-gate.mjs"],
     "preliminary-release.test.mjs": ["scripts/stage_preliminary_review.py", "scripts/stage-gate.mjs"],
     "kernel-layout.test.mjs": ["scripts/kernel_layout/**", "scripts/layout_check.py", "examples/design-source/**"],
+    "kernel-interactions.test.mjs": ["scripts/kernel_layout/**", "scripts/layout_check.py", "examples/design-source/**"],
     "kernel-layout-size.test.mjs": ["scripts/kernel_layout/**", "scripts/layout_check.py", "examples/design-source/**"],
     "project-ci.test.mjs": ["templates/**", "examples/sample-project/**", "scripts/project-ci-audit.mjs"],
     "design-audit.test.mjs": ["scripts/design-audit.mjs", "scripts/design-audit/**", "scripts/project-ci-audit.mjs"],
