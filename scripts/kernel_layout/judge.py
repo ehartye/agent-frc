@@ -24,13 +24,26 @@ def contact_row(rule, found):
                 status=status, gapMm=found["gapMm"], t=found["t"])
 
 
-def case_row(case, found, contacts, withdrawal):
-    """One checked case. It passes when no pair is closer than the allowance, every required contact is reached and,
-    for a service withdrawal, the moved solids end beyond the allowance of everything that stayed."""
+def compression_row(rule, found):
+    """A squeezed game piece: within its allowed depth with a proven ceiling, past it, or left open by the depth limit."""
+    status = "fail" if found["deeperThanLimit"] else "pass" if found["proven"] else "open"
+    return dict(payload=rule["payload"], contact=rule["contact"], maxDepthMm=rule["maxDepthMm"], basis=rule["basis"], status=status,
+                deepestMm=found["deepestMm"], t=found["t"], upperBoundMm=found["upperBoundMm"], sectionRadiusMm=found["sectionRadiusMm"],
+                **({"evidence": rule["evidence"]} if "evidence" in rule else {}))
+
+
+def worst(rows):
+    return "fail" if any(r["status"] == "fail" for r in rows) else "open" if any(r["status"] == "open" for r in rows) else "pass"
+
+
+def case_row(case, found, contacts, withdrawal, compression=()):
+    """One checked case. It passes when no pair is closer than the allowance, every required contact is reached, no
+    game piece is squeezed past its allowed depth and, for a service withdrawal, the moved solids end beyond the
+    allowance of everything that stayed."""
     pairs = [pair_row(row) for row in found["pairs"]]
     status = "fail" if any(r["status"] == "fail" for r in pairs) else "open" if any(r["status"] == "open" for r in pairs) else "pass"
-    if status == "pass" and contacts:
-        status = "fail" if any(r["status"] == "fail" for r in contacts) else "open" if any(r["status"] == "open" for r in contacts) else "pass"
+    if status == "pass":
+        status = worst([*contacts, *compression])
     extracted = []
     if withdrawal is not None:
         if withdrawal["smallestBoxGapMm"] > case["minGapMm"]:
@@ -39,7 +52,7 @@ def case_row(case, found, contacts, withdrawal):
             status = "open"
     return dict(case=case["id"], status=status, allowanceMm=case["minGapMm"], moving=sorted(case["moves"]), removed=dict(case["removed"]),
                 extracted=extracted, installedCount=case["present"],
-                pairs=pairs, requiredContacts=contacts, counts=found["counts"],
+                pairs=pairs, requiredContacts=contacts, compression=list(compression), counts=found["counts"],
                 **({"withdrawnBoxGapMm": withdrawal["smallestBoxGapMm"]} if withdrawal is not None else {}))
 
 

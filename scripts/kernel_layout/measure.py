@@ -46,6 +46,12 @@ class Measured:
         return approach.reach(self.assembly, case["id"], rule["pair"], rule["maxGapMm"], tuple(rule.get("window", (0.0, 1.0))),
                               sorted(case["removed"]), case["depth"])
 
+    def pressed(self, case, rule):
+        """How deep a contact solid presses into a ball or round-section ring along a case, against the allowed depth."""
+        from frc_design_kernel.measure import compression
+        return compression.indentation(self.assembly, case["id"], rule["payload"], rule["contact"], rule["maxDepthMm"],
+                                       sorted(case["removed"]), case["depth"])
+
     def withdrawn(self, case):
         """At the end of a service case, how far the moved solids are from everything that stayed."""
         from frc_design_kernel.measure import approach

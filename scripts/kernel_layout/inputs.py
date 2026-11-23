@@ -16,7 +16,7 @@ PURPOSES = ("operating", "park", "service")
 # What belongs to the design source. A judgement file that carries one of these is refused, naming it.
 SOURCE_KEYS = ("groups", "mounts", "contacts", "solids", "fixtures", "poses", "motions", "datum", "step", "motion", "design")
 STAGE_KEYS = {"purpose", "phase", "basis", "minGapMm", "allowanceBasis", "pathToleranceMm", "depth", "absent", "extract",
-              "requiredContacts", "carriedWith", "transportedBy", "freePath", "supportedBy"}
+              "requiredContacts", "payloadCompression", "carriedWith", "transportedBy", "freePath", "supportedBy"}
 DEFAULT_DEPTH = 9
 
 
@@ -109,7 +109,7 @@ def case_record(data, key, stage, members, fixtures):
                 fixtures=[dict(id=name) for name in sorted(fixtures - set(absent))],
                 removed={name: "Taken out before this case" for name in absent},
                 extract=sorted(m for g in moving for m in members[g]) if stage.get("extract") else [],
-                requiredContacts=stage.get("requiredContacts", []))
+                requiredContacts=stage.get("requiredContacts", []), compression=stage.get("payloadCompression", []))
 
 
 def check_stage(key, stage, roster):
@@ -120,6 +120,10 @@ def check_stage(key, stage, roster):
     require("phase" not in stage or named(stage["phase"]), "Give the phase of " + key + " as a short name, such as acquire")
     require(set(stage.get("absent", [])) <= roster, "Stage " + key + " lists an absent solid the design source does not hold")
     require(isinstance(stage.get("depth", DEFAULT_DEPTH), int), "Give the search depth of " + key + " as a whole number")
+    for rule in stage.get("payloadCompression", []):
+        require(isinstance(rule, dict) and rule.get("payload") in roster and rule.get("contact") in roster and number(rule.get("maxDepthMm"))
+                and rule["maxDepthMm"] > 0 and named(rule.get("basis")),
+                "A compression rule of " + key + " names the payload solid, the contact solid that presses into it, maxDepthMm above zero and its basis")
     for rule in stage.get("requiredContacts", []):
         require(isinstance(rule, dict) and named(rule.get("id")) and isinstance(rule.get("pair"), list) and set(rule["pair"]) <= roster
                 and len(rule["pair"]) == 2 and number(rule.get("maxGapMm")) and isinstance(rule.get("window", [0, 1]), list),

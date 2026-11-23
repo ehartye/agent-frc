@@ -77,7 +77,10 @@ def measure_cases(inputs, measured, chosen, workers, say):
     rows = []
     for case, found in zip(chosen, measured.clearances(chosen, workers)):
         contacts = [judge.contact_row(rule, measured.reached(case, rule)) for rule in case["requiredContacts"]]
-        rows.append(judge.case_row(case, found, contacts, measured.withdrawn(case) if case["extract"] else None))
+        pressed = [judge.compression_row(rule, measured.pressed(case, rule)) for rule in case["compression"]]
+        rows.append(judge.case_row(case, found, contacts, measured.withdrawn(case) if case["extract"] else None, pressed))
+        for row in pressed:
+            say(f"[squeeze] {case['id']} {row['payload']} by {row['contact']}: {row['status']}, deepest {row['deepestMm']:.2f} mm of {row['maxDepthMm']:g} mm allowed")
         near = found["closest"]
         say(f"[motion] {case['id']} {rows[-1]['status']}: {found['counts']['measured']} of {found['counts']['pairs']} pairs measured"
             + (f", closest {near['pair'][0]} and {near['pair'][1]} at {near['gapMm']:.3f} mm" if near else ""))
