@@ -147,6 +147,35 @@ export function validateProfile(p) {
     if(!d || ![d.length,d.width,d.height,d.speed].every(positive) || d.speed>500 ||
        !Number.isFinite(d.heading) || !nonnegative(d.bumper) || !Array.isArray(d.orders) || d.orders.length!==3 ||
        !d.orders.every(k=>Object.hasOwn(r.programs,k)))throw Error('Invalid rehearsal robot defaults.');
+    // Optional target entry regions and robot limits. A ranged output can score only through an entry; the arc
+    // check (scripts/concept-arc.mjs) reads it. Each factId names the rule-register fact that supports the value.
+    // entry: {centerIn:[x,y,z], kind:'window', widthIn, heightIn, facingDeg, factId} or {centerIn, kind:'ring', radiusIn, factId}.
+    // robotLimits: all five keys, each {value>0, factId} or null for unknown. A bare number is refused, so every
+    // limit stays traceable to its fact; massLb follows the same shape.
+    const only=(o,keys)=>o && typeof o==='object' && !Array.isArray(o) && Object.keys(o).every(k=>keys.includes(k) && o[k]!==undefined);
+    for(const s of r.stations ?? []){
+      if(s?.entry===undefined)continue;
+      const e=s.entry,c=e?.centerIn;
+      if(s.kind!=='scoring')throw Error('Only a scoring station may carry an entry region: '+s.id+'.');
+      const shape=e?.kind==='window' ? only(e,['centerIn','kind','widthIn','heightIn','facingDeg','factId']) &&
+          positive(e.widthIn) && positive(e.heightIn) && Number.isFinite(e.facingDeg) && Math.abs(e.facingDeg)<=360 :
+        e?.kind==='ring' && only(e,['centerIn','kind','radiusIn','factId']) && positive(e.radiusIn);
+      if(!shape || !label(e.factId) || !Array.isArray(c) || c.length!==3 || !c.every(Number.isFinite) ||
+         c[0]<0 || c[0]>p.field.length || c[1]<0 || c[1]>p.field.width || c[2]<0) {
+        throw Error('Give the entry of scoring station '+s.id+' a centerIn [x, y, z] on the field in inches, a factId and either ' +
+          'kind "window" with widthIn, heightIn and facingDeg or kind "ring" with radiusIn.');
+      }
+    }
+    if(r.robotLimits!==undefined){
+      const keys=['perimeterIn','startingHeightIn','maxHeightIn','maxExtensionIn','massLb'],l=r.robotLimits;
+      if(!only(l,keys) || !keys.every(k=>l[k]===null || only(l[k],['value','factId']) && positive(l[k].value) && label(l[k].factId))) {
+        throw Error('Give rehearsal.robotLimits perimeterIn, startingHeightIn, maxHeightIn, maxExtensionIn and massLb, ' +
+          'each {value, factId} with a positive value, or null for an unknown limit.');
+      }
+      if(l.maxHeightIn && l.startingHeightIn && l.maxHeightIn.value<l.startingHeightIn.value) {
+        throw Error('rehearsal.robotLimits.maxHeightIn cannot be below startingHeightIn.');
+      }
+    }
     const waypoint=w=>w && label(w.label) && (!w.frame || ['alliance','field'].includes(w.frame)) &&
       (w.lock===undefined || w.lock===true || label(w.lock)) && (w.release===undefined || w.release===true && Boolean(w.lock)) &&
       (w.dwell===undefined || nonnegative(w.dwell)) && (pt(w.at) || (w.at && (pt(w.at.blue) && pt(w.at.red) ||

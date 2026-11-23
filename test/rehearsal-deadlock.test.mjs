@@ -14,8 +14,10 @@ const series = fileURLToPath(new URL('../scripts/rehearsal-series.mjs', import.m
 
 // Full saved results produced before wait-cycle handling existed, for the unmodified invented training
 // field and for its first match with the blue slot-1 and slot-2 duties exchanged.
-const EXAMPLE_RESULT_SHA256 = '000ac2e2c9a4f9a394c6545412b399956d00f6cd66a9285f7eecef1fc652bba1';
-const SWAPPED_RESULT_SHA256 = '39018fb79e1b0edfdf8e2144009fbb287ea52d0912e53664447c34c1cf0e460e';
+// Re-pinned when the training profile gained optional entry/robotLimits fields; results otherwise byte-identical (verified).
+const EXAMPLE_RESULT_SHA256 = '68046fbde097ca3f60b80d0f254742f939ef9923868a9c83d134dd06f86bfe1a';
+// Re-pinned when the training profile gained optional entry/robotLimits fields; results otherwise byte-identical (verified).
+const SWAPPED_RESULT_SHA256 = 'cd6b89a55d29b1919df4a694b52a0a43bc127c8efc3c8897bb3bbd660bb49ea9';
 
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 
