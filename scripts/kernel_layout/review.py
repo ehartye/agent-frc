@@ -40,13 +40,23 @@ def structure(inputs, bounds, missing):
     return {m["on"]: bounds[m["on"]] for m in mounts if m["on"] in bounds}
 
 
-def physics_of(result):
+def physics_of(result, control):
     """What a receipt records of the measuring inputs: a view-only rebuild reuses its cases only while this is unchanged."""
     unlabelled = {key: {k: v for k, v in stage.items() if k not in STAGE_LABELS} for key, stage in (result.get("stages") or {}).items()}
-    control = result.get("control") or {}
+    control = control or {}
     return {"the design source": (result.get("design") or {}).get("sha256"), "the generated solids": (result.get("step") or {}).get("sha256"),
             "the issue name": result.get("issue"), "the stages": unlabelled, "the groups": result.get("groups"), "the mounts": result.get("mounts"),
-            "the displaced control": [control.get("case"), control.get("displaced"), control.get("offsetMm")]}
+            "the displaced control": [control.get("case"), control.get("displaced"), control.get("offsetMm")],
+            # Compared as JSON, the form the receipt was saved in.
+            "the weight and voltage budgets": json.loads(json.dumps(result.get("budgets")))}
+
+
+def unchanged_since(held, result, spec):
+    """Refuse a view-only rebuild, naming what changed, unless every measuring input is the one the held receipt recorded."""
+    was, now = physics_of(held, held.get("control")), physics_of(result, spec)
+    changed = [name for name in now if now[name] != was[name]]
+    require(not changed, "--view-only reuses the checked cases of a receipt only while their inputs are unchanged. Changed since that "
+            "receipt: " + ", ".join(changed) + ". Run the full check with --write-view")
 
 
 def held_receipt(root, view_only):
@@ -55,6 +65,8 @@ def held_receipt(root, view_only):
     held = read(view_only)
     require(isinstance(held, dict) and held.get("schema") == RECEIPT and not held.get("partial") and isinstance(held.get("cases"), list),
             "--view-only needs the receipt of a whole layout check. Run the full check with --write-view")
+    require(not held.get("control") or held["control"].get("witness"), "--view-only cannot rebuild the displaced control of a receipt that did "
+            "not reject it. Run the full check with --write-view")
     return held
 
 
@@ -153,17 +165,14 @@ def review(root, file, *, write_view=False, physics_only=False, view_only=None, 
     result.update(partial, groups=plan["groups"], mounts=plan["mounts"], mountHostBoundsMm=hosts, stages=plan["stages"], cases=rows)
     if control:
         result["control"] = control
-    if held is not None:
-        was, now = physics_of(held), physics_of(result)
-        changed = [name for name in now if now[name] != was[name]]
-        require(not changed, "--view-only reuses the checked cases of a receipt only while their inputs are unchanged. Changed since that "
-                "receipt: " + ", ".join(changed) + ". Run the full check with --write-view")
     opening = plan.get("presentation", {}).get("openingCase") or (result["cycle"] or [inputs.cases[0]["id"]])[0]
     by_id = {c["id"]: c for c in inputs.cases}
     result["attachment"], lines = attachment.report(inputs, measured, by_id.get(opening, inputs.cases[0]))
     for line in lines:
         say(line)
     result["budgets"] = budgets_of(inputs, missing, say)
+    if held is not None:
+        unchanged_since(held, result, spec)
     writes = []
     if partial or physics_only:
         result.update({} if partial else {"physicsOnly": True})

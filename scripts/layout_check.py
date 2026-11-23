@@ -34,7 +34,7 @@ def ran(args, result):
     cases, control = len(result.get("cases") or []), result.get("control") or {}
     if args.view_only:
         return "view rebuilt from the receipt", "the cases and the displaced control (reused from the receipt)"
-    did = f"layout check of {cases} case(s)" + (", the displaced control" if control.get("witness") or "status" not in control and control else "") + ", attachment and budgets"
+    did = f"layout check of {cases} case(s)" + (", the displaced control" if control and control.get("status") != "skipped" else "") + ", attachment and budgets"
     if result.get("partial"):
         return did, str(len(result["skippedCases"])) + " other case(s), the displaced control and the review view"
     return (did, "the review view (--physics-only)") if args.physics_only else (did + " and the review view", "")
