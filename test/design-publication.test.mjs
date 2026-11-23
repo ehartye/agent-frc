@@ -652,6 +652,33 @@ test('marking a real release effective runs the stage gate, and refuses uncommit
   assert.deepEqual([result.errors, result.designs[0].note], [[], 'becoming effective. Its stage gate record matches the committed receipt.']);
 });
 
+test('a draft published on carried cases stages, and the stage gate measures every case again and trusts none carried', kernel, t => {
+  const e = example(t), folder = path.join(e.season, e.releases, '1.0'), receiptFile = e.releases + '1.0/receipt.json';
+  const check = (...more) => spawnSync(process.execPath, [fileURLToPath(new URL('../scripts/design.mjs', import.meta.url)), 'preliminary-check', e.season,
+    e.releases + '1.0/judgement.json', '--write-view', '--require-checked', '--quiet', '--output', receiptFile, ...more], {encoding: 'utf8'});
+  // The head drawn long enough to sweep through the rail: the whole check blocks the layout.
+  const sourceFile = path.join(folder, 'design.json'), good = readFileSync(sourceFile);
+  editJson(sourceFile, s => ({...s, solids: s.solids.map(solid => solid.name === 'head' ? {...solid, shape: {...solid.shape, toMm: [80, 2, 22]}} : solid)}));
+  e.build('1.0');
+  assert.equal(check().status, 1);
+  // Forged: the failing case's result rewritten to a pass. Its inputs are unchanged, so a carried check carries the forgery.
+  editJson(path.join(e.season, receiptFile), r => ({...r, cases: r.cases.map(c => ({...c, status: 'pass', pairs: c.pairs.map(p => ({...p, status: 'pass'}))}))}));
+  const carried = check('--carry');
+  assert.equal(carried.status, 0, carried.stderr + JSON.stringify(read(path.join(e.season, receiptFile)).missingInputs) + read(path.join(e.season, receiptFile)).status);
+  const receipt = read(path.join(e.season, receiptFile));
+  assert.equal(receipt.status, 'layout-checked');
+  assert.equal(receipt.carriedFrom.cases, 5);
+  // A draft is published on its own check, carried cases included.
+  assert.equal(e.stage('1.0').status, 0);
+  e.commit('draft on carried cases');
+  // Marking it effective runs the full check on the committed design: the interference is found again and the status stays.
+  const refused = e.stage('--set-status', '1.0', 'effective');
+  assert.notEqual(refused.status, 0);
+  assert.match(refused.said, /needs a layout-checked receipt; found blocked|differs from the published receipt/);
+  assert.equal(e.status('1.0'), 'in-progress');
+  writeFileSync(sourceFile, good);
+});
+
 test('a release whose judgement file types a hash passes the gate, and a wrong typed hash fails it', kernel, t => {
   const e = example(t), folder = path.join(e.season, e.releases, '1.0');
   // The author types the hash of the narrative; the check verifies it wherever it reads the file.

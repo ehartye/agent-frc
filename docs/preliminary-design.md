@@ -318,6 +318,18 @@ On Windows a reader that opens a file during the rename itself can get a brief s
 
 `--write-view` replaces a stale scene, so there is no need to delete it first. It never replaces an existing page. A project script that deletes and regenerates files opens a gap for concurrent readers; pause the readers when that matters.
 
+### Check a draft by what changed
+
+A draft is published on the check of what changed. Add `--carry`, with the saved receipt at the `--output` path (or name it with `--from-receipt FILE`):
+
+```sh
+node scripts/design.mjs preliminary-check REPOSITORY cad/preliminary-design/releases/1.0/judgement.json --write-view --carry --output cad/preliminary-design/releases/1.0/receipt.json
+```
+
+A case is carried from the earlier receipt when nothing it drew on changed: the solids present in it, with their volume, bounds and placement, its motion and the poses it names, the groups, the declared contacts, and its stage without the labels (its allowance, depth, absent solids, required contacts, compression rules and payload paths). The library's `used` block for the motion says what it drew on, and each case row records one digest of all of it as `inputsSha256`. Every other case is measured again. The displaced control is always measured again. A renamed design, an edited note and a new library or plugin version change nothing a case drew on, so they carry everything.
+
+Each case row says `checked: "rerun"` or `checked: "carried from FILE"`, and the receipt's `carriedFrom` names the receipt and how many cases came from it. The `[carry]` line gives the counts and the time. Staging accepts the receipt. The stage gate does not: the command that marks a design effective runs the full check on the committed design and trusts nothing carried.
+
 ### Rebuild the review without rerunning the cases
 
 `--write-view` checks every case before it writes the scene. When only the presentation changed, add `--view-only` instead:

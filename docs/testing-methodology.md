@@ -36,7 +36,7 @@ A check runs when the change could break what the check protects. A change to a 
 
 A push only publishes. The project's CI runs no design check and no plugin: it scans, checks that the published site is whole and deploys it.
 
-A draft is work in progress. It is published on the designer's own layout check and carries the in-progress label. It cannot become effective without passing the stage gate, which the command that marks it effective runs. The gate never takes a saved receipt for its result, and it refuses a design whose inputs are not committed.
+A draft is work in progress. It is published on the designer's own layout check of what changed, which carries the cases the change did not touch from the draft's last receipt, and it carries the in-progress label. It cannot become effective without passing the stage gate, which the command that marks it effective runs. The gate never takes a saved receipt for its result, and it refuses a design whose inputs are not committed.
 
 An effective design is frozen. Any change to its physics is a new draft, and that draft passes the stage gate before it replaces the baseline. This is how regression is prevented for designs: by the version scheme, not by rerunning the old design.
 

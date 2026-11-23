@@ -1,4 +1,5 @@
 """Check one design: read its two inputs, have the library measure it, judge the result and write the receipt."""
+import hashlib
 import json
 from pathlib import Path
 from time import perf_counter
@@ -70,6 +71,22 @@ def held_receipt(root, view_only):
     return held
 
 
+def case_inputs(inputs, measured, case):
+    """One digest of everything a case's result depends on: what the library drew on for it, and its stage without the labels."""
+    stage = {k: v for k, v in inputs.plan["stages"][case["id"]].items() if k not in STAGE_LABELS}
+    text = json.dumps({"used": measured.used(case), "stage": stage}, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def carried_receipt(root, path):
+    require(Path(path).is_file(), "--carry needs an earlier receipt of this design to carry cases from; none at "
+            + Path(path).relative_to(root).as_posix() + ". Name it with --from-receipt or run the full check")
+    held = read(path)
+    require(isinstance(held, dict) and held.get("schema") == RECEIPT and isinstance(held.get("cases"), list),
+            "--carry reads a layout check receipt; " + Path(path).relative_to(root).as_posix() + " is not one")
+    return held
+
+
 def measure_cases(inputs, measured, chosen, workers, say):
     """Have the library measure the chosen cases, then judge each one."""
     began = perf_counter()
@@ -78,7 +95,8 @@ def measure_cases(inputs, measured, chosen, workers, say):
     for case, found in zip(chosen, measured.clearances(chosen, workers)):
         contacts = [judge.contact_row(rule, measured.reached(case, rule)) for rule in case["requiredContacts"]]
         pressed = [judge.compression_row(rule, measured.pressed(case, rule)) for rule in case["compression"]]
-        rows.append(judge.case_row(case, found, contacts, measured.withdrawn(case) if case["extract"] else None, pressed))
+        rows.append(dict(judge.case_row(case, found, contacts, measured.withdrawn(case) if case["extract"] else None, pressed),
+                         inputsSha256=case_inputs(inputs, measured, case)))
         for row in pressed:
             say(f"[squeeze] {case['id']} {row['payload']} by {row['contact']}: {row['status']}, deepest {row['deepestMm']:.2f} mm of {row['maxDepthMm']:g} mm allowed")
         near = found["closest"]
@@ -88,14 +106,27 @@ def measure_cases(inputs, measured, chosen, workers, say):
     return rows
 
 
-def checked(inputs, measured, spec, held, only, workers, say, missing):
-    """(case rows, control field, control case row, partial fields): measured now, or taken from a held receipt."""
+def carry_cases(inputs, measured, carry, workers, say):
+    """Measure the cases whose inputs changed since an earlier receipt and carry the rest from it, each row saying which."""
+    began, (held, name) = perf_counter(), carry
+    earlier = {row["case"]: row for row in held["cases"] if "inputsSha256" in row}
+    now = {case["id"]: case_inputs(inputs, measured, case) for case in inputs.cases}
+    rerun = [case for case in inputs.cases if earlier.get(case["id"], {}).get("inputsSha256") != now[case["id"]]]
+    fresh = {row["case"]: row for row in measure_cases(inputs, measured, rerun, workers, say)} if rerun else {}
+    rows = [dict(fresh[c["id"]], checked="rerun") if c["id"] in fresh else dict(earlier[c["id"]], checked="carried from " + name) for c in inputs.cases]
+    say(f"[carry] {len(rerun)} of {len(rows)} case(s) rerun, {len(rows) - len(rerun)} carried from {name}, in {perf_counter() - began:.1f} s"
+        + ("; rerun: " + ", ".join(c["id"] for c in rerun) if rerun else ""))
+    return rows
+
+
+def checked(inputs, measured, spec, held, only, workers, say, missing, carry=None):
+    """(case rows, control field, control case row, partial fields): measured now, carried from an earlier receipt, or taken from a held one."""
     if held is not None:
         say(f"[view] reusing {len(held['cases'])} checked case(s) and the displaced control from the receipt; no case is measured again")
         control = held.get("control")
         return held["cases"], control, dict(case=CONTROL_ID, status="fail", pairs=[control["witness"]]) if control else None, {}
     chosen = [c for c in inputs.cases if only is None or c["id"] in only]
-    rows = measure_cases(inputs, measured, chosen, workers, say)
+    rows = carry_cases(inputs, measured, carry, workers, say) if carry else [dict(row, checked="rerun") for row in measure_cases(inputs, measured, chosen, workers, say)]
     if only is not None:
         skipped = [c["id"] for c in inputs.cases if c["id"] not in only]
         missing.append("Partial run of " + ", ".join(c["id"] for c in chosen) + "; run without --cases to check " + str(len(skipped))
@@ -151,12 +182,14 @@ def prepare(inputs, measured, placements, missing, say):
     return result, hosts, free, supports, stages.control(inputs, missing)
 
 
-def review(root, file, *, write_view=False, physics_only=False, view_only=None, only=None, workers=None, progress=None):
+def review(root, file, *, write_view=False, physics_only=False, view_only=None, carry_from=None, only=None, workers=None, progress=None):
     """Check one design and return its receipt.
 
     physics_only leaves the review view alone; its receipt is marked and is not one to publish. view_only names an
     earlier receipt of this design: its case results and control are reused and the view is rebuilt around them,
-    refused when a measuring input has changed. only limits the run to the named cases and marks the receipt partial."""
+    refused when a measuring input has changed. carry_from names an earlier receipt: a case whose inputs are unchanged since
+    it is carried from it and every other case is measured, while the displaced control is always measured again. only
+    limits the run to the named cases and marks the receipt partial."""
     say = progress or (lambda line: None)
     inputs = load(root, file)
     plan, missing = inputs.plan, list(inputs.judgement.get("missingInputs", []))
@@ -165,7 +198,10 @@ def review(root, file, *, write_view=False, physics_only=False, view_only=None, 
     known = {c["id"] for c in inputs.cases}
     require(only is None or only and set(only) <= known, "--cases names stages of this design: " + ", ".join(sorted(known)))
     held = held_receipt(root, view_only) if view_only is not None else None
-    rows, control, control_case, partial = checked(inputs, measured, spec, held, only, workers, say, missing)
+    carry = (carried_receipt(root, carry_from), Path(carry_from).relative_to(root).as_posix()) if carry_from is not None else None
+    rows, control, control_case, partial = checked(inputs, measured, spec, held, only, workers, say, missing, carry)
+    if carry:
+        result["carriedFrom"] = dict(file=carry[1], sha256=digest(carry_from), cases=sum(1 for row in rows if row["checked"] != "rerun"))
     result.update(partial, groups=plan["groups"], mounts=plan["mounts"], mountHostBoundsMm=hosts, stages=plan["stages"], cases=rows)
     if control:
         result["control"] = control
