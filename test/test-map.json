@@ -107,7 +107,7 @@
   "versionFiles": ["package.json", "plugin.json", ".claude-plugin/plugin.json", ".codex-plugin/plugin.json"],
   "versionTests": ["install-manifests.test.mjs", "runtime-identity.test.mjs", "skill-validation.test.mjs"],
   "covers": {
-    "docs": ["**/*.md", "skills/**", "docs/**", "worksheets/**", "references/**", "LICENSE"],
+    "docs": ["**/*.md", "skills/**", "docs/**", "worksheets/**", "references/**", ".testing/**", "LICENSE"],
     "install-manifests.test.mjs": ["plugin.json", ".claude-plugin/**", ".codex-plugin/**", ".agents/**", ".codex/**", ".gitignore", ".gitattributes"],
     "skill-validation.test.mjs": ["plugin.json", ".claude-plugin/**", ".codex-plugin/**", ".agents/**"],
     "test-map.test.mjs": ["test/durations.json"]
