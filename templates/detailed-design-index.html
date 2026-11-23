@@ -57,6 +57,11 @@ function card(index,id,primary){
     }
   }
   if(status==='effective')box.append(el('p','note','The project entry page and README still show this design and link to its review.'));
+  // The bench tests handed over by the preliminary design, from the record published beside the review.
+  if(status==='in-progress'||status==='effective'){
+    const tests=el('p','note');tests.hidden=true;box.append(tests);
+    index.benchTests?.(id)?.then(said=>{if(said){tests.textContent=said;tests.hidden=false}});
+  }
   const built=link&&index.preliminaryTitle?index.preliminaryTitle(link):link;
   if(link)box.append(el('p','note','Built on preliminary '+(built===link?'release ':'design ')+built+'.'));
   const linked=link&&(status==='in-progress'||status==='effective')&&index.preliminaryStatus?index.preliminaryStatus(link):'effective';
@@ -74,6 +79,14 @@ json('designs.json').then(async index=>{
   // A version, MAJOR.MINOR, reads with its architecture's name from the preliminary index.
   if(releases)index.preliminaryTitle=id=>{const name=releases.designs?.[version.exec(id)?.[1]]?.name;return name?name+' '+id:id};
   index.hasReview=id=>fetch('designs/'+encodeURIComponent(id)+'/index.html',{method:'HEAD',cache:'no-store'}).then(r=>r.ok).catch(()=>false);
+  index.benchTests=id=>json('designs/'+encodeURIComponent(id)+'/bench-tests.json').then(record=>{
+    const tests=(record.tests||[]).filter(t=>t&&typeof t==='object'),of=tag=>tests.filter(t=>t.tag===tag);
+    // A numeric result is judged against the handed-over limits; otherwise the result says whether it passed.
+    const passed=t=>{const r=t.result;if(!r)return false;const n=[t.pass,t.fail,r.value].every(v=>typeof v==='number');
+      return n?(t.pass>t.fail?r.value>=t.pass:r.value<=t.pass):r.passed===true};
+    const planned=t=>[t.owner,t.plan].every(v=>typeof v==='string'&&v.trim());
+    return tests.length?'Bench tests: '+of('before-build').filter(passed).length+' of '+of('before-build').length+' before-build passed, '+
+      of('on-robot').filter(planned).length+' of '+of('on-robot').length+' on-robot with an owner and a plan.':null}).catch(()=>null);
   const current=document.getElementById('current'),archive=document.getElementById('archive');
   current.replaceChildren();
   if(index.current)current.append(card(index,index.current,true));
