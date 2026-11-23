@@ -71,6 +71,32 @@ test('the results page embeds no model: it shows the design still and links the 
   assert.match(await build(), /Invented scope\. · <a href=/);
 });
 
+test('a manifest names its files by path: no typed digest on a source, the stylesheet or the field lab', async t => {
+  const root = await mkdtemp(path.join(tmpdir(),'robot-paths-'));
+  t.after(() => rm(root,{recursive:true,force:true}));
+  await cp(new URL('../examples/highlights/',import.meta.url), root, {recursive:true});
+  const manifest = path.join(root,'project.json'), out = path.join(root,'site');
+  const spec = JSON.parse(await readFile(manifest,'utf8'));
+  const sha = async file => createHash('sha256').update(await readFile(path.join(root,file))).digest('hex');
+  for (const source of spec.sources) delete source.sha256;
+  await writeFile(path.join(root,'robot.css'),'.robot-showcase figure { border: 0; }');
+  spec.stylesheet = {file:'robot.css',shareable:true};
+  await mkdir(path.join(root,'kickoff'));
+  await writeFile(path.join(root,'kickoff/field-lab.html'),'<html><details id="rehearsal"></details><canvas id="replayField"></canvas></html>');
+  await writeFile(path.join(root,'README.md'),'[Rehearse the match](kickoff/field-lab.html)');
+  spec.fieldLab = {file:'kickoff/field-lab.html',shareable:true};
+  await writeFile(manifest,JSON.stringify(spec));
+  const page = await readFile(await buildHighlights(manifest,out,{note(){}}),'utf8');
+  // The builder still publishes each file under the digest it read.
+  assert.ok(page.includes('href="evidence/'+await sha('observations.json')+'.json"'));
+  assert.ok(page.includes('href="evidence/'+await sha('robot.css')+'.css"'));
+  assert.ok(page.includes('<!-- published-field-lab '+await sha('kickoff/field-lab.html')+' -->'));
+  // A typed digest is still verified.
+  spec.sources[0].sha256 = '0'.repeat(64);
+  await writeFile(manifest,JSON.stringify(spec));
+  await assert.rejects(buildHighlights(manifest,out,{note(){}}), /Changed evidence record/);
+});
+
 test('generate, refresh and protect an evidence page', async t => {
   const root = await mkdtemp(path.join(tmpdir(),'robot-page-'));
   t.after(() => rm(root,{recursive:true,force:true}));

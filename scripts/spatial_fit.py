@@ -14,8 +14,9 @@ def verify_basis(root, evidence, commission, archive_sha):
             raise ValueError("Resolve the commissioned fit source within its project")
         with target.open("rb") as stream:
             actual = hashlib.file_digest(stream, "sha256").hexdigest()
-        if actual != ref["sha256"]:
+        if ref.get("sha256") not in (None, actual):
             raise ValueError("Changed spatial fit evidence: " + str(path))
+        ref["sha256"] = actual
         return target
     if set(evidence) != {"threadDrawing", "maleGeometry", "independentOverlap"}:
         raise ValueError("Pin the drawing, external model and independent expected overlap")
@@ -24,8 +25,8 @@ def verify_basis(root, evidence, commission, archive_sha):
     prediction = json.loads(resolve(evidence["independentOverlap"]).read_bytes())
     if (prediction.get("schema") != "agent-frc/spatial-fit-prediction@1" or
             prediction.get("archiveSha256") != archive_sha or prediction.get("commission") != commission or
-            prediction.get("drawingSha256") != evidence["threadDrawing"]["sha256"] or
-            prediction.get("maleGeometrySha256") != evidence["maleGeometry"]["sha256"]):
+            prediction.get("drawingSha256") not in (None, evidence["threadDrawing"]["sha256"]) or
+            prediction.get("maleGeometrySha256") not in (None, evidence["maleGeometry"]["sha256"])):
         raise ValueError("The independent prediction differs from the source, body pair, region or registered thread")
     calculation = prediction["calculation"]
     if calculation["sha256"] in {ref["sha256"] for ref in evidence.values()}:

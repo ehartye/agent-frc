@@ -45,36 +45,34 @@ Read `completedPairs`, `unresolvedPairs` and `unexaminedPairs` together. Complet
 
 A batch budget leaves the unexamined tail for the next call. A `stop` reports that the design is unavailable, including the next pair when known. Recover the native session and cold-open the identical archive, pose and collector to resume its checkpoint. A terminated host can resume from its last atomic checkpoint. Keep the historical checkpoint and use a fresh output and checkpoint when the collector changes. A completed scan with unresolved measurements still requires investigation before release.
 
-## Transfer an issued design to another checkout
+## Move a design to another computer
 
-For a pause or workstation handoff, keep the same active design and freeze the files while recording or checking them. The receiving checkout needs the project revision containing the active pointer, iteration records, authority register and export lineage. Use the [runtime whose exporter matches the issue](setup-health.md#resolve-the-plugin-used-by-this-check). Keep private files and their inventory in approved custody.
+The Fusion archive is a project file. Commit it with the authority register, the export lineage and the exported STEP, and push. Git moves them: another computer starts with `git pull`. No file is held outside the project and no hash travels by another channel.
 
-The installed `native_handoff.py record` command verifies the lineage and includes exactly its native archive and canonical STEP. In a JSON list, select any additional files needed for the next task. Use `[]` when the registered pair is sufficient. Each path is relative to the project root, with forward slashes. Use `child-native` for a separately saved child, `diagnostic-native` or `diagnostic-step` for a comparison issue, `historical-native` or `historical-step` for an earlier issued design needed for replay, or `private-input` for another required input. Choose the source files needed to reproduce the next decision. Omit caches, redundant exports and earlier trials once their custody and relevance are accounted for.
+1. On the first computer, save the design, export the archive and the STEP with the [exporter](#save-and-resume), and commit the archive, `cad/fusion-authority.json`, the lineage and the STEP together. Use `*.f3d binary` and `*.f3z binary` in `.gitattributes`, or Git LFS for large archives.
+2. On the other computer, pull, then ask which file is the one current design. The command replays the register and lineage and fails when the archive or STEP in the checkout is not the one they name.
 
-```json
-[
-  {"path":"cad/inputs/actuator.f3d","role":"child-native","basis":"Selected supplier configuration needed for insertion"},
-  {"path":"cad/trials/offset.step","role":"diagnostic-step","basis":"Previous rejected insertion depth used as a control"}
-]
-```
+   ```sh
+   python PLUGIN/scripts/fusion_authority.py PROJECT cad/fusion-authority.json issue/lineage.json
+   ```
 
-```sh
-python "PLUGIN_ROOT/scripts/native_handoff.py" record "PROJECT_ROOT" "LINEAGE_RELATIVE_PATH" selection.json handoff.json
-```
+3. Open that archive in Fusion and verify it before editing: the design identity and configuration equal the register, the timeline is healthy, and a measurement you know from the last session reads the same. Report from the reopened file.
+4. If a cloud design may be ahead of the committed archive, open the cloud version, export again and commit before continuing. Work from one of the two, never from both.
 
-Retain `handoff.json` in the private project record and give its printed SHA-256 to the receiver through a trusted channel. It records relative file paths, byte counts, SHA-256 values, roles and the verified register and lineage identities. Track or privately transfer the selected files in accordance with their rights. The command writes the inventory and leaves the transport to the project.
+For a task that needs more than the registered pair, such as a separately saved child or a comparison export, `native_handoff.py record` writes an inventory of the selected files with their sizes and digests, and `native_handoff.py check` verifies each one in place in the other checkout. Commit the inventory with the files it lists.
 
 ```sh
-python "PLUGIN_ROOT/scripts/native_handoff.py" check "RECEIVING_PROJECT_ROOT" handoff.json EXPECTED_MANIFEST_SHA256
+python PLUGIN/scripts/native_handoff.py record PROJECT LINEAGE_RELATIVE_PATH selection.json cad/handoff.json
+python PLUGIN/scripts/native_handoff.py check PROJECT cad/handoff.json
 ```
 
-The receiver verifies each selected file in place and the active Fusion issue. If the handoff also used a dedicated transfer folder, add `--payload TRANSFER_DIRECTORY` to require exactly the listed files under that directory, in project-relative layout. Keep the inventory and ordinary project checkout outside that folder. A checkout may contain other project work. Record the receipt and resume the outstanding engineering checks. This verifies file custody; assembly pose, private input sufficiency and mechanical readiness require their own evidence.
+`selection.json` is a JSON list of `{"path", "role", "basis"}` rows, or `[]` when the registered pair is enough. Roles are `child-native`, `diagnostic-native`, `diagnostic-step`, `historical-native`, `historical-step` and `private-input`. The check takes the inventory's SHA-256 as an optional last argument and compares it when given. This verifies the files; assembly pose and mechanical readiness need their own evidence.
 
 ## Save and resume
 
 1. Before editing or resuming in another checkout, read the tracked authority register at the revision the team is developing. Recover the actual native file by the declared ID or archive digest. Check the operating configuration, project revision and any explicit supplier revision pins. A copy with the same visible name does not inherit authority.
 2. Save the current native design. For cloud projects, finish the save/sync and open its latest revision. For offline work, record the new authoritative archive and SHA-256 in the project register. When switching masters or rolling back, commit the superseded and replacement identities, scope, reason and reviewer in the project history. Keep the historical public release separately identifiable.
-3. In Fusion’s Python environment, call `fusion_authority.export_issue(app, project_root, authority_path, new_issue_directory)` from the installed [exporter](../scripts/fusion_authority.py). Pass absolute paths; the fresh issue directory belongs inside the private project. A cloud export uses the selected saved design and captures the exact native archive, root STEP and recursive linked-version observations. The offline path imports its registered archive in a separate document and exports the root STEP. The exporter closes only its own temporary document and restores the prior active one.
+3. In Fusion’s Python environment, call `fusion_authority.export_issue(app, project_root, authority_path, new_issue_directory)` from the installed [exporter](../scripts/fusion_authority.py). Pass absolute paths; the fresh issue directory belongs inside the project and is committed with it. A cloud export uses the selected saved design and captures the exact native archive, root STEP and recursive linked-version observations. The offline path imports its registered archive in a separate document and exports the root STEP. The exporter closes only its own temporary document and restores the prior active one.
 4. From a fresh checkout with access to the project-owned native files, verify the issue with the installed plugin.
 
 ```sh

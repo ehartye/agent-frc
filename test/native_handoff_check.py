@@ -58,6 +58,10 @@ with TemporaryDirectory() as tmp:
     def check(ok=True):
         return run("check", receiver, manifest, pin, "--payload", payload, succeeds=ok)
     assert check()["exactPayload"] is True
+    # The inventory travels with the project: a receiver checks it without a digest sent by another channel.
+    unpinned = run("check", receiver, manifest)
+    assert unpinned["status"] == "pass" and unpinned["manifestSha256"] == pin and unpinned["verifiedFiles"] == 4
+    assert "Changed input" in run("check", receiver, manifest, "0" * 64, succeeds=False)
     extraFile = payload/"unlisted.step"
     extraFile.write_bytes(b"unregistered")
     check(False)

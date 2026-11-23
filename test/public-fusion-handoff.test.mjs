@@ -48,6 +48,16 @@ test('opt-in native handoff binds downloadable bytes, components, edits and obse
   }
   await bind();
   assert.equal(publicFusionHandoff(root).joints,1);
+  // A manifest that names the archive and the reopen receipt by path, with no typed digest, is read the same way.
+  await store('cad/reopen.json',receipt);
+  await store(config.publicFusionHandoff,{...manifest,archive:{file},reopen:{file:'cad/reopen.json'}});
+  git(['add','--','cad']);
+  assert.deepEqual([publicFusionHandoff(root).joints,publicFusionHandoff(root).sha256],[1,hash(archive)]);
+  // A typed digest that no longer matches is still refused.
+  await store(config.publicFusionHandoff,{...manifest,archive:{file,sha256:'0'.repeat(64)},reopen:{file:'cad/reopen.json'}});
+  git(['add','--','cad']);
+  assert.throws(()=>publicFusionHandoff(root),/downloaded archive hash differs/);
+  await bind();
   const output=path.join(root,'published');
   authorizeRender(root,{archive:file,manifest:'highlights.json'});
   const html=await readFile(await buildHighlights(project,output),'utf8');

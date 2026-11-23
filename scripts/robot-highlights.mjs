@@ -71,9 +71,10 @@ export async function buildHighlights(manifest, directory, {note = line => conso
       css.file.endsWith('.css') && !path.win32.isAbsolute(css.file) && !path.isAbsolute(css.file),
       'Expected a shareable project-relative stylesheet');
     const file = await realpath(path.resolve(root, css.file));
-    requireValue(within(root, file) && (await stat(file)).isFile() && /^[a-f0-9]{64}$/.test(css.sha256) &&
-      await digest(file) === css.sha256, 'Changed or invalid project stylesheet');
-    stylesheet = css.sha256 + '.css';
+    // A file is named by path. A SHA-256 typed beside it is verified, and none is required.
+    const found = await digest(file);
+    requireValue(within(root, file) && (await stat(file)).isFile() && (css.sha256 === undefined || found === css.sha256), 'Changed or invalid project stylesheet');
+    stylesheet = found + '.css';
     assets.set(stylesheet, file);
   }
   function applyStyle(markup, base = '') {
@@ -95,8 +96,9 @@ export async function buildHighlights(manifest, directory, {note = line => conso
       requireValue(within(root, file) && (await stat(file)).isFile(), 'Source outside project ' + id);
       type = path.extname(file).toLowerCase();
       requireValue(assetTypes.has(type), 'Unsupported evidence file type ' + type);
-      requireValue(/^[a-f0-9]{64}$/.test(ref.sha256) && await digest(file) === ref.sha256, 'Changed evidence ' + id);
-      const dest = ref.sha256 + type;
+      const found = await digest(file);
+      requireValue(ref.sha256 === undefined || found === ref.sha256, 'Changed evidence ' + id);
+      const dest = found + type;
       href = 'evidence/' + dest;
       assets.set(dest, file);
     } else {
@@ -104,7 +106,7 @@ export async function buildHighlights(manifest, directory, {note = line => conso
       requireValue(url.protocol === 'https:' && !url.username && !url.password, 'Expected public HTTPS evidence URL');
       href = url.href;
     }
-    sources.set(id, {label, version, href, type, sha256:ref.sha256});
+    sources.set(id, {label, version, href, type, sha256:href.startsWith('evidence/') ? path.parse(href).name : undefined});
   }
   function source(id) {
     requireValue(sources.has(id), 'Unknown evidence reference ' + id);
@@ -287,10 +289,10 @@ export async function buildHighlights(manifest, directory, {note = line => conso
   let lab;
   if (data.fieldLab !== undefined) {
     const spec=data.fieldLab;
-    requireValue(spec.shareable===true && /^[a-f0-9]{64}$/.test(spec.sha256),'Confirm field lab redistribution and digest');
+    requireValue(spec.shareable===true,'Confirm field lab redistribution');
     const file=await projectFile(spec.file);
-    const bytes=await readFile(file);
-    requireValue(createHash('sha256').update(bytes).digest('hex')===spec.sha256,'Changed field lab');
+    const bytes=await readFile(file),labSha256=createHash('sha256').update(bytes).digest('hex');
+    requireValue(spec.sha256===undefined || labSha256===spec.sha256,'Changed field lab');
     const markup=bytes.toString('utf8');
     requireValue(/<canvas\b[^>]*\bid=["']replayField["']/i.test(markup) && /\bid=["']rehearsal["']/i.test(markup),
       'Expected the project field lab with a match rehearsal');
@@ -300,7 +302,7 @@ export async function buildHighlights(manifest, directory, {note = line => conso
     const links=Array.from((readme ?? '').matchAll(/\]\(([^)]+)\)/g),m=>m[1].split('#')[0]);
     requireValue(links.some(link=>(!link.includes(':') && path.resolve(root,link)===file) ||
       /^https:\/\/[^\s]+\/field-lab\.html$/.test(link)),'Link the project field lab from README.md');
-    lab={bytes,sha256:spec.sha256};
+    lab={bytes,sha256:labSha256};
   }
   const buildSection = build ? '<section id="build"><h2>Build sheet</h2><table><thead><tr><th>Subsystem</th><th>Configuration</th><th>Evidence</th></tr></thead><tbody>'+build+'</tbody></table></section>' : '';
   const fields = {title, role, revision, results, workflow, labLink:lab ? '<a href="field-lab.html">Open the field lab</a>' : '', buildSection, buildLink:build ? '<a href="#build">Build sheet</a>' : '',

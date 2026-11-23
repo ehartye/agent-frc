@@ -1,6 +1,6 @@
 # Reconcile the operating roster before reading the parked pose
 
-Select the operating duty from the project's commissioning plan before inspecting the candidate. Pin the plan in the study as `operatingRequirements` with its `file`, `sha256` and JSON `pointer`. The plan is a project file. The review reads the section the `pointer` names, usually `/operatingIntent`, and no copy outside the project or environment variable takes part.
+Select the operating duty from the project's commissioning plan before inspecting the candidate. Name the plan in the study as `operatingRequirements` with its `file` and JSON `pointer`; a `sha256` is verified when present and not required. The plan is a project file. The review reads the section the `pointer` names, usually `/operatingIntent`, and no copy outside the project or environment variable takes part.
 
 The selected section contains the canonical `authorityId`, `configuration`, `mode` (fixed or articulated), its engineering `basis`, each required group's `motionRanges` in mm or degrees, and `nativeCoordinates` keyed by those group names. Each coordinate identifies the joint's `type`, rooted `occurrence`, `name` and `coordinate`. Include the scoped `transferMissions` and `externalIssues` even if the approved lists are empty. Capture the requirements of purchased equipment in the same commissioning plan. A supplier's rigid STEP representation can support a fixed installation review when the duty permits. A duty requiring its internal travel needs a source model and qualified poses representing that motion.
 

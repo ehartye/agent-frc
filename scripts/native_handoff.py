@@ -52,7 +52,9 @@ def record(project, lineage_path, selected):
                 files=sorted(rows, key=lambda r: r["path"]))
 
 
-def check(project, manifest, expected, payload=None):
+def check(project, manifest, expected=None, payload=None):
+    # The inventory travels with the project in Git. A digest of it is verified when one is given.
+    expected = expected or sha(manifest)
     inventory = pinned_json(manifest, expected)
     require(inventory["schema"] == SCHEMA, "Unsupported transfer inventory")
     rows = inventory["files"]
@@ -82,7 +84,7 @@ def main():
     verify = sub.add_parser("check", help="verify the receiving checkout and optional exact payload directory")
     verify.add_argument("project", type=Path)
     verify.add_argument("manifest", type=Path)
-    verify.add_argument("expected_sha256")
+    verify.add_argument("expected_sha256", nargs="?", help="Optional: the SHA-256 of the inventory, compared when given")
     verify.add_argument("--payload", type=Path)
     args = parser.parse_args()
     if args.command == "record":

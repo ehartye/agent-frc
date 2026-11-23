@@ -96,8 +96,38 @@ with TemporaryDirectory() as d:
     again=deepcopy(plan);again['from']={'id':active['id'],'number':2,'scope':'Current concept'}
     again['to'].update(id='third-design',fusionId='third-design')
     again['evidence'][0].update(file=active['root']+'/cad/master.f3d',sha256=sha(base/'cad/master.f3d'))
+    # This restart names its outgoing design by path, with no typed digest.
+    del again['evidence'][0]['sha256']
     third=cutover(project,again,vault);assert third['number']==3 and not inventory(project/third['root'])
     assert review(project,vault)['historyVerified']==2
+    assert (vault/sha(base/'cad/master.f3d')).is_file()
     assert (vault/sha(base/'untracked-simulation.log')).read_text()=="unpublished evidence"
     (base/"untracked-simulation.log").write_text("changed")
     expect_bad(lambda:review(project,vault))
+
+
+# The archive store sits inside the project by default and is committed with it: a clone needs nothing else.
+with TemporaryDirectory() as d:
+    temp=Path(d);project=temp/"project";(project/"baseline").mkdir(parents=True)
+    names=["master.f3d","still.png","observation.json","part.step"]
+    for file,data in zip(names,[b"invented design",b"\x89PNG\r\n\x1a\ninvented",b'{"observed":true}',b"invented part"]):
+        (project/"baseline"/file).write_bytes(data)
+    plan=read(SCRIPTS.parent/"templates/design-restart.json")
+    for row,file in zip(plan["evidence"],names):
+        row["file"]="baseline/"+file;row.pop("sha256",None)
+    (temp/"plan.json").write_text(json.dumps(plan),encoding="utf-8")
+    started=cli("design_iteration.py","start",project,temp/"plan.json")
+    assert started.returncode==0,started.stderr
+    store=project/"iterations/archive"
+    assert (store/sha(project/"baseline/master.f3d")).read_bytes()==b"invented design"
+    assert cli("design_iteration.py","check",project).returncode==0
+    subprocess.run(["git","init","-q",str(project)],check=True)
+    subprocess.run(["git","-C",str(project),"add","-A"],check=True)
+    subprocess.run(["git","-C",str(project),"-c","user.name=Test","-c","user.email=fixture@example.invalid","commit","-qm","Cut over"],check=True)
+    clone=temp/"other-computer"
+    subprocess.run(["git","clone","-q",str(project),str(clone)],check=True)
+    verified=cli("design_iteration.py","check",clone)
+    assert verified.returncode==0 and json.loads(verified.stdout)["historyVerified"]==1,verified.stderr+verified.stdout
+    # A changed archived file is found by the same check.
+    (clone/"iterations/archive"/sha(project/"baseline/master.f3d")).write_bytes(b"changed")
+    assert cli("design_iteration.py","check",clone).returncode!=0

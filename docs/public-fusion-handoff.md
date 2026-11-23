@@ -1,6 +1,6 @@
 # Hand a student an editable whole robot
 
-Start from the exact archive a student can download. Keep supplier originals in their authorized project location. A private layout study can use identified proxies. For a new showcase model, use the exact official purchased geometry and verify the rights for each public view or downloadable file. Keep a restricted master private when necessary. A proxy cannot qualify as a complete student assembly. [Mechanical readiness](mechanical-readiness.md) Save the public assembly and independently reopen a copy of those saved bytes in Fusion. Keep the original receipt for the restricted master separate.
+Start from the exact archive a student can download, committed in the project. A layout study can use identified proxies. For a showcase model, use the exact official purchased geometry. A proxy cannot qualify as a complete student assembly. [Mechanical readiness](mechanical-readiness.md) Save the assembly and reopen a copy of those saved bytes in Fusion.
 
 ## Record the native reopen
 
@@ -24,23 +24,23 @@ For example, this joint connects named occurrences in the reopened receipt:
 }
 ```
 
-Two poses measure movement type and magnitude. To claim that positive command direction matches the source design, pin a separate project-owned direction contract via the joint's optional `direction: {file, sha256}`. Its JSON maps that exact joint ID to `{"frame":"frame","axis":[1,0,0],"sign":1}`. By default the frame is the named first occurrence, with the second expressed in the first occurrence's frame. For observations of the first occurrence in the second, set `relativeTransformFrame: "occurrenceTwo"` in the receipt and name that second occurrence in the contract. Express the source command convention in that frame. A world-axis measurement alone needs an independently registered transformation into the observation frame. The unit axis and sign define how a positive joint increment should translate or rotate in that frame under the right-hand rule. Take a nonzero sample below 180 degrees for a revolute joint. Reversing the endpoint order or commanding a negative movement under the positive convention will fail this comparison. Capture source design direction independently of the public sample. For limits, offsets and native-to-physical readback, use the [articulation checker](../scripts/check-native-articulation.mjs).
+Two poses measure movement type and magnitude. To claim that positive command direction matches the source design, name a separate project-owned direction contract with the joint's optional `direction: {file}`. Its JSON maps that exact joint ID to `{"frame":"frame","axis":[1,0,0],"sign":1}`. By default the frame is the named first occurrence, with the second expressed in the first occurrence's frame. For observations of the first occurrence in the second, set `relativeTransformFrame: "occurrenceTwo"` in the receipt and name that second occurrence in the contract. Express the source command convention in that frame. A world-axis measurement alone needs an independently registered transformation into the observation frame. The unit axis and sign define how a positive joint increment should translate or rotate in that frame under the right-hand rule. Take a nonzero sample below 180 degrees for a revolute joint. Reversing the endpoint order or commanding a negative movement under the positive convention will fail this comparison. Capture source design direction independently of the public sample. For limits, offsets and native-to-physical readback, use the [articulation checker](../scripts/check-native-articulation.mjs).
 
 ## Register the student download
 
-Projects offering a public whole-robot handoff set `"publicFusionHandoff": "cad/public-handoff.json"` in their tracked `project-layout.json`. Use `*.f3d binary` and `*.f3z binary` in `.gitattributes` to preserve archive bytes and a consistent line-ending policy for hashed JSON. The archive, register, reopening evidence and any bundled dependencies must have public distribution clearance. A team using a private-only handoff skips this opt-in and keeps its normal access instructions.
+Projects offering a public whole-robot handoff set `"publicFusionHandoff": "cad/public-handoff.json"` in their tracked `project-layout.json`. Use `*.f3d binary` and `*.f3z binary` in `.gitattributes` to preserve archive bytes. A team that offers no download skips this opt-in.
 
 Build the component claims from the intended installed inventory, independently of what survived export. Map each ID to `frame`, `drive`, `mechanism` or `other`. Identify every physical occurrence as `project-original`, `project-proxy` or `authorized-supplier` and state its actual provenance or redistribution basis. Bind expected body names where they matter. Use `joints: []` when the archive claims no native joints. Working supplier electronics and mechanical realism require their own design evidence.
 
-A small manifest has the following shape. Replace both digest placeholders with the hashes of the actual files. Larger assemblies list every installed occurrence, including each repeated module.
+A small manifest has the following shape. It names the archive and the reopen receipt by path. The check reads both, and the reopen receipt, which Fusion's reopen writes, must hold the digest of the archive offered now. A `sha256` typed beside either file is still verified and is not required. Larger assemblies list every installed occurrence, including each repeated module.
 
 ```json
 {
   "schema": "agent-frc/public-fusion-handoff@1",
   "revision": "Workshop assembly B",
   "shareable": true,
-  "archive": {"file": "cad/student.f3d", "sha256": "<archive SHA-256>"},
-  "reopen": {"file": "cad/student-reopen.json", "sha256": "<receipt SHA-256>"},
+  "archive": {"file": "cad/student.f3d"},
+  "reopen": {"file": "cad/student-reopen.json"},
   "components": [
     {"id":"frame","role":"frame","representation":"project-original","provenance":"Team rail drawing","editMetric":"extrusions","bodyNames":["crossmember"]},
     {"id":"drive","role":"drive","representation":"project-proxy","provenance":"Team-authored module envelope"},
@@ -50,4 +50,4 @@ A small manifest has the following shape. Replace both digest placeholders with 
 }
 ```
 
-Run `node scripts/project-layout.mjs check PROJECT` from the plugin checkout. The existing showcase builder reads the same opt-in and requires its revision to equal the showcase revision. Students receive a **Download the student assembly** link to a hash-checked copy alongside the public viewer. For a custom site, run the focused check with `node scripts/public-fusion-handoff.mjs PROJECT`, link the same tracked archive and compare the served bytes with its declared SHA-256. Confirm the link from the public page in a browser. The portable checks compare the supplied native observations and the downloadable bytes. Their result depends on the project's independent native capture, component inventory and rights review.
+Run `node scripts/project-layout.mjs check PROJECT` from the plugin checkout. The existing showcase builder reads the same opt-in and requires its revision to equal the showcase revision. Students receive a **Download the student assembly** link on the results page, to a copy published under the digest the check read. For a custom site, run the focused check with `node scripts/public-fusion-handoff.mjs PROJECT` and link the same tracked archive. Confirm the link from the public page in a browser. The portable checks compare the supplied native observations and the downloadable bytes. Their result depends on the project's native capture and component inventory.
