@@ -15,8 +15,8 @@ const sha = b => createHash('sha256').update(b).digest('hex');
 const skip = !browser() && 'No Chrome or Edge found; set CHROME_PATH';
 
 /** A release laid out as the site serves it: site/fonts, site/releases/ID/{index.html, review-scene.json.gz, receipt.json}. */
-function release(site, id, scene, {receipt = true} = {}) {
-  const dir = path.join(site, 'releases', id);
+function release(site, id, scene, {receipt = true, folder = 'releases'} = {}) {
+  const dir = path.join(site, folder, id);
   mkdirSync(dir, {recursive: true});
   const content = Buffer.from(JSON.stringify(scene)), served = gzipSync(content);
   writeFileSync(path.join(dir, 'index.html'), page);
@@ -24,7 +24,7 @@ function release(site, id, scene, {receipt = true} = {}) {
   if (receipt) writeFileSync(path.join(dir, 'receipt.json'), JSON.stringify({issue: scene.issue, planSha256: 'f'.repeat(64), status: 'layout-checked',
     decision: {status: 'layout-checked', firstUnmet: null}, reopen: [],
     view: {file: 'index.html', sha256: sha(page), verified: true, scene: {file: 'review-scene.json.gz', sha256: sha(served), contentSha256: sha(content), bytes: content.length}}}));
-  return 'releases/' + id + '/index.html';
+  return folder + '/' + id + '/index.html';
 }
 function site(t) {
   const dir = mkdtempSync(path.join(tmpdir(), 'review-structure-'));
@@ -233,4 +233,29 @@ test('a version reads with its design name: a draft number while in progress, no
   writeFileSync(path.join(dir, 'releases.json'), JSON.stringify({...index, current: '1.2'}));
   const asked = await probePage(dir, 'index.html', picker);
   assert.deepEqual([asked.selected, asked.revision, asked.title], ['1.2', 'Draft 3, 2001-03-04, from commit 0123456', 'Tilting carriage 1.2 · Preliminary design']);
+});
+
+test('the same page staged for a detailed design reads its name, draft and status from designs.json and names its preliminary design', {skip}, async t => {
+  // Synthetic site: detailed "Tilting carriage" 1.0 is effective and 1.1 is at draft 2, built on preliminary 1.3.
+  const dir = site(t), tree = path.join(dir, 'detailed-design');
+  release(tree, '1.1', reviewScene(), {folder: 'designs'});
+  release(tree, '1.0', reviewScene(), {folder: 'designs'});
+  release(tree, 'detail-001', reviewScene(), {folder: 'designs'});
+  mkdirSync(path.join(dir, 'preliminary-design'), {recursive: true});
+  writeFileSync(path.join(dir, 'preliminary-design/releases.json'), JSON.stringify({current: '1.3', releases: ['1.3'], designs: {1: {name: 'Tilting carriage'}}, designStatus: {'1.3': 'effective'}}));
+  writeFileSync(path.join(tree, 'designs.json'), JSON.stringify({schema: 'agent-frc/detailed-design-index@1', preliminaryIndex: '../preliminary-design/releases.json',
+    current: '1.0', beside: '1.1', designs: ['detail-001', '1.0', '1.1'], designStatus: {'detail-001': 'superseded', '1.0': 'effective', '1.1': 'in-progress'},
+    architectures: {1: {name: 'Tilting carriage'}}, preliminary: {'1.0': '1.3', '1.1': '1.3', 'detail-001': 'layout-001'}, revision: {'1.0': {number: 4, date: '2001-01-01'}, '1.1': {number: 2, date: '2001-02-02'}}}));
+  const shown = ready + `for(let i=0;i<40&&!/·/.test(document.querySelector('#state').textContent);i++)await new Promise(r=>setTimeout(r,50));
+   return {chip:document.querySelector('#state').textContent,context:document.querySelector('#context').textContent,title:document.title}`;
+  const draft = await probePage(dir, 'detailed-design/designs/1.1/index.html', shown);
+  assert.equal(draft.chip, 'Draft 2 · in progress · layout-checked');
+  assert.match(draft.context, /Tilting carriage 1\.1　\/　Detailed design　\/　built on preliminary design Tilting carriage 1\.3$/);
+  assert.match(draft.title, /^Tilting carriage 1\.1 · /);
+  const effective = await probePage(dir, 'detailed-design/designs/1.0/index.html', shown);
+  assert.equal(effective.chip, 'Effective · layout-checked', 'an effective version shows no draft number');
+  assert.match(effective.context, /Tilting carriage 1\.0　\/　Detailed design　\/　built on preliminary design Tilting carriage 1\.3$/);
+  const earlier = await probePage(dir, 'detailed-design/designs/detail-001/index.html', shown);
+  assert.equal(earlier.chip, 'Superseded · layout-checked');
+  assert.match(earlier.context, /detail-001　\/　Detailed design　\/　built on preliminary release layout-001$/);
 });

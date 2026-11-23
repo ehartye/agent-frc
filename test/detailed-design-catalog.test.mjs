@@ -66,6 +66,25 @@ test('the catalog loads with an in-progress design as the primary card, beside a
   assert.equal(find(beside.archive,link('detail-001')).length,1,'an older in-progress design is listed with its link');
 });
 
+test('a version reads with its name, its draft while in progress and its status, built on its preliminary design',async()=>{
+  // Synthetic index: "Tilting carriage" 1.0 was accepted and superseded by 1.1; draft 3 of 1.2 is built on preliminary 1.4.
+  const ids=await render({...base,designs:['detail-001','1.0','1.1','1.2'],architectures:{1:{name:'Tilting carriage'}},
+    designStatus:{'detail-001':'superseded','1.0':'superseded','1.1':'effective','1.2':'in-progress'},current:'1.1',beside:'1.2',
+    supersededBy:{'detail-001':'1.0','1.0':'1.1'},accepted:{'1.0':'2001-01-02','1.1':'2001-02-03'},preliminary:{'1.1':'1.3','1.2':'1.4'},
+    revision:{'1.0':{number:5,date:'2001-01-01'},'1.1':{number:2,date:'2001-02-02'},'1.2':{number:3,date:'2001-03-04'}}},
+    {designStatus:{'1.3':'superseded','1.4':'effective'},designs:{1:{name:'Tilting carriage'}}});
+  const titles=n=>find(n,x=>x.tag==='h3').map(x=>x.textContent);
+  assert.deepEqual(titles(ids.current),['Tilting carriage 1.1 · effective','Tilting carriage 1.2 · draft 3 · in progress']);
+  assert.match(text(ids.current.children[0]),/Built on preliminary design Tilting carriage 1\.3\./);
+  assert.match(text(ids.current.children[0]),/Accepted 2001-02-03\./);
+  assert.match(text(ids.current.children[0]),/Tilting carriage 1\.3 is now superseded\. Work on the effective preliminary design is the next version of this design\./);
+  assert.match(text(ids.current.children[1]),/Built on preliminary design Tilting carriage 1\.4\./);
+  assert.doesNotMatch(text(ids.current.children[1]),/re-linking/);
+  // Earlier baselines read with their name; an earlier ID reads as the ID.
+  assert.deepEqual(titles(ids.archive),['Tilting carriage 1.0 · superseded','detail-001 · superseded']);
+  assert.match(text(ids.archive),/Superseded by Tilting carriage 1\.1\./);
+});
+
 test('a malformed index still reports the load failure',async()=>{
   const ids=await render({...base,designs:undefined},null);
   assert.match(ids.current.textContent,/could not be loaded/);

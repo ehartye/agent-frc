@@ -46,9 +46,12 @@ const passes = root => assert.deepEqual(checkProject(root, {skipRerun: true}).er
 
 test('stage publishes an in-progress design that the publication check accepts', t => {
   const p = project(t);
-  const index = p.stage();
+  const {report, revision, ...index} = p.stage();
   assert.deepEqual(index, {schema: 'agent-frc/detailed-design-index@1', preliminaryIndex: '../preliminary-design/releases.json', current: 'detail-001', beside: null,
     designs: ['detail-001'], designStatus: {'detail-001': 'in-progress'}, preliminary: {'detail-001': 'layout-001'}});
+  // An earlier ID carries no name; its publishes are counted as drafts like any other design's.
+  assert.equal(revision['detail-001'].number, 1);
+  assert.equal(report, 'Staged detailed design detail-001 (draft 1 · in progress)\n');
   const dir = path.join(p.root, detail, 'designs/detail-001');
   assert.deepEqual(read(path.join(dir, 'design.json')), {schema: 'agent-frc/detailed-design@1', design: 'detail-001', issue: p.receipt.issue,
     preliminary: {release: 'layout-001'}, fusion: {archiveSha256: sha('archive'), stepSha256: p.receipt.step.sha256, configuration: 'Invented stowed assembly', revision: 'review-r1'},
