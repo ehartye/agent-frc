@@ -1,5 +1,6 @@
 {
   "schema": "agent-frc/alliance-study@1",
+  "id": "concept-study-example",
   "side": "blue",
   "profile": {"file": "field.json", "sha256": "34b3dce3993a2fb37143c56d5df09a9ca852205441372f9958d2da99a1459563"},
   "roles": [
