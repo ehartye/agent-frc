@@ -1,3 +1,7 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
+# @subject scripts/package_view.py
+# @subject scripts/preliminary_design.py
 """Name each file of a layout plan by its path: the checker reads it and records its digest, and still verifies a typed SHA-256."""
 from copy import deepcopy
 import gzip

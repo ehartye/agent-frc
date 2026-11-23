@@ -1,3 +1,4 @@
+/** @lane merge */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {cp, mkdtemp, mkdir, readFile, readdir, writeFile, rm} from 'node:fs/promises';

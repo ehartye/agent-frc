@@ -1,3 +1,5 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
 """Two opposed shutters support a free-falling block above a separate receiver."""
 import copy
 import json

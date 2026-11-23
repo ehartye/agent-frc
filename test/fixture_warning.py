@@ -1,3 +1,6 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
+# @subject scripts/preliminary_design.py
 """Say on stderr when a review links field interactions but no case registers a field fixture."""
 import json
 from pathlib import Path

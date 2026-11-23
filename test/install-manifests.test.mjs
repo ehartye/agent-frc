@@ -1,3 +1,7 @@
+/**
+ * @lane merge
+ * @subject scripts/branch-scan.mjs
+ */
 import {cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {execFileSync, spawnSync} from 'node:child_process';
 import os from 'node:os';

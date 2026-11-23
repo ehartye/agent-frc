@@ -1,3 +1,7 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
+# @subject scripts/package_view.py
+# @subject scripts/preliminary_design.py
 """Replace a stale review scene whole with --write-view, keep the page create-only and advise on partly registered mounts."""
 from copy import deepcopy
 import gzip

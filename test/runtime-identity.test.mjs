@@ -1,3 +1,4 @@
+/** @lane merge */
 import {execFileSync, spawnSync} from 'node:child_process';
 import {copyFileSync, mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync} from 'node:fs';
 import os from 'node:os';

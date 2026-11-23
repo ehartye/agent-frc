@@ -1,3 +1,5 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
 """Installed hardware, stock and smooth geometry during independent issue review."""
 from pathlib import Path
 from tempfile import TemporaryDirectory

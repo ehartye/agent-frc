@@ -1,3 +1,5 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
 """Original repeated cube geometry checks for local STL/glTF rendering."""
 from pathlib import Path
 import json

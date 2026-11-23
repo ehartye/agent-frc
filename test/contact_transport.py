@@ -1,3 +1,6 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
+# @subject scripts/preliminary_design.py
 """Count an operating case where powered contact, not a rigid carrier, moves the finite payload."""
 from copy import deepcopy
 import json

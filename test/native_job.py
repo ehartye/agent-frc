@@ -1,3 +1,4 @@
+# @lane merge
 """An original two-request job with a delayed module import and a non-code dependency."""
 import stat
 import subprocess

@@ -1,3 +1,7 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
+# @subject scripts/package_view.py
+# @subject scripts/preliminary_design.py
 """Register a mount against the member it supports, and a joint that fixes a structure member to its host."""
 from copy import deepcopy
 import gzip

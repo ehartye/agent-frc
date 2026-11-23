@@ -1,5 +1,6 @@
+/** @lane merge */
 import assert from 'node:assert/strict';
-import {existsSync} from 'node:fs';
+import {existsSync,readFileSync,readdirSync} from 'node:fs';
 import test from 'node:test';
 import {allTests,glob,mapFile,reach,readJson,repoFiles,root,selectForChange} from '../scripts/test-selection.mjs';
 
@@ -11,6 +12,17 @@ test('every test file is in exactly one lane, and no lane names a missing file',
   const listed=Object.values(map.lanes).flat();
   assert.deepEqual([...listed].sort(),tests,'add a new test file to one lane in '+mapFile+', and remove a deleted one');
   assert.ok(map.quick.every(lane),'the quick run names existing lanes');
+});
+
+// The leading comment of a test file says when it runs and which files it tests without importing them.
+// The audit of .testing/risk.yml reads the same tags, so it and the changed-files selection agree.
+test('every test file declares its lane, and each subject it names exists',()=>{
+  const python=readdirSync(root+'test').filter(name=>name.endsWith('.py')&&/unittest\.TestCase/.test(readFileSync(root+'test/'+name,'utf8')));
+  for(const name of [...tests,...python]){
+    const text=readFileSync(root+'test/'+name,'utf8'),head=name.endsWith('.py')?text.match(/^(#.*\r?\n|\s*\n)*/)[0]:text.match(/^\s*\/\*\*[^]*?\*\//)?.[0]??'';
+    assert.match(head,/@lane (edit|merge|scheduled|release)\b/,name+' starts with a comment that carries @lane');
+    for(const [,subject] of head.matchAll(/@subject (\S+)/g)) assert.ok(existsSync(root+subject),`${name}: ${subject} exists`);
+  }
 });
 
 test('the map and the recorded durations name only files that exist',{skip:!inGit},()=>{
@@ -37,6 +49,13 @@ test('a change selects the tests that cover it, and everything when it cannot be
   assert.equal(words.all,false);
   for(const name of lane('docs')) assert.ok(words.tests.includes(name),name+' runs for a documentation change');
   assert.deepEqual(words.tests.filter(name=>lane('kernel').includes(name)),[],'a documentation change runs no CAD kernel test');
+
+  for(const page of ['templates/detailed-design-index.html','templates/preliminary-review/review.html','docs/preliminary-design.md']){
+    const chosen=pick(page);
+    assert.equal(chosen.all,false,page);
+    assert.deepEqual(chosen.tests.filter(name=>lane('kernel').includes(name)),[],page+' starts no CAD kernel test');
+  }
+  assert.ok(pick('templates/preliminary-review/review.html').tests.includes('review-layout.test.mjs'),'the review page runs its browser test');
 
   // A Python helper named like a script stays with the test that runs it.
   assert.deepEqual(pick('test/free_path.py').tests,['mechanical-readiness.test.mjs']);

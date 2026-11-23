@@ -1,3 +1,5 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
 """An original compound carriage with opposed slides and a phased pinion."""
 from copy import deepcopy
 from pathlib import Path

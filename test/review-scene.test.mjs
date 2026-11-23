@@ -1,3 +1,7 @@
+/**
+ * @lane merge
+ * @subject scripts/review-scene.mjs
+ */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { gzipSync } from 'node:zlib';

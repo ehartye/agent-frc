@@ -1,3 +1,4 @@
+/** @lane merge */
 import test from 'node:test';import assert from 'node:assert/strict';import {validateWitnessReceipt,assessWitnessReceipt,validateWitnessManifest,assessWitnessManifest} from '../scripts/native-witness.mjs';
 function manifest(r){return {schema:'agent-frc/native-witness-manifest@1',pins:{...r.pins},methodPolicy:{...r.method},witnesses:r.witnesses.map(({id,stateHash,pair,rotating,phase})=>({id,stateHash,pair:[...pair],rotating,phase:phase?{...phase}:null}))}}
 const h='a'.repeat(64), pins={trajectory:h,geometry:h,transforms:h,backend:h};

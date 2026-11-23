@@ -63,11 +63,13 @@ Everything else is standard or low tier. `.testing/risk.yml` records the tier of
 
 ## Time guidelines
 
-| Lane | Runs | Guideline |
-|---|---|---|
-| Edit | The tests or cases relevant to what just changed | About 1 minute |
-| Merge | The fast suite for the critical and standard tiers, or the publication checks | About 5 minutes |
-| Gate | A design's full layout check and readiness report, or the plugin's full suite before a release | About 15 minutes |
+| Lane | Runs | Guideline | In the plugin |
+|---|---|---|---|
+| Edit | The tests or cases relevant to what just changed | About 1 minute | `npm run validate` and `npm run test:changed` |
+| Merge | The fast suite for the critical and standard tiers, or the publication checks | About 5 minutes | `npm run test:portable`; a pull request runs the changed selection in CI |
+| Gate | A design's full layout check and readiness report, or the plugin's full suite before a release | About 15 minutes | `npm test` at the qualified station |
+
+A change that reaches the mechanical-review controls runs about a minute and a half in the edit lane; run one class with `npm test -- mechanical-readiness --name CLASS` while editing. [Every command and how the selection works](project-ci.md#how-the-plugin-repository-tests-itself).
 
 These are guidelines. When a run is heading past its guideline, stop and tell the owner what is slow and why. Agree a bounded extended budget before going on. Do not wait out a long run in silence, and do not repeat a run whose inputs have not changed.
 
@@ -89,7 +91,5 @@ A robot project follows the plugin's current release. It does not name a plugin 
 - Do not prove an unchanged result again. A local result is not repeated in CI, except at a stage gate.
 - Do not digest, pin or byte-compare inputs to decide whether to run. The version control system already knows what changed.
 - Keep tests independent of the checkout: no fixed ports, no fixed temporary paths, no absolute paths.
-- Say which lane a new test belongs to. A slow test of a low-tier area belongs in the weekly or release run.
+- Say which lane a new test belongs to, in the file's leading comment: `/** @lane merge */`, or `# @lane merge` in Python. Add `@subject PATH` there for each file the test exercises only through a subprocess. A slow test of a low-tier area belongs in the weekly or release run.
 - While editing, run only what is relevant. Run the merge lane before merging. Run everything only at a release, on the weekly run or when asked.
-
-The commands for each run in the plugin are in [how the plugin repository tests itself](project-ci.md#how-the-plugin-repository-tests-itself).

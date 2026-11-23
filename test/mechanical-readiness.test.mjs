@@ -1,3 +1,8 @@
+/**
+ * @lane merge
+ * @subject scripts/mechanical_readiness.py
+ * @subject scripts/preliminary_design.py
+ */
 import assert from 'node:assert/strict';
 import {execFile,execFileSync} from 'node:child_process';
 import {mkdtempSync,readFileSync,writeFileSync,mkdirSync,cpSync,rmSync} from 'node:fs';

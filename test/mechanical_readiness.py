@@ -1,3 +1,10 @@
+# @lane merge
+# @subject scripts/layout_attachment.py
+# @subject scripts/mechanical_readiness.py
+# @subject scripts/package_view.py
+# @subject scripts/preliminary_design.py
+# @subject templates/preliminary-review/review.html
+# @subject templates/stage-preliminary-review.py
 import shutil
 import json
 from pathlib import Path

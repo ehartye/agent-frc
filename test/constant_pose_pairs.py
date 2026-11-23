@@ -1,3 +1,6 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
+# @subject scripts/preliminary_design.py
 """Cull and reuse constant-relative-pose pairs without changing any clearance finding."""
 from contextlib import contextmanager
 from copy import deepcopy

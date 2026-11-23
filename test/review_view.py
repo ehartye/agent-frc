@@ -1,3 +1,7 @@
+# @lane merge
+# @subject scripts/package_view.py
+# @subject scripts/preliminary_design.py
+# @subject scripts/review-scene.mjs
 """Review regions, fits and the compressed scene of the preliminary design player."""
 import gzip
 import hashlib

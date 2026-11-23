@@ -1,3 +1,7 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
+# @subject scripts/package_view.py
+# @subject scripts/preliminary_design.py
 """Rebuild the review scene and receipt from an earlier receipt without rerunning the cases, and refuse changed physics inputs."""
 from copy import deepcopy
 import json

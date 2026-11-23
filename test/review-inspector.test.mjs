@@ -1,3 +1,8 @@
+/**
+ * @lane merge
+ * @subject scripts/review-scene.mjs
+ * @subject templates/preliminary-review/review.html
+ */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';

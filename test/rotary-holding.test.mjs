@@ -1,3 +1,4 @@
+/** @lane merge */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {reviewRotaryHolding} from '../scripts/rotary-holding.mjs';

@@ -1,3 +1,7 @@
+# @lane merge
+# @subject scripts/layout_attachment.py
+# @subject scripts/mechanical_readiness.py
+# @subject scripts/preliminary_design.py
 """Report floating robot solids and field fixtures off the floor as information that never changes the result."""
 from copy import deepcopy
 import gzip

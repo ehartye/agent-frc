@@ -1,3 +1,4 @@
+/** @lane merge */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createStudy,forkBranch,appendArtifact,pin,digest,validateStudy,impactReport} from '../scripts/decision-chain.mjs';

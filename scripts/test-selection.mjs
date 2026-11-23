@@ -17,10 +17,10 @@ export const glob=pattern=>new RegExp('^'+pattern.replace(/[.+?^${}()|[\]\\]/g,'
 
 const code=/\.(mjs|js|py)$/;
 
-// Every repository file each test can reach. A reference is an import, a path that resolves to a file
+// The files one file refers to. A reference is an import, a path that resolves to a file
 // or to a folder below the top level, or a file name that only one file below the top level carries.
 // Top-level files such as README.md share their names with files in a robot project, so the map lists them by hand.
-export function reach(tests=allTests(),files=repoFiles()){
+export function referenceReader(files=repoFiles()){
   const known=new Set(files),named=new Map(),direct=new Map();
   for(const file of files){const base=path.posix.basename(file);named.set(base,[...(named.get(base)??[]),file]);}
   const below=folder=>folder.includes('/')?files.filter(file=>file.startsWith(folder+'/')):[];
@@ -42,6 +42,12 @@ export function reach(tests=allTests(),files=repoFiles()){
     }
     found.delete(file);direct.set(file,found);return found;
   };
+  return references;
+}
+
+// Every repository file each test can reach, followed through the code files it references.
+export function reach(tests=allTests(),files=repoFiles()){
+  const references=referenceReader(files);
   return new Map(tests.map(test=>{
     const start='test/'+test,seen=new Set([start]),queue=[start];
     while(queue.length){const file=queue.pop();if(code.test(file)) for(const next of references(file)) if(!seen.has(next)){seen.add(next);queue.push(next);}}
@@ -59,6 +65,8 @@ export function selectForChange(changed,{tests=allTests(),map=readJson(mapFile),
     const hits=new Set(tests.filter(test=>reached.get(test).has(file)));
     for(const [covered,patterns] of covers) if(patterns.some(pattern=>pattern.test(file))) covered.forEach(test=>hits.add(test));
     if(!hits.size) return {all:true,tests,reason:`no test is mapped to ${file}`};
+    // A document, page or style sheet never starts a CAD kernel test.
+    if(map.pages.some(pattern=>glob(pattern).test(file))) map.lanes.kernel.forEach(test=>hits.delete(test));
     hits.forEach(test=>picked.add(test));
   }
   return {all:false,tests:tests.filter(test=>picked.has(test)),reason:`${changed.length} changed file${changed.length===1?'':'s'}`};

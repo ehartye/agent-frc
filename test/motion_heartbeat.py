@@ -1,3 +1,5 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
 """Show life inside a long motion case and warn when a rotation cannot change a body's occupied volume."""
 import json
 from pathlib import Path

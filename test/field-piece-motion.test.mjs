@@ -1,3 +1,4 @@
+/** @lane merge */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createFieldPieceMotion} from '../scripts/field-piece-motion.mjs';

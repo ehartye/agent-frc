@@ -1,3 +1,4 @@
+/** @lane merge */
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';

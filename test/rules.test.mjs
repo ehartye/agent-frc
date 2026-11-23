@@ -1,3 +1,4 @@
+/** @lane merge */
 import {validateProfile} from '../scripts/kickoff.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';

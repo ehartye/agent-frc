@@ -1,3 +1,8 @@
+/**
+ * @lane merge
+ * @subject templates/preliminary-review-index.html
+ * @subject templates/preliminary-review/review.html
+ */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';

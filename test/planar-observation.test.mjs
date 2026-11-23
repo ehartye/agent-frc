@@ -1,3 +1,4 @@
+/** @lane merge */
 import test from 'node:test';import assert from 'node:assert/strict';import {relativeBodyObservation as observe,checkFaultMomentumTransition as fault} from '../scripts/planar-observation.mjs';
 const base=()=>({robotPosition:[1,2],robotVelocity:[.3,-.2],heading:.7,yawRate:1.2,targetPosition:[1.4,2.2],targetVelocity:[-.1,.4]});
 test('rotating-frame derivative matches independent central finite difference',()=>{const a=base(),v=observe(a),h=1e-6;const at=t=>observe({...a,heading:a.heading+t*a.yawRate,robotPosition:a.robotPosition.map((x,i)=>x+t*a.robotVelocity[i]),targetPosition:a.targetPosition.map((x,i)=>x+t*a.targetVelocity[i])}).relativePosition;const lo=at(-h),hi=at(h);for(let i=0;i<2;i++)assert(Math.abs((hi[i]-lo[i])/(2*h)-v.relativeVelocity[i])<1e-8)});
