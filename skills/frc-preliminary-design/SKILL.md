@@ -90,7 +90,7 @@ These need no permission and no reminder. If you cannot do one, say so in your r
 **Publishing**
 
 17. **Commit and push** after the first passing check, after each trial result and after each publish.
-18. **Run the publication check before pushing.** It never runs the layout check, and the project's CI runs no design check: what you push is what is published.
+18. **Run the publication check before pushing.** It never runs the layout check, and the project's CI runs no design check: what you push is what is published. Read its `Advice:` lines. They list published files that no page, index or listed design leads to, such as a withdrawn viewer left in `docs/`. Delete or link each one before the push.
 19. **Open the published page in a browser after each push.** Confirm the model loads, each animation plays its whole phase and the status is right. A green check alone does not show that.
 20. **Keep paths short and relative.** No drive letters, no home folders.
 21. **Take the obvious default** and say what you chose.

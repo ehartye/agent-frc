@@ -20,6 +20,9 @@
  *      that marks it effective writes after running the full layout check on the committed design.
  *   9. No tracked file holds a personal machine path or a credential, and the project carries no plugin file.
  *
+ * It also lists, as advice that blocks nothing, the published files that no page, index or listed design leads to:
+ * publishing the folder puts them online with the rest.
+ *
  * A detailed design whose mechanical-readiness review does not pass cannot be effective. A withdrawn design is a
  * status with a reason; its files may leave the site. The check reads data only: it never inspects page markup.
  */
@@ -34,6 +37,7 @@ import {effectiveReadiness, readinessText} from './effective-readiness.mjs';
 import {compareWithReceipt, readScene} from './review-scene.mjs';
 import {contentSha, identityDifferences, physicsIdentity, receiptIdentity} from './physics-identity.mjs';
 import {scanTree} from '../templates/project-ci/scan.mjs';
+import {unlinkedAdvice} from './published-content.mjs';
 import {benchFile, effectiveProblems, handedOver, summary as benchSummary, summaryText as benchText} from './bench-tests.mjs';
 
 const receiptSchema = 'agent-frc/preliminary-layout-result@1';
@@ -454,7 +458,9 @@ export function checkProject(root, options = {}) {
     try { scan = scanTree(root); } catch (error) { if (/git/i.test(error.message)) return; throw error; }
     for (const f of scan.findings) errors.push(f.file + ':' + f.line + ': ' + (f.kind === 'machine-path' ? 'a personal machine path; write paths relative to the repository' : 'a credential; remove it and rotate it') + ': ' + f.text);
   });
-  return {plugin: pluginVersion, preliminary, detailed, designs, comparedWith: since ?? null, warnings, reports, errors};
+  // Publishing the folder publishes everything in it, linked or not.
+  const advice = attempt('published content', () => unlinkedAdvice(root, o.site)) ?? [];
+  return {plugin: pluginVersion, preliminary, detailed, designs, comparedWith: since ?? null, advice, warnings, reports, errors};
 }
 
 /** Where this branch left the default branch of the remote, as last fetched: {commit, name}, or null without one. */
@@ -492,6 +498,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
     const result = checkProject(path.resolve(project), options);
     for (const report of result.reports) console.log('== ' + report.title + ' ==\n' + report.text);
     for (const warning of result.warnings) console.error('Warning: ' + warning);
+    if (result.advice.length) console.error('Advice: ' + result.advice.join('\n'));
     for (const error of result.errors) console.error('Error: ' + error);
     const {reports, ...summary} = result;
     console.log(JSON.stringify(summary, null, 2));

@@ -33,7 +33,7 @@ if(quick||lane){
 }
 if(changed){
   const isCommit=text=>{try{git('rev-parse','--verify','--quiet',`${text}^{commit}`);return true;}catch{return false;}};
-  const base=args.length&&isCommit(args[0])?args.shift():'origin/main',change=changedFiles(base),choice=selectForChange(change.changed,{versionOnly:change.versionOnly});
+  const base=args.length&&isCommit(args[0])?args.shift():'origin/main',change=changedFiles(base),choice=selectForChange(change.changed,{versionOnly:change.versionOnly,deleted:change.deleted});
   selected=selected.filter(test=>choice.tests.includes(test));
   why=`changes since ${base} (${change.from.slice(0,7)}): ${choice.all?`everything, because ${choice.reason}`:choice.reason}`;
 }
