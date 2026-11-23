@@ -67,6 +67,11 @@ class Measured:
         return clearance.along(self.assembly, case["id"], case["minGapMm"], absent=others, depth=case["depth"], include_still=True,
                                displace={spec["displaced"]: spec["offsetMm"]})
 
+    def used(self, case):
+        """What the library's clearance along a case draws on: every solid present, the motion, its poses, the groups and contacts."""
+        from frc_design_kernel.measure.summary import used_by_motion
+        return used_by_motion(self.assembly, case["id"], sorted(case["removed"]))
+
     def screen(self, name):
         """The library's screen facts for one declared interaction: plain facts, judged in interactions.py."""
         from frc_design_kernel.measure import screen

@@ -257,6 +257,49 @@ class KernelLayoutCheck(unittest.TestCase):
         self.assertEqual(len(payload["meshes"]), 2, "equal tessellations are stored once, across bodies and cases")
         self.assertEqual([payload["cases"][1]["bodies"][b]["mesh"] for b in "abc"], [0, 0, 1])
 
+    def carried(self, *flags):
+        """Check with --carry from the receipt beside the judgement file, and save the new receipt there."""
+        run, _ = self.check("--physics-only", "--carry", "--output", RELEASE + "/receipt.json", *flags)
+        receipt = json.loads((self.root / RELEASE / "receipt.json").read_text(encoding="utf-8"))
+        return run, receipt, sorted(row["case"] for row in receipt["cases"] if row["checked"] == "rerun")
+
+    def test_a_draft_check_measures_only_the_cases_whose_inputs_changed(self):
+        judgement = self.copy(self.judgement)
+        # The release stage takes the rail out first, so it does not draw on the rail.
+        judgement["stages"]["release"]["absent"] = ["rail"]
+        self.put("judgement.json", judgement)
+        run, _ = self.check("--physics-only", "--output", RELEASE + "/receipt.json")
+        self.assertEqual(run.returncode, 0, run.stderr)
+        # A renamed design and an edited note change nothing a case measured: every case is carried.
+        source = self.copy(self.source)
+        source["name"] = "Invented renamed carrier 1.0"
+        source["mounts"][0]["note"] = "Invented reworded note"
+        self.put("design.json", source)
+        self.build()
+        run, receipt, rerun = self.carried()
+        self.assertEqual(run.returncode, 0, run.stderr)
+        self.assertEqual(rerun, [])
+        self.assertEqual(receipt["carriedFrom"]["cases"], 5)
+        self.assertIn("[carry] 0 of 5 case(s) rerun, 5 carried from " + RELEASE + "/receipt.json", run.stderr)
+        self.assertEqual(receipt["control"]["witness"]["status"], "fail", "the displaced control is measured again")
+        self.assertIn("carried from " + RELEASE + "/receipt.json", next(row["checked"] for row in receipt["cases"]))
+        # Moving the rail reruns exactly the cases that draw on it: every case but release.
+        next(s for s in source["solids"] if s["name"] == "rail")["shape"].update(fromMm=[19, 72, 18], toMm=[24, 77, 23])
+        self.put("design.json", source)
+        self.build()
+        run, receipt, rerun = self.carried()
+        self.assertEqual(rerun, ["acquire", "loaded-turn", "park-loaded", "remove-carrier"])
+        self.assertEqual(receipt["status"], "layout-checked", receipt["missingInputs"])
+        # A changed allowance reruns its case alone.
+        judgement["stages"]["acquire"]["minGapMm"] = 2
+        self.put("judgement.json", judgement)
+        _, _, rerun = self.carried()
+        self.assertEqual(rerun, ["acquire"])
+        # The whole check reruns everything and carries nothing.
+        run, whole = self.check("--physics-only")
+        self.assertEqual({row["checked"] for row in whole["cases"]}, {"rerun"})
+        self.assertNotIn("carriedFrom", whole)
+
     def test_mass_over_the_limit_blocks_the_layout(self):
         budgets = self.copy(self.budgets)
         budgets["masses"][0]["kg"] = [4, 12]

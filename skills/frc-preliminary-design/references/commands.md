@@ -70,13 +70,15 @@ node PLUGIN/scripts/design.mjs preliminary-check . cad/preliminary-design/releas
 | Changing geometry or motion only | `--physics-only` | Checks every case and the budgets. Writes no review page |
 | Changing names, colours, explanations or grouping | `--view-only` in place of `--write-view` | Rebuilds the review page from the saved receipt in seconds. Measures no case again |
 | Sharing the machine | `--workers N` | Sets the worker count. Use half the cores |
-| Publishing | `--write-view --output ...` | The full check. Only this receipt can be published |
+| Publishing a draft after a change | `--write-view --carry --output ...` | Measures only the cases whose inputs changed since the saved receipt and carries the rest; the displaced control is always measured. A draft is published on this receipt |
+| Publishing the first draft | `--write-view --output ...` | The full check of every case |
 
 Read these lines on stderr:
 
 - `[inputs]` comes first: the judgement file and its digest.
 - `[scope]` gives the solid count and the finest path tolerance beside the guidelines.
 - `[motion]` gives each case's status, how many pairs were measured and the closest pair.
+- `[carry]` says how many cases were measured again, how many were carried and from which receipt, and names the ones measured.
 - `[control]` says whether the displaced control was rejected, as it must be.
 - `[attachment]` lists each robot solid with no path to the frame and each field fixture off the floor. Clear every row: move the solid onto its support, draw the support, add its mount in the design source, or label it under `attachment.unmounted` in the judgement file with its reason. [Nothing floats](../../../docs/preliminary-design.md#nothing-floats)
 - `[budgets]` gives mass and voltage.
