@@ -1,42 +1,145 @@
 # Preliminary design: the layout and its check
 
-This page is the reference for the layout check: what the plan holds, what each flag does and how to read the result. For the order of work, the defaults and what to try when something fails, start from the [preliminary design skill](../skills/frc-preliminary-design/SKILL.md). For the commands in order, see [commands](../skills/frc-preliminary-design/references/commands.md).
+This page is the reference for the layout check: what the design source and the judgement file hold, what each flag does and how to read the result. For the order of work, the defaults and what to try when something fails, start from the [preliminary design skill](../skills/frc-preliminary-design/SKILL.md). For the commands in order, see [commands](../skills/frc-preliminary-design/references/commands.md).
 
-A preliminary design is one robot datum and one layout. On a single placed STEP it represents fixed structure and bumpers, mounts, moving members, a finite game piece, the field parts the mission touches and the service envelope. Simple conservative solids are enough to decide an architecture. Record what each one bounds and what geometry is missing.
+A preliminary design is one robot frame and one layout: fixed structure and bumpers, mounts, moving members, a finite game piece, the field parts the mission touches and the service envelope. Simple conservative solids are enough to decide an architecture. Record what each one bounds and what geometry is missing.
 
-A saved layout identifies the geometry. Its end poses alone leave the path between them untested, so every motion is checked as a case.
+Three kinds of repository take part, and each has one job:
+
+| Repository | Holds | Runs |
+| --- | --- | --- |
+| The robot project | Data: the design source, custom shapes, the generated solids and records, the published page, its own CI | No plugin code |
+| The design library, `frc-design-kernel` | Code that builds solids from a design source and measures clearance, attachment and mass along its motions | Nothing of the plugin |
+| The plugin | The coding agent's tool: which cases to check, what a result means, readiness, the review page, publishing | The library |
+
+The library builds and measures. The plugin judges. A design's end poses alone leave the path between them untested, so every motion is checked as a case.
 
 ## Contents
 
-- [Work a synthetic example](#work-a-synthetic-example)
-- [Write the plan](#write-the-plan)
+- [Work an invented example](#work-an-invented-example)
+- [The design source and the judgement file](#the-design-source-and-the-judgement-file)
+- [Work in three stages](#work-in-three-stages)
 - [Run the check](#run-the-check)
+- [The earlier format: a layout plan and a builder](#the-earlier-format-a-layout-plan-and-a-builder)
 - [Nothing floats](#nothing-floats)
 - [Keep the layout a blockout](#keep-the-layout-a-blockout)
 - [Size the checks to the risk](#size-the-checks-to-the-risk)
 - [Judge readiness to be marked effective](#judge-readiness-to-be-marked-effective)
 - [Carry plugin updates into a season project](#carry-plugin-updates-into-a-season-project)
 
-## Work a synthetic example
+## Work an invented example
 
-With the plugin's geometry Python environment selected, create a new example folder and run the check.
+With the geometry Python environment selected and the design library installed, write the example into a new folder, generate its solids and check it.
 
 ```sh
-python examples/preliminary-design/create.py layout-trial
-node scripts/design.mjs preliminary-check layout-trial cad/preliminary-design/releases/1.0/layout.json --require-checked
+python examples/design-source/create.py layout-trial
+node scripts/design.mjs preliminary-check layout-trial cad/preliminary-design/releases/1.0/judgement.json --require-checked
 ```
 
-`layout-trial` stands for a repository. The design sits in the folder `cad/preliminary-design/releases/1.0/` inside it, with every file named from `layout-trial`, and nothing is generated at its top level.
+`layout-trial` stands for a repository. The design sits in the folder `cad/preliminary-design/releases/1.0/` inside it, with every file named from `layout-trial`, and nothing is generated at its top level. The starter draws nothing: it writes the design source and the judgement file as data, runs the library's `build` and then the check.
 
-The carrier rotates 90° with a finite article while a neighboring slide travels 12 mm. A separate park case returns the carrier and slide. The service case withdraws the group 80 mm. Each case reserves 1 mm between unrelated bodies. The proposed layout clears acquisition, the loaded turn, release, parking and service withdrawal.
+The carrier rotates 90° with a finite article while a neighbouring slide travels 12 mm. A separate park motion returns the carrier and slide. The service motion withdraws the group 80 mm. Each stage reserves 1 mm between unrelated solids. The layout clears acquisition, the loaded turn, release, parking and service withdrawal.
 
-As a control, moving a fixed rail 50 mm into the arc leaves both operating end poses clear and produces about 52.04 mm³ of shared material at half travel. Read the actual pair and path fraction in the receipt. The example uses invented figures and simple shapes.
+As a control, moving a fixed rail 50 mm into the arc leaves both operating end poses clear and puts the head through the rail at half travel. Read the pair and stroke fraction in the receipt. The example uses invented figures and simple shapes.
 
-The synthetic robot weighs 11 to 13.5 kg against its invented 15 kg limit. Its 11.2 to 14 kg running estimate includes the article. Simultaneous demand of 32 to 50 A leaves 10.0 to 11.264 V in the weak-pack case, above the 9.2 V required. Raise the drive's upper estimate from 30 A to 80 A in the loaded turn and the low end falls to 8.5 V. That change reopens the layout decision, even with identical animation and clear paths.
+The invented robot weighs 11 to 13.5 kg against its 15 kg limit. Its 11.2 to 14 kg running estimate includes the article. Simultaneous demand of 32 to 50 A leaves 10.0 to 11.264 V in the weak-pack case, above the 9.2 V required. Raise the drive's upper estimate from 30 A to 80 A in the loaded turn and the low end falls to 8.5 V. That change reopens the layout decision with identical geometry.
 
-## Write the plan
+## The design source and the judgement file
 
-The plan, `layout.json`, names the design's files and says how the solids are grouped, mounted and moved. Have the project's builder script write it. [The files in a design's folder](../skills/frc-preliminary-design/references/commands.md#build-the-inputs)
+A design has two inputs, kept apart on purpose.
+
+| File | Whose | Holds |
+| --- | --- | --- |
+| `design.json`, the design source | The library's | Parameters, solids, groups and what carries what, fixtures, mounts, contacts, poses and motions |
+| `judgement.json`, the judgement file | The plugin's | The design source's name, a stage for each motion, the cycle, the displaced control, attachment labels, the scope guidelines, budgets, premises, the narrative list and the `presentation` text |
+
+The rule for what goes where: if the library needs it to build or place a solid, it is in the design source. Every reason, allowance, label and explanation is in the judgement file. The check refuses a judgement file that carries `groups`, `mounts`, `contacts`, `poses`, `motions`, a `datum`, a `step` or a `motion` reference, and names what to move.
+
+### The design source
+
+The format is the library's and is described in its [design document](https://github.com/ehartye/frc-design-kernel/blob/main/DESIGN.md). The library is in its settling period, so the format may still change; after an update, the library's message says what to fix. What the layout check asks of a source:
+
+- **Frame.** `frame` states the origin and axes in words. The floor is at Z = 0 unless `attachment.floorZMm` says otherwise.
+- **Groups.** A group is one rigid body. Its `role` is one of `structure`, `bumper`, `drive`, `battery`, `mechanism`, `payload`, `service`, `other` or `fixture`. A layout needs the first six.
+- **Solids.** One per functional volume, from the listed shapes, with sizes worked out from `parameters`. A purchased or field part is placed from its STEP file with `part`. A custom shape is the exception: it needs a reason and limits, and it only makes one solid.
+- **Fixtures.** Field parts and game pieces on the field go under `fixtures`, never under `solids`. Use the official models where the project has them.
+- **Mounts.** Each mechanism group has at least one mount with a `note`: the note is the basis the review shows. The mount point lies inside its host's box.
+- **Contacts.** Two solids that are meant to touch are a [declared contact](#declare-an-intended-contact), with a note and the motions it holds in.
+- **Poses and motions.** One motion for each checked stroke, starting from a named pose. A curved move is one motion: a `path` operation, or a motion `through` poses. Each motion of the cycle starts where the one before it ended.
+
+Generate the solids with `python -m frc_design_kernel build SOURCE --out FOLDER` and name the manifest in the judgement file under `generated`. A generated file is never edited. The check stops when the manifest is of an earlier source.
+
+### The judgement file
+
+```json
+{
+  "schema": "agent-frc/layout-judgement@1",
+  "issue": "invented-design-1.0",
+  "source": {"file": "cad/preliminary-design/releases/1.0/design.json"},
+  "generated": {"file": "cad/preliminary-design/releases/1.0/generated/manifest.json"},
+  "view": "cad/preliminary-design/releases/1.0/package-motion.html",
+  "budgets": {"file": "cad/preliminary-design/releases/1.0/budgets.json"},
+  "stages": {"loaded-turn": {"purpose": "operating", "phase": "deliver", "basis": "Sweep the head and sample while the gate slides",
+                             "minGapMm": 1, "allowanceBasis": "1 mm packaging reserve", "pathToleranceMm": 40,
+                             "carriedWith": {"carried article": "carrier"}}},
+  "cycle": ["acquire", "loaded-turn", "release", "park-loaded"],
+  "control": {"case": "loaded-turn", "displaced": "rail", "moving": "head", "offsetMm": [0, -50, 0], "basis": "Move the fixed rail into the arc"}
+}
+```
+
+| Field | Holds |
+| --- | --- |
+| `stages` | One entry for each motion of the source, under the motion's name. See the table below |
+| `cycle` | The operating and park stages in mission order. Service stages are left out |
+| `control` | The [displaced control](#the-displaced-control): a stage, one solid that stays still in it, one that moves, an offset and the basis |
+| `attachment` | `gapMm`, `floorZMm` and the labelled exceptions `unmounted` and `suspended`. [Nothing floats](#nothing-floats) |
+| `scopeGuidelines` | The project's own figures for solids and path tolerance, and an agreed `extendedBudget` |
+| `budgets` | The mass and current ledger, which names its limits. [Mass and voltage budgets](#mass-and-voltage-budgets) |
+| `premises`, `narrativeReview`, `missingInputs` | What the layout holds from upstream, the objectives it answers and what is still missing |
+| `presentation` | Everything the review page says: `components` with a purpose and rationale for each solid, titles, phases, replays and notes |
+
+A stage holds:
+
+| Field | Meaning |
+| --- | --- |
+| `purpose` | `operating`, `park` or `service` |
+| `phase` | The mission phase whose animation plays this stage. [Animations](#animations-show-the-mission-the-check-list-shows-the-evidence) |
+| `basis` | What the motion is, in a sentence |
+| `minGapMm`, `allowanceBasis` | The allowance between unrelated solids, and why that figure |
+| `pathToleranceMm` | How closely the motion follows the path it stands for. Reported against the scope guidelines |
+| `absent` | Solids taken out of the scene before the motion, such as a cover removed before a part is lifted out |
+| `extract` | `true` for a service withdrawal: the moved solids must end beyond the allowance of everything that stayed |
+| `requiredContacts` | Pairs that must come within `maxGapMm` in a `window` of the stroke, such as a hook seating on a bar |
+| `depth` | How many times the search may halve the stroke before it reports a pair as open. Default 9 |
+| `carriedWith`, `transportedBy`, `freePath`, `supportedBy` | [What moved each payload](#move-a-payload-by-contact-transport), with its trial record |
+
+`missions.json`, the mass and current ledger and its limits stay separate files beside the judgement file, because the readiness report and the review page read them on their own.
+
+### What is not on this path yet
+
+- [Game-piece compression](#game-piece-compression) rules and [held premises](preliminary-design-holds.md) with `--previous` are checked only in the earlier format.
+- Trials are not run by the plugin. A stage binds a recorded trial as before; trials written as data and run by the library are coming.
+- The check has no early stop. It measures every case, or the ones named with `--cases`.
+
+## Work in three stages
+
+| Stage | What you do | It settles when |
+| --- | --- | --- |
+| 1. Arrange and measure | Write the design source, generate the solids, run the layout check | The receipt reads `layout-checked` |
+| 2. Planar trials | Try each deciding interaction in its plane, with a control, brackets and a half-step repeat | Each trial passes, or its risk is listed as a bench test |
+| 3. 3D confirmation | Try the interactions a plane cannot show, on the settled layout | The same |
+
+A finding from stage 2 or 3 is fixed in the design source. Never edit a generated STEP, a manifest or a scene: the next generation would undo the edit and the receipt would describe solids nobody drew. After the fix, regenerate and rerun only what the change made stale: the layout check, and the trials that read the changed solids. A record says what it was made from, so an unchanged one stands. Two round trips on one interaction is a check-in with the user.
+
+## The earlier format: a layout plan and a builder
+
+A design checked before the design library existed has a layout plan, `layout.json`, a motion study, `paths.json`, and a STEP that a project builder program wrote. The check still reads that format, and an effective design in it stays as it is. New work uses a design source and a judgement file. Nothing converts one format to the other: write the source and the judgement file by hand, from the plan and the study.
+
+The sections from here to [Run the check](#run-the-check) describe the earlier format. The fields of a stage, a premise, a payload path and a budget have the same shape in a judgement file; where one differs, the section says so.
+
+### Write the plan
+
+The plan, `layout.json`, names the design's files and says how the solids are grouped, mounted and moved. In the earlier format the project's builder script writes it.
 
 ### Files, datum and frame
 
@@ -206,7 +309,13 @@ Unrelated solids must stay `minGapMm` apart. Two solids that are meant to touch,
 | Meet at a designed joint or seat | Declare the interface in the case |
 | Squeeze a soft game piece | [Declare the compression](#game-piece-compression) |
 
-Declare a designed interface under the case's `intendedInterfaces` in the motion study:
+In a design source, declare the contact where the design is written, with the motions it holds in:
+
+```json
+"contacts": [{"pair": ["carrier", "pivot"], "during": ["loaded-turn"], "note": "Carrier seats on the pivot"}]
+```
+
+In the earlier format, declare a designed interface under the case's `intendedInterfaces` in the motion study:
 
 ```json
 "intendedInterfaces": [{"pair": ["carrier", "pivot"], "basis": "Carrier seats on the pivot", "qualifiedBy": {"file": "contacts.json"}}]
@@ -248,8 +357,37 @@ After a geometry change, re-estimate every mass and current line whose solids ch
 ## Run the check
 
 ```sh
-node scripts/design.mjs preliminary-check REPOSITORY cad/preliminary-design/releases/1.0/layout.json --write-view --output cad/preliminary-design/releases/1.0/receipt.json
+python -m frc_design_kernel build cad/preliminary-design/releases/1.0/design.json --out cad/preliminary-design/releases/1.0/generated
+node scripts/design.mjs preliminary-check REPOSITORY cad/preliminary-design/releases/1.0/judgement.json --write-view --output cad/preliminary-design/releases/1.0/receipt.json
 ```
+
+The command reads the file it is given. A judgement file is checked on the design library; a `layout.json` is checked in the earlier format.
+
+| Flag | Effect |
+| --- | --- |
+| `--write-view` | Creates the review page if it is missing and writes or replaces its scene |
+| `--output FILE` | Saves the receipt through a temporary file and a rename |
+| `--require-checked` | Exits 1 unless the receipt reads `layout-checked` |
+| `--cases A,B` | Measures only the named stages. The receipt is partial and is not one to publish |
+| `--physics-only` | Checks every case, the control and the budgets and leaves the view alone. The receipt is not one to publish |
+| `--view-only` | Rebuilds the page and scene from the saved receipt and measures nothing again. Refused, naming what changed, when the design source, the generated solids, a stage's measuring inputs, the groups, the mounts, the control or the budgets differ from that receipt |
+| `--workers N` | Worker processes that share the cases. Default: half the cores |
+| `--quiet` | Omits the progress lines |
+
+The check prints what it ran and what it did not, and the time against the guidelines:
+
+```text
+[inputs] judgement cad/preliminary-design/releases/1.0/judgement.json sha256=...
+[scope] solids=8 (guideline: up to about 80 for a whole robot) finest path tolerance=40 mm in acquire (guideline: 10 mm or coarser) figures=plugin default
+[motion] loaded-turn pass: 3 of 28 pairs measured, closest head and rail at 41.2 mm
+[control] rail shifted [0, -50, 0] mm in loaded-turn: rejected, as it must be
+[attachment] acquire start pose, touching within 3 mm: 7 robot solids checked, 0 floating, ...
+[budgets] done mass=pass electrical=pass 0.00s
+[result] layout-checked
+[time] layout check of 5 case(s), the displaced control, attachment and budgets and the review view in 2 s. Guidelines: about 1 minute while editing, 5 before merging, 15 at a stage gate.
+```
+
+A pair's row in the receipt is `pass` with the proven lower bound of its gap over the whole stroke, `fail` with the stroke fraction, gap and shared volume where it was found, or `open` when the search reached its depth limit before it could prove the pair clear. An open pair is never passed off as clear. The receipt's `library` field records the design library's version and commit. It is information: nothing compares it.
 
 The receipt's status says where the layout stands:
 
@@ -291,7 +429,7 @@ On Windows a reader that opens a file during the rename itself can get a brief s
 
 ### Follow progress and stop at the first blocking case
 
-While the check runs, it writes one line to stderr as each motion case finishes. The receipt on stdout is unchanged. Each line gives the case's position in the study, its ID and status, the failing and open pair rows, the `bounded`, `broadPhase` and `constantPoseBroadPhase` counts, and the case and total elapsed seconds.
+This section and the next describe the earlier format. While the check runs, it writes one line to stderr as each motion case finishes. The receipt on stdout is unchanged. Each line gives the case's position in the study, its ID and status, the failing and open pair rows, the `bounded`, `broadPhase` and `constantPoseBroadPhase` counts, and the case and total elapsed seconds.
 
 With one worker process the lines follow the study order and the displaced control is the last. Lines mark the start and finish of the budget review.
 
@@ -660,5 +798,6 @@ From 0.142.0 [the plugin is a tool of the coding agent, not a dependency of the 
 | 0.140.0 | Superseded by 0.142.0. |
 | 0.142.0 | Delete the project's `stage.py`, `serve.py` and every workflow that names the plugin, and write the project's own CI from `templates/project-ci/`. The agent runs staging from the plugin, and the command that marks a design effective runs the stage gate. `stage_preliminary_review.py --refresh-view ID` republishes the view of the effective release. [What to do](design-publication-migration.md#take-the-plugin-out-of-a-project) |
 | 0.143.0 | Nothing to copy into a project. Run the [audit](project-ci.md#audit-the-project-for-use-of-the-plugin): it now reads every folder and lists project code that runs or imports plugin code. The publication check lists [published files that nothing links to](design-publication.md#published-files-that-nothing-links-to). `project-layout.mjs agents` rewrites the Design checks block with marker lines that do not name the plugin. A project may take the newer reference `ci.yml` and `site-check.mjs` when it wants them. |
+| 0.144.0 | Nothing to copy into a project. The layout check now reads a [design source and a judgement file](#the-design-source-and-the-judgement-file) and builds and measures with the design library, `frc-design-kernel`; [check that it is installed](setup-health.md#check-the-design-library). A design with a `layout.json` and a builder is in [the earlier format](#the-earlier-format-a-layout-plan-and-a-builder): it still checks, and an effective one stays as it is. To move work in progress, write the design source and the judgement file by hand, generate the solids, check and stage the same version again as its next draft, then delete the builder. |
 
 An in-progress design takes the new page when it is published again under its version. An effective design takes it through a [view refresh](design-publication.md#refresh-the-view-of-an-effective-release), which leaves its physics as it was. A superseded or withdrawn design never changes.

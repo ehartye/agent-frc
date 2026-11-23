@@ -361,6 +361,7 @@ To check its next version from the repository root:
 | 0.133.0 | The detailed-design tools read files by path. |
 | 0.142.0 | The plugin left project CI. A project owns its workflow and two checks, and holds no copy of a plugin command. |
 | 0.143.0 | The audit reads every folder and finds code that runs or imports plugin code. The publication check lists published files that nothing links to. |
+| 0.144.0 | The layout check reads a design source and a judgement file and measures with the design library. Staging publishes the design source as `design.json` in place of `motion.json`, and the release record names `judgement.json` as the file the stage gate checks. Designs in the earlier format are staged and gated as before. |
 
 These plugin files and options are gone. Nothing in a project should name them.
 

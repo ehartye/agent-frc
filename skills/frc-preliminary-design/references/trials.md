@@ -1,6 +1,8 @@
 # Trials and replays
 
-A trial is a physics run that decides whether an interaction works: a piece is acquired, held, passed, delivered, or the robot is lifted and stays up. The project owns its trial runner and its field model. The plugin reads the trial record, binds it to a case and plays the recording. It does not run a trial.
+A trial is a physics run that decides whether an interaction works: a piece is acquired, held, passed, delivered, or the robot is lifted and stays up. The plugin reads the trial record, binds it to a case and plays the recording. It does not run a trial.
+
+Trials written as data in the design source and run by the design library are coming, planar first and then in 3D on the settled layout. Until this page says so, a project keeps the records of the trials it has run and binds them as described here.
 
 ## Contents
 
@@ -79,7 +81,7 @@ That is four or five runs for an interaction with one uncertain input. The times
 
 ## Bind the trial to its case
 
-A piece in a case is moved by one of four things. Declare which in the case's entry under `stages` in the plan.
+A piece in a case is moved by one of four things. Declare which in the case's entry under `stages` in the judgement file.
 
 | The piece | Declare | Trial needed |
 | --- | --- | --- |
@@ -88,11 +90,11 @@ A piece in a case is moved by one of four things. Declare which in the case's en
 | Has left every mechanism | [`freePath`](../../../docs/preliminary-design.md#a-free-payload-path) | Yes |
 | Rests on or rolls along a field fixture | [`supportedBy`](../../../docs/preliminary-design.md#a-payload-a-field-fixture-supports) | Yes |
 
-The trial record repeats the case ID, the payload group and the payload's exact moves, so the check can tell that the trial established this path. A case that only follows its carrier is a prescribed path and does not count as trial-driven.
+The trial record repeats the case ID, the payload group and the exact start and moves the design source gives the payload, so the check can tell that the trial established this path. A case that only follows its carrier is a prescribed path and does not count as trial-driven.
 
 ## Play the recording as a replay
 
-Convert the recorded run to a replay set in the project and name it under `presentation.replays` in the plan. The replay becomes one more entry in the review page's animation list, after the mission animations. [Replay set format](review-layout-template.md#play-a-recorded-trial-in-the-animation-list)
+Convert the recorded run to a replay set in the project and name it under `presentation.replays` in the judgement file. The replay becomes one more entry in the review page's animation list, after the mission animations. [Replay set format](review-layout-template.md#play-a-recorded-trial-in-the-animation-list)
 
 - Use the run's own timestamps.
 - List what the trial recorded under `recorded` and what was prescribed or interpolated under `display`.
