@@ -2,19 +2,19 @@
 FRAMES = 25
 
 
-def capture(case, measured, placements, meshes, shifted=None):
+def capture(case, measured, placements, meshes, volumes, shifted=None):
     """One case's bodies: display mesh and per-frame placement. A solid that does not move in the case keeps one frame.
 
-    meshes is shared across the cases of one check, so each solid is tessellated once, as drawn. shifted is
+    meshes is shared across the cases of one check, so the library tessellates each solid once, as drawn. volumes
+    are the generated manifest's, so the page shows the volume the library built. shifted is
     (solid, offset) for the displaced control: that solid is drawn where the control put it."""
-    import package_mesh
     steps = [placements.at(case["id"], i / (FRAMES - 1)) for i in range(FRAMES)]
     bodies = {}
     for name, solid in sorted(measured.assembly.solids.items()):
         if name in case["removed"]:
             continue
         if name not in meshes:
-            meshes[name] = package_mesh.surface_mesh(solid.shape)
+            meshes[name] = dict(measured.mesh(name), volumeMm3=volumes.get(name))
         matrices = [steps[i][solid.group] for i in (range(FRAMES) if name in case["moves"] else range(1))]
         if shifted and name == shifted[0]:
             matrices = [placements.matrix.compose(m, placements.matrix.translation(shifted[1])) for m in matrices]
@@ -28,10 +28,10 @@ def scenes(inputs, measured, placements, control):
     cycle = inputs.plan.get("cycle") or []
     meshes, by_id = {}, {c["id"]: c for c in inputs.cases}
     ordered = sorted(inputs.cases, key=lambda c: cycle.index(c["id"]) if c["id"] in cycle else len(cycle))
-    found = [capture(case, measured, placements, meshes) for case in ordered]
+    found = [capture(case, measured, placements, meshes, inputs.volumes) for case in ordered]
     if control:
         nominal = by_id[control["case"]]
-        found.append(capture(dict(nominal, id=CONTROL_ID), measured, PlacedAs(placements, nominal["id"]), meshes,
+        found.append(capture(dict(nominal, id=CONTROL_ID), measured, PlacedAs(placements, nominal["id"]), meshes, inputs.volumes,
                              (control["displaced"], control["offsetMm"])))
     return found
 

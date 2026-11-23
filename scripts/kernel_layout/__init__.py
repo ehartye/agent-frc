@@ -10,6 +10,6 @@ A design has two inputs, kept apart on purpose:
   the judgement file  the plugin's file: stages and their purpose, the cycle, the control, allowances and their
                       basis, attachment labels, budgets, premises, the narrative list and the presentation text
 
-No module here builds a shape or measures a distance. Each module stays under 600 lines and each function under
+No module here builds a shape, measures a distance or tessellates a solid, and none imports the library's internals. Each module stays under 600 lines and each function under
 120; test/kernel-layout-size.test.mjs fails otherwise.
 """
