@@ -57,6 +57,8 @@ test('invalid concepts name the offending field',()=>{
   rejects(edit(turret,d=>{d.outputs[0].ranged.elevationDeg.slewDegS=null;}),/outputs\[0\]\.ranged\.elevationDeg\.slewDegS/);
   rejects(edit(turret,d=>delete d.outputs[0].ranged.turret.slewDegS),/outputs\[0\]\.ranged\.turret\.slewDegS/);
   rejects(edit(turret,d=>{d.schema='agent-frc/concept-bot@2';}),/schema/);
+  rejects(edit(turret,d=>{d.outputs[0].requiresStop=true;}),/outputs\[0\]\.ranged\.firesWhileMoving: an output that requiresStop cannot fire while moving/);
+  assert.equal(validateConceptBot(edit(turret,d=>{d.outputs[0].requiresStop=true;d.outputs[0].ranged.firesWhileMoving=false;})).outputs[0].requiresStop,true);
   rejects(edit(turret,d=>{d.defaultsApplied=['massLb'];}),/defaultsApplied/);
   rejects(edit(placer,d=>{d.defaultsApplied=['massLb'];}),/defaultsApplied/);
   rejects(edit(turret,d=>{d.defaultsApplied=['drive'];}),/defaultsApplied/);

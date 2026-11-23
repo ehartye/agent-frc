@@ -173,6 +173,7 @@ function parse(doc) {
       }
       let moving=false;
       if(q.firesWhileMoving!==false){
+        if(out.requiresStop)fail(sub+'.firesWhileMoving','an output that requiresStop cannot fire while moving; set it to false.');
         const m=fields(q.firesWhileMoving,sub+'.firesWhileMoving',['maxRobotSpeedInS','successFraction']);
         moving={maxRobotSpeedInS:quantity(m.maxRobotSpeedInS,sub+'.firesWhileMoving.maxRobotSpeedInS'),
           successFraction:quantity(m.successFraction,sub+'.firesWhileMoving.successFraction')};
