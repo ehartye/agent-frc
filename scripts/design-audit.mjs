@@ -134,9 +134,11 @@ function customCode(root, files, sources, registryOf) {
       customs.push({name, kind: entry?.kind ?? 'shape', file, text, lines});
     }
     for (const [name, entry] of Object.entries(registry)) if (!code.includes(folder + name + '.py')) findings.push({form: 'custom-not-registered', file: source.file, line: null, detail: 'registers custom "' + name + '" but ' + folder + name + '.py is not there'});
-    if (code.length) info.push({file: folder, text: plural(code.length, 'custom file') + ', ' + plural(total, 'line') + ' of code (guidelines: at most ' + guidelines.customFiles + ' files and ' + guidelines.customLines + ' lines)'});
-    if (code.length > guidelines.customFiles || total > guidelines.customLines) findings.push({form: 'custom-size', file: folder, line: null,
-      detail: plural(code.length, 'file') + ' and ' + plural(total, 'line') + ' of custom code, past the guidelines of ' + guidelines.customFiles + ' files and ' + guidelines.customLines + ' lines: check in with the owner'});
+    const mine = customs.filter(item => item.file.startsWith(folder)), shapes = mine.filter(item => item.kind === 'shape').length, laws = mine.length - shapes;
+    const said = plural(shapes, 'custom shape') + ' and ' + plural(laws, 'custom force law or criterion', 'custom force laws or criteria') + ', ' + plural(total, 'line') + ' of code';
+    const limits = 'at most ' + guidelines.customShapes + ' shapes, ' + guidelines.customTrialFiles + ' laws or criteria and ' + guidelines.customLines + ' lines';
+    if (code.length) info.push({file: folder, text: said + ' (guidelines: ' + limits + ')'});
+    if (shapes > guidelines.customShapes || laws > guidelines.customTrialFiles || total > guidelines.customLines) findings.push({form: 'custom-size', file: folder, line: null, detail: said + ', past the guidelines of ' + limits + ': check in with the owner'});
   }
   return {findings, info, customs};
 }
