@@ -98,7 +98,7 @@ Building solids and measuring them belong to a separate library, `frc-design-ker
 - Prove it can fail. Keep a control that the check rejects.
 - Test behaviour at a seam: a command, an input, a written file. Do not assert on a mock alone or against the value just computed.
 - Do not prove an unchanged result again. A local result is not repeated in CI, except at a stage gate.
-- Do not digest, pin or byte-compare inputs to decide whether to run. The version control system already knows what changed.
+- Decide whether to rerun from what each check actually uses, at the smallest unit of work; never from file bytes, labels, names, notes, status words or version numbers. The decision costs seconds and uses figures the build already produces, with no separate comparison pass.
 - Keep tests independent of the checkout: no fixed ports, no fixed temporary paths, no absolute paths.
 - Say which lane a new test belongs to, in the file's leading comment: `/** @lane merge */`, or `# @lane merge` in Python. Add `@subject PATH` there for each file the test exercises only through a subprocess. The tier of the subject decides the lane: a test of a critical area is `merge` even when it needs the CAD kernel, and a CAD kernel or browser test of a standard or low area is `scheduled`. A slow test of a low-tier area belongs in the release run.
 - While editing, run only what is relevant. Run the merge lane before merging. Run everything only before a release tag or when asked. The hosted run on the default branch executes the full portable suite after every merge.

@@ -41,6 +41,6 @@ Follow [Test by need and risk](docs/testing-methodology.md). It decides what run
 - A change to a page, a title, a name, a status or a document never triggers a model evaluation.
 - The stage gate is the full layout check on the committed design. The agent runs it, once, when the design is marked effective. A draft is published on its own layout check, and a push only publishes.
 - Name the failure a new test catches and keep a control that proves it can fail. One owner per invariant.
-- Do not digest, pin or byte-compare inputs to decide whether to run. Do not prove an unchanged result again.
+- Decide whether to rerun from what each check actually uses, at the smallest unit of work; never from file bytes, labels, names, notes, status words or version numbers. The decision costs seconds and uses figures the build already produces, with no separate comparison pass. Do not prove an unchanged result again.
 - When a run is heading past its time guideline (about 1 minute while editing, 5 before merging, 15 at a gate), stop and check in with the owner.
 - The plugin is a tool of the coding agent, not a dependency of a project. Project code never runs plugin code: no file a project holds or copies from `templates/` may name the plugin's repository, a commit, a path or a variable of it. A project's CI is its own files, written from `templates/project-ci/`.
