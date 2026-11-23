@@ -1,72 +1,120 @@
 ---
 name: frc-mechanical-readiness
-description: "Review a selected robot or subsystem before shop release or showcase promotion. Check exact Fusion and supplier identities, retained assembly paths, interference through motion, fabrication capability, loads and service evidence."
+description: "Review a detailed robot or subsystem design before it is built or marked effective. Check part identity, interference and attachment through motion, shop capability, loads and service, then record the verdict."
 ---
 
-# Review the selected robot for fabrication and publication
+# Mechanical-readiness review
 
-Review the fabrication package and current native Fusion assembly from detailed design. Record a build-ready outcome only when all applicable checks pass. A blocking animation establishes only the gross paths and allowances covered by that study. [Engineering detail and exit criteria for the three phases](../../docs/design-phase-detail.md)
+The review answers one question: can a team build this design from the Fusion file and have it work? It reads the saved, reopened Fusion file and its export, never the live session. It ends with a saved verdict. A detailed design becomes `effective` only on a verdict of `pass`.
 
-For an axial bearing adjustment, [check the complete stack](../../docs/axial-bearing-stack.md). Trace both race load paths, measure the full retained shaft stroke, and test a displaced bearing against the hub, spacer and outside supports.
+**Start here:** do the five steps in order on the design that detailed design hands over. A subsystem is reviewed as a subsystem, with its outside interfaces named.
 
-For a removable motor or bearing with a circular pilot, [check its radial locating play](../../docs/seated-pilot.md) and the remaining shaft-alignment allowance across the interfaces disturbed during service.
+| Word | Meaning here |
+| --- | --- |
+| Reopened | Read from the saved Fusion file after closing it |
+| Export | The STEP written from that Fusion file |
+| Parts list | Every part the design needs, with its site and job, written before the review |
+| Fit | An overlap or gap two named parts are meant to have, with a limit |
+| Duty | One load or motion case a part must survive, with a limit and a measurement |
+| Study | The project file that lists the inputs, parts, fits and duties for one review |
+| Verdict | `pass`, `open` or `fail` |
 
-For repeated parked checks on a few named parts, [verify and reuse their placed STEP geometry](../../docs/mechanical-methods.md#recheck-named-pairs-from-a-large-parked-step). Keep the complete issue as the input to whole-assembly review.
+## Before you start
 
-Use the [agent placement guard](../../docs/checked-placement.md) when moving or installing components. Then repeat the complete cold census and the operating sweep on the issued assembly. [Keep independent pose receipts](../../docs/fusion-authority.md#keep-independent-pose-observations-when-one-trial-stops) so a failed motion trial leaves parked measurements available for diagnosis.
+- Name the scope: whole robot or one subsystem, and the poses it moves through.
+- Find the registered Fusion file and export it. [Find the current Fusion design](../../docs/fusion-authority.md)
+- Collect the parts list, the work list, the bench-test record and any known defects from detailed design.
+- Write down the required travel and handoffs before looking at results.
 
-Compare every physical occurrence in the cold successor with the [pre-CAD target roster](../../docs/article-functions.md). Reconcile added, missing and substituted parts, then qualify actual retention and clearance across the complete assembly.
+## The review, in order
 
-Check saved installation features against independently frozen world datums, including fixed hardware. Trace each loaded mount through its qualified structural members to the chassis. For service, [prove the removal order](../../docs/mechanical-methods.md#prove-the-removal-order) from the assembled inventory, retaining the complete moving group and all prior removals at each step. Identify cosmetic covers and inspect the direction each actual joint can carry. Commission the physical donor, recipient, finite article and supported acceptance interval for every loaded duty. Verify measured separation through a free release, including a held or reversed drive as a control. Review registered numerical disagreements between mating solids using independent interior witnesses and complementary regions. [Operating criteria](../../docs/operating-intent.md)
+### 1. Identity: is every part the part it claims to be?
 
-Start with the exact archive and pose the student would receive. Name the scope, planned operations and candidate revision. Freeze the required operating travel, handoffs and known defects from the commissioning plan. On cold reopen, compare them with the recorded rooted Fusion joint inventory, including fixed and hidden assemblies. A usable engineering model can stay in the project while any required check remains open.
+- Reopen the Fusion file. Compare its parts with the export and with the parts list. Report missing, extra and substituted parts.
+- A purchased part matches the manufacturer's part number, option and model.
+- A shop-made part has an editable Fusion design, a drawing and a stock grade.
+- Each identical fastener has a count and an installed position.
 
-1. Cold-reopen the Fusion archive. Reconcile occurrence hierarchy, installed transforms, native body bounds and exact placed STEP solids against the expected build. Bind a purchased article to the official part, configuration, model bytes and item-level rights. Bind a shop-made article to its editable native design, drawing, stock grade and revision. Identify the repeat count and installed position of each identical fastener. For a volume discrepancy, [retest the supplier and installed bodies at matched accuracy](../../docs/fusion-volume-study.md#compare-a-supplier-import-with-an-installed-solid). If shape comparisons disagree, [check their shared interior and retain the raw measurements](../../docs/mechanical-methods.md#resolve-a-contradictory-source-shape-measurement).
-2. Measure the complete placed assembly. Inspect every separate group and every pair with common material. Follow an explicitly retained connection to the chassis from every part. For an intentional press fit, threaded engagement or moving clearance, identify both bodies, the retaining feature, permissible gap/intersection, tolerance and inspection. Resolve any invalid intersection against the same two native bodies at the reviewed pose. For [disagreeing repeated interfaces](../../docs/mechanical-methods.md#compare-repeated-installed-interfaces), inspect each original pair and compare its native result in the same installed pose. Retest the whole travel or prove a conservative bound between poses.
-3. Ask the shop to reconstruct the hardest joint using its actual tools. Check datums, tool radius, approach/withdrawal, tolerance accumulation, fastener grip, joint restraint, weld access and material/temper where applicable. Replay assembly, inspection and removal within the installed robot. [Shop capability](../../docs/fabrication-capabilities.md) · [Fabrication chain](../../docs/fabrication-chain.md) Commission each installed [blind or through screw stack](../../docs/fastener-stacks.md), its bearing seat, full thread engagement and actual bottom clearance. Trace split pilot faces across the complete wall, including intermediate openings and the shared exit of a through-tapped case. On a chamfered blind bore, locate the clamp face, cylindrical pilot and drill tip separately. Check whether a fastened stack can pull through its structural mount. Move the whole stack in the [retention and service test](../../docs/mechanical-methods.md#can-the-fastened-assembly-pull-through-its-mount) and verify the stop and its load capacity.
-4. Trace each governing load through the real supports. Test the adverse direction, extension, asymmetric loading, jam or power loss where applicable, expected impact, repeated duty and service state. Compare stress and stiffness to source-qualified limits. Preserve unknown fatigue life, material properties and physical test status. Draw the external boundary for each case. For a free chassis, check the available contact reaction and compare the response against independent mass and motion evidence. Repeat with a false fixed restraint. [Mechanism hardening](../../docs/mechanism-hardening.md) · [Coupled support](../../docs/coupled-support.md)
-5. Run the [mechanical-readiness review](../../docs/mechanical-readiness.md) on the candidate. Check independently that the duty roster covers the installed design. A detailed design becomes the `effective` showcase model only with a passing review, including shop and structural duties, and verified rights for every published derivative. Save the review result and commit it with the status change in one reviewed pull request; the publication check fails an effective design whose review does not pass. An [in-progress detailed design](../../docs/design-publication.md#publish-a-detailed-design) can publish beside it on automated prerequisites: an effective preliminary link, a passing layout check on the registered Fusion export and a mission animation. Those prerequisites never make a design effective. A [preliminary design release](../../docs/design-publication.md#publish-a-preliminary-design-release) needs only its layout-checked physics receipt and a mission-task case, and remains secondary to the detailed model. Preserve the previously released model if the candidate has a failed or open check. Record the exact failing pair or duty and the next discriminating test in the project.
+[Parts list](../../docs/article-functions.md) · [Start with the installed assembly](../../docs/mechanical-readiness.md#start-with-the-actual-installed-assembly)
 
-For every defect found by an external study, reproduce its detection using the installed plugin, retain the failing control and rerun the actual candidate. [Method coverage and project issue register](../../docs/mechanical-methods.md)
+### 2. Interference and attachment: does it fit and stay together?
 
-If repeated clashes, inaccessible attachments or an unattainable scoring role survive local fixes, revisit the premise with `frc-preliminary-design`. Compare the inherited mechanism with a different architecture under the same role, space, supply, timing and evidence before choosing the next iteration.
+- Measure the whole placed assembly. Inspect every separate group and every pair that shares material.
+- Trace every part to the frame through a named joint or fastener.
+- For each press fit, thread or moving clearance, name both parts, the feature that holds them, the limit and how it is inspected. Any other overlap fails.
+- Check the whole travel, or prove a bound between poses. Include a control that must collide.
 
-Use the [Fusion authority and revision handoff](../../docs/fusion-authority.md) to establish the one current saved native design, the STEP exported from that design and the identity of the engineering evidence. When resuming in another checkout or before replacing a published view, verify the selected register and lineage with `fusion_authority.py`. For a mechanical review, use `fusion_issue_inventory.capture` in Fusion for missing commissioned poses. [Resume a registered master](../../docs/fusion-authority.md#resume-a-registered-master)
+[Review the geometry and duties](../../docs/mechanical-readiness.md#review-the-geometry-and-duties)
 
-For a mechanism that transfers a game piece, [sweep the actual released object through the installed frame](../../docs/loaded-transfer.md), including its arrival and a jam/reset case. Compare the current vendor purchase BOM to the model’s as-drawn revision for every supplied assembly.
+### 3. Shop and service: can it be made, assembled and taken apart?
 
-For a commissioned [numerically ambiguous interface](../../docs/operating-intent.md#resolve-a-zero-common-on-a-known-ambiguous-pair), check independent bounds on the pair and register any known forbidden material witness.
+- Rebuild the hardest part and joint with the shop's real tools: datums, tool radius, approach, tolerance stack, fastener grip, weld access and material.
+- Check each screw stack: seat, thread engagement and bottom clearance.
+- Replay assembly, inspection and removal inside the installed robot. Cover the battery, the motors and the parts that wear.
 
-Follow the underlying observations for each qualified joint through to their governing case and numerical acceptance limit. The design is shown in [one viewer, its design review](../../docs/design-publication.md#one-viewer-for-one-design).
+[Shop capability](../../docs/fabrication-capabilities.md) · [Fabrication chain](../../docs/fabrication-chain.md) · [Fastener stacks](../../docs/fastener-stacks.md)
 
-Verify mounted hardware at alternate native poses and match each installed constituent's physical material and density to its drawing or supplier requirement. Compare unchanged bodies to their previous native issue. Record motion limits and source-backed material substitutions before issuing a replacement. [Installed hardware and stock](../../docs/mechanical-methods.md)
+### 4. Loads: does each load reach the frame?
 
-For mechanically linked drives, command only the independent native axes and read back the followers. Compare signed travel, installed phase, obstruction and recovery against the commissioned operating interval. [Review coupled operating motion](../../docs/operating-intent.md)
+- Trace each governing load through the real supports. Draw the boundary of each case.
+- Test the adverse direction, full extension, uneven loading, a jam, power loss and expected impact where they apply.
+- Compare stress and stiffness with sourced limits. Record unknown fatigue life, material properties and physical tests as unknown.
+- For anything that lifts the robot or sets the scoring rate, use `frc-mechanism-hardening`.
 
-For a loaded duty, check the entire rotating article and the simultaneous forces and moments on each body through the required interval. Compare the actual nested supplier solids against their commissioned mounting sites. [Finite motion, support and placement](../../docs/operating-intent.md)
+[Mechanism hardening](../../docs/mechanism-hardening.md) · [Coupled support](../../docs/coupled-support.md)
 
-When a delivery depends on a sensor or simulated support decision, [commission its original observation clock](../../docs/loaded-transfer.md#verify-an-admission-decision-on-its-own-clock) and retain the exact article accepted or denied at every required tick.
+### 5. Verdict: run the checker and record the result
 
-For a loaded transfer, require its independently registered trajectory law and all synchronized measurements. Reconcile one-sided article momentum across every custody transition and any independently observed impact. Check the full dwell and retain a matched within-boundary and crossed-boundary case. [Commission measured motion](../../docs/loaded-transfer.md#register-the-executed-trajectory)
+Write the study, measure the export, name the measured file as `geometry` in the study, then review it.
 
-Before making a design effective, run the [publication check](../../docs/design-publication.md#effective-designs) locally. Attach the review's findings to the pull request and keep the current effective design published while any required qualification is open.
+```sh
+python PLUGIN/scripts/mechanical_readiness.py measure . STUDY.json --output cad/detailed-design/geometry.json
+python PLUGIN/scripts/mechanical_readiness.py review . STUDY.json --rescan --require-publication --output cad/detailed-design/readiness-result.json
+```
 
-For a deferred native readback, [stage its exact plugin and project dependencies](../../docs/native-job.md) before dispatch. Keep the same source issue through export, each cold inspection and release.
+`--output` refuses to overwrite a file, so remove the earlier result first. The result lists each finding with its parts and reason. It reports one verdict under two names, `showcaseEligibility` and `buildReadiness`: `fail` when a finding fails, `open` when any finding is open, otherwise `pass`. `engineeringGeometry` is the same verdict for geometry findings alone. [Study fields and the checker](../../docs/mechanical-readiness.md#run-the-checker)
 
-For a numbered design, commission the whole-robot or subsystem publication scope and review the selected current native issue. The earlier design stays effective until the pull request that makes the new one effective merges. [Design status](../../docs/design-publication.md#design-status)
+- Run `node PLUGIN/scripts/bench-tests.mjs check . --design ID`. Each `before-build` test needs a passing result and each `on-robot` test an owner and a plan. Marking the design effective is refused otherwise.
+- On `pass` with the bench tests resolved, check in, then mark the design effective with the commands in `frc-detailed-design` step 7.
+- On `open` or `fail`, record the failing pair or duty and the next test that would settle it. The design stays `in-progress` and the current effective design stays published.
 
-For stalled oblique solid pairs, [measure a finite directional clearance bound](../../docs/mechanical-readiness.md#separate-two-oblique-solids-before-a-costly-intersection) on the exact installed articles and keep checks of contact, load and motion in their original scope.
+## Defaults: do these without being asked
 
-For a keyed drive, commission both loaded flanks, radial support, axial restraint and the signed torque. Reproduce the seated and withdrawn cases before selecting the installed key. [Test torque through a straight key](../../docs/operating-intent.md#check-torque-through-a-straight-key)
+1. Review the reopened file and its export. Never review the live session.
+2. Check that the duty list covers the installed design before trusting a pass.
+3. Keep a failing control with every check that could pass by accident.
+4. Record each result as calculated, simulated, read from Fusion or physically tested.
+5. Record an unknown as unknown. Do not fill it with an estimate.
+6. Leave the previous effective design published while any finding is open.
+7. Attach the findings to the pull request that changes the status.
 
-For a modeled thread in a smooth pilot, check the location of the common material in both cold Fusion and the placed STEP. [Commission the physical pair and its permitted region](../../docs/spatial-fits.md).
+## Check in with the user before
 
-For machined stock whose profiles stay constant between machining depths, [compare the material in every section](../../docs/stock-sections.md). Check a displaced control and retain conflicting native observations.
+1. Starting a scan you expect to run past two hours. That figure is a guideline a project may replace.
+2. Narrowing the scope to pass.
+3. Retagging a `before-build` bench test as `on-robot`.
+4. Marking the design effective.
+5. Returning to whole-robot design. Do this when clashes, unreachable attachments or an unattainable scoring role survive local fixes: compare the mechanism with a different architecture under the same requirements using `frc-preliminary-design`.
 
-If a valid placed solid even gives invalid self-subtractions, [compare the full placed BReps of that registered occurrence in the two exports](../../docs/mechanical-methods.md#compare-two-placed-representations-of-the-same-solid). Retain the raw Boolean results and a displaced control.
+## When you see this, try this
 
-For a purchased flexible drive represented by a smooth band, [compare the finite belt envelope and sampled metal](../../docs/belt-envelope.md). Preserve pulley overlap and every nonmating contact, and qualify tooth engagement, tracking and load separately.
+| You see | First thing to try |
+| --- | --- |
+| A duty has no evidence | Decide which it is: nobody was asked, it needs a physical test, it does not apply, or another duty covers it. Write the exemption with its reason, or the bench test with pass and fail numbers. |
+| A part connects to nothing | Find its joint or fastener in Fusion. If none is drawn, send it back to detailed design. |
+| An overlap that looks intended | Register the pair as a fit with a limit from the drawing. Confirm the overlap is where the fit is. |
+| A volume or shape comparison disagrees | Measure both at matched accuracy before blaming the part. |
+| A scan stalls on one pair | Bound the pair by direction, or keep finished results and resume. |
+| An outside study found a defect the plugin missed | Reproduce it with the installed plugin, keep the failing control, rerun the design. |
 
-After changing structural stock, [recover stress from its actual cut section](../../docs/section-bending.md). Check both extreme fibers and the signed governing load. Repeat a proposed section on the cold installed derivative.
+More situations, one row each: [special cases](references/special-cases.md).
 
-When a named supplier comparison stalls, [retain and resume the individual source measurements](../../docs/mechanical-methods.md#keep-completed-source-comparisons-when-a-solid-takes-too-long). Use the full fresh readiness scan for promotion.
+## Links
+
+| Topic | Read |
+| --- | --- |
+| Full method, study fields and commands | [Qualify the model students will build](../../docs/mechanical-readiness.md) |
+| Statuses and what makes a design effective | [Effective designs](../../docs/design-publication.md#effective-designs) |
+| Finding and exporting the Fusion file | [Fusion authority](../../docs/fusion-authority.md) |
+| Detection methods for known defects | [Mechanical methods](../../docs/mechanical-methods.md) |
+| Required travel, transfers and linked motion | [Operating criteria](../../docs/operating-intent.md) |

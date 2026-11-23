@@ -43,4 +43,4 @@ Register the project’s changed and full test commands, verify the actual defau
 
 For a project with `iterations/active.json`, follow its active design root before recovering older records. After a decision to start over, use `frc-start-over` to preserve the evidence and open a fresh numbered design. [Design iterations](../../docs/design-iterations.md)
 
-When pausing or moving a Fusion design to another computer, commit the archive, register, lineage and STEP and let Git carry them. For extra files, record the selected native files and canonical STEP, then verify them in the receiving checkout. [Transfer an issued design](../../docs/fusion-authority.md#transfer-an-issued-design-to-another-checkout)
+When pausing or moving a Fusion design to another computer, commit the archive, register, lineage and STEP and let Git carry them. For extra files, record the selected native files and canonical STEP, then verify them in the receiving checkout. [Transfer an issued design](../../docs/fusion-authority.md#move-a-design-to-another-computer)

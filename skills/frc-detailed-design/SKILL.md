@@ -1,139 +1,216 @@
 ---
 name: frc-detailed-design
-description: "Use for detailed design of mechanisms and their native Fusion assembly, purchased parts, fabrication features, drawings and mechanical evidence."
+description: "Use for detailed design of a robot in Fusion: start from the effective preliminary design, model real parts, joints and fasteners, keep its reserved paths, mass and voltage checked, and publish drafts until the design is effective."
 ---
-# Detailed design of the native assembly and fabrication package
+# Detailed design in Fusion
 
-During detailed design, take the accepted preliminary assembly layout into Fusion. Show actual joint-driven motion on the saved supplier and fabricated geometry and return a violated reservation to its owner. [Engineering detail and exit criteria for the three phases](../../docs/design-phase-detail.md)
+Detailed design turns the effective preliminary design into a Fusion design a team can build. The work stays inside what preliminary design reserved, or sends the reservation back. The phase ends when a reviewed pull request marks the design `effective` on a passing mechanical-readiness review.
 
-When the project has not specified a drivetrain, start with four-module swerve and use the [module selection workflow](../frc-swerve/SKILL.md) before committing mounting interfaces. Follow a specified drivetrain for that project.
+**Start here:** find the preliminary design that `docs/preliminary-design/releases.json` marks `effective`, and do step 1. This skill authorizes no hardware operation or deployment.
 
-Begin detailed geometry from the [shared whole-robot package issue](../../docs/preliminary-design.md). Check its revision, datum, mount and path allowances. Return a changed interface to the whole-robot designer with a fresh local path check.
+In the commands, `PLUGIN` is the [installed plugin folder](../../docs/setup-health.md#resolve-the-plugin-used-by-this-check), `REGISTER` is the project's Fusion register and `EXPORT` is the newest export folder. `ID` is the detailed design's ID, a version such as `1.0`. Run commands from the project root, in PowerShell or a POSIX shell.
 
-Use **Autodesk Fusion as the student authoring environment**. Start from the project's active Fusion design. Maintain student-editable sketches, parameters, components, joints and drawings there. Hand off a saved version and a reopened F3D or F3Z archive with linked components resolved. Record which features a student can edit and which came from imported solids.
+A detailed design takes the name of its preliminary design and its own version, `MAJOR.MINOR`, as its ID. The major number equals the preliminary design's. The minor number counts effective detailed designs. Staging the same ID again is the next draft; drafts take no number. [Name and number a detailed design](../../docs/design-publication.md#name-and-number-a-detailed-design)
 
-Before drawing mounting holes, [design the attachment](../../docs/attachment-design.md). Select a stock section, locate the supported bolt or rivet rows and size the overlap from the actual host edges. Check full bracket and host stock, fastener volumes, tool motion and the removal path at the permitted combined offsets. Document the candidate hardware, governing load, shop process and service order in the project drawing.
+**Words.** The Fusion file is the saved Fusion design the project registers as current. The export is the STEP written from it. The blockout is the preliminary layout's solids. A reservation is a volume, path, mass or voltage figure preliminary design set aside. Reopened means read from the saved file after closing it.
 
-When a design agent creates, inserts or moves a part, run the [checked placement](../../docs/checked-placement.md) against the last accepted assembly before adopting the new pose. Keep rejected proposals and their named pair evidence with the experiment. For an edit under a rotated or translated parent, [apply the nested root-frame example](../../docs/checked-placement.md#move-a-nested-child-in-the-root-frame) and remeasure the intended material after attaching and reopening.
+## What you start with
 
-After a feature batch or saved revision, [check timeline health, physical seats, mass and center of mass](../../docs/fusion-design-checkpoints.md). Carry changes in load or timing into the project power and route comparisons.
+The handoff is the effective preliminary design's folder, `cad/preliminary-design/releases/VERSION/`, with its handoff note, `HANDOFF.md`, when it has one.
 
-[Check the collision shape the solver actually used](../../docs/collider-comparison.md) against the issued article and its mounted poses before carrying a contact result into design.
+| Handed over | What you do with it |
+| --- | --- |
+| Blockout: the STEP that `layout.json` names | Bring it into Fusion as the reference (step 2) |
+| Robot frame and datums: `layout.json` `datum` and `mounts`, and the note | Put each joint origin on its datum (step 2) |
+| Envelopes in the note: frame, bumpers, parked height, reach | Draw each limit as a `Limit` body (step 2) |
+| Interfaces and allowances: `mounts`, declared fits and the note | One work item each. Draw every undrawn connection |
+| Motion cases, cycle and displaced control | Repeat them unchanged on every export (step 4) |
+| Mass and loaded-voltage budgets: `budgets.json` and its limits file | Charge every change against the stated reserve (step 4) |
+| Open risks and bench tests: `missions.json` `risks` and the note | A work-list row for each risk and a bench-test record (step 1) |
+| Operating point and its passing range | Draw the stop or adjustment that holds it (step 3) |
+| Trials and replays | Repeat each trial the note lists, and any whose contact surfaces change (step 5) |
+| First work items in the note | The first rows of the work list (step 1) |
 
-Before sizing an actuator from simulation, [compare the actual articles moving with each joint](../../docs/articulated-mass.md). Verify the signed axis, moving mass, center and rotary inertia at the selected configuration. Keep unknown purchased internals visible.
+## Order of work
 
-For each purchased part, look for the manufacturer's model of the exact part number, generation and installed configuration. Import an official STEP into Fusion when the supplier provides that format. Verify units, revision, mounting datums, occurrence count and installed orientation against the manufacturer drawing. Record the manufacturer, part number, revision, configuration, source and retrieval date in the project's parts register, and commit the model with the project.
+### 1. Read the handoff and write the work list
 
-External shape authoring requires a project-specific reason why that operation is impractical in Fusion, the result it enables, and a path back into the student assembly. For a large scripted family of candidates, for example, preserve the generator and its inputs and import the chosen solid into Fusion. Where an exact purchased model cannot be obtained, record the failed lookup or mismatch, mark the replacement as a proxy, cite its dimensional basis and identify which design decisions remain open.
+Read that folder end to end, the handoff note first when it has one. Write `cad/detailed-design/work/ID/work-list.md` before drawing anything. Give it one row for each first work item, interface, undrawn connection, open risk and reservation.
 
-Before selecting parts or combining design changes, use the [assembly accounting check](../../docs/assembly-accounting.md) to reconcile installed instances, supplied articles and inspection mass. When a later revision replaces a candidate part, select the installing change first and record each revisionâ€™s own signed net mass. Trace the comparison limit to the projectâ€™s selected rule or budget before relying on a final margin.
+Each row holds: the handoff's own name or number for the item; its kind (work item, interface, risk or reservation); the subsystem and part it lands on; the step below that closes it; the pass and fail numbers, copied unchanged; and the result, open or the file and line that records it.
 
-For an issued engineering assembly, [reconcile the full reopened physical-material inventory with the configured BOM](../../docs/engineering-material-mass.md). Separate stock grades, complete purchased articles and display or fixture bodies. Reconstruct a critical fastened interface from the drawing and loose parts before making a fabrication claim.
+Bench tests have their own record, `cad/detailed-design/designs/ID/bench-tests.json`. Seed it from the handoff. Give each test a tag, `before-build` or `on-robot`, an owner and a plan. Record each result with the second command. More simulation never closes a bench test. [Bench tests as records](../../docs/design-publication.md#bench-tests-handed-over-from-preliminary-design)
 
-For each joint pose, [choose the observation stage](../../docs/mesh-correspondence.md#choose-when-to-observe-a-joint) that matches the design claim. Verify the actual coordinate, moving members and stationary structure.
+```sh
+node PLUGIN/scripts/bench-tests.mjs seed . --design ID --preliminary VERSION
+node PLUGIN/scripts/bench-tests.mjs result . --design ID --test TEST --value VALUE --note "TEXT"
+```
 
-When a saved assembly replaces a temporary CAD document, use the [native study replay procedure](../../docs/native-study-replay.md) to verify the destination, assembly revision and moving geometry before repeating a clearance query. Save the binding and pose inputs in the design project.
+A case or budget line the handoff already shows as failing or thin is an open risk with a row of its own. It is not a new violation.
 
-When resuming an existing design, follow the [design continuation procedure](../../docs/strategy-first-continuation.md) before proposing the next CAD edit or mechanism experiment.
+If `iterations/active.json` or the project's Fusion register names a different architecture from the effective preliminary design, the status index decides. Do not resume the other design's Fusion file. The version carries the architecture. Check in. `frc-start-over` is the route to a new major version: it opens a design root and register for it.
 
-Read [grounding policy](../../docs/grounding.md). Start with the [learning brief](../../docs/briefs.md): npm run brief -- --workflow mechanism-cad --season YEAR --as-of YYYY-MM-DD. The brief is optional scaffolding, not a source-reading substitute. No vault is required; local catalog use must be explicitly configured.
+### 2. Start the Fusion file from the blockout
 
-For a new kickoff design, use the [field lab and narrative handoff](../../docs/kickoff-field-lab.md) first. Identify the chosen match role, the student observation that supports it and the capability the proposed mechanism must satisfy.
+1. Create one new Fusion design for this robot design. Work in millimetres. Put the Fusion origin on the layout datum, with the axes the handoff states.
+2. Save the Fusion file beside the register and register it before the first export. The register is `cad/fusion-authority.json` under the project's design root. [Find the current Fusion design](../../docs/fusion-authority.md)
+3. Insert the blockout STEP at the origin. Do not edit its solids. Measure one handoff datum point to confirm the frame.
+4. Put joint axes, mount points and travel limits from the handoff in one layout sketch in the root component. Parts reference that sketch.
+5. Put reserved volumes for wiring, tools, hands and service in a component named `Reservations`. Where the handoff reserves none, add the ones this design needs as you find them. Add each envelope limit the handoff gives as a number, such as a reach or a height, as a thin `Limit` body there. Keep them to the end.
+6. Resolve the palette with `python PLUGIN/scripts/component_palette.py .` and colour parts by role. [CAD colour convention](../../docs/cad-color-convention.md)
 
-Before issuing a still, [verify the saved viewport or registered render](../../docs/cad-capture-review.md). Reopen and activate the selected assembly, restore only the intended display state and compare the resulting pixels with an independent view. Check the whole outline, visible mechanism, cover finish and readable markings promised in this pose. Keep failed captures and distinguish a verified renderer from a native viewport.
+Name components so the export maps back to the motion cases. The layout check knows a solid by its component's name, and every solid must be in exactly one group of the plan.
 
-## Establish context
+| Rule | Why |
+| --- | --- |
+| One body in each leaf component | Two bodies export as `NAME [index]`, and the index moves with the browser order |
+| The main part that replaces a blockout solid keeps that solid's exact name | Mounts, cases and the displaced control still find it |
+| Every other part is named `BLOCKOUT NAME - part`, such as `Carriage plate - left bearing block` | Your script puts it in that solid's group and gives it that solid's moves in every case |
+| A part placed several times keeps one component | Each copy exports as `NAME [index]`. List them again after reordering |
 
-- Game-piece geometry and season envelope.
-- Load cases, motion range and manufacturing process.
-- CAD document/version and measurement provenance.
+Copy the preliminary design's check inputs to `cad/detailed-design/designs/ID/`. Rewrite each file reference for the new folder and point `layout.json` at the export. Keep the cases, cycle, displaced control and declared fits unchanged. The check matches exact names only, so every new solid needs its own entries. Generate them from the naming rule with a small project script kept beside the plan. Do not type them by hand.
 
-## Work through the evidence
+| File | Entry for each solid |
+| --- | --- |
+| `layout.json` | `groups` members; `presentation.components` purpose and rationale; `mounts` where a member has its own |
+| Motion study | `moves` and `initialPose` in every case that moves its group |
+| `budgets.json` | `masses` members |
 
-1. Sketch acquisition, transfer, staging and release states.
-2. Trace source-code caller/end/default/periodic paths independently of geometry.
-3. Define CAD joints, clearances, drawing dimensions and an export/reopen check.
+Export, run the layout check (step 4) and publish draft 1 (step 5) while the file still holds only the blockout. This proves the frame, the names and the publishing path. Compare the solid names in that export with the blockout's and fix any name that changed in the round trip.
 
-Inspect unmatchedQueries, omitted counts, source versions and review dates. Open relevant official/pinned sources before factual decisions. Keep source findings, recommendations and unknowns separate. Never infer compatibility from an empty season list or a matching keyword.
+### 3. Detail one subsystem at a time
 
-## Reviewable output
+Take the riskiest subsystem first. With no specified drivetrain, start with four-module swerve and use `frc-swerve` before fixing its mounts. Start a new chassis from the [frame profile](../../docs/frame-profile.md) sketch. Work through each subsystem in this order.
 
-Deliver a state table, cad review checklist and proposed measurement sheet. For each material claim identify source URL/version, applicability and verification level. Record actual commands/results separately from proposed tests.
+| Order | Do | Method |
+| --- | --- | --- |
+| 1. Parts list | List every part the subsystem needs: site, part, option and the job it does. A fastener names the joint it holds. | [Parts list](../../docs/article-functions.md) |
+| 2. Purchased parts | Import the manufacturer's model of the exact part number and option. Check units, mounting datums and orientation. Record source, date and option in the parts register and commit the model. | [Hardware catalog](../../docs/hardware-catalog.md) |
+| 3. Structure and attachment | Design each attachment before drawing holes: load, two patterns on the real faces, stock, hardware, tool side, removal order. | [Attachment design](../../docs/attachment-design.md) |
+| 4. Shafts and bearings | Give each shaft two supports, an axial stop each way and a way out. | [Bearing stack](../../docs/axial-bearing-stack.md) · [Seated pilot](../../docs/seated-pilot.md) |
+| 5. Fasteners | Model one real fastener for each distinct joint and pattern it. Check length, thread engagement and bottom clearance. | [Fastener stacks](../../docs/fastener-stacks.md) |
+| 6. Stops, adjustments and tolerances | Draw the hard stop or adjustment for each operating point at its handoff value, with the range the trials passed. | [Operating space](../../docs/operating-space.md) |
+| 7. Sensors and wiring | Mount each sensor and reserve room for wires, connectors and a hand. | [Sensor observability](../../docs/sensor-observability.md) · [Electrical review](../../docs/electrical-review.md) |
+| 8. Joints | Give each moving part a Fusion joint on its datum, with limits. | [Fusion handoff checks](../../docs/native-fusion-handoff.md) |
 
-- Unmeasured dimensions and loads are marked assumptions.
-- A command goal does not certify mechanical stopping or guarding.
-- Source file and asset licenses are checked before reuse.
+When the real parts of a blockout solid are in place, delete that solid in the same edit that gives its name to the main part. For the mechanisms that decide the match role, use `frc-mechanism-hardening`.
 
-No hardware operation or deployment is authorized by this skill. Do not infer physical safety, CAD validity or model effectiveness from static review or passing software fixtures. Source/file/dependency licenses must be checked before copying.
+### 4. Keep the reservations checked
 
-## Native CAD evidence and long-running checks
+After each subsystem, save, export and run all four checks. Fix or report every new failure before the next subsystem.
 
-Read [native CAD verification lessons](../../docs/native-cad-feedback.md) before claiming clearance or validating a mounting interface. Audit static support/cartridge interfaces separately from moving/game-piece sweeps; preserve baseline contacts and failing intermediate poses. Require method-qualified bounds, negative controls and source-bound incremental progress for expensive checks. Do not describe the proposed native backend optimizations as implemented by the portable blockout CLI.
+| Reservation | How it is checked |
+| --- | --- |
+| Paths | The layout check sweeps the export through the preliminary motion cases. |
+| Volumes | The `Reservations` bodies and the remaining blockout solids are solids in the same check. A part that enters one fails its case. |
+| Mass | Read mass and centre of mass from Fusion. Write each subsystem's range into `budgets.json` `masses`. The check compares the upper total with the limit. |
+| Loaded voltage | After a change of motor, gearing or load, update `batterySideA` and `loadedKg` in `budgets.json` `electricalCases`. The check compares every case with its minimum voltage. |
 
-Use `npm run native:witness -- receipt.json expected-manifest.json` for the bounded native-evidence contract. Independently prepare the expected manifest before the native run, including source pins, exact witness states/pairs/phase and method/tolerance policy; phase-unregistered rotating geometry, failed Booleans and incomplete receipts remain unknown. This is receipt checking, not native CAD execution. At every meaningful tool failure or result, send source-bound friction and a counterexample to the plugin feedback loop instead of postponing harvest until cleanup.
+Export from Fusion's Python environment into a new folder each time, such as `cad/detailed-design/designs/ID/export-3`. It writes `assembly.step` and `lineage.json`. Delete the previous export folder; Git keeps it. Then verify the export and run the check from a terminal:
 
-## Source identity and proxy-contact boundaries
+```python
+fusion_authority.export_issue(app, project_root, register_path, new_export_folder)
+```
 
-For nested native assemblies, use [occurrence identity checking](../../docs/native-identity.md) before reusing body/source mappings. Capture actual ancestry, child overrides and the complete expected physical inventory, including hidden bodies. Never infer identity by display name alone.
+```sh
+python PLUGIN/scripts/fusion_authority.py . REGISTER EXPORT/lineage.json
+node PLUGIN/scripts/design.mjs preliminary-check . cad/detailed-design/designs/ID/layout.json --physics-only --fail-fast --jobs 4
+node PLUGIN/scripts/design.mjs preliminary-check . cad/detailed-design/designs/ID/layout.json --write-view --output cad/detailed-design/designs/ID/receipt.json --jobs 4
+```
 
-For new proxy-contact evidence, use [native witness version 2](../../docs/native-cad-feedback.md). Declare both operand representations and independently checked installed-transform registration. Outer-envelope overlap and unregistered supplier-source orientation remain unknown for installed material contact. Preserve observed volumes and failed poses; do not omit unsupported contact from a physics model or downgrade the receipt schema to obtain clearance.
+Use the first check line while fixing and the second for the result you publish. [Mass, centre of mass and voltage](../../docs/fusion-design-checkpoints.md) · [Layout check](../../docs/preliminary-design.md)
 
-## Operating-space iteration
+### 5. Publish the draft as in-progress
 
-Use [define, check and iterate the operating space](../../docs/operating-space.md) when the student needs to set functional ranges, assess tolerances or recheck a changed design. Reuse the existing narrative/artifact; maintain the linked worksheet as a sidecar, classify physical versus study/model limits, and invalidate affected evidence after changes. Keep consequential choices with the student.
+A detailed design publishes as `in-progress` on three things: a link to the effective preliminary design, an export that passes the layout check on that design's motion cases, and a mission animation on the detailed geometry. Keep the copied `missions.json` beside the plan; it names the mission cases to play. Rerun a physics trial when detailing changes a surface that touches the game piece.
 
-## Native deliverable contract
+```sh
+node PLUGIN/scripts/detailed-design-release.mjs stage . --design ID --inputs cad/detailed-design/designs/ID --preliminary VERSION --authority REGISTER --lineage EXPORT/lineage.json
+node PLUGIN/scripts/design-publication.mjs check . --skip-rerun
+```
 
-For replacements or removals, use [native revision persistence](../../docs/native-revision.md). Check exact occurrence/body instances, empty-container ancestry, after-edit/recompute/reopen inventories and required persistent features. A delete return value or equal body count is insufficient. Recheck assembly interfaces independently from the game-piece path and preserve all new or increased interference witnesses.
+Stage the same ID after each subsystem. Commit the Fusion file, export, check inputs and published folder together, push, and open the published page. [Publish a detailed design](../../docs/design-publication.md#publish-a-detailed-design)
 
-Use the [native Fusion handoff checks](../../docs/native-fusion-handoff.md) for the student assembly. Save and reopen the selected archive. Verify grounding, repeated physical placements, symmetric edits, stored joint limits and complete native/export inventories. Identify supplier access requirements and which features students can edit.
+### 6. Take the readiness review
 
-## Standing viewing convention
+When every subsystem is detailed and no blockout solid remains, run `frc-mechanical-readiness` on the reopened Fusion file. Before the review, `node PLUGIN/scripts/bench-tests.mjs check . --design ID` passes: every `before-build` test has a passing result and every `on-robot` test has an owner and a plan. Fix what the review fails, republish the draft and review again.
 
-Use the [CAD color convention](../../docs/cad-color-convention.md) for new/revised robot views: consistent functional roles, visible legend and non-color labels, with documented project overrides. Preserve supplier appearances and physical material properties; appearance never means safety or verified performance. Recheck native persistence and body inventory after application.
+### 7. Mark the design effective
 
-## Loaded feed paths
+Check in before this step. `effective` refuses a design while a bench test is unresolved. Save the passing review result, then:
 
-For a loader, hopper or circulating carrier, sweep the loaded gate and adjacent pieces, record downstream acceptance and trace the return path on one clock. Check the next ID after reset and compare the achieved spacing with the required service rate. [Trace storage to the receiver](../../docs/storage-to-service.md).
+```sh
+node PLUGIN/scripts/detailed-design-release.mjs effective . --design ID --readiness cad/detailed-design/readiness-result.json
+node PLUGIN/scripts/design-publication.mjs check .
+```
 
-## Project tidying
+Open one pull request with the status change, the review result, the entry page and the README still. The design is effective when it is reviewed and merged. [Effective designs](../../docs/design-publication.md#effective-designs)
 
-Use [safe project tidying](../../docs/project-tidying.md) when choosing an active Fusion draft or handing it back. Give the draft a recognizable name, verify the requested save in its authorized destination, and report the active tab. Inventory exact document identities, preserve unknown or unsaved work, reuse verified saved states, and reconcile long-running operations before closing inspection copies or retrying.
+## Return a reservation to preliminary design
 
-For a frame or bumper support, recover the complete installed backing inventory behind its cover and preserve display states. Measure finite mating area and separately reopen an explicitly identified replacement. [Check hidden backing and support fit](../../docs/hidden-backing-fit.md).
+Return it when a reserved path, volume, mass or loaded-voltage figure cannot be kept after the cheap fixes in the table below.
 
-Before relying on a Fusion mass or Boolean result, compare direct native and temporary volume readings on a known solid, check a material-overlap control and a disjoint control, and inspect the face set. For a machining change, restrict the cut participants and reopen both the intended body and each neighbor crossed by the tool. [Run the two-plate Fusion experiment](../../docs/fusion-volume-study.md).
+1. Stop work on the affected interface. Other subsystems continue.
+2. Record the failing pair, case and amount, or the budget line and shortfall, in the work list.
+3. Check in with the user.
+4. Open the next preliminary minor version as a draft and hand the record to `frc-preliminary-design`. After effective `1.0` that is `python cad/preliminary-design/stage.py --copy-inputs 1.0 1.1`. A different architecture is the next major version and a new detailed design.
+5. The detailed design stays `in-progress` and keeps its ID. When the new preliminary version is effective, copy its changed cases into the detailed plan, rerun the check and stage the same ID again with `--preliminary 1.1`. If no case changed, `node PLUGIN/scripts/detailed-design-release.mjs relink . --design ID --preliminary 1.1` re-points it.
 
-Before using generated primitives for clearance, verify actual world bounds/registration and analytic volume with translated/axis/near-axis controls. Use the bounded placement-witness helper described in native-fusion-handoff.md; correct volume alone cannot establish correct placement, and matching witnesses do not establish clearance.
+[When to return to an earlier phase](../../docs/design-phase-detail.md#when-to-return-to-an-earlier-phase) · [Start the next version](../../docs/design-publication.md#name-and-number-a-design)
 
-For an authorized official local Fusion session, use the [guarded disposable recipe](../../examples/fusion-guarded/README.md): unique document match plus job marker, expected geometry/revision, durable intent, no uncertain replay, feature health and separate native/STEP reopen evidence. Do not generalize the executed sideplate test to a full robot or untested client crash recovery.
+## Defaults: do these without being asked
 
-## Portable export, articulation and viewer contracts
+Say in the result when one could not be done.
 
-For each new assembly, run `python <plugin>/scripts/component_palette.py <project>` to resolve the default viewing palette and any overrides under `cad/component-palette.json`. Assign project parts by stable role in Fusion. Preserve purchased appearances and use the same part mapping for the published CAD.
+**Starting**
+1. Build on the effective preliminary design, not on old CAD. Reuse an earlier Fusion component only when it fits the handoff datums, and name it.
+2. Keep one Fusion file for each robot design. Register it the day it is created.
+3. Use the handoff's robot frame and datums unchanged. A datum that has to move is a return to preliminary design.
+4. Keep each blockout solid until its real parts exist. Then delete it and say so.
 
-Use the [native viewer contract guide](../../docs/native-viewer-contracts.md) for independent expected/observed JSON comparisons. The native:export and native:articulation commands require exact inventories, archive identity, explicit frames/units and finite witnesses. Expected input comes first for both commands. Preserve synthetic, native-observed and human-reported evidence boundaries as allowed by each contract; a match does not execute CAD, prove a reopen or qualify a robot.
+**Parts**
+5. Nothing floats. Every real part is joined or fastened to something that traces to the frame. Clear each floating solid in the check's `[attachment]` lines, or list it with the reason. Blockout solids are exempt until replaced.
+6. Nothing overlaps unless it is a declared fit. Register press fits, threads and squeezed game pieces by pair with a limit.
+7. Use the manufacturer's model for a purchased part. Where none exists, use a labelled stand-in and list what it leaves open.
+8. Give every moving part a joint with limits, and a hard stop or a stated reason it needs none.
+9. Author shapes in Fusion. An outside tool needs a written reason and a path back into the Fusion file.
+10. Colour by role from the project palette. Bumpers take the documented alliance colour. Supplier finishes stay.
 
-Before using a sensor to advance the mechanism, [check the mounted optical path and release evidence](../../docs/sensor-observability.md). Compare the seated and early-exit readings with the actual material and require an independent clearance observation for withdrawal.
+**Working in Fusion**
+11. Save, close and reopen before measuring anything you report.
+12. Check timeline health after each batch of features. Fix a failed feature before the next edit.
+13. When a script moves or inserts parts, work in a copy. Keep the last good file until the new one passes.
+14. Record which features a student can edit and which came in as imported solids.
 
-Trace the same camera rays with the piece removed at pickup and during travel. Identify which rays still see a calibrated surface as the mechanism moves. Use those rays to distinguish a seated piece from an empty or shifted one. [Check the traveling camera view](../../docs/camera-reference.md).
+**Publishing and moving**
+15. Publish a draft after each subsystem, under the same ID.
+16. Commit and push the Fusion file, export and check inputs together every session. Another computer starts with `git pull`.
+17. Run the publication check locally before pushing.
+18. Use project-relative paths. No drive letters and no home folders.
+19. Take the obvious choice and say what you chose.
 
-For a publicly downloadable whole robot, bind the student archive to its own reopened component, feature and joint evidence. [Verify the public Fusion handoff](../../docs/public-fusion-handoff.md).
+## Check in with the user before
 
-Begin detailed CAD from the selected [whole-robot architecture](../../docs/whole-robot-comparison.md). Check the installed revision against its [elevation loads, cycle rate and recovery](../../docs/mechanism-hardening.md).
+1. Returning a reservation to preliminary design.
+2. Using more than half of the margin the handoff states between a mass or voltage estimate and its limit.
+3. Changing the drivetrain or a purchased part family.
+4. Starting a check you expect to run past the 30-minute guideline.
+5. Making a third local fix to the same clash.
+6. Acting when the project's Fusion register or `iterations/active.json` names a different design from the effective preliminary design.
+7. Marking the design effective.
 
-Start a new chassis with [rear plan chamfers](../../docs/frame-profile.md). Use the generated Fusion-importable sketch for the frame and continuous backing, padding and cover. Preserve the ordinary side elevation and verify the actual joint, attachments and wheel clearances.
+## When you see this, try this
 
-Take up every bench test the preliminary design hands over: seed `bench-tests.json` with `bench-tests.mjs seed`, tag each test `before-build` or `on-robot`, and give it an owner and a plan. A design becomes effective only when every before-build test has a recorded passing result and every on-robot test has an owner and a plan. [Bench tests as records](../../docs/design-publication.md#bench-tests-handed-over-from-preliminary-design)
+Likely causes for each row, and eleven rarer symptoms: [special cases](references/special-cases.md#symptoms-likely-causes).
 
-To show a detailed design while it is still changing, [publish it as in-progress](../../docs/design-publication.md#publish-a-detailed-design). The staged design review is its [one viewer](../../docs/design-publication.md#one-viewer-for-one-design), in progress and effective. Give it the name of its preliminary design and its own version as the ID, such as `--design 1.0`; stage the same ID again for each draft. [Name and number a detailed design](../../docs/design-publication.md#name-and-number-a-detailed-design) Link the effective preliminary release, run the layout check on the STEP exported from the registered Fusion design and play a mission case on that geometry. Commit the check inputs so the project's CI can rerun the check. It becomes effective in a reviewed pull request that carries a passing mechanical-readiness review.
+| You see | First thing to try | Check in when |
+| --- | --- | --- |
+| The export fails the layout check | Read the first failing pair and case. `no group lists:` names solids the plan misses; fix names first. Then check one datum point. Look at geometry last. | Both parts were in the blockout and are unchanged |
+| Bolted parts fail a case only because they touch | A case with `minGapMm` above zero fails every mated pair. Set it to 0 in the detailed plan and say so in the stage's `allowanceBasis`. Keep each required running clearance as a body in `Reservations`. Overlap still fails. | A handoff clearance cannot be drawn as a body |
+| A part crosses a reserved volume or path | In order: flip or rotate the part, pick its shorter or flatter option, move the fastener or connector side. Rerun. | None works, or a neighbour must move past its allowance |
+| The mass reserve is used up | List the ten heaviest changes since the last budget. Check each material. Count each purchased assembly once, at supplier mass. | The upper estimate is inside the minimum reserve or over the limit |
+| A check is too slow | Use `--physics-only --fail-fast` while fixing. Set `--jobs`. Coarsen the path tolerance of cases with ample margin. | A whole-cycle check will pass 30 minutes |
 
-Use the [Fusion authority and revision handoff](../../docs/fusion-authority.md) to establish the one current saved native design, the STEP exported from that design and the identity of the engineering evidence. When resuming in another checkout or before replacing a published view, verify the selected register and lineage with `fusion_authority.py`. For a mechanical review, use `fusion_issue_inventory.capture` in Fusion for missing commissioned poses. [Resume a registered master](../../docs/fusion-authority.md#resume-a-registered-master)
+## Scope guidelines and rare cases
 
-Before dispatching long native work, [stage the complete pinned package and project inputs in private job storage](../../docs/native-job.md). Run the guarded access check in Fusion before starting the recipe. Reopen and inspect through that directory. Retire it after the station reports terminal release and restores its original open documents.
-
-For a project with `iterations/active.json`, follow its active design root before recovering older records. After a decision to start over, use `frc-start-over` to preserve the evidence and open a fresh numbered design. [Design iterations](../../docs/design-iterations.md)
-
-If a scripted placement stops before contact checks, compare the requested and observed assembly-world occurrence matrices after recompute. [Read a refused placement](../../docs/checked-placement.md#read-a-refused-placement)
-
-If a proposed fit uses a smooth tap pilot and a modeled external thread, register the allowed annulus, validate the actual representations and keep the raw common. [Locate an intentional thread fit](../../docs/spatial-fits.md).
+The figures for check time, clearance and fastener detail are guidelines a project may replace. Check in before going past one. [Scope guidelines](references/scope-guidelines.md) · [Special cases, one row each](references/special-cases.md)
