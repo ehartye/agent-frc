@@ -41,7 +41,7 @@ Follow the steps in order. Steps 3 to 7 repeat on every edit. [Every command, in
 5. **Run the check.** Read the scope, attachment and budget lines and fix what they report. Repeat until the receipt reads `layout-checked`.
 6. **Publish the draft** and open the published page yourself. An in-progress design goes up as soon as it passes its coarse check, with its open risks listed. The site deploys when the pull request merges to the default branch.
 7. **Rank the risks. Run the few trials that decide the architecture.** Give each a control, brackets and one finer-timestep repeat. Add each recorded trial to the animation list as a replay. Republish the same version. [Trials and replays](references/trials.md)
-8. **Close each risk** with a design change, or list it as a bench test with pass and fail numbers. Run the readiness report until it reads 3 of 3.
+8. **Close each risk** with a design change, or list it as a bench test with pass and fail numbers. Run the readiness report until it reads 3 of 3. A trial named only on the mission case is reported as `prescribed motion with a trial attached` and does not count: name it on the case's stage or play it as a replay.
 9. **Propose effective.** Write the [handoff note](references/commands.md#write-the-handoff-note), attach the readiness report and ask the user. The user decides.
 
 When more than one architecture is plausible at step 2, block out each one coarsely against the same frame, field, mass and power figures. Pick one, say what it gives up, then name it and carry on. Check in only when the comparison does not separate them. [Whole-robot comparison](../../docs/whole-robot-comparison.md)
@@ -70,7 +70,7 @@ These need no permission and no reminder. If you cannot do one, say so in your r
 
 11. **Fit the plan to ten minutes before starting.** Estimate from the per-case seconds of the last run. Cut cases, coarsen tolerances or drop trials first.
 12. **Cap workers** at half the cores with `--jobs` when anything else is running. Cap your own trial scripts the same way.
-13. **Check the exit code** of every builder and script before using its output. A failed builder leaves old files behind.
+13. **Check the exit code** of every builder and script before using its output. A failed builder leaves old files behind. Pass the builder's sources to the check with `--built-from` so a plan older than them draws a `[plan] warning`.
 14. **Never idle on a background run.** Start it, then do work that does not depend on it: explanations, the risk list, the handoff note.
 15. **Record each trial to its settled end.** Keep the piece's position, attitude, velocity and spin at the deciding moment.
 16. **Stop when the decision is made.** A bracket ends at its first failing value. A bench-test question stays on the bench list.
@@ -115,7 +115,7 @@ Ask only when the choices lead to different designs. Keep working on everything 
 | A miss cannot be explained | The recording ended early; the deciding state was not kept | Rerun three misses to rest with the end state kept. Classify each: late, bounced out, never arrived | Three misses have three causes |
 | A rate is not met, or margin and outcome disagree | Operating point off-centre; variation wider than assumed; the margin is not what scores | The mission outcome decides. Step one input from the operating point and stop at the first result that settles it. State the margin cost and list it as a bench test | The best setting still misses |
 | The receipt or page differs between two runs with no input change | The plugin revision moved under the run; a builder that is not repeatable | Compare the plugin revision of both runs. Rerun from a fixed copy at the revision the workflow names | Both runs used the same revision |
-| A result did not change after an edit | The builder failed and left old files; the check ran on stale inputs | Check the builder's exit code. Rebuild, then rerun with `--output` in the design's folder | It survives a clean rebuild |
+| A result did not change after an edit | The builder failed and left old files; the check ran on stale inputs | Check the builder's exit code. Read the `[plan]` line: it gives the time the plan was last written and its digest. Rebuild, then rerun with `--output` in the design's folder and `--built-from` naming the builder's sources | It survives a clean rebuild |
 | The published page is old, blank or differs from the local one | Not pushed or not deployed; browser cache; opened from `file://`; unchanged files republished | Confirm the commit is on the default branch and the deploy is green. Hard-reload. Serve the page over HTTP. Compare the two `receipt.json` files | The deploy is green and they still differ |
 | The animation list holds many short clips of one motion | The segments of one phase share no name; an earlier copy of the review page | Name the phase of each case under `stages.CASE.phase` and rebuild with `--view-only`. For an earlier page, delete it and rebuild. [Animations and check results](../../docs/preliminary-design.md#animations-show-the-mission-the-check-list-shows-the-evidence) | Never |
 | Publishing is refused | A second in-progress version of one architecture; an effective version edited; no mission case; no design name | Read the message. Revise the existing draft, or take the next version | You believe a new version is right |

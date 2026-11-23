@@ -330,6 +330,28 @@ The displaced control is expected to collide, so it never stops a run. It is the
 
 To recheck the physics of a layout whose review is already written, add `--physics-only`. It checks every case, the displaced control and the budgets and does not read or write the review page or its scene. The receipt sets `"physicsOnly": true` and is not one to publish. A project's CI [reruns each published layout](design-publication.md) this way and compares the result with the committed receipt.
 
+### Confirm the check read a fresh plan
+
+The first stderr line of every check names the layout plan it read, when that file was last written (UTC) and its SHA-256, which is the receipt's `planSha256`:
+
+```text
+[plan] cad/preliminary-design/releases/1.0/layout.json modified 2031-03-04T18:22:07Z sha256=5f2c...
+```
+
+When a project script builds the plan, check that script's exit code before running the check. A builder that fails leaves the previous plan in place, and the check then passes on stale inputs. A pipe that filters the builder's output can hide its exit code; run the builder by itself, or keep the exit code, and stop when it is not zero. Then name the builder's sources with `--built-from`, a file or a folder relative to the project, repeated as needed:
+
+```sh
+node scripts/design.mjs preliminary-check PROJECT layout.json --built-from scripts/build_layout.py --built-from scripts/layout_parts
+```
+
+A plan last written before any named source changed draws a warning:
+
+```text
+[plan] warning: cad/preliminary-design/releases/1.0/layout.json was last written 2031-03-04T18:22:07Z, before scripts/build_layout.py changed at 2031-03-04T19:05:40Z. Its builder may have failed or not run since, so this check may be reading a stale plan. Check the builder's exit code and rebuild the plan before relying on the result.
+```
+
+The warning compares file times only. It never changes the receipt, the status or the exit code, and `--quiet` omits it. In a named folder the plan itself and `__pycache__` files are not counted; name a folder that holds sources, not one the builder writes other outputs into. A path that does not exist stops the run.
+
 ### Rebuild the review without rerunning the cases
 
 `--write-view` checks every case before it writes the scene. When only the presentation changed, add `--view-only` instead:
@@ -561,7 +583,7 @@ Informational: marking a design effective stays a project decision in a reviewed
 [not met] 1. Whole mission cycle checked for clearance, mass and voltage
             - Narrative stage endgame has no case
 [met]     2. Every mission-critical interaction driven by a qualified physics trial
-            · acquire: intake-trial.json
+            · acquire: motion driven by the trial (the layout check bound the checked path to it): intake-trial.json (matches its recorded SHA-256)
 [not met] 3. Every open risk closed by a design change or carried as a bench test with numbers
             - Risk belt-slip has neither a closing design change (closedBy) nor a bench test with a measure, a pass value and a fail value
 Bench tests to carry as verification items (results are not required to mark the design effective): none listed
@@ -580,7 +602,16 @@ Declare what the report reads:
 - **Cycle map.** In `missions.json`, map each mission phase (the report calls it a narrative stage) to its checked cases: `"cycle": {"acquire": {"cases": ["acquire"]}, "retain": {"cases": ["loaded-turn"]}, ...}` for `acquire`, `retain`, `transfer`, `deliver`, `reset`, `endgame`, `park` and `service`. Each case must pass in a whole `layout-checked` receipt of this exact plan, with no missing inputs, a passing inspection weight and passing loaded-voltage cases, so supply the budgets.
 
   The `service` stage needs a case checked as `service`, `park` a case checked as `park`, and every other stage an `operating` case. When the game has no such stage, state it alone: `{"notApplicable": "reason"}`. The report shows the reason.
-- **Trials.** A mission case is trial-driven when its stage names a trial through `transportedBy`, `freePath` or `supportedBy`, when the mission case carries a `trial` reference such as `{"file": "release-trial.json"}`, or when the trial of a linked field interaction records that case. A case that only follows its carrier is a prescribed path. Stage trials count only from a `layout-checked` receipt of this plan, and each trial record must name the mission case it ran (`case`, or the `case` inside its `transport`, `freePath` or `support` record). Each trial record carries its qualification:
+- **Trials.** The report tells how each mission case's animation relates to its trial and says so in a note under the criterion:
+
+  | Note | What the files declare | Criterion 2 |
+  | --- | --- | --- |
+  | `motion driven by the trial` | The case's stage names the trial through `transportedBy`, `freePath` or `supportedBy`, so the layout check bound the checked path to the trial's record. | Counts |
+  | `animation played from the trial` | A review replay under `presentation.replays` names the trial as evidence, or a linked field interaction names it. The review plays the recorded run; the checked case motion is still prescribed. | Counts |
+  | `prescribed motion with a trial attached` | Only the mission case's own `trial` reference, such as `{"file": "release-trial.json"}`, names the trial. The case moves on a prescribed stroke and nothing plays the trial. | `not met` |
+  | `prescribed motion, no trial` | No trial is named. A case that only follows its carrier is a prescribed path. | `not met` |
+
+  The exit criterion requires the mission animation to be driven by the named trial, so a qualified trial attached to a prescribed motion is reported as `not met` with the line `prescribed motion with a trial attached (FILE)`. Bind the payload path in the stage, or play the recorded run as a review replay. With `--json`, the criterion lists each case under `interactions` with `motion` set to `bound`, `played`, `attached` or `prescribed` and its trial files. Stage trials count only from a `layout-checked` receipt of this plan, and each trial record must name the mission case it ran (`case`, or the `case` inside its `transport`, `freePath` or `support` record). Each trial record carries its qualification:
 
   ```json
   "qualification": {
@@ -624,5 +655,6 @@ A season pins a plugin revision and holds copies of some plugin files. After mov
 | 0.134.0 | The detailed design catalog `docs/detailed-design/index.html`. Detailed design keeps the bench tests its preliminary design hands over as [one record](design-publication.md#bench-tests-handed-over-from-preliminary-design), seeded with `bench-tests.mjs seed`. A detailed design becomes effective only when every `before-build` test has a recorded passing result and every `on-robot` test has an owner and a plan. A risk's `benchTest` may carry a `tag`. |
 | 0.136.0 | Nothing to re-copy. The preliminary design skill is an ordered workflow with a list of defaults and a table of what to try when something fails. Held premises moved to [their own page](preliminary-design-holds.md), and trial sizing to the skill's trials reference. `npm run validate` in the plugin now fails on text damaged by a wrong encoding. |
 | 0.137.0 | The local review page (delete it and rebuild it with `--view-only`). The page lists [one animation per mission phase](#animations-show-the-mission-the-check-list-shows-the-evidence) and moves the checked cases into the check results, grouped by phase. No plan edit is needed: cases whose IDs differ by a trailing segment number form one phase. A stage may name its `phase`, and `presentation.phases` gives a phase a title and a `headline` flag. The rebuilt scene carries `animations` and the declared path tolerances, so its content and digest change; an issued design keeps its scene, and the new page derives the phases of an earlier scene. A mission case must be played by a mission animation. |
+| 0.138.0 | Nothing to re-copy. The layout check names the plan it read on its first stderr line and warns when the plan is older than a `--built-from` source. The effective-readiness report no longer counts a mission case whose only trial is its own `trial` reference: it reports `prescribed motion with a trial attached` as `not met`. Bind the path in the stage or play the trial as a review replay. |
 
 An in-progress design takes the new page when it is published again under its version. An effective, superseded or withdrawn design never changes.

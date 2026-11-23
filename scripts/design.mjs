@@ -38,7 +38,7 @@ function handoff(a) {
 try{
  if(command==='new'){if(!input||rest.length)throw Error('Usage: design new output.json [project.json]');const project=out?readJson(out):{};const convention=projectFrameProfile(input);if(project.frameProfile===undefined&&convention!==undefined)project.frameProfile=convention;write(input,canonicalStringify(createDesign(project)));console.log('Created editable design artifact');}
  else if(command==='preliminary-check'){
-   if(!input||!out)throw Error('Usage: design preliminary-check PROJECT PLAN.json [--previous HOLD.json] [--require-checked] [--write-view] [--view-only [--from-receipt RECEIPT.json]] [--fail-fast] [--physics-only] [--jobs N] [--quiet] [--heartbeat SECONDS] [--output RECEIPT.json]');
+   if(!input||!out)throw Error('Usage: design preliminary-check PROJECT PLAN.json [--previous HOLD.json] [--require-checked] [--write-view] [--view-only [--from-receipt RECEIPT.json]] [--fail-fast] [--physics-only] [--jobs N] [--quiet] [--built-from PATH]... [--heartbeat SECONDS] [--output RECEIPT.json]');
    // Inherited streams keep the receipt on stdout and let per-case progress reach stderr as each case finishes.
    const run=spawnSync(process.env.PYTHON||(process.platform==='win32'?'python':'python3'),
      ['-B',path.join(import.meta.dirname,'preliminary_design.py'),input,out,...rest],{stdio:'inherit'});

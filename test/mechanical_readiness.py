@@ -37,6 +37,7 @@ from contact_transport import ContactTransport
 from held_pin_relocation import HeldPinRelocation
 from parallel_cases import ParallelCases
 from view_only import ViewOnly
+from plan_identity import PlanIdentity
 from layout_scope import LayoutScope
 from path_references import PathReferences
 from attachment_report import LayoutAttachment

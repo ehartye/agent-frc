@@ -6,6 +6,7 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import test from 'node:test';
+import {gzipSync} from 'node:zlib';
 import {cycleStages,effectiveReadiness,readinessText} from '../scripts/effective-readiness.mjs';
 
 const plugin=fileURLToPath(new URL('..',import.meta.url));
@@ -36,7 +37,7 @@ function project(t,edit=x=>x){
         {id:'belt-slip',risk:'Invented belt slips when wet',benchTest:{measure:'pull at stall',unit:'N',pass:60,fail:40}}]},
     files};
   const d=edit(draft)??draft;
-  for(const [name,body] of Object.entries(d.files))writeFileSync(path.join(root,name),typeof body==='string'?body:JSON.stringify(body));
+  for(const [name,body] of Object.entries(d.files))writeFileSync(path.join(root,name),typeof body==='string'||Buffer.isBuffer(body)?body:JSON.stringify(body));
   const pin=name=>({file:name,sha256:sha(readFileSync(path.join(root,name)))});
   if(d.receipt&&d.files['intake-trial.json'])d.receipt.stages.acquire.transportedBy={sample:{mechanisms:['carrier'],evidence:d.pins?.intake??pin('intake-trial.json')}};
   if(d.receipt&&d.files['release-trial.json'])d.receipt.stages.deliver[d.relation??'freePath']={sample:{basis:'Invented',evidence:d.pins?.release??pin('release-trial.json')}};
@@ -134,16 +135,55 @@ test('each mission case needs a pinned trial with a pass, a control, brackets an
     assert.equal(c.met,false,String(reason));
     assert.ok(c.reasons.some(r=>reason.test(r)),String(reason)+' in '+c.reasons.join(' | '));
   }
-  // A mission trial pin or a linked field interaction that records the case also binds the motion.
-  const viaMission=judged(t,'trial-driven',d=>{
+});
+
+test('a trial that drives the motion is told from a trial attached to a prescribed motion',t=>{
+  const motion=(c,id)=>c.interactions.find(i=>i.case===id);
+  // A stage pin: the layout check bound the checked path to the trial.
+  const bound=judged(t,'trial-driven');
+  assert.equal(bound.met,true,bound.reasons.join(' | '));
+  assert.deepEqual(motion(bound,'deliver'),{case:'deliver',motion:'bound',trials:['release-trial.json']});
+  assert.ok(bound.notes.includes('deliver: motion driven by the trial (the layout check bound the checked path to it): release-trial.json (matches its recorded SHA-256)'),bound.notes.join(' | '));
+  // A qualified trial pinned on the mission case alone leaves the case's motion prescribed: reported, and not met.
+  const attach=d=>{
     const text=JSON.stringify(d.files['release-trial.json']);d.files['mission-trial.json']=text;delete d.files['release-trial.json'];
-    d.missions.missionCases[1].trial={file:'mission-trial.json',sha256:sha(text)};});
-  assert.equal(viaMission.met,true,viaMission.reasons.join(' | '));
+    d.missions.missionCases[1].trial={file:'mission-trial.json',sha256:sha(text)};return text;};
+  const attached=judged(t,'trial-driven',d=>{attach(d);});
+  assert.equal(attached.met,false);
+  assert.deepEqual(attached.reasons.filter(r=>r.startsWith('Mission case deliver')),
+    ['Mission case deliver (delivered): prescribed motion with a trial attached (mission-trial.json). The trial records this case, but the animation is not driven by it. '
+      +'Declare the payload path through transportedBy, freePath or supportedBy so the layout check binds the checked motion to the trial, or play the recorded run as a review replay']);
+  assert.deepEqual(motion(attached,'deliver'),{case:'deliver',motion:'attached',trials:['mission-trial.json']});
+  assert.equal(motion(attached,'acquire').motion,'bound');
+  const text=readinessText(effectiveReadiness(project(t,d=>{attach(d);})));
+  assert.match(text,/\[not met\] 2\.[^\n]*\n\s+- Mission case deliver \(delivered\): prescribed motion with a trial attached \(mission-trial\.json\)/);
+  assert.match(text,/· deliver: prescribed motion with a trial attached: mission-trial\.json/);
+  // The same pin counts once a review replay plays that trial: the animation is the recorded run.
+  for(const gzip of [false,true]){
+    const replayed=judged(t,'trial-driven',d=>{
+      const trial=attach(d),set=JSON.stringify({schema:'agent-frc/review-replays@1',replays:[{id:'lane-run',evidence:[{file:'mission-trial.json',sha256:sha(trial),role:'recorded run'}]}]});
+      d.files['replays.json']=gzip?gzipSync(set):set;
+      d.plan.presentation.replays=[{file:'replays.json',sha256:'0'.repeat(64)}];});
+    assert.equal(replayed.met,true,replayed.reasons.join(' | '));
+    assert.equal(motion(replayed,'deliver').motion,'played');
+    assert.ok(replayed.notes.some(n=>n.startsWith('deliver: animation played from the trial (a review replay or a linked field player); the checked case motion is prescribed: mission-trial.json')));
+  }
+  // A replay of another case's trial plays nothing for this one.
+  const elsewhere=judged(t,'trial-driven',d=>{
+    attach(d);
+    d.files['replays.json']=JSON.stringify({replays:[{id:'intake-run',evidence:[{file:'intake-trial.json',sha256:'0'.repeat(64)}]}]});
+    d.plan.presentation.replays=[{file:'replays.json',sha256:'0'.repeat(64)}];});
+  assert.equal(motion(elsewhere,'deliver').motion,'attached');
+  // A linked field player whose trial records the case plays it too.
   const viaLink=judged(t,'trial-driven',d=>{
     const record={case:'deliver',qualification:d.files['release-trial.json'].qualification},text=JSON.stringify(record);
     d.files['lane-trial.json']=text;delete d.files['release-trial.json'];
     d.plan.presentation.fieldInteractions=[{title:'Invented lane',href:'field/lane.html',objective:'Invented cycle',evidence:{file:'lane-trial.json',sha256:sha(text)}}];});
   assert.equal(viaLink.met,true,viaLink.reasons.join(' | '));
+  assert.equal(motion(viaLink,'deliver').motion,'played');
+  // No trial at all stays the plain prescribed finding.
+  const none=judged(t,'trial-driven',d=>{delete d.files['release-trial.json'];});
+  assert.equal(motion(none,'deliver').motion,'prescribed');
 });
 
 test('a trial named by path alone is read, and the report says no hash was compared',t=>{
@@ -151,12 +191,15 @@ test('a trial named by path alone is read, and the report says no hash was compa
   const viaMission=judged(t,'trial-driven',d=>{
     d.files['mission-trial.json']=JSON.stringify(d.files['release-trial.json']);delete d.files['release-trial.json'];
     d.missions.missionCases[1].trial={file:'mission-trial.json'};});
-  assert.equal(viaMission.met,true,viaMission.reasons.join(' | '));
-  assert.deepEqual(viaMission.notes,['acquire: intake-trial.json (matches its recorded SHA-256)','deliver: mission-trial.json (read; no SHA-256 given to compare)']);
+  // The mission trial is read and qualified, but it is only attached to a prescribed motion, so the criterion stays unmet.
+  assert.deepEqual(viaMission.reasons.map(r=>r.split('.')[0]),['Mission case deliver (delivered): prescribed motion with a trial attached (mission-trial']);
+  assert.deepEqual(viaMission.notes,['acquire: motion driven by the trial (the layout check bound the checked path to it): intake-trial.json (matches its recorded SHA-256)',
+    'deliver: prescribed motion with a trial attached: mission-trial.json (read; no SHA-256 given to compare)']);
   const viaLink=judged(t,'trial-driven',d=>{
     d.files['lane-trial.json']=JSON.stringify({case:'deliver',qualification:d.files['release-trial.json'].qualification});delete d.files['release-trial.json'];
     d.plan.presentation.fieldInteractions=[{title:'Invented lane',href:'field/lane.html',objective:'Invented cycle',evidence:{file:'lane-trial.json'}}];});
   assert.equal(viaLink.met,true,viaLink.reasons.join(' | '));
+  assert.ok(viaLink.notes.some(n=>n.startsWith('deliver: animation played from the trial')&&n.endsWith(': lane-trial.json (read; no SHA-256 given to compare)')),viaLink.notes.join(' | '));
   // The digest the layout check recorded in the receipt is kept over a path-only reference to the same file, and still compared.
   const changed=judged(t,'trial-driven',d=>{
     d.pins={release:{file:'release-trial.json',sha256:'0'.repeat(64)}};d.missions.missionCases[1].trial={file:'release-trial.json'};});
