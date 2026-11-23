@@ -353,8 +353,10 @@ def component_inspector(plan, scenes, study_cases, mass_lines=None, load_members
         if volumes.get(member) is None:
             missing.append("volume")
         moves = [c["id"] for c in study_cases if member in c.get("moves", {})]
+        # A field fixture reads as field, not as the robot role of the group that lists it. A game piece stays a game piece.
+        category = entry.get("category") or ("field" if member in fixtures and role != "payload" else role)
         rows[member] = dict(
-            id=member, name=entry.get("name") or member, category=entry.get("category") or role, role=role,
+            id=member, name=entry.get("name") or member, category=category, role=role,
             subsystem=entry.get("subsystem"), motionGroup=group, material=entry.get("material"),
             volumeMm3=volumes.get(member), volumeType=volume_type,
             mass=lines, massExcluded=("Field fixture; not robot mass" if member in fixtures else
@@ -408,8 +410,22 @@ def parked_assembly(observed_cases, study_cases, roster):
                 unresolved=[list(p) for p in sorted(unresolved)])
 
 
-def _colour(palette, category, role):
-    return palette.get(category) or palette.get(role) or palette.get(ROLE_COLOURS.get(role, "")) or palette.get("reference") or "#8a9199"
+def _colour(palette, category, role, alliance="blue", fixture=False):
+    """A body's viewing colour: its own category, else the field colour for a fixture, the alliance colour for a bumper, then its role."""
+    own = palette.get(category) or palette.get(role)
+    if not own and fixture:
+        own = palette.get("field")
+    if not own and role == "bumper":
+        own = palette.get("bumper-" + alliance)
+    return own or palette.get(ROLE_COLOURS.get(role, "")) or palette.get("reference") or "#8a9199"
+
+
+def _alliance(presentation, palette):
+    """The alliance whose colour the bumper covers take: presentation.alliance, blue when the plan names none."""
+    alliance = presentation.get("alliance", "blue")
+    require(named(alliance) and "bumper-" + alliance in palette,
+            "presentation.alliance names an alliance with a bumper-ALLIANCE colour in the palette, such as red or blue")
+    return alliance
 
 
 def _timeline(plan, case_id, frames):
@@ -475,8 +491,8 @@ def replay_entries(root, plan, meshes, bodies, placed, palette):
             if key not in mesh_index:
                 mesh_index[key] = len(meshes)
                 meshes.append(mesh)
-            category = item.get("category") or "reference"
-            colour = item.get("color") or _colour(palette, category, "reference")
+            category = item.get("category") or "field"
+            colour = item.get("color") or _colour(palette, category, "reference", fixture=True)
             require(isinstance(colour, str) and re.fullmatch(r"#[0-9a-fA-F]{6}", colour), where + ": field body " + member + " color is #rrggbb")
             body = dict(name=item["name"], category=category, role="reference", color=colour.lower(),
                         subsystem=item.get("subsystem"), motionGroup="field", material=item.get("material"), volumeMm3=None,
@@ -535,6 +551,7 @@ def build_scene(root, plan, scenes, observed, budgets, review):
     presentation = plan.get("presentation", {})
     palette = {k: v.lower() for k, v in resolve_palette(root).items()}
     fixtures = set(review.get("fixtures", set()))
+    alliance = _alliance(presentation, palette)
     study_cases = review.get("studyCases", [])
     payload = scene_payload(scenes)
     ledger = read(pinned(root, budgets["source"])) if budgets else None
@@ -546,7 +563,7 @@ def build_scene(root, plan, scenes, observed, budgets, review):
     bodies = {}
     for member, row in inspector.items():
         bodies[member] = dict(name=row["name"], category=row["category"], role=row["role"],
-                              color=_colour(palette, row["category"], row["role"]), subsystem=row["subsystem"],
+                              color=_colour(palette, row["category"], row["role"], alliance, member in fixtures), subsystem=row["subsystem"],
                               motionGroup=row["motionGroup"], material=row["material"], volumeMm3=row["volumeMm3"],
                               volumeType=row["volumeType"], closed=row["volumeMm3"] is not None, fixture=member in fixtures,
                               purpose=row["purpose"], rationale=row["rationale"], support=support.get(member),
@@ -617,6 +634,10 @@ def build_scene(root, plan, scenes, observed, budgets, review):
     for case in cases:
         for member, body in case["bodies"].items():
             placed.setdefault(member, body["mesh"])
+    attachment = review.get("attachment")
+    if attachment:
+        # What the layout check reported about floating solids; the page lists it and the inspector repeats it.
+        scene["attachment"] = attachment
     rows = replay_entries(root, plan, scene["meshes"], bodies, placed, palette)
     if rows:
         # Absent without replays, so a release issued before replays existed rebuilds to the same scene bytes.

@@ -467,6 +467,165 @@
       "items": {
         "$ref": "#/$defs/replay"
       }
+    },
+    "attachment": {
+      "type": "object",
+      "x-supplier": "plugin",
+      "description": "The layout check's attachment report for one case's start pose: robot solids with no path of contacts or registered mounts to the frame, labelled unmounted allowances and field fixtures off the floor. Information only; no verdict reads it.",
+      "required": [
+        "informational",
+        "case"
+      ],
+      "properties": {
+        "informational": {
+          "const": true
+        },
+        "case": {
+          "type": "string"
+        },
+        "pose": {
+          "type": "string"
+        },
+        "skipped": {
+          "type": "string"
+        },
+        "gapMm": {
+          "type": "number"
+        },
+        "floorZMm": {
+          "type": "number"
+        },
+        "robotSolids": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "frameSolids": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "excluded": {
+          "type": "object"
+        },
+        "measuredPairs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unresolvedPairs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "floating": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "solid",
+              "group",
+              "nearest",
+              "gapMm"
+            ],
+            "properties": {
+              "solid": {
+                "type": "string"
+              },
+              "group": {
+                "type": "string"
+              },
+              "nearest": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "gapMm": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "heldByMountOnly": {
+          "$ref": "#/$defs/ids"
+        },
+        "onUnmountedAllowance": {
+          "$ref": "#/$defs/ids"
+        },
+        "unmountedAllowances": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "solid",
+              "group",
+              "reason",
+              "reachesFrame"
+            ],
+            "properties": {
+              "solid": {
+                "type": "string"
+              },
+              "group": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "reachesFrame": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "fixturesOffFloor": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "fixture",
+              "lowestAboveFloorMm"
+            ],
+            "properties": {
+              "fixture": {
+                "type": "string"
+              },
+              "lowestAboveFloorMm": {
+                "type": "number"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "suspendedFixtures": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "fixture",
+              "reason",
+              "lowestAboveFloorMm"
+            ],
+            "properties": {
+              "fixture": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "lowestAboveFloorMm": {
+                "type": "number"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
     }
   },
   "$defs": {

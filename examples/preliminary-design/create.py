@@ -133,6 +133,8 @@ def create(root, release_id=None, project=None, pins=False):
               control=dict(case="loaded-turn",displaced="rail",moving="head",offsetMm=[0,-50,0],
                            basis="Move the fixed rail into the arc between the same clear endpoints"))
     plan.update(cycle=["acquire","loaded-turn","release","park-loaded"], view=prefix+"package-motion.html")
+    # Nothing floats: the rail's support is deliberately not drawn in this teaching layout, so the plan labels it with the reason.
+    plan["attachment"]={"unmounted":{"rail":"Synthetic teaching layout: the frame member that carries the rail is not drawn."}}
     (root/"narrative.md").write_text(
         "Acquire a sample from the front and turn it past the gate for release. "
         "At the finish, park the carrier. If the gate stays closed, stop before the turn.\n",
