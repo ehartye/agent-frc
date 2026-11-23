@@ -10,6 +10,11 @@ Use a consistent functional-role color convention whenever creating or revising 
 | Electrical and control | Violet #8263A9 | E label / named electrical group |
 | Reserved space or keep-out | Orange #D55E00 | K label / dashed or hatched envelope |
 | Reference or unassigned | Gray #8A9199 | R label / reference group |
+| Field part | Stone #A8A694 | F label / field group; not a robot part |
+| Bumper cover, red alliance | Red #C8102E | B label / bumper outline with the alliance named |
+| Bumper cover, blue alliance | Blue #285BA3 | B label / bumper outline with the alliance named |
+
+The preliminary review applies the last three by itself. A field fixture takes the field colour whichever plan group lists it, and so does a field body that only a replay shows, so a field part never reads as a floating robot part. A game piece registered as a fixture stays a game piece. A `bumper` group takes the colour of the alliance the layout plan names under `presentation.alliance`: `red` or `blue`, and blue when the plan names none.
 
 ## Apply and explain
 
@@ -25,7 +30,7 @@ Keep evidence status separate from functional role: write UNKNOWN, NOT CHECKED, 
 
 ## Project override and recheck
 
-The plugin provides the six functional roles above. A new robot project can use all six without a configuration file. To change one color or add a role for a distinct component group, commit `cad/component-palette.json` to the robot repository. Each value is a six-digit sRGB hex color. Keep role IDs stable across CAD revisions.
+The plugin provides the six functional roles, the field role and the two alliance colours above. A new robot project can use them all without a configuration file. To change one color or add a role for a distinct component group, commit `cad/component-palette.json` to the robot repository. Each value is a six-digit sRGB hex color. Keep role IDs stable across CAD revisions.
 
 ```json
 {
@@ -37,7 +42,7 @@ The plugin provides the six functional roles above. A new robot project can use 
 }
 ```
 
-Run `python <plugin>/scripts/component_palette.py <robot-project>` to print the effective palette. The example replaces the structure swatch, adds a named bumper cover and inherits the other five roles. Use the same resolved RGB values for Fusion viewing appearances, the public orbit model and the README render. Keep the project palette alongside the part-to-role map, including an explicit role for each bumper cover and the selected alliance. Check the legend when an override changes the contrast of a label.
+Run `python <plugin>/scripts/component_palette.py <robot-project>` to print the effective palette. The example replaces the structure swatch and the blue-alliance bumper colour and inherits the other roles. In the preliminary review the bumper covers of a blue-alliance layout then take `#285BA3` or whatever the project documents there. Use `bumper-red` and `bumper-blue` for the project's documented alliance colours, `field` to restyle field parts, or `bumper` to give every bumper cover one colour whatever the alliance. Use the same resolved RGB values for Fusion viewing appearances, the public orbit model and the README render. Keep the project palette alongside the part-to-role map, including an explicit role for each bumper cover and the selected alliance. Check the legend when an override changes the contrast of a label.
 
 ### Publish a colored assembly
 
@@ -57,6 +62,6 @@ Each project-owned README shows a current still directly below its title. In `ca
 
 A student/team may override colors for an established convention, accessibility needs or a specific comparison. Save the role-ID-to-appearance mapping, reason, revision and legend with the project, and use it consistently. Ask only when the choice is consequential; routine readable defaults do not need a separate design decision. Recheck semantic coverage, supplier preservation, label readability, native persistence and unchanged physical properties after updates. Keep the convention portable across Fusion, blockouts and rendered evidence, without implying an exchange format preserves native appearances.
 
-Tests validate the default role IDs, unique colors, explicit non-color cues, hex values and opaque swatch label contrast. They do not certify native application, actual rendered contrast, material assignments or physical correctness. The current robot's requirement for a native Fusion file remains separate from this viewing convention.
+Tests validate that fixtures and bumper covers resolve to these colours in the review scene, with and without a project override. Tests also validate the default role IDs, unique colors, explicit non-color cues, hex values and opaque swatch label contrast. They do not certify native application, actual rendered contrast, material assignments or physical correctness. The current robot's requirement for a native Fusion file remains separate from this viewing convention.
 
 If correct appearance readback disagrees with the viewport, follow [native appearance and scene diagnostics](native-fusion-handoff.md#appearance-and-scene-diagnostics-readback-is-not-a-render). Do not accept a stale screenshot or change physical materials to force a visual result.

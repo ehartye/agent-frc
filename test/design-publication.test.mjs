@@ -36,6 +36,19 @@ function project(t, releases = {'layout-001': {}}, statuses = undefined) {
 const editJson = (file, edit) => writeFileSync(file, JSON.stringify(edit(read(file)), null, 2));
 const errorsOf = result => result.errors.join('\n');
 
+test('the informational attachment report is no part of the verdict: an older receipt without it still reproduces', t => {
+  const p = project(t);
+  const report = {informational: true, case: 'raise', gapMm: 3, floating: [{solid: 'invented-panel', group: 'panel', nearest: 'frame', gapMm: 12}], fixturesOffFloor: []};
+  // The committed receipt predates the report; the rerun, from a newer plugin, carries it.
+  assert.equal(read(p.receiptFile('layout-001')).attachment, undefined);
+  assert.deepEqual(p.check({run: p.run(r => ({...r, attachment: report}))}).errors, []);
+  // And the other way round: a committed receipt that lists floating solids is still one to publish.
+  editJson(p.receiptFile('layout-001'), r => ({...r, attachment: report}));
+  assert.deepEqual(p.check({run: p.run(r => { const {attachment, ...rest} = r; return rest; })}).errors, []);
+  const receipt = read(p.receiptFile('layout-001'));
+  assert.deepEqual(compareVerdicts(receipt, {...receipt, attachment: {...report, floating: []}}), []);
+});
+
 test('passes a release whose rerun reproduces the committed receipt', t => {
   const p = project(t);
   const result = p.check();
