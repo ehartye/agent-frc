@@ -31,7 +31,7 @@ After conceptual design and role selection, own the [shared package layout check
 
 For intentional squeeze, [register the compressible game piece and its contacting surface](../../docs/preliminary-design.md#game-piece-compression). Compare the measured indentation and its motion bound with the specified allowance. Keep other pairs under their existing clearance checks.
 
-Trace both the support path from each moving load to the frame and its drive path from the actuator to the load. Include the occupied shafts, bearings, carriers, stops and mounts that govern clearance. Mark an absent connection in the layout and review.
+Trace both the support path from each moving load to the frame and its drive path from the actuator to the load. Include the occupied shafts, bearings, carriers, stops and mounts that govern clearance. Nothing floats: every robot solid touches, or is mounted to, a solid that traces to the frame, so fix a floating solid without being asked or label it an unmounted allowance with a reason. Read the `[attachment]` section after each check and clear it. [Nothing floats](../../docs/preliminary-design.md#nothing-floats)
 
 Before fixing a mechanism footprint, choose its [attachment stock, pattern and tool side](../../docs/attachment-design.md). Sketch the signed load into the chassis, compare two placements on actual supporting members and reserve room for bracket stock, fasteners, tools and the complete removal path at the worst permitted combination of offsets.
 

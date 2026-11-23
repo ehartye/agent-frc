@@ -8,7 +8,7 @@ import { validateScene } from '../scripts/review-scene.mjs';
 // The stock page's pure helpers, loaded from the shipped template.
 const html = readFileSync(new URL('../templates/preliminary-review/review.html', import.meta.url), 'utf8');
 const source = html.split('<script id="review-logic">')[1].split('</script>')[0];
-const logic = new Function(source + '\nreturn {inspectorFields, visibleBodies, findComponent, partition, frameCount, massLinesFor, sha256Pure, digestHex, fieldFitState, replayMotion, eventAt, tubeTriangles, triangleValues, alongCenterline, carriedValues, MISSING, NOT_SUPPLIED};')();
+const logic = new Function(source + '\nreturn {inspectorFields, attachmentNote, attachmentRows, visibleBodies, findComponent, partition, frameCount, massLinesFor, sha256Pure, digestHex, fieldFitState, replayMotion, eventAt, tubeTriangles, triangleValues, alongCenterline, carriedValues, MISSING, NOT_SUPPLIED};')();
 const field = (fields, label) => fields.find(f => f[0] === label);
 
 test('the inspector shows identity, classification, volume, mass basis, support, loads and moving cases from the scene', () => {
@@ -147,4 +147,45 @@ test('a tube is a closed ring of triangles at its radius, and a carried mesh mov
   assert.deepEqual([moved[2], moved[8], moved[14]].map(z => Math.round(z)), [-16, -24, -20], 'each vertex drops with the nearest point of the centerline');
   assert.deepEqual([moved[0], moved[6], moved[13]], [40, 60, 10], 'and keeps its place along and across it');
   assert.deepEqual([...logic.carriedValues(base, param, rest, rest, base.slice())], [...base], 'the first centerline leaves the mesh as drawn');
+});
+
+test('the attachment report names each floating solid and labelled exception, and the inspector repeats it', () => {
+  const scene = reviewScene();
+  assert.equal(logic.attachmentNote('arm', scene), null, 'a scene without the report says nothing');
+  assert.deepEqual(logic.attachmentRows(scene), []);
+  scene.attachment = {informational: true, case: 'raise', gapMm: 3, robotSolids: 3,
+    floating: [{solid: 'battery', group: 'battery', nearest: 'frame', gapMm: 41.26}], heldByMountOnly: ['arm'], onUnmountedAllowance: [],
+    unmountedAllowances: [], fixturesOffFloor: [{fixture: 'target', lowestAboveFloorMm: 120}], suspendedFixtures: []};
+  assert.deepEqual(validateScene(scene).errors, []);
+  const rows = logic.attachmentRows(scene);
+  assert.deepEqual(rows.map(r => [r[0], r[1], r[3]]), [['Floating', 'battery', true], ['Off floor', 'target', true], ['Mount only', 'arm', false]]);
+  assert.match(rows[0][2], /nearest attached solid frame, 41\.3 mm away/);
+  assert.deepEqual(rows[0][4], ['frame'], 'selecting a floating solid also marks its nearest attached solid');
+  const support = field(logic.inspectorFields('battery', scene), 'Support and load path');
+  assert.match(support[1][0], /^Floating: nothing holds it within 3 mm\. Nearest attached solid: frame, 41\.3 mm away/);
+  assert.equal(support[2], true, 'a floating solid shows as a gap in the inspector');
+  const held = field(logic.inspectorFields('arm', scene), 'Support and load path');
+  assert.deepEqual(held[1], ['Held across a gap by a registered mount alone; no modelled solid touches it', 'Pivot shaft into the frame plate.']);
+  assert.equal(held[2], false);
+  assert.match(field(logic.inspectorFields('target', scene), 'Support and load path')[1][0], /^Off the floor: lowest point 120\.0 mm above it/);
+  // A labelled allowance shows its reason and is not a finding.
+  scene.attachment.floating = [];
+  scene.attachment.unmountedAllowances = [{solid: 'battery', group: 'battery', reason: 'Invented tray not drawn yet', reachesFrame: false}];
+  scene.attachment.fixturesOffFloor = [];
+  scene.attachment.suspendedFixtures = [{fixture: 'target', reason: 'Invented target hung from the roof', lowestAboveFloorMm: 120}];
+  const allowance = field(logic.inspectorFields('battery', scene), 'Support and load path');
+  assert.deepEqual([allowance[1][0], allowance[2]], ['Unmounted allowance: Invented tray not drawn yet', false]);
+  assert.deepEqual(logic.attachmentRows(scene).map(r => [r[0], r[1], r[3]]), [['Allowance', 'battery', false], ['Mount only', 'arm', false], ['Suspended', 'target', false]]);
+  assert.deepEqual(field(logic.inspectorFields('target', scene), 'Support and load path')[1], ['Suspended: Invented target hung from the roof', 'Field fixture']);
+  // The report may only name bodies of the scene.
+  scene.attachment.heldByMountOnly = ['ghost'];
+  assert.ok(validateScene(scene).errors.some(e => /\/attachment names an unknown body: ghost/.test(e)));
+});
+
+test('a field fixture shows its own category without a robot role', () => {
+  const scene = reviewScene();
+  scene.bodies.target.category = 'field';
+  assert.equal(field(logic.inspectorFields('target', scene), 'Category')[1], 'field');
+  scene.bodies.arm.category = 'intake';
+  assert.equal(field(logic.inspectorFields('arm', scene), 'Category')[1], 'intake (colour of role mechanism)');
 });

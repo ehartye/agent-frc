@@ -8,6 +8,7 @@ import sys
 from time import perf_counter
 
 from atomic_file import write_atomic
+import layout_attachment
 from component_shape import proper_rotation
 from mechanical_motion import HEARTBEAT_SECONDS, evaluate, reuse, stderr_progress, transforms, vec
 from package_budgets import budget_review
@@ -194,6 +195,22 @@ def scope_report(plan, stages, solids, fixtures):
                      "time or how many cases or solids, and when it stops) before going deeper, then record it under "
                      "scopeGuidelines.extendedBudget in the layout plan.")
     return report,lines
+
+
+def attachment_field(plan, groups, mounts, case, scene, observations, fixtures, progress, partial=False):
+    """The informational attachment report of the opening case. It never stops a run or changes its result."""
+    if partial or not scene:
+        # A stopped run may or may not have reached the opening case, depending on its workers; it reports nothing either way.
+        return dict(informational=True,case=case["id"],skipped="A partial --fail-fast run does not report attachment")
+    rows=next((c["pairs"] for c in observations if c["case"]==case["id"]),[])
+    try:
+        report,lines=layout_attachment.report(plan,groups,mounts,case,scene,rows,fixtures)
+    except Exception as error:
+        report,lines=dict(informational=True,case=case["id"],skipped="The attachment report could not be completed: "+str(error)),[]
+        lines=["[attachment] note: "+report["skipped"]]
+    if progress:
+        for line in lines:progress(line)
+    return report
 
 
 def mount_notes(groups, mounts):
@@ -632,6 +649,11 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
     result["scope"],scope_lines=scope_report(plan,stages,len(roster-case_fixtures),len(case_fixtures))
     if progress:
         for line in scope_lines:progress(line)
+    # A malformed attachment label stops the run here, before any case is checked.
+    layout_attachment.settings(plan,roster)
+    opening=plan.get("presentation",{}).get("openingCase") or (plan.get("cycle") or [None])[0]
+    if opening not in by_id:opening=cases[0]["id"]
+    opening_scene={}
     covered=set()
     loaded_operating=False
     free_bound={}
@@ -712,6 +734,8 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
     # One display tessellation per body for the whole study; each case folds its start pose into its frame matrices.
     tessellations={}
     def inspect_scene(case,scene):
+        # The attachment report reads the opening case at its start pose.
+        if case["id"]==opening:opening_scene.update(scene)
         # A physics-only run shows nothing, so it needs no display mesh.
         if not physics_only:frames.append(capture(case,scene,tessellations))
     # The displaced control is expected to fail, so it never stops a fail-fast run. It runs last and
@@ -741,6 +765,7 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
                           progress=progress,fail_fast=fail_fast,never_stop={control_id},heartbeat_seconds=heartbeat_seconds,jobs=jobs)
     partial=observed.get("partial",False)
     observations=observed["cases"]
+    result["attachment"]=attachment_field(plan,groups,mounts,by_id[opening],opening_scene,observations,case_fixtures,progress,partial)
     if control and partial:
         result["control"]=dict(case=control["case"],displaced=displaced,offsetMm=shift,witness=None,status="skipped")
     elif control:
@@ -785,7 +810,8 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
             result["view"]=verify_view(root,plan,sorted(frames,key=lambda f:cycle.index(f["id"]) if f["id"] in cycle else len(cycle)),
                                        write_view,observed,result["budgets"],
                                        dict(control=result.get("control"),missing=missing,
-                                            studyCases=cases,fixtures=fixture_ids,freePaths=free_bound,supports=support_bound),deferred=view_writes,
+                                            studyCases=cases,fixtures=fixture_ids,freePaths=free_bound,supports=support_bound,
+                                            attachment=result["attachment"]),deferred=view_writes,
                                        beside=Path(file).resolve().parent)
             if not result["view"] or not result["view"]["verified"]:
                 missing.append("Generate the matching view of these checked trajectories with --write-view")

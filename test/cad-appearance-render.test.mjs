@@ -57,10 +57,13 @@ test('colored highlights bind the resolved palette, source assignment and facet 
   await save();
   await mkdir(path.join(root,'cad'),{recursive:true});
   await writeFile(path.join(root,'cad/component-palette.json'),JSON.stringify({schema:'agent-frc/component-palette@1',colors:{structure:'#112233'}}));
-  await assert.rejects(buildHighlights(manifest,target),/palette changed/);
+  await assert.rejects(buildHighlights(manifest,target),/palette color of role structure, which this assembly uses, changed/);
+  // A palette change this assembly does not use, such as a new role, leaves its export current.
+  await writeFile(path.join(root,'cad/component-palette.json'),JSON.stringify({schema:'agent-frc/component-palette@1',colors:{'invented-role':'#112233',mechanism:'#445566'}}));
+  await buildHighlights(manifest,target);
   await rm(path.join(root,'cad/component-palette.json'));
   await writeFile(colored,Buffer.concat([assignments,Buffer.from('\n')]));
-  await assert.rejects(buildHighlights(manifest,target),/manifest or resolved palette changed/);
+  await assert.rejects(buildHighlights(manifest,target),/Appearance manifest changed/);
 });
 
 test('native STEP still and orbit agree on repeated solid roles', {skip:process.env.FRC_TEST_PROFILE==='portable' && 'Run the CAD kernel and rendering controls at the qualified station'}, async t => {

@@ -44,6 +44,27 @@
       "color": "#8A9199",
       "textColor": "#000000",
       "cue": "R / reference group; not hidden by default"
+    },
+    {
+      "id": "field",
+      "label": "FIELD PART",
+      "color": "#A8A694",
+      "textColor": "#000000",
+      "cue": "F / field group; not a robot part"
+    },
+    {
+      "id": "bumper-red",
+      "label": "BUMPER COVER, RED ALLIANCE",
+      "color": "#C8102E",
+      "textColor": "#FFFFFF",
+      "cue": "B / bumper outline with the alliance named"
+    },
+    {
+      "id": "bumper-blue",
+      "label": "BUMPER COVER, BLUE ALLIANCE",
+      "color": "#285BA3",
+      "textColor": "#FFFFFF",
+      "cue": "B / bumper outline with the alliance named"
     }
   ],
   "statusPolicy": "Evidence status is a separate text annotation; no color means safe, legal, verified or failed",

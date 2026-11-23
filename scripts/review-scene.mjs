@@ -113,6 +113,11 @@ export function validateScene(scene) {
   if (scene.mass) for (const l of scene.mass.lines) known(l.members, '/mass/lines/' + l.id);
   if (scene.mass?.runningAdditions) for (const l of scene.mass.runningAdditions) known(l.members, '/mass/runningAdditions/' + l.name);
   for (const d of scene.power) for (const l of d.lines) known(l.members, '/power/' + d.case + '/' + l.name);
+  if (scene.attachment) {
+    const a = scene.attachment;
+    known([...(a.floating || []).flatMap(r => [r.solid, r.nearest].filter(v => v !== null)), ...(a.unmountedAllowances || []).map(r => r.solid),
+      ...(a.heldByMountOnly || []), ...(a.onUnmountedAllowance || []), ...[...(a.fixturesOffFloor || []), ...(a.suspendedFixtures || [])].map(r => r.fixture)], '/attachment');
+  }
   if (scene.cutaway) for (const id of scene.cutaway.hides) if (!ids.has(id) || !bodies[id].fixture) errors.push('/cutaway/hides names a body that is not a fixture: ' + id);
   // Visible findings rather than errors: the page keeps them on screen.
   for (const r of scene.required) {

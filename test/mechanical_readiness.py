@@ -39,6 +39,7 @@ from parallel_cases import ParallelCases
 from view_only import ViewOnly
 from layout_scope import LayoutScope
 from path_references import PathReferences
+from attachment_report import LayoutAttachment
 
 
 class Readiness(unittest.TestCase):

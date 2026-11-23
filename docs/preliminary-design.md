@@ -225,6 +225,53 @@ Record the path tolerance each case was split at as `pathToleranceMm` in its ent
 
 The receipt carries the same figures in its `scope` field: `solids`, `fieldFixtures`, the `guideline` figures and whether they came from the plugin default or the layout plan, `finestPathToleranceMm` with its case, the number of cases with no declared tolerance, the guidelines `passed`, and the agreed `extendedBudget` when one is recorded. The report is information. It never changes a status, a missing input or an exit code, and the publication check does not read it. A plan that sets none of these keys is checked as before; its receipt gains only the `scope` field. `--quiet` omits the stderr lines and keeps the field.
 
+## Nothing floats
+
+Every physical robot solid in a preliminary layout is held by something. It touches another robot solid, or the plan registers its mount, and that chain of contacts and mounts leads to the frame. A solid that hangs in space reads as a mistake to a reviewer, so fix it before sharing the review: add the support that carries it, or register its mount. Do not wait to be asked.
+
+Sometimes a support is deliberately not drawn yet. Label that solid as an unmounted allowance in the layout plan and give the reason:
+
+```json
+"attachment": {
+  "unmounted": {"control-panel": "Panel stand-offs are chosen with the electrical layout in detailed design"}
+}
+```
+
+Place field parts as case fixtures, not as members of a robot group, so they are drawn as field and left out of the robot. A fixture reaches the floor, or rests on a fixture that does. Label one that really hangs, such as a chain or a hanging target:
+
+```json
+"attachment": {
+  "suspended": {"hanging-target": "Hangs from the overhead truss, which this layout does not include"}
+}
+```
+
+### Read the attachment section of the layout check
+
+After the motion cases, the layout check writes an `[attachment]` section to stderr. It reads the opening case at its start pose, the pose the review opens on.
+
+```text
+[attachment] acquire start pose, touching within 3 mm: 41 robot solids checked, 2 floating, 3 held by a registered mount alone, 1 unmounted allowance, 1 field fixture off the floor (6 extra pair distances, 0.04s)
+[attachment] floating: camera (sensors); nearest attached solid upright-left, 38.5 mm away
+[attachment] floating: hopper-wall (hopper); nearest attached solid frame-rail-rear, 12 mm away
+[attachment] held across a gap by a registered mount alone: arm, arm-roller, lift-carriage
+[attachment] unmounted allowance: control-panel (electrical): Panel stand-offs are chosen with the electrical layout in detailed design
+[attachment] field fixture off the floor: target-shelf, lowest point 410 mm above the floor at Z = 0 mm
+[attachment] note: nothing floats. Give each floating solid a support that touches it and traces to the frame, or register its mount; ...
+```
+
+Read it after every check and clear each `floating` and `off the floor` line. The rules it applies:
+
+- **Touching** means the surfaces are within 3 mm. State another figure as `attachment.gapMm`. A pair the case declares under `intendedInterfaces` touches.
+- **The frame** is the connected set of solids that holds the most members of `structure` groups.
+- **A registered mount** holds the member it names to its host. A mount without a member holds the member of its group that lies nearest the mount point. A solid held only this way, with no modelled solid touching it, is listed as held by a registered mount alone. That is not a finding, but it still looks detached in the review until its bracket or shaft is drawn.
+- **An unmounted allowance** is listed apart with its reason, and so is anything it carries. When a labelled solid reaches the frame after all, the line says the label can go.
+- **Left out:** field fixtures, game pieces (`payload` groups), `service` groups and components whose `volumeType` is `gauge`.
+- **The floor** is Z = 0 in the STEP world. State another height as `attachment.floorZMm`.
+
+The receipt carries the same report in its `attachment` field: `floating` (each with its `group`, `nearest` attached solid and `gapMm`), `heldByMountOnly`, `unmountedAllowances`, `onUnmountedAllowance`, `fixturesOffFloor` and `suspendedFixtures`. The stock review page lists every row under **Attachment: nothing floats**, below the required components. Choose a row to select that solid in the model. An unmounted allowance is drawn hatched and the inspector shows its reason.
+
+The report is information. It never changes a status, a missing input or an exit code, and the publication check does not read it. A receipt saved before the report existed still reproduces on a rerun. It reuses the gaps the motion check has already measured and measures only the extra pairs it needs, so it adds little time. A partial `--fail-fast` run records that the report was skipped. `--quiet` omits the stderr lines.
+
 ## Size the checks to the risk
 
 Preliminary design is fast iteration. A revised layout should be checked and back in front of a reviewer in minutes, so decide how much checking a question deserves before running anything. A slow loop hides design problems behind queue time.
@@ -321,9 +368,10 @@ A season pins a plugin revision and holds copies of some plugin files. After mov
 | 0.122.1 | The release index page `docs/preliminary-design/index.html` from `templates/preliminary-review-index.html`. The note under the header is gone: the release picker names each design status and the review page shows the rest. |
 | 0.123.0 | `stage.py`, the release index page and the local review page (delete `package-motion.html` and rerun the check with `--write-view`). Staging an in-progress release again revises it in place and counts a revision; an effective release is no longer restaged. Mark in-progress releases that a later release replaced `superseded`, and add `accepted` for a superseded release that was once effective. [Revise an in-progress release in place](design-publication.md#revise-an-in-progress-release-in-place) |
 | 0.125.0 | Nothing to re-copy. The layout check reports the solid count and the finest declared path tolerance beside the [scope guidelines](#keep-the-layout-a-blockout). A stage may declare `pathToleranceMm`, and the plan may state its own figures and an agreed budget under `scopeGuidelines`. |
+| 0.126.0 | Nothing to re-copy. `preliminary-check --view-only` [rebuilds the review page, scene and receipt](#rebuild-the-review-without-rerunning-the-cases) from the saved receipt after a presentation edit, without rerunning the cases. |
 | 0.127.0 | `stage.py`, the release index page, the detailed design catalog and the local review page (delete `package-motion.html` and rebuild it with `--view-only`). A new release takes a version as its ID, `MAJOR.MINOR`, and its architecture is named once with `--design-name`; the pages show "NAME 1.1 · draft 3 · in progress". An existing ID keeps working. [Name and number a design](design-publication.md#name-and-number-a-design), [rename a release to a version](design-publication-migration.md#rename-a-release-to-a-version) |
 | 0.128.0 | Nothing to re-copy. A layout plan and its records [name files by path](#name-files-by-path); a typed `sha256` is optional and still verified. To drop the typed hashes of an in-progress release, [delete the `sha256` keys, rerun the check and restage](#drop-the-typed-hashes-of-an-in-progress-release). `cad-readmes.py` without options [checks the README still by its block, image and caption](cad-color-convention.md#keep-the-readme-still-current) and compares no bytes: add `status` to `cad-showcase.json` and run it once with `--update`. |
-| 0.126.0 | Nothing to re-copy. `preliminary-check --view-only` [rebuilds the review page, scene and receipt](#rebuild-the-review-without-rerunning-the-cases) from the saved receipt after a presentation edit, without rerunning the cases. |
+| 0.130.0 | The local review page (delete `package-motion.html` and rerun the check with `--write-view`). The layout check reports [floating solids and field fixtures off the floor](#nothing-floats), and the plan may label an unmounted allowance or a suspended fixture under `attachment`. Field fixtures take the `field` colour and bumper covers the alliance colour, so a rebuilt scene differs from one built before; an issued release keeps its scene. |
 
 An in-progress release takes the new page when it is staged again under its ID. An effective, superseded or withdrawn release never changes.
 

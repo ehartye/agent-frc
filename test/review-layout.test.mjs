@@ -92,7 +92,7 @@ test('the stock page keeps the reference region order, control placement, labels
     assert.ok(g.metrics.top >= Math.max(g.canvas.bottom, g.inspector.bottom), at + 'resource figures start below the viewer row');
     assert.ok(g.scroll <= width, at + 'no sideways scrolling');
     if (width !== 1600) continue;
-    assert.deepEqual(g.topWords, ['Assembly layout', 'Labels', 'Floor', 'Target cutaway', 'Fit robot', 'Fit field interaction', 'Expand'], 'top bar: view toggles and view buttons only');
+    assert.deepEqual(g.topWords, ['Assembly layout', 'Labels', 'Floor', 'Hide field parts', 'Target cutaway', 'Fit robot', 'Fit field interaction', 'Expand'], 'top bar: view toggles and view buttons only');
     assert.deepEqual(g.playWords, ['Play'], 'playback row: no visible labels besides Play');
     assert.equal(g.playLabels, 0);
     assert.deepEqual([g.slider, g.sliderLabels], ['Position on path', 0], 'the slider is named only for assistive technology');
