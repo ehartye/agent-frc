@@ -1236,4 +1236,10 @@ class Readiness(unittest.TestCase):
 
 
 if __name__=="__main__":
-    unittest.main()
+    import sys
+    # --list prints every test class here with its test count, so the Node test can run each class in its own process.
+    if sys.argv[1:]==["--list"]:
+        groups=unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
+        print(json.dumps({type(next(iter(group))).__name__:group.countTestCases() for group in groups if group.countTestCases()},sort_keys=True))
+    else:
+        unittest.main()

@@ -69,4 +69,28 @@ The runner selects the checked-in `gradlew` or `gradlew.bat`. Gradle's `build` r
 4. Open a pull request into the default branch. It runs the changed checks once. Ordinary pushes to a feature branch do not start a second run. A default-branch push repeats the checks on the merged tree. **Run workflow** on a selected project branch executes all registered checks. A missing comparison base also selects the full suite.
 5. After a successful test PR, require the emitted project check in the default branch protection. Use the check names emitted by the actual job. Keep the team’s existing review and admin policies. Manual full verification is safe to rerun without deploying.
 
-The plugin repository runs `npm run validate` and `npm run test:portable` before building its own public guide. At the qualified desktop station, `npm test` also runs the native STEP render and full mechanical-review controls. The hosted job uses the portable profile for every default-branch pull request, merged default-branch change and manual run.
+## How the plugin repository tests itself
+
+These commands carry out [Test by need and risk](testing-methodology.md) for the plugin's own tests. While you work on the plugin, run two commands after a change:
+
+```sh
+npm run validate
+npm run test:changed
+```
+
+`npm run test:changed` runs the test files that cover what you changed since the merge base with `origin/main`, uncommitted and untracked files included. Pass another base after `--`, for example `npm run test:changed -- HEAD~1`. A change to documentation, a skill or the guide runs `validate` and the documentation tests, with the guide tests when the guide's own files changed. The run prints its total time and its five slowest files.
+
+| Run | Command | When |
+| --- | --- | --- |
+| Changed files | `npm run test:changed` | After each change, with `npm run validate` |
+| Quick | `npm run test:quick` | A broad check in seconds: every test that needs no CAD kernel, browser or guide build |
+| Named files | `npm test -- role-handoff kickoff` | One or more test files, by any part of the name |
+| One Python class | `npm test -- mechanical-readiness --name FreePath` | One class of the mechanical-review controls |
+| Full portable | `npm run test:portable` | Everything that runs without the CAD kernel or a renderer |
+| Full station | `npm test` | Before a release tag, or when asked. It adds the native STEP render and the full mechanical-review controls at the qualified desktop station |
+
+Add `--portable` to skip the tests that need the CAD kernel, `--lane NAME` to run one lane, `--jobs N` to change how many test files run at once (default: half the cores) and `--list` to see the selection without running it.
+
+The selection reads two things. [`test/test-map.json`](../test/test-map.json) places every test file in one lane (`logic`, `docs`, `browser` or `kernel`) and lists by hand the files a test covers that its code does not name. The runner adds every file a test reaches through its imports and through the file names and paths in its code, followed through the scripts it runs. A changed file that no test reaches runs every test. So does a change to the runner, the map or `package.json`, except a change to the version number alone. Add a new test file to one lane; `test/test-map.test.mjs` fails until you do.
+
+The hosted job runs `npm run validate` on every pull request, then the changed-files selection under the portable profile. A merged default-branch change and a manual run execute the full portable suite before the public guide is built. The layout check rerun installs the CAD kernel only when a pull request reaches the test it runs. Each run writes its total time and slowest files to the job summary.

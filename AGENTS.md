@@ -37,7 +37,7 @@ Keep the public repository independent from any optional local vault. Never incl
 Follow [Test by need and risk](docs/testing-methodology.md). It decides what runs for every change in this repository and in the projects that use it.
 
 - `.testing/risk.yml` gives the tier of each area. Read it before adding or changing a test.
-- While editing, run `npm run validate` and only the tests relevant to the files you changed. Run everything only before a release, on the weekly run or when asked.
+- While editing, run `npm run validate` and `npm run test:changed`, which runs only the tests that cover the files you changed. Run everything (`npm test`) only before a release, on the weekly run or when asked. [Commands and lanes](docs/project-ci.md#how-the-plugin-repository-tests-itself)
 - A change to a page, a title, a name, a status or a document never triggers a model evaluation.
 - Rerun a design's full layout check in CI only when the design changes stage. Publish a draft on its local check.
 - Name the failure a new test catches and keep a control that proves it can fail. One owner per invariant.

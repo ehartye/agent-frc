@@ -1,17 +1,34 @@
 import assert from 'node:assert/strict';
-import {execFileSync} from 'node:child_process';
+import {execFile,execFileSync} from 'node:child_process';
 import {mkdtempSync,readFileSync,writeFileSync,mkdirSync,cpSync,rmSync} from 'node:fs';
-import {tmpdir} from 'node:os';
+import {availableParallelism,tmpdir} from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import test from 'node:test';
+import test,{describe} from 'node:test';
+import {promisify} from 'node:util';
 
-test('complete mechanical review with geometry and adverse-case controls', {skip:process.env.FRC_TEST_PROFILE==='portable' && 'Run the CAD kernel and rendering controls at the qualified station'},()=>{
-  const py=process.env.PYTHON ?? (process.platform==='win32'?'python':'python3');
-  const p=fileURLToPath(new URL('./mechanical_readiness.py',import.meta.url));
-  execFileSync(py,[p],{stdio:'pipe'});
-  const keyedTorque = fileURLToPath(new URL('../examples/mechanical-readiness/keyed-torque.py', import.meta.url));
-  execFileSync(py, ['-B', keyedTorque], {stdio:'pipe'});
+const run=promisify(execFile);
+
+// Each Python test class runs in its own process, several at once. Run one class alone with:
+//   npm test -- mechanical-readiness --name FreePath
+// The classes and their test counts come from the Python file itself, so a new class or test is picked up without a change here.
+const portable=process.env.FRC_TEST_PROFILE==='portable';
+const py=process.env.PYTHON ?? (process.platform==='win32'?'python':'python3');
+const hub=fileURLToPath(new URL('./mechanical_readiness.py',import.meta.url));
+const classes=portable?{}:JSON.parse(execFileSync(py,[hub,'--list'],{encoding:'utf8'}).trim().split(/\r?\n/).at(-1));
+const atOnce=Number(process.env.FRC_TEST_JOBS)||Math.max(1,Math.floor(availableParallelism()/2));
+
+describe('complete mechanical review with geometry and adverse-case controls',{concurrency:atOnce},()=>{
+  test('the CAD kernel and rendering controls',{skip:portable && 'Run the CAD kernel and rendering controls at the qualified station'},()=>{
+    assert.ok(Object.keys(classes).length>30,'the Python file lists its test classes');
+  });
+  for(const [name,count] of Object.entries(classes)) test(`${name}: ${count} Python tests`,async()=>{
+    const {stderr}=await run(py,[hub,name],{maxBuffer:1<<26});
+    assert.match(stderr,new RegExp(`^Ran ${count} tests? `,'m'));
+  });
+  test('keyed torque example',{skip:portable && 'Run the CAD kernel and rendering controls at the qualified station'},async()=>{
+    await run(py,['-B',fileURLToPath(new URL('../examples/mechanical-readiness/keyed-torque.py',import.meta.url))]);
+  });
 });
 
 test('a results page with a CAD still builds without a mechanical review: it publishes no model of its own',async t=>{

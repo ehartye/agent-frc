@@ -59,8 +59,8 @@ The template is intentionally incomplete and uses a fake pin. Replace that pin w
 ```
 node --test test/subsystem-contracts.test.mjs
 node scripts/subsystem-contracts.mjs study.json subsystem-artifact-id
-npm test
 npm run validate
+npm run test:changed
 ```
 
 CLI exit 1 means invalid input; exit 2 means a structurally valid review with declared blockers; exit 0 means no listed blockers, **never approval**. Authentication, automatic dependency discovery, semantic unit compatibility, whole-robot budget aggregation, CI branch protection, runtime interlocks and physical validation remain proposed work. Evidence records need a separate lineage/result review, including whether a reused old-spec result actually applies to the current implementation.

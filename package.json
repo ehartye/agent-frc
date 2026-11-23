@@ -11,6 +11,8 @@
   "scripts": {
     "test": "node scripts/test-suite.mjs",
     "test:portable": "node scripts/test-suite.mjs --portable",
+    "test:changed": "node scripts/test-suite.mjs --changed",
+    "test:quick": "node scripts/test-suite.mjs --quick",
     "validate": "node scripts/validate.mjs",
     "assembly:check": "node scripts/assembly-accounting.mjs",
     "highlights:build": "node scripts/robot-highlights.mjs",

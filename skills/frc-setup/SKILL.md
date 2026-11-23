@@ -28,4 +28,4 @@ For Java simulation work, use `setup:check -- --task java --jdk ABSOLUTE_JDK_PAT
 
 Run the selected project’s offline checks with its declared prerequisites. Record the command, revision, versions and outcome. Keep an unavailable prerequisite visible.
 
-Use npm run validate from the plugin root to check an installed copy or a checkout. Use npm test from a plugin checkout for the portable test suite.
+Use npm run validate from the plugin root to check an installed copy or a checkout. From a plugin checkout, use npm run test:changed for the tests that cover the changed files and npm run test:portable for the whole portable suite. npm test is the full station suite: it also needs the CAD kernel, and it is run before a release tag or when asked.

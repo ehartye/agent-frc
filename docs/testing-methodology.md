@@ -91,3 +91,5 @@ A robot project follows the plugin's current release. It does not name a plugin 
 - Keep tests independent of the checkout: no fixed ports, no fixed temporary paths, no absolute paths.
 - Say which lane a new test belongs to. A slow test of a low-tier area belongs in the weekly or release run.
 - While editing, run only what is relevant. Run the merge lane before merging. Run everything only at a release, on the weekly run or when asked.
+
+The commands for each run in the plugin are in [how the plugin repository tests itself](project-ci.md#how-the-plugin-repository-tests-itself).

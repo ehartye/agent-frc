@@ -35,7 +35,7 @@ Model uncertainty must be reported separately from random trial variation. Curre
 
 ## Inspect a saved graph
 
-Run `npm test` and `npm run validate`. To inspect a saved graph: `npm run chain -- study.json`. JSON parsing/graph failures exit nonzero. The CLI is read-only. Tests exercise independent strategy and design branches, shared and branch-local invalidation, explicit rebasing, changed hashes, revision conflicts, invalid handoffs, season contamination and forged decisions.
+Run `npm run validate` and `npm run test:changed`. To inspect a saved graph: `npm run chain -- study.json`. JSON parsing/graph failures exit nonzero. The CLI is read-only. Tests exercise independent strategy and design branches, shared and branch-local invalidation, explicit rebasing, changed hashes, revision conflicts, invalid handoffs, season contamination and forged decisions.
 
 ## Machine-readable field and game semantics
 
