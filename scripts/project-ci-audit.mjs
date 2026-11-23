@@ -69,7 +69,7 @@ const escape = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const plural = (count, one, many = one + 's') => count + ' ' + (count === 1 ? one : many);
 
 /** Every file of the project, by its path from the root: the tracked and untracked files Git would commit, or a walk. */
-function projectFiles(root) {
+export function projectFiles(root) {
   if (existsSync(path.join(root, '.git'))) try {
     return {by: 'Git', files: execFileSync('git', ['-C', root, 'ls-files', '-co', '--exclude-standard', '-z'], {encoding: 'utf8', maxBuffer: 1 << 28, stdio: ['ignore', 'pipe', 'ignore']})
       .split('\0').filter(name => name && statSync(path.join(root, name), {throwIfNoEntry: false})?.isFile())};
@@ -86,7 +86,7 @@ function projectFiles(root) {
 }
 
 /** The text of a file, or why it was not read. */
-function textOf(full) {
+export function textOf(full) {
   const size = statSync(full).size;
   if (size > sizeLimit) return {skipped: 'large'};
   const head = Buffer.alloc(Math.min(size, 8000)), file = openSync(full, 'r');
@@ -95,7 +95,7 @@ function textOf(full) {
 }
 
 /** The plugin's own scripts and Python modules that the project does not itself hold. */
-function foreignNames(files) {
+export function foreignNames(files) {
   const held = new Set(), folders = new Set();
   for (const name of files) { const parts = name.split('/'); held.add(parts.pop()); parts.forEach(part => folders.add(part)); }
   const own = readdirSync(pluginScripts).filter(name => /\.(mjs|js|py)$/.test(name));

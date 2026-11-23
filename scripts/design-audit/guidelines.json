@@ -1,0 +1,7 @@
+{
+  "note": "Guidelines, not limits: past one, check in with the owner. The design library's DESIGN.md says one or two short custom files are normal, and the preliminary design skill makes a second custom shape, or one longer than a few lines, a check-in.",
+  "customSolidShare": 0.15,
+  "customFiles": 2,
+  "customFileLines": 40,
+  "customLines": 80
+}
