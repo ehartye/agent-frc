@@ -6,6 +6,7 @@
  * project folder. Marking a design effective stays a project decision in a reviewed pull request.
  */
 import {createHash} from 'node:crypto';
+import {gunzipSync} from 'node:zlib';
 import {existsSync,readFileSync,statSync} from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
@@ -96,35 +97,65 @@ function qualification(trial,name){
 /** The case a trial record says it ran. */
 const trialCase=trial=>object(trial)?trial.case??(object(trial.transport)?trial.transport.case:undefined)??(object(trial.freePath)?trial.freePath.case:undefined)??(object(trial.support)?trial.support.case:undefined):undefined;
 
+/** The trial pins each review replay plays back, from the pinned replay sets under presentation.replays. */
+function replayPins(root,plan){
+  const pins=[];
+  for(const ref of rows(object(plan.presentation)?plan.presentation.replays:null)){
+    if(!named(ref.file)||path.isAbsolute(ref.file))continue;
+    try{
+      const raw=readFileSync(path.resolve(root,ref.file));
+      const set=JSON.parse((raw[0]===31&&raw[1]===139?gunzipSync(raw):raw).toString('utf8'));
+      for(const replay of rows(set?.replays))pins.push(...rows(replay.evidence));
+    }catch{/* An unreadable replay set plays nothing the report can count. */}
+  }
+  return pins;
+}
+/** How a mission case's animation relates to its trial, strongest first. */
+export const motionKinds={
+  bound:'motion driven by the trial (the layout check bound the checked path to it)',
+  played:'animation played from the trial (a review replay or a linked field player); the checked case motion is prescribed',
+  attached:'prescribed motion with a trial attached',
+  prescribed:'prescribed motion, no trial'};
+
 /**
  * Criterion 2: every mission case moves on a named, qualified physics trial rather than a prescribed path.
  * A trial is named by its project-relative path and read. Its bytes are compared only when the reference carries
  * a SHA-256: one an author typed, or the one the layout check recorded in the receipt.
  */
 function trialDriven(root,plan,planBytes,receipt,missions){
-  const reasons=[],notes=[],cases=rows(missions?.missionCases);
-  if(!cases.length)return {reasons:['No mission case: declare each mission-critical interaction under missionCases in missions.json'],notes};
+  const reasons=[],notes=[],interactions=[],cases=rows(missions?.missionCases);
+  if(!cases.length)return {reasons:['No mission case: declare each mission-critical interaction under missionCases in missions.json'],notes,interactions};
   // A stage pin counts only from a whole, layout-checked receipt of this plan: that check bound the trial to the path.
   const checked=bound(receipt,planBytes);
-  const links=rows(object(plan.presentation)?plan.presentation.fieldInteractions:null).map(row=>row.evidence).filter(object);
+  const links=[...rows(object(plan.presentation)?plan.presentation.fieldInteractions:null).map(row=>row.evidence).filter(object),...replayPins(root,plan)];
   for(const m of cases){
     if(!named(m.case)){reasons.push('A mission case names no case');continue;}
     const where='Mission case '+m.case+(named(m.accomplishes)?' ('+m.accomplishes+')':'');
     const stage=checked&&object(receipt.stages)&&object(receipt.stages[m.case])?receipt.stages[m.case]:{};
     const pins=['transportedBy','freePath','supportedBy'].flatMap(k=>Object.values(object(stage[k])?stage[k]:{}))
-      .map(s=>object(s)?s.evidence:null).filter(object);
-    if(object(m.trial))pins.push(m.trial);
-    // A linked field interaction binds the motion only when its trial records this case.
-    for(const pin of links){const trial=load(root,pin.file);if(!trial.reason&&trialCase(trial.json)===m.case)pins.push(pin);}
-    // One entry per file; a reference that carries a SHA-256 is kept over one that names the path alone.
-    const byFile=new Map();
-    for(const p of pins.filter(p=>named(p.file)))if(!byFile.has(p.file)||named(p.sha256))byFile.set(p.file,p);
+      .map(s=>object(s)?s.evidence:null).filter(object).map(pin=>({...pin,kind:'bound'}));
+    if(object(m.trial))pins.push({...m.trial,kind:'attached'});
+    // A replay or a linked field interaction plays the trial for this case only when its trial records the case.
+    for(const pin of links){const trial=load(root,pin.file);if(!trial.reason&&trialCase(trial.json)===m.case)pins.push({...pin,kind:'played'});}
+    // One entry per file, holding the strongest kind that names it; a reference that carries a SHA-256 is kept over one that names the path alone.
+    const strength=['bound','played','attached'],byFile=new Map();
+    for(const p of pins.filter(p=>named(p.file))){
+      const held=byFile.get(p.file),kind=held&&strength.indexOf(held.kind)<strength.indexOf(p.kind)?held.kind:p.kind;
+      byFile.set(p.file,{...(!held||named(p.sha256)?p:held),kind});
+    }
     const unique=[...byFile.values()];
+    // Strongest first: a stage reference binds the checked path to the trial, a replay or field player plays the trial, a mission reference only attaches it.
+    const kind=strength.find(k=>unique.some(p=>p.kind===k))??'prescribed';
+    interactions.push({case:m.case,motion:kind,trials:unique.map(p=>p.file)});
     if(!unique.length){
-      reasons.push(where+': the motion is prescribed; no trial is named through transportedBy, freePath, supportedBy, a mission trial or a linked field interaction'
+      reasons.push(where+': the motion is prescribed; no trial is named through transportedBy, freePath, supportedBy, a mission trial, a review replay or a linked field interaction'
         +(checked?'':' (stage trials are read only from a layout-checked receipt of this plan)'));
       continue;
     }
+    if(kind==='attached')
+      reasons.push(where+': prescribed motion with a trial attached ('+unique.map(p=>p.file).join(', ')+'). The trial records this case, but the animation is not driven by it. '
+        +'Declare the payload path through transportedBy, freePath or supportedBy so the layout check binds the checked motion to the trial, or play the recorded run as a review replay'
+        +(checked?'':' (stage trials are read only from a layout-checked receipt of this plan)'));
     for(const pin of unique){
       const trial=load(root,pin.file);
       if(trial.reason){reasons.push(where+': '+trial.reason);continue;}
@@ -132,9 +163,9 @@ function trialDriven(root,plan,planBytes,receipt,missions){
       if(trialCase(trial.json)!==m.case){reasons.push(where+': trial '+pin.file+' records another case');continue;}
       for(const reason of qualification(trial.json,pin.file))reasons.push(where+': '+reason);
     }
-    notes.push(m.case+': '+unique.map(p=>p.file+(p.sha256===undefined?' (read; no SHA-256 given to compare)':' (matches its recorded SHA-256)')).join(', '));
+    notes.push(m.case+': '+motionKinds[kind]+': '+unique.map(p=>p.file+(p.sha256===undefined?' (read; no SHA-256 given to compare)':' (matches its recorded SHA-256)')).join(', '));
   }
-  return {reasons,notes};
+  return {reasons,notes,interactions};
 }
 
 /** A bench test that states its measure, a pass value and a fail value. */
@@ -181,9 +212,9 @@ export function effectiveReadiness(root,{release='',plan:planName,receipt:receip
   const add=(id,title,run)=>{
     let result;
     if(!p)result={reasons:unreadable,notes:[]};
-    else try{const x=run();result={reasons:[...other,...x.reasons],notes:x.notes};}
+    else try{const x=run();result={reasons:[...other,...x.reasons],notes:x.notes,...(x.interactions?{interactions:x.interactions}:{})};}
     catch(error){result={reasons:[...other,'Could not judge this criterion from malformed input: '+error.message],notes:[]};}
-    criteria.push({id,title,met:result.reasons.length===0,reasons:result.reasons,notes:result.notes});
+    criteria.push({id,title,met:result.reasons.length===0,reasons:result.reasons,notes:result.notes,...(result.interactions?{interactions:result.interactions}:{})});
   };
   add('whole-cycle','Whole mission cycle checked for clearance, mass and voltage',()=>wholeCycle(plan.bytes,r,m));
   add('trial-driven','Every mission-critical interaction driven by a qualified physics trial',()=>trialDriven(root,p,plan.bytes,r,m));

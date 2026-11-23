@@ -1,6 +1,7 @@
 """Review an early loaded-mechanism layout in one registered STEP world frame."""
 import argparse
 from copy import deepcopy
+from datetime import datetime, timezone
 import json
 from pathlib import Path
 import subprocess
@@ -211,6 +212,32 @@ def attachment_field(plan, groups, mounts, case, scene, observations, fixtures, 
     if progress:
         for line in lines:progress(line)
     return report
+
+
+def plan_identity(root, file, sources=()):
+    """Stderr lines that say which layout plan this run read: its path, when it was last written and its digest.
+
+    sources are the files or folders a project builder writes the plan from, relative to the project. A plan
+    last written before one of them changed draws a warning: its builder may have failed or not run. The lines are
+    information for the reader and never enter the receipt or change the result."""
+    stamp=lambda seconds:datetime.fromtimestamp(seconds,timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    written=file.stat().st_mtime
+    name=file.relative_to(root).as_posix()
+    lines=[f"[plan] {name} modified {stamp(written)} sha256={digest(file)}"]
+    for source in sources:
+        require(named(source),"--built-from names a builder source file or folder")
+        path=(root/source).resolve()
+        require(path.exists(),"--built-from names no file or folder: "+source)
+        # The plan itself and compiled caches are outputs, not sources.
+        files=[path] if path.is_file() else [p for p in path.rglob("*") if p.is_file() and p!=file and "__pycache__" not in p.parts]
+        require(files,"--built-from names a folder that holds no source file: "+source)
+        newest=max(files,key=lambda p:p.stat().st_mtime)
+        changed=newest.stat().st_mtime
+        if changed>written:
+            lines.append(f"[plan] warning: {name} was last written {stamp(written)}, before {newest.as_posix() if not newest.is_relative_to(root) else newest.relative_to(root).as_posix()} "
+                         f"changed at {stamp(changed)}. Its builder may have failed or not run since, so this check may be reading "
+                         "a stale plan. Check the builder's exit code and rebuild the plan before relying on the result.")
+    return lines
 
 
 def mount_notes(groups, mounts):
@@ -908,6 +935,8 @@ if __name__=="__main__":
                         help="Write the receipt to the project-relative FILE through a temporary file and a rename instead of stdout; "
                              "a run that ends in an error leaves the previous FILE intact")
     parser.add_argument("--quiet",action="store_true",help="Omit progress, heartbeat and warning lines on stderr")
+    parser.add_argument("--built-from",action="append",default=[],metavar="PATH",
+                        help="A builder source file or folder the plan is written from; warn on stderr when the plan is older. Repeatable")
     parser.add_argument("--heartbeat",type=float,default=HEARTBEAT_SECONDS,metavar="SECONDS",
                         help="Seconds inside a motion case before a stderr line names the active pair (default 30)")
     parser.add_argument("--jobs",type=int,metavar="N",
@@ -920,6 +949,9 @@ if __name__=="__main__":
         require(not (args.physics_only and args.write_view),"Choose --physics-only or --write-view")
         require(args.view_only or not args.from_receipt,"--from-receipt applies only with --view-only")
         plan_file=project_path(root,args.plan)
+        # Said first, so a reader can tell a fresh plan from one a failed builder left behind.
+        for line in plan_identity(root,plan_file,args.built_from):
+            if not args.quiet:stderr_progress(line)
         held=None
         if args.view_only:
             held=project_path(root,args.from_receipt) if args.from_receipt else output or plan_file.with_name("receipt.json")

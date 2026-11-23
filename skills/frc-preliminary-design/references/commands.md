@@ -57,11 +57,13 @@ node PLUGIN/scripts/design.mjs preliminary-check . cad/preliminary-design/releas
 | Fixing a failing layout | `--fail-fast` | Stops at the first case that does not pass. The receipt is partial |
 | Changing geometry or motion only | `--physics-only` | Checks every case and the budgets. Writes no review page |
 | Changing names, colours, explanations or grouping | `--view-only` in place of `--write-view` | Rebuilds the review page from the saved receipt in seconds. Reruns no case |
+| Running after a project builder | `--built-from PATH` | Warns when the plan is older than the builder's source file or folder. Repeat it for each source. Changes no result |
 | Sharing the machine | `--jobs N` | Sets the worker count. Use half the cores |
 | Publishing | `--write-view --output ...` | The full check. Only this receipt can be published |
 
 Read these lines on stderr:
 
+- `[plan]` comes first: the plan's path, when it was last written and its digest. A `[plan] warning` says the plan is older than a `--built-from` source: check the builder's exit code and rebuild before relying on the result. [Confirm the check read a fresh plan](../../../docs/preliminary-design.md#confirm-the-check-read-a-fresh-plan)
 - `[scope]` gives the solid count and the finest path tolerance beside the guidelines.
 - `[mounts] note` names members with no registered mount.
 - `[attachment]` lists each robot solid with no path to the frame and each field fixture off the floor. Clear every row: move the solid onto its support, draw the support, register its mount, or label it under `attachment.unmounted` in the plan with its reason. [Nothing floats](../../../docs/preliminary-design.md#nothing-floats)
@@ -108,7 +110,7 @@ The plugin reads trial records. It does not run trials: the project owns its tri
 node PLUGIN/scripts/design.mjs effective-readiness . --release cad/preliminary-design/releases/1.0 --design "Tilting carriage 1.0"
 ```
 
-The report lists the three criteria as met or not met, each with the reason. It writes nothing and always exits 0. [What it reads](../../../docs/preliminary-design.md#judge-readiness-to-be-marked-effective)
+The report lists the three criteria as met or not met, each with the reason. It writes nothing and always exits 0. Under criterion 2 a note says how each mission case's animation relates to its trial. `prescribed motion with a trial attached` is `not met`: name the trial on the case's stage, or play it as a replay. [What it reads](../../../docs/preliminary-design.md#judge-readiness-to-be-marked-effective)
 
 ## Write the handoff note
 
