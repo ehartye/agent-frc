@@ -190,8 +190,9 @@ A season pins a plugin revision and holds copies of some plugin files. After mov
 | 0.117.0 | `stage.py`. The project is now the repository. A new check keeps the layout plan, its inputs and its `view` together in a release folder such as `cad/preliminary-design/releases/ID/`, names the view from the repository root, as in `cad/preliminary-design/releases/ID/package-motion.html`, and writes every pin from the repository root. `--write-view` refuses a view at the project root; an issued release whose view sits there still verifies. See [Keep the view in its release folder](#keep-the-view-in-its-release-folder). `effective-readiness` takes `--release FOLDER`. |
 | 0.118.0 | Nothing to re-copy. A stage may declare `supportedBy` for a payload a registered field fixture supports. |
 | 0.122.1 | The release index page `docs/preliminary-design/index.html` from `templates/preliminary-review-index.html`. The note under the header is gone: the release picker names each design status and the review page shows the rest. |
+| 0.123.0 | `stage.py`, the release index page and the local review page (delete `package-motion.html` and rerun the check with `--write-view`). Staging an in-progress release again revises it in place and counts a revision; an effective release is no longer restaged. Mark in-progress releases that a later release replaced `superseded`, and add `accepted` for a superseded release that was once effective. [Revise an in-progress release in place](design-publication.md#revise-an-in-progress-release-in-place) |
 
-An issued release never changes; a new release carries the new page.
+An in-progress release takes the new page when it is staged again under its ID. An effective, superseded or withdrawn release never changes.
 
 ## Examine the moving blocks and budgets
 

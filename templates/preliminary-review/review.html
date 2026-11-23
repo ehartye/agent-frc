@@ -236,9 +236,9 @@ function header(){
  decide(scene.decision.status,scene.decision.firstUnmet,'(at scene generation; awaiting the review receipt)');
  triggered(scene.decision.status==='blocked'&&scene.decision.firstUnmet?[scene.decision.firstUnmet.text]:[]);
 }
-let designStatus=null,decision='pending receipt';
+let designStatus=null,revision='',decision='pending receipt';
 const releaseId=()=>decodeURIComponent(new URL('.',location.href).pathname.split('/').filter(Boolean).at(-1)||'');
-function chip(){const s=$('state');s.textContent=(designStatus?designStatus[0].toUpperCase()+designStatus.slice(1).replace('-',' ')+' · ':'')+decision;s.className='chip '+decision}
+function chip(){const s=$('state');s.textContent=(designStatus?designStatus[0].toUpperCase()+designStatus.slice(1).replace('-',' ')+' · ':'')+revision+decision;s.className='chip '+decision}
 function decide(status,unmet,source){
  decision=status;$('decision').textContent=status;$('decision').className='chip '+status;chip();
  $('decisionSource').textContent=source;$('firstUnmet').textContent=unmet?unmet.text:'None. Every commissioned check passes.';
@@ -249,7 +249,9 @@ function triggered(list){$('triggered').replaceChildren(...(list.length?list:['N
 async function showDesignStatus(){
  const id=releaseId();
  try{const r=await fetch('../../releases.json',{cache:'no-store'});if(!r.ok)return;const index=await r.json();if(!index.releases?.includes(id))return;
-  designStatus=index.designStatus?.[id]??'in-progress';chip()}catch{}
+  designStatus=index.designStatus?.[id]??'in-progress';
+  // An in-progress release is revised in place; the index counts its revisions.
+  const edited=index.revision?.[id]?.number;revision=Number.isInteger(edited)?'revision '+edited+' · ':'';chip()}catch{}
 }
 async function bindReceipt(contentSha){
  let receipt=null;try{const r=await fetch('receipt.json',{cache:'no-store'});receipt=r.ok?await r.json():null}catch{}

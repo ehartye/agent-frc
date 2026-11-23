@@ -178,3 +178,25 @@ test('the stable index explains a withdrawn release instead of loading its remov
     message: 'Release layout-001 was withdrawn: Invented reason: the lane moved. Its files are in the repository history at commit 0123456789ab.',
     frameHidden: true, option: 'layout-001 · withdrawn · current', viewportWidth: 1280});
 });
+
+test('an in-progress release shows its revision; the picker lists one entry per design', {skip}, async t => {
+  // Synthetic index: `draft` was superseded before it was ever accepted, `first` was effective and then superseded.
+  const dir = site(t), url = release(dir, 'second', reviewScene());
+  const index = {current: 'second', releases: ['draft', 'first', 'second'],
+    designStatus: {draft: 'superseded', first: 'superseded', second: 'in-progress'}, accepted: {first: '2001-02-03'},
+    revision: {draft: {number: 3, date: '2001-01-02'}, second: {number: 4, date: '2001-03-04', commit: '0123456789abcdef0123456789abcdef01234567'}}};
+  writeFileSync(path.join(dir, 'releases.json'), JSON.stringify(index));
+  const chip = await probePage(dir, url, ready + `for(let i=0;i<40&&!/·/.test(document.querySelector('#state').textContent);i++)await new Promise(r=>setTimeout(r,50));
+   return {chip:document.querySelector('#state').textContent}`);
+  assert.equal(chip.chip, 'In progress · revision 4 · layout-checked');
+  writeFileSync(path.join(dir, 'index.html'), readFileSync(new URL('../templates/preliminary-review-index.html', import.meta.url), 'utf8'));
+  const picker = `const s=document.querySelector('select');for(let i=0;i<60&&s.disabled;i++)await new Promise(r=>setTimeout(r,50));
+   return {options:[...s.options].map(o=>o.textContent),selected:s.value,revision:document.querySelector('#revision').textContent}`;
+  assert.deepEqual(await probePage(dir, 'index.html', picker), {
+    options: ['first · superseded', 'second · in progress · revision 4 · current'], selected: 'second',
+    revision: 'Revision 4, 2001-03-04, from commit 0123456', viewportWidth: 1280});
+  // The superseded draft keeps its record and is listed when it is the release being opened, as a link by ID does.
+  writeFileSync(path.join(dir, 'releases.json'), JSON.stringify({...index, current: 'draft'}));
+  const asked = await probePage(dir, 'index.html', picker);
+  assert.deepEqual([asked.options[0], asked.selected], ['draft · superseded · revision 3 · current', 'draft']);
+});

@@ -62,6 +62,7 @@ Open `docs/preliminary-design/releases.json` and `docs/detailed-design/designs.j
 
 - Delete `effectiveHistory` and `legacy` from `releases.json`. Git history records every status a release has held.
 - Give every listed design a status under `designStatus`. A design the site no longer shows is `superseded` when a later design replaced it and `withdrawn` otherwise.
+- Mark each in-progress release that a later release replaced `superseded`, so the picker lists one entry per design. For a superseded release that was once effective, add the date it was accepted under `accepted`, as in `"accepted": {"layout-001": "DATE"}`, so it stays listed. From here on, [revise an in-progress release in place](design-publication.md#revise-an-in-progress-release-in-place) and do not take a new ID for an edit.
 - Give every withdrawn design a reason under `reason`. Add `lastCommit` when the commit that last held its files is known.
 - Delete each on-site archive of a withdrawn design, such as `docs/detailed-design/archive/`, and any archived copy of an earlier README kept only to satisfy a pin. Git keeps those files. Remove links to them.
 - Delete each published folder of a withdrawn design.

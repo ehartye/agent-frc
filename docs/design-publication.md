@@ -66,7 +66,26 @@ python cad/preliminary-design/stage.py layout-002
 node PLUGIN/scripts/design-publication.mjs check . --skip-rerun
 ```
 
-Staging copies the review page as it is, the scene, receipt, motion, budget and limit files, each field player the scene links and each trial a mission case names into `docs/preliminary-design/releases/ID/`. It writes the release record and lists the release as `in-progress`. Staging the same ID again replaces the published files of an in-progress or effective release, so a fix needs no new ID.
+Staging copies the review page as it is, the scene, receipt, motion, budget and limit files, each field player the scene links and each trial a mission case names into `docs/preliminary-design/releases/ID/`. It writes the release record and lists the release as `in-progress`.
+
+### Revise an in-progress release in place
+
+One design keeps one release ID. An edit to the same design is a revision of its release, not a new release:
+
+```sh
+node PLUGIN/scripts/design.mjs preliminary-check . cad/preliminary-design/releases/layout-002/layout.json --write-view --output cad/preliminary-design/releases/layout-002/receipt.json
+python cad/preliminary-design/stage.py layout-002
+```
+
+Edit the inputs in the release's own folder, rerun the check there and stage the same ID. Staging replaces the published page, scene, receipt and evidence, and counts the revision in the index: `"revision": {"layout-002": {"number": 4, "date": "DATE", "commit": "COMMIT"}}`, where the commit is the one the checkout was at. The picker and the review page show it as "revision 4". The picker gains no entry, and the publication check reruns the layout check on the revised inputs. Staging unchanged files counts nothing. Push each revision to publish an in-progress design as it develops; Git keeps the earlier bytes.
+
+| Situation | What to do |
+| --- | --- |
+| An edit, fix or refinement of an in-progress design | Stage the same release ID again. |
+| A different design: another architecture or concept | A new release ID. |
+| The design that follows an effective release | A new release ID. |
+
+A release stops changing when it is marked `effective`, and stays unchanged as `superseded` or `withdrawn`: staging its ID is refused. When a new release replaces an in-progress one that was never accepted, mark the old one `superseded` with `python cad/preliminary-design/stage.py --set-status OLD-ID superseded`. It keeps its record in the index and opens from a link that names it, and the picker lists it no longer. The picker lists a superseded release only when the index holds the date it was accepted, under `accepted`, which `--set-status ID effective` records.
 
 ```json
 {
