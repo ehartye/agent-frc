@@ -388,6 +388,6 @@ export function createFieldRehearsal(profile) {
     for(const r of sim.robots){delete r.goal;}
     for(const r of sim.robots)Object.assign(r,{pickup:null,leg:0,waypoints:null,target:0,dwell:0,wait:0,travelIn:0,visits:0,blocked:'',action:'',...(r.concept?{currentSpeedInS:0}:{})});
   }
-  return {supported,behaviors,defaults,startingRoster,completeRoster,create,createProbe,advance,nextPhase,assessRoute,geom,waypoint,intake:game?.intake,dt,periods:phases,terminal,
+  return {supported,behaviors,defaults,startingRoster,completeRoster,create,createProbe,advance,nextPhase,assessRoute,geom,waypoint,intake:game?.intake,mouth:game?.mouth,dt,periods:phases,terminal,
     phaseSeconds:name=>duration(name)*dt,elapsedSeconds:name=>wallDuration(name)*dt};
 }

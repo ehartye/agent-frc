@@ -17,10 +17,9 @@
   byId('replayBasis').textContent=config.basis+' '+config.boundsNote+
     ' The default bumper adds '+config.defaults.bumper+' in per side. Priorities follow request time, then robot ID for same-tick requests. Completed trips count arrivals and service, with scoring evaluated separately by the project station model.';
   // Concept bots embedded in the profile. A card names one by id; the engine resolves it to the compiled record.
-  // The game's own mouth() places each port on its face, so the drawing and the contact test share one geometry.
+  // The engine's mouth() places each port on its face, so the drawing and the contact test share one geometry.
   const concepts=config.concepts ?? [], prisms=new Map();
   const conceptRecord=r=>{const id=typeof r.concept==='string'?r.concept:r.concept?.id;return id?concepts.find(c=>c.record.concept.id===id):null;};
-  const ports=concepts.length?createRehearsalGame(profile,rehearsal.geom,createFieldPieceMotion(profile,rehearsal.geom)):null;
   const points=x=>Math.round(x*1000)/1000;
   if(concepts.length)canvas.parentElement.querySelector('figcaption').append(' Gold bars are input mouths and mint bars output faces. A dashed wedge is a turret’s travel, its solid ray the current aim, and the white arrow each concept robot’s heading.');
   const stations=config.stations ?? [], legend=byId('replayStations'), counters=new Map();
@@ -132,10 +131,10 @@
     // Concept marks: gold input mouths, mint output faces, a dashed turret wedge with its current aim ray, a heading arrow.
     function conceptMarks(r){
       const toward=(from,deg,length)=>[from[0]+length*Math.cos(deg*Math.PI/180),from[1]+length*Math.sin(deg*Math.PI/180)];
-      for(const port of r.concept.inputs){const m=ports.mouth(r,port);line(m.ends,'#182d41',4);line(m.ends,'#ffdf85',2);}
+      for(const port of r.concept.inputs){const m=rehearsal.mouth(r,port);line(m.ends,'#182d41',4);line(m.ends,'#ffdf85',2);}
       for(const port of r.concept.outputs){
         const span=(port.face==='front'||port.face==='back'?r.width:r.length)+2*r.bumper;
-        const m=ports.mouth(r,{face:port.face,extensionIn:0,widthIn:span*.6}),normal=Math.atan2(m.forward[1],m.forward[0])*180/Math.PI;
+        const m=rehearsal.mouth(r,{face:port.face,extensionIn:0,widthIn:span*.6}),normal=Math.atan2(m.forward[1],m.forward[0])*180/Math.PI;
         line(m.ends,'#182d41',4);line(m.ends,'#7ff0c8',2);
         if(port.kind!=='ranged')continue;
         const turret=port.ranged.turret,reach=Math.max(12,span*.6);
@@ -156,7 +155,7 @@
       const intake=r.intake?rehearsal.intake(r):null;
       if(intake){line(intake.ends,'#182d41',4);line(intake.ends,'#ffdf85',2);}
       if(r.concept)conceptMarks(r);
-      const port=r.concept?.inputs.find(p=>p.id===r.pickup?.port),mouth=intake ?? (port?ports.mouth(r,port):null);
+      const port=r.concept?.inputs.find(p=>p.id===r.pickup?.port),mouth=intake ?? (port?rehearsal.mouth(r,port):null);
       const target=mouth && sim.game.motion.pieces.find(piece=>piece.id===r.pickup?.id);
       if(target){
         const [tx,ty]=at(target.p);

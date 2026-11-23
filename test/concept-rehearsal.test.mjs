@@ -2,6 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { createFieldRehearsal } from '../scripts/field-rehearsal.mjs';
 import { compileConceptBot, applyProfileDefaults } from '../scripts/concept-bot.mjs';
 import { rehearsalFindings } from '../scripts/rehearsal-game.mjs';
@@ -288,4 +289,29 @@ test('ports: a place output releases from its stand-off with the face toward the
   const high=play(arena({docs,steps:[shoot],goal:[300,150],points:1,entry:{centerIn:[300,150,40],kind:'window',widthIn:18,heightIn:12,facingDeg:180,factId:'high'}}),
     [{concept:'placer',preload}],4,[[200,150]]);
   assert.equal(high.sim.game.score.blue,0);assert.match(high.notes,/release height/);
+});
+
+test('ports: a concept robot keeps scoring in Main play while its source has stock; an exhausted source is a genuine idle',()=>{
+  // The training shuttle loops a fixed blue rack (6 tiles, no returns) into the blue bay, in both periods.
+  const doc=JSON.parse(readFileSync(new URL('../examples/concept-bots/turret-shooter.json',import.meta.url)));
+  const match=(stock,concept)=>{
+    const p=structuredClone(training);
+    p.rehearsal.stations.find(s=>s.id==='blue-supply').stock=stock;
+    p.rehearsal.concepts=[{document:doc,record:compileConceptBot(applyProfileDefaults(doc,p))}];
+    const engine=createFieldRehearsal(p);
+    const roster=engine.completeRoster(engine.startingRoster().map(r=>r.id==='B1'?
+      {...r,...(concept?{concept:'turret-shooter'}:{}),plans:{Opening:'shuttle','Main play':'shuttle'}}:r));
+    const sim=engine.create(roster);
+    sim.paused=false;engine.advance(sim,20);engine.nextPhase(sim);sim.paused=false;engine.advance(sim,60);
+    const of=(phase,outcome)=>sim.game.events.filter(e=>e.robot==='B1' && e.phase===phase && e.outcome===outcome).length;
+    return {opening:of('Opening','credited'),main:of('Main play','credited'),emptyMain:of('Main play','empty-or-full'),left:sim.game.stock['blue-supply'].length};
+  };
+  // With ample stock the concept robot scores again after the period boundary, as the legacy control does.
+  const ample=match(40,true),control=match(40,false);
+  assert.ok(ample.opening>0 && ample.main>0,'concept scored '+ample.opening+' then '+ample.main);
+  assert.ok(control.main>0,'legacy control scored '+control.main+' in Main play');
+  // With the training stock, the faster concept robot empties the rack in Opening; Main play finds it empty.
+  const training6=match(6,true);
+  assert.equal(training6.opening,6);assert.equal(training6.left,0);
+  assert.equal(training6.main,0);assert.ok(training6.emptyMain>0,'Main play reports the empty rack');
 });
