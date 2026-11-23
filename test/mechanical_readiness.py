@@ -34,6 +34,7 @@ from view_location import ViewLocation
 from held_position_replay import HeldPositionReplay
 from contact_transport import ContactTransport
 from held_pin_relocation import HeldPinRelocation
+from parallel_cases import ParallelCases
 
 
 class Readiness(unittest.TestCase):

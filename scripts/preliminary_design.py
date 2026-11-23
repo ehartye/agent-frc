@@ -431,8 +431,10 @@ def verify_reopens(root, plan, prior, decisions, observations, missing, budget):
 
 
 def review(root, file, previous=None, *, write_view=False, fail_fast=False, progress=None, heartbeat_seconds=HEARTBEAT_SECONDS,
-           physics_only=False):
+           physics_only=False, jobs=1):
     """Check one package issue. progress receives stderr-only lines; fail_fast stops at the first non-passing nominal case.
+    jobs worker processes share the motion cases, or as many as the cores and memory allow when it is None;
+    the receipt does not depend on it.
 
     physics_only checks clearance, the displaced control and the budgets without reading or writing the review view.
     A project's CI uses it to rerun a committed layout; its receipt is marked and is not one to publish."""
@@ -626,7 +628,7 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
     # The displaced control is expected to fail, so it never stops a fail-fast run. It runs last and
     # only after every nominal case passed; otherwise it is skipped and the receipt cannot be checked.
     observed=evaluate(root,study,mount_hosts={m["on"] for m in mounts},package_scene=inspect_scene,
-                      progress=progress,fail_fast=fail_fast,never_stop={control_id},heartbeat_seconds=heartbeat_seconds)
+                      progress=progress,fail_fast=fail_fast,never_stop={control_id},heartbeat_seconds=heartbeat_seconds,jobs=jobs)
     partial=observed.get("partial",False)
     observations=observed["cases"]
     if control and partial:
@@ -755,6 +757,9 @@ if __name__=="__main__":
     parser.add_argument("--quiet",action="store_true",help="Omit progress, heartbeat and warning lines on stderr")
     parser.add_argument("--heartbeat",type=float,default=HEARTBEAT_SECONDS,metavar="SECONDS",
                         help="Seconds inside a motion case before a stderr line names the active pair (default 30)")
+    parser.add_argument("--jobs",type=int,metavar="N",
+                        help="Worker processes that share the motion cases (default: one fewer than the cores, within the "
+                             "work and the memory available). The receipt is the same for every N; 1 runs the cases in order in one process")
     args=parser.parse_args()
     try:
         root=args.project.resolve()
@@ -764,7 +769,7 @@ if __name__=="__main__":
                 and not output.is_dir(),"Save the receipt to a project-relative file in an existing folder")
         result=review(root,project_path(root,args.plan),project_path(root,args.previous) if args.previous else None,
                       write_view=args.write_view,fail_fast=args.fail_fast,progress=None if args.quiet else stderr_progress,
-                      heartbeat_seconds=args.heartbeat,physics_only=args.physics_only)
+                      heartbeat_seconds=args.heartbeat,physics_only=args.physics_only,jobs=args.jobs)
         receipt=json.dumps(result,indent=2,allow_nan=False)+"\n"
         if args.output:write_atomic(output,receipt.encode("utf-8"))
         else:sys.stdout.write(receipt)
