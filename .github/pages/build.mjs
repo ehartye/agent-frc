@@ -189,7 +189,8 @@ for(const file of ['guide.css','interact.js']) await copyFile(path.join(source,f
 await mkdir(path.join(output,'fonts'));
 for(const {name,url} of themeFontFiles()) await copyFile(url,path.join(output,'fonts',name));
 await writeFile(path.join(output,'rules.json'),JSON.stringify(model,null,2)+'\n');
-await buildHighlights(path.join(root,'examples/highlights/project.json'),path.join(output,'robot'));
+// The teaching fixture has no staged design, so its page shows the still and says that no review is published.
+await buildHighlights(path.join(root,'examples/highlights/project.json'),path.join(output,'robot'),{note(){}});
 await buildHighlights(path.join(root,'examples/highlights/stroke-chapter-page.json'),path.join(output,'stroke'));
 const roleStudy=JSON.parse(await readFile(path.join(root,'examples/design-methods/alliance.json'),'utf8'));
 const selection=JSON.parse(await readFile(path.join(studyFolder,'role-selection.json'),'utf8'));

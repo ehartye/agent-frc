@@ -20,19 +20,11 @@ For each mapped solid, the solver checks distance from source to displayed surfa
 
 When an older scene lacks per-part ranges, an optional `sampledScreen` with `toleranceMm` and `basis` can identify measured discrepancies in a bidirectional whole-model screen. A finite set of matching sample centers cannot qualify every physical occurrence. Keep the original scene as historical evidence and retain source-to-facet registration in the successor. Preserve animations when regenerating a sanctioned parked mesh.
 
-## Use the gate
+## Where this comparison applies
 
-The standard CAD still and browser viewer use the same binary STL. The private gate checks the submitted triangle count, current source hash, actual part geometry and submitted still/mesh identities. For custom meshes, add a pinned `meshStudy` to the file’s distribution row, with the same structure described above. Give every posted mesh its own registered source, scope and pose. A failed or open correspondence prevents the replacement. Field-only media can be verified through an independent trusted field build. A gallery-only CAD image still requires the authorized model issue.
+A detailed design has [one published view, its design review](design-publication.md#one-viewer-for-one-design). The layout check builds that page's model from the same STEP it checks, so it needs no mesh comparison. The plugin no longer builds an orbit view from the STL, publishes an animated model or compares a delivered still pixel by pixel.
 
-## Publish a still and a moving model
-
-The delivery check reproduces the standard orthographic still from the verified complete STL with its registered color groups, backdrop and viewport. It compares decoded pixels. A different pose or crop needs its own supported projection.
-
-For a GLB or glTF with physical clips, issue the saved rest pose and supply the per-solid facet map. List every clip by its embedded name in the mesh study's `animations` object. For each clip, `keyPoses` gives `{timeS,pose}` for every distinct channel key time. Each pose must exist in the native issue. The `channels` object maps each glTF node index to `{group,baselinePose,calibrationPose,timeS}`. Capture a native baseline with the coordinate explicitly read in the saved configuration. Capture a second pose moving that joint alone. At the calibration time the public channel must reproduce that isolated native move. Both calibration poses belong in the registered native inspection set.
-
-The checker compares every placed body at every key and the signed coordinate interval along every rigid linear slide or revolute joint. It composes nested joint movements and checks intermediate solids with the same interval bounds used for service clearances. A coordinated clip can use a different combined native pose at each clock. Split a half-turn or a continuous spin into independently inspected shorter arcs. Changing mesh shape, nonrigid scale, discontinuous teleports or an unresolved bearing contact keep the candidate open. Students can still explore the last approved model while the next candidate is reviewed.
-
-A showcase CAD entry can publish its verified self-contained animated GLB using `playableGlb`. The normal builder checks the exact file and links those bytes from the student page. Project-specific interactive viewers may use those same bytes. The original slider handoff in `examples/mechanical-readiness` provides a two-solid real Fusion control. Call `native-coupon.capture(..., moving=True)` in Fusion using a separate scratch project, then run `prepare-coupon.py PROJECT`. The native inspection includes the saved configuration, explicit joint home, a 3 mm extension, both stock materials and joint limits. The example also writes a private 5 mm overtravel GLB. Its moving gauge intersects the pocket wall; keep that file private as a regression. To inspect the valid original educational clip in a browser, put `inspect-slider.html` alongside the issued `carriage.glb` and serve that directory locally.
+Use this command on its own when a project keeps a mesh for another purpose, such as a simulator scene or a print, and wants to know that it holds every installed solid of the STEP. For a GLB or glTF with clips, `pose` selects the clip and time to compare, and the matching posed STEP is the reference.
 
 ## Choose when to observe a joint
 

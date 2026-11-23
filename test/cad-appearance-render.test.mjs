@@ -1,4 +1,3 @@
-import {authorizeRender} from './authorize-render-fixture.mjs';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
@@ -16,7 +15,7 @@ const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const python = process.platform === 'win32' ? 'python' : 'python3';
 const py = (name, ...args) => spawnSync(python, [path.join(scripts,name), ...args], {encoding:'utf8'});
 
-test('colored highlights bind the resolved palette, source assignment and facet ranges', async t => {
+test('a colored export record binds the resolved palette, source assignment and facet ranges', async t => {
   const root = await mkdtemp(path.join(tmpdir(),'cad-colors-'));
   t.after(() => rm(root,{recursive:true,force:true}));
   await cp(project,root,{recursive:true});
@@ -36,37 +35,35 @@ test('colored highlights bind the resolved palette, source assignment and facet 
   record.appearances={file:'roles.json',sha256:sha(assignments),paletteSha256:sha(canonical),
     groups:[{role:'structure',color:config.colors.structure,solids:rows.length,triangles:record.triangles,facetsSha256:sha(facets)}]};
   const save = () => writeFile(receipt,JSON.stringify(record));
-  const selectedFile = path.join(root,'cad-showcase.json');
-  await assert.rejects(buildHighlights(manifest,target),/Selected appearance manifest/);
-  const staleReadme = py('cad-readmes.py',root,'--verify-export');
-  assert.notEqual(staleReadme.status,0);
-  assert.match(staleReadme.stderr,/Selected appearance manifest/);
+  // The export record is validated where it is written and by its own command. The results page no longer compares it.
+  const validate = () => py('cad_appearances.py',root,receipt);
   await save();
-  await writeFile(selectedFile,JSON.stringify({...shape,appearances:'other-roles.json'}));
-  await assert.rejects(buildHighlights(manifest,target),/Selected appearance manifest/);
-  await writeFile(selectedFile,JSON.stringify({...shape,appearances:'roles.json'}));
-  authorizeRender(root);
-  await buildHighlights(manifest,target);
-  const viewer = (await readdir(target)).find(p=>p.startsWith('cad-'));
-  const html = await readFile(path.join(target,viewer,'index.html'),'utf8');
-  assert.ok(html.includes(JSON.stringify([[record.triangles,config.colors.structure,'structure']])));
+  const valid = validate();
+  assert.equal(valid.status,0,valid.stderr);
+  assert.deepEqual(JSON.parse(valid.stdout),[[record.triangles,config.colors.structure,'structure']]);
   record.appearances.groups[0].facetsSha256='f'.repeat(64);
   await save();
-  await assert.rejects(buildHighlights(manifest,target),/exported facets/);
+  assert.match(validate().stderr,/exported facets/);
   record.appearances.groups[0].facetsSha256=sha(facets);
   await save();
   await mkdir(path.join(root,'cad'),{recursive:true});
   await writeFile(path.join(root,'cad/component-palette.json'),JSON.stringify({schema:'agent-frc/component-palette@1',colors:{structure:'#112233'}}));
-  await assert.rejects(buildHighlights(manifest,target),/palette color of role structure, which this assembly uses, changed/);
+  assert.match(validate().stderr,/palette color of role structure, which this assembly uses, changed/);
+  // A palette change cannot fail a site build or a README update for a design that is not being re-exported.
+  await buildHighlights(manifest,target,{note(){}});
+  assert.deepEqual((await readdir(target)).filter(p=>p.startsWith('cad-')),[]);
+  spawnSync('git',['init','-q',root]);
+  const readme = py('cad-readmes.py',root,'--update');
+  assert.equal(readme.status,0,readme.stderr);
   // A palette change this assembly does not use, such as a new role, leaves its export current.
   await writeFile(path.join(root,'cad/component-palette.json'),JSON.stringify({schema:'agent-frc/component-palette@1',colors:{'invented-role':'#112233',mechanism:'#445566'}}));
-  await buildHighlights(manifest,target);
+  assert.equal(validate().status,0);
   await rm(path.join(root,'cad/component-palette.json'));
-  await writeFile(colored,Buffer.concat([assignments,Buffer.from('\n')]));
-  await assert.rejects(buildHighlights(manifest,target),/Appearance manifest changed/);
+  await writeFile(colored,Buffer.concat([assignments,Buffer.from(String.fromCharCode(10))]));
+  assert.match(validate().stderr,/Appearance manifest changed/);
 });
 
-test('native STEP still and orbit agree on repeated solid roles', {skip:process.env.FRC_TEST_PROFILE==='portable' && 'Run the CAD kernel and rendering controls at the qualified station'}, async t => {
+test('native STEP still agrees with the export record on repeated solid roles', {skip:process.env.FRC_TEST_PROFILE==='portable' && 'Run the CAD kernel and rendering controls at the qualified station'}, async t => {
   const available=spawnSync(python,['-c','import OCP, vtk, numpy'],{encoding:'utf8'});
   if(available.status!==0){t.skip('Optional OCP, VTK and NumPy are required for native rendering');return;}
   const root=await mkdtemp(path.join(tmpdir(),'cad-native-colors-'));

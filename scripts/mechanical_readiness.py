@@ -878,73 +878,6 @@ def review(root,study,geometry=None):
     return result
 
 
-def verify_render_mesh(root,study,receipt,mesh):
-    from mesh_correspondence import compare
-    result=compare(pinned(root,study["step"]),mesh,receipt.get("chordMm"),receipt.get("angleRad",.5))
-    require(result["status"]=="pass" and result["solids"]==receipt.get("solids") and result["triangles"]==receipt.get("triangles"),
-        "Displayed mesh differs from the fresh complete placed source: "+str((result["missingFacets"],result["extraFacets"],result["solids"])))
-    return result
-
-
-def verify_delivery(root,study,files):
-    release=study.get("distribution",{})
-    require(release.get("configuration")==study["configuration"] and
-            release.get("archiveSha256")==study["archive"]["sha256"] and release.get("stepSha256")==study["step"]["sha256"] and
-            named(release.get("approvedBy")),"Distribution register does not identify the reviewed issue")
-    allowed={}
-    for ref in release.get("files",[]):
-        file=pinned(root,ref)
-        require(file not in allowed and named(ref.get("rightsBasis")) and ref.get("scope") in ("native","neutral","render","mesh"),
-                "Each derivative needs an exact reviewed identity and redistribution basis")
-        allowed[file]=ref
-    checked_meshes=set()
-    projected=set()
-    delivered={project_path(root,f) for f in files}
-    for path,entry in allowed.items():
-        if path.suffix.lower()==".json":
-            data=read(path)
-            if isinstance(data,dict) and data.get("schema") in ("agent-frc/cad-still@1","agent-frc/cad-still@2"):
-                require(data.get("sourceSha256")==study["step"]["sha256"],"Displayed metadata uses a different STEP")
-                meshes=[f for f in allowed if allowed[f]["sha256"]==data.get("meshSha256")]
-                require(meshes,"The displayed mesh is absent from the registered releases")
-                m=meshes[0]
-                if m not in checked_meshes:
-                    verify_render_mesh(root,study,data,m);checked_meshes.add(m)
-                images=[f for f in allowed if allowed[f]["sha256"]==data.get("imageSha256")]
-                require(images,"Displayed still is absent from the distribution")
-                from release_projection import verify as verify_projection
-                verify_projection(root,study,data,m,images[0])
-                projected.update(images)
-    for name in files:
-        path=project_path(root,name)
-        require(path in allowed,"Unreviewed distributed asset: "+name)
-        restricted=any(row.get("rights")!="exact-redistribution" for row in study["articles"].values())
-        if allowed[path]["scope"] in ("native","neutral") or path.suffix.lower() in (".f3d",".f3z",".step",".stp"):
-            require(not restricted,"Full CAD download includes a component without exact redistribution rights")
-        elif any(row.get("rights")=="private-master" for row in study["articles"].values()):
-            require(False,"Rendered derivative includes an item without public view rights")
-        if path.suffix.lower() in (".png",".jpg",".jpeg",".webp",".avif",".gif",".svg"):
-            require(path in projected,"Distributed CAD still lacks a reproduced projection for this issue")
-        if path.name.lower().endswith((".glb",".gltf",".stl",".stl.gz",".obj",".3mf")) and path not in checked_meshes:
-            from mesh_correspondence import compare
-            proof=allowed[path].get("meshStudy")
-            require(proof,"Supply a source-to-geometry comparison for every published mesh")
-            spec=read(pinned(root,proof))
-            require(spec["step"]==study["step"] and pinned(root,spec["mesh"])==path,"Mesh correspondence points to another issue")
-            result=compare(pinned(root,study["step"]),path,spec["chordMm"],spec["angleRad"],resolution=spec.get("coordinateResolutionMm",.0001),
-                pose=spec["pose"],registration=spec.get("glbToCad"),surfaces=spec.get("surfaces"))
-            require(result["status"]=="pass","Published mesh does not include the actual placed geometry in its declared reference pose")
-            if path.suffix.lower() in (".gltf",".glb"):
-                from release_animation import verify as verify_animation
-                verify_animation(root,study,spec,path)
-            if path.suffix.lower()==".gltf":
-                from showcase_geometry import Glb
-                model=Glb.from_project(path)
-                require(set(model.dependencies)<=delivered,"External glTF buffers must be delivered with the displayed geometry")
-            checked_meshes.add(path)
-
-
-
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command",choices=["measure","review"])
@@ -955,7 +888,7 @@ def main():
     parser.add_argument("--require-build-ready",action="store_true")
     parser.add_argument("--source-sha256")
     parser.add_argument("--archive-sha256")
-    parser.add_argument("--deliver", action="append",default=[],help="Project-relative exact derivative being delivered")
+    parser.add_argument("--deliver", action="append",default=[],help="Retired: the design review page is the one published view. Accepted and ignored")
     parser.add_argument("--rescan",action="store_true")
     args=parser.parse_args()
     root=args.project.resolve()
@@ -974,7 +907,7 @@ def main():
         fresh=run(root,read(pinned(root,study["issueRegister"])))
         require(fresh==read(pinned(root,study["issueResult"])) and fresh["status"]=="pass","Installed detector replay differs from the issue receipt")
     if args.deliver:
-        verify_delivery(root,study,args.deliver)
+        print("Note: --deliver does nothing now. The separate published mesh, still and animated model it compared are retired; the design review page is the one viewer.",file=sys.stderr)
     output=json.dumps(report,indent=2,allow_nan=False)+"\n"
     if args.output:
         with args.output.open("x",encoding="utf-8") as stream:

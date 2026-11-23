@@ -37,7 +37,7 @@ For a mechanism that transfers a game piece, [sweep the actual released object t
 
 For a commissioned [numerically ambiguous interface](../../docs/operating-intent.md#resolve-a-zero-common-on-a-known-ambiguous-pair), check independent bounds on the pair and register any known forbidden material witness.
 
-Follow the underlying observations for each qualified joint through to their governing case and numerical acceptance limit. For a replacement showcase verify the rendered pixels and each playable native joint trajectory, including compound motion. [Publishing the checked geometry](../../docs/mesh-correspondence.md)
+Follow the underlying observations for each qualified joint through to their governing case and numerical acceptance limit. The design is shown in [one viewer, its design review](../../docs/design-publication.md#one-viewer-for-one-design).
 
 Verify mounted hardware at alternate native poses and match each installed constituent's physical material and density to its drawing or supplier requirement. Compare unchanged bodies to their previous native issue. Record motion limits and source-backed material substitutions before issuing a replacement. [Installed hardware and stock](../../docs/mechanical-methods.md)
 

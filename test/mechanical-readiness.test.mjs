@@ -14,12 +14,14 @@ test('complete mechanical review with geometry and adverse-case controls', {skip
   execFileSync(py, ['-B', keyedTorque], {stdio:'pipe'});
 });
 
-test('failed successor leaves the already generated page and field-only work usable',async t=>{
+test('a results page with a CAD still builds without a mechanical review: it publishes no model of its own',async t=>{
   const {buildHighlights}=await import('../scripts/robot-highlights.mjs');
   const root=mkdtempSync(path.join(tmpdir(),'issued-site-'));t.after(()=>rmSync(root,{force:true,recursive:true}));
   const local=path.join(root,'project');cpSync(fileURLToPath(new URL('../examples/highlights/',import.meta.url)),local,{recursive:true});
-  const manifest=path.join(local,'project.json'),out=path.join(root,'site'),original=JSON.parse(readFileSync(manifest)),analysis={...original};delete analysis.cad;
-  writeFileSync(manifest,JSON.stringify(analysis));const page=await buildHighlights(manifest,out),prior=readFileSync(page);
-  writeFileSync(manifest,JSON.stringify(original));await assert.rejects(buildHighlights(manifest,out),/mechanical-readiness review/);
-  assert.deepEqual(readFileSync(page),prior);
+  const manifest=path.join(local,'project.json'),out=path.join(root,'site'),original=JSON.parse(readFileSync(manifest));
+  // An invented successor: the same page for a design with no readiness review yet.
+  writeFileSync(path.join(local,'mounting-plate.step'),'invented successor export');
+  writeFileSync(manifest,JSON.stringify({...original,revision:'desk-fixture-r3',sources:original.sources.map(s=>({...s,revision:'desk-fixture-r3'}))}));
+  const page=readFileSync(await buildHighlights(manifest,out,{note(){}}),'utf8');
+  assert.match(page,/<section id="design"><h2>Explore the design<\/h2>/);assert.doesNotMatch(page,/<iframe/);
 });

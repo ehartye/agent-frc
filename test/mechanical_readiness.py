@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 import unittest
 
 from mechanical_fixture import fixture, write, SCRIPTS
-from mechanical_readiness import evaluate_inputs as review, verify_delivery, digest,scan
+from mechanical_readiness import evaluate_inputs as review, digest,scan
 from showcase_contacts import measure
 from mesh_controls import MeshComparisons
 from observed_transfer import ObservedTransfer
@@ -979,18 +979,6 @@ class Readiness(unittest.TestCase):
         article["procurementBom"]=write(self.root,"ordered.json",purchase)
         self.assertEqual(compare(self.root,article)["differentPositions"],["spacer"])
         self.assertEqual(self.status()["showcaseEligibility"],"fail")
-
-    def test_rights_for_native_and_derivatives_are_separate(self):
-        p=self.root/"view.png";p.write_bytes(b"test view")
-        self.s=fixture(self.root,assets=["view.png"])
-        self.s["articles"]["block"]["rights"]="derived-views-only"
-        with self.assertRaisesRegex(ValueError,"projection"):
-            verify_delivery(self.root,self.s,["view.png"])
-        with self.assertRaisesRegex(ValueError,"redistribution"):
-            verify_delivery(self.root,self.s,["test.f3d"])
-        self.s["articles"]["block"]["rights"]="private-master"
-        with self.assertRaisesRegex(ValueError,"public view"):
-            verify_delivery(self.root,self.s,["view.png"])
 
     def test_fresh_step_repeated_source_measurement_clear_and_interfering_controls(self):
         try:

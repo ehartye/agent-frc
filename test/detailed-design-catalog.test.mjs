@@ -15,10 +15,10 @@ function node(tag){
 const text=n=>typeof n==='string'?n:[n.textContent,...n.children.map(text)].join(' ').trim();
 const find=(n,test)=>typeof n==='string'?[]:[...(test(n)?[n]:[]),...n.children.flatMap(c=>find(c,test))];
 
-async function render(index,releases){
+async function render(index,releases,staged=[]){
   const ids={current:node('section'),archive:node('ul'),'archive-title':node('h2')};
   const document={createElement:node,getElementById:id=>ids[id]};
-  const files={'designs.json':index,[index.preliminaryIndex]:releases};
+  const files={'designs.json':index,[index.preliminaryIndex]:releases,...Object.fromEntries(staged.map(id=>['designs/'+id+'/index.html',{}]))};
   const fetch=async url=>files[url]?{ok:true,json:async()=>files[url]}:{ok:false,status:404};
   let done;
   const settled=new Promise(resolve=>{done=resolve;});
@@ -28,6 +28,8 @@ async function render(index,releases){
   assert.notEqual(wrapped,source,'the catalog still ends with its load-failure handler');
   new Function('document','fetch','done',wrapped)(document,fetch,done);
   await settled;
+  // The effective card asks whether its review page is staged; let that answer land.
+  await new Promise(resolve=>setTimeout(resolve,0));
   return ids;
 }
 const base={schema:'agent-frc/detailed-design-index@1',preliminaryIndex:'../preliminary-design/releases.json'};
@@ -83,6 +85,20 @@ test('a version reads with its name, its draft while in progress and its status,
   // Earlier baselines read with their name; an earlier ID reads as the ID.
   assert.deepEqual(titles(ids.archive),['Tilting carriage 1.0 · superseded','detail-001 · superseded']);
   assert.match(text(ids.archive),/Superseded by Tilting carriage 1\.1\./);
+});
+
+test('one viewer for one design: the effective and the in-progress card both link the staged design review',async()=>{
+  const index={...base,designs:['1.0','1.1'],architectures:{1:{name:'Tilting carriage'}},designStatus:{'1.0':'effective','1.1':'in-progress'},current:'1.0',beside:'1.1'};
+  const link=id=>n=>n.tag==='a'&&n.href==='designs/'+id+'/'&&/Open the design review/.test(n.textContent);
+  const shown=(ids,id)=>find(ids.current,n=>n.tag==='p'&&!n.hidden&&n.children.some(link(id))).length;
+  const both=await render(index,{designStatus:{}},['1.0','1.1']);
+  assert.deepEqual([shown(both,'1.0'),shown(both,'1.1')],[1,1]);
+  assert.doesNotMatch(text(both.current),/model selector/);
+  assert.equal(find(both.current,n=>!n.hidden&&n.textContent==='No design review is staged for this design yet.').length,0);
+  // An effective design recorded from its review alone has no page: the card says so and offers no dead link.
+  const unstaged=await render(index,{designStatus:{}},['1.1']);
+  assert.deepEqual([shown(unstaged,'1.0'),shown(unstaged,'1.1')],[0,1]);
+  assert.equal(find(unstaged.current,n=>!n.hidden&&n.textContent==='No design review is staged for this design yet.').length,1);
 });
 
 test('a malformed index still reports the load failure',async()=>{

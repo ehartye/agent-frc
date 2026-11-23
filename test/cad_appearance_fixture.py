@@ -83,8 +83,6 @@ def fixture(root):
         },
     )
     run(root, "export-showcase-cad.py")
-    helper=Path(__file__).with_name("authorize-render-fixture.mjs")
-    subprocess.check_output(["node",str(helper),str(root)])
     run(root, "cad-readmes.py", "--update")
     run(root, "cad-readmes.py")
     folder = root / "docs/robot/cad"
@@ -105,7 +103,9 @@ def fixture(root):
     expected = [
         [24, "#DC241F", "left-and-right"], [12, "#00BD3E", "middle", "appearance-overlay"]
     ]
-    assert json.dumps(expected) in (folder / "index.html").read_text(encoding="utf8")
+    validated = subprocess.run([sys.executable, str(SCRIPTS / "cad_appearances.py"), str(root), str(folder / "receipt.json")], text=True, capture_output=True, check=True)
+    assert json.loads(validated.stdout) == expected
+    assert not (folder / "index.html").exists(), "no separate orbit view is built; the design review is the one viewer"
     rows.reverse()
     write(root / "roles.json", assign)
     assert "Solid bounds disagree" in run(root, "export-showcase-cad.py", ok=False)
