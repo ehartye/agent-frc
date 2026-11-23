@@ -78,19 +78,20 @@ def validated_groups(root, record, packed):
     rows, colors, binding = load_assignments(
         root, appearance.get("file"), record["sourceSha256"]
     )
-    if any(appearance.get(key) != value for key, value in binding.items()):
-        raise ValueError(
-            "Appearance manifest or resolved palette changed; regenerate CAD"
-        )
+    # The palette as a whole may change after an export: a new role or a colour this assembly does not use leaves
+    # its colored mesh current. Each group's own colour is compared below.
+    if appearance.get("sha256") != binding["sha256"] or appearance.get("file") != binding["file"]:
+        raise ValueError("Appearance manifest changed; regenerate CAD")
     counts = Counter(row["role"] for row in rows)
     groups = appearance.get("groups")
     if not isinstance(groups, list) or len(groups) != len(counts):
         raise ValueError("Incomplete CAD appearance groups")
     for group, (role, count) in zip(groups, counts.items()):
+        if isinstance(group, dict) and group.get("role") == role and group.get("color") != colors[role]:
+            raise ValueError(f"The palette color of role {role}, which this assembly uses, changed; regenerate CAD")
         if (
             not isinstance(group, dict)
             or group.get("role") != role
-            or group.get("color") != colors[role]
             or group.get("solids") != count
             or type(group.get("triangles")) is not int
             or group["triangles"] <= 0
