@@ -60,6 +60,8 @@ Each phase keeps one index: `releases.json` for preliminary design and `designs.
 
 ## Name and number a design
 
+On this page a "release" is one version of a preliminary design as published: the tools name its folder `releases/VERSION/`, its record `release.json` and its flag `--release`. A release ID is the design's version.
+
 A design has a name, a version and a status, in preliminary design and in [detailed design](#name-and-number-a-detailed-design). The name says which architecture it is. The version says which accepted baseline of that architecture it is. The status says whether the project has accepted it, and stays separate from the number.
 
 | Part | Meaning | Changes when |
@@ -160,14 +162,14 @@ A design ID issued before versions, such as `detail-003`, keeps working in every
 
 ## Publish a preliminary design release
 
-Keep the release's checked inputs in the repository at `cad/preliminary-design/releases/ID/`: the layout, its STEP and motion study, the budgets and limits, the review page and scene written by `--write-view` (or rebuilt by [`--view-only`](preliminary-design.md#rebuild-the-review-without-rerunning-the-cases) after a presentation edit), the `layout-checked` `receipt.json` and a `missions.json` that names at least one mission case. The project's `cad/preliminary-design/stage.py` is its copy of the plugin's [staging script](../templates/stage-preliminary-review.py).
+Keep the release's checked inputs in the repository at `cad/preliminary-design/releases/ID/`: the layout, its STEP and motion study, the budgets and limits, the review page written by `--write-view` (or rebuilt by [`--view-only`](preliminary-design.md#rebuild-the-review-without-rerunning-the-cases) after a presentation edit), the `layout-checked` `receipt.json` and a `missions.json` that names at least one mission case. The scene is written beside the page and the starter's `.gitignore` leaves that input-side copy uncommitted: the published copy under `docs/` is the committed one. The project's `cad/preliminary-design/stage.py` is its copy of the plugin's [staging script](../templates/stage-preliminary-review.py).
 
 ```sh
 python cad/preliminary-design/stage.py 1.0 --design-name "Tilting carriage"
 node PLUGIN/scripts/design-publication.mjs check . --skip-rerun
 ```
 
-Staging copies the review page as it is, the scene, receipt, motion, budget and limit files, each field player the scene links and each trial a mission case names into `docs/preliminary-design/releases/ID/`. It writes the release record and lists the release as `in-progress`, at draft 1. The ID is the [version](#name-and-number-a-design), and the name is given once.
+Staging copies the review page as it is, the scene, receipt, motion, budget and limit files and each trial a mission case names into `docs/preliminary-design/releases/ID/`. One design has one review page: a recorded trial plays in its motion list as a [replay](../skills/frc-preliminary-design/references/review-layout-template.md#play-a-recorded-trial-in-the-motion-list). It writes the release record and lists the release as `in-progress`, at draft 1. The ID is the [version](#name-and-number-a-design), and the name is given once.
 
 ### Revise an in-progress release in place
 
@@ -197,14 +199,11 @@ A release stops changing when it is marked `effective`, and stays unchanged as `
   "check": {"project": "cad/preliminary-design/releases/1.0", "plan": "layout.json"},
   "missionCases": [
     {"case": "release", "kind": "operating-case", "accomplishes": "delivered", "objective": "Acquire, turn and release"}
-  ],
-  "fieldPlayers": [
-    {"file": "field/release-lane.html", "trial": {"file": "release-lane-trial.json"}, "objective": "Acquire, turn and release"}
   ]
 }
 ```
 
-A mission case names a passing operating case, what it accomplishes (`acquired`, `delivered`, `scored` or `climb-held`) and a narrative objective the receipt marks `represented`. For a contact-transport, free-path or fixture-support trial use `"kind": "field-interaction-trial"` with `"trial": {"file": "acquire-trial.json"}`, or `"player": "field/release-lane.html"` for a trial shown by a field player. The trial must be one the receipt names for that case. The record carries no digest of its sibling files: they are committed together, and the check compares their content.
+A mission case names a passing operating case, what it accomplishes (`acquired`, `delivered`, `scored` or `climb-held`) and a narrative objective the receipt marks `represented`. For a contact-transport, free-path or fixture-support trial use `"kind": "field-interaction-trial"` with `"trial": {"file": "acquire-trial.json"}`. The trial must be one the receipt names for that case. A design that still carries an [earlier separate field page](../skills/frc-preliminary-design/references/review-layout-template.md#earlier-field-pages) lists it under `fieldPlayers` and may name it with `"player"`; new work uses a replay. The record carries no digest of its sibling files: they are committed together, and the check compares their content.
 
 Change a status in the same way, in a pull request:
 
@@ -330,7 +329,7 @@ A design becomes effective when a reviewed pull request changes its status in th
 
 ### A change to an effective design
 
-An effective design was accepted with the files it had in that pull request. When a later branch edits the committed inputs or the published folder of a design that was already effective where the branch left the default branch, the check adds a warning that names the folders. The warning does not fail the check. The rerun still has to reproduce the committed receipt. Treat the warning as a prompt for the reviewer: accept the change as a revision of the effective design, or publish it as the next minor version and make that one effective.
+An effective design was accepted with the files it had in that pull request. When a later branch edits the committed inputs or the published folder of a design that was already effective where the branch left the default branch, the check adds a warning that names the folders. The warning does not fail the check. The rerun still has to reproduce the committed receipt. An effective design does not change. Publish the change as the next minor version and make that one effective. The warning is there so the reviewer sees an edit that did not do so. A correction that changes no checked result, such as a spelling in a note, is the reviewer's call.
 
 The pull request that makes a design effective raises no warning for that design.
 
@@ -359,16 +358,16 @@ The command removes those files, lists the design first in the index as `withdra
 
 ## Keep the rerun fast
 
-Some layouts take half an hour to check. The workflow keeps that off most runs.
+A layout inside the [scope guidelines](preliminary-design.md#keep-the-layout-a-blockout) checks in about ten minutes. A rerun that takes much longer is a sign that the layout or its cases have grown past them: cut the solids, the cases or the tolerances before tuning CI. The workflow also keeps the rerun off most runs.
 
 - **Cache.** A rerun that passed is stored under one digest of every file in the design's inputs folder and the plugin version. Change any input and the design is rerun. Pass the folder with `--cache`; the workflow restores it, and saves it even when another step fails. A cached result is still compared with the committed receipt.
 - **Changed designs only.** With `--base COMMIT`, a design with no cached result is rerun only when its inputs, published folder or index changed since that commit. The workflow passes the point where a feature branch left the default branch. A change to a workflow file reruns every design without a cached result, because a pin may have moved. On the default branch the workflow passes no base, so a rerun that failed there is repeated until it passes.
-- **Budget.** `--budget-minutes` stops one rerun that runs too long, 45 minutes by default. The rerun stops at the first clearance case that does not pass. It shares the motion cases between worker processes, one fewer than the runner's cores unless `--jobs N` sets the number.
+- **Budget.** `--budget-minutes` stops one rerun that runs too long. The default of 45 minutes is a backstop, not a target. The rerun stops at the first clearance case that does not pass. It shares the motion cases between worker processes, one fewer than the runner's cores unless `--jobs N` sets the number.
 - **Physics only.** The rerun uses `--physics-only`, which skips building the review scene. A receipt from such a run is marked and cannot be published.
 
 A new design is rerun twice: once on its branch and once on the default branch after the merge, because GitHub does not share a branch's cache with the default branch. The site deploys after the second run. Changing the plugin pin or the kernel versions empties the cache, so every in-progress and effective design is rerun once.
 
-Run the same command before pushing. `--skip-rerun` checks everything except the rerun when the layout check has just run locally.
+Run the same command before pushing. `--skip-rerun` checks everything except the rerun when the layout check has just run locally. CI runs on Linux and a workstation may run Windows, so the local run is the first check and CI is the second.
 
 ## Set up the workflow
 

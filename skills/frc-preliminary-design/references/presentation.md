@@ -1,65 +1,97 @@
-# Present a preliminary design review
+# Present a preliminary design
 
-Give the reviewer an interactive whole-robot blockout and a decision they can inspect. Link the review from the project handoff. Put the selected concept, revision, robot datum, units and current disposition on the opening view. Use the project's Agent FRC presentation theme and [component palette](../../../docs/cad-color-convention.md).
+The review page gives a reviewer an interactive whole-robot blockout and a decision they can inspect. The plugin's [stock review page](review-layout-template.md) already does everything on this page when the plan supplies the data. Use this page to decide what to supply and what to look at before sharing.
 
-Use the plugin's [stock preliminary design review](review-layout-template.md). One page serves every season and reads only a standardized review scene (`agent-frc/preliminary-review-scene@1`); the project supplies data in `layout.json`, not markup. The stock page and [its scene schema](../../../templates/preliminary-review/scene.schema.json) are the source of truth for layout, controls and theme.
+The stock page is a consistent starting place. The project supplies data under `presentation` in the plan, not markup. A project may change its copy of the page when it has a reason. [The scene schema](../../../templates/preliminary-review/scene.schema.json) defines the data.
+
+## Contents
+
+- [One design, one page, one motion list](#one-design-one-page-one-motion-list)
+- [What the reviewer can do](#what-the-reviewer-can-do)
+- [Choose a representative solid](#choose-a-representative-solid)
+- [Opening view](#opening-view)
+- [Inventory and budgets](#inventory-and-budgets)
+- [Evidence behind the picture](#evidence-behind-the-picture)
+- [Look before you share](#look-before-you-share)
+- [Share on a local network](#share-on-a-local-network)
+
+## One design, one page, one motion list
+
+- The review page lists every motion in one selector: the checked cases first, then each recorded trial as a replay. All play in the same model view with the same controls.
+- Add no second page, tab or player for a trial, a field interaction or a new path. [Replay set format](review-layout-template.md#play-a-recorded-trial-in-the-motion-list)
+- Add no status banner. The page's chip and the version picker already show the name, version, draft and status.
+- A replay is playback. The check neither runs nor credits it, so label what the trial recorded and what is display only.
 
 ## What the reviewer can do
 
-Show the reviewed strategic narrative revision and the disposition of each match objective and fallback. Provide a component selector and direct surface picking. Display two separate, project-authored explanations for every placed ID: **Purpose** describes what it does, and **Why it is included** identifies the need or tradeoff that justifies this piece in this architecture. A service gauge, for example, can represent a socket and justify its volume by the required removal sequence. Keep missing explanations visible.
+The page shows the strategic narrative's objectives with the disposition of each. For every placed ID it shows two project-written explanations: **Purpose** says what the solid does, and **Why it is included** names the need or tradeoff that earns it space. A service gauge, for example, can stand for a socket and justify its volume by the removal sequence. Missing explanations stay visible.
 
-- Orbit through a full revolution and underneath the robot, pan in the view plane, zoom and reset to a fitted view. Provide pointer and keyboard controls and a visible control legend. Keep the camera where the reviewer puts it when scrubbing motion.
-- Display depth-tested, closed solid volumes. Preserve cavities, holes, independent moving members and the finite game piece. Include fixed and moving neighbors, bumpers, service stock and withdrawal envelopes. Show/hide labels independently of geometry. Provide a textual category legend and component list.
-- Put the floor at the registered ground elevation. Show units and a scale cue. Build visible game pieces and field fixtures from the selected official dimensions or field model, including openings, orientation and height. Preserve the field-to-robot transform during motion. Identify partial fixtures and distinguish nominal surfaces from conservative collision envelopes.
-- Play, pause and scrub operating, loaded, disabled/park and service cases. Identify the pose or fraction, operating stage, simultaneously moving groups and independent piece path. Make a collision selectable by pair and case. Hidden components still count in validation and budgets.
-- Select components by stable identity and assemble a named subsystem from any selection. Keep category (what an article is), subsystem (which function it serves) and motion group (what it moves with) separate. Preserve custom selections locally or in an export. A shared component appears once in the whole-robot total.
+- **Move around.** Orbit through a full revolution and underneath, pan, zoom and reset to a fitted view. The camera stays where the reviewer puts it during playback.
+- **See solids.** Depth-tested closed volumes, with cavities, holes, moving members and the finite game piece preserved. Labels toggle apart from geometry.
+- **See the field.** The floor sits at the registered ground height, with units and a scale cue. Field parts and game pieces come from the project's official models or dimensions, at scale, in the robot's datum. A partial or stand-in fixture says so.
+- **Play motion.** Play, pause and scrub operating, loaded, park and service cases. The page names the pose or fraction, the groups moving together and the piece's own path. A collision is selectable by pair and case.
+- **Select and group.** Pick a surface or search by name. Category (what a solid is), subsystem (which function it serves) and motion group (what it moves with) stay separate. A shared component counts once in the whole-robot total.
+
+Hidden components still count in the check and the budgets.
 
 ## Choose a representative solid
 
-Use whatever shape captures the fit decision. A cylinder preserves a wheel radius, a sphere preserves ball contact, a torus preserves a central opening, and a swept profile follows a cable bend. Combine primitives or use boolean cuts to form fork gaps, hollow rails, offset housings and other compound shapes. Keep a mounting datum and motion axis. Compare extrema, material occupancy, useful voids and volume with a measured article or drawing. Record the deviation and the clearance it could consume. An equal-volume box can still block a passage or conceal a collision. Keep nominal solids, tolerance envelopes and service sweeps selectable separately. Recheck the changed solid over the same path.
+Use whatever shape captures the fit decision. A cylinder preserves a wheel radius, a sphere preserves ball contact, a torus preserves a central opening. Combine primitives or use boolean cuts to form fork gaps, hollow rails and offset housings.
 
-## Review interface
+Keep a mounting datum and a motion axis. Compare extrema, occupancy, useful voids and volume with a measured article or drawing. Record the deviation and the clearance it could consume. An equal-volume box can still block a passage or conceal a collision.
 
-The stock page provides the Agent FRC navy-and-gold interface with a large, expandable canvas. View controls sit above the model and playback controls (case, Play, speed, slider, readout) directly below it. The inspector column sits beside the viewer column in one row on a wide screen, stacking below it only on narrow pages, as the [page order](review-layout-template.md#page-order) specifies. Keep functional category colors stable in the model, its legend and inventory. Picking a visible surface should identify the frontmost component and reveal its name, material, subsystem, volume and mass basis. Give reviewers a way to focus on an internal part and then restore the full assembly.
+Use one solid per functional volume. Leave out fasteners, bearings, shafts, lines and brackets unless one is the risk being examined. Reserve wiring and dressing space with one conservative solid or a stated gap. Real hardware belongs to detailed design.
 
-For the opening pose, show the real supports and the finite piece in its intended seat. Verify the pose before sharing it. If a coarse box appears to penetrate a piece, compare it with the shaped part in the same pose, retain the original control and check the whole path again. Nothing floats: fix a floating solid, or label it an unmounted allowance with a reason under `attachment.unmounted` in the layout plan. Read the `[attachment]` section after each check. Do not move the piece to improve a picture.
+## Opening view
 
-Trace each moving load into the frame. For a driven wheel, identify the wheel, hub, axle or shaft, reacting bearings, carrier, mount and frame member. Trace the torque path from the motor case and output through any reducer, coupling, belt or chain. A datum axis locates the joint. Model the occupied axle, bearings and attachment separately wherever they constrain the piece, travel or service path. Model spring seats and positive stops on guided mechanisms. Use matched names for handed supports, retain the source IDs, and identify each unsupported or conceptual connection explicitly. Verify the opening pose with every proposed support present.
+Open on the selected design with the finite piece in its intended seat and every drawn support present. Verify the pose before sharing it.
 
-Render a cable corridor as a swept circular section on its actual centerline when the routing allowance is tubular. Include bend radii and distinguish the outside cable diameter from radial clearance.
+Nothing floats. Every physical solid touches, or is mounted to, something that traces to the frame. A support that is not drawn yet is labelled under `attachment.unmounted` in the plan with its reason. The page draws it hatched and lists it under **Attachment: nothing floats**, so a reviewer can tell an undrawn support from a missing design. Read the `[attachment]` section after each check.
+
+If a coarse box appears to penetrate a piece, compare it with the shaped part in the same pose, keep the original control and check the whole path again. Do not move the piece to improve a picture.
+
+Record how each moving load reaches the frame in `presentation.loadPaths`: the mount, the member it hangs from and the actuator that drives it, in a sentence. Name each connection that is still conceptual.
 
 ## Inventory and budgets
 
-For every component show its category color, role, source or estimate basis, preliminary material, installed quantity, occupied volume and estimated mass or range. Mark placeholders and missing allocations. Use STEP or a closed oriented mesh to measure volume. Distinguish physical material volume from a package envelope and the sum of envelope volumes from their geometric union. A clearance gauge adds no robot weight. Appearance alone cannot establish material or density.
+For every component the page shows its category colour, role, source or estimate basis, material, quantity, volume and estimated mass or range. Colours come from the project's [component palette](../../../docs/cad-color-convention.md). Bumper covers take the alliance colour from `presentation.alliance`, and field fixtures take the field colour.
 
-Let reviewers group the inventory by category and by their own subsystem membership. Roll up unique mass lines and volumes. If a mass estimate covers several members and a selection splits that allocation, report the shared range separately until it is apportioned. Show the inspection basis, running configuration, excluded equipment, reserve and mass limits.
+- Mark placeholders and missing allocations.
+- A clearance gauge adds no robot weight. Appearance alone cannot establish material or density.
+- If one mass estimate covers several solids and a selection splits it, the page reports the shared range apart until it is apportioned.
+- Under `presentation.required`, list the few roles this architecture cannot work without, each with its placed IDs. The page shows a role with no solid as Missing.
 
-For each duty and battery condition, show the selected group's battery-side current range and contribution to voltage sag, alongside the whole-robot minimum bus voltage and its requirement. Components on the same parallel bus share voltage. Sum coincident currents, apply the pack model, and calculate branch drop separately if measured. When only independent current bounds exist, label the result a conservative bound. Expose combined loads that cannot be attributed to one category or subsystem. Never distribute them by volume, silently count missing loads as zero or sum nominal device voltages. [Shared electrical loads](../../../docs/shared-power-review.md)
+**Weight.** Lead with the inspection limit, the low and high estimate and the signed headroom. Keep running additions separate.
 
-Lead the weight ledger with the inspection limit, low/high estimate and signed headroom. Separate running additions. Lead the power ledger with selected duty, battery condition, minimum bus voltage, required voltage and margin. Put load bars in battery-side amperes and let the reviewer select a load to see its members. With a pack resistance model, report current and power available at the chosen voltage floor and identify the limiting duty. A pack sag budget alone cannot qualify a breaker, conductor or thermal limit.
+**Power.** Lead with the selected duty, battery condition, minimum bus voltage, required voltage and margin. Show loads in battery-side amperes. Components on one bus share its voltage: sum coincident currents and apply the pack model. Never spread a combined load by volume, count a missing load as zero or add nominal device voltages. [Shared electrical loads](../../../docs/shared-power-review.md)
 
-Commission expected counts for the selected architecture, including its wheels, propulsion and steering actuators, control computer, power distribution, main disconnect, supply and communications. Compare expected IDs with the unfiltered placed roster. Display missing roles, counts, unallocated loads, voltage violations, overweight estimates and components awaiting a support or connection. Reviewers need to distinguish a missing representation from a missing physical design. Test a deliberately incomplete roster and a failing power case.
+A pack sag budget alone does not qualify a breaker, conductor or thermal rating.
 
-The stock page reads every value from the review scene. The checker builds the scene from project-authored `presentation` fields: `components` keyed by placed ID (required `purpose` and `rationale`; optional `name`, `category`, `subsystem`, `material` and `volumeType`), `required` mapping roles to expected placed IDs, `loadMembers` mapping each budget source to its consuming IDs, `loadPaths`, `runningAdditions`, `context`, `architecture`, `focus`, `notes`, `caseKinds` and `uncoveredCases`, and the optional `caseTimelines`, `cutaway`, `openingCase`, `links`, `fieldInteractions` and `replays`. The [scene data table](review-layout-template.md#scene-data-and-who-supplies-it) says who supplies each field. A missing project field renders as "Not supplied in this review"; a grouping or camera change preserves the commissioned checks.
+The [scene data table](review-layout-template.md#scene-data-and-who-supplies-it) says which `presentation` field feeds each part of the page. A missing project field renders as "Not supplied in this review".
 
 ## Evidence behind the picture
 
-Label imposed payload motion as prescribed. For a tipping holder, show the reviewer the loaded pose and a separate power-off escape control. Identify the first angle at which gravity points through an opening, the available resisting contacts, and the measured escape distance or obstruction. A collision-free carried path alone establishes clearance.
+The check builds the scene and the receipt together, so the page shows the checked numbers without any binding step from you. What you supply is honest labelling:
 
-1. Bind the view to the reviewed geometry, motion definition and result by revision and digest. Check that every displayed mesh is closed, that the roster matches and that mesh volumes agree with source solids at a declared tolerance.
-2. Check the parked assembly for positive-volume intersections. Account for all unique pairs, including broad-phase separations. Identify intended interfaces individually with allowed geometry and allowance. Keep unresolved measurements visible.
-3. Check clearance throughout each prescribed path, including its endpoints, simultaneous motions, payload and withdrawal tools. Give the method, tolerance and interval coverage. Sampled poses alone establish clearance only at those samples.
-4. List the limiting pair, clearance or overlap, and pose/time for each failure. Preserve a displaced control that the same check catches. A blocked or incomplete review still gets a view. Reopen the owning design phase before committing affected hardware. [Layout checker and decision](../../../docs/preliminary-design.md)
+1. Label imposed payload motion as prescribed. A collision-free carried path shows clearance only. [Retention and what moved the piece](trials.md#test-retention-when-a-piece-is-lifted-or-tipped)
+2. Give each clearance its method and tolerance. Sampled poses show clearance only at those samples.
+3. Name each intended contact, with its allowance, apart from verified clearance and from unresolved contact.
+4. Keep the displaced control playable, and list inhibited, adverse and uncovered cases under `presentation.caseKinds` and `presentation.uncoveredCases`.
 
-## Hand off a LAN review
+A blocked or incomplete design still gets a review page. Show the first unmet requirement.
 
-Serve a dedicated directory containing only the review and its local assets. Bind the server to the selected LAN interface on an available port. Include the LAN URL, revision, launch/stop instructions and expected scope. Open the URL on the host, then on a second device when available. Verify reset, full orbit, pan, label toggle, playback, grouping and a known failed case. Preserve the static bundle for viewing after the host shuts down. Private CAD and unrelated workspace files stay outside the serving directory.
+## Look before you share
 
-## Field interactions and physics playback
+After every publish, open the published page yourself. This short form takes about two minutes:
 
-Make the selected architecture the opening view. Provide a named, playable case for each mission-critical interaction. Keep rejected concepts in the decision record. A failed duty holds or revises the selected design.
+1. The model loads and sits on the floor. Nothing floats and no field part is coloured as robot.
+2. The title shows the design's name, version, draft and status.
+3. Each entry in the motion list plays, cases and replays.
+4. One picked solid shows its purpose and rationale.
+5. The weight and voltage figures match the receipt.
 
-- **Build the interacting field area at scale.** Use project-owned official geometry or dimensioned drawings at the selected rules cutoff. Register floor, approach, contact surfaces, nearby obstructions, target and any rule-relevant sensors in the same datum as the robot. Record source, units, transform and dimensions. Identify each simplification and the outcome it could change.
-- **Drive playback from the physical trial.** Commands may prescribe actuator inputs. Integrate the free payload or supported robot responses that decide the mission. For delivery, continue the same released article with its measured position, orientation and velocity through field contact and the applicable scoring observation. For elevation, resolve fixture compliance or its justified bounds, gravity, unilateral floor contact, actuator capacity, load transfer and the disabled hold through assessment.
-- **Play the recorded trial in the review's own viewer.** Name a replay set under `presentation.replays`. Each replay becomes one more entry in the single motion list, after the checked cases, and plays in the same model view with the same Play, speed and slider controls below it. The page adds no tab and no second player. The slider reads the run's own timestamps in seconds, and numbered event buttons jump to each recorded moment. Draw a rope, chain or hose as a tube along its recorded centerline, or let the centerline carry a field body's mesh. A replay is playback: the layout check neither runs nor credits it, so label its recorded and display-only motions. [Replay set format](review-layout-template.md#play-a-recorded-trial-in-the-motion-list)
-- **Expose the evidence in the player.** Use timestamps from the run, allow scrubbing and show the interaction area, event and decision metric together. Link the exact layout, scenario, solver settings and trace. Replay a disabled or adverse control and check timestep or geometric sensitivity where it can change the decision. Report estimated contact properties, missing physical measurements and the first unmet condition. Mark any commanded illustration separately.
+Run the [full handoff check](review-layout-template.md#handoff-check) once, before proposing the design as effective.
+
+## Share on a local network
+
+Serve only the review and its local assets, with `python cad/preliminary-design/serve.py --bind LAN_ADDRESS --port 8000`. Give the reviewer the URL, the design's name and version, and how to stop the server. Open the URL on the host, then on a second device when one is available. Private CAD and unrelated files stay outside the served folder.

@@ -152,7 +152,7 @@ test('validation fails for a clone whose marketplace points at an uncommitted ex
   const env = Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.toUpperCase().startsWith('GIT_')));
   const git = (...args) => execFileSync('git', args, {cwd: root, env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe']});
   for (const file of [...files, '.gitignore', 'references/public-sources.json', 'scripts/validate.mjs', 'scripts/install-manifests.mjs',
-    'scripts/skill-validation.mjs', 'scripts/check-design-references.mjs', 'scripts/season-terms.mjs', 'scripts/season-terms.json', 'scripts/branch-scan.mjs']) {
+    'scripts/skill-validation.mjs', 'scripts/check-design-references.mjs', 'scripts/season-terms.mjs', 'scripts/season-terms.json', 'scripts/branch-scan.mjs', 'scripts/mojibake.mjs']) {
     mkdirSync(path.dirname(path.join(root, file)), {recursive: true});
     cpSync(path.join(repository, file), path.join(root, file));
   }

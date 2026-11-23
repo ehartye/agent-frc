@@ -12,7 +12,13 @@ For a new game, extract the [project rules model](../../docs/project-rules-model
 1. Place a robot-sized prism on the scale field. Vary its footprint, heading, turns and route. Record the field edition, coordinate frame and assumptions.
 2. Try a front, side or underbody pickup zone as a field-scale hypothesis. Record which robot face approaches the source, its field pose, the release pose and the return to ready. In the directional Field Lab the pickup line is on the front edge. Mark other face assumptions as planning estimates whenever the selected trial cannot represent them. [Field rehearsal](../../docs/field-rehearsal.md)
 3. Vary assumed acquisition, shot and reset times. Compare the same route and opponent behavior with a slower action or missed pickup. Count finite pieces and the time left for the next cycle.
-4. Hand the selected cycle, interaction faces, poses, timing and open assumptions to role selection. Once a role is chosen, [whole-robot design owns the shared package layout](../../docs/preliminary-design.md). Component placement, mounting, detailed motion and service belong there.
+4. Hand the selected cycle, interaction faces, poses, timing and open assumptions to role selection. Once a role is chosen, `frc-preliminary-design` owns the whole-robot layout. Component placement, mounting, motion and service belong there.
+
+Before handing off, settle these at field scale:
+
+- **Role first.** State the alliance role, the scored event, the reserve time and the fallback. Walk one identifiable piece through approach, capture, retention, transfer, placement and reset, with the robot's position, time and energy at each step. Mark the operations that can overlap and the shared resources that prevent it.
+- **Compare allocations, not suppliers.** Sketch competing ways to divide the functions before choosing purchased mechanisms. Start from a simple baseline. Try removing a transfer, reversing a path, using passive geometry or running functions in parallel. State what each candidate deliberately gives up.
+- **Partner-dependent roles.** When a role relies on a partner, [compare the complete alliance service chain](../../docs/alliance-completion.md) on the match clock and change partner availability before selecting an architecture. Revisit a selected role with the [saved role and refinement comparison](../../docs/whole-robot-comparison.md#test-a-refinement-against-the-selected-role).
 
 Use [complete match rehearsals](../../docs/match-series.md) to test likely per-period behaviors for both alliances with finite piece stock, occupied robot footprints and explicit target activity. Compare the independent matches at 10× and carry observed queues and unresolved scoring conditions into the project strategy.
 

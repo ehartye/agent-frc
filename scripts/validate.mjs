@@ -5,6 +5,7 @@ import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 import { validateSkills } from './skill-validation.mjs';
 import {scanSeasonTree} from './season-terms.mjs';
+import {scanMojibakeTree} from './mojibake.mjs';
 const root=path.resolve(import.meta.dirname,'..');
 // A missing or unreadable plugin.json is reported by the install check below.
 let manifest=null;
@@ -34,7 +35,9 @@ const packaged = checkPackagedReferences(root, {tracked, ignoredTracked});
 // Season-neutral text: a game name, field term, season year or team number belongs in the owning season project.
 const season = scanSeasonTree(root);
 const seasonIssues = season.findings.map(f => ({path: f.file + ':' + f.line, code: f.kind, reason: 'Keep season-specific language in the owning season project: ' + f.text}));
-const issues = [...schemaIssues, ...checked.issues, ...install.issues, ...packaged.issues, ...seasonIssues];
+// Text read as Windows-1252 and saved again shows as two or three wrong characters where one was meant.
+const encodingIssues = scanMojibakeTree(root).map(f => ({path: f.file + ':' + f.line, code: 'damaged-encoding', reason: 'Restore the intended character; the text was read as Windows-1252 and saved again: ' + f.text}));
+const issues = [...schemaIssues, ...checked.issues, ...install.issues, ...packaged.issues, ...seasonIssues, ...encodingIssues];
 if (issues.length) {
   for (const issue of issues) console.error(`${issue.path}: ${issue.code}: ${issue.reason}`);
   process.exit(1);
