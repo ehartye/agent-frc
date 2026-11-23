@@ -169,15 +169,11 @@ export function sourceFindings(source, guidelines) {
   return {findings, info, registry, solids, customSolids, trials};
 }
 
-/** Screen verdict overrides in a judgement file: [{at, verdict, reason}] wherever an entry overrides a screen result. */
-export function overridesIn(judgement, at = '') {
-  if (Array.isArray(judgement)) return judgement.flatMap((item, i) => overridesIn(item, at + '[' + i + ']'));
-  if (!judgement || typeof judgement !== 'object') return [];
-  return Object.entries(judgement).flatMap(([name, value]) => {
-    const here = at ? at + '.' + name : name;
-    if (/^override/i.test(name) && value && typeof value === 'object')
-      return (Array.isArray(value) ? value.map((item, i) => [here + '[' + i + ']', item]) : 'reason' in value || 'verdict' in value ? [[here, value]] : Object.entries(value).map(([entry, item]) => [here + '.' + entry, item]))
-        .map(([where, item]) => ({at: where, verdict: item?.verdict ?? item?.to ?? item?.result ?? null, reason: typeof item?.reason === 'string' ? item.reason.trim() : typeof item === 'string' ? item.trim() : ''}));
-    return overridesIn(value, here);
-  });
+/** Screen verdict overrides in a judgement file, written as interactions.NAME.override: [{at, verdict, reason}]. */
+export function overridesIn(judgement) {
+  const interactions = judgement?.interactions;
+  if (!interactions || typeof interactions !== 'object' || Array.isArray(interactions)) return [];
+  return Object.entries(interactions).filter(([, entry]) => entry && typeof entry === 'object' && 'override' in entry)
+    .map(([name, entry]) => ({at: 'interactions.' + name + '.override', verdict: entry.override?.verdict ?? null,
+      reason: typeof entry.override?.reason === 'string' ? entry.override.reason.trim() : ''}));
 }

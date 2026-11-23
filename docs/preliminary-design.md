@@ -515,11 +515,11 @@ Say in the judgement file what each interaction decides and which trial answers 
 "measurements": {"file": "cad/preliminary-design/releases/1.0/records/measurements.json"}
 ```
 
-`decides` is the decision the trial could change. Never run a trial whose outcome could not change a decision: give `noTrial` and the reason instead. `cases` are the stages whose motion the interaction stands behind; a mission case counts toward being effective only when an interaction that meets its bar lists it. `trials` and `measurements` name the library's records, in one folder. An interaction the judgement file does not explain is a missing input: what it decides is settled at the arrangement stage, before any trial runs.
+`decides` is the decision the trial could change. The review page and the readiness report say it beside each trial that is not run yet, so a reader sees what is open. Never run a trial whose outcome could not change a decision: give `noTrial` and the reason instead. `cases` are the stages whose motion the interaction stands behind; a mission case counts toward being effective only when an interaction that meets its bar lists it. `trials` and `measurements` name the library's records, in one folder. An interaction the judgement file does not explain is a missing input: what it decides is settled at the arrangement stage, before any trial runs.
 
 ### The screen verdict
 
-At the arrangement stage, before a trial is written, the check reads the library's screen facts for each interaction and gives one verdict with its reasons in plain words:
+At the arrangement stage, before a trial is written, the check reads the library's screen facts for each interaction and gives one verdict with its reasons in plain words. Each reason gives what was measured and the guideline it is held to, such as `unguided on the plus side of the plane; guideline: a guide within 15 mm, a tenth of the piece's width`:
 
 | Verdict | When | What a trial must show |
 | --- | --- | --- |

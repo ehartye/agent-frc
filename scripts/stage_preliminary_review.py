@@ -111,12 +111,12 @@ def design_name(record, major):
 
 def title_of(record, release):
     """A version reads NAME MAJOR.MINOR."""
-    name = design_name(record, major_of(release)) if version_of(release) else None
+    name = design_name(record, major_of(release))
     return name + " " + release if name else release
 
 
 def described(record, release):
-    return ("preliminary design " if version_of(release) else "preliminary release ") + title_of(record, release)
+    return "preliminary design " + title_of(record, release)
 
 
 def state_of(record, release):
@@ -159,7 +159,7 @@ def place_version(record, release, name):
         raise ValueError(title_of(record, drafting) + " is already in progress (draft " + str(revision_of(record, drafting)) + "). Revise it in "
                          "place: stage " + drafting + " again. A draft takes no number; a new number is for a new effective baseline or a new architecture")
     minors = [version_of(r)[1] for r in record["releases"] if major_of(r) == major]
-    majors = sorted({major_of(r) for r in record["releases"] if version_of(r)})
+    majors = sorted({major_of(r) for r in record["releases"]})
     if minors:
         following = str(major) + "." + str(max(minors) + 1)
         if minor < max(minors):
@@ -283,7 +283,7 @@ def stage(season, inputs, release, design=None, refresh=False):
     site.mkdir(parents=True, exist_ok=True)
     with update_index(site), tempfile.TemporaryDirectory(dir=site.parent, prefix=".stage-") as tmp:
         index = load_index(site)
-        notes = place_version(index, release, design) if version_of(release) and not refresh else []
+        notes = place_version(index, release, design) if not refresh else []
         if refresh:
             listed = release in index["releases"]
             if not listed or status_of(index, release) != "effective":
@@ -297,16 +297,13 @@ def stage(season, inputs, release, design=None, refresh=False):
             was, now = receipt_identity(before), receipt_identity(result)
             changed = [name for name in now if now[name] != was[name]] + (["the issue name"] if before.get("issue") != result.get("issue") else [])
             if changed:
-                following = (str(version_of(release)[0]) + "." + str(version_of(release)[1] + 1)) if version_of(release) else "a new release ID"
+                following = str(version_of(release)[0]) + "." + str(version_of(release)[1] + 1)
                 raise ValueError(sentence(title_of(index, release)) + " is effective and this receipt differs from the published one in " + ", ".join(changed)
                                  + ". A view refresh keeps the physics. Work that changes it belongs to " + following + ", staged as a draft")
         elif release in index["releases"] and status_of(index, release) != "in-progress":
-            if version_of(release):
-                major, minor = version_of(release)
-                raise ValueError(title_of(index, release) + " is " + status_of(index, release) + " and no longer changes. Work toward its next baseline is "
-                                 + str(major) + "." + str(minor + 1) + ", staged as a draft; a different architecture takes the next major number with its own name")
-            raise ValueError("Release " + release + " is " + status_of(index, release) + " and no longer changes. Only an in-progress "
-                             "release is revised in place; publish the design that follows it under a new release ID")
+            major, minor = version_of(release)
+            raise ValueError(title_of(index, release) + " is " + status_of(index, release) + " and no longer changes. Work toward its next baseline is "
+                             + str(major) + "." + str(minor + 1) + ", staged as a draft; a different architecture takes the next major number with its own name")
         staged = Path(tmp) / release
         for name, source in files.items():
             (staged / name).parent.mkdir(parents=True, exist_ok=True)
@@ -416,7 +413,7 @@ def set_status(site, release, status, reason=None):
             raise ValueError("Unknown release: " + release)
         statuses = record.setdefault("designStatus", {})
         version = version_of(release)
-        drafting = in_progress_of(record, version[0], besides=release) if version and status == "in-progress" else None
+        drafting = in_progress_of(record, version[0], besides=release) if status == "in-progress" else None
         if drafting:
             raise ValueError(title_of(record, drafting) + " is already in progress. One architecture has one in-progress version: revise " + drafting + " in place")
         if status == "effective":
@@ -441,8 +438,8 @@ def set_status(site, release, status, reason=None):
         statuses[release] = status
         save_index(record, site)
     print(sentence(described(record, release)) + " is " + status + "; the site opens " + str(record["current"]))
-    if version and status == "effective" and design_name(record, version[0]):
-        latest = max(major_of(r) for r in record["releases"] if version_of(r))
+    if status == "effective" and design_name(record, version[0]):
+        latest = max(major_of(r) for r in record["releases"])
         print("Work toward the next baseline of " + design_name(record, version[0]) + " is " + str(version[0]) + "." + str(version[1] + 1)
               + ", staged as drafts until it is accepted. A different architecture is " + str(latest + 1) + ".0 with its own name.")
     print(ON_PUSH)
@@ -564,7 +561,7 @@ def remove(season, base, release, replaced_by=None):
             if field in record and not record[field]:
                 del record[field]
         version = version_of(release)
-        if version and not any(major_of(r) == version[0] for r in record["releases"]):
+        if not any(major_of(r) == version[0] for r in record["releases"]):
             # A major number with no version left is free again, with its name.
             (record.get("designs") or {}).pop(str(version[0]), None)
         if "designs" in record and not record["designs"]:

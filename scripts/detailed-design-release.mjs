@@ -55,7 +55,7 @@ function saveIndex(at, index) {
   const view = primaryView(index), out = {schema: indexSchema, preliminaryIndex: index.preliminaryIndex ?? at.preliminaryIndex, ...view,
     designs: index.designs, designStatus: index.designStatus};
   // A major number keeps its name while any version of it is listed.
-  const titled = Object.entries(index.architectures ?? {}).filter(([major]) => index.designs.some(id => String(versionOf(id)?.major) === major));
+  const titled = Object.entries(index.architectures ?? {}).filter(([major]) => index.designs.some(id => String(versionOf(id).major) === major));
   if (titled.length) out.architectures = Object.fromEntries(titled);
   for (const key of perDesign) {
     const rows = Object.entries(index[key] ?? {}).filter(([id]) => index.designs.includes(id));
@@ -80,7 +80,7 @@ function headCommit(project) {
   try { return execFileSync('git', ['-C', project, 'rev-parse', '--verify', '-q', 'HEAD'], {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']}).trim() || null; } catch { return null; }
 }
 const today = () => new Date().toISOString().slice(0, 10);
-const majorOf = id => versionOf(id)?.major ?? null;
+const majorOf = id => versionOf(id).major;
 const inProgressOf = (index, major, besides) => index.designs.find(id => id !== besides && majorOf(id) === major && index.designStatus[id] === 'in-progress') ?? null;
 const described = (index, id) => 'detailed design ' + detailedTitle(index, id);
 const sentence = text => text[0].toUpperCase() + text.slice(1);
@@ -140,9 +140,8 @@ function placeVersion(at, index, design, name, preliminary) {
 /** Why a design that is no longer in progress cannot be staged again, with the ID that follows it. */
 function settled(index, design) {
   const version = versionOf(design), status = index.designStatus[design];
-  return version ? sentence(described(index, design)) + ' is ' + status + ' and no longer changes. Work toward its next baseline is ' + version.major + '.' + (version.minor + 1) +
-    ', staged as a draft; a different architecture takes the next major number with its own name'
-    : 'Design ' + design + ' is ' + status + '; choose a new ID';
+  return sentence(described(index, design)) + ' is ' + status + ' and no longer changes. Work toward its next baseline is ' + version.major + '.' + (version.minor + 1) +
+    ', staged as a draft; a different architecture takes the next major number with its own name';
 }
 const report = lines => lines.length ? {report: lines.join('\n') + '\n'} : {};
 // What a push does with the change just made, said after each command. The method: docs/testing-methodology.md.
@@ -165,7 +164,7 @@ export function stageInProgress({project, design, designName, inputs, preliminar
   check(named(inputs) && named(preliminary) && named(authority) && named(lineage), 'Supply --inputs, --preliminary, --authority and --lineage');
   const listed = index.designs.includes(design);
   if (listed && index.designStatus[design] !== 'in-progress') throw Error(settled(index, design));
-  const notes = versionOf(design) ? placeVersion(at, index, design, designName, preliminary) : [];
+  const notes = placeVersion(at, index, design, designName, preliminary);
   const source = path.resolve(project, inputs), need = name => {
     const file = path.join(source, name);
     check(named(name) && existsSync(file) && statSync(file).isFile(), 'Detailed design input is missing ' + name);
@@ -259,13 +258,12 @@ export function relink({project, design, preliminary, ...folders}) {
 export function markEffective({project, design, designName, readiness, benchTests, run, now, budgetMinutes, workers, ...folders}) {
   const at = layout(project, folders), index = loadIndex(at);
   check(designId.test(design ?? '') && named(readiness), 'Supply --design and --readiness, the mechanical-readiness review result');
-  check(designName === undefined || versionOf(design), '--design-name names the architecture of a version ID, MAJOR.MINOR');
   const review = readJson(path.resolve(project, readiness));
   check(review.schema === readinessSchema && named(review.stepSha256), 'The readiness file is not a mechanical-readiness review result');
   check(review.showcaseEligibility === 'pass', 'Design ' + design + ' cannot be effective: its mechanical-readiness review reports ' + review.showcaseEligibility + '\n' + readinessSummary(review));
   const dir = path.join(at.tree, 'designs', design), recordFile = path.join(dir, 'design.json');
   check(!index.designs.includes(design) || index.designStatus[design] === 'in-progress', 'Only a new or in-progress design can become effective: ' + design);
-  const notes = versionOf(design) ? placeVersion(at, index, design, designName, index.preliminary?.[design]) : [];
+  const notes = placeVersion(at, index, design, designName, index.preliminary?.[design]);
   // Bench tests as records: every before-build test has a passing result, every on-robot test an owner and a plan.
   const bench = effectiveGate(project, design, {...(named(benchTests) ? {file: path.resolve(project, benchTests)} : {}), ...folders});
   check(!bench.problems.length, sentence(described(index, design)) + ' cannot be effective until its bench tests are resolved:\n' + bench.problems.map(p => '  - ' + p).join('\n'));
@@ -291,11 +289,11 @@ export function markEffective({project, design, designName, readiness, benchTest
   index.designStatus[design] = 'effective';
   // The date it was accepted stays with the design once it is superseded.
   index.accepted = {...index.accepted, [design]: index.accepted?.[design] ?? today()};
-  const version = versionOf(design), latest = Math.max(0, ...index.designs.map(majorOf).filter(Boolean));
+  const version = versionOf(design), latest = Math.max(0, ...index.designs.map(majorOf));
   return {...saveIndex(at, index), report: (gate ? gateLine(sentence(described(index, design)), gate) + '\n' : '') + readinessSummary(review) + (bench.record ? 'Bench tests: ' + benchText(benchSummary(bench.record)) + '\n' : '') +
-    notes.map(n => 'Note: ' + n + '\n').join('') + (version ? 'Work toward the next baseline of ' +
+    notes.map(n => 'Note: ' + n + '\n').join('') + 'Work toward the next baseline of ' +
     architectureName(index, design) + ' is ' + version.major + '.' + (version.minor + 1) + ', staged as drafts until it is accepted. A different architecture is ' +
-    (latest + 1) + '.0 with its own name.\n' : '') + onPush + '\n'};
+    (latest + 1) + '.0 with its own name.\n' + onPush + '\n'};
 }
 
 /**
