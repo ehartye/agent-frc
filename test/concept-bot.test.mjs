@@ -18,7 +18,7 @@ test('the three invented examples validate and compile to the shared rehearsal r
   assert.match(record.concept.digest,/^[0-9a-f]{64}$/);
   assert.deepEqual({...record,concept:{...record.concept,digest:'x'}},{
     length:28,width:28,height:24,bumper:3,speed:180,frameProfile:{kind:'rear-chamfer',shortSideFractions:[0.1,0.1]},
-    concept:{id:'turret-shooter',digest:'x',
+    concept:{id:'turret-shooter',digest:'x',defaultsApplied:[],
       drive:{type:'swerve',topSpeedInS:180,accelInS2:250,rotationDegS:360},
       body:{maxHeightIn:30,maxReachIn:6},
       massLb:null,
@@ -57,6 +57,9 @@ test('invalid concepts name the offending field',()=>{
   rejects(edit(turret,d=>{d.outputs[0].ranged.elevationDeg.slewDegS=null;}),/outputs\[0\]\.ranged\.elevationDeg\.slewDegS/);
   rejects(edit(turret,d=>delete d.outputs[0].ranged.turret.slewDegS),/outputs\[0\]\.ranged\.turret\.slewDegS/);
   rejects(edit(turret,d=>{d.schema='agent-frc/concept-bot@2';}),/schema/);
+  rejects(edit(turret,d=>{d.defaultsApplied=['massLb'];}),/defaultsApplied/);
+  rejects(edit(placer,d=>{d.defaultsApplied=['massLb'];}),/defaultsApplied/);
+  rejects(edit(turret,d=>{d.defaultsApplied=['drive'];}),/defaultsApplied/);
   assert.ok(Object.isFrozen(VALIDITY));
   assert.ok(Object.values(VALIDITY).every(([lo,hi])=>Number.isFinite(lo)&&Number.isFinite(hi)&&lo<=hi));
 });
@@ -68,16 +71,26 @@ test('a missing mass defaults to 75–95% of the profile inspection limit withou
   assert.notEqual(filled,turret);
   assert.deepEqual({...filled.massLb,basis:undefined},{min:75,max:95,label:'assumed',basis:undefined,default:true});
   assert.match(filled.massLb.basis,/R-mass/);
+  assert.deepEqual(filled.defaultsApplied,['massLb']);
   assert.deepEqual(compileConceptBot(filled).concept.massLb,{min:75,max:95,label:'assumed',default:true});
+  assert.deepEqual(compileConceptBot(filled).concept.defaultsApplied,['massLb']);
+  assert.deepEqual(applyProfileDefaults(filled,profile),filled);
+  assert.equal(Object.hasOwn(applyProfileDefaults(placer,profile),'defaultsApplied'),false);
   assert.match(applyProfileDefaults(turret,{rehearsal:{robotLimits:{massLb:100}}}).massLb.basis,/robotLimits\.massLb/);
   assert.deepEqual(applyProfileDefaults(placer,profile).massLb,placer.massLb);
   for(const p of [{},{rehearsal:{robotLimits:{massLb:null}}},undefined])
     assert.equal(Object.hasOwn(applyProfileDefaults(turret,p),'massLb'),false);
 });
 
-test('the concept digest is stable across key order and changes with content',()=>{
+test('the concept digest covers the source file: stable across key order and profile defaults, changed by content',()=>{
   const digest=doc=>compileConceptBot(doc).concept.digest;
   assert.equal(digest(reorder(turret)),digest(turret));
+  for(const limit of [100,{value:120,factId:'R-mass'}]){
+    const profile={rehearsal:{robotLimits:{massLb:limit}}};
+    assert.equal(digest(applyProfileDefaults(fixed,profile)),digest(fixed));
+    assert.equal(digest(applyProfileDefaults(placer,profile)),digest(placer));
+  }
+  assert.notEqual(digest(edit(fixed,d=>{d.massLb={min:75,max:95,label:'assumed',basis:'Student estimate.'};})),digest(fixed));
   assert.notEqual(digest(fixed),digest(turret));
   assert.notEqual(digest(edit(turret,d=>{d.drive.topSpeedInS.basis+=' Revised.';})),digest(turret));
 });

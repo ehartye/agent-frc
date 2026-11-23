@@ -7,6 +7,8 @@
 // Every number lies inside its VALIDITY range; capacities are integers. Unknown fields are rejected.
 // compileConceptBot unwraps the document into the rehearsal robot record: the body fields the
 // engine already reads plus a `concept` block of plain numbers.
+// applyProfileDefaults lists each field it fills under `defaultsApplied`. The concept digest hashes the
+// source document, without those fields and that list, so one file has one digest under any profile.
 import { createHash } from 'node:crypto';
 import { framePlan } from './frame-profile.mjs';
 
@@ -31,6 +33,8 @@ export const VALIDITY=Object.freeze({
   'outputs[].ranged.firesWhileMoving.maxRobotSpeedInS':[1,500],'outputs[].ranged.firesWhileMoving.successFraction':[0,1],
 });
 const INTEGER=new Set(['storage.capacity.*']);
+// Fields applyProfileDefaults may fill from the profile.
+const DEFAULTABLE=Object.freeze(['massLb']);
 
 const fail=(path,message)=>{throw Error(path+': '+message);};
 const text=s=>typeof s==='string'&&s.trim().length>0;
@@ -90,8 +94,12 @@ function face(v,path) {
 }
 
 function parse(doc) {
-  fields(doc,'',['schema','id','name','basis','body','drive','inputs','storage','outputs','concurrency'],['massLb']);
+  fields(doc,'',['schema','id','name','basis','body','drive','inputs','storage','outputs','concurrency'],['massLb','defaultsApplied']);
   if(doc.schema!==CONCEPT_SCHEMA)fail('schema','use '+CONCEPT_SCHEMA+'.');
+  const defaulted=doc.defaultsApplied ?? [];
+  if(!Array.isArray(defaulted)||new Set(defaulted).size!==defaulted.length||
+    !defaulted.every(k=>DEFAULTABLE.includes(k)&&doc[k]?.default===true))
+    fail('defaultsApplied','list only profile defaults the document carries: massLb with default true.');
   if(typeof doc.id!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(doc.id))fail('id','use letters, digits, dot, dash or underscore.');
   for(const k of ['name','basis'])if(!text(doc[k]))fail(k,'supply a non-empty string.');
 
@@ -197,15 +205,23 @@ export function applyProfileDefaults(doc,profile) {
   if(copy?.massLb===undefined&&Number.isFinite(value)&&value>0){
     copy.massLb={min:0.75*value,max:0.95*value,label:'assumed',
       basis:'Default 75–95% of the inspection limit ('+(text(limit?.factId)?limit.factId:'robotLimits.massLb')+')',default:true};
+    copy.defaultsApplied=[...(copy.defaultsApplied ?? []),'massLb'];
   }
   return copy;
+}
+
+// The source document: the validated document without its profile defaults.
+function source(doc) {
+  const {defaultsApplied=[],...rest}=doc;
+  for(const k of defaultsApplied)delete rest[k];
+  return rest;
 }
 
 export function compileConceptBot(doc) {
   const {body,frameProfile,...c}=parse(doc);
   return {length:body.frameLengthIn,width:body.frameWidthIn,height:body.stowedHeightIn,bumper:body.bumperIn,speed:c.drive.topSpeedInS,
     ...(frameProfile===undefined?{}:{frameProfile:structuredClone(frameProfile)}),
-    concept:{id:doc.id,digest:createHash('sha256').update(canonical(doc)).digest('hex'),drive:c.drive,
+    concept:{id:doc.id,digest:createHash('sha256').update(canonical(source(doc))).digest('hex'),defaultsApplied:[...(doc.defaultsApplied ?? [])],drive:c.drive,
       body:{maxHeightIn:body.maxHeightIn,maxReachIn:body.maxReachIn},massLb:c.massLb,inputs:c.inputs,storage:c.storage,
       outputs:c.outputs,concurrency:c.concurrency}};
 }
