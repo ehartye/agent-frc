@@ -204,7 +204,7 @@
     "animations": {
       "type": "array",
       "x-supplier": "plugin",
-      "description": "The animation list: one entry per mission phase, each playing its cases end to end. A stage names its phase under stages.CASE.phase; presentation.phases gives a title and says whether it is a headline mission animation. A case is one checked segment, listed in the check results and not here. A scene written before 0.138.0 has none, and the page derives them from the case IDs.",
+      "description": "The animation list: one entry per mission phase, each playing its cases end to end. A stage names its phase under stages.CASE.phase; presentation.phases gives a title and says whether it is a headline mission animation. A case is one checked segment, listed in the check results and not here. A scene written before 0.137.0 has none, and the page derives them from the case IDs.",
       "minItems": 1,
       "items": {
         "type": "object",
