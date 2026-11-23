@@ -123,7 +123,7 @@ Write `HANDOFF.md` in the design's folder before proposing effective. It tells d
 | Operating point and windows | The setpoints the trials passed at, with the passing and failing value on each side |
 | Motion cases | The cycle, the displaced control and the path tolerance each case was checked at |
 | Budgets | Mass by subsystem and the reserve; loaded voltage by duty and the margin |
-| Open risks and bench tests | Each risk, closed by a named design change or listed with its measure, pass value and fail value |
+| Open risks and bench tests | Each risk, closed by a named design change or listed with its measure, pass value and fail value. A bench test may carry an optional `tag` in `missions.json`: `before-build` when it must pass before the build, `on-robot` when it is run on the finished robot |
 | Trials and replays | Which interactions were tried on blockout geometry and must be repeated on real parts |
 | First work items | A short list for detailed design, riskiest first |
 
