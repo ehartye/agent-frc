@@ -82,4 +82,11 @@ export function folderReceipt(root,folder,receipt,plan,ledger,basis) {
   return {...receipt,planSha256:sha(plan),budgets:{...receipt.budgets,source:{file:'budgets.json',sha256:sha(JSON.stringify(ledger,null,2))},
     limits:{...receipt.budgets.limits,file:'package-limits.json'}}};
 }
+/** Commit the inputs of a published release: its plan and the files its receipt names, with the bytes the receipt recorded. */
+export function commitInputs(root,id,{basis=id}={}) {
+  const folder='cad/preliminary-design/releases/'+id+'/',published=path.join(root,'docs',tree,'releases',id);
+  write(root,folder+'layout.json','plan '+id);
+  write(root,folder+'package.step','step '+basis);
+  for(const [name,from] of [['paths.json','motion.json'],['budgets.json','budgets.json'],['limits.json','limits.json']])write(root,folder+name,readFileSync(path.join(published,from)));
+}
 export function listing(site,current,releases,designStatus){write(site,tree+'/releases.json',{current,releases,...(designStatus?{designStatus}:{})});}

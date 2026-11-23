@@ -47,7 +47,7 @@ The skill's "When you see this, try this" table gives the first thing to try. Th
 | A bench test has no owner | Map it to a part, a fixture or a software check. If the design removed the risk, close the risk with `closedBy` in the next preliminary version and seed the record again. | It needs a field element or a measurement the shop cannot make |
 | The same clash survives local fixes | Stop after the third fix. Write what failed each time. | Always |
 | Work must move to another computer | Save, export, commit the Fusion file, export and check inputs together, and push. | The cloud copy and the committed file differ |
-| The project's `stage.py` refuses `--copy-inputs` | Update the project's copy from the plugin. [Carry plugin updates](../../../docs/preliminary-design.md#carry-plugin-updates-into-a-season-project) | The updated copy still refuses it |
+| The project still holds a `stage.py` | Delete it and run the plugin's staging command from the project root. [Take the plugin out of a project](../../../docs/design-publication-migration.md#take-the-plugin-out-of-a-project) | The plugin's command refuses `--copy-inputs` |
 | The voltage reserve is used up | Recompute the governing case with the new mass and ratio. Try a current limit or a staggered start before new hardware. | The weak-battery case still fails |
 
 ## Purchased parts and stand-ins

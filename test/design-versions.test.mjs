@@ -1,6 +1,7 @@
 /**
  * @lane merge
- * @subject templates/stage-preliminary-review.py
+ * @subject scripts/stage_preliminary_review.py
+ * @subject scripts/stage-gate.mjs
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -13,16 +14,16 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 
-// The project's stage.py is a few lines that call the plugin's staging command; this names the plugin for it.
-process.env.AGENT_FRC_PLUGIN = fileURLToPath(new URL('..', import.meta.url));
+// The staging command is the plugin's: an agent runs it from the plugin and names the project's design folder.
+const stagingCommand = fileURLToPath(new URL('../scripts/stage_preliminary_review.py', import.meta.url));
+// These invented releases hold no solid, so the layout check of the stage gate is stood in for: it reproduces the receipt.
+const gateCheck = fileURLToPath(new URL('./fixtures/gate-reproduces.mjs', import.meta.url));
 // Synthetic teaching fixtures: two invented architectures, "Tilting carriage" and "Swinging arm", each a one-case layout.
 async function season(t) {
   const root = await mkdtemp(path.join(tmpdir(), 'design-versions-'));
   t.after(() => rm(root, { recursive: true, force: true }));
   const author = path.join(root, 'cad', 'preliminary-design'), site = path.join(root, 'docs', 'preliminary-design');
   await mkdir(author, { recursive: true });
-  const script = path.join(author, 'stage.py');
-  await writeFile(script, await readFile(fileURLToPath(new URL('../templates/stage-preliminary-review.py', import.meta.url))));
   /** The checked inputs of one release. `step` stands for the STEP the layout was checked on. */
   async function fixture(id, {page = '<html>Review of ' + id + '</html>', step = 'step of ' + id} = {}) {
     const dir = path.join(author, 'releases', id);
@@ -37,12 +38,14 @@ async function season(t) {
     const limits = await pin('package-limits.json', '{"inspectionLimitKg":14}');
     const budgets = await pin('budgets.json', JSON.stringify({requirements: limits, masses: [], electricalCases: {}}));
     const plan = await pin('layout.json', JSON.stringify({motion, budgets, view: 'viewer.html'}));
-    await pin('receipt.json', JSON.stringify({planSha256: plan.sha256, issue: 'synthetic-' + id, status: 'layout-checked',
+    await pin('package.step', step);
+    await pin('receipt.json', JSON.stringify({schema: 'agent-frc/preliminary-layout-result@1', missingInputs: [], reopen: [], cases: [{case: 'turn', status: 'pass'}], control: {witness: {status: 'fail'}},
+      budgets: {massStatus: 'pass', electricalCases: [{case: 'weak', status: 'pass'}]}, planSha256: plan.sha256, issue: 'synthetic-' + id, status: 'layout-checked',
       step: {file: 'package.step', sha256: createHash('sha256').update(step).digest('hex')}}));
     await pin('missions.json', JSON.stringify({missionCases: [{case: 'turn', kind: 'operating-case', accomplishes: 'delivered', objective: 'Move the sample'}]}));
     return dir;
   }
-  const stage = (...args) => spawnSync(process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3'), [script, ...args], {encoding: 'utf8'});
+  const stage = (...args) => spawnSync(process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3'), [stagingCommand, '--base', author, ...args, ...(args.includes('effective') ? ['--gate-check', gateCheck] : [])], {encoding: 'utf8'});
   const listing = path.join(site, 'releases.json');
   const index = async () => JSON.parse((await readFile(listing, 'utf8')).replace(/"\d{4}-\d{2}-\d{2}"/g, '"DATE"'));
   const edit = async change => writeFile(listing, JSON.stringify(change(JSON.parse(await readFile(listing, 'utf8')))));
@@ -57,7 +60,7 @@ test('a version is staged under MAJOR.MINOR and its architecture is named once',
   assert.match(s.stage('1.0').stderr, /Name design 1 with --design-name "NAME": a short name in words for the architecture/);
   assert.match(s.stage('1.0', '--design-name', ' ').stderr, /Give the design a short name in words/);
   assert.ok(!existsSync(path.join(s.site, 'releases')), 'an unnamed design publishes nothing');
-  assert.match(s.ok(s.stage('1.0', '--design-name', 'Tilting  carriage')), /^Staged preliminary design Tilting carriage 1\.0 \(draft 1, in progress\)\r?\nOn push: CI runs the publication checks\. The layout check is not rerun for a draft; the local check you ran is its check\.\r?\n$/);
+  assert.match(s.ok(s.stage('1.0', '--design-name', 'Tilting  carriage')), /^Staged preliminary design Tilting carriage 1\.0 \(draft 1, in progress\)\r?\nBefore pushing, run the publication check: node PLUGIN\/scripts\/design-publication\.mjs check \.\r?\nOn push: the project's workflow publishes the page\. Nothing is rerun\.\r?\n$/);
   assert.deepEqual(await s.index(), {releases: ['1.0'], designs: {1: {name: 'Tilting carriage'}}, revision: {'1.0': rev(1)},
     designStatus: {'1.0': 'in-progress'}, current: '1.0'});
   const record = JSON.parse(await readFile(path.join(s.site, 'releases', '1.0', 'release.json')));
@@ -89,12 +92,13 @@ test('drafts take no number: one in-progress version per architecture, and a new
   assert.match(accepted, /Preliminary design Tilting carriage 1\.0 is effective; the site opens 1\.0/);
   assert.match(accepted, /Work toward the next baseline of Tilting carriage is 1\.1, staged as drafts until it is accepted\. A different architecture is 2\.0 with its own name\./);
   assert.match(accepted, /Effective-readiness report for Tilting carriage 1\.0 \(/);
-  assert.match(accepted, /On push: this is the stage gate\. CI reruns the full layout check once on the committed design, on each push of the branch that carries this change\. Make it the last commit of its pull request\./);
+  assert.match(accepted, /^\[gate\] Preliminary design Tilting carriage 1\.0: the full layout check ran on the committed design and reproduced the published receipt in \d+ s \(guideline: about 15 minutes at a stage gate\)\.$/m);
+  assert.match(accepted, /On push: the project's workflow publishes the page\. Nothing is rerun\.\r?\n$/);
   await s.fixture('1.0', {page: '<html>Edited after acceptance</html>'});
   assert.match(s.stage('1.0').stderr, /Tilting carriage 1\.0 is effective and no longer changes\. Work toward its next baseline is 1\.1, staged as a draft/);
 
   // An accepted revision: 1.1 is drafted beside the effective 1.0, then supersedes it.
-  assert.match(s.ok(s.stage('1.1')), /^Staged preliminary design Tilting carriage 1\.1 \(draft 1, in progress\)\r?\nOn push: CI runs the publication checks\. The layout check is not rerun for a draft; the local check you ran is its check\.\r?\n$/);
+  assert.match(s.ok(s.stage('1.1')), /^Staged preliminary design Tilting carriage 1\.1 \(draft 1, in progress\)\r?\nBefore pushing, run the publication check: node PLUGIN\/scripts\/design-publication\.mjs check \.\r?\nOn push: the project's workflow publishes the page\. Nothing is rerun\.\r?\n$/);
   await s.fixture('1.1', {page: '<html>Second draft of 1.1</html>'});
   assert.match(s.ok(s.stage('1.1')), /\(draft 2, in progress\)/);
   assert.deepEqual([(await s.index()).designStatus, (await s.index()).current], [{'1.0': 'effective', '1.1': 'in-progress'}, '1.0']);
@@ -228,16 +232,17 @@ test('the view of an effective release is republished while its receipt records 
   await s.fixture('1.0');
   s.ok(s.stage('1.0', '--design-name', 'Tilting carriage'));
   // A draft is revised by staging it again; the refresh is for the release that no longer changes.
-  assert.match(s.stage('--refresh-view', '1.0').stderr, /--refresh-view republishes the view of the effective release\. Preliminary design Tilting carriage 1\.0 is in-progress; stage it to publish or revise it: stage\.py 1\.0/);
+  assert.match(s.stage('--refresh-view', '1.0').stderr, /--refresh-view republishes the view of the effective release\. Preliminary design Tilting carriage 1\.0 is in-progress; stage it to publish or revise it: stage_preliminary_review\.py 1\.0/);
   s.ok(s.stage('--set-status', '1.0', 'effective'));
   const before = await s.index();
   // A rebuilt review page on the same STEP: published, and the index keeps its status, accepted date and draft count.
   await s.fixture('1.0', {page: '<html>Rebuilt review of 1.0</html>'});
   assert.match(s.stage('1.0').stderr, /Tilting carriage 1\.0 is effective and no longer changes/);
-  assert.match(s.ok(s.stage('--refresh-view', '1.0')), /^Refreshed the view of preliminary design Tilting carriage 1\.0 \(effective\)\. Its physics, status, accepted date and draft count are unchanged\r?\nOn push: CI runs the publication checks\. The layout check is not rerun: no physics changed\.\r?\n$/);
+  assert.match(s.ok(s.stage('--refresh-view', '1.0')), /^Refreshed the view of preliminary design Tilting carriage 1\.0 \(effective\)\. Its physics, status, accepted date and draft count are unchanged\r?\nBefore pushing, run the publication check: node PLUGIN\/scripts\/design-publication\.mjs check \.\r?\nOn push: the project's workflow publishes the page\. Nothing is rerun\.\r?\n$/);
   assert.equal(await published('index.html'), '<html>Rebuilt review of 1.0</html>');
   // The refresh is recorded as a refresh. It is no draft: the status, the accepted date and the draft count stay.
   const refreshed = {...before, refreshed: {'1.0': {date: 'DATE'}}};
+  assert.ok(existsSync(path.join(s.site, 'releases', '1.0', 'gate.json')), 'the record of the stage gate stays with the effective release');
   assert.deepEqual([before.designStatus, before.accepted, before.revision], [{'1.0': 'effective'}, {'1.0': 'DATE'}, {'1.0': rev(1)}]);
   assert.deepEqual(await s.index(), refreshed);
   assert.match(s.ok(s.stage('--refresh-view', '1.0')), /Preliminary design Tilting carriage 1\.0 is unchanged \(effective\)/);

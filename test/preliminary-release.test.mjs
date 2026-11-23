@@ -1,6 +1,7 @@
 /**
  * @lane merge
- * @subject templates/stage-preliminary-review.py
+ * @subject scripts/stage_preliminary_review.py
+ * @subject scripts/stage-gate.mjs
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -13,8 +14,10 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 
-// The project's stage.py is a few lines that call the plugin's staging command; this names the plugin for it.
-process.env.AGENT_FRC_PLUGIN = fileURLToPath(new URL('..', import.meta.url));
+// The staging command is the plugin's: an agent runs it from the plugin and names the project's design folder.
+const stagingCommand = fileURLToPath(new URL('../scripts/stage_preliminary_review.py', import.meta.url));
+// These invented releases hold no solid, so the layout check of the stage gate is stood in for: it reproduces the receipt.
+const gateCheck = fileURLToPath(new URL('./fixtures/gate-reproduces.mjs', import.meta.url));
 // Synthetic teaching fixture: an invented layout with one case and one objective.
 test('the season script publishes a checked release, records where its inputs are and sets design statuses', async t => {
   const root = await mkdtemp(path.join(tmpdir(), 'preliminary-releases-'));
@@ -22,8 +25,6 @@ test('the season script publishes a checked release, records where its inputs ar
   const author = path.join(root, 'cad', 'preliminary-design');
   const site = path.join(root, 'docs', 'preliminary-design');
   await mkdir(author, { recursive: true });
-  const script = path.join(author, 'stage.py');
-  await writeFile(script, await readFile(fileURLToPath(new URL('../templates/stage-preliminary-review.py', import.meta.url))));
   async function fixture(id, {receipt = {}, scene: shown = {}, page = '<html>Project review of ' + id + '</html>'} = {}) {
     const dir = path.join(author, 'releases', id);
     await mkdir(path.join(dir, 'field'), { recursive: true });
@@ -39,11 +40,12 @@ test('the season script publishes a checked release, records where its inputs ar
     const limits = await pin('package-limits.json', '{"inspectionLimitKg":14}');
     const budgets = await pin('budgets.json', JSON.stringify({requirements: limits, masses: [], electricalCases: {}}));
     const plan = await pin('layout.json', JSON.stringify({motion, budgets, view: 'viewer.html'}));
-    await pin('receipt.json', JSON.stringify({planSha256: plan.sha256, issue: 'synthetic-' + id, status: 'layout-checked', ...receipt}));
+    await pin('receipt.json', JSON.stringify({schema: 'agent-frc/preliminary-layout-result@1', missingInputs: [], reopen: [], cases: [{case: 'turn', status: 'pass'}], control: {witness: {status: 'fail'}},
+      budgets: {massStatus: 'pass', electricalCases: [{case: 'weak', status: 'pass'}]}, planSha256: plan.sha256, issue: 'synthetic-' + id, status: 'layout-checked', ...receipt}));
     await pin('missions.json', JSON.stringify({missionCases: [{case: 'turn', kind: 'operating-case', accomplishes: 'delivered', objective: 'Move the sample'}]}));
     return {dir, trial};
   }
-  const stage = (...args) => spawnSync(process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3'), [script, ...args], {encoding: 'utf8'});
+  const stage = (...args) => spawnSync(process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3'), [stagingCommand, '--base', author, ...args, ...(args.includes('effective') ? ['--gate-check', gateCheck] : [])], {encoding: 'utf8'});
   const listing = path.join(site, 'releases.json'), index = async () => JSON.parse((await readFile(listing, 'utf8')).replace(/"\d{4}-\d{2}-\d{2}"/g, '"DATE"'));
   const rev = number => ({number, date: 'DATE'});
 
@@ -113,7 +115,8 @@ test('the season script publishes a checked release, records where its inputs ar
   assert.equal(promoted.status, 0, promoted.stderr);
   assert.match(promoted.stdout, /Preliminary release b is effective; the site opens b/);
   assert.match(promoted.stdout, /Effective-readiness report for synthetic-b/, 'the reviewer is shown the readiness report of the installed plugin');
-  assert.match(promoted.stdout, /On push: this is the stage gate\. CI reruns the full layout check once on the committed design/, 'the command says what CI will do');
+  assert.match(promoted.stdout, /^\[gate\] Preliminary release b: the full layout check ran on the committed design and reproduced the published receipt in \d+ s/m, 'the command reports the gate it just ran');
+  assert.match(promoted.stdout, /On push: the project's workflow publishes the page\. Nothing is rerun\.\r?\n$/, 'the command says what a push will do');
   assert.deepEqual(await index(), {releases: ['a', 'b'], revision: counted, designStatus: {a: 'superseded', b: 'effective'}, accepted: {a: 'DATE', b: 'DATE'}, current: 'b'});
   assert.ok(existsSync(path.join(site, 'releases', 'a', 'receipt.json')), 'superseding a release keeps its published files');
   assert.match(stage('--set-status', 'b', 'paused').stderr, /in-progress, effective, superseded, withdrawn/);

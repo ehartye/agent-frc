@@ -19,6 +19,7 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
 import {gunzipSync} from 'node:zlib';
 
 import {writeDirectoryAtomic, writeFileAtomic} from './atomic-write.mjs';
+import {gateLine, stageGate, writeGate} from './stage-gate.mjs';
 import {architectureName, designStatuses, detailedTitle, draftOf, releaseId, stateOf, versionOf} from './design-status.mjs';
 import {checkProject, detailedWhere, primaryView, readinessSummary} from './design-publication.mjs';
 import {benchFile, effectiveGate, summary as benchSummary, summaryText as benchText} from './bench-tests.mjs';
@@ -71,7 +72,7 @@ function saveIndex(at, index) {
 }
 /** Run the publication check without the rerun and return what it says about this design or the detailed index. */
 function problems(at, design) {
-  const result = checkProject(at.project, {site: at.site, detailed: at.detailed, preliminary: at.preliminary, skipRerun: true, log: () => {}});
+  const result = checkProject(at.project, {site: at.site, detailed: at.detailed, preliminary: at.preliminary, scan: false, base: null, log: () => {}});
   const where = detailedWhere(loadIndex(at), design);
   return result.errors.filter(e => e.startsWith(where + ' ') || e.startsWith(where + ':'));
 }
@@ -146,10 +147,8 @@ function settled(index, design) {
     : 'Design ' + design + ' is ' + status + '; choose a new ID';
 }
 const report = lines => lines.length ? {report: lines.join('\n') + '\n'} : {};
-// What the project's CI does with the change just made, said after each command. The method: docs/testing-methodology.md.
-const onPush = {draft: 'On push: CI runs the publication checks. The layout check is not rerun for a draft; the local check you ran is its check.',
-  gate: 'On push: this is the stage gate. CI reruns the full layout check once on the committed design, on each push of the branch that carries this change. Make it the last commit of its pull request.',
-  labels: 'On push: CI runs the publication checks. The layout check is not rerun: no physics changed.'};
+// What a push does with the change just made, said after each command. The method: docs/testing-methodology.md.
+const onPush = 'On push: the project\'s workflow publishes the page. Nothing is rerun.';
 
 /** Replay the Fusion authority register and export lineage: the archive and STEP the registered design exports to. */
 function fusionExport({project, authority, lineage, python}) {
@@ -231,7 +230,7 @@ export function stageInProgress({project, design, designName, inputs, preliminar
   if (backup) rmSync(backup, {recursive: true, force: true});
   check(!found.length, found.join('\n'));
   return {...saved, ...report([(number > 1 ? 'Revised ' + described(index, design) + ' in place' : 'Staged ' + described(index, design)) + ' (' + stateOf(index, design) + ')',
-    ...notes.map(n => 'Note: ' + n), onPush.draft])};
+    ...notes.map(n => 'Note: ' + n), 'Before pushing, run the publication check: node PLUGIN/scripts/design-publication.mjs check .', onPush])};
 }
 
 /** Whether a published folder holds exactly these files. */
@@ -263,7 +262,7 @@ export function relink({project, design, preliminary, ...folders}) {
   const saved = saveIndex(at, index), found = problems(at, design);
   if (found.length) { writeFileSync(recordFile, recordBefore); writeFileSync(at.indexFile, indexBefore); }
   check(!found.length, found.join('\n'));
-  return {...saved, ...report([sentence(described(index, design)) + ' is now built on preliminary ' + preliminary + (was && was !== preliminary ? ' (was ' + was + ')' : '') + ' and keeps its ID', onPush.labels])};
+  return {...saved, ...report([sentence(described(index, design)) + ' is now built on preliminary ' + preliminary + (was && was !== preliminary ? ' (was ' + was + ')' : '') + ' and keeps its ID', onPush])};
 }
 
 /**
@@ -271,7 +270,7 @@ export function relink({project, design, preliminary, ...folders}) {
  * effective becomes superseded. A design not yet published gets a record from the review. A review that does not
  * pass is refused. The report goes to the reviewer of the pull request, who accepts the design by merging it.
  */
-export function markEffective({project, design, designName, readiness, benchTests, ...folders}) {
+export function markEffective({project, design, designName, readiness, benchTests, run, now, budgetMinutes, jobs, ...folders}) {
   const at = layout(project, folders), index = loadIndex(at);
   check(designId.test(design ?? '') && named(readiness), 'Supply --design and --readiness, the mechanical-readiness review result');
   check(designName === undefined || versionOf(design), '--design-name names the architecture of a version ID, MAJOR.MINOR');
@@ -284,6 +283,12 @@ export function markEffective({project, design, designName, readiness, benchTest
   // Bench tests as records: every before-build test has a passing result, every on-robot test an owner and a plan.
   const bench = effectiveGate(project, design, {...(named(benchTests) ? {file: path.resolve(project, benchTests)} : {}), ...folders});
   check(!bench.problems.length, sentence(described(index, design)) + ' cannot be effective until its bench tests are resolved:\n' + bench.problems.map(p => '  - ' + p).join('\n'));
+  // The stage gate: the full layout check, run here on the committed design. An earlier receipt is never taken for it.
+  // A design recorded from its review alone has no layout of its own to check.
+  const gate = existsSync(path.join(dir, 'receipt.json')) ? stageGate({root: at.project, where: sentence(described(index, design)), id: design, phase: 'detailed-design',
+    inputs: path.resolve(at.project, readJson(recordFile).check?.project ?? path.join(at.inputs, design)), published: dir, record: readJson(recordFile),
+    ...(run ? {run} : {}), ...(now ? {now} : {}), budgetMinutes, jobs}) : null;
+  if (gate) writeGate(dir, gate);
   if (!existsSync(recordFile)) {
     mkdirSync(dir, {recursive: true});
     writeFileAtomic(recordFile, JSON.stringify({schema: designSchema, design,
@@ -301,10 +306,10 @@ export function markEffective({project, design, designName, readiness, benchTest
   // The date it was accepted stays with the design once it is superseded.
   index.accepted = {...index.accepted, [design]: index.accepted?.[design] ?? today()};
   const version = versionOf(design), latest = Math.max(0, ...index.designs.map(majorOf).filter(Boolean));
-  return {...saveIndex(at, index), report: readinessSummary(review) + (bench.record ? 'Bench tests: ' + benchText(benchSummary(bench.record)) + '\n' : '') +
+  return {...saveIndex(at, index), report: (gate ? gateLine(sentence(described(index, design)), gate) + '\n' : '') + readinessSummary(review) + (bench.record ? 'Bench tests: ' + benchText(benchSummary(bench.record)) + '\n' : '') +
     notes.map(n => 'Note: ' + n + '\n').join('') + (version ? 'Work toward the next baseline of ' +
     architectureName(index, design) + ' is ' + version.major + '.' + (version.minor + 1) + ', staged as drafts until it is accepted. A different architecture is ' +
-    (latest + 1) + '.0 with its own name.\n' : '') + onPush.gate + '\n'};
+    (latest + 1) + '.0 with its own name.\n' : '') + onPush + '\n'};
 }
 
 /**
@@ -466,6 +471,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
       check(rest[i]?.startsWith('--') && rest[i + 1] !== undefined, 'Expected --option value pairs');
       options[rest[i].slice(2).replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = rest[i + 1];
     }
+    for (const name of ['budgetMinutes', 'jobs']) if (options[name] !== undefined) options[name] = Number(options[name]);
+    // --check MODULE is for the plugin's own tests: the default export of the module stands in for the layout check.
+    if (options.check) { options.run = (await import(pathToFileURL(path.resolve(options.check)).href)).default; delete options.check; }
+    if (mode === 'effective') console.error('[gate] Running the full layout check on the committed design. Guideline: about 15 minutes.');
     check(project && statSync(project, {throwIfNoEntry: false})?.isDirectory(), 'Supply the project folder');
     options.project = path.resolve(project);
     const command = {stage: stageInProgress, effective: markEffective, relink, supersede, withdraw, refresh, 'copy-inputs': copyInputs, remove}[mode];
@@ -475,7 +484,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
     console.log(JSON.stringify(index, null, 2));
   } catch (error) {
     console.error(error.message + '\nUsage: detailed-design-release.mjs stage PROJECT --design MAJOR.MINOR [--design-name "NAME"] --inputs FOLDER --preliminary RELEASE --authority REGISTER --lineage LINEAGE' +
-      ' | relink PROJECT --design ID --preliminary RELEASE | effective PROJECT --design ID --readiness REVIEW_RESULT.json [--design-name "NAME"] [--bench-tests FILE]' +
+      ' | relink PROJECT --design ID --preliminary RELEASE | effective PROJECT --design ID --readiness REVIEW_RESULT.json [--design-name "NAME"] [--bench-tests FILE] [--budget-minutes 45] [--jobs N]' +
       ' | supersede PROJECT --design ID [--by ID] | withdraw PROJECT --design ID --reason TEXT [--files PATH,PATH] | copy-inputs PROJECT --from ID --to ID' +
       ' | remove PROJECT --design ID [--replaced-by ID] | refresh PROJECT' +
       '   [--site docs] [--detailed detailed-design] [--preliminary-tree preliminary-design] [--detailed-inputs cad/detailed-design/designs]');

@@ -13,8 +13,13 @@ import path from 'node:path';
 import test from 'node:test';
 import {fileURLToPath} from 'node:url';
 import {checkProject} from '../scripts/design-publication.mjs';
-import {markEffective, refresh, stageInProgress, withdraw} from '../scripts/detailed-design-release.mjs';
-import {folderReceipt, issueRelease, listing, sha, write} from './fixtures/preliminary-release.mjs';
+import {markEffective as markEffectiveWithGate, refresh, stageInProgress, withdraw} from '../scripts/detailed-design-release.mjs';
+import reproduces from './fixtures/gate-reproduces.mjs';
+
+// These invented designs hold no solid, so the layout check of the stage gate is stood in for: it reproduces the receipt.
+const gateCheck = fileURLToPath(new URL('./fixtures/gate-reproduces.mjs', import.meta.url));
+const markEffective = options => markEffectiveWithGate({run: reproduces, ...options});
+import {commitInputs, folderReceipt, issueRelease, listing, sha, write} from './fixtures/preliminary-release.mjs';
 
 // Synthetic teaching fixtures: invented releases, cases and objectives with no relation to any game.
 const script = fileURLToPath(new URL('../scripts/detailed-design-release.mjs', import.meta.url));
@@ -26,6 +31,7 @@ function project(t, {status = 'effective'} = {}) {
   const root = mkdtempSync(path.join(os.tmpdir(), 'detailed-release-'));
   t.after(() => rmSync(root, {recursive: true, force: true}));
   issueRelease(path.join(root, 'docs'), 'layout-001');
+  commitInputs(root, 'layout-001');
   listing(path.join(root, 'docs'), 'layout-001', ['layout-001'], {'layout-001': status});
   const published = path.join(root, prelim, 'releases/layout-001'), inputs = 'cad/detailed-design/designs/detail-001';
   const receipt = read(path.join(published, 'receipt.json')), ledger = {...read(path.join(published, 'budgets.json')), requirements: {file: 'package-limits.json'}};
@@ -49,7 +55,7 @@ function project(t, {status = 'effective'} = {}) {
     lineage: 'cad/lineage.json', replay, ...options});
   return {root, inputs, receipt, stage, review, index: () => read(path.join(root, detail, 'designs.json'))};
 }
-const passes = root => assert.deepEqual(checkProject(root, {skipRerun: true}).errors, []);
+const passes = root => assert.deepEqual(checkProject(root, {log: () => {}}).errors, []);
 
 test('stage publishes an in-progress design that the publication check accepts', t => {
   const p = project(t);
@@ -58,7 +64,7 @@ test('stage publishes an in-progress design that the publication check accepts',
     designs: ['detail-001'], designStatus: {'detail-001': 'in-progress'}, preliminary: {'detail-001': 'layout-001'}});
   // An earlier ID carries no name; its publishes are counted as drafts like any other design's.
   assert.equal(revision['detail-001'].number, 1);
-  assert.equal(report, 'Staged detailed design detail-001 (draft 1 · in progress)\nOn push: CI runs the publication checks. The layout check is not rerun for a draft; the local check you ran is its check.\n');
+  assert.equal(report, 'Staged detailed design detail-001 (draft 1 · in progress)\nBefore pushing, run the publication check: node PLUGIN/scripts/design-publication.mjs check .\nOn push: the project\'s workflow publishes the page. Nothing is rerun.\n');
   const dir = path.join(p.root, detail, 'designs/detail-001');
   assert.deepEqual(read(path.join(dir, 'design.json')), {schema: 'agent-frc/detailed-design@1', design: 'detail-001', issue: p.receipt.issue,
     preliminary: {release: 'layout-001'}, fusion: {archiveSha256: sha('archive'), stepSha256: p.receipt.step.sha256, configuration: 'Invented stowed assembly', revision: 'review-r1'},
@@ -68,12 +74,6 @@ test('stage publishes an in-progress design that the publication check accepts',
   assert.ok(existsSync(path.join(p.root, detail, 'index.html')), 'the stock catalog is written when the tree has none');
   assert.ok(existsSync(path.join(p.root, detail, 'fonts/fonts.css')), 'the review page finds its theme fonts in the detailed tree');
   passes(p.root);
-  // The rerun finds the committed inputs through the record.
-  write(p.root, 'cad/preliminary-design/releases/layout-001/layout.json', 'plan layout-001');
-  const committed = dir => existsSync(path.join(dir, 'receipt.json')) ? path.join(dir, 'receipt.json') : path.join(p.root, prelim, 'releases/layout-001/receipt.json');
-  const rerun = checkProject(p.root, {rerun: 'all', log: () => {}, run: ({project: dir}) => ({...read(committed(dir)), physicsOnly: true})});
-  assert.deepEqual(rerun.errors, []);
-  assert.equal(rerun.detailed.designs[0].rerun, 'pass');
   // Staging again after a fix replaces the design while it is in progress.
   write(p.root, p.inputs + '/review/index.html', '<html>Corrected review</html>');
   p.stage();
@@ -131,7 +131,7 @@ test('a detailed design becomes effective end to end from the review command, wi
     const marked = spawnSync(process.execPath, [script, 'effective', p.root, '--design', 'detail-001', '--readiness', result], {encoding: 'utf8', env});
     assert.equal(marked.status, 0, marked.stderr);
     assert.deepEqual(p.index().designStatus, {'detail-001': 'effective'});
-    const checked = checkProject(p.root, {skipRerun: true});
+    const checked = checkProject(p.root, {log: () => {}});
     assert.deepEqual(checked.errors, []);
     assert.match(checked.reports.find(r => /detail-001/.test(r.title)).text, /Showcase eligibility: pass\nFindings not passing: 0/);
     // A failing duty in the same study is refused by the review command and by the status change.
@@ -182,7 +182,7 @@ test('a model published before the index is withdrawn by naming its files', t =>
   assert.deepEqual(index.lastCommit, {'draft-001': published});
   assert.equal(index.current, 'detail-001');
   assert.ok(!existsSync(path.join(p.root, 'docs/models/robot.glb')) && !existsSync(path.join(p.root, 'docs/media/robot-still.png')));
-  const result = checkProject(p.root, {skipRerun: true});
+  const result = checkProject(p.root, {log: () => {}});
   assert.deepEqual([result.errors, result.warnings], [[], []]);
 });
 
@@ -190,7 +190,7 @@ test('refresh recomputes the primary view of an index edited by hand', t => {
   const p = project(t);
   p.stage();
   write(p.root, detail + '/designs.json', {...p.index(), current: null, beside: 'detail-001'});
-  assert.match(checkProject(p.root, {skipRerun: true}).errors.join('\n'), /set current to detail-001 and beside to null/);
+  assert.match(checkProject(p.root, {log: () => {}}).errors.join('\n'), /set current to detail-001 and beside to null/);
   assert.equal(refresh({project: p.root}).current, 'detail-001');
   passes(p.root);
 });
@@ -199,7 +199,7 @@ test('the command line runs each command and reports a refusal', t => {
   const p = project(t);
   p.stage();
   const run = (...args) => spawnSync(process.execPath, [script, ...args], {encoding: 'utf8'});
-  const effective = run('effective', p.root, '--design', 'detail-001', '--readiness', p.review('pass'));
+  const effective = run('effective', p.root, '--design', 'detail-001', '--readiness', p.review('pass'), '--check', gateCheck);
   assert.equal(effective.status, 0, effective.stderr);
   assert.match(effective.stderr, /Showcase eligibility: pass/);
   assert.equal(JSON.parse(effective.stdout).current, 'detail-001');

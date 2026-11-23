@@ -20,12 +20,12 @@ Do the move in one pull request per project. Steps 1 to 4 make the new check pas
 | `scripts/preliminary-release.mjs` (`verify`, `verify-catalog`, `compare-template`) | `design-publication.mjs check` |
 | `stage.py --check-index`, `--verifier` | `design-publication.mjs check` |
 | `detailed-design-release.mjs` options `--policy`, `--packet` and a site folder as the first argument | The project folder as the first argument; `effective --readiness`, `withdraw --reason` |
-| `templates/robot-showcase-pages.yml`, `templates/preliminary-review-pages.yml`, `templates/prepare-showcase-release.mjs` | `templates/design-publication.yml` |
+| `templates/robot-showcase-pages.yml`, `templates/preliminary-review-pages.yml`, `templates/prepare-showcase-release.mjs` | The project's own workflow, written from `templates/project-ci/ci.yml` |
 | `{"signedPacket": …}` under `mechanicalReadiness` in a showcase or highlights manifest | `{"reviewResult": "PATH"}`, the committed review result, or the study path as before |
 
 ## 1. Commit the design inputs
 
-The check reruns the layout check in CI when a design becomes effective, so every file the layout check reads must be in the repository. The repository holds everything the design needs. Make the repository private if the season's work is private.
+The stage gate reruns the layout check on the committed design when a design is marked effective, so every file the layout check reads must be in the repository. The repository holds everything the design needs. Make the repository private if the season's work is private.
 
 For each preliminary release that is `in-progress` or `effective`, commit its inputs at `cad/preliminary-design/releases/ID/`:
 
@@ -50,7 +50,7 @@ If a release's inputs sit in another folder, or its plan has another name, add `
 
 | Project file | Copy from the plugin |
 | --- | --- |
-| `cad/preliminary-design/stage.py` | `templates/stage-preliminary-review.py` |
+| `cad/preliminary-design/stage.py` | Nothing in the project. The agent runs `PLUGIN/scripts/stage_preliminary_review.py`. |
 | `docs/preliminary-design/index.html` | `templates/preliminary-review-index.html`, unless the project changed its copy |
 | `docs/detailed-design/index.html` | `templates/detailed-design-index.html`, unless the project changed its copy |
 
@@ -74,14 +74,13 @@ An effective detailed design needs its mechanical-readiness review result at `do
 
 ## 4. Add the one workflow and run the check
 
-Copy `templates/design-publication.yml` to `.github/workflows/design-publication.yml` and follow [Set up the workflow](design-publication.md#set-up-the-workflow). The file calls the plugin's workflow and names no plugin commit.
+[Write the project's CI](project-ci.md#write-the-projects-ci) from `templates/project-ci/`. It names no plugin.
 
 ```sh
-node PLUGIN/scripts/design-publication.mjs check . --skip-rerun
-node PLUGIN/scripts/design-publication.mjs check . --rerun all
+node PLUGIN/scripts/design-publication.mjs check .
 ```
 
-The first command checks the records, scenes and indexes in seconds. The second also reruns the layout check of each in-progress and effective design, once, to prove that the committed inputs reproduce the receipts before the old gates go. Fix every error before deleting anything in the next steps. If a rerun differs from the committed receipt, the committed inputs are not the ones the receipt was made from: run the layout check on the committed inputs, stage the release again and review the difference.
+The command checks the records, scenes and indexes in seconds and runs no layout check. Fix every error before deleting anything in the next steps. A receipt that is not of the committed files is named: run the layout check on the committed inputs, stage the release again and review the difference.
 
 ## 5. Delete the old workflow files
 
@@ -130,7 +129,7 @@ Delete these repository variables after the pull request merges and the default-
 | --- | --- |
 | `FRC_APPROVED_MODEL_COMMIT` | The approved-commit baseline |
 | `FRC_MODEL_VERIFIER_COMMIT` | A second plugin pin for the verifier |
-| `AGENT_FRC_PLUGIN_SHA` | A plugin pin. The design publication workflow names no plugin commit. Keep it only while a remaining workflow still calls the reusable project checks. |
+| `AGENT_FRC_PLUGIN_SHA` | A plugin pin. No project file names the plugin. |
 | `FRC_ACTIVE_MODEL_SELECTION`, `FRC_REQUIRE_ACTIVE_MODEL_SELECTION` | The active model selection |
 | `FRC_REVIEWER_PUBLIC_KEY` | The signature verification key |
 | `FRC_PAGES_LAYOUT` | The branch or built switch |
@@ -170,7 +169,7 @@ Do the rename in one pull request.
 1. **Rebuild the inputs in the new folder.**
 
    ```sh
-   python cad/preliminary-design/stage.py --copy-inputs layout-004 1.0
+   python PLUGIN/scripts/stage_preliminary_review.py --copy-inputs layout-004 1.0
    ```
 
    The command copies `cad/preliminary-design/releases/layout-004/` to `cad/preliminary-design/releases/1.0/`. The plan's `view` and every pin written from the repository root name the old folder, so it writes each of those pins with the new path and the digest of the copied file. It first verifies each pin against the old folder and refuses a stale one. The STEP keeps its bytes: its digest is what shows the design did not change. A held receipt keeps its bytes too. The page, scene and receipt are not copied, because they carry the old paths.
@@ -183,25 +182,25 @@ Do the rename in one pull request.
 3. **Stage under the new ID** and name the architecture.
 
    ```sh
-   python cad/preliminary-design/stage.py 1.0 --design-name "Tilting carriage"
+   python PLUGIN/scripts/stage_preliminary_review.py 1.0 --design-name "Tilting carriage"
    ```
 
 4. **Carry the status.** When the old release is effective, mark the new one effective. The old one becomes superseded in the same edit.
 
    ```sh
-   python cad/preliminary-design/stage.py --set-status 1.0 effective
+   python PLUGIN/scripts/stage_preliminary_review.py --set-status 1.0 effective
    ```
 
 5. **Remove the old ID.**
 
    ```sh
-   python cad/preliminary-design/stage.py --remove layout-004 --replaced-by 1.0
+   python PLUGIN/scripts/stage_preliminary_review.py --remove layout-004 --replaced-by 1.0
    ```
 
    The command deletes `docs/preliminary-design/releases/layout-004/` and `cad/preliminary-design/releases/layout-004/` and takes the ID out of every field of the index. For a release that is or was effective it requires `--replaced-by`, and it refuses unless that release is effective and its receipt names the same STEP digest. The new release then keeps the earlier accepted date. An in-progress release, or a superseded one that was never accepted, needs no `--replaced-by`.
 
 6. **Update what named the old ID.** Stage an in-progress detailed design again with `--preliminary 1.0`; the command names each one. Change links, the README still caption and any registered check that names the old folder.
-7. Run `node PLUGIN/scripts/design-publication.mjs check . --skip-rerun`, commit and open the pull request. CI matches a renamed effective release to the earlier ID by its [physics](design-publication.md#a-change-to-an-effective-design) and does not rerun it.
+7. Run `node PLUGIN/scripts/design-publication.mjs check .`, commit and open the pull request. The check matches a renamed effective release to the earlier ID by its [physics](design-publication.md#a-change-to-an-effective-design).
 
 A changed design is not a rename. If the STEP differs, the old release stays in the index as superseded and the new design takes the next version.
 
@@ -243,7 +242,7 @@ Do the rename in one pull request.
    node PLUGIN/scripts/detailed-design-release.mjs remove . --design detail-003 --replaced-by 1.0
    ```
 
-6. Change links, the README still caption and any registered check that names the old folder. Run `node PLUGIN/scripts/design-publication.mjs check . --skip-rerun`, commit and open the pull request.
+6. Change links, the README still caption and any registered check that names the old folder. Run `node PLUGIN/scripts/design-publication.mjs check .`, commit and open the pull request.
 
 A changed design is not a rename. If the STEP differs, the old design stays in the index as superseded and the new design takes the next version.
 
@@ -289,7 +288,7 @@ Move the files of an outside archive store into `iterations/archive/` and commit
 
    ```sh
    node PLUGIN/scripts/detailed-design-release.mjs withdraw . --design detail-001 --reason "The lift changed to a two-stage carriage."
-   python cad/preliminary-design/stage.py --set-status 2.0 withdrawn --reason "The carrier moved to the other side."
+   python PLUGIN/scripts/stage_preliminary_review.py --set-status 2.0 withdrawn --reason "The carrier moved to the other side."
    ```
 
    For a model that was published before the design index existed, name its published files. The command removes them and lists the design:
@@ -299,29 +298,40 @@ Move the files of an outside archive store into `iterations/archive/` and commit
    ```
 
 3. Update the entry page, the README and its still, and the model selector for the new primary view: the effective design, else the newest in-progress one, else a line that says no detailed design is published with a link to the current preliminary design.
-4. Run `node PLUGIN/scripts/design-publication.mjs check . --skip-rerun`, commit and open the pull request.
+4. Run `node PLUGIN/scripts/design-publication.mjs check .`, commit and open the pull request.
 
 The index keeps the status, the reason and the last commit that changed the published files. The files leave the site and stay in Git. The pull request needs no declaration, no approval advance and no archive. A project whose build script emits the withdrawn model must stop emitting it in the same pull request.
 
 ## Check the result
 
-- The pull request shows **Design publication** and **Paths and secrets**, both green, with no admin merge.
+- The pull request shows the project's own check, **Scan and site check**, green, with no admin merge.
 - `gh variable list` shows none of the variables above.
-- The default-branch run after the merge repeats the cheap checks and deploys the site. It reruns no layout check.
+- The default-branch run after the merge scans, checks the site and deploys it. It runs no design check.
 - The site opens the same primary view as before, each withdrawn design shows its reason, and no link points at a deleted archive.
 
-## Move to the stage-gate rerun
+## Take the plugin out of a project
 
-From plugin 0.140.0 a project [follows the plugin's current release](testing-methodology.md#keep-the-project-and-the-plugin-loosely-coupled), and CI reruns the layout check only [when a design becomes effective](design-publication.md#when-the-layout-check-reruns). A project on the earlier workflow replaces two files in one pull request. Until it does, the publication check fails with one message that names them.
+From plugin 0.142.0 [the plugin is a tool of the coding agent, not a dependency of the project](testing-methodology.md#the-plugin-is-a-tool-of-the-coding-agent-not-a-dependency-of-the-project). A project on any earlier layout does this in one pull request. Until it does, the publication check fails with one message that names the files.
 
-1. Replace `.github/workflows/design-publication.yml` with `templates/design-publication.yml`. It calls the plugin's workflow and names no plugin commit. Carry over two choices if the project made them: `deploy: false` for a site served from the `docs` folder, and `lfs: true`.
-2. Replace `cad/preliminary-design/stage.py` with `templates/stage-preliminary-review.py`. It calls the plugin's staging command. Name the installed plugin for it with `AGENT_FRC_PLUGIN` or `--plugin PATH`.
-3. Require the checks under their new names, **designs / Design publication** and **designs / Paths and secrets**, in place of the earlier two.
-4. Run `node PLUGIN/scripts/project-layout.mjs agents .` to write the Design checks block into the project's `AGENTS.md`.
+1. Delete every workflow that names the plugin: `.github/workflows/design-publication.yml`, a branch scan or project checks workflow that checks the plugin out, and any other the [audit](project-ci.md#audit-the-projects-ci) reports.
+2. Delete `cad/preliminary-design/stage.py` and `cad/preliminary-design/serve.py`. The agent runs `python PLUGIN/scripts/stage_preliminary_review.py` and `python PLUGIN/scripts/serve_preliminary_review.py` from the project root.
+3. [Write the project's CI](project-ci.md#write-the-projects-ci) from `templates/project-ci/`: `ci.yml`, `scan.mjs` and `site-check.mjs`. A project test that ran through `tests/ci.json` becomes a step of that workflow that runs the project's own command.
+4. Remove the repository variables that named the plugin or its runner: `AGENT_FRC_PLUGIN_SHA`, `DESIGN_CHECK_RUNNER`, `DESIGN_CHECK_JOBS`. Change the required checks to the new workflow's job, **Scan and site check**.
+5. Run `node PLUGIN/scripts/project-layout.mjs agents .` to refresh the Design checks block in the project's `AGENTS.md`.
+6. Run `node PLUGIN/scripts/project-ci-audit.mjs .` and `node PLUGIN/scripts/design-publication.mjs check .`.
 
-No design is restaged and no receipt changes. That pull request reruns no layout check: every effective design was effective before it.
+No design is restaged and no receipt changes. A design that is already effective needs no `gate.json`. The next design to be marked effective gets one from the command that marks it.
 
-Optional: set the repository variable `DESIGN_CHECK_RUNNER` to a self-hosted runner label, and `DESIGN_CHECK_JOBS` to its worker count. [Set up the workflow](design-publication.md#set-up-the-workflow)
+These plugin files are gone, because a project must not run them:
+
+| Removed | In its place |
+| --- | --- |
+| `templates/design-publication.yml` and the plugin workflow it called | `templates/project-ci/ci.yml`, which the project owns. The stage gate runs in the command that marks a design effective. |
+| `templates/branch-scan.yml` | The scan step of `ci.yml`, running the project's `scripts/ci/scan.mjs` |
+| `templates/project-checks.yml`, `templates/project-ci.yml` | Steps in the project's own workflow |
+| `templates/stage-preliminary-review.py`, `templates/serve-preliminary-review.py` | `scripts/stage_preliminary_review.py` and `scripts/serve_preliminary_review.py`, run by the agent from the plugin |
+| `design-publication.mjs check --skip-rerun`, `--rerun`, `--cache`, `--budget-minutes`, `--jobs` | Nothing: the check never runs the layout check |
+| `stage.py --readiness` | Nothing: the gate prints the report |
 
 ## Move a design checked in its own folder to the repository root
 

@@ -264,17 +264,18 @@ if __name__=="__main__":
         templates = Path(__file__).resolve().parents[2] / "templates"
         if not (site / "fonts").exists():
             shutil.copytree(templates / "preliminary-review-fonts", site / "fonts")
-        for source, dest in [("serve-preliminary-review.py", author / "serve.py"),
-                             ("preliminary-review-gitignore", author / ".gitignore"),
-                             ("stage-preliminary-review.py", author / "stage.py"),
+        # A project holds data, published output and its own CI: a workflow and two checks that name no plugin.
+        for source, dest in [("preliminary-review-gitignore", author / ".gitignore"),
                              ("preliminary-review-index.html", site / "index.html"),
-                             # The one workflow a project runs: scan, publication check, registered checks and deploy.
-                             ("design-publication.yml", season / ".github/workflows/design-publication.yml")]:
+                             ("project-ci/ci.yml", season / ".github/workflows/ci.yml"),
+                             ("project-ci/scan.mjs", season / "scripts/ci/scan.mjs"),
+                             ("project-ci/site-check.mjs", season / "scripts/ci/site-check.mjs")]:
             if not dest.exists():
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(templates / source, dest)
         create(author / "releases" / args.release, release_id=args.release, project=season, pins=args.pins)
-        subprocess.run([sys.executable, str(author / "stage.py"), "--plugin", str(templates.parent), args.release,
+        # The staging command is the plugin's: the agent runs it from the plugin, and the project keeps no copy.
+        subprocess.run([sys.executable, str(templates.parent / "scripts/stage_preliminary_review.py"), "--base", str(author), args.release,
                         *(["--design-name", args.design_name] if version else [])], check=True)
     else:
         # The new directory stands for a repository: the package sits in a release folder inside it.

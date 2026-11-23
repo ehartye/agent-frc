@@ -3,7 +3,7 @@
 # @subject scripts/package_view.py
 # @subject scripts/preliminary_design.py
 # @subject templates/preliminary-review/review.html
-# @subject templates/stage-preliminary-review.py
+# @subject scripts/stage_preliminary_review.py
 """Check a package from the repository root: the review page and scene sit beside the layout plan in its release folder."""
 from hashlib import sha256
 import json

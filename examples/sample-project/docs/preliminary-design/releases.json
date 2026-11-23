@@ -1,0 +1,7 @@
+{
+  "releases": ["1.0"],
+  "designs": {"1": {"name": "Tilting carriage"}},
+  "designStatus": {"1.0": "in-progress"},
+  "revision": {"1.0": {"number": 1, "date": "2001-02-03"}},
+  "current": "1.0"
+}

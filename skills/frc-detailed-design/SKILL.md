@@ -35,13 +35,13 @@ The handoff is the effective preliminary design's folder, `cad/preliminary-desig
 
 | The change | Run |
 | --- | --- |
-| Geometry, a motion, a tolerance or reserve, a fixture, a trial, a mass or voltage budget | The local layout check, on the phases the change affects |
-| The page, a title, a colour, a name, a version label, a status word, a document | `--view-only` when the page shows it, then the publication check with `--skip-rerun`. Never the layout check |
-| Publishing a draft | The publication check with `--skip-rerun`. A draft is published on its local check |
-| Marking a design effective | Nothing more locally. CI reruns the full layout check once, on the committed design |
+| Geometry, a motion, a tolerance or reserve, a fixture, a trial, a mass or voltage budget | The layout check, on the phases the change affects |
+| The page, a title, a colour, a name, a version label, a status word, a document | `--view-only` when the page shows it, then the publication check. Never the layout check |
+| Publishing a draft | The publication check. A draft is published on its own layout check |
+| Marking a design effective | The command that marks it effective. It runs the stage gate itself: the full layout check on the committed design, once. Commit the design's inputs first |
 | The physics of an effective design | Never in place. Open the next minor version as a draft |
 
-Time guidelines: about 1 minute while editing, 5 before merging, 15 at a stage gate. When a run is heading past its guideline, stop and tell the user what is slow. Do not repeat a run whose inputs have not changed. Read the last lines each command prints: they say what ran, what did not and what CI will do on push. [Test by need and risk](../../docs/testing-methodology.md)
+You run every one of these with the plugin. The project runs none of them: its CI is its own files, and a push only publishes. Time guidelines: about 1 minute while editing, 5 before merging, 15 at a stage gate. When a run is heading past its guideline, stop and tell the user what is slow. Do not repeat a run whose inputs have not changed. Read the last lines each command prints: they say what ran, what did not and what a push will do. [Test by need and risk](../../docs/testing-methodology.md)
 
 ## Order of work
 
@@ -138,7 +138,7 @@ A detailed design publishes as `in-progress` on three things: a link to the effe
 
 ```sh
 node PLUGIN/scripts/detailed-design-release.mjs stage . --design ID --inputs cad/detailed-design/designs/ID --preliminary VERSION --authority REGISTER --lineage EXPORT/lineage.json
-node PLUGIN/scripts/design-publication.mjs check . --skip-rerun
+node PLUGIN/scripts/design-publication.mjs check .
 ```
 
 Stage the same ID after each subsystem. Commit the Fusion file, export, check inputs and published folder together, push, and open the published page. [Publish a detailed design](../../docs/design-publication.md#publish-a-detailed-design)
@@ -153,10 +153,10 @@ Check in before this step. `effective` refuses a design while a bench test is un
 
 ```sh
 node PLUGIN/scripts/detailed-design-release.mjs effective . --design ID --readiness cad/detailed-design/readiness-result.json
-node PLUGIN/scripts/design-publication.mjs check . --skip-rerun
+node PLUGIN/scripts/design-publication.mjs check .
 ```
 
-Open one pull request with the status change, the review result, the entry page and the README still. Make the status change its last commit. This is the stage gate: CI reruns the layout check once on the committed inputs for each push that carries the change, and never for a draft. [When the layout check reruns](../../docs/design-publication.md#when-the-layout-check-reruns) The design is effective when it is reviewed and merged. [Effective designs](../../docs/design-publication.md#effective-designs)
+Commit the design's inputs before this step. `effective` runs the stage gate itself: the full layout check on the committed design, once, with its time against the 15-minute guideline. It writes `gate.json` beside the published design and sets the status only when the gate passes. Open one pull request with the status change, the gate record, the review result, the entry page and the README still. The design is effective when it is reviewed and merged. [The stage gate](../../docs/design-publication.md#the-stage-gate)
 
 ## Return a reservation to preliminary design
 
@@ -165,7 +165,7 @@ Return it when a reserved path, volume, mass or loaded-voltage figure cannot be 
 1. Stop work on the affected interface. Other subsystems continue.
 2. Record the failing pair, case and amount, or the budget line and shortfall, in the work list.
 3. Check in with the user.
-4. Open the next preliminary minor version as a draft and hand the record to `frc-preliminary-design`. After effective `1.0` that is `python cad/preliminary-design/stage.py --copy-inputs 1.0 1.1`. A different architecture is the next major version and a new detailed design.
+4. Open the next preliminary minor version as a draft and hand the record to `frc-preliminary-design`. After effective `1.0` that is `python PLUGIN/scripts/stage_preliminary_review.py --copy-inputs 1.0 1.1`. A different architecture is the next major version and a new detailed design.
 5. The detailed design stays `in-progress` and keeps its ID. When the new preliminary version is effective, copy its changed cases into the detailed plan, rerun the check and stage the same ID again with `--preliminary 1.1`. If no case changed, `node PLUGIN/scripts/detailed-design-release.mjs relink . --design ID --preliminary 1.1` re-points it.
 
 [When to return to an earlier phase](../../docs/design-phase-detail.md#when-to-return-to-an-earlier-phase) · [Start the next version](../../docs/design-publication.md#name-and-number-a-design)

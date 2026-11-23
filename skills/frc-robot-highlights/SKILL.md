@@ -25,7 +25,7 @@ Statuses, staging and withdrawal belong to [design publication](../../docs/desig
 
 ## What to run for a showcase change
 
-A showcase change is a page change. Build the page, open it and run the publication check with `--skip-rerun`. It never starts the layout check or a readiness review: those run when geometry, motion or a budget changes, and once in CI when a design becomes effective. The page build should take about a minute; when it is heading past that, stop and tell the user what is slow. [Test by need and risk](../../docs/testing-methodology.md)
+A showcase change is a page change. Build the page, open it and run the publication check. It never starts the layout check or a readiness review: those run when geometry, motion or a budget changes, and the stage gate runs once, in the command that marks a design effective. The page build should take about a minute; when it is heading past that, stop and tell the user what is slow. [Test by need and risk](../../docs/testing-methodology.md)
 
 ## Order of work
 
@@ -45,7 +45,7 @@ python PLUGIN/scripts/export-showcase-cad.py .
 python PLUGIN/scripts/cad-readmes.py . --update
 ```
 
-Run `cad-readmes.py .` with no option in CI. It checks that each README shows the still below its title, that the image exists and that the caption names the current design and its status. [Keep the README still current](../../docs/cad-color-convention.md#keep-the-readme-still-current)
+Run `cad-readmes.py .` with no option before pushing. It checks that each README shows the still below its title, that the image exists and that the caption names the current design and its status. [Keep the README still current](../../docs/cad-color-convention.md#keep-the-readme-still-current)
 
 Before publishing a still, reopen the Fusion file, restore only the intended display state and compare the picture with a second view. Check the whole outline, the visible mechanism, the cover finish and readable markings. [Check a captured still](../../docs/cad-capture-review.md)
 
@@ -78,7 +78,7 @@ Open the generated `index.html` on a desktop and at a narrow width. Follow every
 
 ### 6. Publish and verify
 
-Keep `highlights.json` and its source files in the project repository. For a repository that already has a Pages site, build into a subfolder of that site and link it. Use the [design publication workflow](../../docs/design-publication.md#set-up-the-workflow); run its check locally before pushing.
+Keep `highlights.json` and its source files in the project repository. For a repository that already has a Pages site, build into a subfolder of that site and link it. The project publishes it with [its own CI](../../docs/project-ci.md#write-the-projects-ci); run the publication check before pushing.
 
 After the first deployment, open the URL the deploy job reports. Check the design review, the still and film playback on the hosted page. Add the live URL to the README. On a later change, revisit every changed configuration, claim and caption and build again.
 
