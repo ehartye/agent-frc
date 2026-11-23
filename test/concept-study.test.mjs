@@ -10,7 +10,8 @@ import { expandConceptStudy } from '../scripts/concept-study.mjs';
 
 const dir=path.join(path.dirname(fileURLToPath(import.meta.url)),'..','examples','concept-study');
 const study=JSON.parse(await readFile(path.join(dir,'study.json'),'utf8'));
-// The example pins must hold: each role's file hashes to its sha256.
+// The example pins must hold: the profile and each role's file hash to their sha256.
+await readPinned(dir,study.profile);
 const documents=Object.fromEntries(await Promise.all(study.roles.map(async role=>
   [role.id,JSON.parse((await readPinned(dir,role.concept)).toString('utf8'))])));
 const edit=(x,change)=>{const copy=structuredClone(x);change(copy);return copy;};
