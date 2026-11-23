@@ -1,4 +1,9 @@
-/** @lane merge */
+/**
+ * @lane merge
+ * @subject scripts/design.mjs
+ * @subject scripts/design_iteration.py
+ * @subject scripts/fusion_authority.py
+ */
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import test from 'node:test';

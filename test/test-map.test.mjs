@@ -2,10 +2,10 @@
 import assert from 'node:assert/strict';
 import {existsSync,readFileSync,readdirSync} from 'node:fs';
 import test from 'node:test';
-import {allTests,glob,mapFile,reach,readJson,repoFiles,root,selectForChange} from '../scripts/test-selection.mjs';
+import {allTests,git,glob,mapFile,reach,readJson,repoFiles,root,selectForChange} from '../scripts/test-selection.mjs';
 
 const map=readJson(mapFile),tests=allTests();
-const inGit=existsSync(root+'.git')&&'Needs the Git file list of a checkout';
+const inGit=(()=>{try{git('rev-parse','--git-dir');return true;}catch{return false;}})()||'Needs the Git file list of a checkout';
 const lane=name=>map.lanes[name];
 
 test('every test file is in exactly one lane, and no lane names a missing file',()=>{
@@ -25,7 +25,7 @@ test('every test file declares its lane, and each subject it names exists',()=>{
   }
 });
 
-test('the map and the recorded durations name only files that exist',{skip:!inGit},()=>{
+test('the map and the recorded durations name only files that exist',{skip:inGit!==true&&inGit},()=>{
   const files=repoFiles();
   for(const [key,patterns] of Object.entries(map.covers)){
     assert.ok(lane(key)||tests.includes(key),key+' is a lane or a test file');
@@ -36,7 +36,7 @@ test('the map and the recorded durations name only files that exist',{skip:!inGi
   for(const [profile,seconds] of Object.entries(readJson('test/durations.json'))) for(const name of Object.keys(seconds)) assert.ok(tests.includes(name),`${profile}: ${name}`);
 });
 
-test('a change selects the tests that cover it, and everything when it cannot be attributed',{skip:!inGit},()=>{
+test('a change selects the tests that cover it, and everything when it cannot be attributed',{skip:inGit!==true&&inGit},()=>{
   const reached=reach();
   // This file names the files it asks about, so it counts as covering them; leave it out of the answers.
   const pick=(...changed)=>{const choice=selectForChange(changed,{reached});return {...choice,tests:choice.tests.filter(name=>name!=='test-map.test.mjs')};};

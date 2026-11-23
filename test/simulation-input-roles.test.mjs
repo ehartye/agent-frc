@@ -1,4 +1,7 @@
-/** @lane merge */
+/**
+ * @lane merge
+ * @subject examples/simulation-input-roles/produce.mjs
+ */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
