@@ -39,7 +39,10 @@ def fixture(root,source="fixture.step",assets=(),archive_name="test.f3d", measur
         writer=STEPCAFControl_Writer();writer.Transfer(doc,STEPControl_AsIs);writer.Write(str(root/source))
     if not (root/archive_name).exists():
         with zipfile.ZipFile(root/archive_name,"w") as file:
-            file.writestr("FusionAssetName/Manifest.xml","Synthetic reopen receipt for a unit test")
+            # Invented entries in the layout of a native design. No Fusion content.
+            active="FusionAssetName[Active]/"
+            for entry in ("Manifest.dat",active+"Manifest.dat",active+"FusionDesignSegmentType1/BulkStream.dat",active+"Breps.BlobParts/synthetic.smb"):
+                file.writestr(entry,"Synthetic reopen receipt for a unit test")
     native=pin(root,archive_name)
     step=pin(root,source)
     bind=dict(archiveSha256=native["sha256"],stepSha256=step["sha256"],configuration="Registered test issue")

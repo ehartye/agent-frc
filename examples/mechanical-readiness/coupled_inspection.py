@@ -69,7 +69,7 @@ def prepare(root, archive, step, members):
         if travel:trace.update(guide=near,interpolationBasis=SCHEMA,trajectorySource=execution)
         cases.append(dict(id=duty,duty=duty,execution=execution,trace=record("issue/"+duty+"-trace.json",trace),windowS=[clock[0],clock[-1]],
             admissionGapMm=0,readyOffsetsMm={near:[0,0,0],far:[0,0,0]},terminalBoundsMm=mission["terminalBoundsMm"] if travel else [12,.7,5.9,14,9.3,7.1]))
-    record("issue/teaching-observer.json",ledger)
-    return record("issue/teaching-transfer.json",dict(schema="agent-frc/loaded-transfer@1",id="present-to-fixed-receiver",
+    inventory=record("issue/teaching-observer.json",ledger)
+    return record("issue/teaching-transfer.json",dict(schema="agent-frc/loaded-transfer@1",id="present-to-fixed-receiver",executionInventory=inventory,
         step=step,piece=piece,basis="Supported horizontal delivery or blocked return; no powered actuator or physical endurance claim",
         gravityMmS2=9806.65,traceToleranceMm=.000001,cases=cases)),mission

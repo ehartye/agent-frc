@@ -12,7 +12,7 @@ from showcase_contacts import load_solids
 def replay(root,study,*,motion_model=None,mission=None):
     require(study.get("schema")=="agent-frc/loaded-transfer@1" and named(study.get("id")),"Missing loaded duty")
     from transfer_trajectory import keys
-    keys(study,set("schema id step piece basis gravityMmS2 traceToleranceMm cases stock".split()),"loaded study")
+    keys(study,set("schema id step piece basis gravityMmS2 traceToleranceMm cases stock executionInventory".split()),"loaded study")
     keys(study["piece"],{"id","solid","file"},"admitted article")
     step=pinned(root,study["step"]);piece=study["piece"];shape=pinned(root,piece["file"])
     shapes,_=load_solids(shape)

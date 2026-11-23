@@ -35,6 +35,30 @@ class ObservedTransfer(unittest.TestCase):
                 target["trace"]=write(root,"unsupported.json",original)
                 self.assertEqual(replay(root,broken)["cases"][0]["executionStatus"],"fail")
 
+    def test_a_study_names_its_execution_inventory_as_a_project_file_with_no_variable(self):
+        try:
+            from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox
+        except ImportError:self.skipTest("Requires OpenCascade")
+        import importlib.util
+        from mechanical_fixture import SCRIPTS
+        from loaded_transfer import replay
+        fixture=SCRIPTS.parent/"examples/mechanical-readiness/observed-shutters.py"
+        spec=importlib.util.spec_from_file_location("project_inventory",fixture)
+        issued=importlib.util.module_from_spec(spec);spec.loader.exec_module(issued)
+        with TemporaryDirectory() as tmp:
+            root,study,ledger=issued.generate(Path(tmp))
+            with patch.dict(os.environ,{k:v for k,v in os.environ.items() if k!="FRC_TRANSFER_EXECUTIONS"},clear=True):
+                self.assertEqual(replay(root,study)["status"],"open")
+                registered=json.loads(ledger.read_bytes())
+                named=dict(study,executionInventory=write(root,"observed-executions.json",registered))
+                self.assertEqual(replay(root,named)["status"],"pass")
+                # An execution the inventory does not list is still refused.
+                registered["observed"].pop(study["cases"][0]["execution"]["sha256"])
+                unlisted=dict(study,executionInventory=write(root,"partial-executions.json",registered))
+                refused=replay(root,unlisted)
+                self.assertNotEqual(refused["status"],"pass")
+                self.assertIn("absent from",json.dumps([c["executionReason"] for c in refused["cases"]]))
+
     def test_irregular_observations_cannot_hide_behind_a_supported_chord(self):
         import importlib.util
         from mechanical_fixture import SCRIPTS

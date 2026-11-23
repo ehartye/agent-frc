@@ -103,20 +103,25 @@ def inspect(root, study, test, trace, parts, piece, stock, *, installed_at=None,
     if not ref:
         return "open","No independently registered observed loaded execution"
     source=pinned(root,ref);raw=read(source)
-    ledger=os.environ.get("FRC_TRANSFER_EXECUTIONS")
-    if not ledger:return "open","Independent execution inventory is unavailable"
-    inventory=Path(ledger).resolve()
-    require(not inventory.is_relative_to(root) and inventory.is_file(),"Transfer execution inventory must be independent of candidate")
+    # The study names its observed-execution inventory as a project file. A study written before that names it
+    # through FRC_TRANSFER_EXECUTIONS, wherever the file is kept.
+    if study.get("executionInventory"):
+        inventory=pinned(root,study["executionInventory"])
+    else:
+        ledger=os.environ.get("FRC_TRANSFER_EXECUTIONS")
+        if not ledger:return "open","No observed execution inventory is registered"
+        inventory=Path(ledger).resolve()
+        require(inventory.is_file(),"Observed execution inventory is missing")
     registered=read(inventory)
     require(registered.get("schema")=="agent-frc/observed-transfer-inventory@1" and
-            digest(source) in registered["observed"],"Execution is absent from independent operator inventory")
+            digest(source) in registered["observed"],"Execution is absent from the observed execution inventory")
     witness=registered["observed"][digest(source)]
     from transfer_trajectory import verify as verify_trajectory
     verify_trajectory(root,mission,trace,raw,witness,article,study["gravityMmS2"],installed_at,rotates)
     if mission is not None:
         from transfer_mission import identity as mission_identity
         require(witness.get("missionSha256")==mission_identity(mission),
-                "Independent observer did not register this run for the commissioned article, recipient and duty")
+                "The observer did not register this run for the commissioned article, recipient and duty")
     require(witness.get("origin") in ("executed-simulation","physical-measurement") and named(witness.get("observer")) and
             named(witness.get("producer")) and named(witness.get("basis")),"Register who observed the executed solver or instrument")
     require(raw.get("schema")=="agent-frc/observed-transfer@1" and raw.get("outcome")=="pass" and

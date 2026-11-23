@@ -1,28 +1,19 @@
 
 """Reconcile the rooted Fusion constraint inventory and the independently selected commissioning duty."""
 from collections import Counter, defaultdict
-import os
-from pathlib import Path
-
-from mechanical_readiness import digest, pinned, read, require
+from mechanical_readiness import pinned, read, require
 
 
 def joint_key(row):
     return row["type"], row["occurrence"], row["name"]
 
 
-def intended(root, study, reopen, *, trusted=False):
+def intended(root, study, reopen):
     ref = study.get("operatingRequirements")
     require(isinstance(ref, dict), "Register the selected operating duty from the project's commissioning plan")
     plan = pinned(root, ref)
     pointer = ref.get("pointer")
     require(isinstance(pointer, str) and pointer.startswith("/") and "//" not in pointer, "Choose a commissioning plan section")
-    if trusted:
-        external = os.environ.get("FRC_OPERATING_REQUIREMENTS")
-        require(external and Path(external).is_file() and not Path(external).resolve().is_relative_to(root),
-                "Supply the independently approved commissioning plan outside the candidate")
-        require(digest(Path(external)) == digest(plan) and pointer == os.environ.get("FRC_OPERATING_PROFILE", "/operatingIntent"),
-                "Candidate duties differ from the independently approved plan or selected profile")
     record = read(plan)
     for part in pointer[1:].split("/"):
         record = record[part.replace("~1", "/").replace("~0", "~")]

@@ -1,4 +1,4 @@
-"""Create an original fixed solid in its own saved Fusion archive and collect trusted native evidence."""
+"""Create an original fixed solid in its own saved Fusion archive and collect native evidence."""
 import hashlib
 import importlib.util
 import json
@@ -7,7 +7,7 @@ import adsk.core
 import adsk.fusion
 
 
-def capture(app, project, installed_scripts, key, station_folder, *, moving=False, rigid=False, coupled=False):
+def capture(app, project, installed_scripts, station_folder, *, moving=False, rigid=False, coupled=False):
     moving=moving or coupled
     project=Path(project).resolve()
     project.mkdir(parents=True,exist_ok=False)
@@ -101,16 +101,16 @@ def capture(app, project, installed_scripts, key, station_folder, *, moving=Fals
     (cad/"fusion-authority.json").write_text(json.dumps(register,indent=2),encoding="utf-8")
     spec=importlib.util.spec_from_file_location("native_station",Path(installed_scripts)/"fusion_issue_station.py")
     station=importlib.util.module_from_spec(spec);spec.loader.exec_module(station)
-    lineage=station.export_current(app,project,project/"issue",key)
-    observed=station.measure_pose(app,project,project/"issue/lineage.json",project/"issue/native.json",key,station_folder)
-    station.module("fusion_body_materials").capture(app,project,project/"issue/lineage.json",project/"issue/materials.json",key)
-    station.module("fusion_joint_authority").capture(app,project,project/"issue/lineage.json",project/"issue/joints.json",key)
+    lineage=station.export_current(app,project,project/"issue")
+    observed=station.measure_pose(app,project,project/"issue/lineage.json",project/"issue/native.json",station_folder)
+    station.module("fusion_body_materials").capture(app,project,project/"issue/lineage.json",project/"issue/materials.json")
+    station.module("fusion_joint_authority").capture(app,project,project/"issue/lineage.json",project/"issue/joints.json")
     if moving:
         targets=(("home",0),("middle",.15),("extended",.3),("reset",0)) if coupled else (("home",0),("extended",.3))
         for name,coordinate in targets:
             pose={"id":name,"joints":[{"group":"carriage","type":"asBuilt","name":"Travel along pocket",
                 "occurrence":"@root","coordinate":"slideValue","nativeValue":coordinate}]}
-            data=station.measure_pose(app,project,project/"issue/lineage.json",project/("issue/"+name+".json"),key,station_folder,pose)
+            data=station.measure_pose(app,project,project/"issue/lineage.json",project/("issue/"+name+".json"),station_folder,pose)
             if not data["complete"]:raise ValueError("Incomplete native moving control")
         if coupled:
             coords={g:dict(type="asBuilt",occurrence="@root",name=n,coordinate="slideValue") for g,n in
@@ -118,7 +118,7 @@ def capture(app, project, installed_scripts, key, station_folder, *, moving=Fals
             sites={k:dict(occurrence=n+":1",body=n,localMm=p) for k,n,p in
                    (("anchor","Pocketed base",[0,0,0]),("near","Seated gauge",[14,8,6]),("far","Keyed gauge",[14,22,6]))}
             request=dict(coordinates=coords,landmarks=sites,frames=[dict(id=name,commands={"carriage":v}) for name,v in targets])
-            station.module("fusion_link_calibration").capture(app,project,project/"issue/lineage.json",request,project/"issue/links.json",key)
+            station.module("fusion_link_calibration").capture(app,project,project/"issue/lineage.json",request,project/"issue/links.json")
     if not observed["complete"] or app.documents.count!=count or before and app.activeDocument.creationId!=before.creationId:
         raise ValueError("Native review or original document restoration failed")
     return {"lineage":lineage,"observed":observed,"documentsRestored":True}

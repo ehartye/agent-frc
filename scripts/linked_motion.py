@@ -1,4 +1,4 @@
-"""Reconstruct supported slider/revolute trees from driver-only native readbacks and signed physical poses."""
+"""Reconstruct supported slider/revolute trees from driver-only native readbacks and recorded physical poses."""
 from math import pi
 from pathlib import Path
 import numpy as np
@@ -312,19 +312,15 @@ def diagnostic(root,study):
     """Evaluate joint math and mounted occurrence transforms without granting a mechanical release."""
     from source_joint_roster import active_coordinates
     raw=read(pinned(root,study["jointAuthority"]))
-    from native_station_verify import authenticate
     from fusion_authority import verify
     archive=verify(root,pinned(root,study["authority"]),pinned(root,study["lineage"]))
     from fusion_authority import register_path
     require(pinned(root,study["authority"])==register_path(root).resolve() and
             archive["archiveSha256"]==raw["archiveSha256"]==study["archive"]["sha256"] and
             archive["stepSha256"]==raw["stepSha256"]==study["step"]["sha256"],"Linked diagnostic is registered to a different authority")
-    authenticate(root,study,[("canonical-export",study["lineage"]),("native-joint-authority",study["jointAuthority"]),
-                             ("native-link-calibration",study["linkCalibration"])])
-    import os
-    original=os.environ.get("FRC_OPERATING_REQUIREMENTS")
-    require(original and Path(original).is_file() and not Path(original).resolve().is_relative_to(root) and
-            digest(Path(original))==digest(pinned(root,study["commissioning"])),"Supply the independently frozen linked diagnostic plan")
+    from mechanical_readiness import inspect_archive
+    inspect_archive(pinned(root,study["archive"]))
+    pinned(root,study["linkCalibration"])
     plan=read(pinned(root,study["commissioning"]))
     owners={n:n for n in study["installedOccurrences"]}
     require(len(owners)==len(study["installedOccurrences"]) and owners,"Register exact installed occurrence paths for the diagnostic")

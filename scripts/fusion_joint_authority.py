@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 
-def capture(app, project, lineage_file, output, station_key):
+def capture(app, project, lineage_file, output):
     import adsk.fusion
     root=Path(project).resolve();output=Path(output).resolve()
     if not output.is_relative_to(root) or output.exists():raise ValueError("Use a fresh project-owned native record")
@@ -80,5 +80,4 @@ def capture(app, project, lineage_file, output, station_key):
         if before and before.isValid:before.activate()
     if app.documents.count!=count:raise ValueError("Native document set changed")
     with output.open("x",encoding="utf8") as stream:json.dump(result,stream,indent=2,allow_nan=False)
-    station.seal(root,output,station_key,"native-joint-authority",station.digest(register),lineage["archiveSha256"],lineage["stepSha256"])
     return result

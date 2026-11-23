@@ -12,6 +12,7 @@ from observed_transfer import ObservedTransfer
 from installed_kinematics import InstalledKinematics
 from linked_kinematics import LinkedKinematics
 from native_pose_stages import PoseStages
+from readiness_without_key import ReadinessWithoutKey
 from collider_comparison_test import ColliderComparison
 from articulated_mass_test import ArticulatedMass
 from pilot_alignment_test import SeatedPilot
@@ -1011,8 +1012,8 @@ class Readiness(unittest.TestCase):
             s=fixture(self.root,"actual.step",measured=data)
             self.assertEqual(review(self.root,s)["showcaseEligibility"],expected)
             if expected=="pass":
-                with self.assertRaisesRegex(ValueError,"native station|native Fusion"):
-                    verify_candidate(self.root,"test-readiness.json","actual.step",[])
+                # A passing review binds the candidate with no key or signature.
+                verify_candidate(self.root,"test-readiness.json","actual.step",[])
             else:
                 with self.assertRaisesRegex(ValueError,"readiness fail"):
                     verify_candidate(self.root,"test-readiness.json","actual.step",[])

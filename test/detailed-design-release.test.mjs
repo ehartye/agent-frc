@@ -105,6 +105,34 @@ test('effective is a status change that commits a passing readiness review and s
   assert.throws(() => markEffective({project: p.root, design: 'detail-001', readiness: p.review('pass')}), /Only a new or in-progress design can become effective/);
 });
 
+test('a detailed design becomes effective end to end from the review command, with no key or variable',
+  {skip: process.env.FRC_TEST_PROFILE === 'portable' && 'Run the CAD kernel checks at the qualified station'}, t => {
+    const p = project(t), py = process.env.PYTHON ?? (process.platform === 'win32' ? 'python' : 'python3');
+    // Nothing the retired signature, key or held-plan checks read is present.
+    const env = Object.fromEntries(Object.entries(process.env).filter(([name]) => !/^FRC_(NATIVE_WITNESS|OPERATING|REVIEWER|MODEL)_/.test(name)));
+    const mechanical = path.join(p.root, 'cad/mechanical'), result = 'cad/mechanical/readiness-result.json';
+    execFileSync(py, ['-B', fileURLToPath(new URL('./readiness_study.py', import.meta.url)), mechanical], {stdio: 'pipe', env});
+    const reviewCommand = fileURLToPath(new URL('../scripts/mechanical_readiness.py', import.meta.url));
+    execFileSync(py, ['-B', reviewCommand, 'review', mechanical, 'readiness-study.json', '--require-publication', '--output', path.join(p.root, result)], {stdio: 'pipe', env});
+    const review = read(path.join(p.root, result));
+    assert.deepEqual([review.showcaseEligibility, review.buildReadiness, review.findings], ['pass', 'pass', []]);
+    // The status change records the design from its review: the reviewed STEP and archive.
+    const marked = spawnSync(process.execPath, [script, 'effective', p.root, '--design', 'detail-001', '--readiness', result], {encoding: 'utf8', env});
+    assert.equal(marked.status, 0, marked.stderr);
+    assert.deepEqual(p.index().designStatus, {'detail-001': 'effective'});
+    const checked = checkProject(p.root, {skipRerun: true});
+    assert.deepEqual(checked.errors, []);
+    assert.match(checked.reports.find(r => /detail-001/.test(r.title)).text, /Showcase eligibility: pass\nFindings not passing: 0/);
+    // A failing duty in the same study is refused by the review command and by the status change.
+    const study = read(path.join(mechanical, 'readiness-study.json'));
+    study.duties.at(-1).max = .7;
+    write(mechanical, 'blocked-study.json', study);
+    const blocked = spawnSync(py, ['-B', reviewCommand, 'review', mechanical, 'blocked-study.json', '--require-publication', '--output', path.join(mechanical, 'blocked-result.json')], {encoding: 'utf8', env});
+    assert.equal(blocked.status, 1, blocked.stderr);
+    assert.equal(read(path.join(mechanical, 'blocked-result.json')).showcaseEligibility, 'fail');
+    assert.throws(() => markEffective({project: p.root, design: 'detail-002', readiness: 'cad/mechanical/blocked-result.json'}), /detail-002 cannot be effective: its mechanical-readiness review reports fail/);
+  });
+
 test('withdraw is a status change: the index keeps the reason and the last commit, and the files leave with no archive', t => {
   const p = project(t);
   p.stage();
