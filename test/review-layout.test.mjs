@@ -179,7 +179,7 @@ test('the stable index explains a withdrawn release instead of loading its remov
     frameHidden: true, option: 'layout-001 · withdrawn · current', viewportWidth: 1280});
 });
 
-test('an in-progress release shows its revision; the picker lists one entry per design', {skip}, async t => {
+test('an in-progress release shows its draft; the picker lists live designs first and earlier ones after', {skip}, async t => {
   // Synthetic index: `draft` was superseded before it was ever accepted, `first` was effective and then superseded.
   const dir = site(t), url = release(dir, 'second', reviewScene());
   const index = {current: 'second', releases: ['draft', 'first', 'second'],
@@ -188,15 +188,49 @@ test('an in-progress release shows its revision; the picker lists one entry per 
   writeFileSync(path.join(dir, 'releases.json'), JSON.stringify(index));
   const chip = await probePage(dir, url, ready + `for(let i=0;i<40&&!/·/.test(document.querySelector('#state').textContent);i++)await new Promise(r=>setTimeout(r,50));
    return {chip:document.querySelector('#state').textContent}`);
-  assert.equal(chip.chip, 'In progress · revision 4 · layout-checked');
+  assert.equal(chip.chip, 'Draft 4 · in progress · layout-checked');
   writeFileSync(path.join(dir, 'index.html'), readFileSync(new URL('../templates/preliminary-review-index.html', import.meta.url), 'utf8'));
   const picker = `const s=document.querySelector('select');for(let i=0;i<60&&s.disabled;i++)await new Promise(r=>setTimeout(r,50));
-   return {options:[...s.options].map(o=>o.textContent),selected:s.value,revision:document.querySelector('#revision').textContent}`;
+   return {options:[...s.options].map(o=>o.textContent),selected:s.value,revision:document.querySelector('#revision').textContent,
+     groups:[...s.querySelectorAll('optgroup')].map(g=>g.label+': '+[...g.children].map(o=>o.value).join(', ')),title:document.title}`;
   assert.deepEqual(await probePage(dir, 'index.html', picker), {
-    options: ['first · superseded', 'second · in progress · revision 4 · current'], selected: 'second',
-    revision: 'Revision 4, 2001-03-04, from commit 0123456', viewportWidth: 1280});
+    options: ['second · draft 4 · in progress · current', 'first · superseded'], selected: 'second', groups: ['Earlier: first'],
+    revision: 'Draft 4, 2001-03-04, from commit 0123456', title: 'second · Preliminary design', viewportWidth: 1280});
   // The superseded draft keeps its record and is listed when it is the release being opened, as a link by ID does.
   writeFileSync(path.join(dir, 'releases.json'), JSON.stringify({...index, current: 'draft'}));
   const asked = await probePage(dir, 'index.html', picker);
-  assert.deepEqual([asked.options[0], asked.selected], ['draft · superseded · revision 3 · current', 'draft']);
+  assert.deepEqual([asked.options, asked.selected, asked.revision], [['second · draft 4 · in progress', 'draft · superseded · current', 'first · superseded'], 'draft', '']);
+});
+
+test('a version reads with its design name: a draft number while in progress, none once effective', {skip}, async t => {
+  // Synthetic index: "Tilting carriage" has an earlier baseline 1.0, the effective 1.1 and draft 3 of 1.2; "Swinging arm" is a start-over at draft 1.
+  const dir = site(t), url = release(dir, '1.2', reviewScene());
+  release(dir, '1.1', reviewScene());
+  const commit = '0123456789abcdef0123456789abcdef01234567';
+  const index = {current: '1.1', releases: ['layout-004', '1.0', '1.1', '1.2', '2.0'],
+    designs: {1: {name: 'Tilting carriage'}, 2: {name: 'Swinging arm'}},
+    designStatus: {'layout-004': 'superseded', '1.0': 'superseded', '1.1': 'effective', '1.2': 'in-progress', '2.0': 'in-progress'},
+    accepted: {'1.0': '2001-01-02', '1.1': '2001-02-03'},
+    revision: {'1.0': {number: 5, date: '2001-01-01'}, '1.1': {number: 2, date: '2001-02-02', commit}, '1.2': {number: 3, date: '2001-03-04', commit}, '2.0': {number: 1, date: '2001-03-05'}}};
+  writeFileSync(path.join(dir, 'releases.json'), JSON.stringify(index));
+  const shown = ready + `for(let i=0;i<40&&!/·/.test(document.querySelector('#state').textContent);i++)await new Promise(r=>setTimeout(r,50));
+   return {chip:document.querySelector('#state').textContent,context:document.querySelector('#context').textContent,title:document.title}`;
+  const draft = await probePage(dir, url, shown);
+  assert.equal(draft.chip, 'Draft 3 · in progress · layout-checked');
+  assert.match(draft.context, /Tilting carriage 1\.2　\/　Preliminary design$/);
+  assert.match(draft.title, /^Tilting carriage 1\.2 · /);
+  const effective = await probePage(dir, 'releases/1.1/index.html', shown);
+  assert.equal(effective.chip, 'Effective · layout-checked', 'an effective version shows no draft number');
+  assert.match(effective.context, /Tilting carriage 1\.1　\/　Preliminary design$/);
+  writeFileSync(path.join(dir, 'index.html'), readFileSync(new URL('../templates/preliminary-review-index.html', import.meta.url), 'utf8'));
+  const picker = `const s=document.querySelector('select');for(let i=0;i<60&&s.disabled;i++)await new Promise(r=>setTimeout(r,50));
+   return {options:[...s.options].map(o=>o.textContent),selected:s.value,revision:document.querySelector('#revision').textContent,
+     groups:[...s.querySelectorAll('optgroup')].map(g=>g.label+': '+[...g.children].map(o=>o.value).join(', ')),title:document.title}`;
+  assert.deepEqual(await probePage(dir, 'index.html', picker), {
+    options: ['Tilting carriage 1.1 · effective · current', 'Tilting carriage 1.2 · draft 3 · in progress', 'Swinging arm 2.0 · draft 1 · in progress', 'Tilting carriage 1.0 · superseded'],
+    selected: '1.1', groups: ['Earlier: 1.0'], revision: 'Accepted 2001-02-03, from commit 0123456', title: 'Tilting carriage 1.1 · Preliminary design', viewportWidth: 1280});
+  // The draft, opened as a link by ID does.
+  writeFileSync(path.join(dir, 'releases.json'), JSON.stringify({...index, current: '1.2'}));
+  const asked = await probePage(dir, 'index.html', picker);
+  assert.deepEqual([asked.selected, asked.revision, asked.title], ['1.2', 'Draft 3, 2001-03-04, from commit 0123456', 'Tilting carriage 1.2 · Preliminary design']);
 });

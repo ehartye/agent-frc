@@ -218,6 +218,12 @@ test('a release folder under the project root holds the three files while pins r
   assert.equal(run.status,0,run.stderr);
   assert.match(run.stdout,/Result: 3 of 3 criteria met\./);
   assert.equal(effectiveReadiness(root,{release:'../outside'}).met,0);
+  // A version is titled with its design name: the invented "Tilting carriage 1.0".
+  assert.equal(report.design,undefined);
+  const titled=spawnSync(process.execPath,[path.join(plugin,'scripts','design.mjs'),'effective-readiness',root,'--release',folder,'--design','Tilting carriage 1.0'],{encoding:'utf8'});
+  assert.equal(titled.status,0,titled.stderr);
+  assert.match(titled.stdout,/^Effective-readiness report for Tilting carriage 1\.0 \(\S+\)\r?\n/);
+  assert.equal(effectiveReadiness(root,{release:folder,design:'Tilting carriage 1.0'}).design,'Tilting carriage 1.0');
 });
 
 test('stage.py prints the report when a release is marked effective',t=>{

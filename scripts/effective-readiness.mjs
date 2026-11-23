@@ -158,9 +158,10 @@ function risksResolved(plan,missions){
 
 /**
  * Evaluate the three exit criteria for one project folder. Paths are relative to the folder.
- * Returns {issue, criteria:[{id,title,met,reasons,notes}], verificationItems, met, of}.
+ * `design` is how the release reads in the index, NAME MAJOR.MINOR; the report is titled with it.
+ * Returns {issue, design, criteria:[{id,title,met,reasons,notes}], verificationItems, met, of}.
  */
-export function effectiveReadiness(root,{release='',plan:planName,receipt:receiptName,missions:missionsName}={}){
+export function effectiveReadiness(root,{release='',plan:planName,receipt:receiptName,missions:missionsName,design}={}){
   // A release folder inside the project holds the three files; pins still resolve from the project root.
   const within=name=>named(release)?path.posix.join(String(release).replace(/\\/g,'/'),name):name;
   planName??=within('layout.json');receiptName??=within('receipt.json');missionsName??=within('missions.json');
@@ -181,13 +182,13 @@ export function effectiveReadiness(root,{release='',plan:planName,receipt:receip
   add('trial-driven','Every mission-critical interaction driven by a qualified physics trial',()=>trialDriven(root,p,plan.bytes,r,m));
   add('risks-resolved','Every open risk closed by a design change or carried as a bench test with numbers',()=>risksResolved(p,m));
   const verificationItems=rows(m?.risks).filter(x=>named(x.id)&&benchTest(x.benchTest)&&!named(x.closedBy)).map(x=>({...x.benchTest,id:x.id}));
-  return {schema:'agent-frc/effective-readiness@1',issue:named(r?.issue)?r.issue:named(p?.issue)?p.issue:null,criteria,verificationItems,
+  return {schema:'agent-frc/effective-readiness@1',issue:named(r?.issue)?r.issue:named(p?.issue)?p.issue:null,...(named(design)?{design:design.trim()}:{}),criteria,verificationItems,
     met:criteria.filter(c=>c.met).length,of:criteria.length};
 }
 
 /** The report as text for a reviewer. */
 export function readinessText(report){
-  const lines=['Effective-readiness report for '+(report.issue??'an unidentified issue'),
+  const lines=['Effective-readiness report for '+(report.design?report.design+' ('+(report.issue??'unidentified issue')+')':report.issue??'an unidentified issue'),
     'Informational: marking a design effective stays a project decision in a reviewed pull request.'];
   report.criteria.forEach((c,i)=>{
     lines.push((c.met?'[met]     ':'[not met] ')+(i+1)+'. '+c.title);
@@ -205,12 +206,12 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   let root,json=false,usage=false;
   for(let i=0;i<args.length;i++){
     if(args[i]==='--json')json=true;
-    else if(['--release','--plan','--receipt','--missions'].includes(args[i])&&args[i+1])options[args[i].slice(2)]=args[++i];
+    else if(['--release','--plan','--receipt','--missions','--design'].includes(args[i])&&args[i+1])options[args[i].slice(2)]=args[++i];
     else if(!args[i].startsWith('--')&&root===undefined)root=args[i];
     else usage=true;
   }
   if(usage||root===undefined||!existsSync(root)||!statSync(root).isDirectory()){
-    console.error('Usage: effective-readiness PROJECT [--release FOLDER] [--plan layout.json] [--receipt receipt.json] [--missions missions.json] [--json]');
+    console.error('Usage: effective-readiness PROJECT [--release FOLDER] [--plan layout.json] [--receipt receipt.json] [--missions missions.json] [--design "NAME MAJOR.MINOR"] [--json]');
     process.exitCode=2;
   }else{
     const report=effectiveReadiness(path.resolve(root),options);

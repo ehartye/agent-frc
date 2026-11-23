@@ -19,3 +19,27 @@ export function currentFor(index, historical = new Set(), ids = index.releases) 
   return ids.find(i => st(i) === 'effective') ?? [...ids].reverse().find(i => st(i) === 'in-progress')
     ?? [...ids].reverse().find(i => st(i) !== 'withdrawn' && !historical.has(i)) ?? ids.at(-1);
 }
+
+/**
+ * A preliminary design release takes a version as its ID: MAJOR.MINOR. The major number is the architecture, named
+ * once in the index under `designs`; the minor number counts that architecture's effective baselines. A publish of an
+ * in-progress version is a draft, counted in the index under `revision`, and takes no number. An ID issued before
+ * versions (lowercase letters, digits and hyphens) keeps working and carries no name.
+ */
+export const versionId = /^([1-9][0-9]{0,3})\.(0|[1-9][0-9]{0,3})$/;
+export const releaseId = /^(?:[a-z0-9][a-z0-9-]{0,63}|[1-9][0-9]{0,3}\.(?:0|[1-9][0-9]{0,3}))$/;
+
+/** {major, minor} of a version ID, else null. */
+export function versionOf(id) {
+  const match = versionId.exec(id ?? '');
+  return match ? {major: Number(match[1]), minor: Number(match[2])} : null;
+}
+
+/** The name of the architecture a version belongs to, from the index. */
+export function designName(index, id) {
+  const version = versionOf(id), name = version && index?.designs?.[version.major]?.name;
+  return typeof name === 'string' && name.trim() ? name : null;
+}
+
+/** How a release reads: NAME MAJOR.MINOR for a named version, else its ID. */
+export const designTitle = (index, id) => designName(index, id) ? designName(index, id) + ' ' + id : id;
