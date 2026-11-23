@@ -169,7 +169,7 @@ python cad/preliminary-design/stage.py 1.0 --design-name "Tilting carriage"
 node PLUGIN/scripts/design-publication.mjs check . --skip-rerun
 ```
 
-Staging copies the review page as it is, the scene, receipt, motion, budget and limit files and each trial a mission case names into `docs/preliminary-design/releases/ID/`. One design has one review page: a recorded trial plays in its animation list as a [replay](../skills/frc-preliminary-design/references/review-layout-template.md#play-a-recorded-trial-in-the-motion-list). It writes the release record and lists the release as `in-progress`, at draft 1. The ID is the [version](#name-and-number-a-design), and the name is given once.
+Staging copies the review page as it is, the scene, receipt, motion, budget and limit files and each trial a mission case names into `docs/preliminary-design/releases/ID/`. One design has one review page: a recorded trial plays in its animation list as a [replay](../skills/frc-preliminary-design/references/review-layout-template.md#play-a-recorded-trial-in-the-animation-list). It writes the release record and lists the release as `in-progress`, at draft 1. The ID is the [version](#name-and-number-a-design), and the name is given once.
 
 ### Revise an in-progress release in place
 

@@ -119,7 +119,7 @@ test('a mount registered against a member leads its support and load path', () =
   assert.deepEqual(validateScene(scene).errors, ['/bodies/arm/mounts names an unknown body: absent']);
 });
 
-test('a replay becomes one entry of the motion list: frames from its clock, events by frame, moving parts in the inspector', () => {
+test('a replay becomes one entry of the animation list: frames from its clock, events by frame, moving parts in the inspector', () => {
   const scene = replayScene(), motion = logic.replayMotion(scene.replays[0]);
   assert.deepEqual([motion.replay, motion.kind, motion.removed, motion.results], [true, 'replay', [], []]);
   assert.equal(logic.frameCount(motion), 5, 'a replay has one frame per clock entry');

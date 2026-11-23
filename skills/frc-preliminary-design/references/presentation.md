@@ -6,7 +6,7 @@ The stock page is a consistent starting place. The project supplies data under `
 
 ## Contents
 
-- [One design, one page, one motion list](#one-design-one-page-one-motion-list)
+- [One design, one page, one animation list](#one-design-one-page-one-animation-list)
 - [What the reviewer can do](#what-the-reviewer-can-do)
 - [Choose a representative solid](#choose-a-representative-solid)
 - [Opening view](#opening-view)
@@ -15,10 +15,11 @@ The stock page is a consistent starting place. The project supplies data under `
 - [Look before you share](#look-before-you-share)
 - [Share on a local network](#share-on-a-local-network)
 
-## One design, one page, one motion list
+## One design, one page, one animation list
 
-- The review page lists every motion in one selector: the checked cases first, then each recorded trial as a replay. All play in the same model view with the same controls.
-- Add no second page, tab or player for a trial, a field interaction or a new path. [Replay set format](review-layout-template.md#play-a-recorded-trial-in-the-motion-list)
+- The review page lists what a reviewer plays in one selector: one animation per mission phase, then each recorded trial as a replay. All play in the same model view with the same controls.
+- Animations show the mission. The check results show the evidence. A case is one checked segment of a path, so it is a row of the check results, grouped by phase, and never an entry of the selector. [Name phases and read the check results](../../../docs/preliminary-design.md#animations-show-the-mission-the-check-list-shows-the-evidence)
+- Add no second page, tab or player for a trial, a field interaction or a new path. [Replay set format](review-layout-template.md#play-a-recorded-trial-in-the-animation-list)
 - Add no status banner. The page's chip and the version picker already show the name, version, draft and status.
 - A replay is playback. The check neither runs nor credits it, so label what the trial recorded and what is display only.
 
@@ -29,7 +30,7 @@ The page shows the strategic narrative's objectives with the disposition of each
 - **Move around.** Orbit through a full revolution and underneath, pan, zoom and reset to a fitted view. The camera stays where the reviewer puts it during playback.
 - **See solids.** Depth-tested closed volumes, with cavities, holes, moving members and the finite game piece preserved. Labels toggle apart from geometry.
 - **See the field.** The floor sits at the registered ground height, with units and a scale cue. Field parts and game pieces come from the project's official models or dimensions, at scale, in the robot's datum. A partial or stand-in fixture says so.
-- **Play motion.** Play, pause and scrub operating, loaded, park and service cases. The page names the pose or fraction, the groups moving together and the piece's own path. A collision is selectable by pair and case.
+- **Play motion.** Play, pause and scrub each mission phase, the park and service motions and the displaced control. The page names the pose or fraction, the groups moving together and the piece's own path. A collision is selectable by pair and case.
 - **Select and group.** Pick a surface or search by name. Category (what a solid is), subsystem (which function it serves) and motion group (what it moves with) stay separate. A shared component counts once in the whole-robot total.
 
 Hidden components still count in the check and the budgets.
@@ -86,7 +87,7 @@ After every publish, open the published page yourself. This short form takes abo
 
 1. The model loads and sits on the floor. Nothing floats and no field part is coloured as robot.
 2. The title shows the design's name, version, draft and status.
-3. Each entry in the motion list plays, cases and replays.
+3. Each entry in the animation list plays its whole phase, and each replay plays. The check results list every case under its phase.
 4. One picked solid shows its purpose and rationale.
 5. The weight and voltage figures match the receipt.
 

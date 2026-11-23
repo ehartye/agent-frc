@@ -275,7 +275,7 @@ Two paths are refused, each with the expected path in the message:
 - A view outside the plan's folder.
 - With `--write-view`, a view at the project root. This happens when a design's folder is passed as `PROJECT`. Nothing generated lands at the top of a project.
 
-One design has one review page. A new case or a new trial is one more entry in that page's motion list. Do not write a second page for it.
+One design has one review page. A new mission phase or a new trial is one more entry in that page's animation list, and a new case is one more row of its check results. Do not write a second page for it.
 
 A design that was checked in its own folder by an earlier plugin version keeps verifying. To move one to the repository root for its next version, see the [migration guide](design-publication-migration.md#move-a-design-checked-in-its-own-folder-to-the-repository-root).
 

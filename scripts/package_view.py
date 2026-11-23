@@ -515,7 +515,7 @@ def _watertight(mesh):
 
 
 def replay_entries(root, plan, meshes, bodies, placed, palette):
-    """Trial replays for the one motion list, from the replay sets named under presentation.replays.
+    """Trial replays for the one animation list, from the replay sets named under presentation.replays.
 
     A replay set is a project-generated JSON file (optionally gzipped) with schema agent-frc/review-replays@1. It holds
     `replays` and, optionally, `fieldBodies`: field parts and loose game pieces that only replays show, each with its own

@@ -22,12 +22,13 @@ The figures here are guidelines: about 30 to 80 solids, clearances to about 10 m
 | draft | One publish of an in-progress version. Drafts are counted and take no number |
 | layout | The blockout geometry: the STEP and its named solids |
 | plan | `layout.json`: groups, mounts, cases, budgets and the `presentation` text |
-| case | One checked motion: operating, park or service |
+| case | One checked segment of a motion: operating, park or service. Evidence, listed in the check results |
+| animation | One mission phase played from start to end, whatever number of cases it was checked in |
 | check | The layout check, `preliminary-check` |
 | receipt | The saved result of a check, `receipt.json` |
-| review page | The one page that shows the design. Its motion list holds every case and replay |
+| review page | The one page that shows the design. Its animation list holds one entry per mission phase and each replay. Its check results hold every case |
 | trial | A physics run that decides an interaction. The project owns the runner; the plugin reads the record |
-| replay | A recorded trial, played in the review page's motion list |
+| replay | A recorded trial, played in the review page's animation list |
 
 ## Order of work
 
@@ -39,7 +40,7 @@ Follow the steps in order. Steps 3 to 7 repeat on every edit. [Every command, in
 4. **Write one coarse case for each mission phase** (acquire, retain, transfer, deliver, reset, endgame, park, service), starting near a 40 mm path tolerance, plus one displaced control. Estimate mass and battery current by subsystem, with a reserve.
 5. **Run the check.** Read the scope, attachment and budget lines and fix what they report. Repeat until the receipt reads `layout-checked`.
 6. **Publish the draft** and open the published page yourself. An in-progress design goes up as soon as it passes its coarse check, with its open risks listed. The site deploys when the pull request merges to the default branch.
-7. **Rank the risks. Run the few trials that decide the architecture.** Give each a control, brackets and one finer-timestep repeat. Add each recorded trial to the motion list as a replay. Republish the same version. [Trials and replays](references/trials.md)
+7. **Rank the risks. Run the few trials that decide the architecture.** Give each a control, brackets and one finer-timestep repeat. Add each recorded trial to the animation list as a replay. Republish the same version. [Trials and replays](references/trials.md)
 8. **Close each risk** with a design change, or list it as a bench test with pass and fail numbers. Run the readiness report until it reads 3 of 3.
 9. **Propose effective.** Write the [handoff note](references/commands.md#write-the-handoff-note), attach the readiness report and ask the user. The user decides.
 
@@ -61,7 +62,7 @@ These need no permission and no reminder. If you cannot do one, say so in your r
 **One design, one page**
 
 7. **Revise in place.** An edit to an in-progress design republishes the same version as the next draft.
-8. **One review page, one motion list.** Checked cases first, then replays. Add no second page, tab, player or status banner. The page chip and the picker already show the status.
+8. **One review page, one animation list.** One entry per mission phase, then replays. Animations show the mission and the check results show the evidence: a segment is not an animation. When a phase is split into several cases, name it under `stages.CASE.phase`. Add no second page, tab, player or status banner. The page chip and the picker already show the status.
 9. **Everything generated stays in the design's own folder.** Nothing lands at the repository root.
 10. **A presentation edit uses `--view-only`.** Names, colours, explanations and grouping never need the cases rerun.
 
@@ -78,7 +79,7 @@ These need no permission and no reminder. If you cannot do one, say so in your r
 
 17. **Commit and push** after the first passing check, after each trial result and after each publish.
 18. **Run the publication check locally before pushing.** CI runs on another operating system.
-19. **Open the published page in a browser after each push.** Confirm the model loads, each motion plays and the status is right. A green check alone does not show that.
+19. **Open the published page in a browser after each push.** Confirm the model loads, each animation plays its whole phase and the status is right. A green check alone does not show that.
 20. **Keep paths short and relative.** No drive letters, no home folders.
 21. **Take the obvious default** and say what you chose.
 
@@ -89,6 +90,7 @@ These need no permission and no reminder. If you cannot do one, say so in your r
 ## Check in with the user before
 
 - Refining a path or clearance tolerance below about 10 mm, or passing about 80 solids. Agree what detail, for which question, how much, and when it stops. Record it under `scopeGuidelines.extendedBudget`.
+- A squeezed soft game piece that forces a path tolerance finer than about 10 mm. A wider stated squeeze allowance and a bench test are usually better than dozens of fine segments.
 - Starting a check or trial campaign that will still pass about ten minutes after you have cut it.
 - Dropping the architecture for another one, or starting over (`frc-start-over`).
 - Scoping a narrative objective out, or changing a premise that conceptual design chose.
@@ -115,6 +117,7 @@ Ask only when the choices lead to different designs. Keep working on everything 
 | The receipt or page differs between two runs with no input change | The plugin revision moved under the run; a builder that is not repeatable | Compare the plugin revision of both runs. Rerun from a fixed copy at the revision the workflow names | Both runs used the same revision |
 | A result did not change after an edit | The builder failed and left old files; the check ran on stale inputs | Check the builder's exit code. Rebuild, then rerun with `--output` in the design's folder | It survives a clean rebuild |
 | The published page is old, blank or differs from the local one | Not pushed or not deployed; browser cache; opened from `file://`; unchanged files republished | Confirm the commit is on the default branch and the deploy is green. Hard-reload. Serve the page over HTTP. Compare the two `receipt.json` files | The deploy is green and they still differ |
+| The animation list holds many short clips of one motion | The segments of one phase share no name; an earlier copy of the review page | Name the phase of each case under `stages.CASE.phase` and rebuild with `--view-only`. For an earlier page, delete it and rebuild. [Animations and check results](../../docs/preliminary-design.md#animations-show-the-mission-the-check-list-shows-the-evidence) | Never |
 | Publishing is refused | A second in-progress version of one architecture; an effective version edited; no mission case; no design name | Read the message. Revise the existing draft, or take the next version | You believe a new version is right |
 | CI fails and the local check passes | A path that differs by case or length; a moved plugin pin; a path or secret scan hit | Run the same command locally. Fix the path or pin. Leave the design alone | It fails twice in CI only |
 | Detailed design returns a reservation | A real part does not fit an envelope, allowance or reserve | Start the next minor version from the effective one with `--copy-inputs`, fix the layout, rerun the affected cases | The fix needs a different architecture |

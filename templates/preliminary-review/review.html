@@ -192,7 +192,7 @@ function checkGroups(scene){
  const rest=rows.filter(r=>!used.has(r));if(rest.length)out.push(group(null,'Displaced control and uncovered conditions',rest,false));
  return out;
 }
-// A replay in the shape the page gives a case: one entry of the one motion list.
+// A replay in the shape the page gives a case: one entry of the one animation list.
 function replayMotion(r){return {...r,replay:true,kind:'replay',stage:'replay',status:'replay',removed:[],results:[]}}
 // The latest named event at or before a frame, as [count, label], or null before the first.
 function eventAt(events,t){let n=0;for(const e of events||[]){if(e.frame>t)break;n++}return n?[n,events[n-1].label]:null}

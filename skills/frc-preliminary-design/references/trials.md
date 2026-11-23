@@ -92,7 +92,7 @@ The trial record repeats the case ID, the payload group and the payload's exact 
 
 ## Play the recording as a replay
 
-Convert the recorded run to a replay set in the project and name it under `presentation.replays` in the plan. The replay becomes one more entry in the review page's motion list, after the checked cases. [Replay set format](review-layout-template.md#play-a-recorded-trial-in-the-motion-list)
+Convert the recorded run to a replay set in the project and name it under `presentation.replays` in the plan. The replay becomes one more entry in the review page's animation list, after the mission animations. [Replay set format](review-layout-template.md#play-a-recorded-trial-in-the-animation-list)
 
 - Use the run's own timestamps.
 - List what the trial recorded under `recorded` and what was prescribed or interpolated under `display`.
