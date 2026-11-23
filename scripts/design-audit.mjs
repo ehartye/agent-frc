@@ -74,6 +74,9 @@ export const forms = {
   'restated-dimension': 'A trial number that restates a design parameter',
   'custom-listed-shape': 'A custom shape a listed shape could make',
   'override-no-reason': 'A screen override with no reason',
+  'override-unknown-verdict': 'A screen override to a verdict the check does not know: planar is enough, needs 3D or configurable',
+  'interaction-no-trial': 'An interaction in the judgement file that names neither one trial nor the reason it needs none (noTrial)',
+  'trial-not-in-source': 'A trial the judgement file names that its design source does not define',
   'input-no-source': 'A physical input with no stated source',
   'trial-no-control': 'A trial with no control',
   'trial-no-brackets': 'A trial with no brackets and nothing with an assumed range',
@@ -160,16 +163,42 @@ function qualificationFindings(root, files) {
   return findings;
 }
 
-/** Screen verdict overrides in the plugin's judgement files: listed, and a finding when one has no reason. */
-function judgementOverrides(root, files) {
+const VERDICTS = ['planar is enough', 'needs 3D', 'configurable'];
+
+/** The trials a judgement file names: on its interactions and on its stages' payload paths, as [{at, trial}]. */
+function trialsNamedIn(json) {
+  const named = [];
+  for (const [name, entry] of Object.entries(json?.interactions ?? {})) if (typeof entry?.trial === 'string') named.push({at: 'interactions.' + name + '.trial', trial: entry.trial});
+  for (const [stage, spec] of Object.entries(json?.stages ?? {}))
+    for (const field of ['transportedBy', 'freePath', 'supportedBy'])
+      for (const [payload, bound] of Object.entries(spec?.[field] ?? {}))
+        if (typeof bound?.trial === 'string') named.push({at: 'stages.' + stage + '.' + field + '.' + payload + '.trial', trial: bound.trial});
+  return named;
+}
+
+/** The judgement data in the plugin's judgement files: screen overrides listed with their reasons, an override or an interaction
+ *  that is incomplete, and a trial the design source does not define. */
+function judgementFindings(root, files) {
   const findings = [], info = [];
   for (const file of files.filter(name => path.posix.basename(name) === 'judgement.json' && !name.startsWith('docs/'))) {
     let json;
     try { json = JSON.parse(readText(root, file)); } catch { continue; }
     for (const override of overridesIn(json)) {
+      if (!VERDICTS.includes(override.verdict))
+        findings.push({form: 'override-unknown-verdict', file, line: null, detail: 'the override at ' + override.at + ' names the verdict ' + JSON.stringify(override.verdict)});
       if (override.reason) info.push({file, text: 'screen override at ' + override.at + (override.verdict ? ' to "' + override.verdict + '"' : '') + ': ' + override.reason});
       else findings.push({form: 'override-no-reason', file, line: null, detail: 'the override at ' + override.at + ' gives no reason'});
     }
+    for (const [name, entry] of Object.entries(json?.interactions ?? {})) {
+      const trial = typeof entry?.trial === 'string' && entry.trial.trim(), none = typeof entry?.noTrial === 'string' && entry.noTrial.trim();
+      if (!trial === !none) findings.push({form: 'interaction-no-trial', file, line: null, detail: 'interactions.' + name + (trial ? ' names both a trial and noTrial' : ' names neither a trial nor noTrial')});
+    }
+    const sourceFile = json?.source?.file;
+    let source = null;
+    try { source = typeof sourceFile === 'string' ? JSON.parse(readText(root, sourceFile)) : null; } catch { /* an unreadable source is the layout check's to report */ }
+    if (!source) continue;
+    for (const {at, trial} of trialsNamedIn(json))
+      if (!(trial in (source.trials ?? {}))) findings.push({form: 'trial-not-in-source', file, line: null, detail: at + ' names "' + trial + '", which ' + sourceFile + ' does not define under trials'});
   }
   return {findings, info};
 }
@@ -206,7 +235,7 @@ export function auditDesign(root, {skip = [], run = true, python} = {}) {
   }
   // Generated outputs, the review scene and judgement data.
   const found = !run ? {reason: '--no-run was given'} : !sources.length ? {reason: 'the project has no design source'} : findLibrary(python);
-  const generated = generatedFindings(root, files, sources, found), scenes = sceneFindings(root, files), overrides = judgementOverrides(root, files);
+  const generated = generatedFindings(root, files, sources, found), scenes = sceneFindings(root, files), overrides = judgementFindings(root, files);
   findings.push(...generated.findings, ...scenes.findings, ...overrides.findings, ...qualificationFindings(root, files));
   info.push(...generated.info, ...scenes.info, ...overrides.info);
   // Without a design source there is no door to go around yet: the library's work done in project code is information.
