@@ -4,7 +4,7 @@ import json
 import os
 import sys
 
-from mechanical_readiness import digest, pinned, project_path, read, require, review, scan
+from mechanical_readiness import digest, fill_digests, pinned, project_path, read, require, review, scan
 
 
 def verify_candidate(root, study_path, source, derivatives, native=None, receipt=None, distribute_source=False):
@@ -29,7 +29,7 @@ def verify_candidate(root, study_path, source, derivatives, native=None, receipt
             sorted(digest(project_path(root,p)) for p in derivatives)==sorted([plate["still"],plate["mesh"],plate["receipt"]])):
             return
         raise ValueError("A proposed showcase model requires a complete mechanical-readiness review")
-    study=read(project_path(root,study_path))
+    study=fill_digests(root,read(project_path(root,study_path)))
     require(source is None or study["step"]["sha256"]==digest(project_path(root,source)),"Displayed source differs from the readiness review")
     if native:
         require(study["archive"]["sha256"]==digest(project_path(root,native)),"Download differs from the native readiness review")
