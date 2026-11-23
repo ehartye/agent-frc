@@ -540,3 +540,29 @@ test('ports: a port interval runs on the match clock across the period boundary'
   const second=shots.find(e=>e.phase==='Main play');
   assert.ok(second && second.timeS<1,'second shot at '+(second?.timeS)+' s into Main play');
 });
+
+test('ports: under yield, a concept robot and a legacy robot holding each other give way and move on',()=>{
+  // The invented concept-study field, context "screened": B1 cycles a rack to a ring while the legacy R2 screens
+  // the blue lane. A placer accelerating at 150 in/s2 meets R2 head-on; each waits for the other.
+  const study=JSON.parse(readFileSync(new URL('../examples/concept-study/field.json',import.meta.url)));
+  const doc=JSON.parse(readFileSync(new URL('../examples/concept-bots/front-intake-placer.json',import.meta.url)));
+  doc.id='slow-placer';doc.drive.accelInS2.value=150;
+  const main=waitCycles=>{
+    const p=structuredClone(study);
+    if(waitCycles)p.rehearsal.waitCycles=waitCycles;else delete p.rehearsal.waitCycles;
+    p.rehearsal.concepts=[{document:doc,record:compileConceptBot(applyProfileDefaults(doc,p))}];
+    const engine=createFieldRehearsal(p),match=p.rehearsal.series.matches.find(m=>m.id==='screened');
+    const roster=match.roster.map(r=>r.side==='blue' && r.slot===1?{...r,concept:doc.id}:r);
+    const sim=engine.create(engine.completeRoster(roster),match.setup,match.tieWinner,match.endgameAtRestAfterS,match);
+    sim.paused=false;engine.advance(sim,engine.elapsedSeconds('Opening'));engine.nextPhase(sim);
+    sim.paused=false;engine.advance(sim,engine.elapsedSeconds('Main play'));
+    const robot=id=>sim.robots.find(r=>r.id===id);
+    return {B1:robot('B1'),R2:robot('R2'),credited:sim.game.events.filter(e=>e.robot==='B1' && e.phase==='Main play' && e.outcome==='credited').length};
+  };
+  const yielded=main('yield');
+  for(const id of ['B1','R2'])assert.ok(yielded[id].wait*dt<30 && yielded[id].travelIn>500,id+' waited '+yielded[id].wait*dt+' s, travelled '+yielded[id].travelIn+' in');
+  assert.ok(yielded.credited>0,'B1 scored in Main play');
+  // Control: without yield the same pair stays held for most of Main play.
+  const held=main(undefined);
+  assert.ok(held.B1.wait*dt>40,'report-only B1 waited '+held.B1.wait*dt+' s');
+});

@@ -12,7 +12,7 @@ export function createFieldRehearsal(profile) {
   const terminal=supported ? createTerminalRehearsal(profile) : null;
   // A robot-to-robot wait cycle that holds this long without any member moving is reported. With
   // rehearsal.waitCycles "yield" it also triggers one deterministic yield; otherwise motion is unchanged.
-  const waitCycleS=1, yieldCycles=model?.waitCycles==='yield';
+  const waitCycleS=1, yieldCycles=model?.waitCycles==='yield', giveWayS=3;
   const behaviors=Object.fromEntries(Object.entries(model?.programs || {}).map(([key,p])=>[key,p.label]));
   const phases=model?.periods || [];
   const duration=name=>Math.round((phases.find(p=>p.name===name)?.seconds || 0)/dt);
@@ -297,7 +297,12 @@ export function createFieldRehearsal(profile) {
     // A later peer may move only if its simultaneous sweep also misses earlier movers.
     for(let i=0;i<sim.robots.length;i++) {
       const r=sim.robots[i],a=begins[i];
-      let b=proposal(sim,r);
+      // Giving way after a yield: hold until the yielder is clear (both circumscribed radii and 6 in apart).
+      const way=sim.giveWay?.[r.id],yielder=way && sim.robots.find(o=>o.id===way.to);
+      if(way && (sim.ticks>=way.untilTick || !yielder ||
+        norm(r.p,yielder.p)>geom.circumradius(r)+geom.circumradius(yielder)+6))delete sim.giveWay[r.id];
+      let b=sim.giveWay?.[r.id]?r.p:proposal(sim,r);
+      if(sim.giveWay?.[r.id]){r.action='Giving way to '+way.to;recordWait(sim,r,'Giving way to '+way.to);}
       r.waitFor=null;
       // A moving concept robot told to hold, or to finish a leg, brakes at accelInS2 along its last direction of
       // travel rather than stopping dead. Only a blocked move stops it at once.
@@ -395,6 +400,9 @@ export function createFieldRehearsal(profile) {
         const route=geom.planAround(r.p,goal,r,sim.setup,sim.robots.filter(o=>o.id!==id));
         if(route.length){r.waypoints=route;r.target=1;yielded=id;break;}
       }
+      // The other members give way while the yielder takes its detour, rather than pressing into it: they hold until
+      // it is clear of them or giveWayS has passed.
+      if(yielded)for(const id of path)if(id!==yielded)(sim.giveWay??={})[id]={to:yielded,untilTick:sim.ticks+Math.round(giveWayS/dt)};
       state.yielded=yielded;
       sim.deadlocks.push({phase:sim.phase,timeS:ms((sim.ticks+1)*dt),sinceS:ms(state.since*dt),cycle:path,yielded});
       event(sim,'Wait cycle '+[...path,path[0]].join(' -> ')+(yielded?'; '+yielded+' yields':'; no member can detour'));
@@ -438,7 +446,7 @@ export function createFieldRehearsal(profile) {
   function nextPhase(sim) {
     if(!sim.ended || sim.phaseIndex===phases.length-1)throw Error('Finish the active period before advancing to a configured next period.');
     sim.phase=phases[++sim.phaseIndex].name;sim.ticks=0;sim.carry=0;sim.ended=false;sim.paused=true;sim.resources=reservations();
-    sim.deadlocks=[];sim.waitCycles={};
+    sim.deadlocks=[];sim.waitCycles={};sim.giveWay={};
     game.replenish(sim,0);
     for(const r of sim.robots){delete r.goal;delete r.makeRoom;}
     for(const r of sim.robots)Object.assign(r,{pickup:null,leg:0,waypoints:null,target:0,dwell:0,wait:0,travelIn:0,visits:0,blocked:'',action:'',...(r.concept?{currentSpeedInS:0}:{})});
