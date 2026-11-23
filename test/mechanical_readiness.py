@@ -37,6 +37,7 @@ from held_pin_relocation import HeldPinRelocation
 from parallel_cases import ParallelCases
 from view_only import ViewOnly
 from layout_scope import LayoutScope
+from path_references import PathReferences
 
 
 class Readiness(unittest.TestCase):

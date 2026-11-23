@@ -363,12 +363,23 @@ test('the real layout check reruns a committed synthetic release and rejects a f
     const result = checkProject(season, {budgetMinutes: 5});
     assert.deepEqual(result.errors, []);
     assert.deepEqual(result.preliminary.releases, [{release: '1.0', design: 'Turning carrier 1.0', status: 'in-progress', rerun: 'pass'}]);
+    // The example names every file by path: no author types a hash, and the receipt holds the digests the check read.
+    const authored = 'cad/preliminary-design/releases/1.0';
+    for (const name of ['layout.json', 'paths.json', 'budgets.json', 'missions.json', 'release-lane-replay.json'])
+      assert.doesNotMatch(readFileSync(path.join(season, authored, name), 'utf8'), /sha256/i, name);
+    assert.equal(read(path.join(season, prelim, 'releases/1.0/receipt.json')).motion.sha256, sha(readFileSync(path.join(season, authored, 'paths.json'))));
     // The readiness report of an effective release resolves its trial pins from the repository root, where the check ran.
     editJson(path.join(season, prelim, 'releases.json'), i => ({...i, designStatus: {'1.0': 'effective'}}));
     const report = checkProject(season, {skipRerun: true}).reports.map(r => r.text).join(' ');
     assert.match(report, /Effective-readiness report for Turning carrier 1\.0 \(synthetic-package-1\.0\)/);
     assert.match(report, /trial cad\/preliminary-design\/releases\/1\.0\/release-lane-trial\.json has no qualification record/);
     assert.doesNotMatch(report, /the motion is prescribed/);
+    assert.match(report, /release-lane-trial\.json \(read; no SHA-256 given to compare\)/);
+    // An input changed without a new check and stage: the plan bytes are the same, and the rerun's digest differs from the receipt.
+    const studyFile = path.join(season, authored, 'paths.json'), study = readFileSync(studyFile);
+    editJson(studyFile, s => ({...s, cases: s.cases.map((c, i) => i ? c : {...c, basis: 'Invented reworded basis'})}));
+    assert.match(errorsOf(checkProject(season, {budgetMinutes: 5})), /the rerun differs from the committed receipt in motionSha256/);
+    writeFileSync(studyFile, study);
     editJson(path.join(season, prelim, 'releases.json'), i => ({...i, designStatus: {'1.0': 'in-progress'}}));
     // An edit to the in-progress design is staged under the same ID: one entry, a counted revision, and the rerun on the revised inputs.
     const folder = 'cad/preliminary-design/releases/1.0';
@@ -385,4 +396,18 @@ test('the real layout check reruns a committed synthetic release and rejects a f
     editJson(plan, l => ({...l, control: {...l.control, offsetMm: [0, 50, 0]}}));
     editJson(path.join(season, prelim, 'releases/1.0/receipt.json'), r => ({...r, planSha256: sha(readFileSync(plan))}));
     assert.match(errorsOf(checkProject(season, {budgetMinutes: 5})), /Preliminary design Turning carrier 1\.0 \(rerun\) needs a layout-checked receipt; found provisional/);
+  });
+
+test('a release whose plan types its hashes still reruns, and a wrong typed hash still fails',
+  {skip: process.env.FRC_TEST_PROFILE === 'portable' && 'Run the CAD kernel checks at the qualified station'}, t => {
+    const temp = mkdtempSync(path.join(os.tmpdir(), 'publication-pins-'));
+    t.after(() => rmSync(temp, {recursive: true, force: true}));
+    const season = path.join(temp, 'season'), py = process.env.PYTHON ?? (process.platform === 'win32' ? 'python' : 'python3');
+    execFileSync(py, ['-B', fileURLToPath(new URL('../examples/preliminary-design/create.py', import.meta.url)), season, '--project-review', '--pins'], {stdio: 'pipe'});
+    const folder = path.join(season, 'cad/preliminary-design/releases/1.0');
+    assert.match(readFileSync(path.join(folder, 'layout.json'), 'utf8'), /"sha256"/);
+    assert.deepEqual(checkProject(season, {budgetMinutes: 5}).errors, []);
+    // The narrative changes under its typed hash: the checker refuses the committed plan with "Changed evidence".
+    writeFileSync(path.join(folder, 'narrative.md'), 'Invented narrative, edited after the check.');
+    assert.match(errorsOf(checkProject(season, {budgetMinutes: 5})), /Turning carrier 1\.0: the layout check ended with an error \(exit 2\)/);
   });

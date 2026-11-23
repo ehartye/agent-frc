@@ -146,6 +146,28 @@ test('each mission case needs a pinned trial with a pass, a control, brackets an
   assert.equal(viaLink.met,true,viaLink.reasons.join(' | '));
 });
 
+test('a trial named by path alone is read, and the report says no hash was compared',t=>{
+  // A mission trial and a linked interaction that name only their file: nothing typed to compare, so the files are read.
+  const viaMission=judged(t,'trial-driven',d=>{
+    d.files['mission-trial.json']=JSON.stringify(d.files['release-trial.json']);delete d.files['release-trial.json'];
+    d.missions.missionCases[1].trial={file:'mission-trial.json'};});
+  assert.equal(viaMission.met,true,viaMission.reasons.join(' | '));
+  assert.deepEqual(viaMission.notes,['acquire: intake-trial.json (matches its recorded SHA-256)','deliver: mission-trial.json (read; no SHA-256 given to compare)']);
+  const viaLink=judged(t,'trial-driven',d=>{
+    d.files['lane-trial.json']=JSON.stringify({case:'deliver',qualification:d.files['release-trial.json'].qualification});delete d.files['release-trial.json'];
+    d.plan.presentation.fieldInteractions=[{title:'Invented lane',href:'field/lane.html',objective:'Invented cycle',evidence:{file:'lane-trial.json'}}];});
+  assert.equal(viaLink.met,true,viaLink.reasons.join(' | '));
+  // The digest the layout check recorded in the receipt is kept over a path-only reference to the same file, and still compared.
+  const changed=judged(t,'trial-driven',d=>{
+    d.pins={release:{file:'release-trial.json',sha256:'0'.repeat(64)}};d.missions.missionCases[1].trial={file:'release-trial.json'};});
+  assert.ok(changed.reasons.some(r=>/trial release-trial\.json differs from its pinned SHA-256/.test(r)),changed.reasons.join(' | '));
+  // A path-only trial is still held to the case it records and to its qualification.
+  const other=judged(t,'trial-driven',d=>{delete d.files['release-trial.json'];d.missions.missionCases[1].trial={file:'intake-trial.json'};});
+  assert.ok(other.reasons.some(r=>/trial intake-trial\.json records another case/.test(r)),other.reasons.join(' | '));
+  const gone=judged(t,'trial-driven',d=>{delete d.files['release-trial.json'];d.missions.missionCases[1].trial={file:'gone.json'};});
+  assert.ok(gone.reasons.some(r=>/missing file gone\.json/.test(r)),gone.reasons.join(' | '));
+});
+
 test('every open risk needs a closing design change or a bench test with pass and fail numbers',t=>{
   const cases=[
     [d=>{delete d.missions.risks;},/No risk register/],

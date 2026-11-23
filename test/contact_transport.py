@@ -70,9 +70,9 @@ class ContactTransport(unittest.TestCase):
     def test_missing_unpinned_or_unbound_evidence_stays_missing(self):
         base = dict(mechanisms=["carrier"], drive={"carrier": "Invented powered roller"},
                     basis="The article rolls in on the powered carrier surface")
-        cases = (("absent", None, "Pin the contact-transport evidence for carried article in acquire"),
-                 ("no-file", {"sha256": "0" * 64}, "Pin the contact-transport evidence for carried article in acquire"),
-                 ("unpinned", {"file": "acquire-trial.json"}, "Pin the contact-transport evidence for carried article in acquire"),
+        cases = (("absent", None, "Name the contact-transport evidence file for carried article in acquire"),
+                 ("no-file", {"sha256": "0" * 64}, "Name the contact-transport evidence file for carried article in acquire"),
+                 ("no-path", {"file": ""}, "Name the contact-transport evidence file for carried article in acquire"),
                  ("other-path", self.evidence("short-trial.json", "acquire", ["carrier"], moves={"sample": [dict(kind="translation", travelMm=[0, 4, 0])]}),
                   "Contact-transport evidence for carried article in acquire does not record this payload path"),
                  ("other-case", self.evidence("turn-only.json", "loaded-turn", ["carrier"]),
@@ -122,6 +122,13 @@ class ContactTransport(unittest.TestCase):
         plan["stages"]["park-loaded"]["transportedBy"]["carried article"]["drive"] = {"carrier": "Invented"}
         with self.assertRaisesRegex(ValueError, "Identify the moving payload transported by contact"):
             self.review(plan)
+
+    def test_a_trial_named_by_path_alone_is_read_and_its_digest_recorded(self):
+        pinned = self.evidence("path-only.json", "acquire", ["carrier"])
+        spec = dict(mechanisms=["carrier"], drive={"carrier": "Invented"}, evidence={"file": pinned["file"]}, basis="Invented")
+        result = self.review(self.transport(self.uncarried(), "acquire", spec))
+        self.assertEqual(result["status"], "layout-checked", result["missingInputs"])
+        self.assertEqual(result["stages"]["acquire"]["transportedBy"]["carried article"]["evidence"], pinned)
 
     def test_changed_trial_is_refused(self):
         evidence = self.evidence("changed.json", "acquire", ["carrier"])

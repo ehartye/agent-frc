@@ -412,7 +412,7 @@ def _share(run,case,share=(0,1),*,package=False,package_scene=None,verified=None
         record=read(evidence)
         # One record qualifies its own case and pair, and each row it lists under `interfaces`, all on its one STEP.
         listed=record.get("interfaces",[]) if isinstance(record,dict) else []
-        require(isinstance(record,dict) and isinstance(listed,list) and record.get("stepSha256")==study["step"]["sha256"]
+        require(isinstance(record,dict) and isinstance(listed,list) and (record.get("stepSha256")==study["step"]["sha256"] or study.get("pathReferences") is True and "stepSha256" not in record)
                 and any(isinstance(row,dict) and row.get("case")==id and isinstance(row.get("pair"),list)
                         and set(row["pair"])=={a,b} and row.get("status")=="pass" for row in [record,*listed]),
                 "Interface qualification is stale or incomplete")

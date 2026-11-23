@@ -49,7 +49,7 @@ class ViewLocation(unittest.TestCase):
         cls.repo = Path(cls.folder.name) / "repository"
         cls.package = cls.repo / "cad" / "preliminary-design" / "releases" / "layout-001"
         cls.repo.mkdir()
-        cls.plan = runpy.run_path(str(CREATE))["create"](cls.package, project=cls.repo)
+        cls.plan = runpy.run_path(str(CREATE))["create"](cls.package, project=cls.repo, pins=True)
         cls.prefix = cls.package.relative_to(cls.repo).as_posix() + "/"
 
     @classmethod
