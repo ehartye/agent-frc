@@ -524,10 +524,12 @@ test('the real layout check reruns a committed synthetic release and rejects a f
     assert.match(report, /trial cad\/preliminary-design\/releases\/1\.0\/release-lane-trial\.json has no qualification record/);
     assert.doesNotMatch(report, /the motion is prescribed/);
     assert.match(report, /release-lane-trial\.json \(read; no SHA-256 given to compare\)/);
-    // An input changed without a new check and stage: the plan bytes are the same, and the rerun's digest differs from the receipt.
+    // An input changed without a new check and stage: the plan bytes are the same, and the committed study is not the one
+    // the receipt recorded. No rerun is needed to see it.
     const studyFile = path.join(season, authored, 'paths.json'), study = readFileSync(studyFile);
     editJson(studyFile, s => ({...s, cases: s.cases.map((c, i) => i ? c : {...c, basis: 'Invented reworded basis'})}));
-    assert.match(errorsOf(checkProject(season, {budgetMinutes: 5, rerun: 'all'})), /the rerun differs from the committed receipt in motionSha256/);
+    assert.match(errorsOf(checkProject(season, {log: () => {}, run: () => { throw Error('the layout check was rerun'); }})),
+      /Turning carrier 1\.0: the committed motion study \(cad\/preliminary-design\/releases\/1\.0\/paths\.json\) is not the file its receipt checked/);
     writeFileSync(studyFile, study);
     editJson(path.join(season, prelim, 'releases.json'), i => ({...i, designStatus: {'1.0': 'in-progress'}}));
     // An edit to the in-progress design is staged under the same ID: one entry, a counted revision, and the rerun on the revised inputs.
