@@ -1,3 +1,9 @@
+/**
+ * @lane merge
+ * @subject scripts/fusion_authority.py
+ * @subject scripts/native_handoff.py
+ * @subject scripts/native_job.py
+ */
 import {execFileSync} from "node:child_process";
 import {fileURLToPath} from "node:url";
 import test from "node:test";

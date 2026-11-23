@@ -1,3 +1,7 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
+# @subject scripts/package_view.py
+# @subject scripts/preliminary_design.py
 """Tessellate each body once: a case's start pose lives in its frame matrices, and the drawn positions do not change."""
 import gzip
 import json

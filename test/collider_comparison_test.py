@@ -1,3 +1,5 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory

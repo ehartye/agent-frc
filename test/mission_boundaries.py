@@ -1,3 +1,5 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
 """Adverse and admissible controls for commissioned custody, onset and solid numerical consistency."""
 from copy import deepcopy
 from pathlib import Path

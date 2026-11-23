@@ -1,3 +1,4 @@
+/** @lane merge */
 import test from 'node:test';
 import { createHash } from 'node:crypto';
 import assert from 'node:assert/strict';

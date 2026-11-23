@@ -1,3 +1,5 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
 """Bind a soft-payload indentation allowance to the pinned trial that measured it."""
 import json
 from pathlib import Path

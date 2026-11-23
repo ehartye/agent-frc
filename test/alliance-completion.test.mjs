@@ -1,3 +1,4 @@
+/** @lane merge */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {tmpdir} from 'node:os';

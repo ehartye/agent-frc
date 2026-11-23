@@ -1,3 +1,5 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
 """Regression controls for independently recorded moving membership and numerical properties."""
 import runpy
 import unittest

@@ -1,3 +1,6 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
+# @subject scripts/package_view.py
 """Generated files appear whole: a reader finds the previous bytes or the new bytes, and a failed run changes nothing."""
 import json
 import os

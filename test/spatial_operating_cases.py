@@ -1,3 +1,5 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
 """Compare the actual orientation, simultaneous support and nested installed placement."""
 import math
 import unittest

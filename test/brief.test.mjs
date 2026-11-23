@@ -1,3 +1,4 @@
+/** @lane merge */
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {buildBrief} from '../scripts/brief.mjs';
 const base={season:2096,asOf:'2096-11-15'};
 test('installed mode and mechanism brief queries resolve to relevant primary sources',()=>{

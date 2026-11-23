@@ -104,6 +104,7 @@
       "review-view.test.mjs"
     ]
   },
+  "pages": ["**/*.md", "**/*.html", "**/*.css", "docs/**", "skills/**", "worksheets/**", ".github/pages/**"],
   "everything": ["package.json", "scripts/test-suite.mjs", "scripts/test-selection.mjs", "test/test-map.json"],
   "versionFiles": ["package.json", "plugin.json", ".claude-plugin/plugin.json", ".codex-plugin/plugin.json"],
   "versionTests": ["install-manifests.test.mjs", "runtime-identity.test.mjs", "skill-validation.test.mjs"],

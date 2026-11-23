@@ -1,3 +1,4 @@
+/** @lane merge */
 import test from 'node:test';import assert from 'node:assert/strict';import {inspectEnvironment,parseArgs,selectLibraries} from '../scripts/setup-health.mjs';
 function fake(overrides={}){return (_exe,args,options)=>{assert.equal(options.shell,false);assert.equal(options.windowsHide,true);assert.equal(args[0],'-B');const specs=JSON.parse(args.at(-1));return {status:0,stdout:JSON.stringify({interpreter:{executable:'fixture-python',version:'3.12',prefix:'env',basePrefix:'base',virtualEnvironment:true},libraries:specs.map(r=>({...r,version:'4.0.1',origin:'fixture',importStatus:'ok',...(overrides[r.distribution]??{})}))})};};}
 test('core never probes optional physics',()=>{const r=inspectEnvironment({task:'core',run:()=>{throw Error('must not execute');}});assert.equal(r.pythonStatus,'not-needed-for-core');assert.deepEqual(r.libraries,[]);});

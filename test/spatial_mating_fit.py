@@ -1,3 +1,5 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
 """Original ruled helical teaching solid and matched placement controls, in mm."""
 import math
 import os

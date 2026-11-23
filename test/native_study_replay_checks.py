@@ -1,3 +1,4 @@
+# @lane merge
 """Synthetic host boundary tests. Real Fusion is a separate qualification."""
 import copy
 import hashlib

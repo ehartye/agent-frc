@@ -1,10 +1,11 @@
+/** @lane merge */
 import assert from 'node:assert/strict';
-import {existsSync} from 'node:fs';
+import {existsSync,readFileSync,readdirSync} from 'node:fs';
 import test from 'node:test';
-import {allTests,glob,mapFile,reach,readJson,repoFiles,root,selectForChange} from '../scripts/test-selection.mjs';
+import {allTests,git,glob,mapFile,reach,readJson,repoFiles,root,selectForChange} from '../scripts/test-selection.mjs';
 
 const map=readJson(mapFile),tests=allTests();
-const inGit=existsSync(root+'.git')&&'Needs the Git file list of a checkout';
+const inGit=(()=>{try{git('rev-parse','--git-dir');return true;}catch{return false;}})()||'Needs the Git file list of a checkout';
 const lane=name=>map.lanes[name];
 
 test('every test file is in exactly one lane, and no lane names a missing file',()=>{
@@ -13,7 +14,18 @@ test('every test file is in exactly one lane, and no lane names a missing file',
   assert.ok(map.quick.every(lane),'the quick run names existing lanes');
 });
 
-test('the map and the recorded durations name only files that exist',{skip:!inGit},()=>{
+// The leading comment of a test file says when it runs and which files it tests without importing them.
+// The audit of .testing/risk.yml reads the same tags, so it and the changed-files selection agree.
+test('every test file declares its lane, and each subject it names exists',()=>{
+  const python=readdirSync(root+'test').filter(name=>name.endsWith('.py')&&/unittest\.TestCase/.test(readFileSync(root+'test/'+name,'utf8')));
+  for(const name of [...tests,...python]){
+    const text=readFileSync(root+'test/'+name,'utf8'),head=name.endsWith('.py')?text.match(/^(#.*\r?\n|\s*\n)*/)[0]:text.match(/^\s*\/\*\*[^]*?\*\//)?.[0]??'';
+    assert.match(head,/@lane (edit|merge|scheduled|release)\b/,name+' starts with a comment that carries @lane');
+    for(const [,subject] of head.matchAll(/@subject (\S+)/g)) assert.ok(existsSync(root+subject),`${name}: ${subject} exists`);
+  }
+});
+
+test('the map and the recorded durations name only files that exist',{skip:inGit!==true&&inGit},()=>{
   const files=repoFiles();
   for(const [key,patterns] of Object.entries(map.covers)){
     assert.ok(lane(key)||tests.includes(key),key+' is a lane or a test file');
@@ -24,7 +36,7 @@ test('the map and the recorded durations name only files that exist',{skip:!inGi
   for(const [profile,seconds] of Object.entries(readJson('test/durations.json'))) for(const name of Object.keys(seconds)) assert.ok(tests.includes(name),`${profile}: ${name}`);
 });
 
-test('a change selects the tests that cover it, and everything when it cannot be attributed',{skip:!inGit},()=>{
+test('a change selects the tests that cover it, and everything when it cannot be attributed',{skip:inGit!==true&&inGit},()=>{
   const reached=reach();
   // This file names the files it asks about, so it counts as covering them; leave it out of the answers.
   const pick=(...changed)=>{const choice=selectForChange(changed,{reached});return {...choice,tests:choice.tests.filter(name=>name!=='test-map.test.mjs')};};
@@ -37,6 +49,19 @@ test('a change selects the tests that cover it, and everything when it cannot be
   assert.equal(words.all,false);
   for(const name of lane('docs')) assert.ok(words.tests.includes(name),name+' runs for a documentation change');
   assert.deepEqual(words.tests.filter(name=>lane('kernel').includes(name)),[],'a documentation change runs no CAD kernel test');
+
+  // Every document, page and style sheet in the repository, one at a time: none starts a CAD kernel test or the whole suite.
+  const files=repoFiles();
+  for(const pattern of map.pages){
+    const pages=files.filter(file=>glob(pattern).test(file));
+    assert.ok(pages.length,pattern+' matches a file');
+    for(const page of pages){
+      const chosen=pick(page);
+      assert.equal(chosen.all,false,page+' does not run every test');
+      assert.deepEqual(chosen.tests.filter(name=>lane('kernel').includes(name)),[],page+' starts no CAD kernel test');
+    }
+  }
+  assert.ok(pick('templates/preliminary-review/review.html').tests.includes('review-layout.test.mjs'),'the review page runs its browser test');
 
   // A Python helper named like a script stays with the test that runs it.
   assert.deepEqual(pick('test/free_path.py').tests,['mechanical-readiness.test.mjs']);

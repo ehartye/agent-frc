@@ -1,3 +1,6 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
+# @subject scripts/preliminary_design.py
 """Resume a held delivery stand-off premise by replaying the pinned field profile at the revised position."""
 import json
 import runpy

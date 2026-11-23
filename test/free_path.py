@@ -1,3 +1,7 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
+# @subject scripts/package_view.py
+# @subject scripts/preliminary_design.py
 """Pin the trial behind a payload's unsupported free path; the free path alone is not a loaded operating case."""
 from copy import deepcopy
 import json

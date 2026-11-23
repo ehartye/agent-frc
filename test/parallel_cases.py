@@ -1,3 +1,6 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
+# @subject scripts/preliminary_design.py
 """Share the motion cases between worker processes without changing a byte of the receipt."""
 from copy import deepcopy
 import json

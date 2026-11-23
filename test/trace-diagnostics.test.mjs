@@ -1,3 +1,4 @@
+/** @lane merge */
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {spawnSync} from 'node:child_process';import {diagnoseTrace,renderDiagnostics,hashBytes} from '../scripts/trace-diagnostics.mjs';
 const sha='a'.repeat(64);
 function fixture(){return {schema:'fixture/1',stepS:.001,controllerPeriodS:.01,outcome:'UNKNOWN_DOMAIN',acceptance:false,reason:'unsupported',inputs:{'model.py':sha},events:[{timeS:.912,observation:{timestamp:.912},command:{state:'BRAKE'}}],trace:[.911,.912].map(t=>({timeS:t,contactSampleTimeS:t-.0005,chassis:{vx:.1},relativeRobotXY:[.17,0],note:{v:[.01,0]},busV:12,energyJ:{residual:.01},newPhaseResidualJ:.000001,contacts:[{normalMagnitudeN:.2,activeSamples:12}],command:{state:'BRAKE'}})),rejectedGeometryQuery:{status:'UNKNOWN',relativeRobotXY:[.16,0]},limits:['hypothetical']};}

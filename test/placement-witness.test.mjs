@@ -1,3 +1,4 @@
+/** @lane merge */
 import test from 'node:test';import assert from 'node:assert/strict';import {comparePlacement} from '../scripts/placement-witness.mjs';const w=()=>({units:'mm',center:[173,0,25.4],minimum:[-4.8,-177.8,0],maximum:[350.8,177.8,50.8],volume:194080});const tol={lengthTolerance:.001,volumeTolerance:.01};
 test('same volume at wrong world position fails witnesses',()=>{const a=w(),b=w();for(const k of ['center','minimum','maximum'])b[k][0]-=173;const r=comparePlacement(a,b,tol);assert.equal(r.status,'PLACEMENT_MISMATCH');assert.ok(r.differences.some(x=>x.field==='center'));assert.equal(r.acceptance,false);});
 test('bounds catch wrong orientation despite matching center and volume',()=>{const a=w(),b=w();b.minimum[2]=-152.4;b.maximum[2]=203.2;assert.equal(comparePlacement(a,b,tol).status,'PLACEMENT_MISMATCH');});

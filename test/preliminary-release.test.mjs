@@ -1,3 +1,7 @@
+/**
+ * @lane merge
+ * @subject templates/stage-preliminary-review.py
+ */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';

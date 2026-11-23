@@ -1,3 +1,6 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
+# @subject scripts/preliminary_design.py
 """Report per-case progress on stderr and stop a motion or package check at its first non-passing case."""
 from copy import deepcopy
 import json

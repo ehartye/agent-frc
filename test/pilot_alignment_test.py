@@ -1,3 +1,5 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
 """A centered cover can stay seated through its full radial clearance."""
 import unittest
 from copy import deepcopy

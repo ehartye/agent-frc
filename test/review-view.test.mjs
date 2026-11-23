@@ -1,3 +1,9 @@
+/**
+ * @lane merge
+ * @subject scripts/package_view.py
+ * @subject scripts/preliminary_design.py
+ * @subject scripts/review-scene.mjs
+ */
 import { test } from 'node:test';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';

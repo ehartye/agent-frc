@@ -1,3 +1,6 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
+# @subject scripts/preliminary_design.py
 """Say which layout plan a check read, and warn when the plan is older than the builder sources it is written from."""
 import json
 import os

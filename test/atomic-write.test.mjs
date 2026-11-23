@@ -1,3 +1,4 @@
+/** @lane merge */
 import assert from 'node:assert/strict';
 import {existsSync,mkdirSync,mkdtempSync,readFileSync,readdirSync,rmSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';

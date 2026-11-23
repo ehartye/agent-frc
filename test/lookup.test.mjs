@@ -1,3 +1,4 @@
+/** @lane merge */
 import test from 'node:test';import assert from 'node:assert/strict';import {selectSources,lookup} from '../scripts/lookup.mjs';
 const catalog={as_of:'2096-11-15',sources:[{id:'draft',title:'2097 rules preview',url:'https://example.org/draft',seasons:[2097],authority_state:'preview',review_due:'2096-12-01',privateBody:'never export',capture_path:'../../private.txt'},{id:'old',title:'2094 mechanism',url:'https://example.org/old',seasons:[2094],authority_state:'historical'},{id:'shared',title:'mechanism fundamentals',url:'https://example.org/shared',seasons:[],review_due:'2096-10-01'}]};
 test('Season selection excludes unrelated years by default',()=>assert.deepEqual(selectSources(catalog,{season:2096,asOf:'2096-11-15'}).map(s=>s.id),['shared']));

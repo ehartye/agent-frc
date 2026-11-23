@@ -1,3 +1,13 @@
+/**
+ * @lane merge
+ * @subject examples/swerve/author_module.py
+ * @subject examples/swerve/check-encoders.mjs
+ * @subject examples/swerve/check-readme-preview.py
+ * @subject examples/swerve/check_four_corners.py
+ * @subject examples/swerve/check_fusion.py
+ * @subject examples/swerve/loaded_motion.py
+ * @subject examples/swerve/shaft_power.py
+ */
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';

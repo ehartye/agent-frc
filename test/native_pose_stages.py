@@ -1,3 +1,5 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
 """A synthetic journal that moves immediately, resets on rebuild, or holds a captured position."""
 import sys
 import unittest

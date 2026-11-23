@@ -1,3 +1,7 @@
+/**
+ * @lane merge
+ * @subject references/cad-color-convention.json
+ */
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
 const p=JSON.parse(fs.readFileSync(new URL('../references/cad-color-convention.json',import.meta.url),'utf8'));
 function luminance(hex){const v=hex.slice(1).match(/../g).map(x=>parseInt(x,16)/255).map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4);return .2126*v[0]+.7152*v[1]+.0722*v[2];}

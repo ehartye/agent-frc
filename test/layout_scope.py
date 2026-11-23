@@ -1,3 +1,5 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
 """Report a preliminary layout's solid count and finest path tolerance as information that never changes the result."""
 from copy import deepcopy
 import json

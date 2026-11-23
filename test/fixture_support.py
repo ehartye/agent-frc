@@ -1,3 +1,7 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
+# @subject scripts/package_view.py
+# @subject scripts/preliminary_design.py
 """Declare a payload that a registered field fixture supports, with the pinned trial behind its path."""
 from copy import deepcopy
 import gzip

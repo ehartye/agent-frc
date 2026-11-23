@@ -1,3 +1,5 @@
+# @lane merge
+# @subject scripts/mechanical_readiness.py
 """The readiness verdict rests on the registered evidence. No key, signature or environment variable takes part."""
 import json
 import os

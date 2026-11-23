@@ -1,3 +1,10 @@
+/**
+ * @lane merge
+ * @subject scripts/bench-tests.mjs
+ * @subject scripts/design-publication.mjs
+ * @subject scripts/detailed-design-release.mjs
+ * @subject templates/preliminary-review/review.html
+ */
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import {cpSync, existsSync, mkdtempSync, readFileSync, rmSync} from 'node:fs';

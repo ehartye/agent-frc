@@ -1,3 +1,7 @@
+/**
+ * @lane merge
+ * @subject scripts/project-checks.mjs
+ */
 import assert from 'node:assert/strict';
 import {execFileSync, spawnSync} from 'node:child_process';
 import {mkdtempSync, mkdirSync, rmSync, writeFileSync} from 'node:fs';
