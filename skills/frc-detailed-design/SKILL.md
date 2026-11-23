@@ -16,7 +16,7 @@ A detailed design takes the name of its preliminary design and its own version, 
 
 ## What you start with
 
-The handoff is the effective preliminary design's folder, `cad/preliminary-design/releases/VERSION/`, with its handoff note, `HANDOFF.md`, when it has one.
+The handoff is the effective preliminary design's folder, `cad/preliminary-design/releases/VERSION/`, with its handoff note, `HANDOFF.md`, when it has one. [The ten items it hands over](../../docs/design-phase-detail.md#what-preliminary-design-hands-to-detailed-design)
 
 | Handed over | What you do with it |
 | --- | --- |
