@@ -47,6 +47,30 @@ def pinned(root, ref):
     return target
 
 
+# Keys that may sit beside `file` in a reference an author writes without a SHA-256.
+PATH_REFERENCE = {"file", "role", "field"}
+
+
+def path_reference(node):
+    """Whether a node is a file reference that names its project-relative path and no SHA-256."""
+    return isinstance(node, dict) and named(node.get("file")) and set(node) <= PATH_REFERENCE
+
+
+def resolve_references(root, node):
+    """Return a copy of a plan or record in which every path-only file reference also holds its SHA-256.
+
+    An author names a file by its project-relative path, as {"file": "..."}. The checker reads the file and records
+    the digest it found, so the receipt still says what was checked. A reference that already holds a sha256 is left
+    as typed and is verified wherever it is used."""
+    if path_reference(node):
+        return dict(node, sha256=digest(project_path(root, node["file"])))
+    if isinstance(node, dict):
+        return {key: resolve_references(root, value) for key, value in node.items()}
+    if isinstance(node, list):
+        return [resolve_references(root, value) for value in node]
+    return node
+
+
 def components(nodes, edges):
     paths = {n:set() for n in nodes}
     for a,b in edges:

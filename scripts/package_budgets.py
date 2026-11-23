@@ -1,5 +1,5 @@
 """Screen a source-bound preliminary weight ledger and simultaneous battery-side loads."""
-from mechanical_readiness import named, number, pinned, read, require
+from mechanical_readiness import named, number, pinned, read, require, resolve_references
 
 
 def interval(values, label):
@@ -12,8 +12,9 @@ def budget_review(root, plan, missing):
     if not plan.get("budgets"):
         missing.append("Missing complete weight and concurrent loaded-voltage budgets")
         return None
-    study = read(pinned(root, plan["budgets"]))
-    if any(study[k] != plan[k] for k in ("issue","step","motion","design")):
+    study = resolve_references(root, read(pinned(root, plan["budgets"])))
+    # The issue name binds the ledger to this plan. A file selection the ledger repeats must be the plan's own.
+    if study["issue"] != plan["issue"] or any(k in study and study[k] != plan[k] for k in ("step","motion","design")):
         missing.append("Budget selection differs from the package issue")
         return None
     requirements = read(pinned(root, study["requirements"]))

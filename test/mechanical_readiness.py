@@ -37,6 +37,7 @@ from held_pin_relocation import HeldPinRelocation
 from parallel_cases import ParallelCases
 from view_only import ViewOnly
 from layout_scope import LayoutScope
+from path_references import PathReferences
 
 
 class Readiness(unittest.TestCase):
@@ -1080,7 +1081,7 @@ class Readiness(unittest.TestCase):
         from mechanical_fixture import package_write
         build=Path(__file__).resolve().parents[1]/"examples/preliminary-design/create.py"
         folder=self.root/"layout"
-        plan=runpy.run_path(str(build))["create"](folder)
+        plan=runpy.run_path(str(build))["create"](folder,pins=True)
         file=folder/"layout.json"
         good=review(folder.parent,file)
         self.assertEqual(good["status"],"layout-checked")
@@ -1157,6 +1158,18 @@ class Readiness(unittest.TestCase):
         repeated=package_write(folder,"repeat.json",dict(decision,source=upstream,repeat=dict(previousPlanSha256=stale["planSha256"])))
         package_write(folder,"layout.json",dict(plan,premises=[observations[0],dict(observations[1],accepted=repeated)]))
         self.assertEqual(review(folder.parent,file,hold)["status"],"layout-checked")
+        # The same repeat with every file named by path alone: no digest in the upstream record, the repeat or the plan.
+        def paths(node):
+            if isinstance(node,dict):return {k:paths(v) for k,v in node.items() if k!="sha256"}
+            return [paths(v) for v in node] if isinstance(node,list) else node
+        package_write(folder,"latest-role-paths.json",paths(dict(issue=plan["issue"],phase="conceptual-design",scenario="selected cycle",
+                       premise="acquire-time",fieldReplay=field)))
+        package_write(folder,"repeat-paths.json",paths(dict(decision,source=dict(file=folder.name+"/latest-role-paths.json"),
+                       repeat=dict(basis="Invented repeat on the revised issue"))))
+        package_write(folder,"layout.json",paths(dict(plan,premises=[observations[0],dict(observations[1],accepted=dict(file=folder.name+"/repeat-paths.json"))])))
+        by_path=review(folder.parent,file,hold)
+        self.assertEqual(by_path["status"],"layout-checked",by_path["missingInputs"])
+        self.assertTrue(all(d["repeatVerified"] for d in by_path["priorDecisions"]))
         earlier=package_write(folder,"earlier.json",dict(current,issue="outgoing"))
         package_write(folder,"layout.json",dict(plan,premises=[dict(observations[1],current=earlier)]))
         self.assertEqual(review(folder.parent,file)["status"],"provisional")

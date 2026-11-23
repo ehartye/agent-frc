@@ -60,8 +60,12 @@ def replay_set(write):
 RELEASES = "cad/preliminary-design/releases"
 
 
-def create(root, release_id=None, project=None):
-    """Write the package into the release folder `root`, with every pin written from `project`.
+def create(root, release_id=None, project=None, pins=False):
+    """Write the package into the release folder `root`, with every file named by its path from `project`.
+
+    A reference is {"file": "..."}: git records what each file was and the receipt records what was checked.
+    `pins` also writes the SHA-256 of each referenced file, as plans did before path references; the checker
+    still verifies every sha256 it is given.
 
     The project is the repository: the layout plan, its inputs, the review page and the scene sit together in the
     release folder inside it, and nothing is generated at the project root. Without `project`, the release folder's
@@ -75,7 +79,10 @@ def create(root, release_id=None, project=None):
     cli=Path(__file__).resolve().parents[2]/"scripts/design.mjs"
     subprocess.run(["node",str(cli),"new",str(root/"design.json")],check=True)
     def pin(name):
+        if not pins:return {"file":prefix+name}
         return {"file":prefix+name,"sha256":hashlib.sha256((root/name).read_bytes()).hexdigest()}
+    # Digests an older record repeated beside its file references.
+    def typed(**digests):return {k:v["sha256"] for k,v in digests.items()} if pins else {}
     def write(name,obj):
         (root/name).write_text(json.dumps(obj,indent=2)+"\n",encoding="utf-8")
         return pin(name)
@@ -108,7 +115,7 @@ def create(root, release_id=None, project=None):
     park["initialPose"]={**duty["moves"],"sample":spin(90)+travel([0,12,0])}
     park["moves"]={k:v for k,v in park["moves"].items() if k!="sample"}
     cases=[duty,park,service,intake,release]
-    motion=write("paths.json",dict(schema="agent-frc/mechanical-motion@1",step=step,layoutDesignSha256=design["sha256"],
+    motion=write("paths.json",dict(schema="agent-frc/mechanical-motion@1",step=step,**typed(layoutDesignSha256=design),
                                     layoutDatum=datum,cases=cases))
     groups={key:dict(role=role,members=items) for key,role,items in [
         ("structure","structure",["mount","rail"]),("bumper","bumper",["bumper"]),
@@ -154,7 +161,7 @@ def create(root, release_id=None, project=None):
     masses=[("running gear",["drive"],[4,5]),("power",["battery"],[2,2.2]),
             ("body",["mount","rail","bumper"],[2,2.4]),("mechanisms",["head","gate"],[2,2.4]),
             ("remaining robot",[],[1,1.5])]
-    plan["budgets"]=write("budgets.json",dict(issue=plan["issue"],step=step,motion=motion,design=design,
+    plan["budgets"]=write("budgets.json",dict(issue=plan["issue"],**(dict(step=step,motion=motion,design=design) if pins else {}),
         requirements=requirements,runningPayloadKg=[0.2,0.5],
         masses=[dict(id=k,members=items,kg=r,basis="Synthetic subtotal, including unmodeled items") for k,items,r in masses],
         electricalCases={stage+"-"+k:dict(basis="Simultaneous estimated source currents at loaded operating mass",
@@ -171,7 +178,7 @@ def create(root, release_id=None, project=None):
         accepted=write(key+"-accepted.json",dict(**identity,criterion=criterion,phase="conceptual-design",
                        interfaces=["carrier","carried article"],source=role,fieldInput=field_input,basis="Matched coarse role comparison"))
         measured=write(key+"-current.json",dict(**identity,value=value,issue=plan["issue"],
-                       designSha256=design["sha256"],stepSha256=step["sha256"],source=current,
+                       **typed(designSha256=design,stepSha256=step),source=current,
                        valueField="face" if key=="pickup-face" else "acquireSeconds"))
         plan["premises"].append(dict(accepted=accepted,current=measured))
     if release_id:
@@ -238,6 +245,7 @@ if __name__=="__main__":
     parser.add_argument("--project-review", action="store_true", help="Include a season-local review bundle and launcher")
     parser.add_argument("--release", default="1.0", help="Release ID, a version MAJOR.MINOR: the package folder is cad/preliminary-design/releases/ID")
     parser.add_argument("--design-name", default="Turning carrier", help="The invented architecture's name, recorded the first time its major number is staged")
+    parser.add_argument("--pins", action="store_true", help="Also write the SHA-256 of each referenced file, as older plans did")
     args = parser.parse_args()
     version = re.fullmatch(r"[1-9][0-9]{0,3}\.(0|[1-9][0-9]{0,3})", args.release)
     if not version and not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,63}", args.release):
@@ -260,8 +268,8 @@ if __name__=="__main__":
             if not dest.exists():
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(templates / source, dest)
-        create(author / "releases" / args.release, release_id=args.release, project=season)
+        create(author / "releases" / args.release, release_id=args.release, project=season, pins=args.pins)
         subprocess.run([sys.executable, str(author / "stage.py"), args.release, *(["--design-name", args.design_name] if version else [])], check=True)
     else:
         # The new directory stands for a repository: the package sits in a release folder inside it.
-        create(args.new_directory.resolve() / RELEASES / args.release, project=args.new_directory.resolve())
+        create(args.new_directory.resolve() / RELEASES / args.release, project=args.new_directory.resolve(), pins=args.pins)

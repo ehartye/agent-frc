@@ -43,7 +43,7 @@ class SceneMeshOnce(unittest.TestCase):
     def setUpClass(cls):
         cls.folder = TemporaryDirectory()
         cls.root = Path(cls.folder.name) / "layout"
-        cls.plan = runpy.run_path(str(SCRIPTS.parent / "examples/preliminary-design/create.py"))["create"](cls.root)
+        cls.plan = runpy.run_path(str(SCRIPTS.parent / "examples/preliminary-design/create.py"))["create"](cls.root, pins=True)
         cls.study = json.loads((cls.root.parent / cls.plan["motion"]["file"]).read_text())
         cls.before, cls.after, cache = [], [], {}
         def both(case, scene):

@@ -96,7 +96,11 @@ function qualification(trial,name){
 /** The case a trial record says it ran. */
 const trialCase=trial=>object(trial)?trial.case??(object(trial.transport)?trial.transport.case:undefined)??(object(trial.freePath)?trial.freePath.case:undefined)??(object(trial.support)?trial.support.case:undefined):undefined;
 
-/** Criterion 2: every mission case moves on a pinned, qualified physics trial rather than a prescribed path. */
+/**
+ * Criterion 2: every mission case moves on a named, qualified physics trial rather than a prescribed path.
+ * A trial is named by its project-relative path and read. Its bytes are compared only when the reference carries
+ * a SHA-256: one an author typed, or the one the layout check recorded in the receipt.
+ */
 function trialDriven(root,plan,planBytes,receipt,missions){
   const reasons=[],notes=[],cases=rows(missions?.missionCases);
   if(!cases.length)return {reasons:['No mission case: declare each mission-critical interaction under missionCases in missions.json'],notes};
@@ -112,20 +116,23 @@ function trialDriven(root,plan,planBytes,receipt,missions){
     if(object(m.trial))pins.push(m.trial);
     // A linked field interaction binds the motion only when its trial records this case.
     for(const pin of links){const trial=load(root,pin.file);if(!trial.reason&&trialCase(trial.json)===m.case)pins.push(pin);}
-    const unique=[...new Map(pins.filter(p=>named(p.file)).map(p=>[p.file,p])).values()];
+    // One entry per file; a reference that carries a SHA-256 is kept over one that names the path alone.
+    const byFile=new Map();
+    for(const p of pins.filter(p=>named(p.file)))if(!byFile.has(p.file)||named(p.sha256))byFile.set(p.file,p);
+    const unique=[...byFile.values()];
     if(!unique.length){
-      reasons.push(where+': the motion is prescribed; no trial is pinned through transportedBy, freePath, supportedBy, a mission trial or a linked field interaction'
-        +(checked?'':' (stage pins are read only from a layout-checked receipt of this plan)'));
+      reasons.push(where+': the motion is prescribed; no trial is named through transportedBy, freePath, supportedBy, a mission trial or a linked field interaction'
+        +(checked?'':' (stage trials are read only from a layout-checked receipt of this plan)'));
       continue;
     }
     for(const pin of unique){
       const trial=load(root,pin.file);
       if(trial.reason){reasons.push(where+': '+trial.reason);continue;}
-      if(sha(trial.bytes)!==pin.sha256){reasons.push(where+': trial '+pin.file+' differs from its pinned SHA-256');continue;}
+      if(pin.sha256!==undefined&&sha(trial.bytes)!==pin.sha256){reasons.push(where+': trial '+pin.file+' differs from its pinned SHA-256');continue;}
       if(trialCase(trial.json)!==m.case){reasons.push(where+': trial '+pin.file+' records another case');continue;}
       for(const reason of qualification(trial.json,pin.file))reasons.push(where+': '+reason);
     }
-    notes.push(m.case+': '+unique.map(p=>p.file).join(', '));
+    notes.push(m.case+': '+unique.map(p=>p.file+(p.sha256===undefined?' (read; no SHA-256 given to compare)':' (matches its recorded SHA-256)')).join(', '));
   }
   return {reasons,notes};
 }

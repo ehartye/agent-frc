@@ -77,6 +77,7 @@ def fixture(root):
             "source": source.name,
             "title": "Three-block fixture",
             "scope": "Two distinct component roles",
+            "status": "in-progress",
             "appearances": "roles.json",
             "backdrop": {"center": "#738BA1", "edge": "#183857"},
         },

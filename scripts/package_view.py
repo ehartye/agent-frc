@@ -10,7 +10,7 @@ import zlib
 
 from atomic_file import write_atomic
 from mechanical_motion import transforms
-from mechanical_readiness import named, pinned, read, require
+from mechanical_readiness import named, pinned, read, require, resolve_references
 
 CONTROL_ID = "package-displacement-control"
 CASE_KINDS = ("nominal", "inhibited", "adverse")
@@ -301,7 +301,7 @@ def field_interactions(root, plan):
             pinned(root, evidence)
             evidence = dict(file=evidence["file"], sha256=evidence["sha256"])
         else:
-            require(named(evidence), "Describe or pin the evidence for field interaction " + item["title"])
+            require(named(evidence), "Describe the evidence for field interaction " + item["title"] + " or name its file")
         rows.append(dict(title=item["title"], href=href, objective=item["objective"], evidence=evidence,
                          embed=bool(item.get("embed")), objectiveKnown=item["objective"] in objectives))
     return rows
@@ -443,17 +443,18 @@ def _watertight(mesh):
 
 
 def replay_entries(root, plan, meshes, bodies, placed, palette):
-    """Trial replays for the one motion list, from the pinned replay sets under presentation.replays.
+    """Trial replays for the one motion list, from the replay sets named under presentation.replays.
 
     A replay set is a project-generated JSON file (optionally gzipped) with schema agent-frc/review-replays@1. It holds
     `replays` and, optionally, `fieldBodies`: field parts and loose game pieces that only replays show, each with its own
     display mesh. A replay moves bodies by rigid group, one transform per frame per group, so a whole-robot run stays
     small. Field bodies and their meshes are appended to `bodies` and `meshes`; the replay rows are returned."""
     refs = plan.get("presentation", {}).get("replays", [])
-    require(isinstance(refs, list), "presentation.replays lists pinned replay sets as {file, sha256}")
+    require(isinstance(refs, list), "presentation.replays lists replay sets as {file}")
     rows, mesh_index, taken = [], {}, set()
     for ref in refs:
-        require(isinstance(ref, dict) and set(ref) == {"file", "sha256"}, "presentation.replays lists pinned replay sets as {file, sha256}")
+        # The checker filled in the digest of a replay set named by path alone; a typed sha256 is verified here.
+        require(isinstance(ref, dict) and set(ref) == {"file", "sha256"}, "presentation.replays lists replay sets as {file}")
         raw = pinned(root, ref).read_bytes()
         where = "Replay set " + ref["file"]
         try:
@@ -462,6 +463,7 @@ def replay_entries(root, plan, meshes, bodies, placed, palette):
             raise ValueError(where + " is not JSON or gzipped JSON") from None
         require(isinstance(data, dict) and data.get("schema") == REPLAY_SET and set(data) <= {"schema", "fieldBodies", "replays"}
                 and isinstance(data.get("replays"), list) and data["replays"], where + " needs schema " + REPLAY_SET + " and a replays list")
+        data = resolve_references(root, data)
         field = data.get("fieldBodies", {})
         require(isinstance(field, dict), where + ": fieldBodies maps new body IDs to {name, mesh: {v, f}}")
         for member, item in sorted(field.items()):
@@ -494,10 +496,10 @@ def replay_entries(root, plan, meshes, bodies, placed, palette):
             shown = item.get("bodies")
             require(isinstance(shown, dict) and shown and set(shown) <= set(placed), at + ": bodies maps placed IDs or field bodies to a group or null")
             evidence = item.get("evidence")
-            require(isinstance(evidence, list) and evidence, at + " pins the trial files it plays back under evidence")
+            require(isinstance(evidence, list) and evidence, at + " names the trial files it plays back under evidence")
             pins = []
             for pin in evidence:
-                require(isinstance(pin, dict) and set(pin) <= {"file", "sha256", "role"}, at + ": evidence holds {file, sha256, role}")
+                require(isinstance(pin, dict) and set(pin) <= {"file", "sha256", "role"}, at + ": evidence holds {file, role}")
                 pinned(root, pin)
                 pins.append({k: pin[k] for k in ("file", "sha256", "role") if k in pin})
             groups = item.get("groups")

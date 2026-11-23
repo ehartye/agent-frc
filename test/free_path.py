@@ -9,7 +9,7 @@ import unittest
 from mechanical_fixture import SCRIPTS, package_write as write
 
 NO_LOADED = "No operating path includes the moving mechanism and finite payload"
-PIN = "Pin the free-path evidence for carried article in release"
+PIN = "Name the free-path evidence file for carried article in release"
 UNBOUND = "Free-path evidence for carried article in release does not record this payload path"
 
 
@@ -64,7 +64,7 @@ class FreePath(unittest.TestCase):
 
     def test_missing_unpinned_or_unbound_evidence_stays_missing(self):
         short = [dict(kind="translation", travelMm=[0, 4, 0])]
-        cases = (("absent", None, PIN), ("no-file", {"sha256": "0" * 64}, PIN), ("unpinned", {"file": "release-trial.json"}, PIN),
+        cases = (("absent", None, PIN), ("no-file", {"sha256": "0" * 64}, PIN), ("no-path", {"file": ""}, PIN),
                  ("other-path", self.evidence("short-flight.json", moves={"sample": short}), UNBOUND),
                  ("other-start", self.evidence("other-start.json", initialPose={"sample": short}), UNBOUND),
                  ("other-case", self.evidence("turn-flight.json", case="loaded-turn"), UNBOUND),
@@ -94,6 +94,14 @@ class FreePath(unittest.TestCase):
         plan["stages"]["loaded-turn"]["freePath"] = {"carried article": dict(evidence=evidence, basis="Invented")}
         with self.assertRaisesRegex(ValueError, "Identify the moving payload on a free path"):
             self.review(plan)
+
+    def test_a_trial_named_by_path_alone_is_read_and_its_digest_recorded(self):
+        pinned = self.evidence("path-only-flight.json")
+        result = self.review(self.free(dict(evidence={"file": pinned["file"]}, basis="The article flies free")))
+        self.assertEqual(result["status"], "layout-checked", result["missingInputs"])
+        self.assertEqual(result["stages"]["release"]["freePath"]["carried article"]["evidence"], pinned)
+        with self.assertRaisesRegex(ValueError, "Unresolved project file: layout/absent-flight.json"):
+            self.review(self.free(dict(evidence={"file": "layout/absent-flight.json"}, basis="Invented")))
 
     def test_changed_trial_is_refused(self):
         evidence = self.evidence("changed-flight.json")

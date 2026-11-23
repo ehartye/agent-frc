@@ -12,7 +12,7 @@ from component_shape import proper_rotation
 from mechanical_motion import HEARTBEAT_SECONDS, evaluate, reuse, stderr_progress, transforms, vec
 from package_budgets import budget_review
 from package_view import CONTROL_ID, capture, first_unmet, parked_assembly, verify_view
-from mechanical_readiness import digest, named, number, pinned, project_path, read, require
+from mechanical_readiness import digest, named, number, path_reference, pinned, project_path, read, require, resolve_references
 
 
 def names(items, label, *, empty=False):
@@ -27,6 +27,16 @@ def has_travel(op):
     if op["kind"]=="rotation":
         return number(op["travelDeg"]) and op["travelDeg"]!=0
     return op["kind"]=="gravity-drop" and number(op["fallMm"]) and op["fallMm"]>0
+
+
+def record(root, ref):
+    """Read a referenced project record. Its own path-only references gain the digest of the file they name."""
+    return resolve_references(root, read(pinned(root, ref)))
+
+
+def given(source, key, expected):
+    """Whether an optional digest a record repeats is absent or equals the checked one."""
+    return not isinstance(source, dict) or source.get(key) is None or source[key]==expected
 
 
 def contact_transport(root, key, case, stage, groups, moving, missing):
@@ -53,7 +63,7 @@ def contact_transport(root, key, case, stage, groups, moving, missing):
             missing.append("Declare the drive of stationary transporter "+t+" in "+key);complete=False
         evidence=spec.get("evidence")
         if not (isinstance(evidence,dict) and named(evidence.get("file")) and named(evidence.get("sha256"))):
-            missing.append("Pin the contact-transport evidence for "+payload+" in "+key);continue
+            missing.append("Name the contact-transport evidence file for "+payload+" in "+key);continue
         trial=read(pinned(root,evidence))
         members=groups[payload]["members"]
         expected=dict(case=key,payload=payload,mechanisms=sorted(transporters),
@@ -81,7 +91,7 @@ def free_paths(root, key, case, stage, groups, moving, missing):
         bound[payload]=False
         evidence=spec.get("evidence")
         if not (isinstance(evidence,dict) and named(evidence.get("file")) and named(evidence.get("sha256"))):
-            missing.append("Pin the free-path evidence for "+payload+" in "+key);continue
+            missing.append("Name the free-path evidence file for "+payload+" in "+key);continue
         trial=read(pinned(root,evidence))
         members=groups[payload]["members"]
         expected=dict(case=key,payload=payload,moves={n:case["moves"][n] for n in members},
@@ -113,7 +123,7 @@ def fixture_support(root, key, case, stage, groups, moving, missing):
         bound[payload]=False
         evidence=spec.get("evidence")
         if not (isinstance(evidence,dict) and named(evidence.get("file")) and named(evidence.get("sha256"))):
-            missing.append("Pin the fixture-support evidence for "+payload+" in "+key);continue
+            missing.append("Name the fixture-support evidence file for "+payload+" in "+key);continue
         trial=read(pinned(root,evidence))
         members=groups[payload]["members"]
         expected=dict(case=key,payload=payload,fixtures=sorted(fixtures),moves={n:case["moves"][n] for n in members},
@@ -211,7 +221,7 @@ def compare_premises(root, rows, plan, missing):
     seen=set()
     if not rows:missing.append("No upstream premise commissioned")
     for links in rows:
-        accepted=read(pinned(root,links["accepted"]))
+        accepted=record(root,links["accepted"])
         key=accepted["id"]
         require(named(key) and key not in seen and named(accepted["scenario"]) and named(accepted["basis"])
                 and accepted["phase"] in ("conceptual-design","preliminary-design") and named(accepted["unit"])
@@ -234,7 +244,7 @@ def compare_premises(root, rows, plan, missing):
         if not links.get("current"):
             missing.append("Missing current observation for "+key)
             continue
-        current=read(pinned(root,links["current"]))
+        current=record(root,links["current"])
         require(all(current.get(k)==accepted[k] for k in ("id","unit")) and same_scenario(current,accepted)
                 and named(current.get("scenario")),"Premise observation differs in scope")
         # A matching scenarioId lets the observer word the scenario differently; the receipt keeps both wordings.
@@ -245,8 +255,9 @@ def compare_premises(root, rows, plan, missing):
         value=source[current["valueField"]]
         require(value==current["value"] and type(value)==type(current["value"]), "Reported value differs from its source")
         decision.update(current=links["current"],value=value)
-        if (current.get("issue")!=plan["issue"] or current.get("designSha256")!=plan["design"]["sha256"]
-                or current.get("stepSha256")!=(plan.get("step") or {}).get("sha256")):
+        # The issue name binds an observation to this revision. A digest the observation repeats is still compared.
+        if (current.get("issue")!=plan["issue"] or not given(current,"designSha256",plan["design"]["sha256"])
+                or not given(current,"stepSha256",(plan.get("step") or {}).get("sha256"))):
             missing.append("Earlier revision cannot resume "+key)
             continue
         if "range" in criterion:
@@ -371,7 +382,7 @@ def held_field_input(root, before, selection, replay, relocations=None, followed
     if source is None:
         return None,("Relocated held file "+before["source"]["file"]+" -> "+(relocations or {})[before["source"]["file"]]
                      +" does not match its pinned SHA-256")
-    evidence=read(source)
+    evidence=resolve_references(root,read(source))
     named_steps=[{k:v for k,v in evidence[key].items() if k not in ("profile","result")}
                  for key in ("fieldReplay","fieldInput") if isinstance(evidence,dict) and isinstance(evidence.get(key),dict)]
     # A generic premise names no step; only a replay of every attempt at the station can clear it.
@@ -397,6 +408,8 @@ def held_pinned(root, ref, relocations, followed):
     without a relocation resolves exactly as pinned() does."""
     require(isinstance(ref,dict),"Missing revision-bound file")
     name=ref.get("file")
+    # A held record that names its file by path alone recorded no bytes to compare.
+    if path_reference(ref):return project_path(root,relocations.get(name,name))
     if name not in relocations:return pinned(root,ref)
     target=project_path(root,relocations[name])
     if digest(target)!=ref.get("sha256"):return None
@@ -410,7 +423,7 @@ def current_pins(root, plan):
     files=set()
     def walk(node):
         if isinstance(node,dict):
-            if isinstance(node.get("file"),str) and isinstance(node.get("sha256"),str):files.add(node["file"])
+            if isinstance(node.get("file"),str) and (isinstance(node.get("sha256"),str) or path_reference(node)):files.add(node["file"])
             for value in node.values():walk(value)
         elif isinstance(node,list):
             for value in node:walk(value)
@@ -441,11 +454,11 @@ def verify_reopens(root, plan, prior, decisions, observations, missing, budget):
         elif phase=="preliminary-design" and key in plan["stages"]:
             checked=set(hold["affected"])<=plan["groups"].keys() and any(row["case"]==key and row["status"]=="pass" for row in observations)
         elif key in current and key in original:
-            accepted=read(pinned(root,current[key]["accepted"]))
+            accepted=record(root,current[key]["accepted"])
             repeat=accepted.get("repeat")
             before=None
             if isinstance(repeat,dict):
-                evidence=read(pinned(root,accepted["source"]))
+                evidence=record(root,accepted["source"])
                 held_ref=original[key]["accepted"]
                 before_path=held_pinned(root,held_ref,relocations,followed)
                 if before_path is None:
@@ -461,9 +474,9 @@ def verify_reopens(root, plan, prior, decisions, observations, missing, budget):
                 checked=(bool(selection) and selection==held_input==accepted.get("fieldInput")
                          and ("fieldInput" in before or same_scenario(before,accepted)
                               and (before["unit"]==accepted["unit"] or selection.get("input")=="stationPosition"))
-                         and phase==accepted["phase"]==before["phase"] and current[key]["status"]=="within" and repeat.get("previousPlanSha256")==previous_study
-                         and evidence.get("issue")==plan["issue"] and evidence.get("designSha256")==plan["design"]["sha256"]
-                         and evidence.get("stepSha256")==plan["step"]["sha256"] and evidence.get("phase")==phase
+                         and phase==accepted["phase"]==before["phase"] and current[key]["status"]=="within" and given(repeat,"previousPlanSha256",previous_study)
+                         and evidence.get("issue")==plan["issue"] and given(evidence,"designSha256",plan["design"]["sha256"])
+                         and given(evidence,"stepSha256",plan["step"]["sha256"]) and evidence.get("phase")==phase
                          and same_scenario(evidence,accepted) and evidence.get("premise")==key
                          and phase=="conceptual-design" and isinstance(evidence.get("fieldReplay"),dict)
                          and repeated_field_input(root,evidence["fieldReplay"],current[key]["value"],accepted["unit"],replayed,
@@ -509,6 +522,8 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
     plan_hash=digest(file)
     plan=read(file)
     require(plan["schema"]=="agent-frc/preliminary-layout@1" and named(plan["issue"]), "Select a package issue")
+    # An author names each file by path. The digests the receipt records are the ones read here; a typed sha256 is still verified.
+    plan=resolve_references(root,plan)
     design_path=pinned(root,plan["design"])
     check=subprocess.run(["node",str(Path(__file__).with_name("design.mjs")),"validate",str(design_path)],
                          capture_output=True,text=True)
@@ -565,8 +580,9 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
             if reopen:result["status"]="reopen"
         return result
     source=pinned(root,plan["step"])
-    study=read(pinned(root,plan["motion"]))
-    require(study["step"]==plan["step"] and study["layoutDesignSha256"]==plan["design"]["sha256"]
+    # A preliminary study names its files by path, so a qualification record need not repeat the STEP digest.
+    study=dict(record(root,plan["motion"]),pathReferences=True)
+    require(study["step"]==plan["step"] and given(study,"layoutDesignSha256",plan["design"]["sha256"])
             and study["layoutDatum"]==datum, "Motion study differs from the selected geometry, design or datum")
     result.update(step=plan["step"],motion=plan["motion"])
     groups=plan["groups"]
@@ -793,7 +809,7 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
     if observed["nonSolidLeafCount"]:missing.append("Unexamined non-solid geometry in the selected STEP")
     for links in plan.get("premises",[]):
         for ref in (links["accepted"],links.get("current")):
-            if ref:pinned(root,read(pinned(root,ref))["source"])
+            if ref:pinned(root,record(root,ref)["source"])
     for c in cases:
         for ref in [*(f["file"] for f in c.get("fixtures",[])),*(e["qualifiedBy"] for e in c.get("intendedInterfaces",[])),
                     *(dict(file=r["evidence"]["file"],sha256=r["evidence"]["sha256"]) for r in c.get("payloadCompression",[])

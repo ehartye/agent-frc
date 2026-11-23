@@ -38,7 +38,7 @@ test('colored highlights bind the resolved palette, source assignment and facet 
   const save = () => writeFile(receipt,JSON.stringify(record));
   const selectedFile = path.join(root,'cad-showcase.json');
   await assert.rejects(buildHighlights(manifest,target),/Selected appearance manifest/);
-  const staleReadme = py('cad-readmes.py',root);
+  const staleReadme = py('cad-readmes.py',root,'--verify-export');
   assert.notEqual(staleReadme.status,0);
   assert.match(staleReadme.stderr,/Selected appearance manifest/);
   await save();

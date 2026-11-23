@@ -11,7 +11,7 @@ from mechanical_fixture import SCRIPTS, package_pin as pin, package_write as wri
 from constant_pose_pairs import named_step
 
 NO_LOADED = "No operating path includes the moving mechanism and finite payload"
-PIN = "Pin the fixture-support evidence for carried article in release"
+PIN = "Name the fixture-support evidence file for carried article in release"
 UNBOUND = "Fixture-support evidence for carried article in release does not record this payload path"
 IDENTIFY = "Identify the moving payload a fixture supports, declared under supportedBy alone"
 
@@ -102,7 +102,7 @@ class FixtureSupport(unittest.TestCase):
 
     def test_missing_unpinned_or_unbound_evidence_stays_missing(self):
         short = [dict(kind="translation", travelMm=[0, 4, 0])]
-        cases = (("absent", None, PIN), ("no-file", {"sha256": "0" * 64}, PIN), ("unpinned", {"file": "lane-trial.json"}, PIN),
+        cases = (("absent", None, PIN), ("no-file", {"sha256": "0" * 64}, PIN), ("no-path", {"file": ""}, PIN),
                  ("other-path", self.evidence("short-roll.json", moves={"sample": short}), UNBOUND),
                  ("other-start", self.evidence("other-start.json", initialPose={"sample": short}), UNBOUND),
                  ("other-case", self.evidence("turn-roll.json", case="loaded-turn"), UNBOUND),
@@ -139,6 +139,12 @@ class FixtureSupport(unittest.TestCase):
         plan["stages"]["loaded-turn"]["supportedBy"] = {"carried article": spec}
         with self.assertRaisesRegex(ValueError, IDENTIFY):
             self.review(plan)
+
+    def test_a_trial_named_by_path_alone_is_read_and_its_digest_recorded(self):
+        spec = self.spec("path-only-roll.json")
+        result = self.review(self.supported(dict(spec, evidence={"file": spec["evidence"]["file"]})))
+        self.assertEqual(result["status"], "layout-checked", result["missingInputs"])
+        self.assertEqual(result["stages"]["release"]["supportedBy"]["carried article"]["evidence"], spec["evidence"])
 
     def test_changed_trial_is_refused(self):
         spec = self.spec("changed-roll.json")
