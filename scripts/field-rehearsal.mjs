@@ -150,7 +150,7 @@ export function createFieldRehearsal(profile) {
   // Translation follows a trapezoid from the current speed: accelInS2 up to topSpeedInS, then a stop at the leg
   // end, measured along the remaining waypoints. Corners are taken without slowing. currentSpeedInS is 0
   // whenever the robot does not translate in a tick: at the start, during a dwell, a wait or a turn in place.
-  let turnTo,nextSpeed=0;
+  let turnTo,nextSpeed=0,portLeg=false;
   const turnLeft=(r,goal)=>goal===undefined?0:((goal-r.heading)%360+540)%360-180;
   function turned(r,goal) {
     const left=turnLeft(r,goal),most=r.concept.drive.rotationDegS*dt;
@@ -170,7 +170,7 @@ export function createFieldRehearsal(profile) {
     return t<t3-1e-12?[Math.min(D,s1+s2+peak*t-brake*t*t/2),peak-brake*t]:[D,0];
   }
   function proposal(sim,r) {
-    r.blocked='';turnTo=undefined;nextSpeed=0;
+    r.blocked='';turnTo=undefined;nextSpeed=0;portLeg=false;
     const goal=terminal?.enter(sim,r,sim.ticks*dt);
     if(goal)delete r.pickup;
     if(goal && terminal.inside(r,goal)){
@@ -201,6 +201,7 @@ export function createFieldRehearsal(profile) {
     }
     // A concept robot's acquisitions and releases go through its ports; the game supplies each goal and heading.
     if(r.concept && leg.operation){
+      portLeg=true;
       const next=game.conceptStep(sim,r,leg,sim.ticks*dt,dt);
       if(next.done)return finishLeg();
       turnTo=next.heading;
@@ -210,13 +211,14 @@ export function createFieldRehearsal(profile) {
       if(!r.goal || norm(r.goal,next.goal)>.25){
         r.goal=[...next.goal];r.target=1;
         // With a turn still to make, plan for the circumscribed circle, which clears every heading on the way.
-        // Where the circle cannot pass, plan for the footprint at the goal heading (the turn usually ends first),
-        // then for the present footprint, and let each tick's check decide.
+        // Where the circle cannot pass, plan for the body that will move first: the present footprint when the
+        // robot cannot turn where it stands, otherwise the footprint at the goal heading (the turn usually ends
+        // first). Each tick's check decides, and a static block replans from the pose reached.
         const route=body=>leg.straight?(geom.hit(r.p,r.goal,body,sim.setup)?[]:[r.p,r.goal]):geom.plan(r.p,r.goal,body,sim.setup);
-        const turning=Math.abs(turnLeft(r,turnTo))>1e-9;
-        r.waypoints=turning?route({...r,circleIn:geom.circumradius(r)}):[];
-        if(!r.waypoints.length && turning)r.waypoints=route({...r,heading:turnTo});
-        if(!r.waypoints.length)r.waypoints=route(r);
+        const turning=Math.abs(turnLeft(r,turnTo))>1e-9,circle={...r,circleIn:geom.circumradius(r)};
+        const order=!turning?[r]:geom.hit(r.p,r.p,circle,sim.setup)?[r,{...r,heading:turnTo}]:[circle,{...r,heading:turnTo},r];
+        r.waypoints=[];
+        for(const body of order)if(!r.waypoints.length)r.waypoints=route(body);
       }
       if(!r.waypoints.length){recordWait(sim,r,'No footprint-clear path · '+leg.action);return r.p;}
       return r.target>=r.waypoints.length?r.p:drive(r);
@@ -284,22 +286,37 @@ export function createFieldRehearsal(profile) {
     for(let i=0;i<sim.robots.length;i++) {
       const r=sim.robots[i],a=begins[i],b=proposal(sim,r);
       r.waitFor=null;
-      const heading=r.concept && !r.blocked?turned(r,turnTo):r.heading, rotating=heading!==r.heading;
+      let heading=r.concept && !r.blocked?turned(r,turnTo):r.heading, rotating=heading!==r.heading;
       if(r.concept)r.currentSpeedInS=0;
       if(norm(a,b)<1e-9 && !rotating){
         if(!r.blocked && r.waypoints?.[r.target] && norm(r.p,r.waypoints[r.target])<1e-8)r.target++;
         continue;
       }
-      const body=rotating?{...r,circleIn:geom.circumradius(r)}:r;
-      let hit=geom.hit(a,b,body,sim.setup);
-      for(let j=0;j<sim.robots.length;j++)if(i!==j){
-        const t=geom.robotContact(a,b,body,begins[j],ends[j],bodies[j]);
-        if(t!==null && (!hit || t<hit.t))hit={name:sim.robots[j].id,t};
+      const sweep=body=>{
+        let hit=geom.hit(a,b,body,sim.setup);
+        for(let j=0;j<sim.robots.length;j++)if(i!==j){
+          const t=geom.robotContact(a,b,body,begins[j],ends[j],bodies[j]);
+          if(t!==null && (!hit || t<hit.t))hit={name:sim.robots[j].id,t};
+        }
+        return hit;
+      };
+      let body=rotating?{...r,circleIn:geom.circumradius(r)}:r,hit=sweep(body);
+      // On a port leg the heading is the game's intent, not an authored step: when only a wall or obstacle stops
+      // the turn, the robot moves this tick at its present heading and turns once it is clear. An authored
+      // requiredHeading keeps the rule that a blocked rotation is a wait.
+      if(hit && rotating && portLeg && !sim.robots.some(p=>p.id===hit.name)){
+        const still=norm(a,b)<1e-9?null:sweep(r);
+        if(norm(a,b)>=1e-9 && !still){hit=null;body=r;heading=r.heading;rotating=false;}
       }
       // Rejected motion stays at its starting point for this entire tick. Earlier
       // movers already cleared that stationary footprint. Clipping one mover after
       // relative sweeps could introduce a late moving-peer overlap.
-      if(hit){recordWait(sim,r,'Occupied by '+hit.name);if(sim.robots.some(p=>p.id===hit.name))r.waitFor=hit.name;continue;}
+      if(hit){
+        recordWait(sim,r,'Occupied by '+hit.name);
+        if(sim.robots.some(p=>p.id===hit.name))r.waitFor=hit.name;
+        else if(portLeg)delete r.goal;
+        continue;
+      }
       ends[i]=b;bodies[i]=body;headings[i]=heading;
       if(r.concept && norm(a,b)>=1e-9)r.currentSpeedInS=nextSpeed;
       if(r.waypoints?.[r.target] && norm(b,r.waypoints[r.target])<1e-8)r.target++;

@@ -180,9 +180,9 @@ test('ports: only the back input acquires, with the heading on the approach bear
   const back=run('back').events.find(e=>e.operation==='acquire');
   assert.ok(back.timeS>0.5,'the front face touching the piece is not a back-port contact');
   assert.equal(back.port,'back-in');
-  // The turning robot nudges the piece, so the approach bearing is the one at contact, from robot to piece.
-  const approach=Math.atan2(back.contact.position[1]-back.contact.robotPosition[1],back.contact.position[0]-back.contact.robotPosition[0])*180/Math.PI;
-  assert.ok(Math.abs(wrapDeg(back.contact.heading-approach-180))<=10,'heading '+back.contact.heading+' for bearing '+approach);
+  // The robot started facing the piece (heading 0); it turned to present its back.
+  assert.ok(Math.abs(wrapDeg(back.contact.heading-0))>10,'turned from 0 to '+back.contact.heading);
+  assert.ok(Math.abs(wrapDeg(back.contact.heading-180))<=45,'back toward the piece: heading '+back.contact.heading);
 });
 
 test('ports: a turret fires after its slew without turning; a fixed shooter turns first',()=>{
@@ -208,12 +208,18 @@ test('ports: a fixed elevation is denied a pose that only an adjusted elevation 
   assert.ok(Math.hypot(fixed.pose.p[0]-340,fixed.pose.p[1]-60)>=109-1e-6,'fixed elevation released from '+fixed.pose.p);
 });
 
+// A window at [360,120] facing east. The robot starts behind it to the north, at [260,240], so its route to the
+// stop in front of the window passes poses inside the band. The 38 x 32 in opening leaves 30 x 24 in round a 4 in ball.
+// Three preloaded balls; moving shots score 0.6, stationary 0.8.
+const passWindow={centerIn:[360,120,60],kind:'window',widthIn:38,heightIn:32,facingDeg:0,factId:'pass-window'};
+function passThrough(top,moving){
+  const doc=conceptDoc('mover',{top,accel:2000,rotation:360,capacity:{ball:3},outputs:[shooter({elevation:[20,60],moving,fraction:0.8})]});
+  return releases(play(arena({docs:[doc],steps:[shoot],goal:[360,120],entry:passWindow}),
+    [{concept:'mover',preload:{station:'test-rack',quantity:3}}],10,[[260,240]]).events);
+}
+
 test('ports: firing while moving obeys its speed cap and fraction; without it the robot stops first',()=>{
-  // Two preloaded balls, a long straight approach to a ring at [420,60]. Moving shots score 0.6, stationary 0.8.
-  const run=(top,moving)=>{
-    const doc=conceptDoc('mover',{top,accel:2000,outputs:[shooter({elevation:[20,60],moving,fraction:0.8})]});
-    return releases(play(arena({docs:[doc],steps:[shoot],goal:[420,60]}),[{concept:'mover',preload:{station:'test-rack',quantity:2}}],10,[[40,60]]).events);
-  };
+  const run=passThrough;
   const slow=run(50,[60,0.6]);
   assert.ok(slow.length>=1);
   assert.ok(slow[0].moving && Math.abs(slow[0].speedInS-50)<1e-6,'fires while passing at 50 in/s');
@@ -223,6 +229,15 @@ test('ports: firing while moving obeys its speed cap and fraction; without it th
   const stopping=run(50,false);
   assert.ok(stopping.length>=1 && stopping.every(e=>e.speedInS===0 && !e.moving),'stops before firing');
   assert.equal(stopping[0].successFraction,0.8);
+});
+
+test('ports: the moving-fire capability never delays the first release and keeps the stationary stop',()=>{
+  const moving=passThrough(50,[60,0.6]),still=passThrough(50,false);
+  assert.ok(moving[0].timeS<=still[0].timeS+1e-9,'first release '+moving[0].timeS+' s with the capability, '+still[0].timeS+' s without');
+  // Both stop at the same near-edge pose; the capable shooter adds only the releases on the way.
+  const stop=list=>list.filter(e=>!e.moving).map(e=>e.pose.p.map(v=>Math.round(v*1000)/1000).join(','));
+  assert.ok(stop(moving).length>=1);
+  assert.deepEqual([...new Set(stop(moving))],[...new Set(stop(still))]);
 });
 
 test('ports: storage holds a piece for transferS and caps each piece type separately',()=>{
@@ -314,4 +329,97 @@ test('ports: a concept robot keeps scoring in Main play while its source has sto
   const training6=match(6,true);
   assert.equal(training6.opening,6);assert.equal(training6.left,0);
   assert.equal(training6.main,0);assert.ok(training6.emptyMain>0,'Main play reports the empty rack');
+});
+
+test('ports: a step without an outcome leaves a concept release unresolved, as for a legacy robot',()=>{
+  const step={operation:'attempt',station:'test-goal'};
+  const concept=play(arena({docs:[conceptDoc('plain',{outputs:[shooter()]})],steps:[step]}),[{concept:'plain',preload}],2,[[240,60]]);
+  const legacy=play(arena({docs:[],steps:[{...step,dwell:0.1}]}),[{preload}],2,[[340,60]]);
+  const outcome=run=>run.events.filter(e=>e.operation==='attempt').map(e=>e.outcome);
+  assert.deepEqual(outcome(concept),['unresolved']);assert.deepEqual(outcome(legacy),['unresolved']);
+  assert.equal(concept.sim.game.score.blue,0);
+});
+
+test('ports: a fixed rack hands stock only to an input face turned toward it',()=>{
+  // The training rack at [60,48]; the robot starts at [90,48] facing north (90 degrees).
+  const tile=face=>conceptDoc(face+'-tile',{capacity:{tile:2},inputs:[input(face,{pieces:['tile']})]});
+  const rack=[60,48],steps=[{operation:'acquire',station:'blue-supply',at:rack}];
+  for(const face of ['back','front']){
+    const got=play(arena({docs:[tile(face)],steps}),[{concept:face+'-tile',heading:90}],4,[[90,48]]).events.find(e=>e.operation==='acquire' && e.outcome==='acquired');
+    assert.equal(got.port,face+'-in');
+    const toward=Math.atan2(rack[1]-got.pose.p[1],rack[0]-got.pose.p[0])*180/Math.PI;
+    assert.ok(Math.abs(wrapDeg(got.pose.heading-toward-(face==='back'?180:0)))<=10,face+' face: heading '+got.pose.heading+' for bearing '+toward);
+  }
+  // Control: inside a rack radius beside a wall, a front face that must turn 90 degrees cannot (its circle
+  // meets the wall), so it takes nothing; the same robot in the open turns and takes.
+  const beside=y=>{
+    const p=arena({docs:[conceptDoc('front-ball',{inputs:[input('front')]})],steps:[{operation:'acquire',station:'side-rack',at:[250,y]}]});
+    p.rehearsal.stations.push({id:'side-rack',label:'Side rack',kind:'retrieval',side:'both',piece:'ball',at:[250,y],radiusIn:16,stock:3});
+    return play(p,[{concept:'front-ball',heading:90}],2,[[240,y]]);
+  };
+  const walled=beside(19);
+  assert.equal(walled.events.filter(e=>e.outcome==='acquired').length,0);
+  assert.match(walled.sim.robots[0].blocked,/South guardrail/);
+  assert.ok(beside(60).events.some(e=>e.outcome==='acquired'));
+});
+
+test('ports: an input that need not stop collects on the move and finishes sooner',()=>{
+  const balls=[[250,60],[290,60],[330,60]];
+  const run=requiresStop=>{
+    const doc=conceptDoc('sweeper',{capacity:{ball:3},inputs:[input('front',{requiresStop,secondsPerPiece:q(0.3)})]});
+    return play(arena({docs:[doc],steps:[{operation:'acquire',station:'test-balls'}],balls}),[{concept:'sweeper'}],8,[[200,60]])
+      .events.filter(e=>e.operation==='acquire' && e.outcome==='acquired');
+  };
+  const stopping=run(true),rolling=run(false);
+  assert.equal(stopping.length,3);assert.equal(rolling.length,3);
+  assert.ok(stopping.every(e=>e.speedInS===0),'requiresStop acquires at rest');
+  assert.ok(rolling.every(e=>e.speedInS>0),'speeds at contact '+rolling.map(e=>e.speedInS));
+  const done=list=>Math.max(...list.map(e=>e.timeS));
+  assert.ok(done(stopping)-done(rolling)>3*dt,'finished '+done(rolling)+' s rolling against '+done(stopping)+' s stopping');
+});
+
+test('ports: a ranged release leaves from the output face, which stays in front of the window',()=>{
+  // A low window facing east at [400,60]. The robot starts with its centre 12 in in front: its face would be past the plane.
+  const low={centerIn:[400,60,30],kind:'window',widthIn:30,heightIn:24,facingDeg:0,factId:'low-window'};
+  const faceOf=(e,face)=>{const a=(e.pose.heading+(face==='back'?180:0))*Math.PI/180;return [e.pose.p[0]+15*Math.cos(a),e.pose.p[1]+15*Math.sin(a)];};
+  for(const face of ['front','back']){
+    const doc=conceptDoc(face+'-shot',{outputs:[{...shooter({elevation:[20,60]}),face}]});
+    const shots=releases(play(arena({docs:[doc],steps:[shoot],goal:[400,60],entry:low}),[{concept:face+'-shot',heading:180,preload}],4,[[412,60]]).events);
+    assert.ok(shots.length>=1,face+' shooter released');
+    for(const e of shots){
+      const f=faceOf(e,face);
+      assert.ok(f[0]>400,face+' face at x '+f[0]+' is past the window plane');
+      assert.deepEqual(e.pose.releaseIn.map(v=>Math.round(v*1e6)/1e6),[...f,22].map(v=>Math.round(v*1e6)/1e6),'released from the '+face+' face');
+      const toward=Math.atan2(60-e.pose.p[1],400-e.pose.p[0])*180/Math.PI;
+      assert.ok(Math.abs(wrapDeg(e.pose.heading+(face==='back'?180:0)-toward))<=3,face+' face aimed at the window');
+    }
+  }
+});
+
+test('ports: the stop for a narrow window 400 in away passes the arc check',()=>{
+  // A 10 in window (2 in of clearance round a 4 in ball) facing west at [470,140]; the robot starts beyond its band
+  // at a fractional approach angle.
+  const narrow={centerIn:[470,140,60],kind:'window',widthIn:10,heightIn:10,facingDeg:180,factId:'narrow-window'};
+  const far={...shooter({elevation:[20,60]}),ranged:{...shooter({elevation:[20,60]}).ranged,launchSpeedInS:span(300,420)}};
+  const run=play(arena({docs:[conceptDoc('far',{outputs:[far]})],steps:[shoot],goal:[470,140],entry:narrow,balls:[[250,200]]}),
+    [{concept:'far',preload}],6,[[40,157]]);
+  const shot=releases(run.events)[0];
+  assert.ok(shot,'released: '+run.sim.game.notices.join(' | '));
+  assert.ok(Math.hypot(shot.pose.releaseIn[0]-470,shot.pose.releaseIn[1]-140)>=399,'released '+Math.hypot(shot.pose.releaseIn[0]-470,shot.pose.releaseIn[1]-140)+' in away');
+  assert.doesNotMatch(run.notes,/found no arc/);
+});
+
+test('ports: a robot that cannot turn where it stands drives clear first, then turns',()=>{
+  // The example placer leaves the training bay beside the West pedestal facing away from the rack. Its circle
+  // meets the pedestal there, so it must drive out at its present heading before it turns back to the rack.
+  const doc=JSON.parse(readFileSync(new URL('../examples/concept-bots/front-intake-placer.json',import.meta.url)));
+  const p=structuredClone(training);
+  p.rehearsal.concepts=[{document:doc,record:compileConceptBot(applyProfileDefaults(doc,p))}];
+  const engine=createFieldRehearsal(p);
+  const roster=engine.completeRoster(engine.startingRoster().map(r=>r.id==='B1'?{...r,concept:doc.id,plans:{Opening:'shuttle','Main play':'shuttle'}}:r));
+  const sim=engine.create(roster);
+  sim.paused=false;engine.advance(sim,20);engine.nextPhase(sim);sim.paused=false;engine.advance(sim,60);
+  const b1=sim.robots.find(r=>r.id==='B1');
+  assert.equal(sim.game.events.filter(e=>e.robot==='B1' && e.outcome==='credited').length,6,'all six rack tiles placed');
+  assert.ok(b1.wait*dt<1,'waited '+b1.wait*dt+' s: '+b1.blocked);
 });
