@@ -215,7 +215,6 @@ class LayoutAttachment(unittest.TestCase):
         self.assertNotIn((scene["plate"], scene["post"]), calls)
         self.assertEqual([row["solid"] for row in report["floating"]], ["panel"])
         self.assertEqual(report["floating"][0]["nearest"], None)
-        self.assertGreaterEqual(report["unresolvedPairs"], 1)
         self.assertTrue(any("could not be resolved" in line for line in lines))
         # A group mount holds the member nearest its registered point.
         mounts = [dict(group="panel", on="plate", pointMm=[50, 50, 5], basis="Invented panel stand-offs")]

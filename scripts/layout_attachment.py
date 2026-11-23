@@ -210,7 +210,8 @@ def report(plan, groups, mounts, case, scene, rows, fixtures, measure=None, box=
     for name, reason in sorted(own["suspended"].items()):
         if name in lowest:
             suspended.append(dict(fixture=name, reason=reason, lowestAboveFloorMm=round(lowest[name] - floor, 3)))
-    result.update(fixturesOffFloor=off_floor, suspendedFixtures=suspended, measuredPairs=gaps.measured, unresolvedPairs=gaps.unresolved)
+    # How many pairs were measured depends on what the run had already measured, so it stays out of the receipt.
+    result.update(fixturesOffFloor=off_floor, suspendedFixtures=suspended)
 
     plural = lambda n, one, many=None: f"{n} {one if n == 1 else many or one + 's'}"
     lines = [f"[attachment] {case['id']} start pose, touching within {limit:g} mm: {plural(len(robot), 'robot solid')} checked, "

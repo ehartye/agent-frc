@@ -197,10 +197,11 @@ def scope_report(plan, stages, solids, fixtures):
     return report,lines
 
 
-def attachment_field(plan, groups, mounts, case, scene, observations, fixtures, progress):
+def attachment_field(plan, groups, mounts, case, scene, observations, fixtures, progress, partial=False):
     """The informational attachment report of the opening case. It never stops a run or changes its result."""
-    if not scene:
-        return dict(informational=True,case=case["id"],skipped="The run stopped before the opening case was built")
+    if partial or not scene:
+        # A stopped run may or may not have reached the opening case, depending on its workers; it reports nothing either way.
+        return dict(informational=True,case=case["id"],skipped="A partial --fail-fast run does not report attachment")
     rows=next((c["pairs"] for c in observations if c["case"]==case["id"]),[])
     try:
         report,lines=layout_attachment.report(plan,groups,mounts,case,scene,rows,fixtures)
@@ -764,7 +765,7 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
                           progress=progress,fail_fast=fail_fast,never_stop={control_id},heartbeat_seconds=heartbeat_seconds,jobs=jobs)
     partial=observed.get("partial",False)
     observations=observed["cases"]
-    result["attachment"]=attachment_field(plan,groups,mounts,by_id[opening],opening_scene,observations,case_fixtures,progress)
+    result["attachment"]=attachment_field(plan,groups,mounts,by_id[opening],opening_scene,observations,case_fixtures,progress,partial)
     if control and partial:
         result["control"]=dict(case=control["case"],displaced=displaced,offsetMm=shift,witness=None,status="skipped")
     elif control:

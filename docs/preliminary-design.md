@@ -270,7 +270,7 @@ Read it after every check and clear each `floating` and `off the floor` line. Th
 
 The receipt carries the same report in its `attachment` field: `floating` (each with its `group`, `nearest` attached solid and `gapMm`), `heldByMountOnly`, `unmountedAllowances`, `onUnmountedAllowance`, `fixturesOffFloor` and `suspendedFixtures`. The stock review page lists every row under **Attachment: nothing floats**, below the required components. Choose a row to select that solid in the model. An unmounted allowance is drawn hatched and the inspector shows its reason.
 
-The report is information. It never changes a status, a missing input or an exit code, and the publication check does not read it. A receipt saved before the report existed still reproduces on a rerun. It reuses the gaps the motion check has already measured and measures only the extra pairs it needs, so it adds little time. A `--fail-fast` run that stops before the opening case records that the report was skipped. `--quiet` omits the stderr lines.
+The report is information. It never changes a status, a missing input or an exit code, and the publication check does not read it. A receipt saved before the report existed still reproduces on a rerun. It reuses the gaps the motion check has already measured and measures only the extra pairs it needs, so it adds little time. A partial `--fail-fast` run records that the report was skipped. `--quiet` omits the stderr lines.
 
 ## Size the checks to the risk
 

@@ -506,14 +506,6 @@
         "excluded": {
           "type": "object"
         },
-        "measuredPairs": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "unresolvedPairs": {
-          "type": "integer",
-          "minimum": 0
-        },
         "floating": {
           "type": "array",
           "items": {
