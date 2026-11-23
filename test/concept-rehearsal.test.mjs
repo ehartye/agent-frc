@@ -509,3 +509,34 @@ test('ports: a concept robot sharing a rack is never held for ever by a turn ano
   const legacy=match(false);
   assert.equal(legacy.main,0);assert.deepEqual(legacy.credited,[0,0]);
 });
+
+test('ports: a rolling intake collects a tight row without ploughing pieces it cannot take yet',()=>{
+  // Balls 12 in apart and a 1 s port interval: the robot reaches the next ball while the port is still busy.
+  const balls=[[250,60],[262,60],[274,60],[286,60]];
+  const doc=conceptDoc('plough',{capacity:{ball:4},inputs:[input('front',{requiresStop:false,secondsPerPiece:q(1)})]});
+  const run=play(arena({docs:[doc],steps:[{operation:'acquire',station:'test-balls'}],balls}),[{concept:'plough'}],10,[[200,60]]);
+  const got=run.events.filter(e=>e.operation==='acquire' && e.outcome==='acquired');
+  assert.equal(got.length,4,'collected '+got.length+': '+run.sim.robots[0].action);
+  // No piece is pushed more than a small distance before it is taken.
+  for(const e of got){
+    const from=balls.find(b=>Math.hypot(b[0]-e.contact.position[0],b[1]-e.contact.position[1])<=Math.min(...balls.map(c=>Math.hypot(c[0]-e.contact.position[0],c[1]-e.contact.position[1])))+1e-9);
+    const moved=Math.hypot(from[0]-e.contact.position[0],from[1]-e.contact.position[1]);
+    assert.ok(moved<=6,e.pieces[0]+' moved '+moved.toFixed(1)+' in before capture');
+  }
+});
+
+test('ports: a port interval runs on the match clock across the period boundary',()=>{
+  // A shooter that fires just before Opening ends must not find its port busy far into Main play.
+  const doc=conceptDoc('late',{outputs:[shooter()]});
+  const p=arena({docs:[doc],steps:[{operation:'attempt',station:'test-goal',outcome:'credited'}]});
+  const shot={label:'Shoot',frame:'field',at:[340,60],...shoot};
+  p.rehearsal.programs.trial={label:'Trial',steps:[{label:'Wait',frame:'field',at:[240,60],dwell:9.9},shot],byPeriod:{'Main play':[shot]}};
+  p.rehearsal.starts[0]=[240,60];
+  const engine=createFieldRehearsal(p);
+  const sim=engine.createProbe([{...engine.defaults('blue',1),plans:{Opening:'trial','Main play':'trial'},concept:'late',preload:{station:'test-rack',quantity:2}}]);
+  sim.paused=false;engine.advance(sim,20);engine.nextPhase(sim);sim.paused=false;engine.advance(sim,12);
+  const shots=releases(sim.game.events);
+  assert.equal(shots[0].phase,'Opening');
+  const second=shots.find(e=>e.phase==='Main play');
+  assert.ok(second && second.timeS<1,'second shot at '+(second?.timeS)+' s into Main play');
+});

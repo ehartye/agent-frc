@@ -322,14 +322,13 @@ export function createFieldRehearsal(profile) {
       let body=rotating?{...r,circleIn:geom.circumradius(r)}:r,hit=sweep(body);
       // On a port leg the heading is the game's intent, not an authored step. When anything stops the turn, the
       // robot makes this tick's move at its present heading if that sweep is clear, and turns once it is clear.
-      // A turn in place that anything blocks, or a turn another robot blocks with no clear move at the present
-      // heading either, sends it to the nearest reachable pose where its circle is clear (see roomToTurn), and the
-      // leg is planned again from there. Without this two robots can hold each other for ever, one unable to turn
+      // A turn that anything blocks, with no clear move at the present heading either, sends it to the nearest
+      // reachable pose where its circle is clear (see roomToTurn), and the leg is planned again from there. Without this two robots can hold each other for ever, one unable to turn
       // while the other is close and the other waiting for it to leave. An authored requiredHeading keeps the rule
       // that a blocked rotation is a wait.
       if(hit && rotating && portLeg){
         if(norm(a,b)>=1e-9 && !sweep(r)){hit=null;body=r;heading=r.heading;rotating=false;}
-        else if((norm(a,b)<1e-9 || sim.robots.some(p=>p.id===hit.name)) && !r.makeRoom){
+        else if(!r.makeRoom){
           const room=roomToTurn(sim,r,i,ends);
           if(room){r.makeRoom=true;r.goal=room.goal;r.waypoints=room.route;r.target=1;}
         }
