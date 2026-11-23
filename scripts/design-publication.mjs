@@ -9,7 +9,8 @@
  *   3. A mission case plays a represented objective on a passing operating case.
  *   4. An in-progress detailed design names an effective preliminary release and its receipt is on the Fusion export.
  *   5. One status index per phase, with at most one effective design and the primary view computed from it. A
- *      preliminary release whose ID is a version, MAJOR.MINOR, belongs to an architecture the index names.
+ *      design whose ID is a version, MAJOR.MINOR, belongs to an architecture the index names, and a detailed version
+ *      keeps the major number of the preliminary design it is built on.
  *
  * A design becomes effective by a status change in the index, in a reviewed pull request, and this check prints the
  * readiness report for its reviewer. A detailed design whose mechanical-readiness review does not pass cannot be
@@ -23,13 +24,12 @@ import {existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSyn
 import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 
-import {currentFor, designName, designStatuses, designTitle, releaseId, statusOf, versionOf} from './design-status.mjs';
+import {architectureName, currentFor, designName, designStatuses, designTitle, detailedTitle, releaseId, stateOf, statusOf, versionOf} from './design-status.mjs';
 import {effectiveReadiness, readinessText} from './effective-readiness.mjs';
 import {compareWithReceipt, readScene} from './review-scene.mjs';
 
 const receiptSchema = 'agent-frc/preliminary-layout-result@1';
 const readinessSchema = 'agent-frc/mechanical-readiness-result@1';
-const designId = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const accomplishments = ['acquired', 'delivered', 'scored', 'climb-held'];
 const kinds = ['operating-case', 'field-interaction-trial'];
 const sceneFile = 'review-scene.json.gz';
@@ -126,6 +126,9 @@ export function readinessSummary(review) {
     'Showcase eligibility: ' + review.showcaseEligibility, 'Findings not passing: ' + open.length,
     ...open.slice(0, 20).map(f => '  - ' + [f.domain, f.subject, f.status, f.reason].filter(named).join(': '))].join('\n') + '\n';
 }
+
+/** How the check names a detailed design in its messages: by name and version, else by its earlier ID. */
+export const detailedWhere = (index, id) => 'Detailed design ' + detailedTitle(index, id);
 
 /** The primary view of the detailed designs: the effective design, else the newest in-progress one, which otherwise shows beside it. */
 export function primaryView(index) {
@@ -272,21 +275,31 @@ export function checkProject(root, options = {}) {
   let detailed = null;
   if (existsSync(detailIndexFile)) attempt('detailed index', () => {
     const index = parse(readFileSync(detailIndexFile), 'detailed design index'), ids = index?.designs;
-    check(object(index) && index.schema === 'agent-frc/detailed-design-index@1' && Array.isArray(ids) && ids.every(i => designId.test(i ?? '')) &&
+    check(object(index) && index.schema === 'agent-frc/detailed-design-index@1' && Array.isArray(ids) && ids.every(i => releaseId.test(i ?? '')) &&
       new Set(ids).size === ids.length && object(index.designStatus) && ids.every(i => designStatuses.includes(index.designStatus[i])),
-      'The detailed design index needs unique design IDs, each with a designStatus (' + designStatuses.join(', ') + ')');
+      'The detailed design index needs unique design IDs (a version, MAJOR.MINOR, or an earlier ID of lowercase letters, digits and hyphens), each with a designStatus (' + designStatuses.join(', ') + ')');
+    // The architecture each major number stands for: the same name as its preliminary design.
+    check(index.architectures === undefined || object(index.architectures) && Object.entries(index.architectures).every(([major, d]) => /^[1-9][0-9]{0,3}$/.test(major) && object(d) && named(d.name)),
+      'architectures maps each major number to its architecture name, as in {"1": {"name": "NAME"}}');
+    for (const major of new Set(ids.map(i => versionOf(i)?.major).filter(Boolean)))
+      check(named(index.architectures?.[major]?.name), 'Detailed design ' + major + ' has no name: add architectures.' + major + '.name to the detailed design index, or stage a version with --design-name');
     check(ids.filter(i => index.designStatus[i] === 'effective').length <= 1, 'At most one detailed design is effective');
+    // A draft takes no number, so one architecture holds one in-progress version.
+    const drafting = new Map();
+    for (const id of ids.filter(i => versionOf(i) && index.designStatus[i] === 'in-progress')) drafting.set(versionOf(id).major, [...(drafting.get(versionOf(id).major) ?? []), id]);
+    for (const [major, several] of drafting) if (several.length > 1)
+      warnings.push('Detailed design ' + index.architectures[major].name + ' has ' + several.length + ' in-progress versions (' + several.join(', ') + '). A draft takes no number: keep one, revise it in place and mark the others superseded.');
     const view = primaryView(index);
     check((index.current ?? null) === view.current && (index.beside ?? null) === view.beside,
       'The primary view is the effective detailed design, else the newest in-progress one: set current to ' + view.current + ' and beside to ' + view.beside);
     detailed = {...view, designs: []};
     for (const id of ids) {
-      const entry = {design: id, status: index.designStatus[id]};
+      const entry = {design: id, ...(architectureName(index, id) ? {title: detailedTitle(index, id), state: stateOf(index, id)} : {}), status: index.designStatus[id]};
       detailed.designs.push(entry);
-      if (entry.status === 'withdrawn') withdrawnNote('Detailed design ' + id, index, id);
+      if (entry.status === 'withdrawn') withdrawnNote(detailedWhere(index, id), index, id);
       if (!['in-progress', 'effective'].includes(entry.status)) continue;
       attempt(id, () => {
-        const where = 'Detailed design ' + id, dir = path.join(detailTree, 'designs', id), files = filesUnder(dir);
+        const where = detailedWhere(index, id), dir = path.join(detailTree, 'designs', id), files = filesUnder(dir);
         check(files.has('design.json'), where + ' needs its design record (designs/' + id + '/design.json)');
         const record = parse(files.get('design.json'), 'design record: ' + id);
         check(record?.schema === 'agent-frc/detailed-design@1' && record.design === id, where + ': the design record names a different schema or design');
@@ -308,7 +321,9 @@ export function checkProject(root, options = {}) {
         if (entry.status === 'in-progress') {
           const link = record.preliminary?.release, linked = prelimStatus(link);
           check(named(link) && ['effective', 'superseded'].includes(linked), where + ' must name an effective preliminary release; ' + link + ' is ' + linked);
-          if (linked === 'superseded') warnings.push(where + ' names preliminary release ' + link + ', which is now superseded. Re-link it to the effective preliminary release.');
+          check(!versionOf(id) || !versionOf(link) || versionOf(id).major === versionOf(link).major,
+            where + ' names preliminary design ' + link + ', a different architecture. The major number is the architecture: a detailed design keeps the major number of its preliminary design');
+          if (linked === 'superseded') warnings.push(where + ' names preliminary release ' + link + ', which is now superseded. Re-link it to the effective preliminary release: detailed-design-release.mjs relink PROJECT --design ' + id + ' --preliminary RELEASE.');
           const basisFile = path.join(prelimTree, 'releases', link, 'receipt.json');
           if (existsSync(basisFile)) {
             const basis = parse(readFileSync(basisFile), 'receipt of preliminary release ' + link), mine = new Set(receipt.cases.map(c => c.case));

@@ -35,10 +35,15 @@ a{color:inherit}
 </main>
 <script>
 const labels={'in-progress':'In-progress detailed design',effective:'Effective detailed design',superseded:'Superseded detailed design',withdrawn:'Withdrawn detailed design'};
+const version=/^([1-9]\d{0,3})\.(0|[1-9]\d{0,3})$/;
+const titled=(index,id)=>{const name=index.architectures?.[version.exec(id)?.[1]]?.name;return name?name+' '+id:id};
 const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
 function card(index,id,primary){
   const status=index.designStatus[id],box=el(primary===undefined?'li':'article','card '+status+(primary?' primary':''));
-  box.append(el('span','status',labels[status]),el('h3','',id));
+  // A version reads NAME MAJOR.MINOR, then its draft while in progress, then its status. An earlier ID reads as the ID.
+  const major=version.exec(id)?.[1],name=major&&index.architectures?.[major]?.name,edited=index.revision?.[id]?.number;
+  const draft=status==='in-progress'&&Number.isInteger(edited)?'draft '+edited:'';
+  box.append(el('span','status',labels[status]),el('h3','',[name?name+' '+id:id,draft,status.replace('-',' ')].filter(Boolean).join(' · ')));
   const link=index.preliminary?.[id];
   if(status==='in-progress'){
     const a=el('a','','Open the checked motion and mission cases');a.href='designs/'+encodeURIComponent(id)+'/';
@@ -48,8 +53,9 @@ function card(index,id,primary){
   const built=link&&index.preliminaryTitle?index.preliminaryTitle(link):link;
   if(link)box.append(el('p','note','Built on preliminary '+(built===link?'release ':'design ')+built+'.'));
   const linked=link&&(status==='in-progress'||status==='effective')&&index.preliminaryStatus?index.preliminaryStatus(link):'effective';
-  if(linked!=='effective')box.append(el('p','warning','Preliminary '+(built===link?'release ':'design ')+built+' is now '+linked+'. This design needs re-linking to the effective preliminary release.'));
-  if(index.supersededBy?.[id])box.append(el('p','note','Superseded by '+index.supersededBy[id]+'.'));
+  if(linked!=='effective')box.append(el('p','warning','Preliminary '+(built===link?'release ':'design ')+built+' is now '+linked+'. '+(status==='in-progress'?'This design needs re-linking to the effective preliminary release.':'Work on the effective preliminary design is the next version of this design.')));
+  if(status!=='in-progress'&&index.accepted?.[id])box.append(el('p','note','Accepted '+index.accepted[id]+'.'));
+  if(index.supersededBy?.[id])box.append(el('p','note','Superseded by '+titled(index,index.supersededBy[id])+'.'));
   if(index.reason?.[id])box.append(el('p','note','Withdrawn: '+index.reason[id]+(index.lastCommit?.[id]?' Its files are in the repository history at commit '+index.lastCommit[id].slice(0,12)+'.':'')));
   return box;
 }
@@ -59,7 +65,7 @@ json('designs.json').then(async index=>{
   const releases=await json(String(index.preliminaryIndex||'')).catch(()=>null);
   if(releases)index.preliminaryStatus=id=>releases.designStatus?.[id]??'in-progress';
   // A version, MAJOR.MINOR, reads with its architecture's name from the preliminary index.
-  if(releases)index.preliminaryTitle=id=>{const name=releases.designs?.[/^([1-9]\d{0,3})\.(0|[1-9]\d{0,3})$/.exec(id)?.[1]]?.name;return name?name+' '+id:id};
+  if(releases)index.preliminaryTitle=id=>{const name=releases.designs?.[version.exec(id)?.[1]]?.name;return name?name+' '+id:id};
   const current=document.getElementById('current'),archive=document.getElementById('archive');
   current.replaceChildren();
   if(index.current)current.append(card(index,index.current,true));

@@ -205,6 +205,48 @@ Do the rename in one pull request.
 
 A changed design is not a rename. If the STEP differs, the old release stays in the index as superseded and the new design takes the next version.
 
+## Rename a detailed design to a version
+
+A detailed design published before 0.131.0 has an ID such as `detail-003`. It keeps working, and nothing forces a rename. To give it a [name and version](design-publication.md#name-and-number-a-detailed-design), publish the same design under the new ID and then remove the old one. No redirect is left: a link to `designs/detail-003/` no longer opens afterwards.
+
+Choose the version first. The detailed design the project has accepted is `MAJOR.0`, where the major number is that of the preliminary design it is built on. One that was never accepted is also `MAJOR.0`, still a draft.
+
+Do the rename in one pull request.
+
+1. **Copy the inputs to the new folder.** The command verifies each pin that names the old folder and writes it for the new path. The STEP keeps its bytes.
+
+   ```sh
+   node PLUGIN/scripts/detailed-design-release.mjs copy-inputs . --from detail-003 --to 1.0
+   ```
+
+2. **Check.** Run the layout check in the new folder, so the page, scene and receipt are written with the new paths.
+
+   ```sh
+   node PLUGIN/scripts/design.mjs preliminary-check . cad/detailed-design/designs/1.0/layout.json --write-view --require-checked --output cad/detailed-design/designs/1.0/receipt.json
+   ```
+
+3. **Stage under the new ID.** The name comes from the preliminary release index. Add `--design-name "NAME"` when that index has none for the major number.
+
+   ```sh
+   node PLUGIN/scripts/detailed-design-release.mjs stage . --design 1.0 --inputs cad/detailed-design/designs/1.0 --preliminary 1.0 --authority cad/fusion-authority.json --lineage cad/lineage.json
+   ```
+
+4. **Carry the status.** When the old design is effective, mark the new one effective with the same review result. The old one becomes superseded in the same edit.
+
+   ```sh
+   node PLUGIN/scripts/detailed-design-release.mjs effective . --design 1.0 --readiness cad/detailed-design/readiness-result.json
+   ```
+
+5. **Remove the old ID.** For a design that is or was effective the command requires `--replaced-by`, and refuses unless that design is effective and its record names the same STEP digest.
+
+   ```sh
+   node PLUGIN/scripts/detailed-design-release.mjs remove . --design detail-003 --replaced-by 1.0
+   ```
+
+6. Change links, the README still caption and any registered check that names the old folder. Run `node PLUGIN/scripts/design-publication.mjs check .`, commit and open the pull request.
+
+A changed design is not a rename. If the STEP differs, the old design stays in the index as superseded and the new design takes the next version.
+
 ## Withdraw a design in one pull request
 
 1. Branch from the default branch.

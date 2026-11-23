@@ -43,3 +43,26 @@ export function designName(index, id) {
 
 /** How a release reads: NAME MAJOR.MINOR for a named version, else its ID. */
 export const designTitle = (index, id) => designName(index, id) ? designName(index, id) + ' ' + id : id;
+
+/**
+ * A detailed design takes the same name and its own MAJOR.MINOR. Its index lists design IDs under `designs`, so it
+ * names each architecture under `architectures`: {"1": {"name": "NAME"}}. The minor number counts the detailed
+ * effective baselines of that architecture, and a publish of an in-progress version is a draft under `revision`.
+ */
+export function architectureName(index, id) {
+  const version = versionOf(id), name = version && index?.architectures?.[version.major]?.name;
+  return typeof name === 'string' && name.trim() ? name : null;
+}
+
+/** How a detailed design reads: NAME MAJOR.MINOR for a named version, else its ID. */
+export const detailedTitle = (index, id) => architectureName(index, id) ? architectureName(index, id) + ' ' + id : id;
+
+/** The draft count of a design: how many times it was staged with changed files. One staged before drafts were counted is at 1. */
+export function draftOf(index, id) {
+  const number = index?.revision?.[id]?.number;
+  return Number.isInteger(number) && number > 0 ? number : 1;
+}
+
+/** What a reader sees after the name: the draft count while in progress, then the status. */
+export const stateOf = (index, id, status = index?.designStatus?.[id] ?? 'in-progress') =>
+  status === 'in-progress' ? 'draft ' + draftOf(index, id) + ' · in progress' : status;
