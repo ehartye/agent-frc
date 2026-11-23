@@ -132,6 +132,59 @@ To recheck the physics of a layout whose review is already written, add `--physi
 
 Give every downstream designer the issue name, design and STEP hashes, host and mount points, motion study, status and open inputs. If one interface changes, identify its neighbors through the group roster. Recheck the affected loaded, park and withdrawal paths on the revised package, repeat the adverse control and issue the updated receipt before another designer takes the old clearance as available. The executable rechecks every commissioned case. Detailed seat geometry, loads, tolerances, retention, actuator dynamics and physical performance require their own commissioned evidence.
 
+## Keep the layout a blockout
+
+Preliminary design is lightweight, fast iteration. These are guidelines for how much detail a preliminary layout carries. They keep the work at the level where an architecture is decided, and they tell the agent when to check in with the user before going deeper. Work may go past a guideline with an agreed, bounded budget.
+
+- **A preliminary layout is a blockout.** Use one solid per functional volume, about 30 to 80 solids for a whole robot. Leave out fasteners, bearings, lines and brackets unless one of them is the risk being examined.
+- **Answer clearance questions to about 10 mm.** A fit tighter than that becomes a listed interface, with its allowance, for detailed design.
+- **Keep mass and power as estimates.** Estimate by subsystem and hold a reserve.
+- **Run physics trials on the few interactions that decide the architecture.**
+
+The 30 to 80 solids and the 10 mm figure are starting figures, not measured values. A project states its own under `scopeGuidelines` in the layout plan:
+
+```json
+"scopeGuidelines": {"solids": 60, "toleranceMm": 15}
+```
+
+### Check in before going deeper
+
+The agent pauses and tells the user when either of these is about to happen:
+
+- the work would refine a path or clearance tolerance below 10 mm, or
+- the layout would exceed 80 solids.
+
+The agent and the user then agree an extended budget before the work continues. The budget names four things:
+
+1. what extra detail is added,
+2. which question it answers,
+3. how much time, or how many cases or solids, it may use, and
+4. when it stops.
+
+The check-in makes sure the work is not getting carried away. Once the budget is agreed the work continues, and the agent checks in again before going past it. Record the agreed budget in the layout plan so the next reader sees it:
+
+```json
+"scopeGuidelines": {
+  "extendedBudget": {
+    "detail": "Idler shafts on the carrier",
+    "question": "Does the carrier clear the rail with its shafts in place?",
+    "allowance": "Six more solids and one case refined to 2 mm",
+    "stopsWhen": "The carrier and rail pair is resolved either way"
+  }
+}
+```
+
+### Read the scope line of the layout check
+
+Record the path tolerance each case was split at as `pathToleranceMm` in its entry under `stages` in the layout plan. Before the first case runs, the layout check writes one `[scope]` line to stderr with the number of placed solids and the finest declared path tolerance, each beside its guideline. Field fixtures are counted apart from the solids. A second line says so plainly when a guideline is passed, and names the agreed budget when the plan records one.
+
+```text
+[scope] solids=96 (guideline: up to about 80 for a whole robot) finest path tolerance=2 mm in lift-loaded (guideline: 10 mm or coarser) figures=plugin default
+[scope] note: the layout has 96 solids, past the guideline of about 80 and lift-loaded is checked to a 2 mm path tolerance, finer than the guideline of 10 mm. This is information and does not change the result. Check in with the user and agree a bounded extended budget (what detail, for which question, how much time or how many cases or solids, and when it stops) before going deeper, then record it under scopeGuidelines.extendedBudget in the layout plan.
+```
+
+The receipt carries the same figures in its `scope` field: `solids`, `fieldFixtures`, the `guideline` figures and whether they came from the plugin default or the layout plan, `finestPathToleranceMm` with its case, the number of cases with no declared tolerance, the guidelines `passed`, and the agreed `extendedBudget` when one is recorded. The report is information. It never changes a status, a missing input or an exit code, and the publication check does not read it. A plan that sets none of these keys is checked as before; its receipt gains only the `scope` field. `--quiet` omits the stderr lines and keeps the field.
+
 ## Size the checks to the risk
 
 Preliminary design is fast iteration. A revised layout should be checked and back in front of a reviewer in minutes, so decide how much checking a question deserves before running anything. A slow loop hides design problems behind queue time.
@@ -140,7 +193,7 @@ Preliminary design is fast iteration. A revised layout should be checked and bac
 
 **Rank the risks and test the top few.** List the premises that could change the architecture, a mechanism or an interface, each with its likelihood and its consequence. Before a trial runs, write down the decision it could change and the result that would change it. Skip a trial when no result would change the design. A question about the field or its instruments, or one the owner has already decided, becomes a bench test with pass and fail numbers.
 
-**Check the whole cycle coarsely, then refine where the margin is thin.** Split the recorded or planned path into as few cases as follow it within a stated tolerance, starting near 40 mm. The checker sweeps each case continuously, so a coarse case still covers its whole move. Treat any pair whose clearance is smaller than the tolerance as unresolved. Rerun only the phase that holds that pair at a finer tolerance. Leave phases with ample margin coarse and record the tolerance each phase was checked at.
+**Check the whole cycle coarsely, then refine where the margin is thin.** Split the recorded or planned path into as few cases as follow it within a stated tolerance, starting near 40 mm. The checker sweeps each case continuously, so a coarse case still covers its whole move. Treat any pair whose clearance is smaller than the tolerance as unresolved. Rerun only the phase that holds that pair at a finer tolerance. Leave phases with ample margin coarse and record the tolerance each phase was checked at as `pathToleranceMm` in its stage. Before refining below about 10 mm, [check in and agree a budget](#check-in-before-going-deeper).
 
 A phase where a soft game piece is squeezed against its rollers or guides needs a path tolerance well under its indentation allowance, often 1 mm, because the path error is spent directly against that allowance. Free travel through open structure rarely needs it. Fewer cases are not always faster: a coarse case sweeps a longer move and takes longer, so let `--jobs` spread the cases and their pairs across the cores and judge the plan by its total time.
 
@@ -227,6 +280,7 @@ A season pins a plugin revision and holds copies of some plugin files. After mov
 | 0.118.0 | Nothing to re-copy. A stage may declare `supportedBy` for a payload a registered field fixture supports. |
 | 0.122.1 | The release index page `docs/preliminary-design/index.html` from `templates/preliminary-review-index.html`. The note under the header is gone: the release picker names each design status and the review page shows the rest. |
 | 0.123.0 | `stage.py`, the release index page and the local review page (delete `package-motion.html` and rerun the check with `--write-view`). Staging an in-progress release again revises it in place and counts a revision; an effective release is no longer restaged. Mark in-progress releases that a later release replaced `superseded`, and add `accepted` for a superseded release that was once effective. [Revise an in-progress release in place](design-publication.md#revise-an-in-progress-release-in-place) |
+| 0.125.0 | Nothing to re-copy. The layout check reports the solid count and the finest declared path tolerance beside the [scope guidelines](#keep-the-layout-a-blockout). A stage may declare `pathToleranceMm`, and the plan may state its own figures and an agreed budget under `scopeGuidelines`. |
 
 An in-progress release takes the new page when it is staged again under its ID. An effective, superseded or withdrawn release never changes.
 
