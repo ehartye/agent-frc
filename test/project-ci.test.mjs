@@ -138,5 +138,5 @@ test('the audit reports a project that names the plugin, lacks a check or differ
   rmSync(path.join(root, '.github'), {recursive: true});
   assert.ok(auditProjectCi(root).findings.includes('The project has no workflow. Write .github/workflows/ci.yml from the reference templates/project-ci/ci.yml.'));
   assert.match('node PLUGIN/scripts/design.mjs', namesPlugin);
-  assert.ok(existsSync(path.join(sample, 'README.md')));
+  assert.ok(existsSync(path.join(sample, 'ABOUT.md')));
 });

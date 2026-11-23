@@ -87,7 +87,7 @@ The coding agent has the plugin installed and runs its commands. A robot project
 - A plugin release never forces a project to rerun a check. The project meets the new behaviour the next time the agent works on it.
 - There is no promise to keep old formats working. When a format changes, the agent's command says what to change in the project, in one message.
 
-The [sample project](../examples/sample-project/README.md) shows the whole of it: an invented project whose CI is those reference files, with nothing of the plugin in it.
+The [sample project](../examples/sample-project/ABOUT.md) shows the whole of it: an invented project whose CI is those reference files, with nothing of the plugin in it.
 
 Building solids, measuring them and running physics trials are moving to a separate library, `frc-design-kernel`, that a project and the plugin both import. Until it exists, a project's builders stay as they are.
 

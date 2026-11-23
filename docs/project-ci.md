@@ -23,7 +23,7 @@ Copy three files from [`templates/project-ci/`](../templates/project-ci/ci.yml) 
 4. Require the **Scan and site check** job on the default branch.
 5. Keep `on: push`. A `pull_request` trigger runs a stranger's code, which matters most on a self-hosted runner.
 
-The [sample project](../examples/sample-project/README.md) is a complete invented project that uses these three files unchanged. The plugin's tests copy it to a folder that holds no plugin and run its checks there.
+The [sample project](../examples/sample-project/ABOUT.md) is a complete invented project that uses these three files unchanged. The plugin's tests copy it to a folder that holds no plugin and run its checks there.
 
 The default project CI is publish, scan and site integrity. It runs no layout check and no physics: a design is checked by the agent before it is pushed, and its [stage gate](design-publication.md#the-stage-gate) runs when it is marked effective.
 
