@@ -2,6 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { arcCheck, standOffBand } from '../scripts/concept-arc.mjs';
+import { createArcModel, GRAVITY_IN_S2 } from '../scripts/concept-arc.mjs';
 
 // Every fixture here is invented. Inches, seconds, degrees; z up; gravity 386.09 in/s².
 const g = 386.09, rad = d => d * Math.PI / 180;
@@ -99,4 +100,16 @@ test('invalid arc inputs are rejected', () => {
     [ok[0], ok[1], ok[2], [1]]
   ]) assert.throws(() => arcCheck(release, target, p, v), /Supply/);
   assert.throws(() => standOffBand(ok[1], 4, ok[2], -1), /Supply/);
+});
+
+test('the arc model is one self-contained factory that a page can inline from its source text', () => {
+  // The Field Lab inlines createArcModel.toString(); rebuild it from text alone, with no module scope.
+  const inlined = new Function('return ' + createArcModel.toString())()();
+  assert.equal(inlined.GRAVITY_IN_S2, GRAVITY_IN_S2);
+  const release = {positionIn:[0, 0, 20]}, ring = {kind:'ring', centerIn:[100, 0, 40], radiusIn:10, pieceRadiusIn:4};
+  const p = port([100, 400], [20, 60]), entry = {kind:'window', centerIn:[300, 100, 60], widthIn:24, heightIn:18, facingDeg:180};
+  assert.deepEqual(inlined.arcCheck(release, ring, p, [20, -10]), arcCheck(release, ring, p, [20, -10]));
+  assert.deepEqual(inlined.arcCheck(release, {...ring, centerIn:[100, 0, 900]}, p), arcCheck(release, {...ring, centerIn:[100, 0, 900]}, p));
+  assert.deepEqual(inlined.standOffBand(entry, 4, p, 24), standOffBand(entry, 4, p, 24));
+  assert.throws(() => inlined.arcCheck({positionIn:[0, 0]}, ring, p), /Supply/);
 });

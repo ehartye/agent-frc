@@ -141,3 +141,47 @@ test('scoring entry regions and robot limits are optional, and strictly shaped w
     assert.throws(()=>validateProfile(withLimits(bad)),/robotLimits/,JSON.stringify(bad));
   }
 });
+
+test('kickoff embeds each --concept as its document and compiled record, and the lab inlines the arc model',async t=>{
+  const {applyProfileDefaults,compileConceptBot}=await import('../scripts/concept-bot.mjs');
+  const concept=async rel=>JSON.parse(await readFile(new URL('../examples/concept-bots/'+rel,import.meta.url),'utf8'));
+  const turret=await concept('turret-shooter.json'),placer=await concept('front-intake-placer.json');
+  const cwd=await mkdtemp(path.join(tmpdir(),'frc-kickoff-concept-'));
+  t.after(()=>rm(cwd,{recursive:true,force:true}));
+  const run=(...args)=>execFileSync(process.execPath,[cli,...args],{cwd,stdio:'pipe'});
+  await writeFile(path.join(cwd,'team-profile.json'),JSON.stringify(profile));
+  await writeFile(path.join(cwd,'turret.json'),JSON.stringify(turret));
+  await writeFile(path.join(cwd,'placer.json'),JSON.stringify(placer));
+  run('--profile','team-profile.json','--concept','turret.json','--concept','placer.json','--model-output','model.json');
+  const saved=JSON.parse(await readFile(path.join(cwd,'model.json'),'utf8'));
+  assert.deepEqual(saved.rehearsal.concepts,[turret,placer].map(document=>({document,record:compileConceptBot(applyProfileDefaults(document,profile))})));
+  assert.equal(saved.rehearsal.concepts[0].record.concept.massLb.default,true,'the mass default comes from the profile being built');
+  assert.deepEqual(validateProfile(structuredClone(saved)).rehearsal.concepts,saved.rehearsal.concepts);
+  run('--profile','team-profile.json','--concept','turret.json','--output','lab.html');
+  const html=await readFile(path.join(cwd,'lab.html'),'utf8');
+  assert.match(html,/function createArcModel\(/);
+  assert.ok(html.indexOf('function createArcModel(')<html.indexOf('function createRehearsalGame('));
+  assert.throws(()=>run('--profile','team-profile.json','--concept','turret.json','--concept','turret.json','--output','twice.html'),/turret-shooter/);
+  assert.throws(()=>run('--profile','team-profile.json','--concept','--output','none.html'));
+  const broken={...turret,drive:{...turret.drive,type:'tank'}};
+  await writeFile(path.join(cwd,'broken.json'),JSON.stringify(broken));
+  assert.throws(()=>run('--profile','team-profile.json','--concept','broken.json','--output','broken.html'),/drive\.type/);
+
+  // Failing controls on reopening a saved model: a tampered record, a duplicate ID and an unknown reference.
+  const model=()=>structuredClone(saved);
+  const tampered=model();tampered.rehearsal.concepts[0].record.speed+=1;
+  assert.throws(()=>validateProfile(tampered),/record/);
+  const twice=model();twice.rehearsal.concepts.push(structuredClone(twice.rehearsal.concepts[0]));
+  assert.throws(()=>validateProfile(twice),/duplicate|turret-shooter/i);
+  const invalid=model();invalid.rehearsal.concepts[0].document.drive.type='tank';
+  assert.throws(()=>validateProfile(invalid),/drive\.type/);
+  const referenced=model();referenced.rehearsal.defaults.concept='turret-shooter';
+  referenced.rehearsal.series.matches[0].roster[0].concept='front-intake-placer';
+  assert.doesNotThrow(()=>validateProfile(referenced));
+  const unknownDefault=model();unknownDefault.rehearsal.defaults.concept='absent-bot';
+  assert.throws(()=>validateProfile(unknownDefault),/absent-bot/);
+  const unknownRow=model();unknownRow.rehearsal.series.matches[0].roster[0].concept='absent-bot';
+  assert.throws(()=>validateProfile(unknownRow),/absent-bot/);
+  const noConcepts=structuredClone(profile);noConcepts.rehearsal.defaults.concept='turret-shooter';
+  assert.throws(()=>validateProfile(noConcepts),/turret-shooter/);
+});
