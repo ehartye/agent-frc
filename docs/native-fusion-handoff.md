@@ -80,6 +80,6 @@ The pure exported comparePlacement(expected, observed, tolerances) helper in scr
 
 ## Portable checks for handoff receipts
 
-The [native viewer contract guide](native-viewer-contracts.md) provides executable export-inventory, archive-bound articulation and control-policy comparisons. Prepare expectations independently; keep mesh identity separate from physical motion group, account for excluded bodies, and bind joint axes, origins, sign/offset, limits and saved/reopened readbacks to the exact archive. Preserve mass/inertia provenance separately from appearance. These checks assess supplied finite observations and never replace actual save/reopen, native measurement or interactive host verification.
+The [native viewer contract guide](native-viewer-contracts.md) provides executable export-inventory and archive-bound articulation comparisons. Prepare expectations independently; keep mesh identity separate from physical motion group, account for excluded bodies, and bind joint axes, origins, sign/offset, limits and saved/reopened readbacks to the exact archive. Preserve mass/inertia provenance separately from appearance. These checks assess supplied finite observations and never replace actual save/reopen, native measurement or interactive host verification.
 
 For a publicly downloadable whole robot, bind the student archive to its own reopened component, feature and joint evidence. [Verify the public Fusion handoff](public-fusion-handoff.md).

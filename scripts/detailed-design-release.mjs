@@ -29,6 +29,7 @@ const receiptSchema = 'agent-frc/preliminary-layout-result@1';
 // A version, MAJOR.MINOR, or an ID issued before versions: lowercase letters, digits and hyphens.
 const designId = releaseId, useVersion = 'Use a version as the design ID: MAJOR.MINOR, such as 1.0';
 const catalog = new URL('../templates/detailed-design-index.html', import.meta.url);
+const fonts = fileURLToPath(new URL('../templates/preliminary-review-fonts', import.meta.url));
 const perDesign = ['supersededBy', 'reason', 'lastCommit', 'preliminary', 'revision', 'accepted'];
 
 function check(ok, message) { if (!ok) throw Error(message); }
@@ -63,6 +64,8 @@ function saveIndex(at, index) {
   mkdirSync(at.tree, {recursive: true});
   writeFileAtomic(at.indexFile, JSON.stringify(out, null, 2) + '\n');
   if (!existsSync(path.join(at.tree, 'index.html'))) writeFileAtomic(path.join(at.tree, 'index.html'), readFileSync(catalog));
+  // The staged review page reads its theme fonts from the tree it sits in, at ../../fonts/.
+  if (!existsSync(path.join(at.tree, 'fonts')) && index.designs.some(id => existsSync(path.join(at.tree, 'designs', id, 'index.html')))) cpSync(fonts, path.join(at.tree, 'fonts'), {recursive: true});
   return out;
 }
 /** Run the publication check without the rerun and return what it says about this design or the detailed index. */

@@ -1,4 +1,4 @@
-"""Render a still and a browser mesh from one project-owned STEP assembly."""
+"""Render the README still, and the mesh it is drawn from, from one project-owned STEP assembly."""
 import argparse
 import gzip
 import hashlib
@@ -73,7 +73,7 @@ def set_backdrop(renderer, width, height, colors):
     import numpy as np
     from vtk.util.numpy_support import numpy_to_vtk
 
-    # Match the CSS farthest-corner ellipse in the orbit viewer. VTK starts at bottom left.
+    # A farthest-corner ellipse, as a CSS radial gradient draws it. VTK starts at bottom left.
     yy, xx = np.ogrid[:height, :width]
     dx = ((xx + .5) / width - .5) / (.5 * math.sqrt(2))
     dy = ((yy + .5) / height - .52) / (.52 * math.sqrt(2))

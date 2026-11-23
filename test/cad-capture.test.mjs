@@ -1,4 +1,3 @@
-import {authorizeRender} from './authorize-render-fixture.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
@@ -13,7 +12,7 @@ const python=process.platform==='win32'?'python':'python3';
 const script=name=>fileURLToPath(new URL('../scripts/'+name,import.meta.url));
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const json=(file,data)=>writeFile(file,JSON.stringify(data));
-test('rehashed blank views and same-area mirrored marks fail publication on both CAD entry points',async t=>{
+test('rehashed blank views and same-area mirrored marks fail the capture review',async t=>{
   if(spawnSync(python,['-c','from PIL import Image']).status!==0){t.skip('Pillow is required for optional pixel evidence');return;}
   const sample=spawnSync(python,[script('cad_capture.py'),'.','examples/swerve/capture-review.json'],{encoding:'utf8'});
   assert.equal(sample.status,0,sample.stderr);assert.equal(JSON.parse(sample.stdout).exactReferenceBytes,true);
@@ -53,13 +52,14 @@ for state in ['good','stale','blank']:
   const run=()=>spawnSync(python,[script('cad_capture.py'),dir,'review.json'],{encoding:'utf8'});
   const readme=()=>spawnSync(python,[script('cad-readmes.py'),dir,'--update'],{encoding:'utf8'});
   spawnSync('git',['init','-q',dir]);
-  await state('good');authorizeRender(dir);assert.equal(run().status,0);assert.equal(readme().status,0);
-  await buildHighlights(path.join(dir,'project.json'),out);
+  await state('good');assert.equal(run().status,0);assert.equal(readme().status,0);
+  await buildHighlights(path.join(dir,'project.json'),out,{note(){}});
   await state('stale');
   const outcome=JSON.parse(run().stdout);
   assert.deepEqual(outcome.features.map(f=>f.status),['pass','fail']);
   assert.equal(outcome.features[1].referenceCoverage,outcome.features[1].candidateCoverage);
-  assert.notEqual(readme().status,0);await assert.rejects(buildHighlights(path.join(dir,'project.json'),out));
+  // The capture review is its own command. A README update or a site build does not rerun it.
+  assert.equal(readme().status,0);await buildHighlights(path.join(dir,'project.json'),out,{note(){}});
   await state('blank');assert.deepEqual(JSON.parse(run().stdout).features.map(f=>f.overlap),[0,0]);
   review.features[0].referenceCoverage=[.8,.9];await state('good');
   assert.equal(JSON.parse(run().stdout).status,'open');

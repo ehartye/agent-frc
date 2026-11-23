@@ -1,6 +1,6 @@
 # Verify a saved CAD still
 
-A student should be able to recognize the same assembly, configuration and pose in the Fusion source, still and orbit viewer. A successful PNG write, matching hash or set of visible body flags can coexist with an empty viewport or an earlier assembly drawing. Inspect the pixels in the delivered image.
+A student should be able to recognize the same assembly, configuration and pose in the Fusion source, the still and the design review. A successful PNG write, matching hash or set of visible body flags can coexist with an empty viewport or an earlier assembly drawing. Inspect the pixels in the delivered image.
 
 ## Capture the intended document
 
@@ -8,7 +8,7 @@ A student should be able to recognize the same assembly, configuration and pose 
 2. Reopen the **saved archive** in an owned document. Activate that document, the intended design/root component and the intended timeline position. Confirm identity immediately before capture. Inspect parent occurrence and body-folder visibility, bodies, isolation, opacity and the effective per-occurrence graphics state. Keep hidden references, alternate candidates and fixtures hidden where the selected view calls for it.
 3. In the owned display document, apply the selected representation. If a freshly opened viewport looks incomplete, invalidate and restore the **intended** display groups, process pending graphics events, refresh and fit the intended camera. Re-read the resulting eye, target, up, extents and pixel dimensions. Keep the failing image. Never count a successful refresh or a delay as evidence that the new pixels are correct.
 4. Inspect the PNG at student reading size. Compare the outline and one or more discriminating features against a known view of the exact source. A missing crossmember can leave the outline largely intact. Inspect both the ink strokes and the negative spaces between characters if the page promises readable markings. Separate a fresh native viewport from an archive’s embedded preview and from a STEP-derived render. Each can use a different camera. Preserve the screenshot or render actually verified.
-5. Link the verified still and its specific configuration to the orbit model. Keep a separately issued engineering revision under its own caption until its own capture and handoff are ready. Close only the documents opened for this check.
+5. Link the verified still and its specific configuration to the design review. Keep a separately issued engineering revision under its own caption until its own capture and handoff are ready. Close only the documents opened for this check.
 
 ## Check a registered view
 

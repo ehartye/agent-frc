@@ -7,6 +7,7 @@ import { promisify } from 'node:util';
 import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { copyFile, mkdir, readFile, realpath, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -37,7 +38,12 @@ async function optionalRead(file) {
   catch (error) { if (error.code !== 'ENOENT') throw error; }
 }
 
-export async function buildHighlights(manifest, directory) {
+/**
+ * Build the results page of a robot: results, build sheet, films and the project's workflow. The page embeds no model
+ * of its own. A `cad` entry shows the design's still and links the one viewer of that design, its design review page.
+ * `note` receives a line for each manifest entry that no longer does anything.
+ */
+export async function buildHighlights(manifest, directory, {note = line => console.error('Note: ' + line)} = {}) {
   const authorizeModel=async (python,root,request)=>{
     const checker=fileURLToPath(new URL('./showcase_release.py',import.meta.url));
     await promisify(execFile)(python,[checker,root,JSON.stringify(request)],{encoding:'utf8'});
@@ -73,14 +79,6 @@ export async function buildHighlights(manifest, directory) {
   function applyStyle(markup, base = '') {
     if (!stylesheet) return markup;
     return markup.replace('</head>', '<link rel="stylesheet" href="' + base + 'evidence/' + stylesheet + '"></head>');
-  }
-  function backdrop(config) {
-    if (!Object.hasOwn(config, 'backdrop')) return undefined;
-    const value = config.backdrop;
-    requireValue(value && Object.keys(value).length === 2 &&
-      [value.center, value.edge].every(color => typeof color === 'string' && /^#[0-9a-f]{6}$/i.test(color)),
-      'Invalid CAD backdrop');
-    return {center: value.center.toUpperCase(), edge: value.edge.toUpperCase()};
   }
   const sources = new Map();
   for (const ref of list(data.sources, 'sources', true)) {
@@ -233,91 +231,34 @@ export async function buildHighlights(manifest, directory) {
   }
   const template = await readFile(new URL('../templates/robot-highlights.html', import.meta.url), 'utf8');
   let model = '';
-  let modelFiles,release;
   if (data.cad) {
     const config = data.cad;
     requireValue(config.shareable === true, 'Confirm CAD redistribution');
-    const receiptFile = await projectFile(config.receipt);
-    const record = JSON.parse(await readFile(receiptFile,'utf8'));
-    requireValue(['agent-frc/cad-still@1','agent-frc/cad-still@2'].includes(record.schema) && await digest(await projectFile(record.source)) === record.sourceSha256,'Changed CAD source');
-    let captureReview=config.captureReview,readiness=config.mechanicalReadiness ?? data.mechanicalReadiness;
-    const selectedFile = path.join(root,'cad-showcase.json');
-    const selectedText = await optionalRead(selectedFile);
-    if (selectedText !== undefined) {
-      const selected = JSON.parse(selectedText.replace(/^\uFEFF/, ''));
-      // A showcase can also feature a separately registered historical assembly.
-      if (selected.source === record.source || path.normalize(config.receipt) === path.join('docs','robot','cad','receipt.json')) {
-        requireValue(selected.source === record.source, 'Selected CAD source differs from the export');
-        requireValue(JSON.stringify(backdrop(selected)) === JSON.stringify(backdrop(record)), 'Selected backdrop differs from the CAD export');
-        if(selected.captureReview!==undefined){
-          requireValue(captureReview===undefined||captureReview===selected.captureReview,'Selected capture review differs from the showcase');
-          captureReview=selected.captureReview;
-        }
-        if(selected.mechanicalReadiness!==undefined){
-          requireValue(!readiness || JSON.stringify(readiness)===JSON.stringify(selected.mechanicalReadiness),'Selected mechanical readiness differs from the showcase');
-          readiness=selected.mechanicalReadiness;
-        }
-        const colored = record.schema === 'agent-frc/cad-still@2';
-        requireValue(Object.hasOwn(selected,'appearances') === colored &&
-          (!colored || selected.appearances === record.appearances?.file), 'Selected appearance manifest differs from the export');
-      }
+    const name = escape(string(config.title,'assembly name')), scope = escape(string(config.scope,'CAD scope'));
+    // The still is named directly, or sits beside the export record a manifest written for the retired orbit view names.
+    const still = await projectFile(config.still ?? path.join(config.receipt === undefined ? 'docs/robot/cad' : path.dirname(string(config.receipt,'CAD export record')),'assembly.png'));
+    const type = path.extname(still).toLowerCase();
+    requireValue(['.png','.jpg','.jpeg','.webp'].includes(type), 'Expected a CAD still image');
+    const picture = await digest(still) + type;
+    assets.set(picture, still);
+    if (config.playableGlb !== undefined) note('cad.playableGlb is no longer published: the design review plays the motion. Remove the entry.');
+    // The one viewer of a design is its review page: named by the manifest, else the current detailed design's.
+    let review = config.review;
+    if (review === undefined) {
+      const index = JSON.parse((await optionalRead(path.join(root,'docs/detailed-design/designs.json')) ?? '{}').replace(/^\uFEFF/, ''));
+      if (typeof index.current === 'string' && existsSync(path.join(root,'docs/detailed-design/designs',index.current,'index.html'))) review = 'docs/detailed-design/designs/' + index.current + '/';
     }
-    const folder = path.dirname(config.receipt);
-    const still = await projectFile(path.join(folder,'assembly.png'));
-    const mesh = await projectFile(path.join(folder,'assembly.stl.gz'));
-    requireValue(await digest(still) === record.imageSha256 && await digest(mesh) === record.meshSha256, 'Changed CAD export');
-    requireValue(Array.isArray(record.nativeBounds) && record.nativeBounds.length === 6 && record.nativeBounds.every(Number.isFinite), 'Invalid CAD bounds');
-    if(captureReview!==undefined){
-      await projectFile(captureReview);
-      const checker=fileURLToPath(new URL('./cad_capture.py',import.meta.url));
-      await promisify(execFile)(python,[checker,root,captureReview,'--source-sha256',record.sourceSha256,'--image-sha256',record.imageSha256],{encoding:'utf8'});
-    }
-    let layout = record.nativeBounds;
-    if (record.schema === 'agent-frc/cad-still@2') {
-      await projectFile(record.appearances?.file);
-      const validator = fileURLToPath(new URL('./cad_appearances.py',import.meta.url));
-      const {stdout} = await promisify(execFile)(python,[validator,root,receiptFile],{encoding:'utf8'});
-      layout = {bounds:record.nativeBounds, groups:JSON.parse(stdout)};
-    }
-    if (backdrop(record)) layout = {...(Array.isArray(layout) ? {bounds: layout} : layout), backdrop: backdrop(record)};
-    const values = {title:escape(string(config.title,'assembly name')), scope:escape(string(config.scope,'CAD scope')),
-      facts:escape(record.solids+' solids · '+record.triangles+' triangles · '+record.chordMm+' mm chord setting'),
-      bounds:JSON.stringify(layout), mesh:(await readFile(mesh)).toString('base64')};
-    const viewer = await readFile(new URL('../templates/cad-orbit.html',import.meta.url),'utf8');
-    // Content-address the viewer directory so a later generation cannot change an earlier page's model.
-    const rendered = applyStyle(viewer.replace(/\{\{(\w+)\}\}/g, (_, key) => values[key]), '../');
-    const dest = 'cad-' + createHash('sha256').update(rendered).update(await readFile(receiptFile)).update(record.imageSha256).digest('hex');
-    modelFiles = {dest, still, receiptFile, rendered};
-    release={study_path:readiness??null,source:record.source,receipt:record,
-      derivatives:[path.join(folder,'assembly.png'),path.join(folder,'assembly.stl.gz'),config.receipt]};
-    let motionLink='';
-    if(config.playableGlb!==undefined){
-      const relative=string(config.playableGlb,'playable CAD model');
-      requireValue(path.extname(relative).toLowerCase()==='.glb','Expected an issued self-contained GLB');
-      const glb=await projectFile(relative);
-      const asset=await digest(glb)+'.glb';
-      assets.set(asset,glb);
-      release.derivatives.push(relative);
-      motionLink=' · <a href="evidence/'+asset+'" download>Download the animated model</a>';
-    }
-    model = '<section><h2>Explore the CAD</h2><iframe title="'+values.title+'" loading="lazy" style="width:100%;height: min(48rem,85vh);border:0" src="'+dest+'/index.html"></iframe><p><a href="'+dest+'/index.html">Open the model full screen</a>'+motionLink+'</p></section>';
+    let href;
+    if (review !== undefined && /^https:\/\//.test(string(review,'design review'))) href = new URL(review).href;
+    else if (review !== undefined) {
+      requireValue(!path.win32.isAbsolute(review) && !path.isAbsolute(review) && within(root, path.resolve(root, review)), 'Name the design review as a project-relative folder or page, or an HTTPS address');
+      href = path.relative(path.resolve(directory), path.resolve(root, review)).split(path.sep).join('/') + (/[\\/]$/.test(review) ? '/' : '');
+    } else note('No design review to link from the results page. Stage the detailed design, or set cad.review to its folder, and rebuild.');
+    const image = '<img alt="' + name + '" src="evidence/' + picture + '">';
+    model = '<section id="design"><h2>Explore the design</h2><figure>' + (href ? '<a href="' + escape(href) + '">' + image + '</a>' : image) +
+      '<figcaption>' + name + ' · ' + scope + (href ? ' · <a href="' + escape(href) + '">Open the design review</a>' : ' · The design review is not published yet.') + '</figcaption></figure></section>';
   }
-  let coverage = '';
-  if (data.inventory) {
-    const file = await projectFile(data.inventory.file);
-    requireValue(await digest(file) === data.inventory.sha256, 'Changed inventory mapping');
-    const checker = fileURLToPath(new URL('./check-showcase-inventory.py', import.meta.url));
-    const {stdout} = await promisify(execFile)(python,[checker,file,'--project',root],{encoding:'utf8',maxBuffer:8*1024*1024});
-    const result = JSON.parse(stdout);
-    requireValue(data.cad && result.revision === data.revision &&
-      result.modelSha256 === JSON.parse(await readFile(modelFiles.receiptFile,'utf8')).meshSha256,
-      'Inventory must match the featured CAD export and candidate revision');
-    const rows = result.articles.map(row => '<tr><th scope="row">'+escape(row.id)+'</th><td>'+escape(row.subsystem)+'</td><td>'+
-      escape(row.status)+'</td><td>'+escape(row.representation ?? row.reason)+'</td></tr>').join('');
-    coverage = '<section><h2>Published assembly coverage</h2><p>'+escape(result.revision)+' · '+escape(result.pose)+' · '+escape(result.status)+
-      '</p><details><summary>Inspect '+result.articles.length+' registered articles</summary><table><thead><tr><th>Article</th><th>Subsystem</th><th>Coverage</th><th>Representation</th></tr></thead><tbody>'+
-      rows+'</tbody></table></details></section>';
-  }
+  if (data.inventory !== undefined) note('inventory is no longer published: it listed the parts of the retired orbit model. The design review lists and isolates each component. Remove the entry.');
   let workflow = '';
   if (data.workflow !== undefined) {
     const url = new URL(data.workflow.revisionUrl);
@@ -363,42 +304,11 @@ export async function buildHighlights(manifest, directory) {
   }
   const buildSection = build ? '<section id="build"><h2>Build sheet</h2><table><thead><tr><th>Subsystem</th><th>Configuration</th><th>Evidence</th></tr></thead><tbody>'+build+'</tbody></table></section>' : '';
   const fields = {title, role, revision, results, workflow, labLink:lab ? '<a href="field-lab.html">Open the field lab</a>' : '', buildSection, buildLink:build ? '<a href="#build">Build sheet</a>' : '',
-    revisionLabel:stage === 'analysis' ? 'Analysis revision' : 'Candidate', model:model+coverage, media:media ? '<section id="media"><h2>Evidence gallery</h2>' + media + '</section>' : '',
+    revisionLabel:stage === 'analysis' ? 'Analysis revision' : 'Candidate', model, media:media ? '<section id="media"><h2>Evidence gallery</h2>' + media + '</section>' : '',
     campaign, campaignLink:campaign ? '<a href="#campaign">Repeatability</a>' : '', mediaLink:media ? '<a href="#media">Gallery</a>' : '', themeFonts:inlineThemeFonts({families:['Source Sans 3']})};
   const html = applyStyle(template.replace(/\{\{(\w+)\}\}/g, (_, key) => fields[key]));
-  const visuals=[...assets.values()].filter(asset=>/\.(?:png|jpe?g|webp|mp4|webm|pdf)$/i.test(asset));
-  if(!release&&!student&&visuals.length){
-    const known=JSON.parse(await readFile(new URL('../references/retained-teaching-display.json',import.meta.url),'utf8'));
-    const pending=[];
-    for(const visual of visuals){
-      if(await digest(visual)===known.illustratedStroke)continue;
-      let independent=false;
-      if(process.env.FRC_VERIFIED_FIELD_ROOT){
-        const approved=await realpath(process.env.FRC_VERIFIED_FIELD_ROOT);
-        requireValue(approved!==root&&!within(root,approved),'Keep independently generated field media outside the candidate');
-        const file=path.join(approved,path.relative(root,visual));
-        try{independent=within(approved,await realpath(file))&&await digest(file)===await digest(visual);}catch(e){if(e.code!=='ENOENT')throw e;}
-      }
-      if(!independent)pending.push(path.relative(root,visual));
-    }
-    if(pending.length)release={study_path:data.mechanicalReadiness??null,source:null,derivatives:pending};
-  }
-  if(student || release){
-    release??={study_path:data.mechanicalReadiness??null,source:null,derivatives:[]};
-    if(release.source||student)for(const asset of visuals)release.derivatives.push(path.relative(root,asset));
-    if(student)release.native=path.relative(root,student.file);
-    await authorizeModel(python,root,release);
-  }
-  const publicConfig=await optionalRead(path.join(root,'cad-showcase.json'));
-  if(publicConfig && (student || release)){
-    const cfg=JSON.parse(publicConfig.replace(/^\uFEFF/,''));
-    const featured=cfg.featuredAssembly ?? cfg.featured;
-    if(featured){
-      requireValue(featured.source && featured.still && featured.mesh,'Featured model needs a registered neutral source, still and mesh');
-      await authorizeModel(python,root,{study_path:featured.mechanicalReadiness??null,source:featured.source,native:featured.archive??null,
-        derivatives:[featured.still,featured.mesh]});
-    }
-  }
+  // A downloadable Fusion archive is offered with the review of that archive.
+  if(student)await authorizeModel(python,root,{study_path:data.mechanicalReadiness??null,source:null,derivatives:[],native:path.relative(root,student.file)});
   await mkdir(directory, {recursive:true});
   const output = await realpath(directory);
   const page = path.join(output, 'index.html');
@@ -414,14 +324,6 @@ export async function buildHighlights(manifest, directory) {
       const temporary=path.join(output,randomUUID()+'.tmp');
       try{await writeFile(temporary,lab.bytes);await rename(temporary,target);}finally{await rm(temporary,{force:true});}
     }
-  }
-  if (modelFiles) {
-    const target = path.join(output,modelFiles.dest);
-    await mkdir(target,{recursive:true});
-    requireValue(await realpath(target) === target,'CAD directory is redirected');
-    await copyFile(modelFiles.still,path.join(target,'assembly.png'));
-    await copyFile(modelFiles.receiptFile,path.join(target,'receipt.json'));
-    await writeFile(path.join(target,'index.html'),modelFiles.rendered);
   }
   const folder = path.join(output,'evidence');
   if (assets.size) {

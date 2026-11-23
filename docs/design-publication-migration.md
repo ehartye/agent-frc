@@ -247,6 +247,20 @@ Do the rename in one pull request.
 
 A changed design is not a rename. If the STEP differs, the old design stays in the index as superseded and the new design takes the next version.
 
+## Move to one viewer
+
+From 0.132.0 a detailed design has [one viewer](design-publication.md#one-viewer-for-one-design), its design review page. The plugin no longer builds a separate orbit view, publishes an animated model beside it or embeds a model in the results page. Pages a project already published keep loading: they are static files in the project's site.
+
+| The project has | What happens now | What to do |
+| --- | --- | --- |
+| `docs/robot/cad/index.html` from `cad-readmes.py --update` | The page stays and still opens. `--update` no longer rebuilds it. While it exists and no design review is published, the README still keeps linking to it. | Delete it and `assembly.stl.gz` once a design review is published, then run `--update`. |
+| `cad-readmes.py --verify-export` or `--template` in CI | Accepted and ignored, with a note. | Remove the option. |
+| A `cad` entry in the highlights manifest | The page shows the still and links the design review. It writes no `cad-…/` viewer folder; an earlier one stays until deleted. `receipt` is read only to find `assembly.png` beside it. | Optionally set `cad.still` and `cad.review`. Delete old `cad-…/` folders from the site. |
+| `cad.playableGlb` or `inventory` in the highlights manifest | Ignored, with a note. | Remove the entry. |
+| `mechanical_readiness.py … --deliver FILE` | Accepted and ignored, with a note. The `distribution` field of the study is no longer read. | Remove the option and the field. |
+| `npm run viewer:controls` or `check-showcase-inventory.py` | Removed. | Remove the step. |
+| `FRC_VERIFIED_FIELD_ROOT` | No longer read. A results page with images or films builds from the project alone. | Delete the variable. |
+
 ## Withdraw a design in one pull request
 
 1. Branch from the default branch.

@@ -259,7 +259,21 @@ Each command only edits files. The pull request and the check decide whether the
 
 `revision` holds the draft count of each design: its `number` is the "draft N" shown while the design is in progress. `accepted` holds the date a design became effective.
 
-`current` is the effective design, else the newest in-progress one. `beside` is the newest in-progress design while another is effective. The effective design holds the project's primary view: the entry page model, the README still and the model selector. An in-progress design shows beside it, labelled, and takes the primary view only when no design is effective. Update the entry page, README and selector in the pull request that changes the status.
+`current` is the effective design, else the newest in-progress one. `beside` is the newest in-progress design while another is effective. The effective design holds the project's primary view: the entry page and the README still show it and link to its review. An in-progress design shows beside it, labelled, and takes the primary view only when no design is effective. Update the entry page and README in the pull request that changes the status.
+
+### One viewer for one design
+
+A detailed design has one viewer: the design review page that `stage` publishes at `docs/detailed-design/designs/ID/`. It is the review the layout check wrote for the Fusion export, with the model, the checked motion cases, the mission cases and the component inspector. The same page serves the design while it is in progress and after it is effective. Under `designs/ID/` it reads `designs.json` and titles itself "Detailed design review", with the design's name, draft, status and the preliminary design it is built on. `stage` copies the page's theme fonts to `docs/detailed-design/fonts/` when that folder is missing.
+
+Everything else links to that page and embeds no model of its own.
+
+| Page | What it does |
+| --- | --- |
+| The catalog `docs/detailed-design/index.html` | Links the review of the effective design and of each in-progress one. |
+| The README still | Shows the picture and links the review. [Keep the README still current](cad-color-convention.md#keep-the-readme-still-current) |
+| The results page from `robot-highlights.mjs` | Shows the still, results, build sheet and films, and links the review. |
+
+Stage a design in progress before it becomes effective, so the effective design has its review page. `effective` still records a design that was never staged from its review result; the catalog then says that no design review is staged for it. [What was retired, and what a project that published the earlier viewers does](design-publication-migration.md#move-to-one-viewer)
 
 When the preliminary release that an in-progress detailed design names is superseded, the design stays published and the check adds a warning. [Re-link it](#name-and-number-a-detailed-design) to the effective preliminary release with `relink`, or stage it again on that release when its motion cases changed.
 

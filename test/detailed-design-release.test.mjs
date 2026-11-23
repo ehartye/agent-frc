@@ -59,6 +59,7 @@ test('stage publishes an in-progress design that the publication check accepts',
     missionCases: [{case: 'loaded-turn', kind: 'operating-case', accomplishes: 'delivered', objective: 'Carry the sample to the bin'}]});
   assert.equal(readFileSync(path.join(dir, 'index.html'), 'utf8'), '<html>Detailed review</html>');
   assert.ok(existsSync(path.join(p.root, detail, 'index.html')), 'the stock catalog is written when the tree has none');
+  assert.ok(existsSync(path.join(p.root, detail, 'fonts/fonts.css')), 'the review page finds its theme fonts in the detailed tree');
   passes(p.root);
   // The rerun finds the committed inputs through the record.
   write(p.root, 'cad/preliminary-design/releases/layout-001/layout.json', 'plan layout-001');

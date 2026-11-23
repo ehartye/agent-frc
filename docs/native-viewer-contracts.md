@@ -1,4 +1,4 @@
-# Native export, articulation and viewer control evidence
+# Native export and articulation evidence
 
 These portable comparators read an independently prepared manifest and an observed receipt. They compare the supplied evidence; they do not open CAD, parse meshes, calculate physics, authenticate measurements or connect to a viewer. A matching synthetic fixture remains synthetic evidence.
 
@@ -45,33 +45,8 @@ Each joint has `id`, `parentBodyId`, `childBodyId`, `kind` (`revolute` or `prism
 
 Each witness names `jointId`, `poseId`, `frameId`, `native` and `physical` coordinates plus `reopen: {saved: true, reopened: true, archiveSha256}`. Every joint needs a witness. Archive identity must bind the same saved/reopened source, not an older model with plausible numbers. These markers are supplied observations: the comparator neither performs nor verifies the actual reopen. Matching axes, origins and readbacks do not establish actuator dynamics, load capacity or retention. Appearance colors and material names are not mass/inertia provenance.
 
-## Control routing and display restoration
-
-```sh
-npm run viewer:controls -- test/fixtures/native-viewer/controls-expected.json test/fixtures/native-viewer/controls-observed.json
-```
-
-Expected result: `agent-frc/viewer-controls-result@1`, `matched`, synthetic basis, exit 0. The complete [manifest](../test/fixtures/native-viewer/controls-expected.json) and [receipt](../test/fixtures/native-viewer/controls-observed.json) cover a colliding drive/display key, repeat, keyup after a modifier change, an unrelated engine camera binding, focus loss and a late keyup.
-
-Use `agent-frc/viewer-controls-manifest@1` and `agent-frc/viewer-controls-receipt@1`. The manifest owns:
-
-- `sourcePins`, `allowedEvidenceBases`, `applicationBindings: [{code, modifiers, action}]` and `engineBindings: [{code, modifiers, optionIds}]`. Keys use exact DOM `code` names, with unique explicit `Alt`, `Control`, `Meta`, `Shift` modifiers; duplicate chords within either binding list are invalid. Common keyboard, navigation, function and numpad codes are supported; unsupported codes fail explicitly.
-- `restoreValues`: finite scalar values for exactly the options belonging to colliding application/engine chords. It must not include unrelated engine/camera settings. `releaseOnFocusLoss` enumerates all application actions exactly once.
-- Ordered `cases`, each with a unique `id`, `initialHeld: [{code, action}]` and named events. An event is `{id, type: "keydown"|"keyup", code, modifiers}` or `{id, type: "focus-loss"}`. Case order does not matter; event order does.
-
-The receipt owns `sourcePins`, `evidenceBasis` and corresponding cases/events. Each transition reports `id`, `event` (without the ID), `priorHeld`, **observed** `postEngine` display state, `finalHeld` and `finalDisplay`. Display values are finite numbers, strings or booleans. Include all restored options and every unrelated option whose preservation is being checked. Missing post-engine state is invalid; omitted unlisted camera properties are outside the evidence scope.
-
-The comparator checks the independent event sequence and prior-held continuity, then applies this policy:
-
-1. Consume the captured state after engine handling; never predict engine side effects.
-2. On keydown, activate a matching application chord if its physical code is not already held. Repeated keydown is idempotent. On keyup, release by physical code, even if modifiers have changed. Focus loss clears all held actions; a later keyup is inert.
-3. For keydown, or keyup that releases a previously held physical binding, whose **current chord** collides, restore only that chord's named options. A keyup with no prior held binding is inert, including after focus loss or an earlier keyup: preserve its entire post-engine observed state. Preserve every other post-engine observed value, including engine camera changes. Focus loss does not restore display options.
-4. Compare the claimed final held/display state with that computed outcome. Do not use the claimed final state as the next transition's oracle.
-
-Controls permits `synthetic`, `interactive-observed` and `human-reported` bases. It has no native-observed mode. The host must normalize input to the supported physical codes/modifiers, capture the correct engine → observation → application → restoration order, deliver focus-loss events, apply the calculated policy and retain source-bound real interactive evidence. This package does not attach callbacks, prevent engine shortcuts or demonstrate correct host integration. Human-reported and real interactive observations remain distinct from synthetic transitions.
-
 ## API and verification
 
-Pure exports are `compareNativeExport(expected, observed)`, `compareNativeArticulation(expected, observed)` and `compareViewerControls(expected, observed)` from their corresponding scripts. They do not mutate the supplied objects. The small shared CLI performs bounded JSON reading and maps the result status to the exit code.
+Pure exports are `compareNativeExport(expected, observed)` and `compareNativeArticulation(expected, observed)` from their corresponding scripts. They do not mutate the supplied objects. The small shared CLI performs bounded JSON reading and maps the result status to the exit code.
 
-Run `npm test` and `npm run validate`. Focused suites are `test/native-export.test.mjs`, `test/native-articulation.test.mjs` and `test/viewer-controls.test.mjs`. They cover positive independent synthetic inputs, source/basis mismatches, missing inventories/witnesses, malformed values, policy violations and CLI failures. No native asset, CAD, physics or GUI runtime is required. The existing `agent-frc/native-witness@1` material-overlap and design-artifact schemas are unchanged.
+Run `npm test` and `npm run validate`. Focused suites are `test/native-export.test.mjs` and `test/native-articulation.test.mjs`. They cover positive independent synthetic inputs, source/basis mismatches, missing inventories/witnesses, malformed values, policy violations and CLI failures. No native asset, CAD, physics or GUI runtime is required. The existing `agent-frc/native-witness@1` material-overlap and design-artifact schemas are unchanged.

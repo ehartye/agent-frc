@@ -44,7 +44,7 @@ aside{padding:16px;align-self:start}aside label{display:block;margin-bottom:5px}
 <main>
 <header><span>Agent FRC　/　Engineering review</span><span id="links"></span></header>
 <div class="title"><div><p id="context">Preliminary design</p><h1 id="heading">Preliminary design review</h1></div><div class="title-side"><strong id="state" class="chip" title="Design status from the release index · checked result from the review receipt">Loading geometry…</strong><p id="unmetInline" hidden></p></div></div>
-<details id="review-basis"><summary>Review basis</summary><p>Preliminary design: not the released detailed model. The review receipt gives the checked result.</p>
+<details id="review-basis"><summary>Review basis</summary><p id="basisNote">Preliminary design: not the released detailed model. The review receipt gives the checked result.</p>
 <dl id="review-summary" aria-label="Review basis">
  <div><dt>Selected architecture</dt><dd id="architecture"></dd></div><div><dt>Datum</dt><dd id="datum"></dd></div><div><dt>Units</dt><dd id="units"></dd></div><div><dt>Strategic narrative</dt><dd id="narrativeSource"></dd></div>
  <div class="wide"><dt>Current decision</dt><dd><span id="decision"></span> <span id="decisionSource"></span></dd></div><div class="wide"><dt>First unmet requirement</dt><dd id="firstUnmet"></dd></div>
@@ -276,6 +276,9 @@ const versionMajor=id=>/^([1-9]\d{0,3})\.(0|[1-9]\d{0,3})$/.exec(id)?.[1];
 async function showDetailedStatus(id){
  const r=await fetch('../../designs.json',{cache:'no-store'});if(!r.ok)return;const index=await r.json();if(!index.designs?.includes?.(id))return;
  phase='Detailed design';designStatus=index.designStatus?.[id]??'in-progress';
+ // This page is the one viewer of the detailed design, in progress and effective: the same checked model, motion and missions.
+ for(const e of [$('heading'),document.querySelector('title')])e.textContent=e.textContent.replace('Preliminary design review','Detailed design review');
+ $('basisNote').textContent='Detailed design: the model exported from the registered Fusion design, checked on the motion cases of the preliminary design it is built on. The review receipt gives the checked result.';
  const edited=index.revision?.[id]?.number;draft=designStatus==='in-progress'&&Number.isInteger(edited)?edited:0;
  const name=index.architectures?.[versionMajor(id)]?.name,link=index.preliminary?.[id];
  if(typeof name==='string'&&name.trim()){designTitle=name+' '+id;document.title=designTitle+' · '+document.title.replace(designTitle+' · ','')}

@@ -4,7 +4,7 @@ import json
 import os
 import sys
 
-from mechanical_readiness import digest, pinned, project_path, read, require, review, scan, verify_delivery
+from mechanical_readiness import digest, pinned, project_path, read, require, review, scan
 
 
 def verify_candidate(root, study_path, source, derivatives, native=None, receipt=None, distribute_source=False):
@@ -46,7 +46,6 @@ def verify_candidate(root, study_path, source, derivatives, native=None, receipt
         from mechanical_methods import run
         fresh=run(root,read(pinned(root,study["issueRegister"])))
         require(fresh==read(pinned(root,study["issueResult"])) and fresh["status"]=="pass","Installed method rerun differs from the accepted issue results")
-    verify_delivery(root,study,[*derivatives,*([source] if distribute_source and source else []),*([native] if native else [])])
 
 
 if __name__=="__main__":

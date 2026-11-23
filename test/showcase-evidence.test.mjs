@@ -1,4 +1,3 @@
-import {authorizeRender} from './authorize-render-fixture.mjs';
 import assert from 'node:assert/strict';
 import {execFileSync,spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
@@ -23,11 +22,9 @@ test('kickoff publication, independent slow-motion event clock and versioned wor
     spec.sources.push({id,file,revision:spec.revision,label:id,shareable:true,sha256});
     return sha256;
   };
-  const trusted=await mkdtemp(path.join(os.tmpdir(),'field-media-witness-'));
-  t.after(()=>rm(trusted,{recursive:true,force:true}));
-  const previous=process.env.FRC_VERIFIED_FIELD_ROOT;process.env.FRC_VERIFIED_FIELD_ROOT=trusted;
-  t.after(()=>{if(previous===undefined)delete process.env.FRC_VERIFIED_FIELD_ROOT;else process.env.FRC_VERIFIED_FIELD_ROOT=previous;});
-  await writeFile(path.join(trusted,'clip.webm'),'test clip pointer');
+  // A field-only page with a film builds from the project alone: no variable, no copy of the media held elsewhere.
+  const previous=process.env.FRC_VERIFIED_FIELD_ROOT;delete process.env.FRC_VERIFIED_FIELD_ROOT;
+  t.after(()=>{if(previous!==undefined)process.env.FRC_VERIFIED_FIELD_ROOT=previous;});
   const clipSha256=await store('film','clip.webm',Buffer.from('test clip pointer'));
   const evidence={schema:'agent-frc/replay-events@1',revision:spec.revision,clock:'trial',attempt:'one',observedRevision:spec.revision,
     piece:'sample',initialState:'checkpoint-4',scope:'independent-start',clipSha256,traceSha256:spec.sources[0].sha256,
@@ -58,17 +55,10 @@ test('kickoff publication, independent slow-motion event clock and versioned wor
   await writeFile(path.join(root,'docs','workflow.md'),(await readFile(path.join(root,'docs','workflow.md'),'utf8')).replace('analysis.md','missing.md'));
   assert.throws(()=>workflowRows(root),/unavailable/);
 });
-test('publication geometry uses placed model bytes and separates missing, unknown, omitted and proxy',()=>{
-  const script=fileURLToPath(new URL('./showcase_inventory_fixture.py',import.meta.url));
-  const result=spawnSync(process.platform==='win32'?'python':'python3',[script],{encoding:'utf8'});
-  assert.equal(result.status,0,result.stderr+result.stdout);
-});
-
 test('exports the actual standalone project field lab at a stable linked address',async t=>{
   const root=await mkdtemp(path.join(os.tmpdir(),'project-lab-'));
   t.after(()=>rm(root,{recursive:true,force:true}));
   await cp(example,root,{recursive:true});
-  authorizeRender(root);
   const manifest=path.join(root,'project.json'),spec=JSON.parse(await readFile(manifest,'utf8'));
   const file='kickoff/field-lab.html',out=path.join(root,'out');
   await mkdir(path.join(root,'kickoff'));

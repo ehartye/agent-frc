@@ -133,39 +133,6 @@ class MeshComparisons(unittest.TestCase):
             gltf["scenes"][0]["nodes"]=[0]
             r=actual();self.assertEqual(r["status"],"fail");self.assertEqual(r["missingFacets"],12)
 
-    def test_reproduce_full_two_part_pixels_and_viewpoint(self):
-        try:
-            import vtk
-            from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox
-        except ImportError:self.skipTest("Requires VTK and OpenCascade")
-        import importlib.util
-        from PIL import Image,ImageOps
-        from OCP.gp import gp_Pnt
-        from OCP.STEPControl import STEPControl_Writer,STEPControl_AsIs
-        from mechanical_fixture import SCRIPTS,pin
-        from release_projection import verify
-        module=importlib.util.spec_from_file_location("original_export",SCRIPTS/"export-showcase-cad.py")
-        exporter=importlib.util.module_from_spec(module);module.loader.exec_module(exporter)
-        with TemporaryDirectory() as tmp:
-            root=Path(tmp)
-            for name,count in (("full",2),("partial",1)):
-                box=STEPControl_Writer()
-                for j in range(count):
-                    solid=BRepPrimAPI_MakeBox(gp_Pnt(j*4,0,j),2.,2.,1.+j).Shape()
-                    box.Transfer(solid,STEPControl_AsIs)
-                box.Write(str(root/(name+".step")))
-                exporter.export(root,{"source":name+".step"},root/name)
-            folder=root/"full";img=folder/"assembly.png";mesh=folder/"assembly.stl.gz"
-            receipt=json.loads((folder/"receipt.json").read_text())
-            case={"step":pin(root,"full.step")}
-            verify(root,case,receipt,mesh,img)
-            with Image.open(img) as rendered:
-                ImageOps.mirror(rendered).save(root/"mirrored.png")
-                Image.new("RGB",rendered.size,(30,40,50)).save(root/"blank.png")
-            for path in (root/"partial/assembly.png",root/"mirrored.png",root/"blank.png"):
-                with self.subTest(path=path.name),self.assertRaisesRegex(ValueError,"pixels"):
-                    verify(root,case,receipt,mesh,path)
-
     def test_different_diagonal_complete_surface_and_shift(self):
         try:
             import vtk

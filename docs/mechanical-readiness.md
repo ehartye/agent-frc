@@ -31,10 +31,10 @@ Use file references of the form `{"file":"cad/issue.step","sha256":"…"}` relat
 ```sh
 python scripts/mechanical_readiness.py measure PROJECT path/to/study.json --output PROJECT/geometry-new.json
 python scripts/mechanical_readiness.py review PROJECT path/to/study.json --rescan
-python scripts/mechanical_readiness.py review PROJECT path/to/study.json --require-publication --deliver cad/issue.glb
+python scripts/mechanical_readiness.py review PROJECT path/to/study.json --require-publication --output PROJECT/cad/detailed-design/readiness-result.json
 ```
 
-Pin the resulting scan in `geometry` after independent inspection. To use the built-in publishing paths, set `mechanicalReadiness` to the study path in the selected `cad-showcase.json` and public highlight CAD entry. A separately featured assembly supplies its own study, source, mesh, still and archive. A native-download-only page can set the field at the top of its highlights manifest. Custom Pages builders should review the candidate and pass every planned derivative through `--deliver` before uploading or replacing any output. Allow a failed check to stop deployment. Keep the previous issue accessible.
+Pin the resulting scan in `geometry` after independent inspection. A results page that offers the Fusion archive for download sets `mechanicalReadiness` at the top of its highlights manifest. The design has [one published view, its design review](design-publication.md#one-viewer-for-one-design), so the review no longer checks a separate published mesh, still or animated model: `--deliver` is accepted and ignored.
 
 | Study field | Project evidence |
 | --- | --- |
@@ -43,7 +43,6 @@ Pin the resulting scan in `geometry` after independent inspection. To use the bu
 | `chassisAnchor`, `connections`, `mating` | Choose a measured solid. A connection gives an exact solid `pair` and an `evidence` reference to a `retained-joint` observation with the same `pair`, `mechanism`, `loadPath`, `inspection`, `maxInterfaceGapMm` and observed `verified`. A fitted pair gives `pair`, `fit`, `maxMm3` and `evidence` to an `intended-fit` observation with the same values and a `basis`. All other positive rigid intersections fail. |
 | `duties` | Each duty gives a unique `id`, `domain`, installed solid `subjects`, adverse `case`, `basis`, `unit`, `min` and/or `max`, and an `observation`. Cover sweep, shop, assembly, service, strength, stiffness, impact and fatigue. Register actual condition-specific engineering limits and fully scoped exemptions. |
 | `coverage` | Independent `engineering` and `build` observation references. The scope reviewer identifies every installed body and all duties, including omissions. A narrow operating claim needs a narrow, honest scope. |
-| `distribution` | Bind `configuration`, `archiveSha256`, `stepSha256`, `approvedBy` and pinned `files`. Each file also has `scope` (native, neutral, render or mesh) and an item-specific `rightsBasis`. Component rights may be `exact-redistribution`, `derived-views-only` or `private-master`. |
 
 The native reopen gives `opened: true`, `configuration`, `archiveSha256`, `stepSha256`, `movingGroups` and `installedOccurrences`. Each occurrence gives `path`, `article`, `revision`, `configuration`, `modelSha256`, `worldTransform`, a list of `solids`, and a `worldBoundsMm` object keyed by those solids. Each bounds array contains minimum XYZ then maximum XYZ. Report native `editable` for fabricated articles. A component used four times needs four distinct installed paths.
 

@@ -247,8 +247,13 @@ test('the same page staged for a detailed design reads its name, draft and statu
     current: '1.0', beside: '1.1', designs: ['detail-001', '1.0', '1.1'], designStatus: {'detail-001': 'superseded', '1.0': 'effective', '1.1': 'in-progress'},
     architectures: {1: {name: 'Tilting carriage'}}, preliminary: {'1.0': '1.3', '1.1': '1.3', 'detail-001': 'layout-001'}, revision: {'1.0': {number: 4, date: '2001-01-01'}, '1.1': {number: 2, date: '2001-02-02'}}}));
   const shown = ready + `for(let i=0;i<40&&!/·/.test(document.querySelector('#state').textContent);i++)await new Promise(r=>setTimeout(r,50));
-   return {chip:document.querySelector('#state').textContent,context:document.querySelector('#context').textContent,title:document.title}`;
+   return {chip:document.querySelector('#state').textContent,context:document.querySelector('#context').textContent,title:document.title,
+    heading:document.querySelector('h1').textContent,basis:document.querySelector('#basisNote').textContent}`;
   const draft = await probePage(dir, 'detailed-design/designs/1.1/index.html', shown);
+  // The page is the one viewer of the detailed design and says which phase it shows.
+  assert.doesNotMatch(draft.heading + draft.title, /Preliminary design review/);
+  assert.match(draft.title, /Detailed design review$/);
+  assert.match(draft.basis, /^Detailed design: the model exported from the registered Fusion design/);
   assert.equal(draft.chip, 'Draft 2 · in progress · layout-checked');
   assert.match(draft.context, /Tilting carriage 1\.1　\/　Detailed design　\/　built on preliminary design Tilting carriage 1\.3$/);
   assert.match(draft.title, /^Tilting carriage 1\.1 · /);
