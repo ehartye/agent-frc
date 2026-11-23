@@ -8,7 +8,9 @@
  *   2. The numbers the review scene shows equal the receipt.
  *   3. A mission case plays a represented objective on a passing operating case.
  *   4. An in-progress detailed design names an effective preliminary release and its receipt is on the Fusion export.
- *   5. One status index per phase, with at most one effective design and the primary view computed from it. A
+ *   5. An effective detailed design carries its bench-test record: every before-build test has a passing result and
+ *      every on-robot test has an owner and a plan.
+ *   6. One status index per phase, with at most one effective design and the primary view computed from it. A
  *      design whose ID is a version, MAJOR.MINOR, belongs to an architecture the index names, and a detailed version
  *      keeps the major number of the preliminary design it is built on.
  *
@@ -27,6 +29,7 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
 import {architectureName, currentFor, designName, designStatuses, designTitle, detailedTitle, releaseId, stateOf, statusOf, versionOf} from './design-status.mjs';
 import {effectiveReadiness, readinessText} from './effective-readiness.mjs';
 import {compareWithReceipt, readScene} from './review-scene.mjs';
+import {benchFile, effectiveProblems, handedOver, summary as benchSummary, summaryText as benchText} from './bench-tests.mjs';
 
 const receiptSchema = 'agent-frc/preliminary-layout-result@1';
 const readinessSchema = 'agent-frc/mechanical-readiness-result@1';
@@ -310,7 +313,14 @@ export function checkProject(root, options = {}) {
           const review = parse(files.get('readiness.json'), 'readiness review: ' + id);
           check(review?.schema === readinessSchema && named(review.stepSha256), where + ': readiness.json is not a mechanical-readiness review result');
           check(review.stepSha256 === record.fusion?.stepSha256, where + ': the readiness review is of a different STEP than the design record names');
-          reports.push({title: where + ' (effective)', text: readinessSummary(review)});
+          // Bench tests as records. The preliminary design's risk register says which tests were handed over.
+          const link = record.preliminary?.release ?? index.preliminary?.[id];
+          const handed = named(link) ? handedOver(root, link, {site: o.site, preliminaryTree: o.preliminary, inputs: o.inputs}).tests : null;
+          const bench = files.has(benchFile) ? parse(files.get(benchFile), 'bench-test record: ' + id) : null;
+          reports.push({title: where + ' (effective)', text: readinessSummary(review) + (bench ? 'Bench tests: ' + benchText(benchSummary(bench)) + '\n' : '')});
+          const unresolved = bench ? effectiveProblems(bench, handed) : handed?.length ? ['its preliminary design ' + link + ' hands over ' + handed.length +
+            ' bench test' + (handed.length === 1 ? '' : 's') + ' and the design publishes no record (designs/' + id + '/' + benchFile + ')'] : [];
+          check(!unresolved.length, where + ' cannot be effective until its bench tests are resolved: ' + unresolved.join('; '));
           check(review.showcaseEligibility === 'pass', where + ' cannot be effective: its mechanical-readiness review reports ' + review.showcaseEligibility +
             '. Resolve the findings and commit the passing review, or keep the design in progress.');
           warnIfChanged(where, detailIndexFile, id, [inside(root, record.check?.project ?? path.join(o.detailedInputs, id), where + ': check.project'), dir]);

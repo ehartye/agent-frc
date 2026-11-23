@@ -18,6 +18,7 @@ A project that still runs the earlier gates moves to this workflow with the [mig
 | The design plays a mission task | The record names a mission case: a passing operating case in the checked cycle, for a narrative objective the receipt marks `represented`. A field-interaction trial must be one the receipt names. |
 | A detailed design builds on an accepted layout | An in-progress detailed design names a preliminary release that is `effective`, its receipt is on the STEP its record names as the Fusion export, and it covers that release's motion cases, cycle and displaced control. |
 | An effective detailed design passed its review | The design carries its mechanical-readiness review result, for the STEP its record names, and the review reports `pass`. |
+| An effective detailed design resolved its bench tests | The design publishes its [bench-test record](#bench-tests-handed-over-from-preliminary-design). Every `before-build` test has a recorded passing result and every `on-robot` test has an owner and a plan. Every bench test its preliminary design hands over is in the record with the handed-over numbers. |
 | One status per design, one primary view | Each index holds `in-progress`, `effective`, `superseded` or `withdrawn` for each design, at most one `effective`, and the primary view computed from the statuses. |
 
 The rerun compares digests and verdicts. The digests are the ones the layout check read and wrote into the receipt: the plan, the STEP, the motion study, the budgets and limits, and each trial a stage names. A plan [names its files by path](preliminary-design.md#name-files-by-path) and needs no typed hash for this, and an input that changed since the committed receipt still shows as a differing digest. It does not compare measured values digit for digit, because a CAD kernel on another operating system can round them differently.
@@ -231,7 +232,7 @@ The design ID is a [version, and the design takes the name of its preliminary de
 | --- | --- |
 | `stage` | `docs/detailed-design/designs/ID/` with the review files and `design.json`, listed as `in-progress` at draft 1. Staging the same in-progress ID again replaces the files and counts the next draft. It replays the Fusion authority register and lineage with `fusion_authority.py` and refuses a receipt on any other STEP. It leaves the site as it was when the publication check would fail the design. |
 | `relink` | The preliminary release an in-progress design is built on, in `design.json` and the index. The design keeps its ID, files and draft count. |
-| `effective` | `designs/ID/readiness.json`, a copy of the review result, the status `effective` and the date under `accepted`. The earlier effective design becomes `superseded`. A design that was never shown in progress gets its record from the review; give `--design-name` when its major number has no name yet. A review that does not report `pass` is refused. |
+| `effective` | `designs/ID/readiness.json`, a copy of the review result, `designs/ID/bench-tests.json`, the status `effective` and the date under `accepted`. It refuses while a [bench test](#bench-tests-handed-over-from-preliminary-design) is unresolved. The earlier effective design becomes `superseded`. A design that was never shown in progress gets its record from the review; give `--design-name` when its major number has no name yet. A review that does not report `pass` is refused. |
 | `supersede` | The status `superseded` for an in-progress design that a newer one replaced before it was accepted. `--by ID` records which. |
 | `copy-inputs` | `cad/detailed-design/designs/TO/`, a copy of the inputs of `FROM` with each pin that names the folder written for the new path. The page, scene and receipt are left for the layout check to write. |
 | `remove` | Nothing: it deletes a design's published folder, inputs folder and index entry, and leaves no redirect. A design that is or was effective needs `--replaced-by ID`, the effective design of the same STEP. |
@@ -277,12 +278,55 @@ Stage a design in progress before it becomes effective, so the effective design 
 
 When the preliminary release that an in-progress detailed design names is superseded, the design stays published and the check adds a warning. [Re-link it](#name-and-number-a-detailed-design) to the effective preliminary release with `relink`, or stage it again on that release when its motion cases changed.
 
+### Bench tests handed over from preliminary design
+
+A preliminary design closes each open risk with a design change or hands it over as a bench test with a measure, a pass value and a fail value, under `risks[].benchTest` in its `missions.json`. Detailed design keeps them as one plain JSON record, `cad/detailed-design/designs/ID/bench-tests.json`. It holds no hash.
+
+```sh
+node PLUGIN/scripts/bench-tests.mjs seed . --design 1.0
+node PLUGIN/scripts/bench-tests.mjs result . --design 1.0 --test B2 --value 2.5 --note "Fixture run, three repeats"
+node PLUGIN/scripts/bench-tests.mjs check . --design 1.0
+```
+
+| Command | What it does |
+| --- | --- |
+| `seed` | Writes the record from the risk register of the preliminary release the design is built on: one test for each risk that is not closed and carries a bench test with numbers. Run it again after the preliminary design changes: a test keeps its tag, owner, plan and result, takes the new numbers, and one no longer handed over stays with `"handedOver": false`. `--preliminary RELEASE` names another release. |
+| `result` | Records the result of one test with its date. A numeric value is judged against the handed-over numbers, in whichever direction they run; a value between the two limits is not a pass. For limits that are not numbers, say `--passed true` or `--passed false`. It also updates the published copy of a design that has one. |
+| `check` | Lists what still stops the design from being effective, and exits 1 while anything does. |
+
+```json
+{
+  "schema": "agent-frc/bench-tests@1",
+  "design": "1.0",
+  "preliminary": "1.0",
+  "source": "cad/preliminary-design/releases/1.0/missions.json",
+  "tests": [
+    {"id": "B1", "risk": "The latch may not hold the sample through a turn", "measure": "Pull-out force of the latch", "pass": 40, "fail": 25, "unit": "N",
+     "tag": "before-build", "owner": "Build team", "plan": "Pull the latch on the bench fixture with a spring scale, three repeats",
+     "result": {"value": 46, "passed": true, "date": "DATE"}},
+    {"id": "B3", "risk": "The sample may bounce out on release", "measure": "Samples retained of ten releases", "pass": 9, "fail": 6,
+     "tag": "on-robot", "owner": "Drive team", "plan": "Ten releases on the practice field after the first drive", "result": null}
+  ]
+}
+```
+
+Give each test a `tag`. A risk may carry one in the handoff, as `"benchTest": {..., "tag": "on-robot"}`; otherwise the record starts untagged and you choose.
+
+| Tag | Meaning | Needed before the design is effective |
+| --- | --- | --- |
+| `before-build` | It gates the build. | A recorded result that passes |
+| `on-robot` | It is run on the finished robot. | An `owner` and a `plan`. Record the result when it is run. |
+
+`stage` publishes the record beside the review and notes what is outstanding; a draft is not held to it. `effective` refuses a design while a `before-build` test has no passing result, an `on-robot` test has no owner and plan, a test has no tag, a handed-over test is missing from the record or its numbers were changed, and names each one. The publication check holds an effective design to the same rule on the published copy, `docs/detailed-design/designs/ID/bench-tests.json`. A design whose preliminary design hands over no bench test, or whose preliminary inputs are not in the project, needs no record.
+
+More simulation never closes a bench test. If the design removed the risk, close the risk in the preliminary design's register with `closedBy` in its next version and seed again.
+
 ## Effective designs
 
 A design becomes effective when a reviewed pull request changes its status in the index. No signature is involved. The reviewer accepts the design by merging the pull request, and the check prints the evidence in the log and in the run summary.
 
 - **Preliminary.** The check prints the [effective-readiness report](preliminary-design.md#judge-readiness-to-be-marked-effective) for the release's inputs, titled with the design name and version. The report is informational: the check does not fail on it.
-- **Detailed.** The design carries the result of the [mechanical-readiness review](mechanical-readiness.md) as `designs/ID/readiness.json`. Save the output of `mechanical_readiness.py review` and pass it to `effective`. It must be a review of the STEP the design record names, and it must report a showcase eligibility of `pass`. A review with any other verdict fails the check, so the design stays in progress until the findings are resolved. The check prints the build readiness, the showcase eligibility and each finding that does not pass.
+- **Detailed.** The design carries the result of the [mechanical-readiness review](mechanical-readiness.md) as `designs/ID/readiness.json`. Save the output of `mechanical_readiness.py review` and pass it to `effective`. It must be a review of the STEP the design record names, and it must report a showcase eligibility of `pass`. Its [bench tests](#bench-tests-handed-over-from-preliminary-design) must be resolved: results for the ones that gate the build, an owner and a plan for the ones run on the robot. A review with any other verdict fails the check, so the design stays in progress until the findings are resolved. The check prints the build readiness, the showcase eligibility and each finding that does not pass.
 
 ### A change to an effective design
 
