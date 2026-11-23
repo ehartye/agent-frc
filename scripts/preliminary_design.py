@@ -134,6 +134,58 @@ def same_scenario(a, b):
     return a.get("scenario")==b.get("scenario")
 
 
+# Scope guidelines for a preliminary layout. They are guidelines: the report below is information and never
+# changes a status or an exit code. A project states its own figures under scopeGuidelines in the layout plan.
+SCOPE_SOLIDS=80
+SCOPE_TOLERANCE_MM=10
+BUDGET_FIELDS=("detail","question","allowance","stopsWhen")
+
+
+def scope_report(plan, stages, solids, fixtures):
+    """Count the placed solids and find the finest declared path tolerance, and name each guideline the layout has passed.
+
+    Returns the informational receipt field and the stderr lines. solids are the placed robot and payload solids;
+    field fixtures are counted apart. A stage declares the tolerance its path was split at as pathToleranceMm."""
+    own=plan.get("scopeGuidelines",{})
+    require(isinstance(own,dict),"Give scopeGuidelines as an object with solids, toleranceMm or extendedBudget")
+    for key in ("solids","toleranceMm"):
+        require(key not in own or number(own[key]) and own[key]>0,"Give scopeGuidelines."+key+" as a positive number")
+    budget=own.get("extendedBudget")
+    require(budget is None or isinstance(budget,dict) and all(named(budget.get(k)) for k in BUDGET_FIELDS),
+            "An agreed extended budget names its "+", ".join(BUDGET_FIELDS))
+    guide=dict(solids=own.get("solids",SCOPE_SOLIDS),toleranceMm=own.get("toleranceMm",SCOPE_TOLERANCE_MM),
+               source="layout plan" if "solids" in own or "toleranceMm" in own else "plugin default")
+    declared=[]
+    for key,stage in stages.items():
+        if "pathToleranceMm" in stage:
+            require(number(stage["pathToleranceMm"]) and stage["pathToleranceMm"]>0,
+                    "Give the path tolerance of "+key+" as a positive number of millimetres")
+            declared.append((stage["pathToleranceMm"],key))
+    finest=min(declared) if declared else None
+    passed=(["solids"] if solids>guide["solids"] else [])+(["pathTolerance"] if finest and finest[0]<guide["toleranceMm"] else [])
+    report=dict(informational=True,solids=solids,fieldFixtures=fixtures,guideline=guide,
+                finestPathToleranceMm=finest[0] if finest else None,finestPathToleranceCase=finest[1] if finest else None,
+                undeclaredPathTolerance=len(stages)-len(declared),passed=passed)
+    if budget:report["extendedBudget"]={k:budget[k] for k in BUDGET_FIELDS}
+    tolerance=f"{finest[0]:g} mm in {finest[1]}" if finest else "not declared"
+    lines=[f"[scope] solids={solids} (guideline: up to about {guide['solids']:g} for a whole robot) "
+           f"finest path tolerance={tolerance} (guideline: {guide['toleranceMm']:g} mm or coarser) figures={guide['source']}"]
+    reasons=[]
+    if "solids" in passed:reasons.append(f"the layout has {solids} solids, past the guideline of about {guide['solids']:g}")
+    if "pathTolerance" in passed:
+        reasons.append(f"{finest[1]} is checked to a {finest[0]:g} mm path tolerance, finer than the guideline of {guide['toleranceMm']:g} mm")
+    if reasons and budget:
+        lines.append("[scope] note: "+" and ".join(reasons)+". The layout plan records an agreed extended budget: "
+                     +budget["detail"]+"; question: "+budget["question"]+"; allowance: "+budget["allowance"]
+                     +"; stops when: "+budget["stopsWhen"]+". Check in again before going past it.")
+    elif reasons:
+        lines.append("[scope] note: "+" and ".join(reasons)+". This is information and does not change the result. "
+                     "Check in with the user and agree a bounded extended budget (what detail, for which question, how much "
+                     "time or how many cases or solids, and when it stops) before going deeper, then record it under "
+                     "scopeGuidelines.extendedBudget in the layout plan.")
+    return report,lines
+
+
 def mount_notes(groups, mounts):
     """Advisory stderr lines about members left out of a partly per-member mount registration. Never in the receipt."""
     lines=[]
@@ -543,6 +595,11 @@ def review(root, file, previous=None, *, write_view=False, fail_fast=False, prog
     # Named before any case runs: left until the review scene is built, the same mistake reads as an unknown scene body.
     ungrouped=sorted({f.get("id") for c in cases for f in c.get("fixtures",[]) if isinstance(f,dict) and named(f.get("id"))}-roster)
     require(not ungrouped,"List each case fixture in a plan group. No group lists: "+", ".join(ungrouped))
+    # Scope guidelines: reported before the cases run, as information that never changes the status or the exit code.
+    case_fixtures={f["id"] for c in cases for f in c.get("fixtures",[])}
+    result["scope"],scope_lines=scope_report(plan,stages,len(roster-case_fixtures),len(case_fixtures))
+    if progress:
+        for line in scope_lines:progress(line)
     covered=set()
     loaded_operating=False
     free_bound={}
