@@ -1,9 +1,5 @@
 # Review a design continuation
 
-[![Original teaching swerve module rendered in Fusion](../swerve/assembly.png)](../swerve/independent-swerve.f3d)
-
-*Plugin teaching example · Independent-axis swerve module, as saved in Fusion.*
-
 Use this exercise to check what a reader actually retrieves when an existing investigation resumes through a skill. The reader and grader use separate material. The tabletop game and all project records are fictional.
 
 ## Run the exercise
