@@ -6,7 +6,7 @@ import sys
 from time import perf_counter
 
 from atomic_file import write_atomic
-from mechanical_readiness import digest, project_path, require
+from kernel_layout.files import digest, project_path, require
 
 
 def say(line):

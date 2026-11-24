@@ -146,10 +146,11 @@ class KernelLayoutCheck(unittest.TestCase):
         self.assertEqual(receipt["decision"]["firstUnmet"]["kind"], "floating")
         self.assertIn("rail", receipt["decision"]["firstUnmet"]["text"])
         self.assertIn("[attachment] floating: rail (structure)", run.stderr)
-        # Control: the same rail on a post and a beam that reach the mount block is attached, and the layout is checked.
+        # Control: the same rail on a post and a beam that reach the mount block is attached, and the layout is checked. Each
+        # stands 2 mm off the next: within the 3 mm touching gap, and clear of the 1 mm allowance.
         source, budgets = self.copy(self.source), self.copy(self.budgets)
-        source["solids"] += [dict(name="rail beam", group="structure", shape=dict(kind="box", fromMm=[-8, 8, 0], toMm=[24, 75, 6])),
-                             dict(name="rail post", group="structure", shape=dict(kind="box", fromMm=[19, 70, 6], toMm=[24, 75, 18]))]
+        source["solids"] += [dict(name="rail beam", group="structure", shape=dict(kind="box", fromMm=[-8, 10, 0], toMm=[24, 75, 6])),
+                             dict(name="rail post", group="structure", shape=dict(kind="box", fromMm=[19, 70, 8], toMm=[24, 75, 16]))]
         self.explain(judgement, "rail beam", "rail post")
         next(row for row in budgets["masses"] if row["id"] == "body")["members"] += ["rail beam", "rail post"]
         self.put("design.json", source)

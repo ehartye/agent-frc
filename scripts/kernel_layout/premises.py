@@ -1,5 +1,5 @@
 """Judge what the layout was asked to answer: the narrative objectives and the premises it holds from upstream."""
-from mechanical_readiness import named, number, pinned, read, require, resolve_references
+from .files import named, number, pinned, read, require, resolve_references
 
 
 def narrative(root, plan, missing):

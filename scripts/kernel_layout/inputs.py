@@ -7,7 +7,7 @@ receipt, the budgets and the review scene can name them.
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from mechanical_readiness import digest, named, number, pinned, read, require, resolve_references
+from .files import digest, named, number, pinned, read, require, resolve_references
 
 SCHEMA = "agent-frc/layout-judgement@1"
 INSTALL = "pip install --upgrade git+https://github.com/ehartye/frc-design-kernel"

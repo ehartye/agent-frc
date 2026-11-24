@@ -159,7 +159,7 @@ test('the publication check validates only the releases the change touches', t =
   let result = p.check({base});
   assert.deepEqual(result.errors, []);
   assert.deepEqual(result.designs.map(d => [d.design, d.note]), [
-    ['Preliminary design Tilting carriage 1.0', 'effective, untouched by this change: its published files stand.'],
+    ['Preliminary design Tilting carriage 1.0', 'effective, physics unchanged since ' + base + '.'],
     ['Preliminary design Tilting carriage 1.1', 'draft, published on its local layout check. The layout check is not run here.']]);
   // Control: a change to a file in its input folder touches it, and the earlier kind is refused. No reader for it is added.
   write(p.root, 'cad/preliminary-design/releases/1.0/notes.md', 'Invented edited note');

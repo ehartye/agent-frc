@@ -4,7 +4,7 @@ A payload that moves in a stage is carried with a mechanism, transported by cont
 by a field fixture. The last three name a trial of the design library, and the payload's move in that stage must be
 the path the trial fitted, whole or over a window of its kept points, so a path is never an arbitrary animation.
 """
-from mechanical_readiness import named, number, require
+from .files import named, number, require
 from .inputs import carried_chain, own_motion
 
 # How a stage says a payload moved.

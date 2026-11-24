@@ -10,8 +10,9 @@
  *
  *   node stage-gate.mjs preliminary PROJECT --release ID
  *
- * runs the gate of a preliminary release with its effective-readiness report and writes the record. It does not set
- * the status: the staging command does, after this command passes.
+ * runs the gate of a preliminary release and writes the record. It refuses the release, before the layout check
+ * runs, unless its effective-readiness report meets every criterion on the committed design. It does not set the
+ * status: the staging command does, after this command passes.
  */
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
@@ -20,9 +21,9 @@ import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 
 import {writeFileAtomic} from './atomic-write.mjs';
-import {checkPhysics, checkedFromRoot, committedReceipt, compareVerdicts, runLayoutCheck} from './design-publication.mjs';
+import {checkPhysics, committedReceipt, compareVerdicts, releaseReadiness, runLayoutCheck, unmetCriteria} from './design-publication.mjs';
 import {designTitle, versionOf} from './design-status.mjs';
-import {effectiveReadiness, readinessText} from './effective-readiness.mjs';
+import {readinessText} from './effective-readiness.mjs';
 import {receiptIdentity} from './physics-identity.mjs';
 
 export const gateFile = 'gate.json', gateSchema = 'agent-frc/stage-gate@1';
@@ -52,9 +53,11 @@ export function gateTime(seconds) {
 /**
  * Run the gate of one design. `inputs` is the folder of its committed check inputs, `published` the folder its receipt
  * is published in, `record` its release or design record. Returns the gate record; throws, naming the reason, when
- * the design does not pass. Options: run (the layout check), now, budgetMinutes, workers.
+ * the design does not pass. Options: run (the layout check), ready (throws when the committed design does not meet the
+ * criteria of its stage; called once its inputs are found committed, before the layout check runs), now, budgetMinutes,
+ * workers.
  */
-export function stageGate({root, where, id, phase, inputs, published, record, run = runLayoutCheck, now = () => Date.now(), budgetMinutes, workers}) {
+export function stageGate({root, where, id, phase, inputs, published, record, run = runLayoutCheck, ready = () => {}, now = () => Date.now(), budgetMinutes, workers}) {
   const changes = uncommitted(root, inputs), rel = full => path.relative(root, full).split(path.sep).join('/');
   check(!changes?.length, where + ' is not marked effective: its inputs have uncommitted changes (' + (changes ?? []).slice(0, 5).map(line => line.trim()).join('; ') +
     '). The stage gate runs on the committed design. Commit ' + rel(inputs) + ', then mark it effective');
@@ -63,6 +66,7 @@ export function stageGate({root, where, id, phase, inputs, published, record, ru
   const receipt = JSON.parse(readFileSync(receiptPath, 'utf8')), planName = 'judgement.json';
   const {fromRoot, absent} = committedReceipt(root, inputs, planName, receipt, where);
   check(!absent.length, where + ' is not marked effective: its receipt names files that are not in ' + rel(inputs) + ' (' + absent.join(', ') + ')');
+  ready();
   const within = name => fromRoot ? rel(path.join(inputs, name)) : name, began = now();
   let fresh;
   try { fresh = run({project: fromRoot ? root : inputs, plan: within(planName), budgetMinutes, workers}); }
@@ -85,7 +89,10 @@ export const gateLine = (where, gate) => '[gate] ' + where + ': the full layout 
 /** Write a gate record beside the published design. */
 export function writeGate(published, gate) { writeFileAtomic(path.join(published, gateFile), JSON.stringify(gate, null, 2) + '\n'); }
 
-/** The gate of a preliminary release, with its effective-readiness report. Returns {gate, where, report}. */
+/**
+ * The gate of a preliminary release. Its effective-readiness report must meet every criterion on the committed design
+ * before the layout check runs. Returns {gate, where, published, report}.
+ */
 export function preliminaryGate({project, release, site = 'docs', preliminary = 'preliminary-design', inputs = 'cad/preliminary-design/releases', ...options}) {
   const root = path.resolve(project), tree = path.join(root, site, preliminary), published = path.join(tree, 'releases', release);
   const read = file => JSON.parse(readFileSync(file, 'utf8'));
@@ -93,12 +100,14 @@ export function preliminaryGate({project, release, site = 'docs', preliminary = 
   const index = read(path.join(tree, 'releases.json')), record = read(path.join(published, 'release.json'));
   const where = 'Preliminary design ' + designTitle(index, release);
   const folder = path.resolve(root, record.check?.project ?? path.join(inputs, release));
-  const gate = stageGate({root, where, id: release, phase: 'preliminary-design', inputs: folder, published, record, ...options});
-  const receipt = read(path.join(published, 'receipt.json')), design = designTitle(index, release);
-  const fromRoot = checkedFromRoot(root, folder, receipt), rel = path.relative(root, folder).split(path.sep).join('/');
   let report;
-  try { report = readinessText(fromRoot ? effectiveReadiness(root, {release: rel, design}) : effectiveReadiness(folder, {design})); }
-  catch (error) { report = 'Effective-readiness report unavailable: ' + error.message + '\n'; }
+  const ready = () => {
+    const found = releaseReadiness(root, folder, published, designTitle(index, release));
+    report = readinessText(found);
+    check(found.met === found.of, where + ' is not marked effective: its effective-readiness report meets ' + found.met + ' of ' + found.of +
+      ' criteria on the committed design. Not met: ' + unmetCriteria(found) + '. Meet every criterion, commit the design, then mark it effective');
+  };
+  const gate = stageGate({root, where, id: release, phase: 'preliminary-design', inputs: folder, published, record, ready, ...options});
   return {gate: {...gate, readinessReport: report}, where, published, report};
 }
 

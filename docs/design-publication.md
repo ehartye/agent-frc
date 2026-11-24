@@ -343,7 +343,7 @@ More simulation never closes a bench test. If the design removed the risk, close
 
 A design becomes effective when a reviewed pull request changes its status in the index. No signature is involved. The command that changes the status runs the [stage gate](#the-stage-gate) first and prints the evidence; the pull request carries the gate's record, and the reviewer accepts the design by merging it.
 
-- **Preliminary.** The command prints the [effective-readiness report](preliminary-design.md#judge-readiness-to-be-marked-effective) for the release's inputs, titled with the design name and version. The report is informational: neither the gate nor the publication check fails on it. It is kept in the gate's record.
+- **Preliminary.** The command prints the [effective-readiness report](preliminary-design.md#judge-readiness-to-be-marked-effective) for the release's committed inputs and published receipt, titled with the design name and version. The gate refuses the release, before its layout check runs, unless the report meets every criterion: no `gate.json` is written and the status stays. The report is kept in the gate's record, and the publication check refuses a release this change makes effective whose report does not meet every criterion.
 - **Detailed.** The design carries the result of the [mechanical-readiness review](mechanical-readiness.md) as `designs/ID/readiness.json`. Save the output of `mechanical_readiness.py review` and pass it to `effective`. It must be a review of the STEP the design record names, and it must report a showcase eligibility of `pass`. Its [bench tests](#bench-tests-handed-over-from-preliminary-design) must be resolved: results for the ones that gate the build, an owner and a plan for the ones run on the robot. A review with any other verdict fails the check, so the design stays in progress until the findings are resolved. The check prints the build readiness, the showcase eligibility and each finding that does not pass.
 
 ### A change to an effective design
@@ -449,5 +449,5 @@ The [audit](project-ci.md#audit-the-project-for-use-of-the-plugin) finds project
 - It does not open Fusion. `stage` replays the Fusion export lineage on the workstation that has the archive.
 - It does not compare the tessellated display solids with the STEP.
 - It does not verify that an animation shows what a mission case says it accomplishes. The reviewer of the pull request watches it.
-- It does not judge the effective-readiness report of a preliminary release. The reviewer does.
+- It does not check a preliminary release the change leaves alone. A release is touched when a file in its own published or input folder changes, or when the change makes it effective; a change to its index entry alone, such as superseding it, does not touch it. An untouched release stands on its published files in the format it was published in.
 - It does not run the layout check, for any design. [A draft is published on its own layout check and cannot become effective without the stage gate](testing-methodology.md#in-a-robot-project).

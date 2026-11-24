@@ -17,8 +17,14 @@
  *      wording change and a rebuilt view pass, and a change to what the layout check read or found is refused,
  *      because that work belongs to the next minor version, opened as a draft.
  *   8. A design this change makes effective carries the record of its stage gate (stage-gate.mjs), which the command
- *      that marks it effective writes after running the full layout check on the committed design.
+ *      that marks it effective writes after running the full layout check on the committed design, and its
+ *      effective-readiness report meets every criterion.
  *   9. No tracked file holds a personal machine path or a credential, and the project carries no plugin file.
+ *
+ * Only the preliminary releases the change touches are checked against 1 to 8. A release is touched when a file in its
+ * own published or input folder changed since the base commit, or when the change makes it effective. A change to its
+ * index entry alone, such as superseding it, does not touch it: it stands on its published files, as it was accepted.
+ * Without a base commit every release is checked.
  *
  * It also lists, as advice that blocks nothing, the published files that no page, index or listed design leads to:
  * publishing the folder puts them online with the rest.
@@ -129,6 +135,31 @@ export function checkEvidence(where, files, record) {
   return receipt;
 }
 
+/**
+ * The effective-readiness report of a preliminary release: its committed judgement file and missions.json, and the
+ * receipt it publishes, which the stage gate reproduces. `inputs` and `published` are folders; `design` titles the report.
+ */
+export function releaseReadiness(root, inputs, published, design) {
+  const rel = full => path.relative(root, full).split(path.sep).join('/');
+  return effectiveReadiness(root, {plan: rel(path.join(inputs, judgementFile)), receipt: rel(path.join(published, 'receipt.json')),
+    missions: rel(path.join(inputs, 'missions.json')), design});
+}
+
+/** The criteria a readiness report does not meet, each with its reasons, in one sentence; empty when it meets them all. */
+export const unmetCriteria = report => report.criteria.filter(c => !c.met).map(c => c.title + ' (' + c.reasons.join('; ') + ')').join('; ');
+
+/**
+ * The files a change touches, by project-relative path: changed since the base commit, staged or not, and untracked.
+ * Null without a usable base: then every release counts as touched.
+ */
+function changedSince(root, base) {
+  try {
+    const git = (...args) => execFileSync('git', ['-C', root, ...args], {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 1024 * 1024 * 1024});
+    return [...git('diff', '--name-only', '--no-renames', '--relative', '-z', base, '--').split('\0'),
+      ...git('ls-files', '--others', '--exclude-standard', '-z').split('\0')].filter(Boolean);
+  } catch { return null; }
+}
+
 /** What a reviewer needs from a mechanical-readiness review result: its verdicts and the findings that do not pass. */
 export function readinessSummary(review) {
   const open = list(review.findings).filter(f => f?.status !== 'pass' && f?.status !== 'closed');
@@ -223,6 +254,9 @@ export function checkProject(root, options = {}) {
   const attempt = (what, body) => { try { return body(); } catch (error) { errors.push(error.message); return undefined; } };
   const compared = o.base === undefined ? remoteBase(root) : o.base ? {commit: o.base, name: o.base} : null, base = baseReader(root, compared?.commit);
   const rel = full => path.relative(root, full).split(path.sep).join('/');
+  // A release is touched when a file in one of its own folders changed. Its index entry is not one of them.
+  const changed = base ? changedSince(root, compared.commit) : null;
+  const touches = (...dirs) => changed === null || changed.some(file => dirs.some(dir => file === dir || file.startsWith(dir + '/')));
   // A project file as it was at the base commit, parsed; null when it was not there.
   const before = name => { try { return parse(base.at(name), name + ' at the base commit'); } catch { return null; } };
   // What an index said at the base commit: the design that was effective there.
@@ -293,17 +327,23 @@ export function checkProject(root, options = {}) {
       }
       attempt(id, () => {
         const where = 'Preliminary design ' + designTitle(index, id), dir = path.join(prelimTree, 'releases', id), record = records.get(id);
+        // A release the change leaves alone stands on its published files: none is read again, in whatever format it was published.
+        const becoming = entry.status === 'effective' && earlier(prelimIndexFile).effective !== id;
+        if (!becoming && !touches(rel(dir), rel(path.resolve(root, record?.check?.project ?? path.join(o.inputs, id))))) {
+          pending.push({where, entry, id, untouched: true});
+          return;
+        }
         check(record?.schema === 'agent-frc/preliminary-release@1' && record.release === id, where + ' needs its release record (release.json)');
         const receipt = checkEvidence(where, filesUnder(dir), record);
         const inputs = inputsOf(where, record, path.join(o.inputs, id));
         pending.push({where, entry, id, receipt, record, inputs, required: true, tree: path.join(prelimTree, 'releases'), recordName: 'release.json',
           fallback: other => rel(path.join(root, o.inputs, other)), was: earlier(prelimIndexFile), ids,
           command: release => 'python PLUGIN/scripts/stage_preliminary_review.py --set-status ' + release + ' effective'});
-        // Effective is the project's decision in a reviewed pull request. The report is for its reviewer.
+        // The stage gate marked this design effective only on a report that met every criterion. It is printed for the reviewer.
         if (entry.status === 'effective') {
-          const design = entry.design;
-          reports.push({title: where + ' (effective)',
-            text: existsSync(inputs) ? readinessText(checkedFromRoot(root, inputs, receipt) ? effectiveReadiness(root, {release: rel(inputs), design}) : effectiveReadiness(inputs, {design})) : 'No readiness report: the check inputs are not committed.\n'});
+          const report = existsSync(inputs) ? releaseReadiness(root, inputs, dir, entry.design) : null;
+          reports.push({title: where + ' (effective)', text: report ? readinessText(report) : 'No readiness report: the check inputs are not committed.\n'});
+          pending.at(-1).readiness = report;
         }
       });
     }
@@ -390,6 +430,8 @@ export function checkProject(root, options = {}) {
   for (const item of pending) attempt(item.where, () => {
     const {where, entry, id, receipt, record, was} = item, project = item.inputs, effective = entry.status === 'effective';
     const note = text => { designs.push({design: where, status: entry.status, note: text}); o.log('[publication] ' + where + ': ' + text); };
+    // An untouched effective release is the one the base commit accepted: its physics is unchanged since then.
+    if (item.untouched) return note(effective ? 'effective, physics unchanged since ' + since + '.' : 'draft, untouched by this change. The layout check is not run here.');
     let becoming = false, said;
     if (!effective) said = 'draft, published on its local layout check. The layout check is not run here.';
     else if (!base) said = 'effective. No default branch of the remote to compare with, so its physics was not compared.';
@@ -425,6 +467,8 @@ export function checkProject(root, options = {}) {
     const physics = sha(JSON.stringify(receiptIdentity(receipt)));
     if (becoming) check(gate?.schema === 'agent-frc/stage-gate@1' && gate.verdict === 'pass' && gate.physics === physics, where + ' is marked effective without a stage gate of this design. ' +
       'Mark it effective with the plugin\'s command, which runs the full layout check on the committed design and writes ' + rel(gatePath) + ': ' + item.command(id));
+    if (becoming && item.readiness) check(item.readiness.met === item.readiness.of, where + ' cannot be effective: its effective-readiness report meets ' +
+      item.readiness.met + ' of ' + item.readiness.of + ' criteria. Not met: ' + unmetCriteria(item.readiness));
     note(said);
   });
   // A personal machine path or a credential is public as soon as the branch is pushed.

@@ -156,7 +156,7 @@ test('the attachment report names each floating solid and labelled exception, an
   const scene = reviewScene();
   assert.equal(logic.attachmentNote('arm', scene), null, 'a scene without the report says nothing');
   assert.deepEqual(logic.attachmentRows(scene), []);
-  scene.attachment = {informational: true, case: 'raise', gapMm: 3, robotSolids: 3,
+  scene.attachment = {case: 'raise', gapMm: 3, robotSolids: 3,
     floating: [{solid: 'battery', group: 'battery', nearest: 'frame', gapMm: 41.26}], heldByMountOnly: ['arm'], onUnmountedAllowance: [],
     unmountedAllowances: [], fixturesOffFloor: [{fixture: 'target', lowestAboveFloorMm: 120}], suspendedFixtures: []};
   assert.deepEqual(validateScene(scene).errors, []);

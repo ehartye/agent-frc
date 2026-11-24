@@ -59,6 +59,7 @@ test('the Design checks block is written into AGENTS.md once and refreshed in pl
   // The block says what to run for each kind of change, and never asks for the layout check on a page change.
   for (const line of ['| Geometry, a motion or a fixture in the design source | Regenerate the solids with the design library, then the layout check |',
     '| A tolerance or reserve, a trial, a mass or voltage budget | The layout check |',
+    '| A draft being published | The layout check with `--carry` on what changed, then the publication check |',
     'Never the layout check |', '| The physics of an effective design | Do not edit it in place. Open the next minor version as a draft |',
     'It runs the stage gate itself: the full layout check on the committed design, once.', 'a push only publishes.',
     '- Time guidelines: about 1 minute while editing, 5 before merging, 15 at a stage gate.'])

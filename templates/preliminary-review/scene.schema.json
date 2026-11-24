@@ -486,15 +486,11 @@
     "attachment": {
       "type": "object",
       "x-supplier": "plugin",
-      "description": "The layout check's attachment report for one case's start pose: robot solids with no path of contacts or registered mounts to the frame, labelled unmounted allowances and field fixtures off the floor. Information only; no verdict reads it.",
+      "description": "The layout check's attachment report for one case's start pose: robot solids with no path of contacts or registered mounts to the frame, labelled unmounted allowances and field fixtures off the floor. A floating solid or a fixture off the floor that no label explains keeps the layout from being layout-checked.",
       "required": [
-        "informational",
         "case"
       ],
       "properties": {
-        "informational": {
-          "const": true
-        },
         "case": {
           "type": "string"
         },

@@ -76,7 +76,7 @@ The library's campaign does the method for each trial: the nominal run, the cont
 
 Publishing an in-progress draft asks less: a passing layout check and one mission case, which may follow a prescribed path.
 
-Physical bench results are not required. They are listed as verification items for the build, and detailed design takes each one up as a [bench-test record](design-publication.md#bench-tests-handed-over-from-preliminary-design): a result for the tests that gate the build and an owner and a plan for the tests run on the robot, before the detailed design is effective. The [effective-readiness report](preliminary-design.md#judge-readiness-to-be-marked-effective) lists each criterion as met or not met with the reason. It is informational: the publication check prints it and does not fail on it, and the decision stays with the reviewed pull request.
+Physical bench results are not required. They are listed as verification items for the build, and detailed design takes each one up as a [bench-test record](design-publication.md#bench-tests-handed-over-from-preliminary-design): a result for the tests that gate the build and an owner and a plan for the tests run on the robot, before the detailed design is effective. The [effective-readiness report](preliminary-design.md#judge-readiness-to-be-marked-effective) lists each criterion as met or not met with the reason. The command that marks a design effective refuses it unless every criterion is met, and the reviewed pull request that carries the gate's record makes the decision.
 
 ### What preliminary design hands to detailed design
 

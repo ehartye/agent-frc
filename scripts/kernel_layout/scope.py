@@ -1,5 +1,5 @@
 """Scope and time, said aloud. Both are guidelines: neither changes a status or an exit code."""
-from mechanical_readiness import named, number, require
+from .files import named, number, require
 
 SCOPE_SOLIDS = 80
 SCOPE_TOLERANCE_MM = 10

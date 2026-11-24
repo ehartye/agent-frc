@@ -9,7 +9,8 @@ from urllib.parse import urlsplit
 import zlib
 
 from atomic_file import write_atomic
-from mechanical_readiness import named, pinned, read, require, resolve_references
+from kernel_layout.attachment import floating
+from kernel_layout.files import named, pinned, read, require, resolve_references
 
 CONTROL_ID = "package-displacement-control"
 CASE_KINDS = ("nominal", "inhibited", "adverse")
@@ -287,6 +288,10 @@ def first_unmet(result):
         if row.get("status") == "fail":
             return dict(kind="voltage", case=row["case"], text="%s: minimum bus %.2f V against %.2f V required (%+.2f V)" % (
                 row["case"], row["loadedBusV"][0], row["requiredMinV"], row["marginV"]))
+    loose = floating(result.get("attachment"))
+    if loose:
+        return dict(kind="floating", text="Floating: " + ", ".join(loose) + ". Give each a support or mount that traces to the frame, "
+                    "rest each fixture on the floor, or label it under attachment in the judgement file with the reason")
     control = result.get("control")
     if control and not control.get("witness"):
         return dict(kind="control", text="Displaced control " + str(control.get("displaced")) + " was "
