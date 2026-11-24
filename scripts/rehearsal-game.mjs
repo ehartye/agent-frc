@@ -377,15 +377,6 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
     const offset=faceDepth(r,port.face)+port.extensionIn,center=p.map((v,i)=>v+offset*forward[i]);
     return {center,forward,lateral,offset,ends:[-1,1].map(sign=>center.map((v,i)=>v+sign*port.widthIn/2*lateral[i]))};
   }
-  // The piece touches the robot's bumpered footprint.
-  function againstBody(r,piece) {
-    const poly=geom.footprint(r.p,r);
-    return poly.some((a,i)=>{
-      const b=poly[(i+1)%poly.length],dx=b[0]-a[0],dy=b[1]-a[1];
-      const t=Math.max(0,Math.min(1,((piece.p[0]-a[0])*dx+(piece.p[1]-a[1])*dy)/(dx*dx+dy*dy)));
-      return Math.hypot(piece.p[0]-a[0]-t*dx,piece.p[1]-a[1]-t*dy)<=piece.radiusIn+0.5;
-    });
-  }
   const reachesHeight=(port,piece)=>port.acquireHeightIn.min<=(piece.heightIn ?? 2*piece.radiusIn)+1e-9 && port.acquireHeightIn.max>=-1e-9;
   // The piece touches the face's mouth, or lies inside the deployed intake between the bumper and the mouth, and the
   // face normal is within headingToleranceDeg of the bearing to it.
@@ -421,7 +412,7 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
         const near=geom.circumradius(blocker)+2*geom.circumradius(r);
         for(const piece of sim.game.motion.pieces)if(Math.hypot(piece.p[0]-blocker.p[0],piece.p[1]-blocker.p[1])<=near)skip[piece.id]=until;
       }
-      delete r.pickup.id;delete r.pickup.since;delete r.pickup.position;delete r.pickup.pushedSince;
+      delete r.pickup.id;delete r.pickup.since;delete r.pickup.position;
     }else restartLeg(sim,r);
   }
   // Plan the current port leg again from the robot's present pose, keeping what it has already released.
@@ -489,6 +480,22 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
     }
     return best;
   }
+  // Time to cover d from the present speed, accelerating at accelInS2 up to topSpeedInS.
+  function etaFrom(r,d) {
+    const {topSpeedInS:top,accelInS2:a}=r.concept.drive,v=Math.min(r.currentSpeedInS ?? 0,top),run=(top*top-v*v)/(2*a);
+    return d<=run?(Math.sqrt(v*v+2*a*d)-v)/a:(top-v)/a+(d-run)/top;
+  }
+  // Where a port aims for a piece. A port that need not stop aims its mouth one radius past the piece, so contact comes
+  // while still moving; if that port will still be busy when the robot gets there, it aims to stop with the piece at
+  // its mouth instead.
+  function pickupGoal(r,piece,port,now,c) {
+    const toward=bearing(r.p,piece.p),heading=toward-faceTurn[port.face],n=unit(toward);
+    // Arrival is when the mouth first reaches the piece, not when the centre would reach it.
+    const toMouth=Math.max(0,Math.hypot(piece.p[0]-r.p[0],piece.p[1]-r.p[1])-faceDepth(r,port.face)-port.extensionIn-piece.radiusIn);
+    const rolls=!port.requiresStop && now+etaFrom(r,toMouth)+1e-9>=(c.free[port.id] ?? -Infinity);
+    const reach=faceDepth(r,port.face)+port.extensionIn+(rolls?-1:.85)*piece.radiusIn;
+    return {goal:[piece.p[0]-n[0]*reach,piece.p[1]-n[1]*reach],heading,toward,rolls};
+  }
   function conceptAcquire(sim,r,leg,s,timeS) {
     const g=sim.game,type=s.piece,ports=portsFor(r.concept.inputs,type);
     if(!ports.length){notice(g,r.id+' has no input port for '+type+' at '+s.label+'.');return {done:true};}
@@ -507,24 +514,19 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
     }
     const c=g.concept[r.id],now=elapsed(sim,timeS),skip=c.skip??={};
     const free=g.motion.pieces.filter(p=>p.station===s.id);
-    let current=free.find(p=>p.id===pickup.id);
-    // Never plough: a target pressed against the bumper outside the mouth for more than 1 s is left alone for 2 s
-    // while the robot seeks another. A nudge from a turn, or a piece that rolls away, is not ploughing.
-    if(current){
-      const port=ports.find(p=>p.id===pickup.port);
-      if(port && !portContact(r,current,port) && againstBody(r,current))pickup.pushedSince??=timeS;
-      else delete pickup.pushedSince;
-      if(pickup.pushedSince!==undefined && timeS-pickup.pushedSince>1+1e-9){
-        skip[current.id]=now+2;delete pickup.id;delete pickup.since;delete pickup.position;delete pickup.pushedSince;current=undefined;
-      }
-    }
+    const current=free.find(p=>p.id===pickup.id);
     if(current){
       // A port that must stop drives on to its pickup pose, where the trapezoid brings it to rest.
       const port=ports.find(p=>p.id===pickup.port),hold={goal:pickup.goal,heading:pickup.heading};
       if(port && portContact(r,current,port))return acquiring(sim,r,s,current,port,timeS,hold,leg);
       delete pickup.since;
-      if(Math.hypot(current.p[0]-pickup.position[0],current.p[1]-pickup.position[1])<.25)
+      if(Math.hypot(current.p[0]-pickup.position[0],current.p[1]-pickup.position[1])<.25){
+        // Decide again, from the present speed, whether the port will be free on arrival, so a robot arriving early
+        // stops short with the piece at its mouth instead of driving into it.
+        const aim=port && pickupGoal(r,current,port,now,c);
+        if(aim && aim.rolls!==pickup.rolls)Object.assign(pickup,{goal:aim.goal,heading:aim.heading,rolls:aim.rolls});
         return {goal:pickup.goal,heading:pickup.heading,action:'Seeking '+current.id};
+      }
     }
     // Choose the piece, port and heading that arrive soonest. The face normal lies on the approach bearing.
     const others=new Set(sim.robots.filter(peer=>peer!==r).map(peer=>peer.pickup?.id));
@@ -535,20 +537,15 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
       if(others.has(piece.id) || (skip[piece.id] ?? -Infinity)>now)continue;
       for(const port of ports){
         if(!reachesHeight(port,piece))continue;
-        const toward=bearing(r.p,piece.p),heading=toward-faceTurn[port.face],n=unit(toward);
-        // A port that need not stop aims its mouth one radius past the piece, so contact comes while still moving;
-        // if that port will still be busy on arrival it aims to stop with the piece at its mouth instead.
-        const near=Math.hypot(piece.p[0]-r.p[0],piece.p[1]-r.p[1]),eta=near>=v*v/a?v/a+near/v:2*Math.sqrt(near/a);
-        const rolls=!port.requiresStop && now+eta+1e-9>=(c.free[port.id] ?? -Infinity);
-        const reach=faceDepth(r,port.face)+port.extensionIn+(rolls?-1:.85)*piece.radiusIn,goal=[piece.p[0]-n[0]*reach,piece.p[1]-n[1]*reach];
+        const {goal,heading,rolls}=pickupGoal(r,piece,port,now,c);
         if(geom.hit(goal,goal,{...r,heading},sim.setup))continue;
         const d=Math.hypot(goal[0]-r.p[0],goal[1]-r.p[1]);
         const time=Math.max(d>=v*v/a?v/a+d/v:2*Math.sqrt(d/a),Math.abs(wrap(heading-r.heading))/rotationDegS);
-        if(!best || time<best.time-1e-9)best={time,piece,port,heading,goal};
+        if(!best || time<best.time-1e-9)best={time,piece,port,heading,goal,rolls};
       }
     }
     if(!best)return g.cargo[r.id].some(p=>p.type===type) && !g.reserve[s.id]?.length?{done:true}:{waiting:'Waiting for reachable stock'};
-    Object.assign(pickup,{id:best.piece.id,position:[...best.piece.p],port:best.port.id,heading:best.heading,goal:best.goal});
+    Object.assign(pickup,{id:best.piece.id,position:[...best.piece.p],port:best.port.id,heading:best.heading,goal:best.goal,rolls:best.rolls});
     delete pickup.since;
     if(portContact(r,best.piece,best.port))return acquiring(sim,r,s,best.piece,best.port,timeS,{goal:best.goal,heading:best.heading},leg);
     return {goal:best.goal,heading:best.heading,action:'Seeking '+best.piece.id};

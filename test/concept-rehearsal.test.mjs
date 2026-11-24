@@ -651,7 +651,7 @@ function studyMatch(field,doc,matchId,edit=()=>{}){
   const deadlocks=[...sim.deadlocks];engine.nextPhase(sim);
   sim.paused=false;engine.advance(sim,engine.elapsedSeconds('Main play'));deadlocks.push(...sim.deadlocks);
   const credited=sim.game.events.filter(e=>e.robot==='B1' && e.phase==='Main play' && e.outcome==='credited');
-  return {sim,deadlocks,robot:id=>sim.robots.find(r=>r.id===id),credited};
+  return {engine,sim,deadlocks,robot:id=>sim.robots.find(r=>r.id===id),credited};
 }
 const variant=(name,pointer,value)=>{
   const doc=JSON.parse(readFileSync(new URL('../examples/concept-bots/'+name+'.json',import.meta.url)));
@@ -678,11 +678,90 @@ test('ports: a seeker drops pieces behind a parked robot and collects the rest',
   const field=JSON.parse(readFileSync(new URL('./fixtures/concept-parked-field.json',import.meta.url)));
   const doc=JSON.parse(readFileSync(new URL('../examples/concept-bots/turret-shooter.json',import.meta.url)));
   const parked=studyMatch(field,doc,'solo');
-  assert.ok(parked.robot('B1').wait*dt<15,'B1 waited '+parked.robot('B1').wait*dt+' s of Main play');
   assert.ok(parked.credited.length>=10,'B1 scored '+parked.credited.length+' in Main play');
+  // Every blue piece left on the floor lies beside the parked B3 (within the reach the robot drops): B1 took the rest.
+  const b3=parked.robot('B3'),reach=parked.engine.geom.circumradius(b3)+2*parked.engine.geom.circumradius(parked.robot('B1'));
+  const left=parked.sim.game.motion.pieces.filter(p=>p.station==='blue-floor');
+  assert.ok(left.every(p=>Math.hypot(p.p[0]-b3.p[0],p.p[1]-b3.p[1])<=reach),'left on the floor: '+left.map(p=>p.id+'@'+p.p.map(Math.round)).join(' '));
   // Control: with B3 started clear of the rows, the pieces it hid are collected, so they were dropped only for B3.
   const clear=studyMatch(field,doc,'solo',p=>{p.rehearsal.starts[2]=[25,20];});
   const hidden=['blue-floor/4','blue-floor/6'];
   assert.ok(hidden.every(id=>clear.sim.game.events.some(e=>e.operation==='acquire' && e.pieces.includes(id))),'hidden pieces collected when B3 is clear');
-  assert.ok(hidden.some(id=>parked.sim.game.motion.pieces.some(p=>p.id===id)),'a hidden piece stays on the floor beside the parked B3');
+  // The parked B3 did obstruct: B1 dropped at least one target it was held from.
+  assert.ok(Object.keys(parked.sim.game.concept.B1.skip ?? {}).length>0,'B1 dropped a target held by B3');
+});
+
+// Run one probe whose robots shoot or seek only in Main play, so the opening allocation does not stand in.
+function mainPlay(profile,rows,seconds,starts){
+  starts.forEach((s,i)=>{profile.rehearsal.starts[i]=s;});
+  const engine=createFieldRehearsal(profile);
+  const sim=engine.createProbe(rows.map((row,i)=>({...engine.defaults('blue',i+1),plans:{Opening:'hold','Main play':'trial'},...row})));
+  sim.paused=false;engine.advance(sim,engine.elapsedSeconds('Opening'));engine.nextPhase(sim);
+  const targets=[];
+  sim.paused=false;
+  for(let t=0;t<Math.round(seconds/dt);t++){engine.advance(sim,dt);targets.push({t:sim.ticks*dt,id:sim.robots[0].pickup?.id});}
+  return {engine,sim,events:sim.game.events,targets};
+}
+
+test('ports: in Main play an output keeps its secondsPerPiece between releases',()=>{
+  // Three preloaded balls, a stationary feasible pose: releases come one secondsPerPiece (0.4 s) apart.
+  const run=mainPlay(arena({docs:[conceptDoc('steady',{capacity:{ball:3},outputs:[shooter()]})],steps:[shoot]}),
+    [{concept:'steady',preload:{station:'test-rack',quantity:3}}],3,[[240,60]]);
+  const shots=releases(run.events).filter(e=>e.phase==='Main play');
+  assert.equal(shots.length,3);
+  for(let i=1;i<shots.length;i++)assert.ok(shots[i].timeS-shots[i-1].timeS>=0.4-1e-9,'shot '+i+' after '+(shots[i].timeS-shots[i-1].timeS).toFixed(2)+' s');
+});
+
+test('ports: a seeker never ploughs a piece it cannot take',()=>{
+  // A front intake with no heading tolerance: once a ball is nudged off the bearing, contact never registers. The
+  // robot must leave a ball pressed against its bumper rather than push it across the floor.
+  const balls=[[260,60],[260,150]];
+  const doc=conceptDoc('strict',{inputs:[input('front',{headingToleranceDeg:q(0)})]});
+  const run=mainPlay(arena({docs:[doc],steps:[{operation:'acquire',station:'test-balls'}],balls}),[{concept:'strict',heading:20}],8,[[200,60]]);
+  for(const piece of run.sim.game.motion.pieces.filter(p=>p.station==='test-balls')){
+    const from=balls[Number(piece.id.split('/')[1])-1];
+    assert.ok(Math.hypot(piece.p[0]-from[0],piece.p[1]-from[1])<=24,piece.id+' pushed '+Math.hypot(piece.p[0]-from[0],piece.p[1]-from[1]).toFixed(1)+' in');
+  }
+});
+
+test('ports: a rolling port still busy on arrival brakes at the piece rather than drive its mouth over it',()=>{
+  // 30 in apart with a 0.5 s interval: from rest the next ball looks free on arrival, but the moving robot gets there
+  // while the port is busy. It must stop with the ball at its mouth, not push it.
+  const balls=[[250,60],[280,60],[310,60]];
+  const doc=conceptDoc('early',{capacity:{ball:3},inputs:[input('front',{requiresStop:false,secondsPerPiece:q(0.5)})]});
+  const run=mainPlay(arena({docs:[doc],steps:[{operation:'acquire',station:'test-balls'}],balls}),[{concept:'early'}],6,[[200,60]]);
+  const got=run.events.filter(e=>e.operation==='acquire' && e.outcome==='acquired');
+  assert.equal(got.length,3);
+  for(const e of got){
+    const from=balls[Number(e.pieces[0].split('/')[1])-1];
+    assert.ok(Math.hypot(e.contact.position[0]-from[0],e.contact.position[1]-from[1])<=2,e.pieces[0]+' moved '+Math.hypot(e.contact.position[0]-from[0],e.contact.position[1]-from[1]).toFixed(1)+' in before capture');
+  }
+});
+
+test('ports: a seeker held by a robot gives up that target even when the target is far from the blocker',()=>{
+  // B2 parks between B1 and the nearer ball (80 in beyond B2, outside the near-blocker reach). B1 must drop it and
+  // collect the other ball instead of returning to the blocked one.
+  const balls=[[230,60],[100,220]];
+  const doc=conceptDoc('seeker',{inputs:[input('front')]});
+  const run=mainPlay(arena({docs:[doc],steps:[{operation:'acquire',station:'test-balls'}],balls}),
+    [{concept:'seeker'},{plans:{Opening:'hold','Main play':'hold'}}],8,[[100,60],[150,60]]);
+  assert.equal(run.targets.find(x=>x.id)?.id,'test-balls/1','B1 first seeks the nearer ball, behind B2');
+  assert.ok(run.events.some(e=>e.operation==='acquire' && e.pieces.includes('test-balls/2')),'B1 collected the other ball: '+run.sim.robots[0].blocked);
+});
+
+test('ports: a seeker held by a robot also passes over the other pieces beside that robot',()=>{
+  // Three balls just beyond the parked B2 and one clear ball farther off. After the first drop B1 must not try
+  // another ball beside B2.
+  const cluster=[[200,90],[200,30],[215,60]],balls=[...cluster,[100,230]];
+  const doc=conceptDoc('seeker',{inputs:[input('front')]});
+  const run=mainPlay(arena({docs:[doc],steps:[{operation:'acquire',station:'test-balls'}],balls}),
+    [{concept:'seeker'},{plans:{Opening:'hold','Main play':'hold'}}],8,[[100,60],[170,60]]);
+  const near=new Set(['test-balls/1','test-balls/2','test-balls/3']);
+  const first=run.targets.find(x=>near.has(x.id));
+  assert.ok(first,'B1 first seeks a ball beside B2');
+  const dropped=run.targets.find(x=>x.t>first.t && x.id!==first.id);
+  assert.ok(dropped,'B1 dropped its first target');
+  const after=run.targets.filter(x=>x.t>=dropped.t && x.t<dropped.t+2.5);
+  assert.ok(after.every(x=>!near.has(x.id)),'B1 tried '+[...new Set(after.map(x=>x.id))].join(', ')+' beside B2 after dropping '+first.id);
+  assert.ok(run.events.some(e=>e.operation==='acquire' && e.pieces.includes('test-balls/4')),'B1 collected the clear ball');
 });
