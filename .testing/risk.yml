@@ -40,9 +40,9 @@ areas:
   - path: scripts/design-publication.mjs
     tier: critical
     why: publication checks and the stage gate
-  - path: scripts/physics-identity.mjs
+  - path: scripts/gate-record.mjs
     tier: critical
-    why: what an effective design is held to; a false match lets its physics change without a gate
+    why: the gate record an effective design is held to; a false match lets a judged file change without a gate
   - path: scripts/effective-readiness.mjs
     tier: critical
     why: the readiness report the stage gate requires to meet every criterion; a false "met" makes a design effective without its trials

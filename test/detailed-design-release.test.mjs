@@ -7,45 +7,41 @@
  */
 import assert from 'node:assert/strict';
 import {execFileSync, spawnSync} from 'node:child_process';
-import {cpSync, existsSync, mkdtempSync, readFileSync, rmSync} from 'node:fs';
+import {existsSync, mkdtempSync, readFileSync, rmSync} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import {fileURLToPath} from 'node:url';
-import {checkProject} from '../scripts/design-publication.mjs';
-import {markEffective as markEffectiveWithGate, refresh, stageInProgress, withdraw} from '../scripts/detailed-design-release.mjs';
-import reproduces from './fixtures/gate-reproduces.mjs';
+import {checkProject as checkWithJudgement} from '../scripts/design-publication.mjs';
+import {markEffective as markEffectiveWithGate, refresh, stageInProgress as stageWithJudgement, withdraw} from '../scripts/detailed-design-release.mjs';
+import {writeGate} from '../scripts/gate-record.mjs';
+import {preliminaryGate} from '../scripts/stage-gate.mjs';
+import {editJson, issueRelease, listing, paged, sha, standIn, write, writeInputs} from './fixtures/preliminary-release.mjs';
 
-// These invented designs hold no solid, so the layout check of the stage gate is stood in for: it reproduces the receipt.
-const gateCheck = fileURLToPath(new URL('./fixtures/gate-reproduces.mjs', import.meta.url));
-const markEffective = options => markEffectiveWithGate({run: reproduces, ...options});
-import {commitInputs, folderReceipt, issueRelease, listing, sha, write} from './fixtures/preliminary-release.mjs';
+// These invented designs hold no solid, so the layout judgement is stood in for.
+const standInCli = fileURLToPath(new URL('./fixtures/stand-in-cli.mjs', import.meta.url));
+const markEffective = options => markEffectiveWithGate({judge: standIn, ...options});
+const stageInProgress = options => stageWithJudgement({judge: standIn, ...options});
+const checkProject = (root, options) => checkWithJudgement(root, {judge: standIn, ...options});
+/** Record the stage gate of a preliminary release, as the command that marks it effective does. */
+const gated = (root, id) => { const done = preliminaryGate({project: root, release: id, judge: standIn}); writeGate(done.published, done.gate); };
 
 // Synthetic teaching fixtures: invented releases, cases and objectives with no relation to any game.
-const script = fileURLToPath(new URL('../scripts/detailed-design-release.mjs', import.meta.url));
 const read = file => JSON.parse(readFileSync(file, 'utf8'));
-const detail = 'docs/detailed-design', prelim = 'docs/preliminary-design';
+const detail = 'docs/detailed-design';
 
 /** A project with one effective preliminary release and checked inputs for a detailed design on the same invented layout. */
 function project(t, {status = 'effective'} = {}) {
   const root = mkdtempSync(path.join(os.tmpdir(), 'detailed-release-'));
   t.after(() => rmSync(root, {recursive: true, force: true}));
-  issueRelease(path.join(root, 'docs'), '1.0');
-  commitInputs(root, '1.0');
-  listing(path.join(root, 'docs'), '1.0', ['1.0'], {'1.0': status}, {1: {name: 'Tilting carriage'}});
-  const published = path.join(root, prelim, 'releases/1.0'), inputs = 'cad/detailed-design/designs/1.0';
-  const receipt = read(path.join(published, 'receipt.json')), ledger = {...read(path.join(published, 'budgets.json')), requirements: {file: 'package-limits.json'}};
-  const plan = JSON.stringify({view: 'review/index.html', source: {file: 'design.json'}, budgets: {file: 'budgets.json'}});
-  write(root, inputs + '/judgement.json', plan);
-  write(root, inputs + '/receipt.json', folderReceipt(root, inputs, receipt, plan, ledger, '1.0'));
-  write(root, inputs + '/missions.json', {missionCases: read(path.join(published, 'release.json')).missionCases});
-  write(root, inputs + '/design.json', readFileSync(path.join(published, 'design.json')));
-  write(root, inputs + '/budgets.json', ledger);
-  write(root, inputs + '/package-limits.json', readFileSync(path.join(published, 'limits.json')));
-  write(root, inputs + '/review/index.html', '<html>Detailed review</html>');
-  cpSync(path.join(published, 'review-scene.json.gz'), path.join(root, inputs, 'review/review-scene.json.gz'));
-  const replay = () => ({archiveSha256: sha('archive'), stepSha256: receipt.step.sha256, configuration: 'Invented stowed assembly', revision: 'review-r1'});
-  const review = (verdict = 'pass', step = receipt.step.sha256) => {
+  issueRelease(root, '1.0');
+  listing(root, '1.0', ['1.0'], {'1.0': status}, {1: {name: 'Tilting carriage'}});
+  if (status === 'effective') gated(root, '1.0');
+  const inputs = 'cad/detailed-design/designs/1.0', stepSha256 = sha('step 1.0');
+  // The design source places its solids from the STEP that stands for the registered Fusion export.
+  writeInputs(root, inputs, {issue: 'synthetic-1.0', step: 'step 1.0', page: '<html>Detailed review</html>'});
+  const replay = () => ({archiveSha256: sha('archive'), stepSha256: stepSha256, configuration: 'Invented stowed assembly', revision: 'review-r1'});
+  const review = (verdict = 'pass', step = stepSha256) => {
     write(root, 'cad/detailed-design/readiness-result.json', {schema: 'agent-frc/mechanical-readiness-result@1', configuration: 'Invented stowed assembly',
       stepSha256: step, archiveSha256: sha('archive'), buildReadiness: verdict, showcaseEligibility: verdict,
       findings: verdict === 'pass' ? [] : [{domain: 'service', status: 'open', subject: 'invented cover', reason: 'removal path not shown'}]});
@@ -53,7 +49,7 @@ function project(t, {status = 'effective'} = {}) {
   };
   const stage = (options = {}) => stageInProgress({project: root, design: '1.0', inputs, preliminary: '1.0', authority: 'cad/fusion-authority.json',
     lineage: 'cad/lineage.json', replay, ...options});
-  return {root, inputs, receipt, stage, review, index: () => read(path.join(root, detail, 'designs.json'))};
+  return {root, inputs, stepSha256, stage, review, index: () => read(path.join(root, detail, 'designs.json'))};
 }
 const passes = root => assert.deepEqual(checkProject(root, {log: () => {}}).errors, []);
 
@@ -66,16 +62,19 @@ test('stage publishes an in-progress design that the publication check accepts',
   assert.equal(revision['1.0'].number, 1);
   assert.equal(report, 'Staged detailed design Tilting carriage 1.0 (draft 1 · in progress)\nBefore pushing, run the publication check: node PLUGIN/scripts/design-publication.mjs check .\nOn push: the project\'s workflow publishes the page. Nothing is rerun.\n');
   const dir = path.join(p.root, detail, 'designs/1.0');
-  assert.deepEqual(read(path.join(dir, 'design.json')), {schema: 'agent-frc/detailed-design@1', design: '1.0', issue: p.receipt.issue,
-    preliminary: {release: '1.0'}, fusion: {archiveSha256: sha('archive'), stepSha256: p.receipt.step.sha256, configuration: 'Invented stowed assembly', revision: 'review-r1'},
-    check: {project: p.inputs},
-    missionCases: [{case: 'loaded-turn', kind: 'operating-case', accomplishes: 'delivered', objective: 'Carry the sample to the bin'}]});
+  assert.deepEqual(read(path.join(dir, 'design.json')), {schema: 'agent-frc/detailed-design@1', design: '1.0', issue: 'synthetic-1.0',
+    preliminary: {release: '1.0'}, fusion: {archiveSha256: sha('archive'), stepSha256: p.stepSha256, configuration: 'Invented stowed assembly', revision: 'review-r1'},
+    check: {project: p.inputs}});
   assert.equal(readFileSync(path.join(dir, 'index.html'), 'utf8'), '<html>Detailed review</html>');
   assert.ok(existsSync(path.join(p.root, detail, 'index.html')), 'the stock catalog is written when the tree has none');
   assert.ok(existsSync(path.join(p.root, detail, 'fonts/fonts.css')), 'the review page finds its theme fonts in the detailed tree');
+  // The source, the judgement, the page file and the records sit beside the record, under names of their own.
+  for (const [name, from] of [['source.json', 'design.json'], ['subsystems/arm.json', 'subsystems/arm.json'], ['judgement.json', 'judgement.json'], ['page.json', 'page.json'],
+    ['records/trials.json', 'records/trials.json'], ['records/measurements/mass.drawn.json', 'records/measurements/mass.drawn.json']])
+    assert.ok(readFileSync(path.join(dir, name)).equals(readFileSync(path.join(p.root, p.inputs, from))), name);
   passes(p.root);
   // Staging again after a fix replaces the design while it is in progress.
-  write(p.root, p.inputs + '/review/index.html', '<html>Corrected review</html>');
+  write(p.root, p.inputs + '/review.html', '<html>Corrected review</html>');
   p.stage();
   assert.equal(readFileSync(path.join(dir, 'index.html'), 'utf8'), '<html>Corrected review</html>');
 });
@@ -88,6 +87,17 @@ test('stage refuses a design source that places no solid from the Fusion export 
   assert.throws(() => q.stage(), /1\.0 must name an effective preliminary release; 1\.0 is in-progress/);
   assert.ok(!existsSync(path.join(q.root, detail, 'designs.json')) && !existsSync(path.join(q.root, detail, 'designs/1.0')));
   assert.throws(() => p.stage({inputs: '../outside'}), /Detailed design input is missing|inside the project/);
+  // It judges the committed records: a stale one, a verdict that is not layout-checked and a scene of another verdict are refused.
+  const r = project(t), at = name => path.join(r.root, r.inputs, name);
+  editJson(at('subsystems/arm.json'), s => ({...s, solids: [{name: 'arm', massKg: 9}]}));
+  assert.throws(() => r.stage(), /is stale: solid "arm" changed/);
+  editJson(at('subsystems/arm.json'), s => ({...s, solids: [{name: 'arm', massKg: 1}]}));
+  write(r.root, r.inputs + '/stand-in.json', {status: 'blocked', firstUnmet: {kind: 'weight', text: 'invented weight'}});
+  assert.throws(() => r.stage(), /its records judge it blocked: invented weight/);
+  rmSync(at('stand-in.json'));
+  paged(r.root, r.inputs + '/judgement.json', scene => ({...scene, weight: {...scene.weight, totalKg: 1}}));
+  assert.throws(() => r.stage(), /the review scene does not repeat the verdict: Scene weight differs from the verdict/);
+  assert.ok(!existsSync(path.join(r.root, detail, 'designs.json')));
 });
 
 test('effective is a status change that commits a passing readiness review and supersedes the earlier design', t => {
@@ -111,7 +121,7 @@ test('effective is a status change that commits a passing readiness review and s
   assert.deepEqual(second.supersededBy, {'1.0': '1.1'});
   assert.equal(second.current, '1.1');
   assert.deepEqual(read(path.join(p.root, detail, 'designs/1.1/design.json')).fusion,
-    {archiveSha256: sha('archive'), stepSha256: p.receipt.step.sha256, configuration: 'Invented stowed assembly'});
+    {archiveSha256: sha('archive'), stepSha256: p.stepSha256, configuration: 'Invented stowed assembly'});
   passes(p.root);
   assert.throws(() => markEffective({project: p.root, design: '1.0', readiness: p.review('pass')}), /Only a new or in-progress design can become effective/);
 });
@@ -128,7 +138,7 @@ test('a detailed design becomes effective end to end from the review command, wi
     const review = read(path.join(p.root, result));
     assert.deepEqual([review.showcaseEligibility, review.buildReadiness, review.findings], ['pass', 'pass', []]);
     // The status change records the design from its review: the reviewed STEP and archive.
-    const marked = spawnSync(process.execPath, [script, 'effective', p.root, '--design', '1.0', '--readiness', result], {encoding: 'utf8', env});
+    const marked = spawnSync(process.execPath, [standInCli, 'detailed-design-release.mjs', 'effective', p.root, '--design', '1.0', '--readiness', result], {encoding: 'utf8', env});
     assert.equal(marked.status, 0, marked.stderr);
     assert.deepEqual(p.index().designStatus, {'1.0': 'effective'});
     const checked = checkProject(p.root, {log: () => {}});
@@ -177,8 +187,8 @@ test('refresh recomputes the primary view of an index edited by hand', t => {
 test('the command line runs each command and reports a refusal', t => {
   const p = project(t);
   p.stage();
-  const run = (...args) => spawnSync(process.execPath, [script, ...args], {encoding: 'utf8'});
-  const effective = run('effective', p.root, '--design', '1.0', '--readiness', p.review('pass'), '--check', gateCheck);
+  const run = (...args) => spawnSync(process.execPath, [standInCli, 'detailed-design-release.mjs', ...args], {encoding: 'utf8'});
+  const effective = run('effective', p.root, '--design', '1.0', '--readiness', p.review('pass'));
   assert.equal(effective.status, 0, effective.stderr);
   assert.match(effective.stderr, /Showcase eligibility: pass/);
   assert.equal(JSON.parse(effective.stdout).current, '1.0');

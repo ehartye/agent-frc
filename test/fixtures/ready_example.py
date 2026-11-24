@@ -3,7 +3,7 @@ its planar trial backing the mission case. The starter already holds the cycle a
 
     python test/fixtures/ready_example.py PROJECT RELEASE NAME
 
-builds the solids, runs the trial and the adjustment extremes with the design library, measures and judges the layout, and
+builds the solids, runs the trial and the adjustment extremes with the design library, measures and judges the layout, builds its page and
 stages the release as a draft under the architecture NAME. Synthetic teaching fixture: invented parts with no relation to any game."""
 import json
 from pathlib import Path
@@ -65,6 +65,7 @@ def ready(project, release, name):
                  ["measure", rel + "/design.json", "--out", rel + "/records", "--extremes", "--min-gap", "1"]):
         subprocess.run([sys.executable, "-m", "frc_design_kernel", *args], cwd=project, check=True, capture_output=True)
     for command in (["node", str(PLUGIN / "scripts/design.mjs"), "preliminary-check", ".", rel + "/judgement.json", "--require-checked", "--quiet"],
+                    ["node", str(PLUGIN / "scripts/design.mjs"), "preliminary-page", ".", rel + "/judgement.json", "--quiet"],
                     [sys.executable, "-B", str(PLUGIN / "scripts/stage_preliminary_review.py"), release, "--design-name", name]):
         done = subprocess.run(command, cwd=project, capture_output=True, text=True)
         if done.returncode:

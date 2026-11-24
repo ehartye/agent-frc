@@ -5,64 +5,53 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
-import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, readdir, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { gzipSync } from 'node:zlib';
-import { readyInteraction, readyMissions } from './fixtures/ready.mjs';
+import { inputsOf, paged, publishedOf, requirementsFile, writeInputs } from './fixtures/preliminary-release.mjs';
 
-// The staging command is the plugin's: an agent runs it from the plugin and names the project's design folder.
-const stagingCommand = fileURLToPath(new URL('../scripts/stage_preliminary_review.py', import.meta.url));
-// These invented releases hold no solid, so the layout check of the stage gate is stood in for: it reproduces the receipt.
-const gateCheck = fileURLToPath(new URL('./fixtures/gate-reproduces.mjs', import.meta.url));
+// The staging command is the plugin's: an agent runs it from the plugin and names the project's design folder. These
+// invented releases hold no solid, so the layout judgement is stood in for.
+const stagingCommand = fileURLToPath(new URL('./fixtures/stage_stand_in.py', import.meta.url));
 // Synthetic teaching fixture: an invented layout with one case and one objective.
-test('the season script publishes a checked release, records where its inputs are and sets design statuses', {skip: 'WP8 converts the gate and staging to records'}, async t => {
+test('the season script publishes a checked release, records where its inputs are and sets design statuses', async t => {
   const root = await mkdtemp(path.join(tmpdir(), 'preliminary-releases-'));
   t.after(() => rm(root, { recursive: true, force: true }));
   const author = path.join(root, 'cad', 'preliminary-design');
   const site = path.join(root, 'docs', 'preliminary-design');
   await mkdir(author, { recursive: true });
-  async function fixture(id, {receipt = {}, scene: shown = {}, page = '<html>Project review of ' + id + '</html>'} = {}) {
-    const dir = path.join(author, 'releases', id);
-    await mkdir(dir, { recursive: true });
-    async function pin(file, content) {
-      await writeFile(path.join(dir, file), content);
-      return { file, sha256: createHash('sha256').update(content).digest('hex') };
-    }
-    const motion = await pin('design.json', '{"cases":[]}');
-    await pin('viewer.html', page);
-    await pin('review-scene.json.gz', gzipSync(JSON.stringify({schema: 'agent-frc/preliminary-review-scene@1', issue: 'synthetic-' + id, ...shown})));
-    const limits = await pin('package-limits.json', '{"inspectionLimitKg":14}');
-    const budgets = await pin('budgets.json', JSON.stringify({requirements: limits, masses: [], electricalCases: {}}));
-    const plan = await pin('judgement.json', JSON.stringify({source: motion, budgets, view: 'viewer.html'}));
-    await pin('receipt.json', JSON.stringify({schema: 'agent-frc/preliminary-layout-result@1', missingInputs: [], reopen: [], cases: [{case: 'turn', status: 'pass'}],
-      stages: {turn: {purpose: 'operating'}}, interactions: [readyInteraction(['turn'])], control: {witness: {status: 'fail'}},
-      budgets: {massStatus: 'pass', electricalCases: [{case: 'weak', status: 'pass'}]}, planSha256: plan.sha256, issue: 'synthetic-' + id, status: 'layout-checked', ...receipt}));
-    await pin('missions.json', JSON.stringify(readyMissions([{case: 'turn', kind: 'operating-case', accomplishes: 'delivered', objective: 'Move the sample'}], 'turn')));
+  async function fixture(id, {page = '<html>Project review of ' + id + '</html>', more = {}, standIn} = {}) {
+    const dir = path.join(root, inputsOf(id));
+    writeInputs(root, inputsOf(id), {issue: 'synthetic-' + id, page, more});
+    await rm(path.join(dir, 'stand-in.json'), {force: true});
+    if (standIn) await writeFile(path.join(dir, 'stand-in.json'), JSON.stringify(standIn));
     return {dir};
   }
-  const stage = (...args) => spawnSync(process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3'), [stagingCommand, '--base', author, ...args, ...(args.includes('effective') ? ['--gate-check', gateCheck] : [])], {encoding: 'utf8'});
+  const stage = (...args) => spawnSync(process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3'), ['-B', stagingCommand, '--base', author, ...args], {encoding: 'utf8'});
   const listing = path.join(site, 'releases.json'), index = async () => JSON.parse((await readFile(listing, 'utf8')).replace(/"\d{4}-\d{2}-\d{2}"/g, '"DATE"'));
   const rev = number => ({number, date: 'DATE'});
   const designs = {1: {name: 'Tilting carriage'}, 2: {name: 'Swinging arm'}};
 
-  // Staging refuses what the publication check would refuse for an obvious reason.
-  const a = await fixture('1.0');
-  await writeFile(path.join(a.dir, 'missions.json'), JSON.stringify({missionCases: []}));
-  assert.match(stage('1.0').stderr, /mission-task case/);
-  await fixture('1.0', {receipt: {status: 'provisional'}});
-  assert.match(stage('1.0').stderr, /layout-checked receipt of a full check/);
-  await fixture('1.0', {receipt: {physicsOnly: true}});
-  assert.match(stage('1.0').stderr, /layout-checked receipt of a full check/);
-  await fixture('1.0', {receipt: {planSha256: 'f'.repeat(64)}});
-  assert.match(stage('1.0').stderr, /receipt belongs to a different layout/);
+  // Staging refuses what the publication check would refuse: it judges the committed records and measures nothing.
+  const a = await fixture('1.0', {standIn: {status: 'provisional', firstUnmet: {kind: 'coverage', text: 'invented: no service motion'}}});
+  assert.match(stage('1.0').stderr, /A preliminary release needs a layout-checked design; its records judge it provisional: invented: no service motion/);
+  await fixture('1.0');
+  await writeFile(path.join(a.dir, 'design.step'), 'a longer arm');
+  assert.match(stage('1.0').stderr, /measurements\/clearance\.motion\.loaded-turn\.json is stale/);
+  await fixture('1.0');
+  await rm(path.join(a.dir, 'records/measurements/mass.drawn.json'));
+  assert.match(stage('1.0').stderr, /mass\.drawn\.json is missing/);
   await fixture('1.0');
   await rm(path.join(a.dir, 'review-scene.json.gz'));
-  assert.match(stage('1.0').stderr, /Generate the review with --write-view/);
+  assert.match(stage('1.0').stderr, /Build the page first: design preliminary-page/);
+  await fixture('1.0');
+  paged(root, inputsOf('1.0') + '/judgement.json', scene => ({...scene, weight: {...scene.weight, totalKg: 1}}));
+  assert.match(stage('1.0').stderr, /The review scene does not repeat the verdict: Scene weight differs from the verdict/);
+  await fixture('1.0', {more: {records: {folder: 'cad/records'}}});
+  assert.match(stage('1.0').stderr, /Keep cad\/records\/measurements\/clearance\.motion\.loaded-turn\.json in the release folder/);
   assert.ok(!existsSync(path.join(site, 'releases', '1.0')), 'a refused release publishes nothing');
 
   // A project's own review page is published as it is.
@@ -72,11 +61,16 @@ test('the season script publishes a checked release, records where its inputs ar
   assert.match(staged.stdout, /Staged preliminary design Tilting carriage 1\.0 \(draft 1, in progress\)/);
   assert.equal(await readFile(path.join(site, 'releases', '1.0', 'index.html'), 'utf8'), '<html>Our own review page</html>');
   assert.deepEqual(JSON.parse(await readFile(path.join(site, 'releases', '1.0', 'release.json'))), {
-    schema: 'agent-frc/preliminary-release@1', release: '1.0', issue: 'synthetic-1.0', phase: 'preliminary-design',
-    check: {project: 'cad/preliminary-design/releases/1.0'},
-    missionCases: [{case: 'turn', kind: 'operating-case', accomplishes: 'delivered', objective: 'Move the sample'}]});
-  for (const name of ['receipt.json', 'review-scene.json.gz', 'design.json', 'budgets.json', 'limits.json'])
-    assert.ok(existsSync(path.join(site, 'releases', '1.0', name)), name);
+    schema: 'agent-frc/preliminary-release@2', release: '1.0', issue: 'synthetic-1.0', phase: 'preliminary-design',
+    check: {project: 'cad/preliminary-design/releases/1.0'}, requirements: requirementsFile});
+  // The published folder holds every source file, the judgement, the page file, the judged records and the page, byte for byte, and nothing else.
+  const files = (await readdir(path.join(root, publishedOf('1.0')), {recursive: true, withFileTypes: true})).filter(f => f.isFile())
+    .map(f => path.relative(path.join(root, publishedOf('1.0')), path.join(f.parentPath ?? f.path, f.name)).split(path.sep).join('/')).sort();
+  assert.deepEqual(files, ['design.json', 'index.html', 'judgement.json', 'page.json', 'records/measurements/clearance.motion.loaded-turn.displaced.battery.json',
+    'records/measurements/clearance.motion.loaded-turn.json', 'records/measurements/clearance.motion.park.json', 'records/measurements/electrical.loaded-turn.json',
+    'records/measurements/mass.drawn.json', 'records/trials.json', 'release.json', 'review-scene.json.gz', 'subsystems/arm.json']);
+  for (const name of files.filter(n => !['index.html', 'release.json'].includes(n)))
+    assert.ok((await readFile(path.join(root, publishedOf('1.0'), name))).equals(await readFile(path.join(a.dir, name))), name);
   assert.deepEqual(await index(), {releases: ['1.0'], designs: {1: designs[1]}, revision: {'1.0': rev(1)}, designStatus: {'1.0': 'in-progress'}, current: '1.0'});
 
   // A second architecture takes the next major number and its own name.
@@ -112,10 +106,10 @@ test('the season script publishes a checked release, records where its inputs ar
   assert.equal(promoted.status, 0, promoted.stderr);
   assert.match(promoted.stdout, /Preliminary design Swinging arm 2\.0 is effective; the site opens 2\.0/);
   assert.match(promoted.stdout, /Effective-readiness report for Swinging arm 2\.0 \(synthetic-2\.0\)/, 'the reviewer is shown the readiness report of the installed plugin');
-  assert.match(promoted.stdout, /^\[gate\] Preliminary design Swinging arm 2\.0: the full layout check ran on the committed design and reproduced the published receipt in \d+ s/m, 'the command reports the gate it just ran');
+  assert.match(promoted.stdout, /^\[gate\] Preliminary design Swinging arm 2\.0: layout-checked on 5 current records, 3 of 3 readiness criteria met, in \d+\.\d s/m, 'the command reports the gate it just ran');
   assert.match(promoted.stdout, /On push: the project's workflow publishes the page\. Nothing is rerun\.\r?\n$/, 'the command says what a push will do');
   assert.deepEqual(await index(), {releases: ['1.0', '2.0'], designs, revision: counted, designStatus: {'1.0': 'superseded', '2.0': 'effective'}, accepted: {'1.0': 'DATE', '2.0': 'DATE'}, current: '2.0'});
-  assert.ok(existsSync(path.join(site, 'releases', '1.0', 'receipt.json')), 'superseding a release keeps its published files');
+  assert.ok(existsSync(path.join(site, 'releases', '1.0', 'judgement.json')), 'superseding a release keeps its published files');
   assert.match(stage('--set-status', '2.0', 'paused').stderr, /in-progress, effective, superseded, withdrawn/);
   assert.match(stage('--set-status', '9.0', 'effective').stderr, /Unknown release/);
 
@@ -144,5 +138,5 @@ test('the season script publishes a checked release, records where its inputs ar
   assert.equal(stage('4.0', '--design-name', 'Rolling cradle').status, 0);
   assert.equal(stage('--set-status', '3.0', 'superseded').status, 0);
   assert.deepEqual([(await index()).designStatus['3.0'], (await index()).designStatus['4.0'], (await index()).current], ['superseded', 'in-progress', '4.0']);
-  assert.ok(existsSync(path.join(site, 'releases', '3.0', 'receipt.json')));
+  assert.ok(existsSync(path.join(site, 'releases', '3.0', 'judgement.json')));
 });

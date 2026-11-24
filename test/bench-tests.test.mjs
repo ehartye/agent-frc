@@ -7,20 +7,28 @@
  */
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
-import {cpSync, existsSync, mkdtempSync, readFileSync, rmSync} from 'node:fs';
+import {existsSync, mkdtempSync, readFileSync, rmSync} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import {fileURLToPath} from 'node:url';
 import {effectiveProblems, handedOver, recordResult, seed, status, verdict} from '../scripts/bench-tests.mjs';
-import {checkProject} from '../scripts/design-publication.mjs';
-import {markEffective as markEffectiveWithGate, stageInProgress} from '../scripts/detailed-design-release.mjs';
-import reproduces from './fixtures/gate-reproduces.mjs';
+import {checkProject as checkWithJudgement} from '../scripts/design-publication.mjs';
+import {markEffective as markEffectiveWithGate, stageInProgress as stageWithJudgement} from '../scripts/detailed-design-release.mjs';
+import {writeGate} from '../scripts/gate-record.mjs';
+import {stageGate} from '../scripts/stage-gate.mjs';
+import {editJson, inputsOf, issueRelease, publishedOf, republish, sha, standIn, write, writeInputs} from './fixtures/preliminary-release.mjs';
 
-// These invented designs hold no solid, so the layout check of the stage gate is stood in for: it reproduces the receipt.
-const gateCheck = fileURLToPath(new URL('./fixtures/gate-reproduces.mjs', import.meta.url));
-const markEffective = options => markEffectiveWithGate({run: reproduces, ...options});
-import {commitInputs, folderReceipt, issueRelease, sha, write} from './fixtures/preliminary-release.mjs';
+// These invented designs hold no solid, so the layout judgement is stood in for.
+const markEffective = options => markEffectiveWithGate({judge: standIn, ...options});
+const stageInProgress = options => stageWithJudgement({judge: standIn, ...options});
+const checkProject = (root, options) => checkWithJudgement(root, {judge: standIn, ...options});
+const judgementFile = (root, id = '1.0') => path.join(root, inputsOf(id), 'judgement.json');
+/** Record the stage gate of preliminary 1.0. One invented risk has no numbers yet, to show it is not handed over, so the readiness the gate would refuse is written in. */
+function gated(root) {
+  const published = path.join(root, publishedOf('1.0'));
+  writeGate(published, {...stageGate({root, where: 'Preliminary design Tilting carriage 1.0', id: '1.0', phase: 'preliminary-design', inputs: path.join(root, inputsOf('1.0')), published, judge: standIn}), readiness: {met: 3, of: 3}});
+}
 
 // Synthetic teaching fixtures: an invented "Tilting carriage" whose preliminary design hands over four invented bench tests.
 const script = fileURLToPath(new URL('../scripts/bench-tests.mjs', import.meta.url));
@@ -38,25 +46,18 @@ const risks = [
 function project(t, {register = risks, stage = true} = {}) {
   const root = mkdtempSync(path.join(os.tmpdir(), 'bench-tests-'));
   t.after(() => rmSync(root, {recursive: true, force: true}));
-  issueRelease(path.join(root, 'docs'), '1.0');
-  commitInputs(root, '1.0');
+  const folder = 'cad/detailed-design/designs/1.0', step = 'step 1.0';
+  issueRelease(root, '1.0');
   write(root, prelim + '/releases.json', {releases: ['1.0'], designs: {1: {name: 'Tilting carriage'}}, designStatus: {'1.0': 'effective'}, current: '1.0'});
-  const published = path.join(root, prelim, 'releases/1.0'), folder = 'cad/detailed-design/designs/1.0';
-  if (register) write(root, 'cad/preliminary-design/releases/1.0/missions.json', {missionCases: read(path.join(published, 'release.json')).missionCases, risks: register});
-  const receipt = read(path.join(published, 'receipt.json')), ledger = {...read(path.join(published, 'budgets.json')), requirements: {file: 'package-limits.json'}}, plan = JSON.stringify({view: 'review/index.html', source: {file: 'design.json'}, budgets: {file: 'budgets.json'}});
-  write(root, folder + '/judgement.json', plan);
-  write(root, folder + '/receipt.json', folderReceipt(root, folder, receipt, plan, ledger, '1.0'));
-  write(root, folder + '/missions.json', {missionCases: read(path.join(published, 'release.json')).missionCases});
-  write(root, folder + '/design.json', readFileSync(path.join(published, 'design.json')));
-  write(root, folder + '/budgets.json', ledger);
-  write(root, folder + '/package-limits.json', readFileSync(path.join(published, 'limits.json')));
-  write(root, folder + '/review/index.html', '<html>Detailed review</html>');
-  cpSync(path.join(published, 'review-scene.json.gz'), path.join(root, folder, 'review/review-scene.json.gz'));
+  editJson(judgementFile(root), ({risks: _, ...j}) => ({...j, ...(register ? {risks: register} : {})}));
+  republish(root, '1.0');
+  gated(root);
+  writeInputs(root, folder, {issue: 'synthetic-1.0', step, page: '<html>Detailed review</html>'});
   const staging = () => stageInProgress({project: root, design: '1.0', inputs: folder, preliminary: '1.0', authority: 'cad/fusion-authority.json', lineage: 'cad/lineage.json',
-    replay: () => ({archiveSha256: sha('archive'), stepSha256: receipt.step.sha256, configuration: 'Invented stowed assembly'})});
+    replay: () => ({archiveSha256: sha('archive'), stepSha256: sha(step), configuration: 'Invented stowed assembly'})});
   if (stage) staging();
   write(root, 'cad/detailed-design/readiness-result.json', {schema: 'agent-frc/mechanical-readiness-result@1', configuration: 'Invented stowed assembly',
-    stepSha256: receipt.step.sha256, archiveSha256: sha('archive'), buildReadiness: 'pass', showcaseEligibility: 'pass', findings: []});
+    stepSha256: sha(step), archiveSha256: sha('archive'), buildReadiness: 'pass', showcaseEligibility: 'pass', findings: []});
   const file = path.join(root, folder, 'bench-tests.json');
   const edit = change => { const record = read(file); change(Object.fromEntries(record.tests.map(t => [t.id, t])), record); write(root, folder + '/bench-tests.json', record); };
   const effective = () => markEffective({project: root, design: '1.0', readiness: 'cad/detailed-design/readiness-result.json'});
@@ -78,9 +79,9 @@ test('seed writes one record for each bench test the preliminary design hands ov
   assert.deepEqual(handedOver(p.root, '1.0').tests.map(x => x.id), ['B1', 'B2', 'B3', 'B4'], 'a closed risk and a risk without numbers are not handed over');
   const seeded = seed({project: p.root, design: '1.0'});
   assert.equal(seeded.file, 'cad/detailed-design/designs/1.0/bench-tests.json');
-  assert.match(seeded.report, /^Wrote cad\/detailed-design\/designs\/1\.0\/bench-tests\.json from cad\/preliminary-design\/releases\/1\.0\/missions\.json: 4 bench tests: 0 of 1 before-build passed, 0 of 1 on-robot with an owner and a plan, 2 not tagged\./);
+  assert.match(seeded.report, /^Wrote cad\/detailed-design\/designs\/1\.0\/bench-tests\.json from cad\/preliminary-design\/releases\/1\.0\/judgement\.json: 4 bench tests: 0 of 1 before-build passed, 0 of 1 on-robot with an owner and a plan, 2 not tagged\./);
   const record = p.record();
-  assert.deepEqual([record.schema, record.design, record.preliminary, record.source], ['agent-frc/bench-tests@1', '1.0', '1.0', 'cad/preliminary-design/releases/1.0/missions.json']);
+  assert.deepEqual([record.schema, record.design, record.preliminary, record.source], ['agent-frc/bench-tests@1', '1.0', '1.0', 'cad/preliminary-design/releases/1.0/judgement.json']);
   assert.deepEqual(record.tests[0], {id: 'B1', risk: 'The latch may not hold the sample through a turn', measure: 'Pull-out force of the latch', pass: 40, fail: 25, unit: 'N',
     tag: null, owner: '', plan: '', result: null});
   assert.deepEqual(record.tests.map(x => x.tag), [null, 'before-build', 'on-robot', null], 'a tag the handoff gives is kept; the others are left to tag');
@@ -89,12 +90,15 @@ test('seed writes one record for each bench test the preliminary design hands ov
   // Seeding again keeps what the team wrote, takes changed handed-over numbers and marks a test no longer handed over.
   p.edit(x => { x.B1.tag = 'before-build'; x.B1.owner = 'Build team'; x.B1.result = {value: 44, passed: true, date: '2001-02-03'}; });
   const changed = risks.filter(r => r.id !== 'B4').map(r => r.id === 'B2' ? {...r, benchTest: {...r.benchTest, pass: 2}} : r);
-  write(p.root, 'cad/preliminary-design/releases/1.0/missions.json', {risks: [...changed, {id: 'B7', risk: 'Invented new risk', benchTest: {measure: 'Stroke', pass: 120, fail: 100, unit: 'mm'}}]});
+  editJson(judgementFile(p.root), j => ({...j, risks: [...changed, {id: 'B7', risk: 'Invented new risk', benchTest: {measure: 'Stroke', pass: 120, fail: 100, unit: 'mm'}}]}));
   const again = seed({project: p.root, design: '1.0'});
   assert.match(again.report, /^Refreshed .* \(1 added\)\./);
   const by = Object.fromEntries(p.record().tests.map(x => [x.id, x]));
   assert.deepEqual([by.B1.owner, by.B1.result.value, by.B2.pass, by.B7.pass, by.B4.handedOver], ['Build team', 44, 2, 120, false]);
-  assert.throws(() => seed({project: p.root, design: '1.0', preliminary: '9.9'}), /No missions\.json for preliminary release 9\.9 in the project/);
+  // The published copy says the same when the inputs are no longer in the project.
+  rmSync(judgementFile(p.root));
+  assert.deepEqual([handedOver(p.root, '1.0').source, handedOver(p.root, '1.0').tests.map(x => x.id)], [publishedOf('1.0') + '/judgement.json', ['B1', 'B2', 'B3', 'B4']]);
+  assert.throws(() => seed({project: p.root, design: '1.0', preliminary: '9.9'}), /No judgement file for preliminary release 9\.9 in the project/);
 });
 
 test('effective refuses, naming each test, until every before-build test passed and every on-robot test has an owner and a plan', t => {
@@ -158,10 +162,14 @@ test('the publication check holds an effective design to its bench-test record',
 });
 
 test('a design whose preliminary design hands over no bench test, and an in-progress draft, are not held to a record', t => {
-  // No risk register is committed, as for a project from before the register: nothing is required.
+  // Its judgement lists no risks: nothing is handed over.
   const legacy = project(t, {register: null});
   assert.equal(legacy.effective().designStatus['1.0'], 'effective');
   assert.deepEqual(checkProject(legacy.root, {log: () => {}}).errors, []);
+  // A preliminary design whose risks cannot be read is another matter: an earlier format, or no judgement at all, is not taken for no risks.
+  const unread = project(t, {register: null});
+  for (const file of [judgementFile(unread.root), path.join(unread.root, publishedOf('1.0'), 'judgement.json')]) editJson(file, j => ({...j, schema: 'agent-frc/layout-judgement@1'}));
+  assert.throws(unread.effective, /cannot be effective until its bench tests are resolved:\n  - The risks of preliminary design 1\.0 cannot be read/);
   // A register whose risks are all closed hands over nothing.
   const closed = project(t, {register: [risks[4]]});
   assert.equal(closed.effective().designStatus['1.0'], 'effective');

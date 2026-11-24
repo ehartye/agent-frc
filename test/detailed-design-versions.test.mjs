@@ -11,17 +11,21 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import {fileURLToPath} from 'node:url';
-import {checkProject} from '../scripts/design-publication.mjs';
-import {copyInputs, markEffective as markEffectiveWithGate, relink, remove, stageInProgress, supersede} from '../scripts/detailed-design-release.mjs';
-import reproduces from './fixtures/gate-reproduces.mjs';
+import {checkProject as checkWithJudgement} from '../scripts/design-publication.mjs';
+import {copyInputs, markEffective as markEffectiveWithGate, relink as relinkWithJudgement, remove, stageInProgress as stageWithJudgement, supersede} from '../scripts/detailed-design-release.mjs';
+import {writeGate} from '../scripts/gate-record.mjs';
+import {preliminaryGate} from '../scripts/stage-gate.mjs';
+import {issueRelease, sha, standIn, write, writeInputs} from './fixtures/preliminary-release.mjs';
 
-// These invented designs hold no solid, so the layout check of the stage gate is stood in for: it reproduces the receipt.
-const gateCheck = fileURLToPath(new URL('./fixtures/gate-reproduces.mjs', import.meta.url));
-const markEffective = options => markEffectiveWithGate({run: reproduces, ...options});
-import {commitInputs, folderReceipt, issueRelease, sha, write} from './fixtures/preliminary-release.mjs';
+// These invented designs hold no solid, so the layout judgement is stood in for.
+const standInCli = fileURLToPath(new URL('./fixtures/stand-in-cli.mjs', import.meta.url));
+const markEffective = options => markEffectiveWithGate({judge: standIn, ...options});
+const stageInProgress = options => stageWithJudgement({judge: standIn, ...options}), relink = options => relinkWithJudgement({judge: standIn, ...options});
+const checkProject = (root, options) => checkWithJudgement(root, {judge: standIn, ...options});
+/** Record the stage gate of a preliminary release, as the command that marks it effective does. */
+const gated = (root, id) => { const done = preliminaryGate({project: root, release: id, judge: standIn}); writeGate(done.published, done.gate); };
 
 // Synthetic teaching fixtures: two invented architectures, "Tilting carriage" and "Swinging arm", with no relation to any game.
-const script = fileURLToPath(new URL('../scripts/detailed-design-release.mjs', import.meta.url));
 const read = file => JSON.parse(readFileSync(file, 'utf8'));
 const detail = 'docs/detailed-design', prelim = 'docs/preliminary-design';
 const dated = index => JSON.parse(JSON.stringify(index).replace(/"\d{4}-\d{2}-\d{2}"/g, '"DATE"'));
@@ -35,22 +39,14 @@ function project(t, {releases = {'1.0': 'effective'}, names = {1: {name: 'Tiltin
   t.after(() => rmSync(root, {recursive: true, force: true}));
   const listing = (statuses, designs = names) => write(root, prelim + '/releases.json', {releases: Object.keys(statuses), ...(designs ? {designs} : {}), designStatus: statuses,
     current: Object.keys(statuses).find(id => statuses[id] === 'effective') ?? Object.keys(statuses).at(-1)});
-  for (const id of Object.keys(releases)) { issueRelease(path.join(root, 'docs'), id); commitInputs(root, id); }
+  for (const id of Object.keys(releases)) issueRelease(root, id);
   listing(releases);
+  for (const id of Object.keys(releases)) gated(root, id);
   /** Checked inputs for design `id`, on the layout and STEP of preliminary release `on`. `page` stands for an edit. */
   function inputs(id, {on = '1.0', page = '<html>Detailed review of ' + id + '</html>'} = {}) {
-    const published = path.join(root, prelim, 'releases', on), folder = 'cad/detailed-design/designs/' + id;
-    const receipt = read(path.join(published, 'receipt.json')), ledger = {...read(path.join(published, 'budgets.json')), requirements: {file: 'package-limits.json'}};
-    const plan = JSON.stringify({view: 'review/index.html', source: {file: 'design.json'}, budgets: {file: 'budgets.json'}});
-    write(root, folder + '/judgement.json', plan);
-    write(root, folder + '/receipt.json', folderReceipt(root, folder, receipt, plan, ledger, on));
-    write(root, folder + '/missions.json', {missionCases: read(path.join(published, 'release.json')).missionCases});
-    write(root, folder + '/design.json', readFileSync(path.join(published, 'design.json')));
-    write(root, folder + '/budgets.json', ledger);
-    write(root, folder + '/package-limits.json', readFileSync(path.join(published, 'limits.json')));
-    write(root, folder + '/review/index.html', page);
-    cpSync(path.join(published, 'review-scene.json.gz'), path.join(root, folder, 'review/review-scene.json.gz'));
-    return {folder, step: receipt.step.sha256};
+    const folder = 'cad/detailed-design/designs/' + id;
+    writeInputs(root, folder, {issue: 'synthetic-' + on, step: 'step ' + on, page});
+    return {folder, step: sha('step ' + on)};
   }
   const stage = (id, {on = '1.0', page, ...options} = {}) => {
     const made = inputs(id, {on, page});
@@ -59,7 +55,7 @@ function project(t, {releases = {'1.0': 'effective'}, names = {1: {name: 'Tiltin
   };
   const review = (on = '1.0', verdict = 'pass') => {
     write(root, 'cad/detailed-design/readiness-result.json', {schema: 'agent-frc/mechanical-readiness-result@1', configuration: 'Invented stowed assembly',
-      stepSha256: read(path.join(root, prelim, 'releases', on, 'receipt.json')).step.sha256, archiveSha256: sha('archive'), buildReadiness: verdict, showcaseEligibility: verdict, findings: []});
+      stepSha256: sha('step ' + on), archiveSha256: sha('archive'), buildReadiness: verdict, showcaseEligibility: verdict, findings: []});
     return 'cad/detailed-design/readiness-result.json';
   };
   return {root, inputs, stage, review, listing, index: () => dated(read(path.join(root, detail, 'designs.json')))};
@@ -160,8 +156,7 @@ test('when the next preliminary baseline is accepted the detailed draft is re-li
   assert.deepEqual([after.errors, after.warnings], [[], []]);
   // A release that is not effective is refused and nothing changes.
   p.listing({'1.0': 'superseded', '1.1': 'effective', '1.2': 'in-progress'});
-  issueRelease(path.join(p.root, 'docs'), '1.2');
-  commitInputs(p.root, '1.2');
+  issueRelease(p.root, '1.2');
   assert.throws(() => relink({project: p.root, design: '1.0', preliminary: '1.2'}), /must name an effective preliminary release; 1\.2 is in-progress/);
   assert.deepEqual(read(path.join(p.root, detail, 'designs/1.0/design.json')).preliminary, {release: '1.1'});
   assert.equal(p.index().preliminary['1.0'], '1.1');
@@ -189,12 +184,13 @@ test('a design is removed after it is staged under another ID, with no redirect:
   const old = 'cad/detailed-design/designs/1.0', pinned = readFileSync(path.join(p.root, old, 'design.json'));
   write(p.root, old + '/study.json', {source: {file: old + '/design.json', sha256: sha(pinned)}, note: 'invented'});
   const copied = copyInputs({project: p.root, from: '1.0', to: '1.1'});
-  assert.deepEqual([copied.inputs, copied.rewritten], ['cad/detailed-design/designs/1.1', ['study.json']]);
-  assert.match(copied.report, /Now run the layout check there, then stage 1\.1:\n  node PLUGIN\/scripts\/design\.mjs preliminary-check \. cad\/detailed-design\/designs\/1\.1\/judgement\.json --write-view --require-checked/);
+  assert.deepEqual([copied.inputs, copied.rewritten], ['cad/detailed-design/designs/1.1', ['judgement.json', 'study.json']]);
+  assert.match(copied.report, /Now run the layout check there, then stage 1\.1:\n  node PLUGIN\/scripts\/design\.mjs preliminary-check \. cad\/detailed-design\/designs\/1\.1\/judgement\.json --require-checked\n  node PLUGIN\/scripts\/design\.mjs preliminary-page \. cad\/detailed-design\/designs\/1\.1\/judgement\.json\n/);
   const target = path.join(p.root, 'cad/detailed-design/designs/1.1');
   assert.deepEqual(read(path.join(target, 'study.json')).source, {file: 'cad/detailed-design/designs/1.1/design.json', sha256: sha(pinned)});
-  assert.ok(!existsSync(path.join(target, 'receipt.json')) && !existsSync(path.join(target, 'review/index.html')) && existsSync(path.join(target, 'missions.json')),
-    'the page, scene and receipt are left for the layout check to write');
+  assert.ok(!existsSync(path.join(target, 'review-scene.json.gz')) && existsSync(path.join(target, 'review.html')) && existsSync(path.join(target, 'records/trials.json')),
+    'the records and the page come along; the scene is left for the page builder');
+  assert.equal(read(path.join(target, 'judgement.json')).records.folder, 'cad/detailed-design/designs/1.1/records');
   assert.throws(() => copyInputs({project: p.root, from: '1.0', to: '1.1'}), /cad\/detailed-design\/designs\/1\.1 already exists/);
   // A pin that no longer matches its file is refused before anything is copied.
   write(p.root, old + '/study.json', {source: {file: old + '/design.json', sha256: sha('another file')}});
@@ -244,13 +240,13 @@ test('the check warns on two in-progress versions of one architecture and on a m
 test('the command line stages a version, re-links it and reports each refusal', t => {
   const p = project(t, {releases: {'1.0': 'effective', '1.1': 'in-progress'}});
   p.stage('1.0');
-  const run = (...args) => spawnSync(process.execPath, [script, ...args], {encoding: 'utf8'});
+  const run = (...args) => spawnSync(process.execPath, [standInCli, 'detailed-design-release.mjs', ...args], {encoding: 'utf8'});
   p.listing({'1.0': 'superseded', '1.1': 'effective'});
   const linked = run('relink', p.root, '--design', '1.0', '--preliminary', '1.1');
   assert.equal(linked.status, 0, linked.stderr);
   assert.match(linked.stderr, /is now built on preliminary 1\.1 \(was 1\.0\) and keeps its ID/);
   assert.equal(JSON.parse(linked.stdout).preliminary['1.0'], '1.1');
-  const effective = run('effective', p.root, '--design', '1.0', '--readiness', p.review(), '--check', gateCheck);
+  const effective = run('effective', p.root, '--design', '1.0', '--readiness', p.review());
   assert.equal(effective.status, 0, effective.stderr);
   assert.match(effective.stderr, /Work toward the next baseline of Tilting carriage is 1\.1/);
   const refused = run('relink', p.root, '--design', '1.0', '--preliminary', '1.1');

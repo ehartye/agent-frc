@@ -5,49 +5,29 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
 import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { gzipSync } from 'node:zlib';
-import { readyInteraction, readyMissions } from './fixtures/ready.mjs';
+import { inputsOf, paged, writeInputs } from './fixtures/preliminary-release.mjs';
 
-// The staging command is the plugin's: an agent runs it from the plugin and names the project's design folder.
-const stagingCommand = fileURLToPath(new URL('../scripts/stage_preliminary_review.py', import.meta.url));
-// These invented releases hold no solid, so the layout check of the stage gate is stood in for: it reproduces the receipt.
-const gateCheck = fileURLToPath(new URL('./fixtures/gate-reproduces.mjs', import.meta.url));
+// The staging command is the plugin's: an agent runs it from the plugin and names the project's design folder. These
+// invented releases hold no solid, so the layout judgement is stood in for.
+const stagingCommand = fileURLToPath(new URL('./fixtures/stage_stand_in.py', import.meta.url));
 // Synthetic teaching fixtures: two invented architectures, "Tilting carriage" and "Swinging arm", each a one-case layout.
 async function season(t) {
   const root = await mkdtemp(path.join(tmpdir(), 'design-versions-'));
   t.after(() => rm(root, { recursive: true, force: true }));
   const author = path.join(root, 'cad', 'preliminary-design'), site = path.join(root, 'docs', 'preliminary-design');
   await mkdir(author, { recursive: true });
-  /** The checked inputs of one release. `step` stands for the STEP the layout was checked on. */
+  /** The measured inputs of one release with its page. `step` stands for the part its records are of. */
   async function fixture(id, {page = '<html>Review of ' + id + '</html>', step = 'step of ' + id} = {}) {
-    const dir = path.join(author, 'releases', id);
-    await mkdir(dir, { recursive: true });
-    const pin = async (file, content) => {
-      await writeFile(path.join(dir, file), content);
-      return { file, sha256: createHash('sha256').update(content).digest('hex') };
-    };
-    const motion = await pin('design.json', '{"cases":[]}');
-    await pin('viewer.html', page);
-    await pin('review-scene.json.gz', gzipSync(JSON.stringify({schema: 'agent-frc/preliminary-review-scene@1', issue: 'synthetic-' + id})));
-    const limits = await pin('package-limits.json', '{"inspectionLimitKg":14}');
-    const budgets = await pin('budgets.json', JSON.stringify({requirements: limits, masses: [], electricalCases: {}}));
-    const plan = await pin('judgement.json', JSON.stringify({source: motion, budgets, view: 'viewer.html'}));
-    await pin('design.step', step);
-    await pin('receipt.json', JSON.stringify({schema: 'agent-frc/preliminary-layout-result@1', missingInputs: [], reopen: [], cases: [{case: 'turn', status: 'pass'}],
-      stages: {turn: {purpose: 'operating'}}, interactions: [readyInteraction(['turn'])], control: {witness: {status: 'fail'}},
-      budgets: {massStatus: 'pass', electricalCases: [{case: 'weak', status: 'pass'}]}, planSha256: plan.sha256, issue: 'synthetic-' + id, status: 'layout-checked',
-      step: {file: 'design.step', sha256: createHash('sha256').update(step).digest('hex')}}));
-    await pin('missions.json', JSON.stringify(readyMissions([{case: 'turn', kind: 'operating-case', accomplishes: 'delivered', objective: 'Move the sample'}], 'turn')));
-    return dir;
+    writeInputs(root, inputsOf(id), {issue: 'synthetic-' + id, page, step});
+    return path.join(root, inputsOf(id));
   }
-  const stage = (...args) => spawnSync(process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3'), [stagingCommand, '--base', author, ...args, ...(args.includes('effective') ? ['--gate-check', gateCheck] : [])], {encoding: 'utf8'});
+  const stage = (...args) => spawnSync(process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3'), ['-B', stagingCommand, '--base', author, ...args], {encoding: 'utf8'});
   const listing = path.join(site, 'releases.json');
   const index = async () => JSON.parse((await readFile(listing, 'utf8')).replace(/"\d{4}-\d{2}-\d{2}"/g, '"DATE"'));
   const edit = async change => writeFile(listing, JSON.stringify(change(JSON.parse(await readFile(listing, 'utf8')))));
@@ -79,7 +59,7 @@ test('a version is staged under MAJOR.MINOR and its architecture is named once',
   assert.match(s.stage('--set-status', '1.0', 'effective', '--design-name', 'x').stderr, /--design-name goes with staging a version/);
 });
 
-test('drafts take no number: one in-progress version per architecture, and a new effective minor supersedes the last', {skip: 'WP8 converts the gate and staging to records'}, async t => {
+test('drafts take no number: one in-progress version per architecture, and a new effective minor supersedes the last', async t => {
   const s = await season(t);
   await s.fixture('1.0');
   s.ok(s.stage('1.0', '--design-name', 'Tilting carriage'));
@@ -94,7 +74,7 @@ test('drafts take no number: one in-progress version per architecture, and a new
   assert.match(accepted, /Preliminary design Tilting carriage 1\.0 is effective; the site opens 1\.0/);
   assert.match(accepted, /Work toward the next baseline of Tilting carriage is 1\.1, staged as drafts until it is accepted\. A different architecture is 2\.0 with its own name\./);
   assert.match(accepted, /Effective-readiness report for Tilting carriage 1\.0 \(/);
-  assert.match(accepted, /^\[gate\] Preliminary design Tilting carriage 1\.0: the full layout check ran on the committed design and reproduced the published receipt in \d+ s \(guideline: about 15 minutes at a stage gate\)\.$/m);
+  assert.match(accepted, /^\[gate\] Preliminary design Tilting carriage 1\.0: layout-checked on 5 current records, 3 of 3 readiness criteria met, in \d+\.\d s \(status 1\.0 s of it\)\. Nothing was measured\.$/m);
   assert.match(accepted, /On push: the project's workflow publishes the page\. Nothing is rerun\.\r?\n$/);
   await s.fixture('1.0', {page: '<html>Edited after acceptance</html>'});
   assert.match(s.stage('1.0').stderr, /Tilting carriage 1\.0 is effective and no longer changes\. Work toward its next baseline is 1\.1, staged as a draft/);
@@ -133,7 +113,7 @@ test('drafts take no number: one in-progress version per architecture, and a new
   assert.match(skipped, /Note: the next architecture after design 2 is 3\.0; 4\.1 skips a number\./);
 });
 
-test('a release is removed after its design is staged under another ID, with no redirect', {skip: 'WP8 converts the gate and staging to records'}, async t => {
+test('a release is removed after its design is staged under another ID, with no redirect', async t => {
   const s = await season(t);
   // An in-progress release: stage the same design as 2.0, then remove 1.0.
   await s.fixture('1.0', {step: 'the carriage'});
@@ -153,7 +133,7 @@ test('a release is removed after its design is staged under another ID, with no 
   s.ok(s.stage('--remove', '2.0'));
   assert.deepEqual(await s.index(), {releases: []});
 
-  // An effective release is removed only once the same STEP is effective under the new ID.
+  // An effective release is removed only once the same design is effective under the new ID.
   await s.fixture('1.0', {step: 'the carriage'});
   s.ok(s.stage('1.0', '--design-name', 'Tilting carriage'));
   s.ok(s.stage('--set-status', '1.0', 'effective'));
@@ -165,11 +145,11 @@ test('a release is removed after its design is staged under another ID, with no 
   s.ok(s.stage('--set-status', '2.0', 'effective'));
   assert.equal((await s.index()).designStatus['1.0'], 'superseded');
   assert.match(s.stage('--remove', '1.0').stderr, /is or was the effective design/, 'a superseded baseline that was accepted is guarded too');
-  assert.match(s.stage('--remove', '1.0', '--replaced-by', '2.0').stderr, /checked on different STEP files/);
-  assert.ok(existsSync(path.join(s.site, 'releases', '1.0', 'receipt.json')), 'a refused removal deletes nothing');
+  assert.match(s.stage('--remove', '1.0', '--replaced-by', '2.0').stderr, /were not judged on the same records/);
+  assert.ok(existsSync(path.join(s.site, 'releases', '1.0', 'judgement.json')), 'a refused removal deletes nothing');
 });
 
-test('an effective release is removed once the same STEP is effective under its new ID', {skip: 'WP8 converts the gate and staging to records'}, async t => {
+test('an effective release is removed once the same design is effective under its new ID', async t => {
   const s = await season(t);
   await s.fixture('1.0', {step: 'the carriage'});
   s.ok(s.stage('1.0', '--design-name', 'Tilting carriage'));
@@ -190,45 +170,33 @@ test('an effective release is removed once the same STEP is effective under its 
   assert.ok(!existsSync(path.join(s.site, 'releases', '1.0')) && !existsSync(path.join(s.author, 'releases', '1.0')));
 });
 
-test('the inputs of a release are copied to a new release folder with their pins written for the new paths', async t => {
-  const s = await season(t), sha = bytes => createHash('sha256').update(bytes).digest('hex');
-  // A release checked from the repository root: its records name their own folder in every pin.
-  const old = 'cad/preliminary-design/releases/1.0/', dir = path.join(s.root, old);
+test('the inputs of a release are copied to a new release folder with its own paths, and its records stay current', async t => {
+  const s = await season(t);
+  const dir = await s.fixture('1.0'), old = inputsOf('1.0'), fresh = inputsOf('1.1'), at = name => path.join(s.root, fresh, name), text = file => readFile(file, 'utf8');
   await mkdir(path.join(dir, 'notes'), {recursive: true});
-  const put = async (name, content) => { await writeFile(path.join(dir, name), content); return {file: old + name, sha256: sha(content)}; };
-  const step = await put('design.step', 'invented solid');
-  const motion = await put('design.json', JSON.stringify({step, cases: []}));
-  await put('notes/lane.md', 'Invented lane note');
-  await put('judgement.json', JSON.stringify({step, source: motion, view: old + 'viewer.html', outside: {file: 'README.md', sha256: 'f'.repeat(64)}}));
-  await put('missions.json', JSON.stringify({missionCases: [], trial: step}));
-  for (const name of ['viewer.html', 'review-scene.json.gz', 'receipt.json']) await put(name, 'written by the check for the old folder');
-
+  await writeFile(path.join(dir, 'notes/lane.md'), 'Invented lane note');
+  await writeFile(path.join(dir, 'notes/lane.json'), JSON.stringify({drawn: {file: old + '/design.step'}, outside: {file: 'README.md'}}));
   const copied = s.ok(s.stage('--copy-inputs', '1.0', '1.1'));
-  assert.match(copied, /Copied the inputs of release 1.0 to cad\/preliminary-design\/releases\/1\.1 and wrote 3 pinning records for the new paths\. The STEP is unchanged\./);
-  assert.match(copied, /preliminary-check \. cad\/preliminary-design\/releases\/1\.1\/judgement\.json --write-view --require-checked --output cad\/preliminary-design\/releases\/1\.1\/receipt\.json/);
-  const fresh = 'cad/preliminary-design/releases/1.1/', at = name => path.join(s.root, fresh, name), json = async name => JSON.parse(await readFile(at(name), 'utf8'));
-  for (const name of ['viewer.html', 'review-scene.json.gz', 'receipt.json']) assert.ok(!existsSync(at(name)), name + ' is left for the layout check to write');
-  assert.equal(await readFile(at('design.step'), 'utf8'), 'invented solid');
-  assert.equal(await readFile(at('notes/lane.md'), 'utf8'), 'Invented lane note', 'a file in a subfolder is copied');
-  const plan = await json('judgement.json'), paths = await json('design.json');
-  assert.deepEqual(paths.step, {file: fresh + 'design.step', sha256: step.sha256});
-  assert.deepEqual(plan.step, paths.step);
-  assert.deepEqual(plan.source, {file: fresh + 'design.json', sha256: sha(await readFile(at('design.json')))}, 'a rewritten record is pinned by its new digest');
-  assert.notEqual(plan.source.sha256, motion.sha256);
-  assert.equal(plan.view, fresh + 'viewer.html');
-  assert.deepEqual(plan.outside, {file: 'README.md', sha256: 'f'.repeat(64)}, 'a pin outside the release folder is left as it is');
-  assert.deepEqual((await json('missions.json')).trial, paths.step);
-  assert.ok(existsSync(path.join(dir, 'receipt.json')), 'the source release is untouched');
-
-  // An existing folder is not overwritten, and a pin that was already stale is not given a fresh digest.
+  assert.match(copied, /Copied the inputs of release 1\.0 to cad\/preliminary-design\/releases\/1\.1 with its records and wrote the paths of 2 files for the new folder\./);
+  assert.match(copied, /preliminary-check \. cad\/preliminary-design\/releases\/1\.1\/judgement\.json --require-checked[^]*preliminary-page \. cad\/preliminary-design\/releases\/1\.1\/judgement\.json/);
+  // The scene is built for its own folder; the page, the source, its parts and every record keep their bytes.
+  assert.ok(!existsSync(at('review-scene.json.gz')), 'the page builder writes the scene of the new folder');
+  for (const name of ['review.html', 'design.json', 'subsystems/arm.json', 'design.step', 'page.json', 'notes/lane.md', 'records/trials.json', 'records/measurements/mass.drawn.json'])
+    assert.equal(await text(at(name)), await text(path.join(dir, name)), name);
+  const judgement = JSON.parse(await text(at('judgement.json')));
+  assert.deepEqual([judgement.source.file, judgement.records.folder, judgement.page.file, judgement.narrative.file, judgement.premises[0].file, judgement.requirements.file],
+    [fresh + '/design.json', fresh + '/records', fresh + '/page.json', fresh + '/narrative.md', fresh + '/premises/robot-mass.json', 'cad/preliminary-design/requirements.json']);
+  assert.deepEqual(JSON.parse(await text(at('notes/lane.json'))), {drawn: {file: fresh + '/design.step'}, outside: {file: 'README.md'}}, 'a path outside the release folder is left as it is');
+  assert.ok(existsSync(path.join(dir, 'review-scene.json.gz')), 'the source release is untouched');
+  // The copy is judged on the records it came with, and stages once its page is built.
+  paged(s.root, fresh + '/judgement.json');
+  s.ok(s.stage('1.1', '--design-name', 'Tilting carriage'));
+  // An existing folder is not overwritten, and a folder with no judgement file is refused.
   assert.match(s.stage('--copy-inputs', '1.0', '1.1').stderr, /cad\/preliminary-design\/releases\/1\.1 already exists/);
-  await writeFile(path.join(dir, 'design.step'), 'a changed solid');
-  assert.match(s.stage('--copy-inputs', '1.0', '2.0').stderr, /pins cad\/preliminary-design\/releases\/1\.0\/design\.step, which is missing or differs from its pinned SHA-256\. Resolve it in release 1.0 before copying/);
-  assert.ok(!existsSync(path.join(s.author, 'releases', '2.0')), 'a refused copy leaves no folder');
   assert.match(s.stage('--copy-inputs', '9.0', '2.0').stderr, /No judgement file at cad\/preliminary-design\/releases\/9\.0/);
 });
 
-test('the view of an effective release is republished while its receipt records the same physics', {skip: 'WP8 converts the gate and staging to records'}, async t => {
+test('the view of an effective release is republished while its stage gate stands for its files', async t => {
   const s = await season(t), published = name => readFile(path.join(s.site, 'releases', '1.0', name), 'utf8');
   await s.fixture('1.0');
   s.ok(s.stage('1.0', '--design-name', 'Tilting carriage'));
@@ -236,7 +204,7 @@ test('the view of an effective release is republished while its receipt records 
   assert.match(s.stage('--refresh-view', '1.0').stderr, /--refresh-view republishes the view of the effective release\. Preliminary design Tilting carriage 1\.0 is in-progress; stage it to publish or revise it: stage_preliminary_review\.py 1\.0/);
   s.ok(s.stage('--set-status', '1.0', 'effective'));
   const before = await s.index();
-  // A rebuilt review page on the same STEP: published, and the index keeps its status, accepted date and draft count.
+  // A rebuilt review page of the same records: published, and the index keeps its status, accepted date and draft count.
   await s.fixture('1.0', {page: '<html>Rebuilt review of 1.0</html>'});
   assert.match(s.stage('1.0').stderr, /Tilting carriage 1\.0 is effective and no longer changes/);
   assert.match(s.ok(s.stage('--refresh-view', '1.0')), /^Refreshed the view of preliminary design Tilting carriage 1\.0 \(effective\)\. Its physics, status, accepted date and draft count are unchanged\r?\nBefore pushing, run the publication check: node PLUGIN\/scripts\/design-publication\.mjs check \.\r?\nOn push: the project's workflow publishes the page\. Nothing is rerun\.\r?\n$/);
@@ -247,10 +215,10 @@ test('the view of an effective release is republished while its receipt records 
   assert.deepEqual([before.designStatus, before.accepted, before.revision], [{'1.0': 'effective'}, {'1.0': 'DATE'}, {'1.0': rev(1)}]);
   assert.deepEqual(await s.index(), refreshed);
   assert.match(s.ok(s.stage('--refresh-view', '1.0')), /Preliminary design Tilting carriage 1\.0 is unchanged \(effective\)/);
-  // A receipt of another STEP is a changed design: refused, with the version that work belongs to, and nothing is published.
+  // Records of another part are a changed design: refused, with the version that work belongs to, and nothing is published.
   await s.fixture('1.0', {page: '<html>Review of a changed design</html>', step: 'a changed step'});
   assert.match(s.stage('--refresh-view', '1.0').stderr,
-    /Tilting carriage 1\.0 is effective and this receipt differs from the published one in the generated solids. A view refresh keeps the physics\. Work that changes it belongs to 1\.1, staged as a draft/);
+    /Tilting carriage 1\.0 is effective, and what its stage gate judged has changed: cad\/preliminary-design\/releases\/1\.0\/design\.step changed[^]* Work that changes it belongs to 1\.1, staged as a draft/);
   assert.equal(await published('index.html'), '<html>Rebuilt review of 1.0</html>');
   assert.deepEqual(await s.index(), refreshed);
   assert.match(s.stage('--refresh-view', '1.0', '--design-name', 'Another name').stderr, /a view refresh changes no name/);
