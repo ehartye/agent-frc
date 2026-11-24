@@ -20,35 +20,9 @@ import unittest
 
 PLUGIN = Path(__file__).resolve().parents[1]
 RELEASE = "cad/preliminary-design/releases/1.0"
-TRIAL = "ball stays at the wall"
-
-
-def tray(source):
-    """The invented field parts, piece, material, adjustment, interaction and trial, added to the starter's source."""
-    source["parameters"]["wall_x"] = 300
-    source["groups"]["field"] = {"role": "fixture"}
-    source["fixtures"] += [dict(name="tray", group="field", shape=dict(kind="box", fromMm=[100, -50, 0], toMm=[298, 50, 10])),
-                           dict(name="wall", group="field", shape=dict(kind="box", fromMm=["=wall_x", -50, 0], toMm=["=wall_x + 10", 50, 60]))]
-    source["pieces"] = {"ball": {"shape": {"kind": "sphere", "centerMm": [0, 0, 0], "radiusMm": 40}, "massKg": {"value": 0.2, "assumed": [0.15, 0.25]}}}
-    source["materials"] = {"felt": {"stiffnessNPerM": {"value": 50000, "assumed": [25000, 100000]}, "restitution": {"value": 0.2, "assumed": [0.1, 0.4]},
-                                    "friction": {"value": 0.5, "assumed": [0.3, 0.8]}}}
-    source["adjustments"] = {"wall position": {"input": "parameters.wall_x", "kind": "mechanical", "range": [300, 306], "note": "Invented slotted wall"}}
-    source["interactions"] = {"tray stop": {"piece": "ball", "plane": {"normal": "y", "atMm": 0}, "solids": ["tray", "wall"],
-                                            "pieceAtMm": [["=wall_x - 40", 0, 50]], "approach": {"angleDeg": [-5, 5], "offsetMm": [-5, 5]},
-                                            "targetOffPlane": False}}
-    source["trials"] = {TRIAL: {
-        "assumes": [{"id": "flat-tray", "text": "Invented: the tray is flat and level."}],
-        "plane": {"normal": "y", "atMm": 0}, "stepS": 0.0002, "durationS": 1.5, "traceS": 0.01, "fitToleranceMm": 2,
-        "piece": {"use": "ball", "start": {"atMm": ["=wall_x - 40", 50]}},
-        "surfaces": [{"solid": "tray", "material": "felt"}, {"solid": "wall", "material": "felt"}],
-        "loads": [{"name": "push", "along": [-1, 0], "accelerationMps2": 3, "startS": 0.2, "durationS": 0.3}],
-        "events": [{"name": "rolled off", "when": {"signal": "zMm", "below": 20}, "outcome": "rolled off"},
-                   {"name": "stayed", "when": {"all": [{"signal": "tS", "above": 0.8}, {"restFor": 0.3}]}, "outcome": "stayed"}],
-        "pass": {"outcomes": ["stayed"]},
-        "control": {"change": {"loads.push.accelerationMps2": -6}, "note": "Pushed away from the wall, the ball rolls off the tray."},
-        "brackets": [{"input": "loads.push.accelerationMps2", "unit": "m/s2", "values": [1, 3, 6]}],
-        "adjustments": ["wall position"]}}
-    return source
+# The invented tray, wall, ball, interaction and trial, shared with the tests that mark the starter effective.
+_TRAY = runpy.run_path(str(PLUGIN / "test/fixtures/ready_example.py"))
+TRIAL, tray = _TRAY["TRIAL"], _TRAY["tray"]
 
 
 class KernelInteractionsCheck(unittest.TestCase):

@@ -13,6 +13,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
+import { readyInteraction, readyMissions } from './fixtures/ready.mjs';
 
 // The staging command is the plugin's: an agent runs it from the plugin and names the project's design folder.
 const stagingCommand = fileURLToPath(new URL('../scripts/stage_preliminary_review.py', import.meta.url));
@@ -39,10 +40,11 @@ async function season(t) {
     const budgets = await pin('budgets.json', JSON.stringify({requirements: limits, masses: [], electricalCases: {}}));
     const plan = await pin('judgement.json', JSON.stringify({source: motion, budgets, view: 'viewer.html'}));
     await pin('design.step', step);
-    await pin('receipt.json', JSON.stringify({schema: 'agent-frc/preliminary-layout-result@1', missingInputs: [], reopen: [], cases: [{case: 'turn', status: 'pass'}], control: {witness: {status: 'fail'}},
+    await pin('receipt.json', JSON.stringify({schema: 'agent-frc/preliminary-layout-result@1', missingInputs: [], reopen: [], cases: [{case: 'turn', status: 'pass'}],
+      stages: {turn: {purpose: 'operating'}}, interactions: [readyInteraction(['turn'])], control: {witness: {status: 'fail'}},
       budgets: {massStatus: 'pass', electricalCases: [{case: 'weak', status: 'pass'}]}, planSha256: plan.sha256, issue: 'synthetic-' + id, status: 'layout-checked',
       step: {file: 'design.step', sha256: createHash('sha256').update(step).digest('hex')}}));
-    await pin('missions.json', JSON.stringify({missionCases: [{case: 'turn', kind: 'operating-case', accomplishes: 'delivered', objective: 'Move the sample'}]}));
+    await pin('missions.json', JSON.stringify(readyMissions([{case: 'turn', kind: 'operating-case', accomplishes: 'delivered', objective: 'Move the sample'}], 'turn')));
     return dir;
   }
   const stage = (...args) => spawnSync(process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3'), [stagingCommand, '--base', author, ...args, ...(args.includes('effective') ? ['--gate-check', gateCheck] : [])], {encoding: 'utf8'});
