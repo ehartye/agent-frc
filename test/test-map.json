@@ -114,7 +114,9 @@
       "detailed-design-release.test.mjs",
       "kernel-interactions.test.mjs",
       "kernel-layout.test.mjs",
-      "mechanical-readiness.test.mjs"
+      "mechanical-readiness.test.mjs",
+      "review-page-play.test.mjs",
+      "review-page.test.mjs"
     ]
   },
   "pages": ["**/*.md", "**/*.html", "**/*.css", "docs/**", "skills/**", "worksheets/**", ".github/pages/**"],

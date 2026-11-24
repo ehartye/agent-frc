@@ -2,16 +2,18 @@
  * @lane merge
  * @subject scripts/review-scene.mjs
  */
+// The review scene's schema, its cross-checks and its comparison with the verdict judged from the records. Failure caught:
+// a scene the page cannot play, or one that claims a result the records do not hold, is accepted.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { gzipSync } from 'node:zlib';
-import { checkSchema, validateScene, readScene, compareWithReceipt, compareWithLedger } from '../scripts/review-scene.mjs';
-import { reviewScene, replayScene, phasedScene } from './fixtures/review-scene.mjs';
+import { checkSchema, validateScene, readScene, compareWithVerdict } from '../scripts/review-scene.mjs';
+import { reviewScene, replayScene, phasedScene, verdictOf } from './fixtures/review-scene.mjs';
 
 test('the synthetic scene satisfies the schema and cross-checks', () => {
   const {errors, warnings} = validateScene(reviewScene());
   assert.deepEqual(errors, []);
-  assert.ok(warnings.some(w => /1 component without subsystem/.test(w)), 'a fixture without a subsystem is reported: ' + warnings);
+  assert.deepEqual(warnings, [], 'a complete scene warns of nothing');
 });
 
 test('schema errors name the field and its pointer', () => {
@@ -19,80 +21,80 @@ test('schema errors name the field and its pointer', () => {
   delete scene.parked;
   scene.bodies.arm.color = 'teal';
   scene.cases[0].kind = 'hopeful';
+  scene.decision.status = 'pending receipt';
   const errors = checkSchema(scene);
   assert.ok(errors.some(e => e === '/ is missing parked'), errors.join('\n'));
   assert.ok(errors.some(e => e.startsWith('/bodies/arm/color must match')));
   assert.ok(errors.some(e => e.startsWith('/cases/0/kind must be one of')));
-  assert.ok(checkSchema({...reviewScene(), schema: 'other@1'}).some(e => e.startsWith('/schema must be')));
+  assert.ok(errors.some(e => e.startsWith('/decision/status must be one of layout-checked, provisional, blocked, reopen')), 'the decision is a verdict status');
+  assert.ok(checkSchema({...reviewScene(), schema: 'agent-frc/preliminary-review-scene@1'}).some(e => e.startsWith('/schema must be')), 'an earlier scene format is not read');
+  for (const gone of ['mass', 'purpose', 'rationale', 'missing', 'volumeType', 'support'])
+    assert.ok(checkSchema({...reviewScene(), bodies: {...reviewScene().bodies, arm: {...reviewScene().bodies.arm, [gone]: null}}}).includes('/bodies/arm/' + gone + ' is not a scene field'), gone);
 });
 
-test('cross-checks catch references to bodies, meshes and frames that do not exist', () => {
+test('cross-checks catch references to bodies, meshes, frames and motions that do not exist', () => {
   const scene = reviewScene();
-  scene.mass.lines[0].members.push('ghost');
-  scene.power[0].lines[1].members = ['phantom'];
+  scene.weight.groups.frame.members.push('ghost');
+  scene.power.motions[0].drives[0].members = ['phantom'];
+  scene.power.motions.push({...scene.power.motions[0], motion: 'spin'});
+  scene.bodies.arm.motorOf = ['wrist'];
   scene.cases[0].bodies.arm.mesh = 9;
   scene.cases[0].time.pop();
   scene.openingCase = 'missing';
   scene.cutaway.hides = ['frame'];
+  scene.required[0].ids.push('wheel');
   const {errors} = validateScene(scene);
-  for (const pattern of [/mass\/lines\/structure names an unknown body: ghost/, /power\/raise-weak\/arm names an unknown body: phantom/,
-    /cases\/0\/bodies\/arm mesh out of range/, /cases\/0\/time needs one entry per frame \(25\)/, /openingCase names an unknown case/, /cutaway\/hides names a body that is not a fixture: frame/])
+  for (const pattern of [/weight\/groups\/frame names an unknown body: ghost/, /power\/raise\/shoulder names an unknown body: phantom/, /power\/motions\/1 names spin, which is not a case/,
+    /bodies\/arm\/motorOf names wrist, which no motion's power lists/, /cases\/0\/bodies\/arm mesh out of range/, /cases\/0\/time needs one entry per frame \(25\)/,
+    /openingCase names an unknown case/, /cutaway\/hides names a body that is not a fixture: frame/, /required\/structure names an unknown body: wheel/])
     assert.ok(errors.some(e => pattern.test(e)), pattern + ' in ' + errors.join('\n'));
 });
 
-test('an incomplete roster, an overweight robot and a low-voltage duty stay valid and visible as warnings', () => {
-  const scene = reviewScene();
-  scene.required.push({role: 'Drive wheels', ids: ['wheel-1', 'wheel-2']});
-  scene.mass.remainingKg = -1.25;
-  scene.power[0].marginV = -0.4;
-  scene.power[0].status = 'fail';
-  const {errors, warnings} = validateScene(scene);
-  assert.deepEqual(errors, []);
-  assert.ok(warnings.includes('Required role Drive wheels is missing wheel-1, wheel-2'));
-  assert.ok(warnings.includes('Inspection weight exceeds the limit by 1.250 kg'));
-  assert.ok(warnings.includes('raise-weak falls 0.40 V below its required voltage'));
-});
-
-test('missing project-authored fields validate with a warning naming where to supply them', () => {
+test('a failing weight limit, a sagging bus, a missing role and missing page text stay valid and visible as warnings', () => {
   const scene = reviewScene({context: null, architecture: null, focus: null, notes: null});
-  scene.mass.runningAdditions = null;
-  scene.bodies.arm.purpose = null;
-  scene.bodies.arm.missing = ['purpose'];
+  scene.required.push({role: 'drive', ids: []});
+  Object.assign(scene.weight.limits[0], {marginKg: -1.25, status: 'fail'});
+  Object.assign(scene.power.motions[0], {marginV: -0.4, status: 'fail'});
   const {errors, warnings} = validateScene(scene);
   assert.deepEqual(errors, []);
-  for (const w of ['Not supplied: presentation.context', 'Not supplied: presentation.architecture', 'Not supplied: presentation.focus',
-    'Not supplied: presentation.notes', 'Running additions are not itemized (presentation.runningAdditions)', '1 component without purpose'])
+  for (const w of ['No drive group in the design source', 'Weight limit inspection is exceeded by 1.250 kg', 'raise: the weak-pack bus falls 0.40 V below what it needs',
+    'Not supplied: page.json context', 'Not supplied: page.json architecture', 'Not supplied: page.json focus', 'Not supplied: page.json notes'])
     assert.ok(warnings.includes(w), w + ' in ' + warnings.join('\n'));
   const optional = reviewScene();
   delete optional.cutaway;
   delete optional.cases[0].time;
   delete optional.cases[0].measure;
-  assert.deepEqual(validateScene(optional), {errors: [], warnings: validateScene(optional).warnings}, 'optional features may be absent');
+  assert.deepEqual(validateScene(optional).errors, [], 'optional features may be absent');
   assert.ok(!validateScene(optional).warnings.some(w => /cutaway|time|measure/.test(w)), 'absent optional features are not warnings');
+  assert.ok(!validateScene(reviewScene()).warnings.some(w => /purpose|rationale/.test(w)), 'a component purpose is not asked for');
 });
 
-test('the scene must repeat the receipt results, however it was compressed', () => {
-  const scene = reviewScene();
-  const content = Buffer.from(JSON.stringify(scene));
-  const served = gzipSync(content);
-  const receipt = {issue: scene.issue, step: scene.sources.step, design: scene.sources.design, narrativeReview: scene.narrativeReview,
-    cases: [{case: 'raise', status: 'pass'}], control: {witness: {pair: ['arm', 'battery'], status: 'fail'}},
-    budgets: {inspectionKg: scene.mass.inspectionKg, remainingKg: scene.mass.remainingKg, runningKg: scene.mass.runningKg,
-      electricalCases: scene.power.map(({case: c, status, batteryCondition, requiredMinV, marginV, loadedBusV, batterySideA}) => ({case: c, status, batteryCondition, requiredMinV, marginV, loadedBusV, batterySideA}))},
-    parked: scene.parked};
-  const read = readScene(served);
-  assert.deepEqual(compareWithReceipt(read, receipt), []);
-  assert.deepEqual(compareWithReceipt(readScene(gzipSync(content, {level: 1})), receipt), [], 'the comparison is of content, not of compressed bytes');
-  assert.deepEqual(compareWithReceipt(read, {...receipt, cases: [{case: 'raise', status: 'fail'}]}), ['Scene case results differ from the receipt']);
-  assert.deepEqual(compareWithReceipt(read, {...receipt, parked: {...scene.parked, screenedPairs: 7}}), ['Scene parked-assembly result differs from the receipt']);
-  assert.deepEqual(compareWithReceipt(read, {...receipt, budgets: {...receipt.budgets, electricalCases: [{...receipt.budgets.electricalCases[0], marginV: 0.2}]}}),
-    ['Scene duties differ from the receipt'], 'the figures the page draws are the receipt figures');
-  const claim = {...scene, decision: {status: 'layout-checked', firstUnmet: null}};
-  assert.ok(compareWithReceipt(readScene(gzipSync(Buffer.from(JSON.stringify(claim)))), receipt).includes('Scene decision may not claim a checked result'));
-  assert.deepEqual(compareWithReceipt(readScene(gzipSync(Buffer.from(JSON.stringify({...scene, issue: 'other'})))), receipt), ['Scene issue differs from the receipt']);
+test('the scene must repeat the verdict judged from the records, however it was compressed', () => {
+  const scene = reviewScene(), verdict = verdictOf(scene);
+  const content = Buffer.from(JSON.stringify(scene)), read = readScene(gzipSync(content));
+  assert.deepEqual(compareWithVerdict(read.scene, verdict), []);
+  assert.deepEqual(compareWithVerdict(readScene(gzipSync(content, {level: 1})).scene, verdict), [], 'the comparison is of content, not of compressed bytes');
+  const differ = (change, expected) => { const v = verdictOf(scene); change(v); assert.deepEqual(compareWithVerdict(scene, v), expected); };
+  differ(v => { v.status = 'blocked'; }, ['Scene decision differs from the verdict']);
+  differ(v => { v.motions.raise.status = 'fail'; }, ['Scene motion results differ from the verdict']);
+  differ(v => { v.motions.spin = {status: 'pass'}; }, ['Scene motion results differ from the verdict']);
+  differ(v => { v.control.rejected = false; }, ['Scene displaced control differs from the verdict']);
+  differ(v => { v.weight.limits[0].marginKg = 3; }, ['Scene weight differs from the verdict']);
+  differ(v => { v.electrical.motions.raise.marginV = 0.2; }, ['Scene power differs from the verdict']);
+  differ(v => { v.issue = 'other'; }, ['Scene issue differs from the verdict']);
+  differ(v => { v.records.jobs.pop(); }, ['Scene records differ from the verdict\'s']);
+  differ(v => { v.narrative.objectives = []; }, ['Scene narrative objectives differ from the verdict']);
+  differ(v => { v.interactions = [{id: 'x', verdict: 'needs 3D', reasons: []}]; }, ['Scene interactions or adjustments differ from the verdict']);
+  // Control: a scene that claims a pass the records do not hold is refused, even when it is otherwise well formed.
+  const claim = reviewScene();
+  claim.cases[0].status = 'pass';
+  const failed = verdictOf(claim);
+  failed.motions.raise.status = 'fail';
+  failed.status = 'blocked';
+  assert.deepEqual(validateScene(claim).errors, []);
+  assert.deepEqual(compareWithVerdict(claim, failed), ['Scene decision differs from the verdict', 'Scene motion results differ from the verdict']);
   assert.throws(() => readScene(gzipSync(Buffer.alloc(2048, 32)), 1024), /Cannot create a Buffer larger|maxOutputLength|larger than/i, 'decompression is bounded');
 });
-
 
 test('links, extra fields and a misnamed or second displaced control are refused', () => {
   for (const href of ['javascript:alert(1)', 'data:text/html,x', '//host/x', '/root', 'http://plain', ' ../x', '..\\x']) {
@@ -107,16 +109,6 @@ test('links, extra fields and a misnamed or second displaced control are refused
   const renamed = reviewScene();
   renamed.cases[1].kind = 'nominal';
   assert.ok(validateScene(renamed).errors.includes('/cases/package-displacement-control must be the displaced control'));
-});
-
-test('the ledger files must match the figures the page draws', () => {
-  const scene = reviewScene();
-  const ledger = {masses: scene.mass.lines.map(l => ({...l})), electricalCases: {'raise-weak': {openCircuitV: [11.6, 12], resistanceOhm: [0.02, 0.03], batterySideA: {drive: [15, 35], arm: [5, 15]}}}};
-  assert.deepEqual(compareWithLedger(scene, ledger, {inspectionLimitKg: 20}), []);
-  assert.deepEqual(compareWithLedger(scene, ledger, {inspectionLimitKg: 99}), ['Scene inspection limit differs from limits.json']);
-  ledger.masses[0].kg = [1, 2];
-  ledger.electricalCases['raise-weak'].batterySideA.arm = [5, 25];
-  assert.deepEqual(compareWithLedger(scene, ledger, {inspectionLimitKg: 20}), ['Scene mass lines differ from budgets.json', 'Scene duty raise-weak differs from budgets.json']);
 });
 
 test('a trial replay validates beside the cases and shares their ID namespace', () => {
@@ -152,30 +144,23 @@ test('a trial replay validates beside the cases and shares their ID namespace', 
   const extra = replayScene();
   extra.replays[0].surprise = true;
   assert.ok(checkSchema(extra).some(e => e === '/replays/0/surprise is not a scene field'));
-  assert.ok(checkSchema({...replayScene(), replays: [{...replayScene().replays[0], evidence: []}]}).some(e => /evidence needs at least 1 items/.test(e)), 'a replay pins the trial it plays back');
+  assert.ok(checkSchema({...replayScene(), replays: [{...replayScene().replays[0], evidence: []}]}).some(e => /evidence needs at least 1 items/.test(e)), 'a replay names the record it plays back');
+  // A replay is playback: the verdict comparison covers exactly the judged motions.
+  const scene = replayScene();
+  assert.deepEqual(compareWithVerdict(scene, verdictOf(scene)), [], 'a replay adds no motion to compare');
 });
 
-test('a replay is playback: the receipt comparison still covers exactly the checked cases', () => {
-  const scene = replayScene(), content = Buffer.from(JSON.stringify(scene)), served = gzipSync(content), read = readScene(served);
-  const receipt = {issue: scene.issue, step: scene.sources.step, design: scene.sources.design, cases: [{case: 'raise', status: 'pass'}],
-    control: {witness: {}}, narrativeReview: scene.narrativeReview};
-  assert.deepEqual(compareWithReceipt(read, receipt, {pins: false}), [], 'a replay adds no case to compare');
-  assert.ok(compareWithReceipt(read, {...receipt, cases: [...receipt.cases, {case: 'lane-run', status: 'pass'}]}, {pins: false})
-    .includes('Scene case results differ from the receipt'), 'a receipt cannot credit a replay as a checked case');
-});
-
-test('animations play every checked case exactly once, by mission phase, and never the displaced control', () => {
+test('animations play every motion exactly once, by phase of the cycle, and never the displaced control', () => {
   assert.deepEqual(validateScene(phasedScene()).errors, []);
-  assert.deepEqual(validateScene(reviewScene()).errors, [], 'a scene written before the animation list still validates');
   const broken = phasedScene();
   broken.animations[0].cases = ['raise-01', 'raise-02', 'ghost'];
   broken.animations[1].cases = ['lower', 'raise-01', 'package-displacement-control'];
-  broken.animations.push({id: 'raise', title: 'Again', mission: false, cases: ['lower']});
+  broken.animations.push({id: 'transfer', title: 'Again', mission: false, cases: ['lower']});
   const {errors} = validateScene(broken);
-  for (const pattern of [/animations\/0\/cases names an unknown case: ghost/, /animations\/1\/cases repeats case raise-01 of animation raise/,
-    /animations\/1\/cases names the displaced control/, /animations\/2 repeats animation raise/, /animations plays no case raise-03/])
+  for (const pattern of [/animations\/0\/cases names an unknown case: ghost/, /animations\/1\/cases repeats case raise-01 of animation transfer/,
+    /animations\/1\/cases names the displaced control/, /animations\/2 repeats animation transfer/, /animations plays no case raise-03/])
     assert.ok(errors.some(e => pattern.test(e)), pattern + ' in ' + errors.join('\n'));
-  assert.ok(checkSchema({...phasedScene(), animations: [{id: 'raise', cases: ['raise-01']}]}).some(e => /animations\/0 is missing title/.test(e)));
+  assert.ok(checkSchema({...phasedScene(), animations: [{id: 'transfer', cases: ['raise-01']}]}).some(e => /animations\/0 is missing title/.test(e)));
   const replay = replayScene();
   replay.animations = [{id: 'lane-run', title: 'Raise', mission: true, cases: ['raise']}];
   assert.ok(validateScene(replay).errors.some(e => /replays\/0 repeats case or replay lane-run/.test(e)), 'a replay may not take an animation ID');
