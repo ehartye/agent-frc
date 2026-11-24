@@ -5,291 +5,228 @@
 # @subject scripts/effective-readiness.mjs
 # @subject examples/design-source/create.py
 # @subject test/fixtures/ready_example.py
-"""Interactions on the design library: the screen verdict, the trial record and the adjustment extremes the check judges.
+"""Interactions on the design library: the screen verdict, the trial and the adjustment's ends the judge runs, and the bar they meet.
 
-Failure caught: a design reaches the effective bar on a trial that is stale, on a verdict that hides what one
-section cannot show, or on an adjustment whose ends were never measured. The invented starter gains a tray and a
-wall on the field, a ball, one interaction, one planar trial and one mechanical adjustment. Each control changes one
-input and must change what is judged."""
+Failure caught: a design reaches the effective bar on a trial that fails, on a verdict that hides what one section cannot
+show, on an adjustment whose ends are never measured, or on a payload path that is not its trial's. The invented starter
+gains a tray and a wall on the field, a ball, one interaction, one planar trial and one mechanical adjustment. Each control
+changes one input and must change what is judged."""
 import json
 from pathlib import Path
-import runpy
 import subprocess
 import sys
-from tempfile import TemporaryDirectory
 import unittest
 
-PLUGIN = Path(__file__).resolve().parents[1]
-RELEASE = "cad/preliminary-design/releases/1.0"
-# The invented tray, wall, ball, interaction and trial, shared with the tests that mark the starter effective.
-_TRAY = runpy.run_path(str(PLUGIN / "test/fixtures/ready_example.py"))
-TRIAL, tray, judged = _TRAY["TRIAL"], _TRAY["tray"], _TRAY["judged"]
+sys.path.insert(0, str(Path(__file__).resolve().parent / "fixtures"))
+from judged_project import PLUGIN, RELEASE, Judge, counted, get, with_tray  # noqa: E402
+from ready_example import TRIAL  # noqa: E402
+
 ROLLED = "ball rolls off the tray"
 
 
-class KernelInteractionsCheck(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.folder = TemporaryDirectory()
-        cls.root = Path(cls.folder.name).resolve()
-        runpy.run_path(str(PLUGIN / "examples/design-source/create.py"))["create"](cls.root / RELEASE, "1.0", cls.root)
-        cls.source = tray(json.loads((cls.root / RELEASE / "design.json").read_text(encoding="utf-8")))
-        cls.judgement = judged(json.loads((cls.root / RELEASE / "judgement.json").read_text(encoding="utf-8")))
-        cls.put("judgement.json", cls.judgement)
-        cls.refresh(cls.source)
+class KernelInteractionsCheck(Judge):
+    change = staticmethod(with_tray)
 
-    @classmethod
-    def tearDownClass(cls):
-        cls.folder.cleanup()
+    def row(self, verdict, check, subject):
+        return next(r for r in verdict["rows"] if (r["check"], r["subject"]) == (check, subject))
 
-    @classmethod
-    def put(cls, name, data):
-        (cls.root / RELEASE / name).write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8", newline="\n")
+    def trials(self):
+        return get(self.root, RELEASE + "/results/trials.json")["trials"]
 
-    @classmethod
-    def library(cls, *args):
-        return subprocess.run([sys.executable, "-m", "frc_design_kernel", *args], cwd=cls.root, check=True, capture_output=True, text=True)
+    def bind(self, trial, window=None, field="transportedBy", **spec):
+        """Bind the carried article's move in acquire to a trial, over a window of its fit when one is given."""
+        own = dict(basis="Invented", trial=trial, **spec, **({"window": window} if window else {}))
+        if field == "transportedBy":
+            own.update(mechanisms=["carrier"], drive={"carrier": "Invented rollers"})
+        self.judgement(lambda j: j.update(motions={"acquire": {field: {"carried article": own}}}))
 
-    @classmethod
-    def refresh(cls, source, trial=True, extremes=True):
-        """Write the source and the library's records for it, as an author does after an edit."""
-        cls.put("design.json", source)
-        if trial:
-            cls.library("try", RELEASE + "/design.json", "--out", RELEASE + "/records")
-        if extremes:
-            cls.library("measure", RELEASE + "/design.json", "--out", RELEASE + "/records", "--extremes", "--min-gap", "1")
+    def moved_on(self, operation):
+        """The article's acquire move written as one operation. It ends where the trial left the article, off its ejector's
+        joint, so the turn starts from a pose with the article as drawn instead of after it."""
+        def change(source):
+            source["motions"]["acquire"]["moves"]["carried article"] = [operation]
+            source["motions"]["acquire"]["by"] = "piece"
+            source["poses"]["loaded"] = {}
+            source["motions"]["loaded-turn"]["from"] = "loaded"
+        self.source(change)
 
-    def tearDown(self):
-        self.put("judgement.json", self.judgement)
-        self.refresh(self.source)
-
-    def check(self, *flags):
-        run = subprocess.run(["node", str(PLUGIN / "scripts/design.mjs"), "preliminary-check", str(self.root), RELEASE + "/judgement.json",
-                              "--json", *flags], capture_output=True, text=True)
-        verdict = json.loads(run.stdout) if run.stdout.strip() else None
-        return run, verdict, ((verdict or {}).get("interactions") or [None])[0]
-
-    def copy(self, data):
-        return json.loads(json.dumps(data))
-
-    def on_fit(self, operation):
-        """The source with the article's acquire move written as the trial's fit. The fit ends where the trial left the
-        article, off its ejector's joint, so the turn starts from a pose with the article as drawn instead of after it."""
-        source = self.copy(self.source)
-        source["motions"]["acquire"]["moves"]["carried article"] = [operation]
-        source["motions"]["acquire"]["by"] = "piece"
-        source["poses"]["loaded"] = {}
-        source["motions"]["loaded-turn"]["from"] = "loaded"
-        return source
-
-    def texts(self, verdict):
-        return [row["text"] for row in verdict["unmet"]]
-
-    def test_the_verdict_the_trial_and_the_adjustment_are_judged_and_meet_the_bar(self):
-        run, verdict, row = self.check()
-        self.assertEqual(run.returncode, 0, run.stderr)
-        self.assertEqual(verdict["status"], "layout-checked", verdict["unmet"])
-        self.assertEqual((row["verdict"], row["decides"]), ("planar is enough", "Invented: whether the wall needs a lip"))
+    def test_the_screen_the_trial_and_the_adjustment_are_judged_and_meet_the_bar(self):
+        verdict = self.judge()
+        self.assertEqual((verdict["result"], verdict["status"]), ("pass", "layout-checked"), verdict["unmet"])
+        [row] = verdict["interactions"]
+        self.assertEqual((row["verdict"], row["decides"], row["unmet"]), ("planar is enough", "Invented: whether the wall needs a lip", []))
         trial = row["trial"]
-        self.assertEqual((trial["name"], trial["engine"], trial["result"], trial["state"]), (TRIAL, "planar", "passed", "current"))
+        self.assertEqual((trial["name"], trial["engine"], trial["result"]), (TRIAL, "planar", "passed"))
         self.assertEqual(trial["sensitivity"][0], "loads.push.accelerationMps2")
         self.assertIn(dict(path="pieces.ball.massKg", value=0.2, source="assumed", range=[0.15, 0.25]), trial["inputs"])
         self.assertIn("flat-tray", [a["id"] for a in trial["assumptions"]])
         self.assertEqual(trial["adjustments"], ["wall position"])
-        self.assertEqual([(a["name"], a["measured"], a["findings"]) for a in verdict["adjustments"]], [("wall position", True, [])])
-        self.assertEqual(verdict["missionCases"], [dict(name="deliver", trial=TRIAL, accomplishes="delivered", objective="Acquire, turn and release",
-                                                       state="current", result="passed")])
-        self.assertIn("[screen] tray stop: planar is enough", run.stderr)
-        self.assertIn("[trial] " + TRIAL + " (planar): passed", run.stderr)
-        # The readiness report judges the same records: the interaction meets its bar and backs the mission case.
-        report = subprocess.run(["node", str(PLUGIN / "scripts/design.mjs"), "effective-readiness", str(self.root), "--release", RELEASE, "--json"],
-                                capture_output=True, text=True)
+        self.assertEqual([(a["name"], a["status"], a["findings"]) for a in verdict["adjustments"]], [("wall position", "pass", [])])
+        self.assertEqual(verdict["missionCases"], [dict(name="deliver", trial=TRIAL, accomplishes="delivered", objective="Acquire, turn and release", result="passed")])
+        # Each has a row of its own, at its own level.
+        self.assertEqual([(self.row(verdict, *key)["level"], self.row(verdict, *key)["result"]) for key in
+                          (("adjustment", "wall position"), ("trial", TRIAL), ("interaction", "tray stop"))], [(5, "pass"), (6, "pass"), (7, "pass")])
+        # The readiness report judges the whole design itself: the interaction meets its bar and backs the mission case.
+        report = subprocess.run(["node", str(PLUGIN / "scripts/design.mjs"), "effective-readiness", "1.0", "--json"], cwd=self.root, capture_output=True, text=True)
         self.assertEqual(report.returncode, 0, report.stderr)
-        criteria = {c["id"]: c for c in json.loads(report.stdout)["criteria"]}
-        self.assertEqual(criteria["interactions"]["reasons"], [])
-        self.assertIn("tray stop: planar is enough; trial " + TRIAL + " (planar): passed; leans most on loads.push.accelerationMps2",
-                      criteria["interactions"]["notes"])
-        self.assertEqual((criteria["whole-cycle"]["reasons"], criteria["risks-resolved"]["reasons"]), ([], []))
+        found = json.loads(report.stdout)
+        criteria = {c["id"]: c for c in found["criteria"]}
+        self.assertEqual({name: c["reasons"] for name, c in criteria.items()}, {"whole-cycle": [], "interactions": [], "risks-resolved": []})
+        self.assertIn("tray stop: planar is enough; trial " + TRIAL + " (planar): passed; leans most on loads.push.accelerationMps2", criteria["interactions"]["notes"])
 
-    def test_a_changed_solid_makes_the_trial_stale_and_judging_refuses(self):
-        source = self.copy(self.source)
-        source["fixtures"][-1]["shape"]["toMm"][2] = 70
-        self.refresh(source, trial=False, extremes=False)
-        run, verdict, _ = self.check()
-        self.assertEqual(run.returncode, 2)
-        self.assertIsNone(verdict)
-        self.assertIn('trial "' + TRIAL + '" is stale', run.stderr)
-        self.assertIn('"wall"', run.stderr)
+    def test_a_trial_that_fails_stops_the_run_and_the_interaction_it_backs_does_not_meet_its_bar(self):
+        self.source(lambda s: s["trials"][TRIAL]["loads"][0].update(accelerationMps2=-6))
+        verdict = self.judge(trials=[TRIAL])
+        self.assertEqual((verdict["result"], verdict["firstUnmet"]["kind"]), ("fail", "trial"))
+        self.assertIn(TRIAL, verdict["firstUnmet"]["text"])
+        failed = self.judge(only=["interaction"])
+        self.assertEqual(self.row(failed, "interaction", "tray stop")["result"], "fail")
+        self.assertTrue(any("trial " + TRIAL + " is " in text for text in failed["interactions"][0]["unmet"]), failed["interactions"][0]["unmet"])
+        self.assertEqual(failed["missionCases"][0]["result"], self.trials()[TRIAL]["result"])
 
     def test_the_screen_sends_what_a_section_cannot_show_to_3d_and_an_override_needs_a_reason(self):
-        source = self.copy(self.source)
-        source["interactions"]["tray stop"]["piecesAtOnce"] = 2
-        self.refresh(source, extremes=False)
-        _, _, row = self.check()
-        self.assertEqual(row["verdict"], "needs 3D")
+        self.source(lambda s: s["interactions"]["tray stop"].update(piecesAtOnce=2))
+        verdict = self.judge(only=["interaction"])
+        [row] = verdict["interactions"]
+        self.assertEqual((verdict["result"], row["verdict"]), ("fail", "needs 3D"))
         self.assertIn("2 pieces at once; guideline: one piece", row["reasons"])
-        judgement = self.copy(self.judgement)
-        judgement["interactions"]["tray stop"]["override"] = dict(verdict="planar is enough", reason="Invented: the second ball waits behind a gate")
-        self.put("judgement.json", judgement)
-        _, _, over = self.check()
-        self.assertEqual((over["screened"], over["verdict"], over["override"]), ("needs 3D", "planar is enough", "Invented: the second ball waits behind a gate"))
-        del judgement["interactions"]["tray stop"]["override"]["reason"]
-        self.put("judgement.json", judgement)
-        refused, _, _ = self.check()
-        self.assertEqual(refused.returncode, 2)
-        self.assertIn("An override of interaction tray stop gives a verdict", refused.stderr)
+        self.assertTrue(any("try it in 3D" in text for text in row["unmet"]), row["unmet"])
+        self.judgement(lambda j: j["interactions"]["tray stop"].update(override=dict(verdict="planar is enough", reason="Invented: the second ball waits behind a gate")))
+        over = self.judge(only=["interaction"])
+        [row] = over["interactions"]
+        self.assertEqual((over["result"], row["screened"], row["verdict"], row["override"]),
+                         ("pass", "needs 3D", "planar is enough", "Invented: the second ball waits behind a gate"))
+        self.judgement(lambda j: j["interactions"]["tray stop"]["override"].pop("reason"))
+        self.assertIn("An override of interaction tray stop gives a verdict", self.refused(only=["interaction"]))
+        self.assertEqual(self.judge(motions=["acquire"])["result"], "pass", "a motion needs no interaction")
+
+    def test_a_best_guess_needs_an_adjustment_measured_at_both_ends(self):
         # A compliant surface makes a simulated result only a best guess.
-        source = self.copy(self.source)
-        source["fixtures"][-2]["material"] = {"class": "compliant", "stiffnessNPerM": 20000}
-        self.refresh(source, extremes=False)
-        self.put("judgement.json", self.judgement)
-        _, _, soft = self.check()
-        self.assertEqual((soft["verdict"], soft["reasons"]), ("configurable", ["tray is compliant; guideline: rigid surfaces"]))
+        def soft(source):
+            source["fixtures"][-2]["material"] = {"class": "compliant", "stiffnessNPerM": 20000}
+        self.source(soft)
+        verdict = self.judge(only=["interaction"])
+        [row] = verdict["interactions"]
+        self.assertEqual((row["verdict"], row["reasons"], row["unmet"]), ("configurable", ["tray is compliant; guideline: rigid surfaces"], []))
+        self.source(lambda s: s["trials"][TRIAL].update(adjustments=[]))
+        [row] = self.judge(only=["interaction"])["interactions"]
+        self.assertTrue(any("Declare the adjustment" in text for text in row["unmet"]), row["unmet"])
 
-    def test_an_adjustment_end_that_closes_on_the_robot_is_a_finding(self):
-        source = self.copy(self.source)
-        source["adjustments"]["wall position"]["range"] = [45, 306]
-        self.refresh(source)
-        _, verdict, _ = self.check()
-        findings = verdict["adjustments"][0]["findings"]
-        self.assertTrue(any(f.startswith("at 45: ") and "wall" in f for f in findings), findings)
-        # Not measured at its ends: the row says how to measure it.
-        (self.root / RELEASE / "records/adjustments.json").unlink()
-        _, unmeasured, _ = self.check()
-        self.assertFalse(unmeasured["adjustments"][0]["measured"])
-        self.assertIn("--extremes --min-gap 1", unmeasured["adjustments"][0]["hint"])
+    def test_an_adjustment_end_that_closes_on_the_robot_fails(self):
+        self.source(lambda s: s["adjustments"]["wall position"].update(range=[45, 306]))
+        verdict = self.judge()
+        self.assertEqual((verdict["result"], verdict["firstUnmet"]["kind"]), ("fail", "adjustment"))
+        [found] = verdict["adjustments"]
+        self.assertEqual(found["status"], "fail")
+        self.assertTrue(any(f.startswith("at 45: ") and "wall" in f for f in found["findings"]), found["findings"])
+        self.assertNotIn(("trial", TRIAL), {(r["check"], r["subject"]) for r in verdict["rows"]})
+        # A pair the search cannot settle at an end is open, never clear.
+        self.source(lambda s: s["adjustments"]["wall position"].update(range=[61, 306]))
+        self.judgement(lambda j: j["rules"].update(depth=1))
+        open_ = self.judge(adjustments=["wall position"])["adjustments"][0]
+        self.assertEqual(open_["status"], "open", open_)
 
-    def test_an_unexplained_interaction_is_unmet_and_a_path_must_be_the_trial_fit(self):
-        judgement = self.copy(self.judgement)
-        del judgement["interactions"]
-        self.put("judgement.json", judgement)
-        _, verdict, row = self.check()
-        self.assertIn("Say in the judgement file what interaction tray stop decides, and name its trial or why it needs none", self.texts(verdict))
-        self.assertEqual(verdict["status"], "provisional")
-        self.assertEqual(row["verdict"], "planar is enough", "the verdict is still judged")
-        # A payload bound to a trial must move on the path the trial fitted.
-        judgement = self.copy(self.judgement)
-        judgement["motions"] = {"acquire": {"transportedBy": {"carried article": dict(mechanisms=["carrier"], drive={"carrier": "Invented rollers"},
-                                                                                      basis="Invented", trial=TRIAL)}}}
-        self.put("judgement.json", judgement)
-        _, unfit, _ = self.check()
-        self.assertIn("The move of carried article in acquire is not the path trial " + TRIAL + " fitted. Write its fit operation as the move in the design source",
-                      self.texts(unfit))
-        fit = json.loads((self.root / RELEASE / "records/trials.json").read_text(encoding="utf-8"))["trials"][TRIAL]["fit"]
-        self.refresh(self.on_fit(fit["operation"]), trial=False, extremes=False)
-        _, fitted, _ = self.check()
-        self.assertFalse(any("fitted" in gap for gap in self.texts(fitted)), fitted["unmet"])
-        # A window of the trial binds the stroke between two kept points of the fit; any other time is refused.
-        spec = judgement["motions"]["acquire"]["transportedBy"]["carried article"]
-        spec["window"] = [fit["atS"][0], fit["atS"][-1]]
-        self.put("judgement.json", judgement)
-        _, windowed, _ = self.check()
-        self.assertFalse(any("fitted" in gap for gap in self.texts(windowed)), windowed["unmet"])
-        spec["window"] = [fit["atS"][0], fit["atS"][-1] / 3]
-        self.put("judgement.json", judgement)
-        refused, _, _ = self.check()
-        self.assertEqual(refused.returncode, 2)
-        self.assertIn("The window of carried article in acquire runs between two kept points of the trial's fit", refused.stderr)
+    def test_an_interaction_nobody_has_explained_fails_only_a_full_judgement(self):
+        self.judgement(lambda j: j.pop("interactions"))
+        verdict = self.judge()
+        self.assertEqual(verdict["result"], "pass")
+        self.assertIn("Say in the judgement file what interaction tray stop decides, and name its trial or why it needs none", verdict["completeness"])
+        [row] = verdict["interactions"]
+        self.assertEqual(row["verdict"], "planar is enough", "it is still screened")
+        with counted() as counts:
+            said = self.refused(full=True)
+        self.assertEqual(counts.built, 0)
+        self.assertIn("what interaction tray stop decides", said)
+
+    def test_a_payload_moves_on_the_path_its_trial_fits_judged_after_the_trial_has_run(self):
+        self.bind(TRIAL)
+        verdict = self.judge(trials=[TRIAL])
+        row = self.row(verdict, "path", "acquire")
+        self.assertEqual((row["level"], row["result"]), (6, "fail"))
+        self.assertIn("The move of carried article in acquire is not the path trial " + TRIAL + " fitted. Write its fit operation as the move in the design source", row["text"])
+        fit = self.trials()[TRIAL]["fit"]
+        self.moved_on(fit["operation"])
+        self.assertEqual(self.row(self.judge(trials=[TRIAL]), "path", "acquire")["result"], "pass")
+        # A window of the trial binds the stroke between two kept points of the fit; any other time fails.
+        self.bind(TRIAL, [fit["atS"][0], fit["atS"][-1]])
+        self.assertEqual(self.row(self.judge(trials=[TRIAL]), "path", "acquire")["result"], "pass")
+        self.bind(TRIAL, [fit["atS"][0], fit["atS"][-1] / 3])
+        self.assertIn("The window of carried article in acquire runs between two kept points of the trial's fit", self.row(self.judge(trials=[TRIAL]), "path", "acquire")["text"])
+        # Without the trial the path is not judged, and the motion's clearance still is.
+        left = self.judge(motions=["acquire"])
+        self.assertEqual(left["result"], "pass")
+        self.assertIn(("path", "acquire"), {(r["check"], r["subject"]) for r in left["notJudged"]})
 
     def rolling(self):
-        """The source with a second invented trial whose fit turns and keeps several points: the ball pushed off the tray's
-        open end rolls along it and falls. Returns (source, the trial's fit)."""
-        source = self.copy(self.source)
-        trial = self.copy(source["trials"][TRIAL])
-        trial.update(fitToleranceMm=1, adjustments=[], loads=[{"name": "push", "along": [-1, 0], "accelerationMps2": -6, "startS": 0.0, "durationS": 0.3}],
-                     events=[{"name": "rolled off", "when": {"signal": "zMm", "below": 0}, "outcome": "rolled off"},
-                             {"name": "stayed", "when": {"all": [{"signal": "tS", "above": 0.8}, {"restFor": 0.3}]}, "outcome": "stayed"}],
-                     control={"change": {"loads.push.accelerationMps2": 3}, "note": "Pushed toward the wall, the ball stays on the tray."},
-                     brackets=[{"input": "loads.push.accelerationMps2", "unit": "m/s2", "values": [-8, -6, -4]}])
-        trial["pass"] = {"outcomes": ["rolled off"]}
-        source["trials"][ROLLED] = trial
-        self.refresh(source, extremes=False)
-        return source, json.loads((self.root / RELEASE / "records/trials.json").read_text(encoding="utf-8"))["trials"][ROLLED]["fit"]
+        """A second invented trial whose fit turns and keeps several points: the ball pushed off the tray's open end rolls
+        along it and falls. Returns the trial's fit."""
+        def change(source):
+            trial = json.loads(json.dumps(source["trials"][TRIAL]))
+            trial.update(fitToleranceMm=1, adjustments=[], loads=[{"name": "push", "along": [-1, 0], "accelerationMps2": -6, "startS": 0.0, "durationS": 0.3}],
+                         events=[{"name": "rolled off", "when": {"signal": "zMm", "below": 0}, "outcome": "rolled off"},
+                                 {"name": "stayed", "when": {"all": [{"signal": "tS", "above": 0.8}, {"restFor": 0.3}]}, "outcome": "stayed"}],
+                         control={"change": {"loads.push.accelerationMps2": 3}, "note": "Pushed toward the wall, the ball stays on the tray."},
+                         brackets=[{"input": "loads.push.accelerationMps2", "unit": "m/s2", "values": [-8, -6, -4]}])
+            trial["pass"] = {"outcomes": ["rolled off"]}
+            source["trials"][ROLLED] = trial
+        self.source(change)
+        self.judge(trials=[ROLLED])
+        return self.trials()[ROLLED]["fit"]
 
-    def bind(self, window=None):
-        """Bind the carried article's move in acquire to the rolling trial, over a window of its fit when one is given."""
-        judgement = self.copy(self.judgement)
-        judgement["motions"] = {"acquire": {"transportedBy": {"carried article": dict(
-            mechanisms=["carrier"], drive={"carrier": "Invented rollers"}, basis="Invented", trial=ROLLED, **({"window": window} if window else {}))}}}
-        self.put("judgement.json", judgement)
-
-    def moved_on(self, source, operation):
-        """The source with the article's acquire move written as one operation, the turn starting from a pose as drawn."""
-        source = self.copy(source)
-        source["motions"]["acquire"]["moves"]["carried article"] = [operation]
-        source["motions"]["acquire"]["by"] = "piece"
-        source["poses"]["loaded"] = {}
-        source["motions"]["loaded-turn"]["from"] = "loaded"
-        return source
+    def path(self):
+        return self.row(self.judge(trials=[ROLLED]), "path", "acquire")
 
     def test_a_window_of_a_turning_fit_is_its_kept_points_with_their_turn(self):
-        source, fit = self.rolling()
+        fit = self.rolling()
         op, times = fit["operation"], fit["atS"]
         self.assertGreaterEqual(len(times), 4, "the fit keeps points inside the trace")
         self.assertTrue(op["turnDeg"][-1] > 90 and op["turnAxis"] == [0, -1, 0], "the rolling ball's fit turns")
         # The stroke between the second and the next-to-last kept point: their places and their turns, about the fit's axis.
-        window = [times[1], times[-2]]
         part = dict(op, throughMm=op["throughMm"][1:-1], turnDeg=op["turnDeg"][1:-1])
-        self.refresh(self.moved_on(source, part), trial=False, extremes=False)
-        self.bind(window)
-        _, bound, _ = self.check()
-        self.assertFalse(any("fitted" in gap for gap in self.texts(bound)), bound["unmet"])
-        unbound = "The move of carried article in acquire is not the path trial " + ROLLED + " fitted over its window. Write its fit operation as the move in the design source"
+        self.moved_on(part)
+        self.bind(ROLLED, [times[1], times[-2]])
+        self.assertEqual(self.path()["result"], "pass")
         # Controls: the same places with the turn the other way, or with no turn, are not the trial's path.
         for other in (dict(part, turnAxis=[0, 1, 0]), {k: v for k, v in part.items() if k not in ("turnDeg", "turnAxis")}):
-            self.refresh(self.moved_on(source, other), trial=False, extremes=False)
-            _, refused, _ = self.check()
-            self.assertIn(unbound, self.texts(refused))
+            self.moved_on(other)
+            self.assertIn("is not the path trial " + ROLLED + " fitted over its window", self.path()["text"])
 
     def test_a_fit_that_strays_past_its_own_tolerance_is_not_the_trial(self):
-        source, fit = self.rolling()
-        self.refresh(self.moved_on(source, fit["operation"]), trial=False, extremes=False)
-        self.bind()
-        _, bound, _ = self.check()
-        self.assertFalse(any(ROLLED in gap for gap in self.texts(bound)), bound["unmet"])
-        # The library measures each sample against its own piece of the kept path. A fit it records as straying past its
-        # tolerance, in place or in turn, does not stand for the trace; the record is written that way here.
-        records = self.root / RELEASE / "records/trials.json"
-        held = records.read_text(encoding="utf-8")
-        for field, limit, words in (("maxDeviationMm", "toleranceMm", "1.5 mm from its trace, past its tolerance of 1 mm"),
-                                    ("maxTurnDeviationDeg", "turnToleranceDeg", "7.5 degrees from its trace, past its tolerance of 5 degrees")):
-            record = json.loads(held)
-            record["trials"][ROLLED]["fit"][field] = record["trials"][ROLLED]["fit"][limit] * 1.5
-            records.write_text(json.dumps(record), encoding="utf-8")
-            _, strays, _ = self.check()
-            self.assertIn("The fit of trial " + ROLLED + " strays " + words + ", so the path of carried article in acquire is not the trial. "
-                          "Run the trial with a smaller fitToleranceMm", self.texts(strays))
-        records.write_text(held, encoding="utf-8")
+        fit = self.rolling()
+        self.moved_on(fit["operation"])
+        self.bind(ROLLED)
+        self.assertEqual(self.path()["result"], "pass")
+        # The library measures each sample against its own piece of the kept path. A fit it states as straying past its
+        # tolerance, in place or in turn, does not stand for the trace; the library's answer is changed that way here.
+        from frc_design_kernel.trials import fit as fits
+        real = fits.path_operation
+        try:
+            for field, limit, words in (("maxDeviationMm", "toleranceMm", "1.5 mm from its trace, past its tolerance of 1 mm"),
+                                        ("maxTurnDeviationDeg", "turnToleranceDeg", "7.5 degrees from its trace, past its tolerance of 5 degrees")):
+                def strays(*args, **kwargs):
+                    found = real(*args, **kwargs)
+                    return dict(found, **{field: found[limit] * 1.5})
+                fits.path_operation = strays
+                self.assertIn("The fit of trial " + ROLLED + " strays " + words + ", so the path of carried article in acquire is not the trial. "
+                              "Run the trial with a smaller fitToleranceMm", self.path()["text"])
+        finally:
+            fits.path_operation = real
 
     def test_a_free_path_or_a_fixture_moves_a_payload_only_on_its_trial(self):
-        fit = json.loads((self.root / RELEASE / "records/trials.json").read_text(encoding="utf-8"))["trials"][TRIAL]["fit"]["operation"]
-        self.refresh(self.on_fit(fit), trial=False, extremes=False)
-        judgement = self.copy(self.judgement)
-        judgement["motions"] = {"acquire": {"freePath": {"carried article": dict(basis="Invented: the article rolls free", trial=TRIAL)}}}
-        self.put("judgement.json", judgement)
-        # The fitted path ends where the trial left the article, so the cycle after it is broken here; the path itself is bound.
-        cycle = "Discontinuous cycle: carried article between acquire and loaded-turn"
-        _, verdict, _ = self.check()
-        self.assertIn(cycle, self.texts(verdict))
-        self.assertFalse(any("fitted" in gap for gap in self.texts(verdict)), verdict["unmet"])
+        self.judge(trials=[TRIAL])
+        self.moved_on(self.trials()[TRIAL]["fit"]["operation"])
+        self.bind(TRIAL, field="freePath")
+        self.assertEqual(self.row(self.judge(trials=[TRIAL]), "path", "acquire")["result"], "pass")
+        # The fitted path ends where the trial left the article, so the cycle after it is broken here: that is its own check.
+        self.assertIn("Discontinuous cycle: carried article between acquire and loaded-turn", [r["text"] for r in self.judge(only=["cycle"])["unmet"]])
         # A field fixture supports the same path; a robot solid cannot.
-        judgement["motions"] = {"acquire": {"supportedBy": {"carried article": dict(fixtures=["tray"], basis="Invented: the tray carries it", trial=TRIAL)}}}
-        self.put("judgement.json", judgement)
-        _, supported, _ = self.check()
-        self.assertIn(cycle, self.texts(supported))
-        judgement["motions"]["acquire"]["supportedBy"]["carried article"]["fixtures"] = ["rail"]
-        self.put("judgement.json", judgement)
-        refused, _, _ = self.check()
-        self.assertEqual(refused.returncode, 2)
-        self.assertIn("Only a field fixture present in acquire can support a payload: carried article", refused.stderr)
+        self.bind(TRIAL, field="supportedBy", fixtures=["tray"])
+        self.assertEqual(self.row(self.judge(trials=[TRIAL]), "path", "acquire")["result"], "pass")
+        self.bind(TRIAL, field="supportedBy", fixtures=["rail"])
+        self.assertIn("Only a field fixture present in acquire can support a payload: carried article", self.refused())
         # A binding names its trial: a path with no trial stops the check.
-        spec = judgement["motions"]["acquire"]["supportedBy"]["carried article"]
-        del spec["trial"]
-        spec["fixtures"] = ["tray"]
-        self.put("judgement.json", judgement)
-        unnamed, _, _ = self.check()
-        self.assertEqual(unnamed.returncode, 2)
-        self.assertIn("the design library trial that moves it, as trial: NAME: carried article", unnamed.stderr)
+        self.judgement(lambda j: j["motions"]["acquire"].update(supportedBy={"carried article": dict(basis="Invented", fixtures=["tray"])}))
+        self.assertIn("the design library trial that moves it, as trial: NAME: carried article", self.refused())
 
 
 if __name__ == "__main__":

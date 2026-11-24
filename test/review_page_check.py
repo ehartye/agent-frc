@@ -5,92 +5,64 @@
 # @subject scripts/review-scene.mjs
 # @subject scripts/design.mjs
 # @subject examples/design-source/create.py
-"""The review page built from the design source, the judgement file, the page file and the library's records.
+"""The review page built from what a run judged, with the words of the page file put over it.
 
-Failure caught: a page whose scene claims what the records do not hold, that needs a receipt, that measures, that a page
-edit can change a verdict through, or that stays published after its records go stale. Each control below changes one
-input of the invented example and must be refused or reported."""
+Failure caught: a page whose scene claims what the judge did not find, that hides when a result ran, that a page edit can
+change a verdict through, or that a partial result reaches. Each control below changes one input of the invented example
+and must be refused or reported."""
 import gzip
 import json
 from pathlib import Path
-import runpy
 import subprocess
 import sys
 from tempfile import TemporaryDirectory
 import unittest
 
-PLUGIN = Path(__file__).resolve().parents[1]
-RELEASE = "cad/preliminary-design/releases/1.0"
-sys.path.insert(0, str(PLUGIN / "scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parent / "fixtures"))
+import judged_project as fixture  # noqa: E402
+from judged_project import LOG, PLUGIN, RELEASE, Judge, commit, counted, get, solid  # noqa: E402
+import ready_example as tray  # noqa: E402
 
-
-def node(*args):
-    return subprocess.run(["node", str(PLUGIN / "scripts/design.mjs"), *args], capture_output=True, text=True)
-
-
-def verdict_of(root):
-    run = node("preliminary-check", str(root), RELEASE + "/judgement.json", "--judge-only", "--json", "--quiet")
-    assert run.returncode == 0, run.stderr
-    found = json.loads(run.stdout)
-    found.pop("seconds")
-    return found
+PAGE, SCENE = RELEASE + "/results/review.html", RELEASE + "/results/review-scene.json.gz"
 
 
 def scene_of(root):
-    return json.loads(gzip.decompress((root / RELEASE / "review-scene.json.gz").read_bytes()))
+    return json.loads(gzip.decompress((root / SCENE).read_bytes()))
 
 
-class ReviewPage(unittest.TestCase):
+class ReviewPage(Judge):
     @classmethod
     def setUpClass(cls):
-        cls.folder = TemporaryDirectory()
-        cls.root = Path(cls.folder.name).resolve()
-        example = runpy.run_path(str(PLUGIN / "examples/design-source/create.py"))
-        example["create"](cls.root / RELEASE, "1.0", cls.root)
-        example["build_and_check"](cls.root, cls.root / RELEASE)
-        cls.files = {p: p.read_bytes() for p in cls.root.rglob("*") if p.is_file()}
+        super().setUpClass()
+        # The design is judged and its page built once, as an agent does, and committed: each test starts from that.
+        run = fixture.judge(cls.root, "1.0", "--page", "--workers", "1", "--json")
+        assert run.returncode == 0, run.stderr
+        cls.said, cls.verdict = run.stderr, fixture.verdict_of(run)
+        commit(cls.root)
 
-    @classmethod
-    def tearDownClass(cls):
-        cls.folder.cleanup()
-
-    def tearDown(self):
-        for p in sorted(self.root.rglob("*"), reverse=True):
-            if p.is_file() and p not in self.files:
-                p.unlink()
-        for p, data in self.files.items():
-            p.write_bytes(data)
-
-    def page(self, *flags):
-        return node("preliminary-page", str(self.root), RELEASE + "/judgement.json", *flags)
-
-    def edit(self, name, change):
-        path = self.root / RELEASE / name
-        data = json.loads(path.read_text(encoding="utf-8"))
-        change(data)
-        path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    def words(self):
+        """Put the page file's words into the page that was built. Judges nothing."""
+        return fixture.judge(self.root, "1.0", "--page-only")
 
     def validate(self, verdict):
         """The scene on disk against the schema, its cross-checks and the verdict, as the release check reads it."""
         with TemporaryDirectory() as temp:
             file = Path(temp) / "verdict.json"
             file.write_text(json.dumps(verdict), encoding="utf-8")
-            run = subprocess.run(["node", str(PLUGIN / "scripts/review-scene.mjs"), "validate", str(self.root / RELEASE / "review-scene.json.gz"), "--verdict", str(file)],
+            run = subprocess.run(["node", str(PLUGIN / "scripts/review-scene.mjs"), "validate", str(self.root / SCENE), "--verdict", str(file)],
                                  capture_output=True, text=True)
         return json.loads(run.stdout) if run.stdout.strip() else {"errors": [run.stderr]}
 
-    # Acceptance 15: the page builds from the source, the judgement, the page file and the records, with no receipt, and its scene validates.
-    def test_the_page_builds_from_the_records_and_its_scene_repeats_the_verdict(self):
+    # Acceptance 15 of the data model: the page builds from the run, with no receipt, and its scene validates.
+    def test_the_page_builds_from_the_run_and_its_scene_repeats_the_verdict(self):
         self.assertTrue((self.root / RELEASE / "page.json").is_file(), "the example has a page file")
-        run = self.page()
-        self.assertEqual(run.returncode, 0, run.stderr)
-        self.assertIn("review-scene.json.gz", run.stdout)
-        self.assertTrue((self.root / RELEASE / "review.html").is_file())
+        self.assertIn("results/review-scene.json.gz", self.said)
+        self.assertTrue((self.root / PAGE).is_file())
         self.assertFalse(list(self.root.rglob("receipt.json")), "no receipt is written or read")
-        verdict, scene = verdict_of(self.root), scene_of(self.root)
+        verdict, scene = self.verdict, scene_of(self.root)
         checked = self.validate(verdict)
         self.assertEqual(checked["errors"], [])
-        self.assertEqual(scene["schema"], "agent-frc/preliminary-review-scene@2")
+        self.assertEqual(scene["schema"], "agent-frc/preliminary-review-scene@3")
         self.assertEqual((scene["decision"]["status"], scene["decision"]["firstUnmet"]), (verdict["status"], verdict["firstUnmet"]))
         motions = [c["id"] for c in scene["cases"] if c["kind"] != "displaced control"]
         self.assertEqual(sorted(motions), sorted(verdict["motions"]))
@@ -101,19 +73,25 @@ class ReviewPage(unittest.TestCase):
         # The animations follow the cycle; a phase takes its title from the page file.
         self.assertEqual([a["id"] for a in scene["animations"]], ["acquire", "transfer", "deliver", "park", "service"])
         self.assertEqual(scene["animations"][1]["title"], "Turn the loaded carrier past the gate")
-        self.assertEqual(scene["title"], json.loads((self.root / RELEASE / "page.json").read_text(encoding="utf-8"))["title"])
-        # Each record the verdict judged is named with its digest.
+        self.assertEqual(scene["title"], get(self.root, RELEASE + "/page.json")["title"])
+        # Each record the verdict judged is named, and nothing on the page is a digest.
         self.assertEqual([j["id"] for j in scene["records"]["jobs"]], [j["id"] for j in verdict["records"]["jobs"]])
+        self.assertNotIn("sha256", json.dumps({k: v for k, v in scene.items() if k != "meshes"}))
+        # Decision 10: the page shows when each result ran.
+        rows = {(x["check"], x["subject"]): x["time"] for x in get(self.root, LOG)["rows"]}
+        self.assertEqual({c["id"]: c["ran"] for c in scene["cases"] if c["kind"] == "nominal"}, {m: rows[("clearance", m)] for m in verdict["motions"]})
+        self.assertEqual(scene["weight"]["ran"], rows[("weight", "inspection")])
+        self.assertEqual({m["motion"]: m["ran"] for m in scene["power"]["motions"]}, {m: rows[("electrical", m)] for m in verdict["electrical"]["motions"]})
+        self.assertEqual(scene["attachment"]["ran"], rows[("attachment", "design")])
         # Weight and power come from the records.
         self.assertEqual(scene["weight"]["rangeKg"], verdict["weight"]["rangeKg"])
         self.assertEqual(sorted(m["motion"] for m in scene["power"]["motions"]), sorted(verdict["electrical"]["motions"]))
 
     # The brief: each driven motion's readout shows its drives, joint values, currents and bus voltage from the electrical records.
     def test_a_driven_motion_reads_out_its_drives_joint_values_currents_and_bus_from_its_records(self):
-        self.assertEqual(self.page().returncode, 0)
         scene = scene_of(self.root)
         turn = next(c for c in scene["cases"] if c["id"] == "loaded-turn")
-        record = json.loads((self.root / RELEASE / "records/measurements/electrical.loaded-turn.json").read_text(encoding="utf-8"))["result"]
+        record = self.record("electrical.loaded-turn")["result"]
         frames = len(turn["measure"])
         self.assertEqual(frames, len(turn["bodies"]["head"]["matrices"]))
         self.assertIn("pivot 0.0°", turn["measure"][0])
@@ -122,8 +100,12 @@ class ReviewPage(unittest.TestCase):
         self.assertIn("%.2f A" % record["drives"]["pivot"]["currentA"]["range"][1], turn["measure"][0])
         low, high = record["bus"]["volts"]["range"]
         self.assertIn("bus %.2f–%.2f V" % (low, high), turn["measure"][0])
+        # A motion that starts where another ends reads its joints from there.
+        park = next(c for c in scene["cases"] if c["id"] == "park-loaded")
+        self.assertIn("pivot 90.0°", park["measure"][0])
+        self.assertIn("gate 12.0 mm", park["measure"][0])
         # The clock is the motion's own: its nominal duration on the triangle speed profile, from rest to rest.
-        duration = json.loads((self.root / RELEASE / "design.json").read_text(encoding="utf-8"))["motions"]["loaded-turn"]["durationS"]["value"]
+        duration = get(self.root, RELEASE + "/design.json")["motions"]["loaded-turn"]["durationS"]["value"]
         self.assertAlmostEqual(turn["time"][-1], duration, places=9)
         self.assertAlmostEqual(turn["time"][(frames - 1) // 2], duration / 2, places=9)
         self.assertGreater(turn["time"][1], duration / (frames - 1), "it starts from rest, so its first step of stroke takes longer than an even share")
@@ -136,95 +118,81 @@ class ReviewPage(unittest.TestCase):
         self.assertEqual(set(hand["measure"]), {"By hand: no motor drives this motion"})
         self.assertNotIn("time", hand)
 
-    # Acceptance 13: the page file is outside the verdict.
-    def test_editing_the_page_file_changes_no_verdict_and_measures_nothing(self):
-        before = verdict_of(self.root)
-        self.assertEqual(self.page().returncode, 0)
-        first = scene_of(self.root)
-        self.edit("page.json", lambda page: page.update(title="Invented: a new title", solids={"head": {"name": "Carrier head", "description": "Invented: renamed on the page"}}))
-        from kernel_layout import measure
+    # Acceptance 13 of the data model: the page file is outside the verdict.
+    def test_editing_the_page_file_judges_nothing_and_changes_no_result(self):
+        first, log = scene_of(self.root), (self.root / LOG).read_bytes()
+        self.edit(RELEASE + "/page.json", lambda page: page.update(title="Invented: a new title", solids={"head": {"name": "Carrier head", "description": "Invented: renamed on the page"}}))
         import package_view
-        calls, real = [], measure.record
-        measure.record = lambda *args, **kwargs: calls.append(args) or real(*args, **kwargs)
-        try:
-            package_view.build(self.root, self.root / RELEASE / "judgement.json")
-        finally:
-            measure.record = real
-        self.assertEqual(calls, [], "building the page never measures")
-        after, second = verdict_of(self.root), scene_of(self.root)
-        self.assertEqual(after, before, "a page edit changes no verdict")
+        with counted() as counts:
+            package_view.words_only(self.root, "1.0")
+        self.assertEqual((counts.built, counts.jobs, counts.tried), (0, [], []), "putting the words in builds, measures and tries nothing")
+        second = scene_of(self.root)
         self.assertEqual((second["title"], second["bodies"]["head"]["name"], second["bodies"]["head"]["description"]),
                          ("Invented: a new title", "Carrier head", "Invented: renamed on the page"))
-        self.assertEqual(second["decision"], first["decision"])
+        for part in ("decision", "cases", "weight", "power", "interactions", "adjustments", "attachment", "records", "unmet"):
+            self.assertEqual(second[part], first[part], part)
+        self.assertEqual((self.root / LOG).read_bytes(), log)
         # A solid with no page entry shows its source name, its group as its subsystem and its note.
-        source = json.loads((self.root / RELEASE / "design.json").read_text(encoding="utf-8"))
-        rail = next(s for s in source["solids"] if s["name"] == "rail")
-        self.assertNotIn("rail", json.loads((self.root / RELEASE / "page.json").read_text(encoding="utf-8")).get("solids", {}))
+        rail = solid(get(self.root, RELEASE + "/design.json"), "rail")
         self.assertEqual((second["bodies"]["rail"]["name"], second["bodies"]["rail"]["subsystem"], second["bodies"]["rail"]["description"]),
                          ("rail", rail["group"], rail.get("note")))
-        # A page file the page cannot read refuses the page, naming it, and still leaves the verdict alone.
-        self.edit("page.json", lambda page: page.update(colour="teal"))
-        bad = self.page()
+        # A page file the page cannot use is refused, naming it, and stops no judging.
+        self.edit(RELEASE + "/page.json", lambda page: page.update(colour="teal"))
+        bad = self.words()
         self.assertEqual(bad.returncode, 2)
         self.assertIn("page.json has no field colour", bad.stderr)
-        self.assertEqual(verdict_of(self.root), before)
+        self.assertEqual(self.judge(motions=["release"])["result"], "pass")
         # With no page file at all, every text comes from the source.
-        self.edit("judgement.json", lambda judgement: judgement.pop("page"))
-        self.assertEqual(self.page().returncode, 0)
+        (self.root / RELEASE / "page.json").unlink()
+        self.assertEqual(self.words().returncode, 0)
         plain = scene_of(self.root)
         self.assertEqual((plain["title"], plain["bodies"]["head"]["name"]), (None, "head"))
-        self.assertEqual(verdict_of(self.root), before)
 
-    def test_a_stale_record_refuses_the_page_and_the_check_reports_a_page_built_from_other_records(self):
-        self.assertEqual(self.page().returncode, 0)
-        self.assertEqual(self.page("--check").returncode, 0, "the committed page is the one the records build")
-        # A page edit not yet built is reported, and --check writes nothing.
-        self.edit("page.json", lambda page: page.update(title="Invented: not built yet"))
-        before = (self.root / RELEASE / "review-scene.json.gz").read_bytes()
-        differs = self.page("--check")
-        self.assertEqual(differs.returncode, 1)
-        self.assertIn("is not the page built from the current records", differs.stdout + differs.stderr)
-        self.assertEqual((self.root / RELEASE / "review-scene.json.gz").read_bytes(), before)
-        # The design auditor reports the same committed scene, and nothing once the page is built again.
-        def audit():
-            run = subprocess.run(["node", str(PLUGIN / "scripts/design-audit.mjs"), str(self.root), "--json"], capture_output=True, text=True)
-            return [f for f in json.loads(run.stdout)[0]["findings"] if f["form"] == "stale-scene"]
-        [finding] = audit()
-        self.assertEqual(finding["file"], RELEASE + "/review-scene.json.gz")
-        self.assertIn("design preliminary-page", finding["detail"])
-        self.assertEqual(self.page().returncode, 0)
-        self.assertEqual(audit(), [], "control: the page built from the current records is not reported")
-        self.edit("page.json", lambda page: page.update(title="Invented: not built yet"))
-        before = (self.root / RELEASE / "review-scene.json.gz").read_bytes()
-        # A moved solid makes a record stale: the page is refused and nothing is measured or written.
-        self.edit("design.json", lambda source: next(s for s in source["solids"] if s["name"] == "rail")["shape"].update(fromMm=[19, 72, 18], toMm=[24, 77, 23]))
-        stale = self.page()
-        self.assertEqual(stale.returncode, 2)
-        self.assertIn("clearance.motion.loaded-turn.json is stale", stale.stderr)
-        self.assertEqual((self.root / RELEASE / "review-scene.json.gz").read_bytes(), before)
-        # Control: measured again, the page builds.
-        self.assertEqual(node("preliminary-check", str(self.root), RELEASE + "/judgement.json", "--quiet").returncode, 0)
-        self.assertEqual(self.page().returncode, 0)
+    # Acceptance 5: a page is built only from a run that judged every motion, and no partial result reaches it.
+    def test_a_partial_result_never_reaches_the_page_and_a_stopped_run_builds_none(self):
+        before = (self.root / SCENE).read_bytes()
+        self.source(lambda s: solid(s, "rail")["shape"].update(fromMm=[19, 20, 18], toMm=[24, 25, 23]))
+        stopped = fixture.judge(self.root, "1.0", "--page", "--workers", "1")
+        self.assertEqual(stopped.returncode, 1)
+        self.assertIn("No page was built", stopped.stdout)
+        self.assertEqual((self.root / SCENE).read_bytes(), before)
+        whole = fixture.judge(self.root, "1.0", "--all", "--page", "--workers", "1")
+        self.assertEqual(whole.returncode, 1, whole.stderr)
+        failing = scene_of(self.root)
+        self.assertEqual((failing["decision"]["status"], {c["id"]: c["status"] for c in failing["cases"]}["loaded-turn"]), ("blocked", "fail"))
+        # The gate's own pairs pass; the failing full result of the motion stays on the page.
+        partial = fixture.judge(self.root, "1.0", "--motion", "loaded-turn", "--solid", "gate", "--workers", "1")
+        self.assertEqual(partial.returncode, 0, partial.stdout)
+        self.assertEqual(self.words().returncode, 0)
+        self.assertEqual(scene_of(self.root)["cases"], failing["cases"])
+        refused = fixture.judge(self.root, "1.0", "--motion", "loaded-turn", "--page")
+        self.assertEqual(refused.returncode, 2)
+        self.assertIn("A page is built from a run that judges levels 0 to 5", refused.stderr)
+
+    def test_the_page_check_refuses_a_scene_that_does_not_repeat_the_verdict(self):
+        self.assertEqual(self.validate(self.verdict)["errors"], [])
+        other = json.loads(json.dumps(self.verdict))
+        other["motions"]["release"]["status"] = "fail"
+        self.assertIn("Scene motion results differ from the verdict", self.validate(other)["errors"])
 
     # From PR 231: one replay per trial with a nominal trace, from trials.json, with no hand-made replay set.
     def test_each_trial_with_a_nominal_trace_is_replayed_from_the_trial_record(self):
-        tray = runpy.run_path(str(PLUGIN / "test/fixtures/ready_example.py"))
-        self.edit("design.json", tray["tray"])
-        self.edit("judgement.json", tray["judged"])
-        for args in (["build", RELEASE + "/design.json", "--out", RELEASE + "/generated"], ["try", RELEASE + "/design.json", "--out", RELEASE + "/records"],
-                     ["measure", RELEASE + "/design.json", "--out", RELEASE + "/records", "--extremes", "--min-gap", "1"]):
-            subprocess.run([sys.executable, "-m", "frc_design_kernel", *args], cwd=self.root, check=True, capture_output=True)
-        self.assertEqual(node("preliminary-check", str(self.root), RELEASE + "/judgement.json", "--quiet").returncode, 0)
-        run = self.page()
-        self.assertEqual(run.returncode, 0, run.stderr)
+        self.source(tray.tray)
+        self.judgement(tray.judged)
+        # The trial is run on its own; the levels of a draft, judged later, show it with the time it ran.
+        self.assertEqual(self.judge(trials=[tray.TRIAL])["result"], "pass")
+        ran = self.rows()[("trial", tray.TRIAL)]["time"]
+        verdict = self.judge(levels=[0, 1, 2, 3, 4, 5], page=True)
+        self.assertEqual(verdict["status"], "layout-checked", verdict["unmet"])
         scene = scene_of(self.root)
-        trace = json.loads((self.root / RELEASE / "records/trials.json").read_text(encoding="utf-8"))["trials"][tray["TRIAL"]]["nominal"]["trace"]
+        trace = get(self.root, RELEASE + "/results/trials.json")["trials"][tray.TRIAL]["nominal"]["trace"]
         [replay] = scene["replays"]
-        self.assertEqual(replay["id"], "trial-ball-stays-at-the-wall")
+        self.assertEqual((replay["id"], replay["ran"]), ("trial-ball-stays-at-the-wall", ran))
         self.assertEqual(replay["time"], [row[0] for row in trace["rows"]], "the replay runs on the trial's own clock")
-        self.assertEqual(replay["evidence"][0]["file"], RELEASE + "/records/trials.json")
-        self.assertEqual(self.validate(verdict_of(self.root))["errors"], [])
-        self.assertEqual([i["id"] for i in scene["interactions"]], ["tray stop"])
+        self.assertEqual(replay["evidence"][0]["file"], RELEASE + "/results/trials.json")
+        self.assertEqual(self.validate(verdict)["errors"], [])
+        [row] = scene["interactions"]
+        self.assertEqual((row["id"], row["trial"]["ran"]), ("tray stop", ran))
 
 
 if __name__ == "__main__":

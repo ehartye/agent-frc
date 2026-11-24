@@ -9,7 +9,6 @@
  * @subject scripts/design-audit/across.mjs
  */
 import assert from 'node:assert/strict';
-import {createHash} from 'node:crypto';
 import {mkdirSync, mkdtempSync, rmSync, writeFileSync} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -84,8 +83,6 @@ function design() {
   };
 }
 const fixedStep = names => "ISO-10303-21;\nHEADER;\nFILE_NAME('Tote carrier 1.0','2000-01-01T00:00:00',(''),(''),'','','');\nENDSEC;\nDATA;\n" + names.map((name, i) => "#" + (i + 1) + "=MANIFOLD_SOLID_BREP('" + name + "',#9);\n").join('') + 'ENDSEC;\nEND-ISO-10303-21;\n';
-const sha = text => createHash('sha256').update(text).digest('hex');
-const sum = text => sha(Buffer.from(text.replace(/\r\n?/g, '\n')));
 /** A project's own helper named like a library module, prose that mentions the CAD kernel, and a call of the library's command. */
 const helpers = {
   'scripts/builder.py': '"""Our own helper. It needs no OCP: the library builds; see "import OCP" in its docs."""\nfrom builder import assembly  # a project module of the same name\nimport subprocess\n\n\ndef rebuild():\n    print("from OCP import nothing")\n    subprocess.run(["python", "-m", "frc_design_kernel", "build", "design/design.json", "--out", "design/generated"], check=True)\n',
@@ -95,14 +92,13 @@ const helpers = {
 };
 
 /** The compliant project as {file: text}, with overlay applied: a value of null removes a file; a function of the design edits it. */
-function files({edit, overlay = {}, stale = false} = {}) {
+function files({edit, overlay = {}} = {}) {
   const data = design();
   edit?.(data);
   const source = JSON.stringify(data, null, 2) + '\n', names = data.solids.map(solid => solid.name);
-  const recordedSource = stale ? JSON.stringify(design(), null, 2) + 'x' : source;
-  const manifest = {schema: 'frc-design-kernel/manifest@1', design: {name: data.name, source: 'design.json', sourceSha256: sha(recordedSource), frame: ''}, generator: {library: 'frc-design-kernel', version: '0.1.0', commit: null},
+  const manifest = {schema: 'frc-design-kernel/manifest@1', design: {name: data.name, source: 'design.json', frame: ''}, generator: {library: 'frc-design-kernel', version: '0.1.0', commit: null},
     pose: null, files: {design: 'design.step', fixtures: null}, solids: names.map(name => ({name, group: 'base', volumeMm3: 1, boundsMm: [0, 0, 0, 1, 1, 1]})), fixtures: [],
-    custom: [{name: 'hook', kind: 'shape', file: 'custom/hook.py', lines: hook.split('\n').length, sha256: sum(hook), reason: '', limits: '', usedBy: ['hook']}], parts: []};
+    custom: [{name: 'hook', kind: 'shape', file: 'custom/hook.py', lines: hook.split('\n').length, reason: '', limits: '', usedBy: ['hook']}], parts: []};
   return {'design/design.json': source, 'design/custom/hook.py': hook, 'design/custom/drag.py': drag, 'design/custom/held.py': held,
     'design/generated/manifest.json': JSON.stringify(manifest, null, 2), 'design/generated/design.step': fixedStep(names), ...helpers, ...overlay};
 }
@@ -144,8 +140,7 @@ const cases = {
     replaceFile('scripts/reach.py', 'from frc_design_kernel.measure import approach\nfrom frc_design_kernel import build, export\nfrom builder import assembly\n')],
   'plugin-code': [replaceFile('scripts/old.py', 'import os, subprocess\nPLUGIN = os.environ["AGENT_FRC_ROOT"]\nsubprocess.run(["node", os.path.join(PLUGIN, "scripts", "design.mjs")])\n'),
     replaceFile('scripts/old.py', '# Checks are run by the agent with the plugin, never by this project.\nprint("done")\n')],
-  'stale-output': [{stale: true}, {}],
-  'hand-edited-output': [replaceFile('design/generated/design.step', fixedStep(['base plate']).replace('2000-01-01T00:00:00', '2031-05-06T07:08:09')), {}],
+  'output-differs': [replaceFile('design/generated/design.step', fixedStep(['base plate']).replace('2000-01-01T00:00:00', '2031-05-06T07:08:09')), {}],
   'custom-several-solids': [replaceFile('design/custom/hook.py', hookWith('    builder = BRep_Builder()\n    compound = TopoDS_Compound()\n')), {}],
   'custom-places-itself': [replaceFile('design/custom/hook.py', hookWith('    shift = gp_Trsf()\n    shift.SetTranslation(gp_Vec(reach, 0, 0))\n')), {}],
   'custom-reads-or-writes': [replaceFile('design/custom/hook.py', hookWith('    depth = float(Path("jaw.txt").read_text())\n')), {}],
@@ -159,24 +154,22 @@ const cases = {
   'custom-criterion-always': [replaceFile('design/custom/held.py', 'def judge(run, parameters):\n    return True\n'), {}],
   'custom-guide-force': [replaceFile('design/custom/drag.py', 'def force(signals, parameters):\n    return (parameters["k"] * (parameters["targetMm"] - signals["xMm"]), 0.0, 0.0)\n'), {}],
   'custom-stands-in': [replaceFile('design/custom/drag.py', 'def force(signals, parameters):\n    sink = -signals["zMm"]\n    return (0.0, parameters["floorStiffness"] * max(sink, 0.0), 0.0)\n'), {}],
-  // Needs the design library to build the page from the records: test/review_page_check.py reports one and its control.
-  'stale-scene': null,
   'engine-scene-file': [replaceFile('design/scene.xml', '<mujoco model="tote"><worldbody/></mujoco>\n'), {}],
   'engine-setting-in-trial': [{edit: data => { data.trials.carry.surfaces[0].solref = [0.02, 1]; }}, {}],
   'custom-share': [{edit: data => { for (const name of ['arm brace', 'bumper front']) Object.assign(data.solids.find(solid => solid.name === name), {shape: {kind: 'custom', use: 'hook', parameters: {}}}); }}, {}],
   'custom-size': [replaceFile('design/custom/hook.py', hookWith(Array.from({length: 30}, (_, i) => '    reach = reach + 0\n').join(''))), {}],
   'restated-dimension': [{edit: data => { data.trials.carry.piece.start.atMm = [240, 0, 400]; }}, {}],
   'custom-listed-shape': [replaceFile('design/custom/hook.py', 'from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox\n\n\ndef build(parameters):\n    return BRepPrimAPI_MakeBox(parameters["xMm"], parameters["yMm"], parameters["zMm"]).Shape()\n'), {}],
-  'override-no-reason': [replaceFile('design/judgement.json', JSON.stringify({schema: 'agent-frc/layout-judgement@1', interactions: {carry: {decides: 'Invented', trial: 'carry', override: {verdict: 'planar is enough'}}}})),
-    replaceFile('design/judgement.json', JSON.stringify({schema: 'agent-frc/layout-judgement@1', interactions: {carry: {decides: 'Invented', trial: 'carry', override: {verdict: 'planar is enough', reason: 'The tote is carried flat; the arm holds it square to the plane.'}}}}))],
-  'override-unknown-verdict': [replaceFile('design/judgement.json', JSON.stringify({schema: 'agent-frc/layout-judgement@1', interactions: {carry: {decides: 'Invented', trial: 'carry', override: {verdict: 'planar', reason: 'Invented reason.'}}}})),
-    replaceFile('design/judgement.json', JSON.stringify({schema: 'agent-frc/layout-judgement@1', interactions: {carry: {decides: 'Invented', trial: 'carry', override: {verdict: 'needs 3D', reason: 'Invented reason.'}}}}))],
-  'interaction-no-trial': [replaceFile('design/judgement.json', JSON.stringify({schema: 'agent-frc/layout-judgement@1', interactions: {carry: {decides: 'Invented'}}})),
-    replaceFile('design/judgement.json', JSON.stringify({schema: 'agent-frc/layout-judgement@1', interactions: {carry: {decides: 'Invented', noTrial: 'Invented: no result changes the design.'}}}))],
-  'trial-not-in-source': [replaceFile('design/judgement.json', JSON.stringify({schema: 'agent-frc/layout-judgement@1', source: {file: 'design/design.json'},
-      interactions: {carry: {decides: 'Invented', trial: 'carry'}}, stages: {raise: {transportedBy: {tote: {trial: 'lift'}}}}})),
-    replaceFile('design/judgement.json', JSON.stringify({schema: 'agent-frc/layout-judgement@1', source: {file: 'design/design.json'},
-      interactions: {carry: {decides: 'Invented', trial: 'carry'}}, stages: {raise: {transportedBy: {tote: {trial: 'carry'}}}}}))],
+  'override-no-reason': [replaceFile('design/judgement.json', JSON.stringify({schema: 'agent-frc/layout-judgement@3', interactions: {carry: {decides: 'Invented', trial: 'carry', override: {verdict: 'planar is enough'}}}})),
+    replaceFile('design/judgement.json', JSON.stringify({schema: 'agent-frc/layout-judgement@3', interactions: {carry: {decides: 'Invented', trial: 'carry', override: {verdict: 'planar is enough', reason: 'The tote is carried flat; the arm holds it square to the plane.'}}}}))],
+  'override-unknown-verdict': [replaceFile('design/judgement.json', JSON.stringify({schema: 'agent-frc/layout-judgement@3', interactions: {carry: {decides: 'Invented', trial: 'carry', override: {verdict: 'planar', reason: 'Invented reason.'}}}})),
+    replaceFile('design/judgement.json', JSON.stringify({schema: 'agent-frc/layout-judgement@3', interactions: {carry: {decides: 'Invented', trial: 'carry', override: {verdict: 'needs 3D', reason: 'Invented reason.'}}}}))],
+  'interaction-no-trial': [replaceFile('design/judgement.json', JSON.stringify({schema: 'agent-frc/layout-judgement@3', interactions: {carry: {decides: 'Invented'}}})),
+    replaceFile('design/judgement.json', JSON.stringify({schema: 'agent-frc/layout-judgement@3', interactions: {carry: {decides: 'Invented', noTrial: 'Invented: no result changes the design.'}}}))],
+  'trial-not-in-source': [replaceFile('design/judgement.json', JSON.stringify({schema: 'agent-frc/layout-judgement@3',
+      interactions: {carry: {decides: 'Invented', trial: 'carry'}}, motions: {raise: {transportedBy: {tote: {trial: 'lift'}}}}})),
+    replaceFile('design/judgement.json', JSON.stringify({schema: 'agent-frc/layout-judgement@3',
+      interactions: {carry: {decides: 'Invented', trial: 'carry'}}, motions: {raise: {transportedBy: {tote: {trial: 'carry'}}}}}))],
   'input-no-source': [{edit: data => { data.materials.pad.friction = 0.8; }}, {}],
   'trial-no-control': [{edit: data => { delete data.trials.carry.control; }}, {}],
   'trial-no-brackets': [{edit: data => { for (const field of ['stiffnessNPerM', 'restitution', 'friction']) data.materials.pad[field] = {value: data.materials.pad[field].value, measured: 'bench rig'}; }},
@@ -186,7 +179,6 @@ const cases = {
 test('every form has a fixture that is reported and a near miss that is not', t => {
   assert.deepEqual(Object.keys(cases).sort(), Object.keys(forms).sort(), 'one case per form');
   for (const [form, pair] of Object.entries(cases)) {
-    if (!pair) continue;
     const [reported, control] = pair;
     const found = audit(t, reported), clear = audit(t, control);
     assert.ok(found.findings.some(finding => finding.form === form), form + ' is reported: ' + JSON.stringify(formsOf(found)));

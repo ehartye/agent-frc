@@ -22,12 +22,16 @@ test('schema errors name the field and its pointer', () => {
   scene.bodies.arm.color = 'teal';
   scene.cases[0].kind = 'hopeful';
   scene.decision.status = 'pending receipt';
+  delete scene.cases[0].ran;
+  scene.sources.design.sha256 = 'a'.repeat(64);
   const errors = checkSchema(scene);
   assert.ok(errors.some(e => e === '/ is missing parked'), errors.join('\n'));
   assert.ok(errors.some(e => e.startsWith('/bodies/arm/color must match')));
   assert.ok(errors.some(e => e.startsWith('/cases/0/kind must be one of')));
   assert.ok(errors.some(e => e.startsWith('/decision/status must be one of layout-checked, provisional, blocked, reopen')), 'the decision is a verdict status');
-  assert.ok(checkSchema({...reviewScene(), schema: 'agent-frc/preliminary-review-scene@1'}).some(e => e.startsWith('/schema must be')), 'an earlier scene format is not read');
+  assert.ok(checkSchema({...reviewScene(), schema: 'agent-frc/preliminary-review-scene@2'}).some(e => e.startsWith('/schema must be')), 'an earlier scene format is not read');
+  assert.ok(errors.includes('/cases/0 is missing ran'), 'every result says when it ran');
+  assert.ok(errors.includes('/sources/design/sha256 is not a scene field'), 'no digest stands for a file on the page');
   for (const gone of ['mass', 'purpose', 'rationale', 'missing', 'volumeType', 'support'])
     assert.ok(checkSchema({...reviewScene(), bodies: {...reviewScene().bodies, arm: {...reviewScene().bodies.arm, [gone]: null}}}).includes('/bodies/arm/' + gone + ' is not a scene field'), gone);
 });
@@ -81,6 +85,7 @@ test('the scene must repeat the verdict judged from the records, however it was 
   differ(v => { v.weight.limits[0].marginKg = 3; }, ['Scene weight differs from the verdict']);
   differ(v => { v.electrical.motions.raise.marginV = 0.2; }, ['Scene power differs from the verdict']);
   differ(v => { v.issue = 'other'; }, ['Scene issue differs from the verdict']);
+  differ(v => { v.weight.rules = 'kickoff/rules/2030-01-05'; }, ['Scene weight differs from the verdict']);
   differ(v => { v.records.jobs.pop(); }, ['Scene records differ from the verdict\'s']);
   differ(v => { v.narrative.objectives = []; }, ['Scene narrative objectives differ from the verdict']);
   differ(v => { v.interactions = [{id: 'x', verdict: 'needs 3D', reasons: []}]; }, ['Scene interactions or adjustments differ from the verdict']);

@@ -57,13 +57,14 @@ test('the Design checks block is written into AGENTS.md once and refreshed in pl
   writeFileSync(file, '<!-- design-checks:start -->\nHalf a block.\n');
   assert.throws(() => writeDesignChecks(root), /unfinished Design checks block/);
   // The block says what to run for each kind of change, and never asks for the layout check on a page change.
-  for (const line of ['| Geometry, a motion or a fixture in the design source | Regenerate the solids with the design library, then the layout check |',
-    '| A tolerance or reserve, a trial, a mass or voltage budget | The layout check |',
-    '| A draft being published | The layout check with `--carry` on what changed, then the publication check |',
-    'Never the layout check |', '| The physics of an effective design | Do not edit it in place. Open the next minor version as a draft |',
-    'It runs the stage gate itself: the full layout check on the committed design, once.', 'a push only publishes.',
-    '- Time guidelines: about 1 minute while editing, 5 before merging, 15 at a stage gate.'])
+  for (const line of ['| One motion, solid or subsystem | The judge, naming that motion, solid or subsystem |', '| A weight, a limit or the battery | The judge, naming the weight or the electrical check |',
+    '| A trial or an assumed input | The judge, naming that trial |', '| A draft being published | The command that publishes it. It judges levels 0 to 5 itself, from nothing |',
+    'Never the judge |', '| The physics of an effective design | Do not edit it in place. Open the next minor version as a draft |',
+    'It judges the whole design itself, from nothing, once. Commit the design first |', 'a push only publishes.', 'Never copy a design to a scratch folder: a separate workspace is a Git worktree.',
+    'Nothing works out what changed. Name the thing to judge; it runs every time it is asked.', 'Ask the judge where a run is instead of waiting for it.',
+    '- Time guidelines: about 1 minute while editing, 5 before merging, 15 for the judgement that marks a design effective.'])
     assert.ok(designChecksBlock.includes(line), line);
+  assert.doesNotMatch(designChecksBlock, /--carry|only the pairs that changed|inputs have not changed/);
   // The block stands alone in a project: with its marker lines it needs no link and names no plugin, repository or path.
   assert.doesNotMatch(designChecksBlock, /https?:|agent-frc|plugin|PLUGIN|\.mjs|\.py/i);
   // A new project gets the file.

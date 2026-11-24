@@ -83,24 +83,26 @@ test('outputs the library made from the current source regenerate; a hand edit, 
     assert.ok(found.python, 'the design library must be importable where FRC_TEST_REQUIRE_LIBRARY is set: ' + found.reason);
     t.after(() => built && rmSync(built, {recursive: true, force: true}));
     const clean = auditDesign(copy(t), {python: found.python});
-    assert.deepEqual(forms(clean), [], 'a fresh build and measurement are current');
-    assert.match(clean.coverage.library, /built design\/design\.json .*asked status of design\/generated/);
+    assert.deepEqual(forms(clean), [], 'a fresh build regenerates, and the audit judges no measurement');
+    assert.match(clean.coverage.library, /built design\/design\.json /);
 
     const handManifest = auditDesign(copy(t, root => edit(root, 'design/generated/manifest.json', text => text.replace(/"volumeMm3": \d+/, '"volumeMm3": 1'))), {python: found.python});
-    assert.ok(forms(handManifest).some(line => /^hand-edited-output design\/generated\/manifest\.json: disagrees with what its own source gives now in solids/.test(line)), forms(handManifest).join('\n'));
+    assert.ok(forms(handManifest).some(line => /^output-differs design\/generated\/manifest\.json: differs from a fresh build in solids/.test(line)), forms(handManifest).join('\n'));
 
     const handStep = auditDesign(copy(t, root => edit(root, 'design/generated/design.step', text => text.replace('ENDSEC;', '/* tidied */\nENDSEC;'))), {python: found.python});
-    assert.ok(forms(handStep).some(line => /^hand-edited-output design\/generated\/design\.step: is not the robot STEP|^hand-edited-output design\/generated\/design\.step: is not the design STEP/.test(line)), forms(handStep).join('\n'));
+    assert.ok(forms(handStep).some(line => /^output-differs design\/generated\/design\.step: is not the design STEP a fresh build gives/.test(line)), forms(handStep).join('\n'));
 
     const earlier = auditDesign(copy(t, root => edit(root, 'design/design.json', text => text.replace('"post_top": 200', '"post_top": 220'))), {python: found.python});
-    const said = forms(earlier).join('\n');
-    assert.match(said, /stale-output design\/generated\/manifest\.json: was made from an earlier design\/design\.json/);
-    assert.match(said, /stale-output design\/generated\/measurements\/clearance\.motion\.wave\.json: clearance\.motion\.wave is stale: /);
+    assert.match(forms(earlier).join('\n'), /^output-differs design\/generated\/manifest\.json: differs from a fresh build in .*solids/m);
 
     const custom = auditDesign(copy(t, root => edit(root, 'design/custom/notch.py', text => text.replace('height - height / 4', 'height - height / 3'))), {python: found.python});
-    assert.match(forms(custom).join('\n'), /stale-output design\/generated\/manifest\.json: was made with an earlier custom\/notch\.py/);
+    assert.match(forms(custom).join('\n'), /output-differs design\/generated\/manifest\.json: differs from a fresh build in solids/);
+
+    // A solid's note changes nothing that is built: the same outputs are not reported.
+    const note = auditDesign(copy(t, root => edit(root, 'design/design.json', text => text.replace('"name": "post",', '"name": "post", "note": "Invented",'))), {python: found.python});
+    assert.deepEqual(forms(note), []);
 
     const notRun = auditDesign(copy(t), {run: false});
     assert.deepEqual(forms(notRun), []);
-    assert.match(notRun.coverage.notRun.join(' '), /Did not run the design library to rebuild \d+ generated records .*--no-run was given/);
+    assert.match(notRun.coverage.notRun.join(' '), /Did not build 1 generated manifest again: --no-run was given/);
   });
