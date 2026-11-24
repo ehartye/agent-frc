@@ -283,46 +283,94 @@ class KernelLayoutCheck(unittest.TestCase):
         self.assertEqual([payload["cases"][1]["bodies"][b]["mesh"] for b in "abc"], [0, 0, 1])
 
     def carried(self, *flags):
-        """Check with --carry from the receipt beside the judgement file, and save the new receipt there."""
+        """Check with --carry from the receipt beside the judgement file, and save the new receipt there. Returns the run,
+        the receipt and {case: (measured solids, pairs measured, pairs carried)} from each case's record of what it did."""
         run, _ = self.check("--physics-only", "--carry", "--output", RELEASE + "/receipt.json", *flags)
         receipt = json.loads((self.root / RELEASE / "receipt.json").read_text(encoding="utf-8"))
-        return run, receipt, sorted(row["case"] for row in receipt["cases"] if row["checked"] == "rerun")
+        return run, receipt, {row["case"]: (row["checked"]["measuredSolids"], row["checked"]["pairsMeasured"], row["checked"]["pairsCarried"])
+                              for row in receipt["cases"]}
 
-    def test_a_draft_check_measures_only_the_cases_whose_inputs_changed(self):
+    @staticmethod
+    def results(receipt):
+        """What a check found in each case, without its record of what was measured now and what was carried."""
+        return {row["case"]: {k: v for k, v in row.items() if k != "checked"} for row in receipt["cases"]}
+
+    def test_a_draft_check_measures_only_the_pairs_whose_inputs_changed(self):
         judgement = self.copy(self.judgement)
-        # The release stage takes the rail out first, so it does not draw on the rail.
+        # The release stage takes the rail out first, so it holds no pair with the rail. Acquire must bring the sample
+        # within 5 mm of the head: a required contact, a pair the case measures beside its clearance.
         judgement["stages"]["release"]["absent"] = ["rail"]
+        judgement["stages"]["acquire"]["requiredContacts"] = [dict(id="seat", pair=["sample", "head"], maxGapMm=5, criterion="Invented seat")]
         self.put("judgement.json", judgement)
         run, _ = self.check("--physics-only", "--output", RELEASE + "/receipt.json")
         self.assertEqual(run.returncode, 0, run.stderr)
-        # A renamed design and an edited note change nothing a case measured: every case is carried.
+        full = json.loads((self.root / RELEASE / "receipt.json").read_text(encoding="utf-8"))
+        self.assertEqual(full["status"], "layout-checked", full["missingInputs"])
+        # The full check measures every pair of every case: 8 solids are 28 pairs, 21 where the rail is taken out.
+        whole = {row["case"]: (row["checked"]["measuredSolids"], row["checked"]["pairsMeasured"], row["checked"]["pairsCarried"]) for row in full["cases"]}
+        self.assertEqual(whole, {c: (None, 21 if c == "release" else 28, 0) for c in whole})
+        # A renamed design and an edited note change no figure a pair is measured from: nothing is measured.
         source = self.copy(self.source)
         source["name"] = "Invented renamed carrier 1.0"
         source["mounts"][0]["note"] = "Invented reworded note"
         self.put("design.json", source)
         self.build()
-        run, receipt, rerun = self.carried()
+        run, receipt, did = self.carried()
         self.assertEqual(run.returncode, 0, run.stderr)
-        self.assertEqual(rerun, [])
-        self.assertEqual(receipt["carriedFrom"]["cases"], 5)
-        self.assertIn("[carry] 0 of 5 case(s) rerun, 5 carried from " + RELEASE + "/receipt.json", run.stderr)
+        self.assertEqual(did, {c: ([], 0, 21 if c == "release" else 28) for c in did})
+        self.assertEqual([row["checked"]["measuresMeasured"] for row in receipt["cases"]], [0] * 5, "the contact and the withdrawal are carried")
+        self.assertEqual(receipt["attachment"]["checked"]["pairsMeasured"], 0)
+        self.assertEqual((receipt["carriedFrom"]["pairsMeasured"], receipt["carriedFrom"]["pairsCarried"]), (0, 133))
+        self.assertIn("[carry] 0 of 133 pairs measured, 133 carried from " + RELEASE + "/receipt.json", run.stderr)
         self.assertEqual(receipt["control"]["witness"]["status"], "fail", "the displaced control is measured again")
-        self.assertIn("carried from " + RELEASE + "/receipt.json", next(row["checked"] for row in receipt["cases"]))
-        # Moving the rail reruns exactly the cases that draw on it: every case but release.
-        next(s for s in source["solids"] if s["name"] == "rail")["shape"].update(fromMm=[19, 72, 18], toMm=[24, 77, 23])
+        self.assertEqual(self.results(receipt), self.results(full))
+        # A renamed solid is found by what it is: no pair is measured, and the case says which name it had.
+        renamed = self.copy(source)
+        next(s for s in renamed["solids"] if s["name"] == "battery")["name"] = "power pack"
+        named = self.copy(judgement)
+        named["presentation"]["components"]["power pack"] = named["presentation"]["components"].pop("battery")
+        named["presentation"]["required"]["supply"] = ["power pack"]
+        budgets = self.copy(self.budgets)
+        next(row for row in budgets["masses"] if row["id"] == "power")["members"] = ["power pack"]
+        self.put("design.json", renamed)
+        self.put("judgement.json", named)
+        self.put("budgets.json", budgets)
+        self.build()
+        run, receipt, did = self.carried()
+        self.assertEqual(run.returncode, 0, run.stderr)
+        self.assertEqual({c: d[1] for c, d in did.items()}, dict.fromkeys(did, 0))
+        self.assertEqual({row["checked"]["renamed"].get("power pack") for row in receipt["cases"]}, {"battery"})
+        self.put("judgement.json", judgement)
+        self.put("budgets.json", self.budgets)
         self.put("design.json", source)
         self.build()
-        run, receipt, rerun = self.carried()
-        self.assertEqual(rerun, ["acquire", "loaded-turn", "park-loaded", "remove-carrier"])
+        self.carried()
+        # Moving the rail measures exactly the pairs that include it, 7 in each case that holds it, and none in release.
+        moved = self.copy(source)
+        next(s for s in moved["solids"] if s["name"] == "rail")["shape"].update(fromMm=[19, 72, 18], toMm=[24, 77, 23])
+        self.put("design.json", moved)
+        self.build()
+        run, receipt, did = self.carried()
+        self.assertEqual(did, {c: ([], 0, 21) if c == "release" else (["rail"], 7, 21) for c in did})
         self.assertEqual(receipt["status"], "layout-checked", receipt["missingInputs"])
-        # A changed allowance reruns its case alone.
+        acquire = next(row for row in receipt["cases"] if row["case"] == "acquire")
+        self.assertEqual((acquire["checked"]["measuresCarried"], acquire["requiredContacts"][0]["status"]), (1, "pass"),
+                         "the seat pair does not include the rail: its contact is carried")
+        service = next(row for row in receipt["cases"] if row["case"] == "remove-carrier")
+        self.assertEqual(service["checked"]["measuresMeasured"], 1, "the withdrawal draws on every solid that stayed: it is measured again")
+        self.assertLess(0, receipt["attachment"]["checked"]["pairsMeasured"])
+        # The merged result is the full check's result of the moved design.
+        _, fresh = self.check("--physics-only")
+        self.assertEqual(self.results(receipt), self.results(fresh))
+        self.assertEqual((receipt["status"], receipt["attachment"]["floating"]), (fresh["status"], fresh["attachment"]["floating"]))
+        # A changed allowance measures every pair of its case again, and nothing else.
         judgement["stages"]["acquire"]["minGapMm"] = 2
         self.put("judgement.json", judgement)
-        _, _, rerun = self.carried()
-        self.assertEqual(rerun, ["acquire"])
-        # The whole check reruns everything and carries nothing.
+        _, _, did = self.carried()
+        self.assertEqual({c: d[1] for c, d in did.items()}, dict(dict.fromkeys(did, 0), acquire=28))
+        # The full check, which the stage gate runs, measures every pair and carries nothing.
         run, whole = self.check("--physics-only")
-        self.assertEqual({row["checked"] for row in whole["cases"]}, {"rerun"})
+        self.assertEqual({(row["checked"]["measuredSolids"], row["checked"]["pairsCarried"]) for row in whole["cases"]}, {(None, 0)})
         self.assertNotIn("carriedFrom", whole)
 
     def test_mass_over_the_limit_blocks_the_layout(self):

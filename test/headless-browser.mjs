@@ -16,7 +16,7 @@ export function browser() {
 
 const types = {'.html': 'text/html', '.css': 'text/css', '.woff2': 'font/woff2', '.js': 'text/javascript', '.json': 'application/json'};
 
-async function render(folder, page, probe, windowWidth, height) {
+async function render(folder, page, probe, windowWidth, height, {query = '', early = '', webgl = false} = {}) {
   const root = path.resolve(folder) + path.sep;
   const script = `<script>addEventListener('load',async()=>{await document.fonts.ready;await new Promise(r=>setTimeout(r,300));
  let out;try{out=await (async()=>{${probe}})()}catch(e){out={probeError:String(e)}}
@@ -28,15 +28,17 @@ async function render(folder, page, probe, windowWidth, height) {
     if ((file + path.sep).startsWith(root) && existsSync(file) && statSync(file).isDirectory()) file = path.join(file, 'index.html');
     if (!file.startsWith(root) || !existsSync(file) || !statSync(file).isFile()) { res.writeHead(404); return res.end(); }
     let body = readFileSync(file);
-    if (name === page) body = Buffer.from(body.toString('utf8').replace(/<\/body>|$/i, m => script + m));
+    if (name === page) body = Buffer.from(body.toString('utf8').replace(/<head>/i, m => m + (early ? '<script>' + early + '</script>' : '')).replace(/<\/body>|$/i, m => script + m));
     res.writeHead(200, {'content-type': types[path.extname(file)] ?? 'application/octet-stream'}); res.end(body);
   });
   await new Promise(r => server.listen(0, '127.0.0.1', r));
   const profileDir = mkdtempSync(path.join(tmpdir(), 'headless-'));
   let dom = '';
   try {
-    const url = 'http://127.0.0.1:' + server.address().port + '/' + page;
-    const child = spawn(browser(), [...(process.platform === 'linux' ? ['--no-sandbox'] : []), '--headless=new', '--disable-gpu',
+    const url = 'http://127.0.0.1:' + server.address().port + '/' + page + query;
+    // Software WebGL, for a page that draws: the SwiftShader renderer, which runs without a GPU.
+    const gl = webgl ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] : ['--disable-gpu'];
+    const child = spawn(browser(), [...(process.platform === 'linux' ? ['--no-sandbox'] : []), '--headless=new', ...gl,
       '--no-first-run', '--no-default-browser-check', '--hide-scrollbars', '--user-data-dir=' + profileDir,
       '--window-size=' + windowWidth + ',' + height, '--virtual-time-budget=15000', '--dump-dom', url], {timeout: 60_000, killSignal: 'SIGKILL'});
     child.stdout.on('data', d => { dom += d; });
@@ -56,12 +58,13 @@ const frame = new Map();
 /**
  * Serve `folder` over HTTP and open `page` with a page (viewport) exactly `width` CSS px wide. `probe` is the
  * body of an async function run after load and font loading; its JSON-serialisable return value is returned.
- * The browser frame width differs by platform, so it is measured once and added to the requested width.
+ * The browser frame width differs by platform, so it is measured once and added to the requested width. `query` is
+ * appended to the page's URL, `early` runs first in the page's head, and `webgl` turns on software WebGL.
  */
-export async function probePage(folder, page, probe, {width = 1280, height = 900} = {}) {
+export async function probePage(folder, page, probe, {width = 1280, height = 900, ...options} = {}) {
   let offset = frame.get(height) ?? 0;
   for (let attempt = 0; attempt < 2; attempt++) {
-    const {viewportWidth, result} = await render(folder, page, probe, width + offset, height);
+    const {viewportWidth, result} = await render(folder, page, probe, width + offset, height, options);
     if (viewportWidth === width) { frame.set(height, offset); return {...result, viewportWidth}; }
     offset += width - viewportWidth;
   }

@@ -707,13 +707,14 @@ test('a draft published on carried cases stages, and the stage gate measures eve
   editJson(sourceFile, s => ({...s, solids: s.solids.map(solid => solid.name === 'head' ? {...solid, shape: {...solid.shape, toMm: [80, 2, 22]}} : solid)}));
   e.build('1.0');
   assert.equal(check().status, 1);
-  // Forged: the failing case's result rewritten to a pass. Its inputs are unchanged, so a carried check carries the forgery.
-  editJson(path.join(e.season, receiptFile), r => ({...r, cases: r.cases.map(c => ({...c, status: 'pass', pairs: c.pairs.map(p => ({...p, status: 'pass'}))}))}));
+  // Forged: the library's rows of the failing case rewritten to a clear pass. No solid changed, so a carried check carries every pair, forgery included.
+  editJson(path.join(e.season, receiptFile), r => ({...r, cases: r.cases.map(c => ({...c, status: 'pass', pairs: c.pairs.map(p => ({...p, status: 'pass'})),
+    clearance: {...c.clearance, rows: c.clearance.rows.map(row => ({...row, closerThanMinGap: false, overlapMm3: 0}))}}))}));
   const carried = check('--carry');
   assert.equal(carried.status, 0, carried.stderr + JSON.stringify(read(path.join(e.season, receiptFile)).missingInputs) + read(path.join(e.season, receiptFile)).status);
   const receipt = read(path.join(e.season, receiptFile));
   assert.equal(receipt.status, 'layout-checked');
-  assert.equal(receipt.carriedFrom.cases, 5);
+  assert.equal(receipt.carriedFrom.pairsMeasured, 0);
   // A draft is published on its own check, carried cases included.
   assert.equal(e.stage('1.0').status, 0);
   e.commit('draft on carried cases');
