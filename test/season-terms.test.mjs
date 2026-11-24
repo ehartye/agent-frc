@@ -37,11 +37,12 @@ test('the shipped list is well formed and this repository passes it', () => {
   assert.ok(result.files > 100);
 });
 
-test('scans a tree and names the file and line', t => {
+test('scans a tree except its README and names the file and line', t => {
   const root = mkdtempSync(path.join(tmpdir(), 'season-terms-'));
   t.after(() => rmSync(root, {recursive: true, force: true}));
   writeFileSync(path.join(root, 'guide.md'), 'Neutral line\nPlay zorbball here\n');
   writeFileSync(path.join(root, 'zorbball-notes.md'), 'Neutral\n');
+  writeFileSync(path.join(root, 'README.md'), 'Play zorbball here\n');
   const result = scanSeasonTree(root, terms);
   assert.deepEqual(result.findings.map(f => [f.file, f.line, f.kind]), [['guide.md', 2, 'season-term'], ['zorbball-notes.md', 0, 'season-term']]);
 });

@@ -17,7 +17,6 @@ import {buildAllianceReport,buildRoleReport} from '../../scripts/role-design-rep
 import {compareRoles} from '../../scripts/strategy-lab.mjs';
 import {createDesign,deriveGeometry} from '../../scripts/design-artifact.mjs';
 import {frameDxf} from '../../scripts/frame-dxf.mjs';
-import {journeyMap} from './journey.mjs';
 import {buildHighlights} from '../../scripts/robot-highlights.mjs';
 import { mkdir, readFile, writeFile, copyFile, access, readdir } from 'node:fs/promises';
 import path from 'node:path';
@@ -35,7 +34,6 @@ const output=path.resolve(process.argv[2] || path.join(root,'artifacts/workflow-
 const escape=s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 const repo='https://github.com/ehartye/agent-frc';
 const link=(label,pathname)=>'<a href="'+repo+'/blob/main/'+pathname+'">'+escape(label)+'</a>';
-const powerGuide='docs/shared-power-review.md';
 const cameraStudy = JSON.parse(await readFile(path.join(root,'examples/sensor-study/camera-frames.json'),'utf8'));
 const retentionStates = JSON.parse(await readFile(path.join(root,'examples/sensor-study/retention-states.json'),'utf8'));
 const trayView = study => reviewCamera(study).find(frame => frame.frame === 'tray-backed');
@@ -149,42 +147,58 @@ const frameOptions=[rearPlan,squarePlan].map((plan,i)=>{
 const frameStudy='<details class="reading"><summary>Explore the rear frame corners</summary><p>Look down on a 700 × 640 mm frame. The gold padding follows the backing and cover around both rear corners.</p>'+
   '<label>Frame profile <select id="frameChoice"><option value="0">Rear chamfers</option><option value="1">Square</option></select></label>'+frameOptions+
   '<a href="starter-frame.dxf" download>Download the rear-chamfer Fusion plan (DXF)</a></details>';
-const chapter=n=>String(n+1).padStart(2,'0');
 const ownedSkills=(await readdir(path.join(root,'skills'),{withFileTypes:true})).filter(v=>v.isDirectory()).map(v=>v.name).sort();
 if(ownedSkills.join()!==Object.keys(purpose).sort().join()) throw Error('Update the guide when the skill inventory changes.');
 for(const stage of stages){
   for(const skill of stage.skills) if(!purpose[skill]) throw Error('Unknown workflow skill '+skill);
   for(const [,p] of stage.docs) await access(path.join(root,p.split('#')[0]));
 }
-const highlightsLink='<a href="robot/index.html">Explore the example robot evidence page ↗</a> · <a href="stroke/index.html">Play the jaw and inspect the target event ↗</a> · ';
-const chapters=stages.map((s,i)=>`<details id="${s.id}" class="chapter"${i===0?' open':''}>
-<summary><span class="ordinal">${chapter(i)}</span><span>${escape(s.name)}</span><span class="toggle" aria-hidden="true"></span></summary>
-<div class="chapter-body"><h3>${escape(s.question)}</h3><p>${escape(s.objective)}</p><p>${escape(s.activity)}</p>
-<div class="handoff"><h4>Carry forward</h4><p>${escape(s.handoff)}</p></div>${s.docs.some(([,p])=>p==='docs/camera-reference.md')?cameraComparison:''}${s.id==='contract'?serviceComparison:''}${s.id==='design'?frameStudy:''}${s.id==='verify'?suspensionStudy+supportLab+faultLab+dutyLab+throughputStudy+captureLab:''}
-<h4>Supporting skills</h4><div class="chips">${s.skills.map(k=>link(k,'skills/'+k+'/SKILL.md')).join('')}</div>
-<div class="reading">${s.id==='design'?'<a href="role-design.html">Compare robot designs against a selected match role ↗</a> · <a href="alliance-completion.html">Which robot design wins when the partner is busy? ↗</a> · ':''}${s.id==='verify'?highlightsLink:''}${s.id==='story'?'<a href="field-lab.html#roleLab">Compare alliance roles and replay the field ↗</a> · ':''}${s.id==='rules'?'<a href="rules.json" download>Download the training rules model ↓</a> · ':''}${s.docs.some(([,p])=>p===powerGuide)?'<a href="#power">Try the shared-power comparison ↓</a> · ':''}${s.docs.map(([label,p])=>link(label+' ↗',p)).join(' · ')}</div></div></details>`).join('\n');
+const items=list=>'<ul>'+list.map(v=>'<li>'+escape(v)+'</li>').join('')+'</ul>';
+const steps=stages.map((s,i)=>`<li><a href="#${s.id}" data-phase="${s.id}"><span class="ordinal">${i+1}</span><span><b>${escape(s.name)}</b><span class="asks">${escape(s.question)}</span></span></a></li>`).join('');
+const phases=stages.map((s,i)=>`<article id="${s.id}" class="phase" aria-labelledby="${s.id}-name">
+<h3 id="${s.id}-name"><span class="ordinal">${i+1}</span>${escape(s.name)}</h3><p class="work">${escape(s.work)}</p>
+<div class="flow"><div><h4>What goes in</h4>${items(s.inputs)}</div>
+<div class="decision"><h4>The decision</h4><p class="question">${escape(s.question)}</p><p><b>Who decides.</b> ${escape(s.decides)}</p></div>
+<div><h4>What comes out</h4>${items(s.outputs)}</div></div>
+<dl><div><dt>It’s done when</dt><dd>${escape(s.done)}</dd></div><div><dt>What reopens it</dt><dd>${escape(s.back)}</dd></div></dl>
+<p class="tries">${s.tries.map(([to,label])=>'<a class="try" href="'+to+'">'+escape(label)+'</a>').join('')}<a href="reference.html#${s.id}">All guides for this phase (${s.docs.length})</a></p>
+<div class="chips" aria-label="Skills for this phase">${s.skills.map(k=>link(k,'skills/'+k+'/SKILL.md')).join('')}</div>
+<nav class="turn" aria-label="Previous and next phase">${i?'<a href="#'+stages[i-1].id+'" data-phase="'+stages[i-1].id+'">← '+escape(stages[i-1].name)+'</a>':'<span></span>'}${i<stages.length-1?'<a href="#'+stages[i+1].id+'" data-phase="'+stages[i+1].id+'">'+escape(stages[i+1].name)+' →</a>':''}</nav></article>`).join('\n');
 const directory=Object.keys(purpose).map(k=>{
   const uses=stages.filter(s=>s.skills.includes(k));
-  if(!uses.length) throw Error('Skill lacks a workflow stage: '+k);
-  return `<div class="skill" data-stages="${uses.map(s=>s.id).join(' ')}"><h3>${link(k,'skills/'+k+'/SKILL.md')}</h3><p>${escape(purpose[k])}</p><div class="used">${uses.map(s=>'<a href="#'+s.id+'">'+escape(s.name)+'</a>').join(' · ')}</div></div>`;
+  if(!uses.length) throw Error('Skill lacks a phase: '+k);
+  return `<div class="skill" data-stages="${uses.map(s=>s.id).join(' ')}"><h3>${link(k,'skills/'+k+'/SKILL.md')}</h3><p>${escape(purpose[k])}</p><div class="used">${uses.map(s=>'<a href="index.html#'+s.id+'">'+escape(s.name)+'</a>').join(' · ')}</div></div>`;
 }).join('\n');
-const style=await readFile(path.join(source,'site.html'),'utf8');
+const guides=stages.map(s=>`<section id="${s.id}"><h3>${escape(s.name)}</h3><ul>${s.docs.map(([label,p])=>'<li>'+link(label,p)+'</li>').join('')}</ul></section>`).join('\n');
+const labs=[['service',serviceComparison],['camera',cameraComparison],['frame',frameStudy],['suspension',suspensionStudy],['support',supportLab],['faults',faultLab],['duty',dutyLab],['throughput',throughputStudy],['capture',captureLab]]
+  .map(([id,html])=>'<div id="lab-'+id+'" class="lab">'+html+'</div>').join('\n');
 const profile=JSON.parse(await readFile(path.join(root,'examples/kickoff/training-field.json'),'utf8'));
 const model=rulesModel(profile);
 const geo=fieldGeometry(profile);
 const diagram={field:model.field,boundary:geo.boundary,obstacles:geo.obstacles(),body:model.rehearsal.defaults,
   route:model.routeHypotheses[0].routeIn};
-const page=style.replace('<!-- journey map -->',()=>journeyMap(stages,false,escape)+journeyMap(stages,true,escape)).replace('<!-- chapters -->',()=>chapters).replace('<!-- skills -->',()=>directory)
-  .replace('<!-- regulator results -->',()=>regulatorResults)
-  .replace('<!-- power options -->',()=>powerOptions).replace('<!-- power results -->',()=>powerResults)
-  .replace('<!-- stage options -->',()=>stages.map(s=>'<option value="'+s.id+'">'+escape(s.name)+'</option>').join(''))
-  .replace('/* field model */',()=>JSON.stringify(diagram).replaceAll('<','\\u003c'));
+const read=name=>readFile(path.join(source,name),'utf8');
+const frame=await read('frame.html');
+async function page(name,title,replacements){
+  let html=frame.replaceAll('<!-- title -->',escape(title)).replace('<!-- main -->',await read(name+'.html').then(body=>()=>body)).replace('<!-- script -->',name+'.js');
+  html=html.replace('href="'+name+'.html"','href="'+name+'.html" aria-current="page"');
+  for(const [mark,value] of Object.entries(replacements)){
+    if(!html.includes(mark)) throw Error(name+'.html has no place for '+mark);
+    html=html.replaceAll(mark,()=>value);
+  }
+  return html;
+}
+const pages={
+  index:await page('index','Agent FRC · From game rules to robot design',{'<!-- steps -->':steps,'<!-- phases -->':phases}),
+  exercises:await page('exercises','Exercises · Agent FRC',{'<!-- power options -->':powerOptions,'<!-- power results -->':powerResults,'<!-- regulator results -->':regulatorResults,'<!-- labs -->':labs,'/* field model */':JSON.stringify(diagram).replaceAll('<','\u003c')}),
+  reference:await page('reference','Skills and guides · Agent FRC',{'<!-- skills -->':directory,'<!-- guides -->':guides,'<!-- stage options -->':stages.map(s=>'<option value="'+s.id+'">'+escape(s.name)+'</option>').join('')})
+};
 await mkdir(output,{recursive:true});
 if((await readdir(output)).length) throw Error('Choose an empty output folder for the workflow guide.');
-await writeFile(path.join(output,'index.html'),page);
+for(const [name,html] of Object.entries(pages)) await writeFile(path.join(output,name+'.html'),html);
 await writeFile(path.join(output,'starter-frame.dxf'),frameDxf(rearPlan));
 await copyFile(path.join(root,'examples/swerve/assembly.png'),path.join(output,'module-preview.png'));
-for(const file of ['guide.css','interact.js']) await copyFile(path.join(source,file),path.join(output,file));
+for(const file of ['guide.css','index.js','exercises.js','reference.js']) await copyFile(path.join(source,file),path.join(output,file));
 // The theme fonts and their OFL licenses, so the guide renders the same on every reader's machine.
 await mkdir(path.join(output,'fonts'));
 for(const {name,url} of themeFontFiles()) await copyFile(url,path.join(output,'fonts',name));
@@ -198,4 +212,4 @@ const architectureStudy=JSON.parse(await readFile(path.join(studyFolder,'role-ar
 buildAllianceReport(completion,path.join(output,'alliance-completion.html'));
 buildRoleReport(reviewConcepts(architectureStudy,evidenceReader(root)),path.join(output,'role-design.html'));
 await buildLab(profile,path.join(output,'field-lab.html'),{...compareRoles(profile,roleStudy),files:{profile:selection.profile,study:selection.study}});
-console.log('Built '+stages.length+' workflow stages, '+ownedSkills.length+' skills and the current kickoff lab.');
+console.log('Built '+stages.length+' phases, '+ownedSkills.length+' skills and the current kickoff lab.');

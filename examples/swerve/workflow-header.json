@@ -1,7 +1,0 @@
-{
-  "examples/swerve/independent-swerve.f3d": "3091b84a1078c0b69198f027aaa4385cb8eb095c7200403175d447d87ed9e12a",
-  "examples/kickoff/training-field.json": "bb9fc1fbd48d3f002266685b965de8525315dde3152ff18d084fa06688477a20",
-  "examples/swerve/check_four_corners.py": "62a1c9a533e8ec7a7a3e3afa214e495c47ecc2596a4243032f3bb97727c7a5c2",
-  "references/cad-color-convention.json": "454783b54e03bac6156778bcf3d3ecfce62972466185f0ccf2809537f950175e",
-  "examples/swerve/workflow-header.png": "4846f41be723ccc98eb006b72aa39bd74d38fb6ac19485204db6e25a9b4c6a49"
-}

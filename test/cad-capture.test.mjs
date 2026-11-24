@@ -51,16 +51,14 @@ for state in ['good','stale','blank']:
     await json(path.join(dir,'review.json'),review);
   };
   const run=()=>spawnSync(python,[script('cad_capture.py'),dir,'review.json'],{encoding:'utf8'});
-  const readme=()=>spawnSync(python,[script('cad-readmes.py'),dir,'--update'],{encoding:'utf8'});
-  spawnSync('git',['init','-q',dir]);
-  await state('good');assert.equal(run().status,0);assert.equal(readme().status,0);
+  await state('good');assert.equal(run().status,0);
   await buildHighlights(path.join(dir,'project.json'),out,{note(){}});
   await state('stale');
   const outcome=JSON.parse(run().stdout);
   assert.deepEqual(outcome.features.map(f=>f.status),['pass','fail']);
   assert.equal(outcome.features[1].referenceCoverage,outcome.features[1].candidateCoverage);
-  // The capture review is its own command. A README update or a site build does not rerun it.
-  assert.equal(readme().status,0);await buildHighlights(path.join(dir,'project.json'),out,{note(){}});
+  // The capture review is its own command. A site build does not rerun it.
+  await buildHighlights(path.join(dir,'project.json'),out,{note(){}});
   await state('blank');assert.deepEqual(JSON.parse(run().stdout).features.map(f=>f.overlap),[0,0]);
   review.features[0].referenceCoverage=[.8,.9];await state('good');
   assert.equal(JSON.parse(run().stdout).status,'open');

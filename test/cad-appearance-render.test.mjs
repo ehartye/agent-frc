@@ -50,12 +50,9 @@ test('a colored export record binds the resolved palette, source assignment and 
   await mkdir(path.join(root,'cad'),{recursive:true});
   await writeFile(path.join(root,'cad/component-palette.json'),JSON.stringify({schema:'agent-frc/component-palette@1',colors:{structure:'#112233'}}));
   assert.match(validate().stderr,/palette color of role structure, which this assembly uses, changed/);
-  // A palette change cannot fail a site build or a README update for a design that is not being re-exported.
+  // A palette change cannot fail a site build for a design that is not being re-exported.
   await buildHighlights(manifest,target,{note(){}});
   assert.deepEqual((await readdir(target)).filter(p=>p.startsWith('cad-')),[]);
-  spawnSync('git',['init','-q',root]);
-  const readme = py('cad-readmes.py',root,'--update');
-  assert.equal(readme.status,0,readme.stderr);
   // A palette change this assembly does not use, such as a new role, leaves its export current.
   await writeFile(path.join(root,'cad/component-palette.json'),JSON.stringify({schema:'agent-frc/component-palette@1',colors:{'invented-role':'#112233',mechanism:'#445566'}}));
   assert.equal(validate().status,0);

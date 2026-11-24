@@ -38,14 +38,12 @@ Start with the project's existing public page, the design and its match role. Fi
 - Resolve the project's [component palette](../../docs/cad-color-convention.md) first. Use the same part roles in Fusion, the design review and the README still. Check the bumper cover, the moving parts next to it and supplier finishes in each.
 - Caption the view with the design name, status, pose and scope. Name simplified purchased parts and unfinished subsystems. Title a subsystem-only view with the subsystem.
 - Link the student Fusion file or its project location.
-- Put a CAD still directly below the title of each project README, linked to the design review. In the project's `cad-showcase.json` set `source`, `title`, `scope` and the design's `status`. The update links the still to the current design's review by itself. Then run:
+- When there is a design to show, put a picture of it at the top of the project README, linked to the design review. In the project's `cad-showcase.json` set `source`, `title`, `scope` and the design's `status`. The command below links the still to the current design's review by itself. Then run:
 
 ```sh
 python PLUGIN/scripts/export-showcase-cad.py .
-python PLUGIN/scripts/cad-readmes.py . --update
+python PLUGIN/scripts/cad-readmes.py .
 ```
-
-Run `cad-readmes.py .` with no option before pushing. It checks that each README shows the still below its title, that the image exists and that the caption names the current design and its status. [Keep the README still current](../../docs/cad-color-convention.md#keep-the-readme-still-current)
 
 Before publishing a still, reopen the Fusion file, restore only the intended display state and compare the picture with a second view. Check the whole outline, the visible mechanism, the cover finish and readable markings. [Check a captured still](../../docs/cad-capture-review.md)
 
