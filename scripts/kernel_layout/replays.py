@@ -27,7 +27,7 @@ def kept_rows(rows):
     """The trace rows a replay shows: all of them, or every n-th and the last for a long trace."""
     step = max(1, -(-len(rows) // FRAMES))
     picked = rows[::step]
-    return picked if picked[-1] is rows[-1] else [*picked, rows[-1]]
+    return picked if picked[-1] == rows[-1] else [*picked, rows[-1]]
 
 
 def piece_mesh(shape):
