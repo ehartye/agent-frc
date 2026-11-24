@@ -2,25 +2,25 @@
   "schema": "agent-frc/alliance-study@1",
   "id": "concept-study-example",
   "side": "blue",
-  "profile": {"file": "field.json", "sha256": "34b3dce3993a2fb37143c56d5df09a9ca852205441372f9958d2da99a1459563"},
+  "profile": {"file": "field.json", "sha256": "ea9f009b1148a0d9f6842fe9a54ab99ebedc27f8a9e66d41e6514cfb695e468f"},
   "roles": [
     {
       "id": "front-intake-placer",
-      "basis": "Invented teaching candidate: a short-range placer that carries one tile at a time from the rack to the ring.",
+      "basis": "Invented teaching candidate: a short-range placer that carries one loose tile at a time to the ring.",
       "concept": {"file": "../concept-bots/front-intake-placer.json", "sha256": "59b8ea4e5bcf3ac8d5be442c39f17f6827637bbbfa91081f99cb4ce1f84bebf9"},
       "plans": {"Opening": "cycle", "Main play": "cycle"},
       "endgame": null
     },
     {
       "id": "turret-shooter",
-      "basis": "Invented teaching candidate: a turreted shooter with an adjustable hood that collects at the rack and shoots into the ring.",
+      "basis": "Invented teaching candidate: a turreted shooter with an adjustable hood that collects loose tiles and shoots them into the ring.",
       "concept": {"file": "../concept-bots/turret-shooter.json", "sha256": "da27e39b1c594e51d1089231d90f485bf3f0a88a59d9dff97129c9073a136b2f"},
       "plans": {"Opening": "cycle", "Main play": "cycle"},
       "endgame": null
     },
     {
       "id": "fixed-shooter",
-      "basis": "Invented teaching candidate: a fixed shooter that turns the drivetrain to aim, collecting at the rack and shooting into the ring.",
+      "basis": "Invented teaching candidate: a fixed shooter that turns the drivetrain to aim, collecting loose tiles and shooting them into the ring.",
       "concept": {"file": "../concept-bots/fixed-shooter.json", "sha256": "9a3e3a54d74a15705fe924f446bb756ee8c2a5b6a2d5f61198be20a12664b693"},
       "plans": {"Opening": "cycle", "Main play": "cycle"},
       "endgame": null
@@ -31,19 +31,19 @@
       "id": "solo",
       "match": "solo",
       "slot": 1,
-      "basis": "The focal robot has the rack, the lane and the ring to itself."
+      "basis": "The focal robot has its alliance’s tiles and ring to itself."
     },
     {
       "id": "screened",
       "match": "screened",
       "slot": 1,
-      "basis": "An opponent crosses the lane between the rack and the ring all match."
+      "basis": "An opponent crosses back and forth over the focal alliance’s tiles all match."
     },
     {
       "id": "shared",
       "match": "shared",
       "slot": 1,
-      "basis": "A partner cycles the same rack and ring as the focal robot."
+      "basis": "A partner collects from the same tiles and scores in the same ring as the focal robot."
     }
   ],
   "conceptSweeps": {

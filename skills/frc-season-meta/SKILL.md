@@ -1,6 +1,6 @@
 ---
 name: frc-season-meta
-description: "Compare competing robot roles before CAD by replaying matched alliances, finite game-piece supplies and shared field space from a project's rules."
+description: "Compare competing robot roles before CAD by replaying matched alliances, finite game-piece supplies and shared field space from a project's rules. Use when asked to choose a robot role, compare alliances or partner mixes, or decide which role changes the alliance result; comparing candidate robot designs for a chosen role belongs to frc-conceptual-design."
 ---
 
 # Which role changes the alliance result?

@@ -62,6 +62,16 @@ test('defaults sweep each assumed quantity over its clipped multiples, one quant
   assert.deepEqual(expandConceptStudy(sweeps({}),documents).variants,result.variants);
 });
 
+test('the example field holds only physical pieces: loose floor stock, no fixed racks and no returns',async ()=>{
+  const field=JSON.parse((await readPinned(dir,study.profile)).toString('utf8'));
+  const stations=field.rehearsal.stations;
+  assert.ok(stations.some(s=>s.kind==='retrieval'));
+  for(const s of stations){
+    if(s.kind==='retrieval')assert.ok(Array.isArray(s.floor?.positions) && s.floor.positions.length===s.stock && !s.service,s.id+' is loose floor stock');
+    assert.equal(s.returns,undefined,s.id+' returns no scored piece');
+  }
+});
+
 test('only quantities labelled assumed are swept by default',()=>{
   const observed=edit(documents,d=>{d['fixed-shooter'].drive.accelInS2.label='observed';});
   const result=expandConceptStudy(sweeps({}),observed);

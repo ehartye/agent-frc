@@ -26,7 +26,7 @@ A concept study is an `agent-frc/alliance-study@1` file, the format of the [matc
 
 Both kinds of pin resolve from the study's folder. A pin whose SHA-256 no longer matches its file stops the run and names the file. Each role still carries its `basis`, `plans` and optional `endgame`, and each context names a published match, a focal slot and a basis, as in any alliance study. A concept study needs 2 to 8 base roles.
 
-Choose contexts that change what the focal robot faces: an open lane, an opponent crossing the route, or a partner sharing the supply. Give the field enough supply for every period you compare, for example with a `returns` rule on each scoring station. With `"waitCycles": "yield"` in the rules model, the rehearsal resolves robots that hold each other, as described in [match series](match-series.md#find-and-resolve-robot-wait-cycles).
+Choose contexts that change what the focal robot faces: an open lane, an opponent crossing the route, or a partner sharing the supply. Put enough loose pieces on the field that the candidates still have work in the last period. A loose piece is a physical body that robots push and that leaves play when scored; a `returns` rule instead moves a scored piece back without travel, so prefer physical stock for a comparison. With `"waitCycles": "yield"` in the rules model, the rehearsal resolves robots that hold each other, as described in [match series](match-series.md#find-and-resolve-robot-wait-cycles).
 
 ## Sweep the assumptions
 
@@ -59,12 +59,15 @@ An explicit axis replaces the default sweep for its pointer. It takes 2 to 9 dis
 
 ## Run the study
 
+From the team project, run the installed plugin's script. In the plugin checkout, `npm run concept:study --` runs the same script.
+
 ```sh
-npm run concept:study -- examples/concept-study/study.json --out results.json --html results.html
-node "<plugin>/scripts/concept-tournament.mjs" study.json --out results.json [--html page.html] [--allow-long] [--max-matches N]
+node "<plugin-root>/scripts/concept-tournament.mjs" study.json --out results.json [--html page.html] [--allow-long] [--max-matches N] [--full]
 ```
 
-The runner creates the folders for `--out` and `--html` before it plays any match, so a path it cannot write stops the run at once with exit 2. It prints the planned number of matches: base roles plus variants, times contexts. It refuses to start when that number exceeds `--max-matches`, 2000 by default. It times the first 3 matches and stops if the projected run exceeds 5 minutes, the merge-time guideline in [Test by need and risk](testing-methodology.md). It prints the projection, and `--allow-long` lets the run continue.
+The runner creates the folders for `--out` and `--html` before it plays any match, so a path it cannot write stops the run at once with exit 2. It prints the planned number of matches: base roles plus variants, times contexts. It refuses to start when that number exceeds `--max-matches`, 2000 by default. It times the first 3 matches and stops if the projected run exceeds 5 minutes, the merge-time guideline in [Test by need and risk](testing-methodology.md). It prints the projection, and `--allow-long` lets the run continue. The invented example plays 297 matches with loose pieces in about 100 s.
+
+The runner also screens each candidate against the profile's robot limits, as [`concept:check`](concept-bots.md#check-a-concept) does. It prints a warning for each limit a candidate exceeds and shows it in the ranking. An exceedance does not change the ranking or the Pareto flags: fix the concept or the limit before selecting that candidate.
 
 | Exit | Meaning |
 | --- | --- |
@@ -75,9 +78,9 @@ The runner creates the folders for `--out` and `--html` before it plays any matc
 The results file, `agent-frc/concept-results@1`, holds:
 - the study, profile and concept pins;
 - the contexts and the planned match count;
-- the ranking, fragility, competitive ranges, axes, variants and the variants not played;
+- the ranking with each candidate's mass range and limit screen, fragility, competitive ranges, axes, variants and the variants not played;
 - the scope statement;
-- the embedded `alliance-comparison@1` result with every cell.
+- the embedded `alliance-comparison@1` result. By default, `detail: "summary"`, each cell keeps its margin, scores, regret, baseline changes and each robot's per-period tallies. `--full` also keeps every event, period and roster.
 
 ## Read the ranking
 
@@ -85,7 +88,7 @@ Margins are in **expected points**. A credited release scores the target's point
 
 The ranking covers the base candidates only. It orders them by mean margin across the contexts, then by worst margin, then by ID. `leaderDecidedBy` says which of the three put the leader first. Each row also gives the margin in every context and the maximum regret: the largest gap to the best base candidate in the same context.
 
-Each candidate carries seven cost signals, read from its document with the profile's defaults applied:
+Each candidate carries eight cost signals, read from its document with the profile's defaults applied:
 
 | Signal | Meaning |
 | --- | --- |
@@ -127,7 +130,7 @@ Every range holds the other quantities at their base values, and each result say
 ## Select a concept
 
 ```sh
-npm run concept:select -- results.json --candidate turret-shooter --basis "Why the team chose it" --out kickoff/selection [--interface shooter=launcher]...
+node "<plugin-root>/scripts/concept-select.mjs" results.json --candidate turret-shooter --basis "Why the team chose it" --out kickoff/selection [--interface robot=chassis]...
 ```
 
 Run it from the project root. The results file and the output folder must be inside the project, and every recorded path is relative to the project root. `--basis` is required: the student's reason, in the student's words. The command exits 0 when it writes the records and 2 on bad input, including a missing basis.
@@ -136,16 +139,17 @@ Run it from the project root. The results file and the output folder must be ins
 - pins to the results file and the selected concept;
 - the selected ID, the basis and the study ID as `scenarioId`;
 - whether the selection was first, Pareto and fragile, with the leader, `leaderDecidedBy` and the flips;
+- `ratePremises`: `written`, `none — not competitive at base` or `none — no break-even within the sweeps`, and for a candidate behind the leader, `overtakes`: where each sweep would match or overtake it;
 - the ranking snapshot, the scope and the list of premise files.
 
-**`premises/<id>.json`** holds the accepted premises, in the shape `scripts/kernel_layout/premises.py` reads: `id`, `scenario`, `scenarioId`, `basis`, `phase: "conceptual-design"`, `unit`, `interfaces`, `source` (the selection file) and `criterion: {range: [lo, hi]}`.
+**`premises/<id>.json`** holds the accepted premises, in the shape `scripts/kernel_layout/premises.py` reads. Each ID is `<study id>.<concept id>.<path>`, such as `concept-study-example.turret-shooter.drive.accelInS2`, so selections from different studies cannot collide. Each record holds `id`, `scenario`, `scenarioId`, `basis`, `phase: "conceptual-design"`, `unit`, `interfaces`, `source` (the selection file) and `criterion: {range: [lo, hi]}`.
 
 - **One premise per swept quantity with a break-even.** It is written for each swept quantity of the selected candidate that is competitive at base and has a break-even on at least one side.
 - **One-sided bounds.** On a side with a break-even, the bound is the last competitive value. On the other side, the bound is the quantity's validity limit. For example, a top speed that is no longer competitive at 90 in/s, is competitive from 120 in/s, and has no break-even above, gets `[120, 500]`.
 - **The basis** states the range, the break-even on each side or that the sweep ended first, the runner-up and its mean margin, and that other quantities were held at base.
-- **No premise** is written for a quantity with no break-even on either side.
+- **No premise** is written for a quantity with no break-even on either side. A candidate behind the leader is not competitive at its base values, so it gets no rate premise at all. The command then prints a warning naming where it would overtake, and only its mass premise bounds preliminary design.
 - **Mass.** A mass premise is always written, with range `[0, massLb.max]`. Its basis gives the mass range and its label, says whether it is the 75–95%-of-limit profile default, and says that the drive and rate assumptions were made for a robot at most that heavy. A candidate with no mass range, and no mass limit in the profile, stops the command.
-- **Interfaces.** Each premise names the robot group it constrains: `drive` for the drive, the port `id` for an input or output, `storage` for storage, and `robot` for mass. `--interface PART=GROUP` renames one to match the preliminary design's group names. Renaming an interface no premise uses is an error.
+- **Interfaces.** Each premise names the robot group it constrains: `drive` for the drive, the port `id` for an input or output, `storage` for storage, and `robot` for mass. `--interface PART=GROUP` renames one to match the preliminary design's group names; renaming an interface no premise uses is an error. Rename `robot` to the group that carries the robot's mass budget, for example `--interface robot=chassis`, rather than adding a group called `robot`. The mass premise is in pounds, so give its current observation in `lb` even when the design's budgets are in kilograms.
 
 ## Hand off to preliminary design
 
