@@ -6,6 +6,8 @@ import {createHash} from 'node:crypto';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import * as tournament from '../scripts/concept-tournament.mjs';
+import * as select from '../scripts/concept-select.mjs';
+import {writeResultsPage} from '../scripts/concept-results-page.mjs';
 import {applyProfileDefaults} from '../scripts/concept-bot.mjs';
 
 const read=rel=>JSON.parse(readFileSync(new URL(rel,import.meta.url),'utf8'));
@@ -117,6 +119,28 @@ test('the run budget: a max-matches stop before play, a projected long run stopp
   assert.equal(results.comparison.cells.length,4);
   assert.deepEqual(results.comparison.cells.map(c=>c.focal.concept),['turret-shooter','front-intake-placer','turret-shooter','front-intake-placer']);
   assert.match(results.scope,/Expected points use declared success fractions; no physical reliability is inferred\./);
+  // The default keeps per-cell summaries: no event log, periods or rosters, and under 2 MB for 297 matches.
+  assert.equal(results.detail,'summary');
+  for(const cell of results.comparison.cells){
+    assert.deepEqual(['events','periods','roster','setup','attempts','occupied'].filter(k=>k in cell),[]);
+    assert.ok(Number.isFinite(cell.margin) && Number.isFinite(cell.regret) && cell.byRobot.length>0);
+  }
+  assert.ok(readFileSync(out).length/4*297<2e6,'about '+Math.round(readFileSync(out).length/4)+' bytes per match');
+  // The placer's 90–110 lb range is over the training field's 100 lb limit: flagged, while Pareto is unchanged.
+  const placer=results.ranking.find(r=>r.id==='placer'),turret=results.ranking.find(r=>r.id==='turret');
+  assert.deepEqual(placer.limits.exceeds,[{check:'mass',value:110,limit:100,unit:'lb'}]);
+  assert.equal(placer.limits.checks.mass,'exceeds');
+  assert.deepEqual(turret.limits.exceeds,[]);
+  assert.match(allowed.out,/Warning: placer exceeds the mass limit: 110 lb over 100 lb/);
+  // The selection and the page work from the summary results.
+  assert.equal(await select.main([path.relative(dir,out),'--candidate',results.leader,'--basis','Why.','--out','sel'],{cwd:dir,log:()=>{},error:()=>{}}),0);
+  await writeResultsPage(results,path.join(dir,'page.html'));
+  // --full keeps every cell's event log.
+  const full=await cli([study,'--out',path.join(dir,'full.json'),'--allow-long','--full']);
+  assert.equal(full.code,0,full.out);
+  const detailed=JSON.parse(readFileSync(path.join(dir,'full.json'),'utf8'));
+  assert.equal(detailed.detail,'full');
+  assert.ok(detailed.comparison.cells.every(c=>Array.isArray(c.events) && Array.isArray(c.periods)));
 });
 
 test('invalid concept studies exit 2: a stale concept pin names the file, and one base role is too few',async t=>{

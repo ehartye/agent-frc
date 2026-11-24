@@ -26,7 +26,14 @@ figure{margin:0;background:var(--card);border:1px solid var(--line);border-radiu
 svg{display:block;width:100%;height:auto}svg text{fill:var(--muted);font:11px var(--body)}
 .axis{stroke:var(--line)}.curve{fill:none;stroke:var(--accent);stroke-width:2}.runner{stroke:var(--muted);stroke-dasharray:4 3}
 .range{fill:var(--band)}.even{stroke:var(--bad);stroke-width:1.5;stroke-dasharray:2 2}.base{stroke:var(--ink);stroke-width:1}
-.dot-in{fill:var(--good)}.dot-out{fill:var(--bad)}code{font-size:.9em}`;
+.dot-in{fill:var(--good)}.dot-out{fill:var(--bad)}code{font-size:.9em}
+.badge{display:inline-block;border-radius:4px;padding:0 6px;font-size:.85rem;white-space:nowrap}.badge.warn{background:var(--warn-bg);border:1px solid var(--warn-edge)}
+#limits{border-left:5px solid var(--warn-edge);padding:6px 14px;margin:1rem 0}`;
+
+// The robot-limit screen of one candidate (concept:check): a warning badge per exceedance, or "within".
+const limitCell=limits=>!limits?'—':limits.exceeds.length?limits.exceeds.map(x=>
+  `<span class="badge warn">exceeds ${esc(x.check)}: ${num(x.value)} ${esc(x.unit)} over ${num(x.limit)} ${esc(x.unit)}</span>`).join(' '):
+  Object.values(limits.checks).includes('unresolved')?'within known limits':'within';
 
 // One margin curve: mean margin against the swept value, the runner-up's mean, the competitive range and break-evens.
 function curve(row) {
@@ -73,7 +80,9 @@ export function resultsPage(results) {
 <td class="n">${num(r.meanMargin)}</td><td class="n">${num(r.worstMargin)}</td><td class="n">${num(r.maximumRegret)}</td>
 <td class="n">${num(s(r).massLbMax)}</td><td class="n">${num(s(r).inputPorts)}</td><td class="n">${num(s(r).outputPorts)}</td>
 <td>${yes(s(r).ranged)}</td><td>${yes(s(r).turret)}</td><td>${yes(s(r).adjustableElevation)}</td><td>${yes(s(r).firesWhileMoving)}</td>
-<td class="n">${pct(s(r).assumedShare)}</td><td class="n">${num(r.featureCount)}</td><td>${yes(r.pareto)}</td></tr>`).join('\n');
+<td class="n">${pct(s(r).assumedShare)}</td><td class="n">${num(r.featureCount)}</td><td>${yes(r.pareto)}</td><td>${limitCell(r.limits)}</td></tr>`).join('\n');
+  const over=ranking.filter(r=>r.limits?.exceeds?.length);
+  const limitNote=over.length?`<p id="limits"><strong>Over a robot limit:</strong> ${over.map(r=>esc(r.id)).join(', ')}. The ranking and Pareto flags do not account for it; fix the concept or the limit before selecting it.</p>`:'';
   const banner=results.fragility?.fragile?`<section id="fragility" role="alert"><strong>Fragile: ${esc(leader?.id)} leads, but depends on these assumptions.</strong>
 Each variant below changes one assumed quantity and, by mean margin, would put another candidate first.
 <ul>${flips.map(f=>`<li><code>${esc(f.pointer)}</code> = ${num(f.value)} (${esc(f.variant.split('@')[0])}) puts <strong>${esc(f.newLeader)}</strong> first</li>`).join('')}</ul></section>`:'';
@@ -89,9 +98,10 @@ Each variant below changes one assumed quantity and, by mean margin, would put a
 <p>Study <code>${esc(results.study?.file??'')}</code> · ${results.plannedMatches??'—'} matches · focal side ${esc(results.side??'')}</p>
 <p>First by the ranking: <strong>${esc(leader?.id??'—')}</strong>${decided?' — decided '+decided:''}. The ranking is a recommendation; the student selects the concept and records why.</p>
 ${banner}
+${limitNote}
 <h2>Ranking</h2>
 <div class="scroll"><table id="ranking"><thead><tr><th>Rank</th><th>Candidate</th><th>Concept</th><th>Mean margin</th><th>Worst margin</th><th>Max regret</th>
-<th>Mass max (lb)</th><th>Input ports</th><th>Output ports</th><th>Ranged</th><th>Turret</th><th>Adjustable elevation</th><th>Fires moving</th><th>Assumed</th><th>Features</th><th>Pareto</th></tr></thead>
+<th>Mass max (lb)</th><th>Input ports</th><th>Output ports</th><th>Ranged</th><th>Turret</th><th>Adjustable elevation</th><th>Fires moving</th><th>Assumed</th><th>Features</th><th>Pareto</th><th>Limits</th></tr></thead>
 <tbody>${rows}</tbody></table></div>
 <p class="muted">Margins are alliance points minus opponent points in expected points, averaged over the contexts. Regret is against the best base candidate in each context. Pareto: no other candidate has an equal or higher mean margin with an equal or lower maximum mass and feature count and is better in one of them.</p>
 <h2>Margin by context</h2>

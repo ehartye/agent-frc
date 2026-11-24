@@ -10,6 +10,10 @@
 // a mass premise, in the shape scripts/kernel_layout/premises.py accepted_premise reads. Each range premise is
 // one-sided: on a side where the sweep found a break-even its bound is the last competitive value; on a side where
 // the sweep ended first its bound is the quantity's validity limit. Paths are relative to the project root.
+// Premise IDs are <study ID>.<concept ID>.<pointer path>, so selections from different studies cannot collide.
+// A candidate that is not competitive at its base values (any candidate behind the leader) gets no rate premise:
+// the selection records ratePremises "none — not competitive at base" and where the candidate would overtake,
+// and the command prints a warning. Only its mass premise reaches preliminary design.
 // A selected role's ranking is a recommendation from the modelled field; the selection is the student's decision.
 import path from 'node:path';
 import {readFileSync,writeFileSync,mkdirSync,readdirSync,rmSync} from 'node:fs';
@@ -72,7 +76,7 @@ export function conceptSelection({results,resultsRef,conceptRef,document,study,s
     const bounds=[low!==null?lastLow:limitLow,high!==null?lastHigh:limitHigh];
     const side=(found,limit,word)=>found!==null?' '+word+', it stops being competitive at '+at(found)+'.':
       ' '+word+', the sweep ended before a break-even, so the bound is the validity limit '+at(limit)+'.';
-    premises.push({id:premiseId(document.id,segments(row.pointer).join('.')),...shared,
+    premises.push({id:premiseId(scenarioId+'.'+document.id,segments(row.pointer).join('.')),...shared,
       basis:'Concept study '+scenarioId+': '+candidate+' stays competitive with runner-up '+row.runnerUp+' (mean margin at least '+
         Number(row.runnerUpMeanMargin.toFixed(3))+' expected points) for '+row.pointer+' from '+at(lastLow)+' to '+at(lastHigh)+', base '+at(row.base)+'.'+
         side(low,limitLow,'Below')+side(high,limitHigh,'Above')+' Other quantities held at base.',
@@ -80,7 +84,8 @@ export function conceptSelection({results,resultsRef,conceptRef,document,study,s
   }
   const mass=entry.massLb;
   if(!mass || !Number.isFinite(mass.max))throw Error('Candidate '+candidate+' has no mass range: give the concept massLb or the profile a mass limit.');
-  premises.push({id:premiseId(document.id,'massLb'),...shared,
+  const rates=premises.length;
+  premises.push({id:premiseId(scenarioId+'.'+document.id,'massLb'),...shared,
     basis:'Mass range '+mass.min+'–'+mass.max+' lb, labelled '+mass.label+', '+(mass.default?'the profile default':
       'from the concept document, not the profile default')+': '+mass.basis+'. The drive and rate assumptions of '+document.id+
       ' were made for a robot at most '+mass.max+' lb.',
@@ -90,15 +95,22 @@ export function conceptSelection({results,resultsRef,conceptRef,document,study,s
     if(!used.has(part))throw Error('--interface '+part+': no premise uses that interface; use one of '+[...used].join(', ')+'.');
     for(const p of premises)p.interfaces=p.interfaces.map(i=>i===part?group:i);
   }
-  const folder=path.posix.dirname(selectionFile);
+  const folder=path.posix.dirname(selectionFile), rows=results.competitiveRanges.filter(r=>r.role===candidate), warnings=[];
+  const behind=rows.filter(r=>!r.competitiveAtBase);
+  const ratePremises=rates?'written':rows.length && behind.length===rows.length?'none — not competitive at base':'none — no break-even within the sweeps';
+  if(!rates)warnings.push('Warning: '+candidate+(ratePremises==='none — not competitive at base'?' is not competitive at base against '+results.leader:
+    ' has no break-even within its sweeps')+', so no rate premise is written; only the mass premise bounds preliminary design.'+
+    (behind.some(r=>r.overtakes?.low!=null || r.overtakes?.high!=null)?' It would match or overtake at: '+behind.filter(r=>r.overtakes?.low!=null || r.overtakes?.high!=null)
+      .map(r=>r.pointer+' '+[r.overtakes.low,r.overtakes.high].filter(v=>v!=null).join(' or ')).join('; ')+'.':''));
   const selection={schema:SELECTION_SCHEMA,selected:candidate,basis:basis.trim(),
     results:resultsRef,concept:conceptRef,scenarioId,
     wasFirst:results.leader===candidate,leader:results.leader,leaderDecidedBy:results.leaderDecidedBy,
     pareto:entry.pareto,fragile:results.fragility.fragile,flips:results.fragility.flips,
+    ratePremises,...(behind.length?{overtakes:behind.map(r=>({pointer:r.pointer,low:r.overtakes?.low??null,high:r.overtakes?.high??null}))}:{}),
     ranking:results.ranking,premises:premises.map(p=>({id:p.id,file:folder+'/premises/'+p.id+'.json'})),
     scope:results.scope,
     note:'The ranking is a recommendation from the modelled field; the student made this selection for the basis given.'};
-  return {selection,premises};
+  return {selection,premises,warnings};
 }
 
 // The premise files in a folder that an earlier selection into the same folder wrote and this run did not: JSON
@@ -149,13 +161,14 @@ export async function main(args,{cwd=process.cwd(),log=console.log,error=console
     if(!pin)throw Error('Candidate '+candidate+' pins no concept bot.');
     const concept=readPin(pin,'the '+candidate+' concept'), study=readPin(results.study,'the study');
     const selectionFile=project(path.join(outDir,'concept-selection.json'));
-    const {selection,premises}=conceptSelection({results,document:decode(concept.bytes),study:decode(study.bytes),studyFile:study.file,
+    const {selection,premises,warnings}=conceptSelection({results,document:decode(concept.bytes),study:decode(study.bytes),studyFile:study.file,
       candidate,basis,selectionFile,renames,
       resultsRef:{file:project(resultsFile),sha256:hash(resultsBytes)},
       conceptRef:{id:pin.id,file:project(concept.file),sha256:pin.sha256}});
     mkdirSync(path.join(outDir,'premises'),{recursive:true});
     writeFileSync(path.join(outDir,'concept-selection.json'),JSON.stringify(selection,null,2)+'\n');
     for(const p of premises)writeFileSync(path.join(outDir,'premises',p.id+'.json'),JSON.stringify(p,null,2)+'\n');
+    for(const w of warnings)log(w);
     log('Selection: '+selectionFile);
     for(const p of selection.premises)log('Premise: '+p.file);
     for(const file of stalePremises(path.join(outDir,'premises'),new Set(premises.map(p=>p.id+'.json')),selectionFile)){

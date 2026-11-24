@@ -1,10 +1,13 @@
 // Concept study tournament: play every concept candidate and its one-at-a-time assumption variants in the same
 // published match contexts, then rank the base candidates and report fragility and competitive ranges.
 //
-// npm run concept:study -- STUDY.json --out RESULTS.json [--html PAGE.html] [--allow-long] [--max-matches N]
+// npm run concept:study -- STUDY.json --out RESULTS.json [--html PAGE.html] [--allow-long] [--max-matches N] [--full]
 //   STUDY.json is an agent-frc/alliance-study@1 study. It pins its rules profile as profile: {file, sha256} and each
 //   candidate's concept bot as concept: {file, sha256}, both resolved from the study's folder; conceptSweeps is
 //   optional (scripts/concept-study.mjs). Exit 0 on success, 2 on invalid input, 3 when the run budget stops it.
+//   The results keep a summary of each match (detail: "summary"); --full keeps every event, period and roster.
+//   Each base concept is also screened against the profile's robot limits (concept:check); an exceedance is
+//   reported in the ranking and printed as a warning, and does not change the ranking or the Pareto flags.
 //
 // Margins are in expected points: a credited release scores the target's points × the port's successFraction.
 // The ranking covers base candidates only. A variant changes one quantity; every other quantity stays at base.
@@ -17,6 +20,7 @@ import {embedConcepts} from './kickoff.mjs';
 import {applyProfileDefaults,LABELS} from './concept-bot.mjs';
 import {expandConceptStudy} from './concept-study.mjs';
 import {prepareComparison,playRoleCell,summarizeComparison} from './strategy-lab.mjs';
+import {conceptCheck} from './concept-check.mjs';
 
 export const RESULTS_SCHEMA='agent-frc/concept-results@1';
 export const DEFAULT_MAX_MATCHES=2000;
@@ -142,9 +146,26 @@ function readPin(dir,ref,what) {
   return {file,bytes};
 }
 
+// One match as the results keep it by default: the margin and scores, the regret and baseline changes, and each
+// robot's per-period tallies. The event log, period detail and full rosters are kept only with --full.
+export function summaryCell({context,match,role,focal,margin,score,ordinary,terminal,byRobot,regret,marginalAlliancePoints,marginChange}) {
+  return {context,match,role,focal:{side:focal.side,slot:focal.slot,...(focal.concept===undefined?{}:{concept:focal.concept})},
+    margin,score,ordinary,terminal,byRobot,regret,marginalAlliancePoints,marginChange};
+}
+
+const LIMIT_UNITS={perimeter:'in',startingHeight:'in',maxHeight:'in',extension:'in',mass:'lb'};
+// concept:check's limit screen of one concept against the profile: each check's status and the exceedances.
+export function limitScreen(document,profile) {
+  const report=conceptCheck(document,profile);
+  return {checks:report.limits,exceeds:Object.entries(report.limits).filter(([,status])=>status==='exceeds').map(([check])=>{
+    const row=report.limitValues[check];
+    return {check,value:row.conceptLb??row.conceptIn,limit:row.limit.value,unit:LIMIT_UNITS[check]};
+  })};
+}
+
 // Builds and plays the tournament. options: maxMatches, allowLong, now (milliseconds), log, outDir (the folder
 // result file references are relative to). Returns {status: 'ok', results} or {status: 'stopped', reason}.
-export async function runTournament(studyFile,{maxMatches=DEFAULT_MAX_MATCHES,allowLong=false,now=()=>performance.now(),log=()=>{},outDir}={}) {
+export async function runTournament(studyFile,{maxMatches=DEFAULT_MAX_MATCHES,allowLong=false,full=false,now=()=>performance.now(),log=()=>{},outDir}={}) {
   const studyPath=path.resolve(studyFile), dir=path.dirname(studyPath), refer=file=>posix(path.relative(outDir??dir,file));
   const studyBytes=readFileSync(studyPath), study=decode(studyBytes);
   if(study?.schema!=='agent-frc/alliance-study@1')throw Error('Supply an agent-frc/alliance-study@1 concept study.');
@@ -195,29 +216,34 @@ export async function runTournament(studyFile,{maxMatches=DEFAULT_MAX_MATCHES,al
   const signals=Object.fromEntries([...documents].map(([role,document])=>[role,costSignals(applyProfileDefaults(document,profile))]));
   const analysis=analyzeTournament({baseRoles:expansion.baseRoles.map(r=>({id:r.id,concept:documents.get(r.id)?.id??null})),
     contexts:prepared.contexts,cells:comparison.cells,axes:expansion.axes,variants:expansion.variants,signals});
+  const limits=new Map([...documents].map(([role,document])=>[role,limitScreen(document,profile)]));
+  for(const [role,screen] of limits)for(const x of screen.exceeds)
+    log('Warning: '+role+' exceeds the '+x.check+' limit: '+x.value+' '+x.unit+' over '+x.limit+' '+x.unit+'.');
   const mass=role=>{const m=documents.has(role)?applyProfileDefaults(documents.get(role),profile).massLb:undefined;
     return m?{min:m.min,max:m.max,label:m.label,basis:m.basis,default:m.default===true}:null;};
   const results={schema:RESULTS_SCHEMA,
     study:{file:refer(studyPath),sha256:hash(studyBytes)},profile:{file:refer(profilePin.file),sha256:study.profile.sha256},concepts,
     side:prepared.side,contexts:prepared.contexts.map(({id,basis})=>({id,basis})),plannedMatches:planned,
-    leader:analysis.leader,leaderDecidedBy:analysis.leaderDecidedBy,ranking:analysis.ranking.map(r=>({...r,massLb:mass(r.id)})),fragility:analysis.fragility,
+    leader:analysis.leader,leaderDecidedBy:analysis.leaderDecidedBy,ranking:analysis.ranking.map(r=>({...r,massLb:mass(r.id),limits:limits.get(r.id)??null})),fragility:analysis.fragility,
     competitiveRanges:analysis.competitiveRanges,axes:expansion.axes,
     variants:expansion.variants.map(({document,...v})=>({...v,concept:document?.id??null})),invalidVariants:analysis.invalidVariants,
-    scope:comparison.scope+' '+EXPECTED_POINTS_SCOPE,comparison};
+    scope:comparison.scope+' '+EXPECTED_POINTS_SCOPE,detail:full?'full':'summary',
+    comparison:full?comparison:{...comparison,cells:comparison.cells.map(summaryCell)}};
   return {status:'ok',results};
 }
 
-const USAGE='Usage: npm run concept:study -- STUDY.json --out RESULTS.json [--html PAGE.html] [--allow-long] [--max-matches N]';
+const USAGE='Usage: npm run concept:study -- STUDY.json --out RESULTS.json [--html PAGE.html] [--allow-long] [--max-matches N] [--full]';
 
 // The command line. Returns the exit code; io injects the clock and output for tests.
 export async function main(args,{now,log=console.log,error=console.error}={}) {
-  let study,out,html,allowLong=false,maxMatches=DEFAULT_MAX_MATCHES;
+  let study,out,html,allowLong=false,full=false,maxMatches=DEFAULT_MAX_MATCHES;
   for(let i=0;i<args.length;i++){
     const arg=args[i], value=()=>{const v=args[++i];if(v===undefined || v.startsWith('--'))throw Error(USAGE);return v;};
     try{
       if(arg==='--out' && out===undefined)out=value();
       else if(arg==='--html' && html===undefined)html=value();
       else if(arg==='--allow-long')allowLong=true;
+      else if(arg==='--full')full=true;
       else if(arg==='--max-matches'){maxMatches=Number(value());if(!Number.isInteger(maxMatches) || maxMatches<1)throw Error('--max-matches takes a positive whole number.');}
       else if(!arg.startsWith('--') && study===undefined)study=arg;
       else throw Error(USAGE);
@@ -231,7 +257,7 @@ export async function main(args,{now,log=console.log,error=console.error}={}) {
   };
   try{
     folder(out);if(html!==undefined)folder(html);
-    const run=await runTournament(study,{maxMatches,allowLong,log,outDir:path.dirname(path.resolve(out)),...(now?{now}:{})});
+    const run=await runTournament(study,{maxMatches,allowLong,full,log,outDir:path.dirname(path.resolve(out)),...(now?{now}:{})});
     if(run.status!=='ok')return 3;
     try{writeFileSync(out,JSON.stringify(run.results)+'\n');}catch(e){throw Error('Cannot write '+out+': '+e.message);}
     log('Results: '+path.resolve(out));
