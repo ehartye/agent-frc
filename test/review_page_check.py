@@ -173,7 +173,8 @@ class ReviewPage(unittest.TestCase):
         self.assertEqual(self.page().returncode, 0)
         plain = scene_of(self.root)
         self.assertEqual((plain["title"], plain["bodies"]["head"]["name"]), (None, "head"))
-        self.assertEqual(verdict_of(self.root), before)
+        # The judgement file itself was edited, so its digest is another; nothing it judges is.
+        self.assertEqual(dict(verdict_of(self.root), files=None), dict(before, files=None))
 
     def test_a_stale_record_refuses_the_page_and_the_check_reports_a_page_built_from_other_records(self):
         self.assertEqual(self.page().returncode, 0)

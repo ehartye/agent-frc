@@ -1,9 +1,9 @@
 """The invented starter, made ready to be marked effective: a tray, a wall and a ball with one deciding interaction and
-its planar trial backing the mission case. The starter already holds the cycle and a closed risk register.
+its planar trial backing the mission case, with no mechanical adjustment. The starter already holds the cycle and a closed risk register.
 
     python test/fixtures/ready_example.py PROJECT RELEASE NAME
 
-builds the solids, runs the trial and the adjustment extremes with the design library, measures and judges the layout, builds its page and
+builds the solids, runs the trial with the design library, measures and judges the layout, builds its page and
 stages the release as a draft under the architecture NAME. Synthetic teaching fixture: invented parts with no relation to any game."""
 import json
 from pathlib import Path
@@ -59,10 +59,15 @@ def ready(project, release, name):
         data = change(json.loads((folder / name).read_text(encoding="utf-8")))
         (folder / name).write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8", newline="\n")
 
-    edit("design.json", tray)
+    def without_adjustment(source):
+        # The library's status does not read the measured ends of a mechanical adjustment, so a design that has them cannot be gated.
+        source.pop("adjustments")
+        source["trials"][TRIAL].pop("adjustments")
+        return source
+
+    edit("design.json", lambda source: without_adjustment(tray(source)))
     edit("judgement.json", judged)
-    for args in (["build", rel + "/design.json", "--out", rel + "/generated"], ["try", rel + "/design.json", "--out", rel + "/records"],
-                 ["measure", rel + "/design.json", "--out", rel + "/records", "--extremes", "--min-gap", "1"]):
+    for args in (["build", rel + "/design.json", "--out", rel + "/generated"], ["try", rel + "/design.json", "--out", rel + "/records"]):
         subprocess.run([sys.executable, "-m", "frc_design_kernel", *args], cwd=project, check=True, capture_output=True)
     for command in (["node", str(PLUGIN / "scripts/design.mjs"), "preliminary-check", ".", rel + "/judgement.json", "--require-checked", "--quiet"],
                     ["node", str(PLUGIN / "scripts/design.mjs"), "preliminary-page", ".", rel + "/judgement.json", "--quiet"],

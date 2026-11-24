@@ -702,7 +702,7 @@ function starter() {
   if (built) return built;
   built = path.join(mkdtempSync(path.join(os.tmpdir(), 'publication-real-')), 'season');
   execFileSync(python, ['-B', here('../examples/design-source/create.py'), built, '--project-review', '--no-check'], {stdio: 'pipe'});
-  // The starter gains an interaction, its trial and an adjustment, so it can meet every readiness criterion.
+  // The starter gains an interaction and its trial, so it can meet every readiness criterion.
   execFileSync(python, ['-B', here('./fixtures/ready_example.py'), built, '1.0', 'Turning carrier'], {stdio: 'pipe'});
   // Counts every call that measures or runs a trial, in any Python process a command starts with its folder on PYTHONPATH.
   write(path.dirname(built), 'count/sitecustomize.py', ['import os', 'from frc_design_kernel.measure import records, run', 'from frc_design_kernel.trials import campaign', 'def counted(module, name):',
@@ -742,7 +742,7 @@ test('marking a real release effective judges its records, measures nothing and 
   for (const check of [['scan.mjs', '.'], ['site-check.mjs', 'docs']]) execFileSync(process.execPath, [path.join(e.season, 'scripts/ci', check[0]), check[1]], {cwd: e.season, stdio: 'pipe'});
   // The published folder: the source, the judgement, the page file, the records and the page, and nothing of the earlier formats.
   const published = readdirSync(path.join(e.season, publishedOf('1.0')), {recursive: true}).map(String).map(n => n.split(path.sep).join('/')).filter(n => /\.\w+$/.test(n)).sort();
-  for (const name of ['design.json', 'index.html', 'judgement.json', 'page.json', 'records/adjustments.json', 'records/trials.json', 'records/measurements/mass.drawn.json', 'release.json', 'review-scene.json.gz'])
+  for (const name of ['design.json', 'index.html', 'judgement.json', 'page.json', 'records/trials.json', 'records/measurements/mass.drawn.json', 'release.json', 'review-scene.json.gz'])
     assert.ok(published.includes(name), name + ' in ' + published);
   assert.equal(published.filter(n => /budget|limits|mission|receipt|requirements/i.test(n)).join(), '');
   assert.deepEqual(read(path.join(e.season, publishedOf('1.0'), 'release.json')), {schema: 'agent-frc/preliminary-release@2', release: '1.0', issue: 'invented-design-1.0', phase: 'preliminary-design',
@@ -764,8 +764,7 @@ test('marking a real release effective judges its records, measures nothing and 
     assert.match(run.said, pattern, name);
     assert.equal(existsSync(e.gateFile('1.0')), false, name + ' leaves no gate record');
     assert.equal(e.status('1.0'), 'in-progress', name);
-    e.git('checkout', '-q', draft, '--', '.');
-    e.git('commit', '-q', '-m', 'restored ' + name);
+    e.git('reset', '-q', '--hard', draft);
   };
   control('a stale job', () => editJson(e.at('1.0', 'design.json'), s => ({...s, solids: s.solids.map(x => x.name === 'rail' ? {...x, shape: {...x.shape, fromMm: [19, 72, 18], toMm: [24, 77, 23]}} : x)})),
     /measurements\/clearance\.motion\.loaded-turn\.json is stale: .*solid "rail" changed/);
@@ -777,7 +776,14 @@ test('marking a real release effective judges its records, measures nothing and 
     editJson(e.at('1.0', 'judgement.json'), j => ({...j, control: {...j.control, offsetMm: [0, 50, 0]}}));
     e.layoutCheck('1.0');
   }, /its records judge it provisional: .*displaced control/i);
-  // Control for the count: a check that measures is counted, here the one above.
+  control('a mechanical adjustment whose measured ends no record keeps current', () => {
+    editJson(e.at('1.0', 'design.json'), s => ({...s, adjustments: {'wall position': {input: 'parameters.wall_x', kind: 'mechanical', range: [300, 306], note: 'Invented slotted wall'}},
+      trials: Object.fromEntries(Object.entries(s.trials).map(([name, trial]) => [name, {...trial, adjustments: ['wall position']}]))}));
+    for (const args of [['try'], ['measure', '--extremes', '--min-gap', '1']])
+      execFileSync(python, ['-m', 'frc_design_kernel', args[0], inputsOf('1.0') + '/design.json', '--out', inputsOf('1.0') + '/records', ...args.slice(1)], {cwd: e.season, stdio: 'pipe'});
+    e.layoutCheck('1.0');
+  }, /adjustment wall position: the library's status does not say whether its measured ends are of the design as it is now/);
+  // Control for the count: a check that measures is counted, here the ones above.
   assert.ok(e.measuredSince().includes('record'));
   // The gate passes: it judges the records as they are. Nothing is measured and no trial runs.
   const accepted = e.stage('--set-status', '1.0', 'effective');
@@ -798,7 +804,7 @@ test('marking a real release effective judges its records, measures nothing and 
   assert.deepEqual(Object.keys(gate.files.source), [inputsOf('1.0') + '/design.json']);
   assert.deepEqual(Object.keys(gate.files.judgement).sort(), [requirementsFile, inputsOf('1.0') + '/judgement.json', inputsOf('1.0') + '/premises/robot-mass.json'].sort());
   assert.deepEqual(Object.keys(gate.files.records).map(n => path.posix.basename(n)).sort(),
-    [...sceneAt(path.join(e.season, publishedOf('1.0'), 'review-scene.json.gz')).records.jobs.map(j => path.posix.basename(j.file)), 'adjustments.json', 'trials.json'].sort());
+    [...sceneAt(path.join(e.season, publishedOf('1.0'), 'review-scene.json.gz')).records.jobs.map(j => path.posix.basename(j.file)), 'trials.json'].sort());
   e.commit('effective');
   const result = e.check('--base', draft);
   assert.deepEqual([result.errors, result.designs[0].note], [[], 'becoming effective. Its stage gate record matches the committed files.']);
@@ -815,8 +821,6 @@ test('a draft whose records were carried is staged and passes the gate, which me
   const stale = e.stage('1.0');
   assert.notEqual(stale.status, 0);
   assert.match(stale.said, /clearance\.motion\.loaded-turn\.json is stale: .*solid "rail" changed/);
-  // The records the library's own measure command wrote are measured again by it, and the judgement's by the layout check.
-  execFileSync(python, ['-m', 'frc_design_kernel', 'measure', inputsOf('1.0') + '/design.json', '--out', inputsOf('1.0') + '/records', '--extremes', '--min-gap', '1', '--carry'], {cwd: e.season, stdio: 'pipe'});
   const carried = e.design('preliminary-check', '.', inputsOf('1.0') + '/judgement.json', '--require-checked');
   assert.equal(carried.status, 0, carried.said);
   assert.match(carried.said, /measured [1-9]\d* and carried [1-9]\d* of \d+ record/);

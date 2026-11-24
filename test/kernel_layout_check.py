@@ -154,6 +154,41 @@ class KernelLayoutCheck(unittest.TestCase):
         self.assertEqual(self.check()[0].returncode, 0)
         self.assertEqual(self.check("--judge-only")[0].returncode, 0)
 
+    # What status cannot see is refused at the gate until a record says what it used. No library or kernel is needed here.
+    def test_evidence_whose_staleness_no_record_shows_is_refused_at_the_gate(self):
+        from hashlib import sha256
+        from types import SimpleNamespace
+        from kernel_layout.evidence import custom_code, referenced, unguarded
+        folder = self.root / RELEASE
+        (folder / "custom").mkdir()
+        (folder / "custom/held.py").write_text("def judge(run, parameters):\n    return run['endS'] > 1\n", encoding="utf-8", newline="\n")
+        (folder / "top.json").write_text(json.dumps({"trials": {"second": {"file": "second.json"}, "first": {"piece": {}}}}), encoding="utf-8")
+        design = SimpleNamespace(path=folder / "top.json", folder=folder, custom_file=lambda name: folder / "custom" / (name + ".py"), custom_used={"held": ["second"]},
+                                 data={"solids": [{"name": "a", "part": {"file": "arm.step", "solid": "a"}}, {"name": "b"}], "fixtures": []})
+        self.assertEqual([p.name for p in referenced(design)], ["arm.step", "held.py", "second.json"], "part, custom code and trial files are the design's")
+        first = {"piece": {"start": {"atMm": [0, 0]}}, "pass": {"outcomes": ["in"]}}
+        second = {"piece": {"start": {"after": "first"}}, "forces": [], "pass": {"custom": {"use": "held"}}}
+        self.assertEqual(custom_code(second), ["held"])
+        inputs = SimpleNamespace(design=design, data={"trials": {"first": first, "second": second}, "adjustments": {"wall": {"kind": "mechanical"}, "spring": {"kind": "spring"}}})
+        row = {"name": "held", "usedBy": ["trial second"], "sha256": sha256((folder / "custom/held.py").read_bytes()).hexdigest()}
+        campaign = {"trials": {"first": {"used": {}}, "second": {"used": {"start": {"atMm": [1, 2]}}}}, "custom": [row]}
+        ends, current = {"adjustments": {"wall": {}, "spring": {}}}, {"records": [{"record": 'adjustment "wall"'}]}
+        found = lambda names=("first", "second"), campaign=campaign, adjustments=ends, state=current: unguarded(inputs, set(names), campaign, adjustments, state)
+        self.assertEqual(found(), [], "control: every one says what it used")
+        # The ends of a mechanical adjustment with no status of their own; not one that is not measured, or not mechanical.
+        self.assertIn("adjustment wall: the library's status does not say", found(state={"records": []})[0])
+        self.assertEqual(found(state={"records": []}, adjustments=None), [])
+        # A chained trial whose record does not hold the end it started from.
+        blind = self.copy(campaign)
+        blind["trials"]["second"]["used"] = {}
+        self.assertEqual(found(campaign=blind), ["trial second starts where trial first ends, and its record does not say which end it started from"])
+        self.assertEqual(found(("first",), blind), [], "a trial the judgement does not use is left to status")
+        # Custom code edited after the campaign, and a campaign that merged a trial run on other code.
+        for other in ([], [dict(row, usedBy=["trial first"])], [dict(row, sha256="0" * 64)]):
+            self.assertIn("trial second runs custom code held", found(campaign=dict(campaign, custom=other))[0])
+        (folder / "custom/held.py").write_text("def judge(run, parameters):\n    return True\n", encoding="utf-8", newline="\n")
+        self.assertIn("run the whole campaign again", found()[0])
+
     # What the stage gate asks for: every record in the folder current, and the files the verdict was made from.
     def test_the_gate_asks_for_every_record_in_the_folder_and_the_verdict_names_the_files_it_was_made_from(self):
         # The source names a subsystem file and a trial file: both are the design's.

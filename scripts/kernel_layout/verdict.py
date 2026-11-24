@@ -29,6 +29,12 @@ def used_trials(inputs):
     return names
 
 
+def adjustments_record(inputs):
+    """The library's adjustments.json in the records folder, or None."""
+    path = inputs.records / "adjustments.json"
+    return read(path) if path.is_file() else None
+
+
 def trial_records(inputs, every_record, say):
     """(trials.json or None, the library's status of the records folder, seconds). Refuses a stale trial record the
     judgement uses or, with every_record, any record in the folder that is not current."""
@@ -46,6 +52,9 @@ def trial_records(inputs, every_record, say):
         raise refused([r.get("file", r["record"]) + " is stale: " + "; ".join(r["changes"]) + (". Run it again with python -m frc_design_kernel try SOURCE --out RECORDS"
                        if r["record"].startswith("trial ") else ". Measure it again, or remove a record the design no longer needs") for r in stale],
                       "before judging, because " + ("a record" if every_record else "a trial record it uses") + " is not current")
+    blind = evidence.unguarded(inputs, names, campaign, adjustments_record(inputs), state) if every_record else []
+    if blind:
+        raise refused(blind, "before judging, because a gate cannot rely on it")
     say(f"[records] {len(state['records'] if every_record else names)} " + ("record(s) in the folder" if every_record else "trial record(s) the judgement uses")
         + f" are current; status took {seconds:.1f} s")
     return campaign, state, seconds
@@ -155,8 +164,7 @@ def judge(root, file, *, judge_only=False, every_record=False, workers=None, pro
         raise refused(problems)
     asked = asking.asked(inputs, stages.control(inputs, []))
     results, listed, check_seconds = measured(inputs, asked, judge_only, workers, say)
-    adjustments = read(inputs.records / "adjustments.json") if (inputs.records / "adjustments.json").is_file() else None
-    verdict = judged(inputs, results, campaign, state, adjustments, paths, path_unmet, say)
+    verdict = judged(inputs, results, campaign, state, adjustments_record(inputs), paths, path_unmet, say)
     verdict["records"] = dict(folder=inputs.records.relative_to(inputs.root).as_posix(), jobs=listed)
     verdict["files"] = evidence.files(inputs, listed)
     verdict["seconds"] = dict(total=perf_counter() - began, status=status_seconds + check_seconds)
