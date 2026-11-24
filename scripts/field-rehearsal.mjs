@@ -12,7 +12,7 @@ export function createFieldRehearsal(profile) {
   const terminal=supported ? createTerminalRehearsal(profile) : null;
   // A robot-to-robot wait cycle that holds this long without any member moving is reported. With
   // rehearsal.waitCycles "yield" it also triggers one deterministic yield; otherwise motion is unchanged.
-  const waitCycleS=1, yieldCycles=model?.waitCycles==='yield', giveWayS=3;
+  const waitCycleS=1, yieldCycles=model?.waitCycles==='yield', giveWayS=3, stuckS=1.5;
   const behaviors=Object.fromEntries(Object.entries(model?.programs || {}).map(([key,p])=>[key,p.label]));
   const phases=model?.periods || [];
   const duration=name=>Math.round((phases.find(p=>p.name===name)?.seconds || 0)/dt);
@@ -198,7 +198,7 @@ export function createFieldRehearsal(profile) {
     if(r.concept)turnTo=leg.requiredHeading;
     function finishLeg(){
       if(leg.release)release(sim,r,key);
-      r.leg++;r.dwell=0;r.waypoints=null;delete r.pickup;delete r.goal;delete r.makeRoom;turnTo=undefined;
+      r.leg++;r.dwell=0;r.waypoints=null;delete r.pickup;delete r.goal;delete r.makeRoom;delete r.stuck;turnTo=undefined;
       if(r.leg===legs.length){
         r.visits++;event(sim,r.id+' completed '+leg.action);
         if(program(r,sim).loop)r.leg=0;
@@ -208,9 +208,20 @@ export function createFieldRehearsal(profile) {
     // A concept robot's acquisitions and releases go through its ports; the game supplies each goal and heading.
     if(r.concept && leg.operation){
       portLeg=true;
+      // Held by another robot with under 1 in of progress for stuckS, the concept robot changes its plan rather than
+      // wait for ever: a wait cycle finds no detour when each robot's goal lies in the other's footprint, and a parked
+      // robot forms no cycle at all. Seeking a floor piece, it drops that piece for another. On any other leg, whose
+      // goal it cannot change, it steps aside off the blocker's path when it can, and plans the leg again from there.
+      if(r.stuck && (sim.ticks-r.stuck.since)*dt+1e-9>=stuckS){
+        const blocker=sim.robots.find(o=>o.id===r.stuck.by);
+        delete r.stuck;delete r.goal;delete r.makeRoom;r.waypoints=null;
+        const aside=leg.operation==='acquire' && r.pickup?.id?null:stepAside(sim,r,blocker);
+        if(aside){r.makeRoom='Stepping aside for '+blocker.id;r.goal=aside.goal;r.waypoints=aside.route;r.target=1;return drive(r);}
+        game.unstick(sim,r,leg,sim.ticks*dt,blocker);
+      }
       // Making room to turn: drive to the clear pose at the present heading, then plan the leg again from there.
       if(r.makeRoom){
-        r.action='Making room to turn';
+        r.action=typeof r.makeRoom==='string'?r.makeRoom:'Making room to turn';
         if(r.target<r.waypoints.length)return drive(r);
         delete r.makeRoom;delete r.goal;r.waypoints=null;game.restartLeg(sim,r);
       }
@@ -343,10 +354,11 @@ export function createFieldRehearsal(profile) {
       // relative sweeps could introduce a late moving-peer overlap.
       if(hit){
         recordWait(sim,r,'Occupied by '+hit.name);
-        if(sim.robots.some(p=>p.id===hit.name))r.waitFor=hit.name;
+        if(sim.robots.some(p=>p.id===hit.name)){r.waitFor=hit.name;if(portLeg)r.stuck??={since:sim.ticks,travel:r.travelIn,by:hit.name};}
         else if(portLeg)delete r.goal;
         continue;
       }
+      if(r.stuck && r.travelIn+norm(a,b)-r.stuck.travel>1)delete r.stuck;
       ends[i]=b;bodies[i]=body;headings[i]=heading;
       if(r.concept && norm(a,b)>=1e-9){r.currentSpeedInS=nextSpeed;r.motionDir=[(b[0]-a[0])/norm(a,b),(b[1]-a[1])/norm(a,b)];}
       if(r.waypoints?.[r.target] && norm(b,r.waypoints[r.target])<1e-8)r.target++;
@@ -364,6 +376,20 @@ export function createFieldRehearsal(profile) {
     for(let d=4;d<=48;d+=4)for(let k=0;k<16;k++){
       const q=[r.p[0]+d*Math.cos(k*Math.PI/8),r.p[1]+d*Math.sin(k*Math.PI/8)];
       if(geom.hit(q,q,circle,sim.setup) || others.some(o=>geom.robotContact(q,q,circle,o.p,o.p,o)!==null))continue;
+      const route=geom.planAround(r.p,q,r,sim.setup,others);
+      if(route.length)return {goal:q,route};
+    }
+    return null;
+  }
+  // The nearest pose, in 4 in rings out to 48 in, clear of the walls, obstacles and every other robot, that is off the
+  // blocker's path to its next waypoint, with a route there around the other robots' footprints.
+  function stepAside(sim,r,blocker) {
+    if(!blocker)return null;
+    const next=blocker.waypoints?.[blocker.target] ?? blocker.p,others=sim.robots.filter(o=>o!==r);
+    for(let d=4;d<=48;d+=4)for(let k=0;k<16;k++){
+      const q=[r.p[0]+d*Math.cos(k*Math.PI/8),r.p[1]+d*Math.sin(k*Math.PI/8)];
+      if(geom.hit(q,q,r,sim.setup) || others.some(o=>geom.robotContact(q,q,r,o.p,o.p,o)!==null))continue;
+      if(geom.robotContact(blocker.p,next,blocker,q,q,r)!==null)continue;
       const route=geom.planAround(r.p,q,r,sim.setup,others);
       if(route.length)return {goal:q,route};
     }
@@ -448,7 +474,7 @@ export function createFieldRehearsal(profile) {
     sim.phase=phases[++sim.phaseIndex].name;sim.ticks=0;sim.carry=0;sim.ended=false;sim.paused=true;sim.resources=reservations();
     sim.deadlocks=[];sim.waitCycles={};sim.giveWay={};
     game.replenish(sim,0);
-    for(const r of sim.robots){delete r.goal;delete r.makeRoom;}
+    for(const r of sim.robots){delete r.goal;delete r.makeRoom;delete r.stuck;}
     for(const r of sim.robots)Object.assign(r,{pickup:null,leg:0,waypoints:null,target:0,dwell:0,wait:0,travelIn:0,visits:0,blocked:'',action:'',...(r.concept?{currentSpeedInS:0}:{})});
   }
   return {supported,behaviors,defaults,startingRoster,completeRoster,create,createProbe,advance,nextPhase,assessRoute,geom,waypoint,intake:game?.intake,mouth:game?.mouth,dt,periods:phases,terminal,

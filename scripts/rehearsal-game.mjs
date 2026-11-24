@@ -410,6 +410,20 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
   }
   // A piece taken at once is aboard now. One captured on the move (later) leaves the field now and lands aboard,
   // with its acquisition logged, on the first tick at or after secondsPerPiece; see land().
+  // A concept robot held by another robot on a port leg: leave the floor piece it was seeking for 3 s, with every
+  // other piece close enough to the blocker to need the same approach (within the blocker's circumscribed radius
+  // plus twice its own), or plan the leg again from where it stands.
+  function unstick(sim,r,leg,timeS,blocker) {
+    const c=sim.game.concept[r.id],until=elapsed(sim,timeS)+3,skip=c.skip??={};
+    if(leg.operation==='acquire' && r.pickup?.id){
+      skip[r.pickup.id]=until;
+      if(blocker){
+        const near=geom.circumradius(blocker)+2*geom.circumradius(r);
+        for(const piece of sim.game.motion.pieces)if(Math.hypot(piece.p[0]-blocker.p[0],piece.p[1]-blocker.p[1])<=near)skip[piece.id]=until;
+      }
+      delete r.pickup.id;delete r.pickup.since;delete r.pickup.position;delete r.pickup.pushedSince;
+    }else restartLeg(sim,r);
+  }
   // Plan the current port leg again from the robot's present pose, keeping what it has already released.
   function restartLeg(sim,r) {
     const c=sim.game.concept[r.id];
@@ -827,7 +841,7 @@ export function createRehearsalGame(profile,geom=fieldGeometry(profile),motion=c
       }
     }
   }
-  return {start,startObservations,observe,apply,replenish,move,seek,intake,mayDeliver,conceptStep,restartLeg,mouth};
+  return {start,startObservations,observe,apply,replenish,move,seek,intake,mayDeliver,conceptStep,restartLeg,unstick,mouth};
 }
 
 

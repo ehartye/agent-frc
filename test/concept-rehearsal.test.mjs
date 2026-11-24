@@ -548,12 +548,12 @@ test('ports: under yield, a concept robot and a legacy robot holding each other 
   const study=JSON.parse(readFileSync(new URL('./fixtures/concept-yield-field.json',import.meta.url)));
   const doc=JSON.parse(readFileSync(new URL('../examples/concept-bots/front-intake-placer.json',import.meta.url)));
   doc.id='slow-placer';doc.drive.accelInS2.value=150;
-  const main=waitCycles=>{
+  const main=(waitCycles,concept=true)=>{
     const p=structuredClone(study);
     if(waitCycles)p.rehearsal.waitCycles=waitCycles;else delete p.rehearsal.waitCycles;
     p.rehearsal.concepts=[{document:doc,record:compileConceptBot(applyProfileDefaults(doc,p))}];
     const engine=createFieldRehearsal(p),match=p.rehearsal.series.matches.find(m=>m.id==='screened');
-    const roster=match.roster.map(r=>r.side==='blue' && r.slot===1?{...r,concept:doc.id}:r);
+    const roster=match.roster.map(r=>concept && r.side==='blue' && r.slot===1?{...r,concept:doc.id}:r);
     const sim=engine.create(engine.completeRoster(roster),match.setup,match.tieWinner,match.endgameAtRestAfterS,match);
     sim.paused=false;engine.advance(sim,engine.elapsedSeconds('Opening'));engine.nextPhase(sim);
     sim.paused=false;engine.advance(sim,engine.elapsedSeconds('Main play'));
@@ -563,9 +563,13 @@ test('ports: under yield, a concept robot and a legacy robot holding each other 
   const yielded=main('yield');
   for(const id of ['B1','R2'])assert.ok(yielded[id].wait*dt<30 && yielded[id].travelIn>500,id+' waited '+yielded[id].wait*dt+' s, travelled '+yielded[id].travelIn+' in');
   assert.ok(yielded.credited>0,'B1 scored in Main play');
-  // Control: without yield the same pair stays held for most of Main play.
-  const held=main(undefined);
-  assert.ok(held.B1.wait*dt>40,'report-only B1 waited '+held.B1.wait*dt+' s');
+  // The give-way after a yield releases a legacy pair in the same scene, which has no other way out.
+  const legacy=main('yield',false);
+  for(const id of ['B1','R2'])assert.ok(legacy[id].wait*dt<35 && legacy[id].travelIn>500,'legacy '+id+' waited '+legacy[id].wait*dt+' s, travelled '+legacy[id].travelIn+' in');
+  // Control: without yield the legacy pair stays held for most of Main play. (A concept B1 no longer needs the yield:
+  // held by a robot it cannot detour around, it changes its plan.)
+  const held=main(undefined,false);
+  assert.ok(held.B1.wait*dt>40 && held.B1.travelIn<1,'report-only legacy B1 waited '+held.B1.wait*dt+' s');
 });
 
 test('ports: beside a wall a front face that must turn makes room, turns and acquires; boxed in, it waits',()=>{
@@ -634,4 +638,51 @@ test('ports: every piece is in exactly one place, and a floor piece never jumps'
     last=floor;
   }
   assert.ok(sim.game.events.some(e=>e.outcome==='credited'),'pieces scored');
+});
+
+// Run one registered match of a frozen field with B1 replaced by a concept; returns the Main play state.
+function studyMatch(field,doc,matchId,edit=()=>{}){
+  const p=structuredClone(field);edit(p);
+  p.rehearsal.concepts=[{document:doc,record:compileConceptBot(applyProfileDefaults(doc,p))}];
+  const engine=createFieldRehearsal(p),match=p.rehearsal.series.matches.find(m=>m.id===matchId);
+  const roster=match.roster.map(r=>r.side==='blue' && r.slot===1?{...r,concept:doc.id}:r);
+  const sim=engine.create(engine.completeRoster(roster),match.setup,match.tieWinner,match.endgameAtRestAfterS,match);
+  sim.paused=false;engine.advance(sim,engine.elapsedSeconds('Opening'));
+  const deadlocks=[...sim.deadlocks];engine.nextPhase(sim);
+  sim.paused=false;engine.advance(sim,engine.elapsedSeconds('Main play'));deadlocks.push(...sim.deadlocks);
+  const credited=sim.game.events.filter(e=>e.robot==='B1' && e.phase==='Main play' && e.outcome==='credited');
+  return {sim,deadlocks,robot:id=>sim.robots.find(r=>r.id===id),credited};
+}
+const variant=(name,pointer,value)=>{
+  const doc=JSON.parse(readFileSync(new URL('../examples/concept-bots/'+name+'.json',import.meta.url)));
+  const keys=pointer.split('/').slice(1);let o=doc;for(const k of keys.slice(0,-1))o=o[k];o[keys.at(-1)]=value;
+  doc.id=name+'-variant';return doc;
+};
+
+test('ports: a concept robot held by a robot it cannot detour around changes its plan instead of waiting out the period',()=>{
+  // Frozen copy of examples/concept-study/field.json as committed in 4dea935 (physical floor pieces, yield on).
+  const field=JSON.parse(readFileSync(new URL('./fixtures/concept-floor-field.json',import.meta.url)));
+  // Each pair's goals lie in the other's footprint, so the yield finds no detour.
+  for(const [doc,matchId,peer] of [[variant('front-intake-placer','/drive/topSpeedInS/value',75),'shared','B2'],
+    [variant('fixed-shooter','/inputs/0/secondsPerPiece/value',0.25),'screened','R2']]){
+    const run=studyMatch(field,doc,matchId);
+    for(const id of ['B1',peer])assert.ok(run.robot(id).wait*dt<30,matchId+' '+id+' waited '+run.robot(id).wait*dt+' s of Main play');
+    assert.ok(run.credited.length>0,matchId+': B1 scored in Main play');
+    // Control: the hold is real. The wait cycle formed and its yield found no member able to detour.
+    assert.ok(run.deadlocks.some(d=>d.cycle.includes('B1') && d.cycle.includes(peer) && d.yielded===null),matchId+' no-detour cycle');
+  }
+});
+
+test('ports: a seeker drops pieces behind a parked robot and collects the rest',()=>{
+  // tour-wp2's variant of the concept-study floor field with B3 parked at the west end of the blue rows.
+  const field=JSON.parse(readFileSync(new URL('./fixtures/concept-parked-field.json',import.meta.url)));
+  const doc=JSON.parse(readFileSync(new URL('../examples/concept-bots/turret-shooter.json',import.meta.url)));
+  const parked=studyMatch(field,doc,'solo');
+  assert.ok(parked.robot('B1').wait*dt<15,'B1 waited '+parked.robot('B1').wait*dt+' s of Main play');
+  assert.ok(parked.credited.length>=10,'B1 scored '+parked.credited.length+' in Main play');
+  // Control: with B3 started clear of the rows, the pieces it hid are collected, so they were dropped only for B3.
+  const clear=studyMatch(field,doc,'solo',p=>{p.rehearsal.starts[2]=[25,20];});
+  const hidden=['blue-floor/4','blue-floor/6'];
+  assert.ok(hidden.every(id=>clear.sim.game.events.some(e=>e.operation==='acquire' && e.pieces.includes(id))),'hidden pieces collected when B3 is clear');
+  assert.ok(hidden.some(id=>parked.sim.game.motion.pieces.some(p=>p.id===id)),'a hidden piece stays on the floor beside the parked B3');
 });

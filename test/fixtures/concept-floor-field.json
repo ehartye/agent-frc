@@ -1,0 +1,76 @@
+{
+  "game": "Concept study field",
+  "edition": "Invented classroom exercise",
+  "manual": "examples/concept-study/field.json",
+  "units": "in",
+  "field": {"length": 480, "width": 264, "source": "Invented field dimensions in this file."},
+  "limits": {"perimeter": 120, "height": 46, "source": "Invented starting-volume limits in this file."},
+  "landmarks": [],
+  "levels": [],
+  "geometrySource": "Invented layout: each alliance has 45 loose tiles in a 5 by 9 grid on its own half and a raised ring just past the grid, toward the centre line. Every value is hypothetical.",
+  "omissions": "The exercise omits mechanism contact, field tolerances, scoring adjudication and hardware behavior.",
+  "rehearsal": {
+    "schema": "field-rehearsal/v1",
+    "basis": "Invented concept-study field. Every dimension, pose, piece count, material property and point value is hypothetical.",
+    "boundsNote": "The field has no interior obstacles. Tiles are loose physical pieces that robots push; an invented tile on carpet slows at about 0.5 g (193 in/s²) with a dull bounce (restitution 0.1). A scored tile leaves play. Each alliance starts with 45 tiles and gets no more.",
+    "sources": ["examples/concept-study/field.json"],
+    "resourceLabel": "shared lane",
+    "setups": ["open"],
+    "waitCycles": "yield",
+    "planes": [],
+    "obstacles": [],
+    "bands": [],
+    "starts": [[25, 60], [25, 132], [25, 204]],
+    "mirror": {"redX": true, "redY": true},
+    "periods": [{"name": "Opening", "seconds": 10}, {"name": "Main play", "seconds": 45}],
+    "defaults": {"length": 24, "width": 24, "height": 26, "bumper": 3, "heading": 0, "speed": 78, "orders": ["hold", "hold", "hold"]},
+    "robotLimits": {
+      "perimeterIn": {"value": 120, "factId": "invented-perimeter"},
+      "startingHeightIn": {"value": 46, "factId": "invented-starting-height"},
+      "maxHeightIn": {"value": 60, "factId": "invented-max-height"},
+      "maxExtensionIn": {"value": 12, "factId": "invented-max-extension"},
+      "massLb": {"value": 100, "factId": "invented-mass"}
+    },
+    "stations": [
+      {"id": "blue-floor", "label": "Blue loose tiles", "kind": "retrieval", "side": "blue", "piece": "tile", "at": [132, 132], "radiusIn": 120, "stock": 45,
+        "floor": {"radiusIn": 4, "heightIn": 2, "captureReachIn": 4, "dragInS2": 193, "restitution": 0.1,
+          "positions": [[80, 40], [80, 63], [80, 86], [80, 109], [80, 132], [80, 155], [80, 178], [80, 201], [80, 224], [106, 40], [106, 63], [106, 86], [106, 109], [106, 132], [106, 155], [106, 178], [106, 201], [106, 224], [132, 40], [132, 63], [132, 86], [132, 109], [132, 132], [132, 155], [132, 178], [132, 201], [132, 224], [158, 40], [158, 63], [158, 86], [158, 109], [158, 132], [158, 155], [158, 178], [158, 201], [158, 224], [184, 40], [184, 63], [184, 86], [184, 109], [184, 132], [184, 155], [184, 178], [184, 201], [184, 224]]}},
+      {"id": "blue-ring", "label": "Blue ring", "kind": "scoring", "side": "blue", "piece": "tile", "at": [215, 132], "radiusIn": 16, "points": 2,
+        "criterion": "Invented: a tile that passes down through the ring scores.",
+        "entry": {"centerIn": [215, 132, 36], "kind": "ring", "radiusIn": 12, "factId": "invented-blue-ring"}},
+      {"id": "red-floor", "label": "Red loose tiles", "kind": "retrieval", "side": "red", "piece": "tile", "at": [348, 132], "radiusIn": 120, "stock": 45,
+        "floor": {"radiusIn": 4, "heightIn": 2, "captureReachIn": 4, "dragInS2": 193, "restitution": 0.1,
+          "positions": [[400, 224], [400, 201], [400, 178], [400, 155], [400, 132], [400, 109], [400, 86], [400, 63], [400, 40], [374, 224], [374, 201], [374, 178], [374, 155], [374, 132], [374, 109], [374, 86], [374, 63], [374, 40], [348, 224], [348, 201], [348, 178], [348, 155], [348, 132], [348, 109], [348, 86], [348, 63], [348, 40], [322, 224], [322, 201], [322, 178], [322, 155], [322, 132], [322, 109], [322, 86], [322, 63], [322, 40], [296, 224], [296, 201], [296, 178], [296, 155], [296, 132], [296, 109], [296, 86], [296, 63], [296, 40]]}},
+      {"id": "red-ring", "label": "Red ring", "kind": "scoring", "side": "red", "piece": "tile", "at": [265, 132], "radiusIn": 16, "points": 2,
+        "criterion": "Invented: a tile that passes down through the ring scores.",
+        "entry": {"centerIn": [265, 132, 36], "kind": "ring", "radiusIn": 12, "factId": "invented-red-ring"}}
+    ],
+    "programs": {
+      "hold": {"label": "Hold position", "steps": []},
+      "cycle": {"label": "Collect tiles and score them in the ring", "loop": true, "steps": [
+        {"at": [132, 132], "label": "Collect tiles", "operation": "acquire", "station": {"blue": "blue-floor", "red": "red-floor"}},
+        {"at": [215, 132], "label": "Score in the ring", "operation": "attempt", "station": {"blue": "blue-ring", "red": "red-ring"}, "outcome": "credited"}
+      ]},
+      "screen": {"label": "Cross the blue tiles", "loop": true, "steps": [
+        {"at": [110, 80], "label": "Screen the near tiles", "frame": "field"},
+        {"at": [200, 190], "label": "Screen the far tiles", "frame": "field"}
+      ]}
+    },
+    "series": {"matches": [
+      {"id": "solo", "basis": "Invented: each alliance cycles one robot while its partners hold at their starts.", "setup": "open", "roster": [
+        {"side": "blue", "slot": 1, "plans": {"Opening": "cycle", "Main play": "cycle"}},
+        {"side": "red", "slot": 1, "plans": {"Opening": "cycle", "Main play": "cycle"}}
+      ]},
+      {"id": "screened", "basis": "Invented: a red robot crosses back and forth over the blue tiles.", "setup": "open", "roster": [
+        {"side": "blue", "slot": 1, "plans": {"Opening": "cycle", "Main play": "cycle"}},
+        {"side": "red", "slot": 1, "plans": {"Opening": "cycle", "Main play": "cycle"}},
+        {"side": "red", "slot": 2, "plans": {"Opening": "screen", "Main play": "screen"}}
+      ]},
+      {"id": "shared", "basis": "Invented: a blue partner without a concept collects from the same tiles and scores in the same ring as the focal robot.", "setup": "open", "roster": [
+        {"side": "blue", "slot": 1, "plans": {"Opening": "cycle", "Main play": "cycle"}},
+        {"side": "blue", "slot": 2, "plans": {"Opening": "cycle", "Main play": "cycle"}},
+        {"side": "red", "slot": 1, "plans": {"Opening": "cycle", "Main play": "cycle"}}
+      ]}
+    ]}
+  }
+}

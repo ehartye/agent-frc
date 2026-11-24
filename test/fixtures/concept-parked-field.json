@@ -1,0 +1,657 @@
+{
+  "game": "Concept study field",
+  "edition": "Invented classroom exercise",
+  "manual": "examples/concept-study/field.json",
+  "units": "in",
+  "field": {
+    "length": 480,
+    "width": 264,
+    "source": "Invented field dimensions in this file."
+  },
+  "limits": {
+    "perimeter": 120,
+    "height": 46,
+    "source": "Invented starting-volume limits in this file."
+  },
+  "landmarks": [],
+  "levels": [],
+  "geometrySource": "Invented layout: each alliance has a tile rack near its wall and a raised ring 150 in away, up and to the side of it. Every value is hypothetical.",
+  "omissions": "The exercise omits mechanism contact, field tolerances, scoring adjudication and hardware behavior.",
+  "rehearsal": {
+    "schema": "field-rehearsal/v1",
+    "basis": "Invented concept-study field. Every dimension, pose, stock, delay and point value is hypothetical.",
+    "boundsNote": "The field has no interior obstacles. Each credited tile returns to its alliance's rack 2 s after it scores, so supply lasts the match.",
+    "sources": [
+      "examples/concept-study/field.json"
+    ],
+    "resourceLabel": "shared lane",
+    "setups": [
+      "open"
+    ],
+    "waitCycles": "yield",
+    "planes": [],
+    "obstacles": [],
+    "bands": [],
+    "starts": [
+      [
+        25,
+        60
+      ],
+      [
+        25,
+        132
+      ],
+      [
+        25,
+        204
+      ]
+    ],
+    "mirror": {
+      "redX": true,
+      "redY": true
+    },
+    "periods": [
+      {
+        "name": "Opening",
+        "seconds": 10
+      },
+      {
+        "name": "Main play",
+        "seconds": 45
+      }
+    ],
+    "defaults": {
+      "length": 24,
+      "width": 24,
+      "height": 26,
+      "bumper": 3,
+      "heading": 0,
+      "speed": 78,
+      "orders": [
+        "hold",
+        "hold",
+        "hold"
+      ]
+    },
+    "robotLimits": {
+      "perimeterIn": {
+        "value": 120,
+        "factId": "invented-perimeter"
+      },
+      "startingHeightIn": {
+        "value": 46,
+        "factId": "invented-starting-height"
+      },
+      "maxHeightIn": {
+        "value": 60,
+        "factId": "invented-max-height"
+      },
+      "maxExtensionIn": {
+        "value": 12,
+        "factId": "invented-max-extension"
+      },
+      "massLb": {
+        "value": 100,
+        "factId": "invented-mass"
+      }
+    },
+    "stations": [
+      {
+        "id": "blue-floor",
+        "label": "Blue loose tiles",
+        "kind": "retrieval",
+        "side": "blue",
+        "piece": "tile",
+        "at": [
+          128,
+          131
+        ],
+        "radiusIn": 120,
+        "stock": 40,
+        "floor": {
+          "positions": [
+            [
+              64,
+              40
+            ],
+            [
+              64,
+              66
+            ],
+            [
+              64,
+              92
+            ],
+            [
+              64,
+              118
+            ],
+            [
+              64,
+              144
+            ],
+            [
+              64,
+              170
+            ],
+            [
+              64,
+              196
+            ],
+            [
+              64,
+              222
+            ],
+            [
+              96,
+              40
+            ],
+            [
+              96,
+              66
+            ],
+            [
+              96,
+              92
+            ],
+            [
+              96,
+              118
+            ],
+            [
+              96,
+              144
+            ],
+            [
+              96,
+              170
+            ],
+            [
+              96,
+              196
+            ],
+            [
+              96,
+              222
+            ],
+            [
+              128,
+              40
+            ],
+            [
+              128,
+              66
+            ],
+            [
+              128,
+              92
+            ],
+            [
+              128,
+              118
+            ],
+            [
+              128,
+              144
+            ],
+            [
+              128,
+              170
+            ],
+            [
+              128,
+              196
+            ],
+            [
+              128,
+              222
+            ],
+            [
+              160,
+              40
+            ],
+            [
+              160,
+              66
+            ],
+            [
+              160,
+              92
+            ],
+            [
+              160,
+              118
+            ],
+            [
+              160,
+              144
+            ],
+            [
+              160,
+              170
+            ],
+            [
+              160,
+              196
+            ],
+            [
+              160,
+              222
+            ],
+            [
+              192,
+              40
+            ],
+            [
+              192,
+              66
+            ],
+            [
+              192,
+              92
+            ],
+            [
+              192,
+              118
+            ],
+            [
+              192,
+              144
+            ],
+            [
+              192,
+              170
+            ],
+            [
+              192,
+              196
+            ],
+            [
+              192,
+              222
+            ]
+          ],
+          "radiusIn": 4,
+          "heightIn": 2,
+          "captureReachIn": 4
+        }
+      },
+      {
+        "id": "blue-ring",
+        "label": "Blue ring",
+        "kind": "scoring",
+        "side": "blue",
+        "piece": "tile",
+        "at": [
+          220,
+          60
+        ],
+        "radiusIn": 16,
+        "points": 2,
+        "criterion": "Invented: a tile that passes down through the ring scores.",
+        "entry": {
+          "centerIn": [
+            220,
+            60,
+            36
+          ],
+          "kind": "ring",
+          "radiusIn": 12,
+          "factId": "invented-blue-ring"
+        }
+      },
+      {
+        "id": "red-floor",
+        "label": "Red loose tiles",
+        "kind": "retrieval",
+        "side": "red",
+        "piece": "tile",
+        "at": [
+          352,
+          133
+        ],
+        "radiusIn": 120,
+        "stock": 40,
+        "floor": {
+          "positions": [
+            [
+              416,
+              224
+            ],
+            [
+              416,
+              198
+            ],
+            [
+              416,
+              172
+            ],
+            [
+              416,
+              146
+            ],
+            [
+              416,
+              120
+            ],
+            [
+              416,
+              94
+            ],
+            [
+              416,
+              68
+            ],
+            [
+              416,
+              42
+            ],
+            [
+              384,
+              224
+            ],
+            [
+              384,
+              198
+            ],
+            [
+              384,
+              172
+            ],
+            [
+              384,
+              146
+            ],
+            [
+              384,
+              120
+            ],
+            [
+              384,
+              94
+            ],
+            [
+              384,
+              68
+            ],
+            [
+              384,
+              42
+            ],
+            [
+              352,
+              224
+            ],
+            [
+              352,
+              198
+            ],
+            [
+              352,
+              172
+            ],
+            [
+              352,
+              146
+            ],
+            [
+              352,
+              120
+            ],
+            [
+              352,
+              94
+            ],
+            [
+              352,
+              68
+            ],
+            [
+              352,
+              42
+            ],
+            [
+              320,
+              224
+            ],
+            [
+              320,
+              198
+            ],
+            [
+              320,
+              172
+            ],
+            [
+              320,
+              146
+            ],
+            [
+              320,
+              120
+            ],
+            [
+              320,
+              94
+            ],
+            [
+              320,
+              68
+            ],
+            [
+              320,
+              42
+            ],
+            [
+              288,
+              224
+            ],
+            [
+              288,
+              198
+            ],
+            [
+              288,
+              172
+            ],
+            [
+              288,
+              146
+            ],
+            [
+              288,
+              120
+            ],
+            [
+              288,
+              94
+            ],
+            [
+              288,
+              68
+            ],
+            [
+              288,
+              42
+            ]
+          ],
+          "radiusIn": 4,
+          "heightIn": 2,
+          "captureReachIn": 4
+        }
+      },
+      {
+        "id": "red-ring",
+        "label": "Red ring",
+        "kind": "scoring",
+        "side": "red",
+        "piece": "tile",
+        "at": [
+          260,
+          204
+        ],
+        "radiusIn": 16,
+        "points": 2,
+        "criterion": "Invented: a tile that passes down through the ring scores.",
+        "entry": {
+          "centerIn": [
+            260,
+            204,
+            36
+          ],
+          "kind": "ring",
+          "radiusIn": 12,
+          "factId": "invented-red-ring"
+        }
+      }
+    ],
+    "programs": {
+      "hold": {
+        "label": "Hold position",
+        "steps": []
+      },
+      "cycle": {
+        "label": "Collect tiles and score them in the ring",
+        "loop": true,
+        "steps": [
+          {
+            "at": [
+              128,
+              131
+            ],
+            "label": "Collect tiles",
+            "operation": "acquire",
+            "station": {
+              "blue": "blue-floor",
+              "red": "red-floor"
+            }
+          },
+          {
+            "at": [
+              220,
+              60
+            ],
+            "label": "Score in the ring",
+            "operation": "attempt",
+            "station": {
+              "blue": "blue-ring",
+              "red": "red-ring"
+            },
+            "outcome": "credited"
+          }
+        ]
+      },
+      "screen": {
+        "label": "Cross the blue lane",
+        "loop": true,
+        "steps": [
+          {
+            "at": [
+              110,
+              80
+            ],
+            "label": "Screen the near side of the lane",
+            "frame": "field"
+          },
+          {
+            "at": [
+              200,
+              190
+            ],
+            "label": "Screen the far side of the lane",
+            "frame": "field"
+          }
+        ]
+      }
+    },
+    "series": {
+      "matches": [
+        {
+          "id": "solo",
+          "basis": "Invented: each alliance cycles one robot while its partners hold at their starts.",
+          "setup": "open",
+          "roster": [
+            {
+              "side": "blue",
+              "slot": 1,
+              "plans": {
+                "Opening": "cycle",
+                "Main play": "cycle"
+              }
+            },
+            {
+              "side": "red",
+              "slot": 1,
+              "plans": {
+                "Opening": "cycle",
+                "Main play": "cycle"
+              }
+            }
+          ]
+        },
+        {
+          "id": "screened",
+          "basis": "Invented: a red robot crosses back and forth over the lane between the blue rack and the blue ring.",
+          "setup": "open",
+          "roster": [
+            {
+              "side": "blue",
+              "slot": 1,
+              "plans": {
+                "Opening": "cycle",
+                "Main play": "cycle"
+              }
+            },
+            {
+              "side": "red",
+              "slot": 1,
+              "plans": {
+                "Opening": "cycle",
+                "Main play": "cycle"
+              }
+            },
+            {
+              "side": "red",
+              "slot": 2,
+              "plans": {
+                "Opening": "screen",
+                "Main play": "screen"
+              }
+            }
+          ]
+        },
+        {
+          "id": "shared",
+          "basis": "Invented: a blue partner without a concept cycles the same rack and ring as the focal robot.",
+          "setup": "open",
+          "roster": [
+            {
+              "side": "blue",
+              "slot": 1,
+              "plans": {
+                "Opening": "cycle",
+                "Main play": "cycle"
+              }
+            },
+            {
+              "side": "blue",
+              "slot": 2,
+              "plans": {
+                "Opening": "cycle",
+                "Main play": "cycle"
+              }
+            },
+            {
+              "side": "red",
+              "slot": 1,
+              "plans": {
+                "Opening": "cycle",
+                "Main play": "cycle"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
