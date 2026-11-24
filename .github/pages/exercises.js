@@ -73,26 +73,6 @@ document.querySelectorAll('[data-pose]').forEach(button=>button.addEventListener
 }));
 new ResizeObserver(draw).observe(pitch);
 
-function openLinkedChapter(){
-  const target=document.getElementById(location.hash.slice(1));
-  if(target?.matches('details.chapter'))target.open=true;
-}
-openLinkedChapter();window.addEventListener('hashchange',openLinkedChapter);
-document.querySelector('.directory').addEventListener('click',e=>{
-  const a=e.target.closest('a[href^="#"]');
-  if(a){const chapter=document.getElementById(a.hash.slice(1));if(chapter)chapter.open=true;}
-});
-
-const filter=document.getElementById('skillFilter');
-function filterSkills(){
-  let count=0;
-  document.querySelectorAll('.skill').forEach(skill=>{
-    skill.hidden=filter.value!=='all' && !skill.dataset.stages.split(' ').includes(filter.value);
-    if(!skill.hidden)count++;
-  });
-  document.getElementById('skillCount').textContent=count+' supporting skill'+(count===1?'':'s');
-}
-filter.addEventListener('change',filterSkills);filterSkills();
 const form=document.getElementById('rateForm');
 function updateRate(){
   const inputs=Array.from(form.querySelectorAll('input'));
@@ -106,10 +86,6 @@ function updateRate(){
     'Enter a positive whole piece count and positive times within the field limits.';
 }
 form.addEventListener('input',updateRate);form.addEventListener('submit',e=>e.preventDefault());updateRate();
-
-document.querySelectorAll('.journey-map [data-chapter]').forEach(link=>{
-  link.addEventListener('click',()=>{ document.getElementById(link.dataset.chapter).open=true; });
-});
 
 document.getElementById('suspensionChoice').addEventListener('change',event=>{
   for(const row of document.querySelectorAll('[data-suspension-pose]'))
@@ -140,3 +116,6 @@ document.getElementById('dutyChoice').addEventListener('change',event=>{
 document.getElementById('coupledChoice').addEventListener('change',event=>{
   for(const row of document.querySelectorAll('[data-coupled-case]'))row.hidden=row.dataset.coupledCase!==event.target.value;
 });
+
+function openLinked(){document.getElementById(location.hash.slice(1))?.querySelector('details')?.setAttribute('open','');}
+openLinked();window.addEventListener('hashchange',openLinked);

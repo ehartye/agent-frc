@@ -48,6 +48,16 @@ The guides write commands such as `npm run kickoff` and `node scripts/design.mjs
 - **Claude Code:** `frc-setup` reports the root that the running session selected.
 - **Codex:** the plugin root is two directories above the `SKILL.md` file that Codex opened. The [runtime resolver](setup-health.md#resolve-the-plugin-used-by-this-check) confirms it against the host inventory.
 
+## Try the commands
+
+These run from the plugin root, installed or checked out. Fill the register and field profile from the team's sources before compiling, and open the generated HTML locally. For a quick trial, run the last command with [the invented training field](../examples/kickoff/training-field.json) as the profile. Outputs use new filenames, so earlier revisions are kept.
+
+```sh
+npm run rules -- init ../robot-project/register.json
+npm run rules -- compile ../robot-project/register.json ../robot-project/field-profile.json ../robot-project/reviewed-rules.json
+npm run kickoff -- --profile ../robot-project/reviewed-rules.json --output ../robot-project/field.html
+```
+
 ## Develop from a checkout
 
 For one Claude Code session, start `claude --plugin-dir PATH_TO_CHECKOUT` from a separate working project. The session loads the files in the checkout, including uncommitted edits.
