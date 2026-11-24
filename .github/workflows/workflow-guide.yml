@@ -26,10 +26,10 @@ jobs:
           node-version: '22'
       - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
         with:
-          python-version: '3.12'
+          python-version: '3.14'
           cache: pip
           cache-dependency-path: .github/workflows/workflow-guide.yml # the pinned versions are in this file
-      - run: python -m pip install Pillow==11.3.0 numpy==2.2.6
+      - run: python -m pip install Pillow==11.3.0 numpy==2.5.3
       - name: Prepare the workflow syntax checker used by the regression
         env:
           ARCHIVE_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
@@ -79,7 +79,7 @@ jobs:
       - if: steps.reach.outputs.run == 'true' || steps.reach.outputs.library == 'true' || steps.reach.outputs.audit == 'true'
         uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
         with:
-          python-version: '3.13'
+          python-version: '3.14'
           cache: pip
           cache-dependency-path: .github/workflows/workflow-guide.yml # the pinned versions are in this file
       # The same interpreter and kernel versions as the defaults of .github/workflows/design-publication.yml, so that install is exercised here.

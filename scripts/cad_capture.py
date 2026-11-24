@@ -4,8 +4,6 @@ import hashlib
 import io
 import json
 import math
-import os
-import subprocess
 from pathlib import Path
 from zipfile import BadZipFile, ZipFile
 
@@ -47,17 +45,7 @@ def reference_image(root, source, manifest):
             name = "FusionAssetName[Active]/Previews/big.png"
             require(archive.namelist().count(name) == 1, "No unambiguous active Fusion preview")
             require(archive.getinfo(name).file_size <= 32_000_000, "Preview exceeds 32 MB")
-            try:
-                return archive.read(name)
-            except NotImplementedError as exc:
-                interpreter = os.environ.get("FRC_ARCHIVE_PYTHON")
-                require(interpreter, "Fusion preview compression needs a compatible Python. For ZIP Zstandard use Python 3.14+ or set FRC_ARCHIVE_PYTHON to its executable.")
-                script = ("import sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); i=z.getinfo(sys.argv[2]); "
-                          "sys.exit(2) if i.file_size>32000000 else sys.stdout.buffer.write(z.read(i))")
-                run = subprocess.run([interpreter, "-c", script, str(source), name], capture_output=True)
-                if run.returncode:
-                    raise ValueError("Configured archive reader could not decode the active Fusion preview") from exc
-                return run.stdout
+            return archive.read(name)
     require(ref["kind"] == "verified-render", "Select an embedded preview or a verified renderer")
     receipt = json.loads(checked(root, ref["receipt"]).read_text(encoding="utf-8-sig"))
     require(pointer(receipt, ref["sourceDigestPointer"]) == manifest["source"]["sha256"], "Renderer receipt names another source")
