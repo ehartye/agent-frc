@@ -477,8 +477,8 @@
     },
     "replays": {
       "type": "array",
-      "x-supplier": "optional",
-      "description": "presentation.replays: playback of recorded trials in the same animation list and view as the mission animations. A replay is evidence playback, not a clearance case: the layout check neither runs nor credits it, and the receipt's case set does not include it.",
+      "x-supplier": "plugin",
+      "description": "One per trial in the library's trial record: playback of its nominal run in the same animation list and view as the mission animations. A replay is evidence playback, not a clearance case: the layout check neither runs nor credits it, and the receipt's case set does not include it.",
       "items": {
         "$ref": "#/$defs/replay"
       }

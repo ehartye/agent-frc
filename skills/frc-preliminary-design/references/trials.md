@@ -100,12 +100,7 @@ Name the library trial with `"trial": NAME` and copy its `fit` operation into th
 
 ## Play the recording as a replay
 
-Convert the recorded run to a replay set in the project and name it under `presentation.replays` in the judgement file. The replay becomes one more entry in the review page's animation list, after the mission animations. [Replay set format](review-layout-template.md#play-a-recorded-trial-in-the-animation-list)
-
-- Use the run's own timestamps.
-- List what the trial recorded under `recorded` and what was prescribed or interpolated under `display`.
-- Add an event at each deciding moment.
-- Put field parts and loose pieces that only the replay shows under `fieldBodies`.
+The layout check plays every trial in the record named as `trials` as a replay: one more entry in the review page's animation list, after the mission animations. It is built from the record's nominal run, on the run's own timestamps, with an event at each moment the run recorded. Nothing is written by hand. [What a replay shows](review-layout-template.md#play-a-recorded-trial-in-the-animation-list)
 
 Do not build a separate page or player for a trial. One design has one list of motions in one view.
 

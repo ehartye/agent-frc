@@ -43,7 +43,7 @@ The figures here are guidelines: about 30 to 80 solids, clearances to about 10 m
 | Geometry, a motion, a fixture | Regenerate the solids, then the layout check. While editing, add `--cases` for the stages the change affects |
 | A tolerance or reserve, a trial, a mass or voltage budget | The layout check |
 | The page, a title, a colour, a name, a version label, a status word, a document | `--view-only` when the page shows it, then the publication check. Never the layout check |
-| Publishing a draft | The layout check with `--carry`: only the cases whose inputs changed are measured. Then the publication check. The full check runs at the stage gate |
+| Publishing a draft | The layout check with `--carry`: only the pairs of solids whose inputs changed are measured. Then the publication check. The full check runs at the stage gate |
 | Marking a design effective | The command that marks it effective. It runs the stage gate itself: the full layout check on the committed design, once. Commit the design's inputs first |
 | The physics of an effective design | Never in place. Open the next minor version as a draft |
 

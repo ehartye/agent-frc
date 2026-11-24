@@ -70,7 +70,7 @@ node PLUGIN/scripts/design.mjs preliminary-check . cad/preliminary-design/releas
 | Changing geometry or motion only | `--physics-only` | Checks every case and the budgets. Writes no review page |
 | Changing names, colours, explanations or grouping | `--view-only` in place of `--write-view` | Rebuilds the review page from the saved receipt in seconds. Measures no case again |
 | Sharing the machine | `--workers N` | Sets the worker count. Use half the cores |
-| Publishing a draft after a change | `--write-view --carry --output ...` | Measures only the cases whose inputs changed since the saved receipt and carries the rest; the displaced control is always measured. A draft is published on this receipt |
+| Publishing a draft after a change | `--write-view --carry --output ...` | Measures only the pairs of solids whose inputs changed since the saved receipt and carries the rest; a rename or a note measures nothing, and the displaced control is always measured. A draft is published on this receipt |
 | Publishing the first draft | `--write-view --output ...` | The full check of every case |
 
 Read these lines on stderr:
@@ -133,7 +133,7 @@ For each interaction that decides the design:
    python -m frc_design_kernel measure cad/preliminary-design/releases/1.0/design.json --out cad/preliminary-design/releases/1.0/records --extremes --min-gap 1
    ```
 4. Name both records in the judgement file as `trials` and `measurements`, and run the layout check again. Each `[trial]` line gives the result word and says when a record is stale.
-5. Convert a recorded run to a replay set and name it under `presentation.replays`. Rebuild the review page with `--view-only`. If it refuses, it names the input that changed: run the full check.
+5. Run the layout check with `--write-view`. The review page plays each trial in the record as a replay; nothing else is written for it.
 
 After any change, ask the library what it made stale and rerun only that: `python -m frc_design_kernel status cad/preliminary-design/releases/1.0/design.json cad/preliminary-design/releases/1.0/records`.
 

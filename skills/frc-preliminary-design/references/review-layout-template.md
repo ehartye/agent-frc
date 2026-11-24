@@ -156,7 +156,7 @@ The schema marks each field `plugin` (derived), `project` (authored under `prese
 | `cases[].time`, `measure`, `positions` | optional | `presentation.caseTimelines[CASE_ID]` with one entry per frame: seconds, live-readout text and robot field position in millimetres. Without them the readout shows the percent of path and the case result. |
 | `cutaway` | optional | `presentation.cutaway`: `{label, hides: [fixture IDs], outline: [[x, y, z], ...]}`, for example a target aperture. |
 | `links` | optional | `presentation.links`: `[{label, href}]` header links to season pages, relative or `https:`. |
-| `replays` | optional | `presentation.replays`: replay sets named as `[{file}]`; see [Play a recorded trial in the animation list](#play-a-recorded-trial-in-the-animation-list). |
+| `replays` | plugin | One per trial in the library's trial record; see [Play a recorded trial in the animation list](#play-a-recorded-trial-in-the-animation-list). |
 
 The limiting pair on each path comes from pairs that include a moving body: a failure or open interval first, then the smallest gap or interval lower bound. An interval bound has no single limiting pose, so **Jump to limiting pose** needs a witness time. The receipt's `decision` records the final `status` and `firstUnmet` requirement: clearance findings first, then weight, voltage, the displaced control, premises outside their accepted range and missing inputs. The conceptual-design return criteria list each accepted conceptual premise from the receipt.
 
@@ -164,34 +164,14 @@ The limiting pair on each path comes from pairs that include a moving body: a fa
 
 A replay plays a recorded physics trial in the review's own viewer. It is one more entry in the animation list, after the mission animations and the other checked motions, with the same Play, speed, slider and readout. `?case=ID` opens it, so replay, animation and case IDs share one namespace. A replay is evidence playback and not a clearance case: the layout check neither runs nor credits it, the receipt's case set leaves it out, and the check results count only checked cases.
 
-Generate a replay set from the trial in the owning project, write it beside the judgement file, as JSON or gzipped JSON, and name it under `presentation.replays` as `{"file": "..."}`. Type no hash: the check reads the file and records its digest in the scene. A set has the schema `agent-frc/review-replays@1`, a `replays` list and optional `fieldBodies`. This example is abbreviated:
+The layout check builds one replay for each trial in the library's record that the judgement file names as `trials`, from the record's nominal run:
 
-```json
-{
-  "schema": "agent-frc/review-replays@1",
-  "fieldBodies": {"lane": {"name": "Release lane", "mesh": {"v": [[0, 0, 0]], "f": [[0, 1, 2]]}, "purpose": "...", "rationale": "..."}},
-  "replays": [{
-    "id": "lane-run", "label": "Lane run (recorded)", "basis": "What was recorded and under which model",
-    "objective": "The narrative objective it plays",
-    "evidence": [{"file": "lane-run.json", "role": "recorded run"}],
-    "recorded": ["Robot position"], "display": ["Hose shape"],
-    "time": [0, 0.05, 0.1], "measure": ["...", "...", "..."], "events": [{"frame": 2, "label": "At the lane"}],
-    "follow": "robot",
-    "bodies": {"frame": "robot", "arm": "arm", "lane": null},
-    "groups": {"robot": [[1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0]], "arm": [null]},
-    "tubes": [{"name": "Hose", "radiusMm": 8, "color": "#c9a227", "points": [[[0, 0, 0], [100, 0, 0]]]},
-              {"name": "Banner", "body": "banner", "points": [[[0, 0, 0], [100, 0, 0]]]}]
-  }]
-}
-```
+- `id` is `trial-` and the trial's name in lower case with hyphens, and `label` the name with "(trial replay)". `evidence` pins the record.
+- `time` is the run's own trace times, every row, or every n-th row and the last for a trace of more than 240 rows. `events` are the moments the run recorded, at the first frame at or after each.
+- The piece is drawn from the shape the record gives it, about its centre. Its group, `piece`, which the view follows, places it at each traced centre on the trial's plane, off the plane by `offPlaneMm` where the 3D engine traced that, and turns it by the spin summed over the trace about the plane's normal, signed the way both engines count spin, as the fit turns it. Other free pieces of a 3D trial follow their own traced centres.
+- The design's solids stand still where the trial's pose puts them: a solid the pose does not move keeps its drawn place (`null`), and the source's own payload solids are left out so the piece is not drawn twice. A surface a mover slides is drawn where it starts; the record traces the piece, not the surface.
 
-- `time` holds the seconds of each frame from the run, never decreasing. Its length is the frame count. `measure` is the optional readout per frame, and `events` names moments by frame, in order.
-- `bodies` maps each shown ID, a placed member or a field body, to the rigid group it moves with. `null` keeps the body where its mesh was drawn. `groups` gives each group one row-major 3×4 transform per frame, in the field frame and in millimetres, applied to the mesh as drawn. A `null` frame hides the group. `follow` names the group the robot view tracks; it needs a transform in every frame.
-- `fieldBodies` adds field parts and loose pieces that only replays show. Each needs a `name` and a closed triangle `mesh`, and may give `category`, `color`, `subsystem`, `material`, `purpose` and `rationale`. A field body counts as a fixture and never as robot mass.
-- `tubes` draws flexible parts along a centerline. `points` holds one centerline for a fixed part or one per frame for a moving one, each with the same number of points. Give `radiusMm` and `color` to draw a round tube. Give `body` instead, naming a field body the replay does not otherwise place, and that body's mesh follows the centerline: each vertex moves with the nearest point on it, measured from the first centerline.
-- `evidence` names every trial file the replay plays back, by project-relative path. List what came from the trial under `recorded` and what was prescribed or interpolated under `display`; display motions carry no contact or load claim.
-
-In the scene, each replay appears under `replays[]` with the same fields, except that the plugin resolves each body to `{mesh, group}` and adds `mesh` to a tube that names a `body`. `review-scene.mjs validate` checks the frame counts, groups, event order and tube bodies. A scene without replays is unchanged.
+In the scene, `bodies` maps each shown ID to `{mesh, group}` and `groups` gives each group one row-major 3×4 transform per frame, in the field frame and in millimetres, applied to the mesh as drawn. A `null` frame hides the group. The page also reads `measure`, a readout per frame, and `tubes`, flexible parts drawn along a centerline, which a replay of a trial record does not use. `review-scene.mjs validate` checks the frame counts, groups, event order and tube bodies. A scene without replays is unchanged.
 
 ## Shape the layout reviewers will inspect
 

@@ -114,7 +114,8 @@
       "detailed-design-release.test.mjs",
       "kernel-interactions.test.mjs",
       "kernel-layout.test.mjs",
-      "mechanical-readiness.test.mjs"
+      "mechanical-readiness.test.mjs",
+      "review-trial-replay.test.mjs"
     ]
   },
   "pages": ["**/*.md", "**/*.html", "**/*.css", "docs/**", "skills/**", "worksheets/**", ".github/pages/**"],
@@ -131,6 +132,7 @@
     "kernel-layout.test.mjs": ["scripts/kernel_layout/**", "scripts/layout_check.py", "examples/design-source/**"],
     "kernel-interactions.test.mjs": ["scripts/kernel_layout/**", "scripts/layout_check.py", "examples/design-source/**"],
     "kernel-layout-size.test.mjs": ["scripts/kernel_layout/**", "scripts/layout_check.py", "examples/design-source/**"],
+    "review-trial-replay.test.mjs": ["scripts/kernel_layout/**", "templates/preliminary-review/**", "test/headless-browser.mjs"],
     "project-ci.test.mjs": ["templates/**", "examples/sample-project/**", "scripts/project-ci-audit.mjs"],
     "design-audit.test.mjs": ["scripts/design-audit.mjs", "scripts/design-audit/**", "scripts/project-ci-audit.mjs"],
     "design-audit-library.test.mjs": ["scripts/design-audit.mjs", "scripts/design-audit/**"],

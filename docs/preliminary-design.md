@@ -96,7 +96,7 @@ Generate the solids with `python -m frc_design_kernel build SOURCE --out FOLDER`
 | `scopeGuidelines` | The project's own figures for solids and path tolerance, and an agreed `extendedBudget` |
 | `budgets` | The mass and current ledger, which names its limits. [Mass and voltage budgets](#mass-and-voltage-budgets) |
 | `premises`, `narrativeReview`, `missingInputs` | What the layout holds from upstream, the objectives it answers and what is still missing |
-| `presentation` | Everything the review page says: `components` with a purpose and rationale for each solid, titles, phases, replays and notes |
+| `presentation` | Everything the review page says: `components` with a purpose and rationale for each solid, titles, phases and notes |
 | `interactions`, `trials`, `measurements` | What each interaction decides and its trial, and the library's records. [Interactions, trials and adjustments](#interactions-trials-and-adjustments) |
 
 A stage holds:
@@ -143,7 +143,7 @@ Name every file by its project-relative path, as `{"file": "..."}`, and type no 
 "budgets": {"file": "cad/preliminary-design/releases/1.0/budgets.json"}
 ```
 
-The same form serves every reference in the judgement file and in the records it names: the budgets and their `requirements`, each premise acceptance, observation and `source`, `narrativeReview.source`, each `presentation.replays` entry and the `evidence` a replay lists, and each trial behind `transportedBy`, `freePath` or `supportedBy`. The check reads each file and records its digest in the receipt. A `sha256` typed beside a file is verified, and a stale one stops the check with `Changed evidence: FILE`.
+The same form serves every reference in the judgement file and in the records it names: the budgets and their `requirements`, each premise acceptance, observation and `source`, `narrativeReview.source`, and each trial behind `transportedBy`, `freePath` or `supportedBy`. The check reads each file and records its digest in the receipt. A `sha256` typed beside a file is verified, and a stale one stops the check with `Changed evidence: FILE`.
 
 ### The displaced control
 
@@ -182,7 +182,9 @@ A trial not in the record, a move that is not its fitted path or an undeclared s
 
 ### One trial, several stages
 
-One trial can run through several stages, such as a drop, a ride on a pocket and a seat. Give each stage a window of the trial: `"trial": "receive", "window": [0.42, 0.91]`. Both ends are times at which the fit kept a point, listed in the record as `fit.atS`. The stage's move is then the fitted path through the kept points inside the window. Set the trial's `fitToleranceMm` small enough that each stage boundary is a kept point.
+One trial can run through several stages, such as a drop, a ride on a pocket and a seat. Give each stage a window of the trial: `"trial": "receive", "window": [0.42, 0.91]`. Both ends are times at which the fit kept a point, listed in the record as `fit.atS`. The stage's move is then the fitted path through the kept points inside the window: their `throughMm` and, for a fit that turns, their `turnDeg` as the fit wrote them, about the same `turnAxis`. Set the trial's `fitToleranceMm` small enough that each stage boundary is a kept point.
+
+The library measures each traced sample against its own piece of the kept path. A fit it records as straying past its own tolerance, `maxDeviationMm` past `toleranceMm` or `maxTurnDeviationDeg` past `turnToleranceDeg`, does not stand for the trace, and no stage binds to it: run the trial with a smaller `fitToleranceMm`. A piece that only turned in place has no path to bind.
 
 ### A free payload path
 
@@ -326,9 +328,9 @@ A draft is published on the check of what changed. Add `--carry`, with the saved
 node scripts/design.mjs preliminary-check REPOSITORY cad/preliminary-design/releases/1.0/judgement.json --write-view --carry --output cad/preliminary-design/releases/1.0/receipt.json
 ```
 
-A case is carried from the earlier receipt when nothing it drew on changed: the solids present in it, with their volume, bounds and placement, its motion and the poses it names, the groups, the declared contacts, and its stage without the labels (its allowance, depth, absent solids, required contacts, compression rules and payload paths). The library's `used` block for the motion says what it drew on, and each case row records one digest of all of it as `inputsSha256`. Every other case is measured again. The displaced control is always measured again. A renamed design, an edited note and a new library or plugin version change nothing a case drew on, so they carry everything.
+In every case only the pairs of solids whose solids, placements, motion or rules changed are measured again; the design library carries every other pair from the case's row in the earlier receipt. It decides from an identity of each solid made from figures the build already produces: its volume, centre, second moments and box, and its group's placement along the motion. A renamed design, a renamed solid, an edited note and a new library or plugin version change no identity, so they measure nothing. A changed allowance or search depth measures every pair of its case. A required contact or a squeeze is carried when its two solids and its rule are unchanged, and a withdrawal when no solid of its case changed. The attachment report carries the touching gaps and mount distances of unchanged solids. The displaced control is always measured again.
 
-Each case row says `checked: "rerun"` or `checked: "carried from FILE"`, and the receipt's `carriedFrom` names the receipt and how many cases came from it. The `[carry]` line gives the counts and the time. Staging accepts the receipt. The stage gate does not: the command that marks a design effective runs the full check on the committed design and trusts nothing carried.
+Each case row keeps what the next carry needs: `clearance` holds the library's inputs, declared contacts and its own rows, one for each entry of `pairs`. Its `checked` says what was done: `measuredSolids`, `pairsMeasured`, `pairsCarried`, `renamed`, and `measuresMeasured` and `measuresCarried` for its contacts, squeezes and withdrawal. The receipt's `carriedFrom` names the earlier receipt and totals the pairs measured and carried, and the `[carry]` line gives the totals and the time. Staging accepts the receipt. The stage gate does not: the command that marks a design effective runs the full check on the committed design and trusts nothing carried.
 
 ### Rebuild the review without rerunning the cases
 
