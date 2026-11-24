@@ -23,6 +23,9 @@
  *      no brackets;
  *   7. across projects (given several): custom code that looks alike in more than one, as library candidates.
  *
+ * It also lists, as information, every motion no motor drives, with the cause it states (by hand, spring, gravity or
+ * piece), from the top file and its subsystem files: the motions whose movement no motor, current or bus voltage stands behind.
+ *
  * A project declares folders to skip and known exceptions in .design-audit.json at its root:
  *
  *   {"skip": ["archive/"], "exceptions": [{"path": "cad/assembly/", "form": "kernel-outside-custom", "reason": "Why."}]}
@@ -203,6 +206,28 @@ function judgementFindings(root, files) {
   return {findings, info};
 }
 
+/** The motions of a design source and its subsystem files that no motor drives, each with its stated cause and the file it is in. */
+export function motorless(source) {
+  const files = [{file: source.file, json: source.json}];
+  for (const entry of Array.isArray(source.json.subsystems) ? source.json.subsystems : []) {
+    const file = path.posix.join(path.posix.dirname(source.file), String(entry?.file ?? ''));
+    try { files.push({file, json: JSON.parse(readText(source.root, file))}); } catch { /* an unreadable subsystem file is the library's to report */ }
+  }
+  const found = [];
+  for (const {file, json} of files)
+    for (const [motion, entry] of Object.entries(json?.motions ?? {}))
+      if (!(entry?.drive && Object.keys(entry.drive).length)) found.push({motion, by: entry?.by ?? null, file});
+  return found.sort((a, b) => a.motion.localeCompare(b.motion));
+}
+
+/** The information line that lists the motions no motor drives, or null when a motor drives every one. */
+function motorlessLine(source) {
+  const motions = motorless(source);
+  if (!motions.length) return null;
+  const said = motions.map(m => m.motion + ' (' + (m.by ? 'by ' + m.by : 'no cause stated') + (m.file === source.file ? '' : ', in ' + m.file) + ')');
+  return {file: source.file, form: 'motions-without-a-motor', motions, text: plural(motions.length, 'motion') + ' without a motor: ' + said.join(', ')};
+}
+
 /** Audit one project. Returns {root, sources, copies, findings, info, exceptions, problems, coverage, customs}. */
 export function auditDesign(root, {skip = [], run = true, python} = {}) {
   const own = declared(root), skipped = [...new Set([...skip, ...own.skip].map(folderOf))].sort();
@@ -214,6 +239,8 @@ export function auditDesign(root, {skip = [], run = true, python} = {}) {
     registryOf.set(source, result.registry);
     findings.push(...result.findings); info.push(...result.info);
     source.summary = {solids: result.solids, customSolids: result.customSolids, trials: Object.keys(result.trials).length, custom: Object.keys(result.registry).length};
+    const moved = motorlessLine(source);
+    if (moved) info.push(moved);
   }
   for (const copy of copies) {
     const same = sources.find(source => source.sha256 === copy.sha256);

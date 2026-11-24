@@ -375,7 +375,9 @@ class KernelLayoutCheck(unittest.TestCase):
 
     def test_a_carried_payload_that_leaves_its_carrier_stops_the_check(self):
         source, judgement = self.copy(self.source), self.copy(self.judgement)
+        # Without carriedBy the article must move with the carrier by its own operations; 70 mm is not the carrier's 80.
         del source["groups"]["carried article"]["carriedBy"]
+        source["motions"]["remove-carrier"]["moves"]["carried article"] = slide([0, 0, 70])
         judgement["motions"] = {"remove-carrier": {"carriedWith": {"carried article": "carrier"}}}
         self.put("design.json", source)
         self.put("judgement.json", judgement)

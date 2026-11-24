@@ -57,9 +57,7 @@ def ready(project, release, name):
 
     def edit(name, change):
         data = change(json.loads((folder / name).read_text(encoding="utf-8")))
-        (folder / name).write_text(json.dumps(data, indent=2) + "
-", encoding="utf-8", newline="
-")
+        (folder / name).write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8", newline="\n")
 
     edit("design.json", tray)
     edit("judgement.json", judged)
@@ -70,8 +68,7 @@ def ready(project, release, name):
                     [sys.executable, "-B", str(PLUGIN / "scripts/stage_preliminary_review.py"), release, "--design-name", name]):
         done = subprocess.run(command, cwd=project, capture_output=True, text=True)
         if done.returncode:
-            raise SystemExit(" ".join(command[:3]) + " failed:
-" + done.stdout + done.stderr)
+            raise SystemExit(" ".join(command[:3]) + " failed:\n" + done.stdout + done.stderr)
 
 
 if __name__ == "__main__":

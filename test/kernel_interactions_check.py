@@ -71,6 +71,16 @@ class KernelInteractionsCheck(unittest.TestCase):
     def copy(self, data):
         return json.loads(json.dumps(data))
 
+    def on_fit(self, operation):
+        """The source with the article's acquire move written as the trial's fit. The fit ends where the trial left the
+        article, off its ejector's joint, so the turn starts from a pose with the article as drawn instead of after it."""
+        source = self.copy(self.source)
+        source["motions"]["acquire"]["moves"]["carried article"] = [operation]
+        source["motions"]["acquire"]["by"] = "piece"
+        source["poses"]["loaded"] = {}
+        source["motions"]["loaded-turn"]["from"] = "loaded"
+        return source
+
     def texts(self, verdict):
         return [row["text"] for row in verdict["unmet"]]
 
@@ -165,10 +175,7 @@ class KernelInteractionsCheck(unittest.TestCase):
         self.assertIn("The move of carried article in acquire is not the path trial " + TRIAL + " fitted. Write its fit operation as the move in the design source",
                       self.texts(unfit))
         fit = json.loads((self.root / RELEASE / "records/trials.json").read_text(encoding="utf-8"))["trials"][TRIAL]["fit"]
-        source = self.copy(self.source)
-        source["motions"]["acquire"]["moves"]["carried article"] = [fit["operation"]]
-        source["motions"]["acquire"]["by"] = "piece"
-        self.refresh(source, trial=False, extremes=False)
+        self.refresh(self.on_fit(fit["operation"]), trial=False, extremes=False)
         _, fitted, _ = self.check()
         self.assertFalse(any("fitted" in gap for gap in self.texts(fitted)), fitted["unmet"])
         # A window of the trial binds the stroke between two kept points of the fit; any other time is refused.
@@ -185,10 +192,7 @@ class KernelInteractionsCheck(unittest.TestCase):
 
     def test_a_free_path_or_a_fixture_moves_a_payload_only_on_its_trial(self):
         fit = json.loads((self.root / RELEASE / "records/trials.json").read_text(encoding="utf-8"))["trials"][TRIAL]["fit"]["operation"]
-        source = self.copy(self.source)
-        source["motions"]["acquire"]["moves"]["carried article"] = [fit]
-        source["motions"]["acquire"]["by"] = "piece"
-        self.refresh(source, trial=False, extremes=False)
+        self.refresh(self.on_fit(fit), trial=False, extremes=False)
         judgement = self.copy(self.judgement)
         judgement["motions"] = {"acquire": {"freePath": {"carried article": dict(basis="Invented: the article rolls free", trial=TRIAL)}}}
         self.put("judgement.json", judgement)

@@ -38,15 +38,15 @@ function handoff(a) {
 try{
  if(command==='new'){if(!input||rest.length)throw Error('Usage: design new output.json [project.json]');const project=out?readJson(out):{};const convention=projectFrameProfile(input);if(project.frameProfile===undefined&&convention!==undefined)project.frameProfile=convention;write(input,canonicalStringify(createDesign(project)));console.log('Created editable design artifact');}
  else if(command==='preliminary-check'){
-   if(!input||!out)throw Error('Usage: design preliminary-check PROJECT JUDGEMENT.json [--write-view] [--view-only [--from-receipt RECEIPT.json]] [--physics-only] [--cases A,B] [--require-checked] [--workers N] [--quiet] [--output RECEIPT.json]');
-   // Inherited streams keep the receipt on stdout and let per-case progress reach stderr as each case finishes.
+   if(!input||!out)throw Error('Usage: design preliminary-check PROJECT JUDGEMENT.json [--judge-only] [--require-checked] [--json] [--workers N] [--quiet]');
+   // Inherited streams keep the verdict on stdout and let progress reach stderr as each record is carried or measured.
    const run=spawnSync(process.env.PYTHON||(process.platform==='win32'?'python':'python3'),
      ['-B',path.join(import.meta.dirname,'layout_check.py'),input,out,...rest],{stdio:'inherit'});
    if(run.error)throw run.error;
    process.exitCode=run.status??2;
  }
  else if(command==='effective-readiness'){
-   // Informational report on the exit criteria for marking a preliminary design effective; it never changes a receipt.
+   // Informational report on the exit criteria for marking a preliminary design effective; it judges the records and writes nothing.
    const run=spawnSync(process.execPath,[path.join(import.meta.dirname,'effective-readiness.mjs'),...process.argv.slice(3)],{stdio:'inherit'});
    if(run.error)throw run.error;
    process.exitCode=run.status??2;
