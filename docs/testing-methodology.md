@@ -10,7 +10,7 @@ A check exists for one of four purposes. Each purpose has its own moment. A chec
 |---|---|---|---|
 | Feedback | Does what I just changed work? | While editing, on what changed | The designer or agent, locally |
 | Stage gate | Does this meet the criteria for the next stage? | Once, when a design changes stage | The agent, with the plugin, on the committed design |
-| Regression | Did this change break something already accepted? | When a change touches what the accepted result depends on | The cheapest check that can tell |
+| Regression | Does the whole design still meet its criteria? | Once, before the design changes stage, by judging it in full | The agent, with the plugin, on the committed design |
 | Publishing hygiene | Is what we publish intact and safe to show? | Before every push, and on every push | The agent before pushing; the project's own CI on the push, in seconds |
 
 The stages of a design are draft to effective, effective preliminary design to detailed design, and detailed design to build.
@@ -19,36 +19,42 @@ The stages of a design are draft to effective, effective preliminary design to d
 
 The plugin and the projects that use it are pre-release. The goal is iteration speed. Protect the core promises and a few whole journeys. Do not add tests for old formats, migration paths or hypothetical misuse.
 
-## Run a check only when the change is relevant to it
+## Run the check you need
 
-A check runs when the change could break what the check protects. A change to a page, a title, a name, a status or a document never triggers a model evaluation. A change to geometry never needs the document tests.
+The person or agent doing the work chooses what to run. A change to a page, a title, a name, a status or a document never triggers a model evaluation. A change to geometry never needs the document tests.
 
 ### In a robot project
 
 | The change touches | What runs | Who runs it |
 |---|---|---|
-| Geometry, a motion, a tolerance or reserve, a fixture, a mass or voltage budget | The layout check with `--carry`: only the pairs of solids the change affects are measured | The agent |
+| Geometry, a motion, a tolerance or reserve, a fixture, a mass or voltage budget | The layout check of the thing being worked on, as the caller names it | The agent |
 | A trial, an assumed input or its range, an approach range or an adjustment | That trial's campaign, run by the library | The agent, with the library |
 | A mechanical adjustment, or a solid it moves | The adjustment-extremes measurement: the layout at both ends of each mechanical adjustment | The agent, with the library |
 | The review page, titles, colours, the view, a design name, a version label, a status word, a document | The publication check: index, receipt, scene, animation | The agent, before pushing |
-| A draft being published | The layout check with `--carry` on what changed, then the publication check | The agent, before pushing |
+| A draft being published | The layout check, then the publication check | The agent, before pushing |
 | A design being marked effective | The stage gate: the full layout check and the readiness report, on the committed design | The agent, once, when the design is marked effective |
-| The physics of an effective design, edited in place | Refused by the publication check. Open the next minor version as a draft | The agent, before pushing |
+| The physics of an effective design | Do not edit it in place. Open the next minor version as a draft | The agent |
 | Anything pushed, on any branch | The scan for personal paths and secrets, the site check and, on the default branch, publishing | The project's own CI |
 
 A push only publishes. The project's CI runs no design check, no trial and no plugin: it scans, checks that the published site is whole and deploys it.
 
-A draft is work in progress. It is published on the designer's own layout check of what changed, which carries everything the change did not touch from the draft's last receipt, and it carries the in-progress label. It cannot become effective without passing the stage gate, which the command that marks it effective runs. The gate never takes a saved receipt for its result, and it refuses a design whose inputs are not committed.
+A draft is work in progress. It is published on the designer's own layout check, and it carries the in-progress label. It cannot become effective without passing the stage gate, which the command that marks it effective runs. The gate never takes a saved receipt for its result, and it refuses a design whose inputs are not committed.
 
 An effective design is frozen. Any change to its physics is a new draft, and that draft passes the stage gate before it replaces the baseline. This is how regression is prevented for designs: by the version scheme, not by rerunning the old design.
 
-#### Rerun only the pairs that changed
+#### No change detection
 
-A case reruns only the pairs of solids whose solids, placements, motion or rules changed. Attachment and mass at a pose carry when nothing at that pose moved. The displaced control is always measured. The decision uses figures the build already produces, such as each solid's volume, bounds and placement, and costs seconds. It never reads file bytes, names, notes, status words or version numbers, so a rename or an edited note measures nothing. The stage gate always runs everything.
+No code works out what changed in a design in order to decide what to test again, or whether a result stands. Two attempts, digests of each case's inputs and then fingerprints of each solid, cost more time than they saved and left holes a stale result could pass through.
 
-#### Check only the releases a change touches
+- Checks run cheapest first and stop early.
+- While iterating, the caller names the one thing to judge. It runs each time it is asked.
+- A log records what ran, when and with what result. It decides nothing.
+- Before a design is marked effective it is judged in full, from nothing.
+- Reusing a result needs a measured cost and the owner's decision first.
 
-The publication check validates only what the change touches. A release is touched when a file in its own published or input folder changes. A change to its index entry, such as marking it superseded, does not touch it. An effective release that a change leaves alone stands on its published files, as its inputs already do. No reader for an earlier format is added.
+A figure that decides no testing is not covered, such as a measured shape kept beside the rules and flagged when it no longer matches.
+
+The judge that works this way is being built. Until it replaces them, the layout check still reuses results it takes as unchanged, and the stage gate refuses every design. Do not extend or repair either.
 
 ### In the plugin
 
@@ -112,7 +118,7 @@ Everything else is standard or low tier. `.testing/risk.yml` records the tier of
 
 A change that reaches the mechanical-review controls takes about 82 seconds in the edit lane. That is over the guideline and accepted for now; run one class with `npm test -- mechanical-readiness --name CLASS` while editing. [Every command and how the selection works](project-ci.md#how-the-plugin-repository-tests-itself).
 
-These are guidelines. When a run is heading past its guideline, stop and tell the owner what is slow and why. Agree a bounded extended budget before going on. Do not wait out a long run in silence, and do not repeat a run whose inputs have not changed.
+These are guidelines. When a run is heading past its guideline, stop and tell the owner what is slow and why. Agree a bounded extended budget before going on. Do not wait out a long run in silence. A run that can be long reports where it is while it runs.
 
 ## The plugin is a tool of the coding agent, not a dependency of the project
 
@@ -135,8 +141,8 @@ Building solids and measuring them belong to a separate library, `frc-design-ker
 - One owner per invariant. Search for an existing test of the same behaviour and extend it.
 - Prove it can fail. Keep a control that the check rejects.
 - Test behaviour at a seam: a command, an input, a written file. Do not assert on a mock alone or against the value just computed.
-- Do not prove an unchanged result again. A local result is not repeated in CI, except at a stage gate.
-- Decide whether to rerun from what each check actually uses, at the smallest unit of work; never from file bytes, labels, names, notes, status words or version numbers. The decision costs seconds and uses figures the build already produces, with no separate comparison pass. For a design, the unit is a pair of solids: [rerun only the pairs that changed](#rerun-only-the-pairs-that-changed).
+- A local result is not repeated in CI, except at a stage gate.
+- A design check works out nothing about what changed: [no change detection](#no-change-detection). Choosing which of the plugin's own tests to run, as `npm run test:changed` does, is separate.
 - Keep tests independent of the checkout: no fixed ports, no fixed temporary paths, no absolute paths.
 - Say which lane a new test belongs to, in the file's leading comment: `/** @lane merge */`, or `# @lane merge` in Python. Add `@subject PATH` there for each file the test exercises only through a subprocess. The tier of the subject decides the lane: a test of a critical area is `merge` even when it needs the CAD kernel, and a CAD kernel or browser test of a standard or low area is `scheduled`. A slow test of a low-tier area belongs in the release run.
 - While editing, run only what is relevant. Run the merge lane before merging. Run everything only before a release tag or when asked. The hosted run on the default branch executes the full portable suite after every merge.
