@@ -20,6 +20,17 @@ Inspect ordinary and terminal credit separately. Compare each robot’s acquired
 
 Freeze a held-out setup before selecting or editing the role. Replay it from the same rules edition. Save both input hashes, profiles, peers and scored witnesses, then write the fallback, confidence limits and next test into the [strategic narrative](game-to-robot-strategy.md). A tied score with different blocked time can still change which robot should yield a corridor. The field model’s credited action supplies a conditional opportunity estimate until the installed mechanism demonstrates that criterion and rate.
 
+## Play a concept bot in a role
+
+A role may set the focal robot's [concept bot](concept-bots.md) with `concept`. The focal robot in each of that role's cells then drives that concept. A role without `concept` leaves the focal robot as the profile defines it. There are two forms:
+
+| Form | Meaning |
+| --- | --- |
+| `{"file": "...", "sha256": "..."}` | A concept file, resolved from the study file's folder, with the SHA-256 of its bytes. The comparison validates the document and embeds it in a copy of the profile. A stale digest stops the run and names the file |
+| `{"id": "..."}` | A concept already embedded in the profile's `rehearsal.concepts`, for example by kickoff `--concept`. An ID that is not embedded stops the run |
+
+A bare string such as `"concept": "placer"` is refused. Two roles may pin the same file. Two different files with the same concept ID are refused. A study without concept roles plays exactly as before. `compareRoles` accepts 2 to 12 roles; its `maxRoles` option raises the cap, which a [concept study](concept-study.md) uses for its swept variants. To rank several concepts and sweep their assumptions, write a concept study rather than comparing them by hand.
+
 ## Hand the selected opportunity to the robot designers
 
 Choose the focal role, partner setup, design period and station in the field lab. **Save selected role for design** downloads a small selection file containing the original profile and study digests. Keep the source files available at the paths in that selection, relative to your project root. For the generated lab, paths are relative to the build working directory if it contains both inputs, otherwise their common parent. A pair on different drives can still be studied by authoring project-relative references under one project root.

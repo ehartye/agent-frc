@@ -8,7 +8,9 @@ Write the concept of operations (ConOps) for the proposed match role. Describe h
 
 Rehearse the same scoring opportunity with competing approaches. Show headings, clearance on the field, partner traffic, pickup and delivery heights, travel speed, acquisition time, release rate, reset time and the cost of retrying after a miss. Label each concept-bot value as required, assumed or observed, with its basis, and estimate mass as a range against the inspection limit. Check each concept against the rules model's robot limits and target entries. Where pickup behavior is outside the rehearsal tool's support, record that assumption and leave its result open.
 
-Move to **preliminary design** when the team can replay its chosen cycle with the selected concept bot and explain why it chose that approach. It must also say, from the concept's labelled ranges, how much slower, larger or less accurate the robot could be before the choice would change.
+Compare the candidates in a [concept study](concept-study.md). It plays each concept bot and one-at-a-time variants of its assumed numbers in the same match contexts. It ranks the candidates by mean margin in expected points, beside their mass, features and a Pareto flag. It marks the ranking fragile when one swept assumption would change the leader, and it gives each swept quantity's competitive range with the other quantities held at base. The ranking is a recommendation. The student selects the concept with `concept:select` and records why.
+
+Move to **preliminary design** when the team can replay its chosen cycle with the selected concept bot and explain why it chose that approach. It must also say, from the concept's labelled ranges, how much slower, larger or less accurate the robot could be before the choice would change. The selection's premise records state exactly that: each is one-sided, bounded by the last competitive value where the study found a break-even, plus a mass premise. Preliminary design lists them as accepted premises, and its layout check reports `reopen` when the design leaves one.
 
 ## 2. Preliminary design
 
