@@ -9,6 +9,7 @@ import * as tournament from '../scripts/concept-tournament.mjs';
 import * as select from '../scripts/concept-select.mjs';
 import {writeResultsPage} from '../scripts/concept-results-page.mjs';
 import {applyProfileDefaults} from '../scripts/concept-bot.mjs';
+import {sweepableQuantities} from '../scripts/concept-study.mjs';
 
 const read=rel=>JSON.parse(readFileSync(new URL(rel,import.meta.url),'utf8'));
 const training=read('../examples/kickoff/training-field.json');
@@ -80,6 +81,16 @@ test('cost signals come from the concept with its profile defaults',()=>{
     adjustableElevation:true,firesWhileMoving:true,assumedShare:27/28});
   assert.deepEqual(signals('front-intake-placer'),{massLbMax:110,inputPorts:1,outputPorts:1,ranged:false,turret:false,
     adjustableElevation:false,firesWhileMoving:false,assumedShare:21/22});
+});
+
+test('every sweepable quantity has a fixed better direction',()=>{
+  const higher=['topSpeedInS','accelInS2','rotationDegS','successFraction','capacity'],lower=['secondsPerPiece','transferS'];
+  for(const id of ['turret-shooter','fixed-shooter','front-intake-placer'])
+    for(const {pointer} of sweepableQuantities(read('../examples/concept-bots/'+id+'.json'))){
+      const field=pointer.includes('/capacity/')?'capacity':pointer.split('/').at(-2);
+      assert.equal(tournament.betterDirection(pointer),higher.includes(field)?'higher':lower.includes(field)?'lower':'unlisted',pointer);
+    }
+  assert.throws(()=>tournament.betterDirection('/body/frameLengthIn/value'),/frameLengthIn/);
 });
 
 // A two-candidate concept study without sweeps, pinned beside its profile and concepts in a temporary folder.

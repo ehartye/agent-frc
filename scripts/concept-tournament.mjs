@@ -1,7 +1,8 @@
 // Concept study tournament: play every concept candidate and its one-at-a-time assumption variants in the same
 // published match contexts, then rank the base candidates and report fragility and competitive ranges.
 //
-// npm run concept:study -- STUDY.json --out RESULTS.json [--html PAGE.html] [--allow-long] [--max-matches N] [--full]
+// node <plugin-root>/scripts/concept-tournament.mjs STUDY.json --out RESULTS.json [--html PAGE.html] [--allow-long] [--max-matches N] [--full]
+//   (npm run concept:study -- … in a plugin checkout)
 //   STUDY.json is an agent-frc/alliance-study@1 study. It pins its rules profile as profile: {file, sha256} and each
 //   candidate's concept bot as concept: {file, sha256}, both resolved from the study's folder; conceptSweeps is
 //   optional (scripts/concept-study.mjs). Exit 0 on success, 2 on invalid input, 3 when the run budget stops it.
@@ -14,7 +15,7 @@
 import path from 'node:path';
 import {readFileSync,writeFileSync,existsSync,mkdirSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-import {pathToFileURL} from 'node:url';
+import {pathToFileURL,fileURLToPath} from 'node:url';
 import {loadScoreObservations} from './score-observations.mjs';
 import {embedConcepts} from './kickoff.mjs';
 import {applyProfileDefaults,LABELS} from './concept-bot.mjs';
@@ -153,6 +154,18 @@ export function summaryCell({context,match,role,focal,margin,score,ordinary,term
     margin,score,ordinary,terminal,byRobot,regret,marginalAlliancePoints,marginChange};
 }
 
+// The better direction of each sweepable quantity: faster, quicker to accelerate and turn, more accurate and holding
+// more pieces is better; a shorter time per piece or transfer is better. concept-select bounds a premise only on the
+// worse side of this direction, and leaves the better side at the validity limit.
+const HIGHER=new Set(['topSpeedInS','accelInS2','rotationDegS','successFraction']), LOWER=new Set(['secondsPerPiece','transferS']);
+export function betterDirection(pointer) {
+  const fields=pointer.split('/').slice(1,-1), field=fields.at(-1);
+  if(fields[0]==='storage' && fields[1]==='capacity')return 'higher';
+  if(HIGHER.has(field))return 'higher';
+  if(LOWER.has(field))return 'lower';
+  throw Error('No better direction is defined for '+pointer+' ('+field+').');
+}
+
 const LIMIT_UNITS={perimeter:'in',startingHeight:'in',maxHeight:'in',extension:'in',mass:'lb'};
 // concept:check's limit screen of one concept against the profile: each check's status and the exceedances.
 export function limitScreen(document,profile) {
@@ -225,14 +238,15 @@ export async function runTournament(studyFile,{maxMatches=DEFAULT_MAX_MATCHES,al
     study:{file:refer(studyPath),sha256:hash(studyBytes)},profile:{file:refer(profilePin.file),sha256:study.profile.sha256},concepts,
     side:prepared.side,contexts:prepared.contexts.map(({id,basis})=>({id,basis})),plannedMatches:planned,
     leader:analysis.leader,leaderDecidedBy:analysis.leaderDecidedBy,ranking:analysis.ranking.map(r=>({...r,massLb:mass(r.id),limits:limits.get(r.id)??null})),fragility:analysis.fragility,
-    competitiveRanges:analysis.competitiveRanges,axes:expansion.axes,
+    competitiveRanges:analysis.competitiveRanges.map(r=>({...r,betterDirection:betterDirection(r.pointer)})),
+    axes:expansion.axes.map(a=>({...a,betterDirection:betterDirection(a.pointer)})),
     variants:expansion.variants.map(({document,...v})=>({...v,concept:document?.id??null})),invalidVariants:analysis.invalidVariants,
     scope:comparison.scope+' '+EXPECTED_POINTS_SCOPE,detail:full?'full':'summary',
     comparison:full?comparison:{...comparison,cells:comparison.cells.map(summaryCell)}};
   return {status:'ok',results};
 }
 
-const USAGE='Usage: npm run concept:study -- STUDY.json --out RESULTS.json [--html PAGE.html] [--allow-long] [--max-matches N] [--full]';
+const USAGE='Usage: node "'+fileURLToPath(import.meta.url)+'" STUDY.json --out RESULTS.json [--html PAGE.html] [--allow-long] [--max-matches N] [--full]';
 
 // The command line. Returns the exit code; io injects the clock and output for tests.
 export async function main(args,{now,log=console.log,error=console.error}={}) {

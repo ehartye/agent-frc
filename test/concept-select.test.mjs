@@ -11,12 +11,14 @@ import * as select from '../scripts/concept-select.mjs';
 import * as page from '../scripts/concept-results-page.mjs';
 
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
-const speed='/drive/topSpeedInS/value',success='/outputs/0/successFraction/value',intake='/inputs/0/secondsPerPiece/value',transfer='/storage/transferS/value';
+const speed='/drive/topSpeedInS/value',success='/outputs/0/successFraction/value',intake='/inputs/0/secondsPerPiece/value',transfer='/storage/transferS/value',
+  release='/outputs/0/secondsPerPiece/value';
 const curve=(values,base,cut)=>values.map(value=>({value,meanMargin:value===base?5:4,worstMargin:3,competitive:cut(value)}));
 
 // A hand-built concept-results@1 file with known ranges, beside its study and the invented turret concept.
-// The turret leads the placer (mean 5 against 4). Its four swept pointers: top speed breaks even above, success
-// fraction below, intake time on both sides, and transfer time never. The placer is over the 100 lb mass limit and
+// The turret leads the placer (mean 5 against 4). Its five swept pointers: top speed (higher is better) breaks even
+// below; success fraction (higher is better) below; intake time (lower is better) on both sides, a non-monotonic
+// sweep; release time (lower is better) only below, on its better side; and transfer time never. The placer is over the 100 lb mass limit and
 // is not competitive at its base value; it would overtake at a top speed of 300.
 function project(t,over={}){
   const root=mkdtempSync(path.join(tmpdir(),'concept-select-'));t.after(()=>rmSync(root,{recursive:true,force:true}));
@@ -43,10 +45,11 @@ function project(t,over={}){
           exceeds:[{check:'mass',value:110,limit:100,unit:'lb'}]}}],
     fragility:{fragile:true,flips:[{variant:'turret@'+success+'=0.4',pointer:success,value:0.4,newLeader:'placer'}]},
     competitiveRanges:[
-      range(speed,180,[90,135,180,225,270],[90,180],{low:null,high:225}),
+      range(speed,180,[90,135,180,225,270],[135,270],{low:90,high:null}),
       range(success,0.8,[0.4,0.6,0.8,1],[0.6,1],{low:0.4,high:null}),
       range(intake,0.5,[0.25,0.375,0.5,0.625,0.75],[0.375,0.625],{low:0.25,high:0.75}),
       range(transfer,0.75,[0.375,0.75,1.125],[0.375,1.125],{low:null,high:null}),
+      range(release,0.4,[0.2,0.3,0.4,0.5,0.6],[0.3,0.6],{low:0.2,high:null}),
       {role:'placer',pointer:speed,label:'assumed',base:150,runnerUp:'turret',runnerUpMeanMargin:5,competitiveAtBase:false,range:null,
         breakEven:{low:null,high:null},overtakes:{low:null,high:300},margins:curve([75,150,300],150,v=>v===300),heldAtBase:true,
         statement:'Competitive where the mean margin is at least 5 expected points. Other swept quantities are held at their base values.'}],
@@ -78,16 +81,23 @@ test('a selection writes its record and one-sided premises only for pointers wit
     ['drive.topSpeedInS','inputs.0.secondsPerPiece','massLb','outputs.0.successFraction'].map(n=>'invented-study.turret-shooter.'+n+'.json'));
   const premise=name=>readJson(root,'sel/premises/invented-study.turret-shooter.'+name+'.json');
   const common={scenarioId:'invented-study',phase:'conceptual-design',source:{file:'sel/concept-selection.json'}};
-  // Top speed breaks even above: the upper bound is the last competitive value; the lower is the validity limit.
+  // Higher top speed is better and it breaks even below: the lower bound is the last competitive value, and the
+  // upper bound is the validity limit.
   const top=premise('drive.topSpeedInS');
   assert.deepEqual({scenarioId:top.scenarioId,phase:top.phase,source:top.source},common);
-  assert.deepEqual([top.id,top.unit,top.interfaces,top.criterion],['invented-study.turret-shooter.drive.topSpeedInS','in/s',['drive'],{range:[1,180]}]);
-  assert.match(top.basis,/225/);assert.match(top.basis,/placer/);assert.match(top.basis,/held at base/);
+  assert.deepEqual([top.id,top.unit,top.interfaces,top.criterion],['invented-study.turret-shooter.drive.topSpeedInS','in/s',['drive'],{range:[135,500]}]);
+  assert.deepEqual([top.betterDirection,top.base],['higher',180]);
+  assert.match(top.basis,/higher is better/);assert.match(top.basis,/90/);assert.match(top.basis,/placer/);assert.match(top.basis,/held at base/);
   assert.ok(typeof top.scenario==='string' && top.scenario.length>0);
   const fraction=premise('outputs.0.successFraction');
   assert.deepEqual([fraction.unit,fraction.interfaces,fraction.criterion],['1',['shooter'],{range:[0.6,1]}]);
+  // Lower intake time is better. Its sweep breaks even on both sides; only the worse (upper) side is bounded.
   const handling=premise('inputs.0.secondsPerPiece');
-  assert.deepEqual([handling.unit,handling.interfaces,handling.criterion],['s',['front-intake'],{range:[0.375,0.625]}]);
+  assert.deepEqual([handling.unit,handling.interfaces,handling.criterion,handling.betterDirection],['s',['front-intake'],{range:[0.01,0.625]},'lower']);
+  assert.match(handling.basis,/lower is better/);
+  // A break-even only on the better side is sweep noise: no premise, and the selection says why.
+  assert.deepEqual(selection.notBounded,[{pointer:release,betterDirection:'lower',breakEven:{low:0.2,high:null},
+    reason:'break-even only on the better side (non-monotonic sweep)'}]);
   const mass=premise('massLb');
   assert.deepEqual([mass.unit,mass.interfaces,mass.criterion],['lb',['robot'],{range:[0,95]}]);
   assert.match(mass.basis,/75–95 lb/);assert.match(mass.basis,/assumed/);assert.match(mass.basis,/default/);assert.match(mass.basis,/at most 95 lb/);

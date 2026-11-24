@@ -88,7 +88,7 @@ Each variant below changes one assumed quantity and, by mean margin, would put a
 <ul>${flips.map(f=>`<li><code>${esc(f.pointer)}</code> = ${num(f.value)} (${esc(f.variant.split('@')[0])}) puts <strong>${esc(f.newLeader)}</strong> first</li>`).join('')}</ul></section>`:'';
   const contextRows=contexts.map(c=>`<tr><th scope="row">${esc(c.id)}</th>${ranking.map(r=>`<td class="n">${num(r.margins?.[c.id])}</td>`).join('')}<td>${esc(c.basis??'')}</td></tr>`).join('\n');
   const figures=(results.competitiveRanges??[]).map(row=>`<figure><h3>${esc(row.role)} · <code>${esc(row.pointer)}</code></h3>
-<p class="muted">${esc(row.label)} quantity · base ${num(row.base)}</p>${curve(row)}<figcaption>${sweepCaption(row)}</figcaption></figure>`).join('\n');
+<p class="muted">${esc(row.label)} quantity · base ${num(row.base)}${row.betterDirection?' · '+esc(row.betterDirection)+' is better':''}</p>${curve(row)}<figcaption>${sweepCaption(row)}</figcaption></figure>`).join('\n');
   const invalid=(results.invalidVariants??[]).length?`<h2>Variants not played</h2><ul>${results.invalidVariants.map(v=>`<li><code>${esc(v.id)}</code>: ${esc(v.error)}</li>`).join('')}</ul>`:'';
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">

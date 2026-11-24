@@ -13,7 +13,7 @@ from tempfile import TemporaryDirectory
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from kernel_layout.premises import accepted_premise  # noqa: E402
+from kernel_layout.premises import accepted_premise, within  # noqa: E402
 
 ROOT, FOLDER = Path(sys.argv[1]).resolve(), sys.argv[2]
 
@@ -36,6 +36,17 @@ class ConceptPremises(unittest.TestCase):
             self.assertEqual(decision["status"], "unknown")
             self.assertEqual(decision["phase"], "conceptual-design")
             self.assertEqual(set(accepted["criterion"]), {"range"})
+
+    def test_a_better_value_is_within_and_a_worse_one_reopens(self):
+        """An observation better than base (faster, lighter, more accurate) never reopens conceptual design."""
+        for name, record in self.records.items():
+            lo, hi = record["criterion"]["range"]
+            higher = record["betterDirection"] == "higher"
+            better = min(hi, record["base"] * 1.2) if higher else max(lo, record["base"] * 0.8)
+            self.assertTrue(within(record["criterion"], better), name + ": better value " + str(better))
+            bound = lo if higher else hi
+            step = max(abs(bound) * 0.01, 1e-6)
+            self.assertFalse(within(record["criterion"], bound - step if higher else bound + step), name + ": past the worse bound")
 
     def test_a_premise_without_a_unit_is_rejected(self):
         name = self.names[0]

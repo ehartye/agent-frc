@@ -1,6 +1,7 @@
 // Record the concept a student selects from a concept study, and the one-sided premises preliminary design holds.
 //
-// npm run concept:select -- RESULTS.json --candidate ID --basis "WHY" --out DIR [--interface PART=GROUP]...
+// node <plugin-root>/scripts/concept-select.mjs RESULTS.json --candidate ID --basis "WHY" --out DIR [--interface PART=GROUP]...
+//   (npm run concept:select -- … in a plugin checkout)
 //   Run from the project root. RESULTS.json is an agent-frc/concept-results@1 file (npm run concept:study); its
 //   study and concept pins resolve from its folder. DIR must be inside the project. Exit 0 when written, 2 on bad input.
 //
@@ -8,8 +9,11 @@
 // the student's basis and a snapshot of the ranking, and says whether the selection was first, Pareto and fragile.
 // DIR/premises/<id>.json holds one accepted premise per swept quantity of the selected role with a break-even, plus
 // a mass premise, in the shape scripts/kernel_layout/premises.py accepted_premise reads. Each range premise is
-// one-sided: on a side where the sweep found a break-even its bound is the last competitive value; on a side where
-// the sweep ended first its bound is the quantity's validity limit. Paths are relative to the project root.
+// one-sided. Each quantity has a fixed better direction (betterDirection in concept-tournament.mjs): the premise
+// bounds only the worse side, at the last competitive value before the break-even there, and its better side is the
+// validity limit, so a better observation never reopens the design. A break-even found only on the better side is
+// noise from a non-monotonic sweep: no premise is written, and the selection lists the pointer under notBounded.
+// Paths are relative to the project root.
 // Premise IDs are <study ID>.<concept ID>.<pointer path>, so selections from different studies cannot collide.
 // A candidate that is not competitive at its base values (any candidate behind the leader) gets no rate premise:
 // the selection records ratePremises "none — not competitive at base" and where the candidate would overtake,
@@ -18,11 +22,12 @@
 import path from 'node:path';
 import {readFileSync,writeFileSync,mkdirSync,readdirSync,rmSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-import {pathToFileURL} from 'node:url';
+import {pathToFileURL,fileURLToPath} from 'node:url';
 import {sweepableQuantities} from './concept-study.mjs';
+import {betterDirection} from './concept-tournament.mjs';
 
 export const SELECTION_SCHEMA='agent-frc/concept-selection@1';
-const USAGE='Usage: npm run concept:select -- RESULTS.json --candidate ID --basis "WHY" --out DIR [--interface PART=GROUP]...';
+const USAGE='Usage: node "'+fileURLToPath(import.meta.url)+'" RESULTS.json --candidate ID --basis "WHY" --out DIR [--interface PART=GROUP]...';
 
 const label=value=>typeof value==='string' && value.trim().length>0;
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
@@ -65,22 +70,29 @@ export function conceptSelection({results,resultsRef,conceptRef,document,study,s
     ', contexts '+results.contexts.map(c=>c.id).join(', ')+'.';
   const quantities=new Map(sweepableQuantities(document).map(q=>[q.pointer,q]));
   const shared={scenario,scenarioId,phase:'conceptual-design',source:{file:selectionFile}};
-  const premises=[];
+  const premises=[], notBounded=[];
   for(const row of results.competitiveRanges.filter(r=>r.role===candidate)){
     const {low,high}=row.breakEven??{};
     if(!row.range || (low===null && high===null))continue;
     const q=quantities.get(row.pointer);
     if(!q)throw Error(row.pointer+' is not a sweepable quantity of '+document.id+'.');
-    const unit=unitOf(row.pointer),[lastLow,lastHigh]=row.range,[limitLow,limitHigh]=q.validity;
+    const direction=betterDirection(row.pointer), higher=direction==='higher';
+    // The worse side: below the base for a quantity where higher is better, above it where lower is better.
+    const worse=higher?low:high;
+    if(worse===null){
+      notBounded.push({pointer:row.pointer,betterDirection:direction,breakEven:{low,high},reason:'break-even only on the better side (non-monotonic sweep)'});
+      continue;
+    }
+    const unit=unitOf(row.pointer),[limitLow,limitHigh]=q.validity,last=higher?row.range[0]:row.range[1];
     const at=v=>Number(v.toFixed(3))+(unit==='1'?'':' '+unit);
-    const bounds=[low!==null?lastLow:limitLow,high!==null?lastHigh:limitHigh];
-    const side=(found,limit,word)=>found!==null?' '+word+', it stops being competitive at '+at(found)+'.':
-      ' '+word+', the sweep ended before a break-even, so the bound is the validity limit '+at(limit)+'.';
     premises.push({id:premiseId(scenarioId+'.'+document.id,segments(row.pointer).join('.')),...shared,
       basis:'Concept study '+scenarioId+': '+candidate+' stays competitive with runner-up '+row.runnerUp+' (mean margin at least '+
-        Number(row.runnerUpMeanMargin.toFixed(3))+' expected points) for '+row.pointer+' from '+at(lastLow)+' to '+at(lastHigh)+', base '+at(row.base)+'.'+
-        side(low,limitLow,'Below')+side(high,limitHigh,'Above')+' Other quantities held at base.',
-      unit,interfaces:[interfaceOf(row.pointer,document)],criterion:{range:bounds},pointer:row.pointer});
+        Number(row.runnerUpMeanMargin.toFixed(3))+' expected points) for '+row.pointer+(higher?' down to ':' up to ')+at(last)+
+        ', base '+at(row.base)+'; it stops being competitive at '+at(worse)+'; '+(higher?'higher':'lower')+' is better for this quantity, so '+
+        'the premise bounds only the '+(higher?'lower':'upper')+' side; the '+(higher?'upper':'lower')+' bound is the validity limit '+
+        at(higher?limitHigh:limitLow)+'. Other quantities held at base.',
+      unit,interfaces:[interfaceOf(row.pointer,document)],criterion:{range:higher?[last,limitHigh]:[limitLow,last]},
+      pointer:row.pointer,betterDirection:direction,base:row.base});
   }
   const mass=entry.massLb;
   if(!mass || !Number.isFinite(mass.max))throw Error('Candidate '+candidate+' has no mass range: give the concept massLb or the profile a mass limit.');
@@ -89,7 +101,7 @@ export function conceptSelection({results,resultsRef,conceptRef,document,study,s
     basis:'Mass range '+mass.min+'–'+mass.max+' lb, labelled '+mass.label+', '+(mass.default?'the profile default':
       'from the concept document, not the profile default')+': '+mass.basis+'. The drive and rate assumptions of '+document.id+
       ' were made for a robot at most '+mass.max+' lb.',
-    unit:'lb',interfaces:['robot'],criterion:{range:[0,mass.max]}});
+    unit:'lb',interfaces:['robot'],criterion:{range:[0,mass.max]},betterDirection:'lower',base:mass.max});
   const used=new Set(premises.flatMap(p=>p.interfaces));
   for(const [part,group] of renames){
     if(!used.has(part))throw Error('--interface '+part+': no premise uses that interface; use one of '+[...used].join(', ')+'.');
@@ -97,16 +109,16 @@ export function conceptSelection({results,resultsRef,conceptRef,document,study,s
   }
   const folder=path.posix.dirname(selectionFile), rows=results.competitiveRanges.filter(r=>r.role===candidate), warnings=[];
   const behind=rows.filter(r=>!r.competitiveAtBase);
-  const ratePremises=rates?'written':rows.length && behind.length===rows.length?'none — not competitive at base':'none — no break-even within the sweeps';
+  const ratePremises=rates?'written':rows.length && behind.length===rows.length?'none — not competitive at base':'none — no worse-side break-even within the sweeps';
   if(!rates)warnings.push('Warning: '+candidate+(ratePremises==='none — not competitive at base'?' is not competitive at base against '+results.leader:
-    ' has no break-even within its sweeps')+', so no rate premise is written; only the mass premise bounds preliminary design.'+
+    ' has no worse-side break-even within its sweeps')+', so no rate premise is written; only the mass premise bounds preliminary design.'+
     (behind.some(r=>r.overtakes?.low!=null || r.overtakes?.high!=null)?' It would match or overtake at: '+behind.filter(r=>r.overtakes?.low!=null || r.overtakes?.high!=null)
       .map(r=>r.pointer+' '+[r.overtakes.low,r.overtakes.high].filter(v=>v!=null).join(' or ')).join('; ')+'.':''));
   const selection={schema:SELECTION_SCHEMA,selected:candidate,basis:basis.trim(),
     results:resultsRef,concept:conceptRef,scenarioId,
     wasFirst:results.leader===candidate,leader:results.leader,leaderDecidedBy:results.leaderDecidedBy,
     pareto:entry.pareto,fragile:results.fragility.fragile,flips:results.fragility.flips,
-    ratePremises,...(behind.length?{overtakes:behind.map(r=>({pointer:r.pointer,low:r.overtakes?.low??null,high:r.overtakes?.high??null}))}:{}),
+    ratePremises,notBounded,...(behind.length?{overtakes:behind.map(r=>({pointer:r.pointer,low:r.overtakes?.low??null,high:r.overtakes?.high??null}))}:{}),
     ranking:results.ranking,premises:premises.map(p=>({id:p.id,file:folder+'/premises/'+p.id+'.json'})),
     scope:results.scope,
     note:'The ranking is a recommendation from the modelled field; the student made this selection for the basis given.'};
