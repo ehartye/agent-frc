@@ -198,36 +198,6 @@ export function compareWithVerdict(scene, verdict) {
   return errors;
 }
 
-/**
- * Receipt-era comparison that scripts/design-publication.mjs still calls for releases staged with a receipt. It reads
- * no scene this page builds; the gate and publication package (data model WP8) removes it with its caller.
- */
-export function compareWithReceipt(read, receipt) {
-  const errors = [];
-  const s = read.scene;
-  if (s.issue !== receipt.issue) errors.push('Scene issue differs from the receipt');
-  if (!same(s.sources?.step, receipt.step) || !same(s.sources?.design, receipt.design)) errors.push('Scene STEP or design source pin differs from the receipt');
-  const shown = Object.fromEntries((s.cases || []).filter(c => c.id !== controlCase).map(c => [c.id, c.status]));
-  const checked = Object.fromEntries((receipt.cases || []).map(c => [c.case, c.status]));
-  if (!same(Object.keys(shown).sort(), Object.keys(checked).sort()) || Object.keys(checked).some(k => shown[k] !== checked[k])) errors.push('Scene case results differ from the receipt');
-  const control = (s.cases || []).find(c => c.id === controlCase);
-  if ((receipt.control?.witness || control) && (control?.status !== 'fail' || control.kind !== 'displaced control'))
-    errors.push('Scene must show the rejected displaced control');
-  if (receipt.parked && !same(s.parked, receipt.parked)) errors.push('Scene parked-assembly result differs from the receipt');
-  if (!['pending receipt', 'blocked'].includes(s.decision?.status)) errors.push('Scene decision may not claim a checked result');
-  if (!same(s.narrativeReview?.objectives ?? [], receipt.narrativeReview?.objectives ?? [])) errors.push('Scene narrative objectives differ from the receipt');
-  if (!same(s.interactions ?? [], receipt.interactions ?? []) || !same(s.adjustments ?? [], receipt.adjustments ?? []))
-    errors.push('Scene interactions or adjustments differ from the receipt');
-  const budgets = receipt.budgets;
-  if (budgets) {
-    const duty = r => [r.case, r.status, r.batteryCondition, r.requiredMinV, r.marginV, r.loadedBusV, r.batterySideA];
-    if (!same((s.power || []).map(duty), budgets.electricalCases.map(duty))) errors.push('Scene duties differ from the receipt');
-    if (!s.mass || !same(s.mass.inspectionKg, budgets.inspectionKg) || !same(s.mass.remainingKg, budgets.remainingKg) || !same(s.mass.runningKg, budgets.runningKg))
-      errors.push('Scene mass differs from the receipt');
-  }
-  return errors;
-}
-
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   try {
     const [mode, file, flag, verdictFile, ...rest] = process.argv.slice(2);

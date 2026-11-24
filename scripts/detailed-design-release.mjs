@@ -18,15 +18,17 @@ import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 
 import {writeDirectoryAtomic, writeFileAtomic} from './atomic-write.mjs';
-import {gateLine, stageGate, writeGate} from './stage-gate.mjs';
+import {filesProblem, writeGate} from './gate-record.mjs';
+import {gateLine, judgedGate} from './stage-gate.mjs';
 import {architectureName, designStatuses, detailedTitle, draftOf, releaseId, stateOf, versionOf} from './design-status.mjs';
 import {checkProject, detailedWhere, primaryView, readinessSummary} from './design-publication.mjs';
+import {judgedVerdict} from './effective-readiness.mjs';
 import {benchFile, effectiveGate, summary as benchSummary, summaryText as benchText} from './bench-tests.mjs';
 
 export const designSchema = 'agent-frc/detailed-design@1';
 export const indexSchema = 'agent-frc/detailed-design-index@1';
 const readinessSchema = 'agent-frc/mechanical-readiness-result@1';
-const judgementFile = 'judgement.json';
+const judgementFile = 'judgement.json', pageFile = 'review.html', sceneFile = 'review-scene.json.gz';
 const designId = releaseId, useVersion = 'Use a version as the design ID: MAJOR.MINOR, such as 1.0';
 const catalog = new URL('../templates/detailed-design-index.html', import.meta.url);
 const fonts = fileURLToPath(new URL('../templates/preliminary-review-fonts', import.meta.url));
@@ -68,9 +70,10 @@ function saveIndex(at, index) {
   if (!existsSync(path.join(at.tree, 'fonts')) && index.designs.some(id => existsSync(path.join(at.tree, 'designs', id, 'index.html')))) cpSync(fonts, path.join(at.tree, 'fonts'), {recursive: true});
   return out;
 }
-/** Run the publication check without the rerun and return what it says about this design or the detailed index. */
-function problems(at, design) {
-  const result = checkProject(at.project, {site: at.site, detailed: at.detailed, preliminary: at.preliminary, scan: false, base: null, log: () => {}});
+/** Run the publication check on this design alone and return what it says about it. */
+function problems(at, design, judge) {
+  const own = [path.join(at.tree, 'designs', design)].map(dir => path.relative(at.project, dir).split(path.sep).join('/'));
+  const result = checkProject(at.project, {site: at.site, detailed: at.detailed, preliminary: at.preliminary, scan: false, base: null, log: () => {}, judge, touches: dir => own.includes(dir)});
   const where = detailedWhere(loadIndex(at), design);
   return result.errors.filter(e => e.startsWith(where + ' ') || e.startsWith(where + ':'));
 }
@@ -154,11 +157,12 @@ function fusionExport({project, authority, lineage, python}) {
 }
 
 /**
- * Publish a new in-progress design from checked inputs: a folder inside the project holding judgement.json, the
- * design source it names, its layout-checked receipt.json and missions.json. The design source must place its solids
- * from the export the registered Fusion design replays to, and the named preliminary release must be effective.
+ * Publish a new in-progress design from checked inputs: a folder inside the project holding judgement.json, the design
+ * source and records it names and its built page. Its committed records must judge it layout-checked; nothing is
+ * measured. The design source must place its solids from the export the registered Fusion design replays to, and the
+ * named preliminary release must be effective.
  */
-export function stageInProgress({project, design, designName, inputs, preliminary, authority, lineage, python, replay: replayExport = fusionExport, ...folders}) {
+export function stageInProgress({project, design, designName, inputs, preliminary, authority, lineage, python, judge = judgedVerdict, replay: replayExport = fusionExport, ...folders}) {
   const at = layout(project, folders), index = loadIndex(at);
   check(designId.test(design ?? ''), useVersion);
   check(named(inputs) && named(preliminary) && named(authority) && named(lineage), 'Supply --inputs, --preliminary, --authority and --lineage');
@@ -170,21 +174,22 @@ export function stageInProgress({project, design, designName, inputs, preliminar
     check(named(name) && existsSync(file) && statSync(file).isFile(), 'Detailed design input is missing ' + name);
     return readFileSync(file);
   };
-  check(!path.relative(project, source).startsWith('..'), 'Keep the check inputs inside the project so its CI can rerun the layout check');
+  check(!path.relative(project, source).startsWith('..'), 'Keep the check inputs inside the project');
   const replay = replayExport({project, authority, lineage, python});
-  const plan = JSON.parse(need(judgementFile)), receiptBytes = need('receipt.json'), receipt = JSON.parse(receiptBytes), missions = JSON.parse(need('missions.json'));
-  check(receipt.planSha256 === sha(need(judgementFile)), 'The receipt belongs to a different judgement file. Rerun the layout check and save its receipt');
-  check((receipt.parts ?? []).some(part => part?.sha256 === replay.stepSha256),
+  const plan = JSON.parse(need(judgementFile)), folder = path.relative(project, source).split(path.sep).join('/');
+  const verdict = judge(project, path.join(source, judgementFile)), outside = verdict.reason ?? filesProblem(verdict.files, folder);
+  check(!outside, outside);
+  check(verdict.status === 'layout-checked', 'A detailed design needs a layout-checked design; its records judge it ' + verdict.status + ': ' + (verdict.firstUnmet?.text ?? 'no reason given'));
+  check(Object.values(verdict.files.parts).includes(replay.stepSha256),
     'The design source places no solid from the registered Fusion export. Take each robot solid from that STEP as a part, then generate and check again');
-  const viewName = plan.view, sceneName = path.posix.join(path.posix.dirname(viewName), 'review-scene.json.gz');
-  const out = new Map([['index.html', need(viewName)], ['review-scene.json.gz', need(sceneName)], ['receipt.json', receiptBytes],
-    ['source.json', need(plan.source.file)], ['budgets.json', need(plan.budgets.file)]]);
-  out.set('limits.json', need(JSON.parse(out.get('budgets.json')).requirements.file));
-  const record = {schema: designSchema, design, issue: receipt.issue, preliminary: {release: preliminary},
+  // Published beside the record, which takes the name design.json: the source, the judgement, its page file, the records and the page.
+  const within = name => path.posix.relative(folder, name), [top, ...subsystems] = Object.keys(verdict.files.source);
+  const out = new Map([['index.html', need(pageFile)], [sceneFile, need(sceneFile)], ['source.json', need(within(top))], [judgementFile, need(judgementFile)]]);
+  for (const name of [...subsystems, ...Object.keys(verdict.files.records), ...(named(plan.page?.file) ? [plan.page.file] : [])]) out.set(within(name), need(within(name)));
+  const record = {schema: designSchema, design, issue: verdict.issue, preliminary: {release: preliminary},
     fusion: {archiveSha256: replay.archiveSha256, stepSha256: replay.stepSha256, configuration: replay.configuration, ...(replay.revision ? {revision: replay.revision} : {})},
-    // Where the stage gate finds the committed inputs to rerun the layout check.
-    check: {project: path.relative(project, source).split(path.sep).join('/')},
-    missionCases: missions.missionCases ?? []};
+    // Where the stage gate and the publication check find the committed inputs to judge.
+    check: {project: folder}};
   out.set('design.json', Buffer.from(JSON.stringify(record, null, 2) + '\n'));
   // The bench tests handed over by the preliminary design, published beside the review. A draft is not held to them.
   const bench = effectiveGate(project, design, {preliminary, file: path.join(source, benchFile), ...folders});
@@ -205,7 +210,7 @@ export function stageInProgress({project, design, designName, inputs, preliminar
   if (!listed) index.designs.push(design);
   index.designStatus[design] = 'in-progress';
   index.preliminary = {...index.preliminary, [design]: preliminary};
-  const saved = saveIndex(at, index), found = problems(at, design);
+  const saved = saveIndex(at, index), found = problems(at, design, judge);
   if (found.length) {
     // Leave the site as it was; a failed stage has nothing to clear before a retry.
     rmSync(dir, {recursive: true, force: true});
@@ -232,7 +237,7 @@ function sameTree(dir, files) {
  * The design keeps its ID, files and draft count. Its layout check must already cover that release's motion cases,
  * cycle and displaced control; otherwise rerun the check on them and stage the design again.
  */
-export function relink({project, design, preliminary, ...folders}) {
+export function relink({project, design, preliminary, judge = judgedVerdict, ...folders}) {
   const at = layout(project, folders), index = loadIndex(at);
   check(index.designs.includes(design) && named(preliminary), 'Supply --design, a listed design, and --preliminary, the effective preliminary release');
   const mine = versionOf(design), basis = versionOf(preliminary);
@@ -244,7 +249,7 @@ export function relink({project, design, preliminary, ...folders}) {
   const was = index.preliminary?.[design];
   writeFileAtomic(recordFile, JSON.stringify({...JSON.parse(recordBefore), preliminary: {release: preliminary}}, null, 2) + '\n');
   index.preliminary = {...index.preliminary, [design]: preliminary};
-  const saved = saveIndex(at, index), found = problems(at, design);
+  const saved = saveIndex(at, index), found = problems(at, design, judge);
   if (found.length) { writeFileSync(recordFile, recordBefore); writeFileSync(at.indexFile, indexBefore); }
   check(!found.length, found.join('\n'));
   return {...saved, ...report([sentence(described(index, design)) + ' is now built on preliminary ' + preliminary + (was && was !== preliminary ? ' (was ' + was + ')' : '') + ' and keeps its ID', onPush])};
@@ -255,7 +260,7 @@ export function relink({project, design, preliminary, ...folders}) {
  * effective becomes superseded. A design not yet published gets a record from the review. A review that does not
  * pass is refused. The report goes to the reviewer of the pull request, who accepts the design by merging it.
  */
-export function markEffective({project, design, designName, readiness, benchTests, run, now, budgetMinutes, workers, ...folders}) {
+export function markEffective({project, design, designName, readiness, benchTests, judge, now, ...folders}) {
   const at = layout(project, folders), index = loadIndex(at);
   check(designId.test(design ?? '') && named(readiness), 'Supply --design and --readiness, the mechanical-readiness review result');
   const review = readJson(path.resolve(project, readiness));
@@ -267,18 +272,17 @@ export function markEffective({project, design, designName, readiness, benchTest
   // Bench tests as records: every before-build test has a passing result, every on-robot test an owner and a plan.
   const bench = effectiveGate(project, design, {...(named(benchTests) ? {file: path.resolve(project, benchTests)} : {}), ...folders});
   check(!bench.problems.length, sentence(described(index, design)) + ' cannot be effective until its bench tests are resolved:\n' + bench.problems.map(p => '  - ' + p).join('\n'));
-  // The stage gate: the full layout check, run here on the committed design. An earlier receipt is never taken for it.
-  // A design recorded from its review alone has no layout of its own to check.
-  const gate = existsSync(path.join(dir, 'receipt.json')) ? stageGate({root: at.project, where: sentence(described(index, design)), id: design, phase: 'detailed-design',
-    inputs: path.resolve(at.project, readJson(recordFile).check?.project ?? path.join(at.inputs, design)), published: dir, record: readJson(recordFile),
-    ...(run ? {run} : {}), ...(now ? {now} : {}), budgetMinutes, workers}) : null;
-  if (gate) writeGate(dir, gate);
+  // The stage gate: the committed records, judged here. A design recorded from its review alone has no layout of its own.
+  const own = existsSync(recordFile) ? readJson(recordFile) : null, where = sentence(described(index, design));
+  check(!own || own.fusion?.stepSha256 === review.stepSha256, 'The readiness review is of a different STEP than design ' + design + ' names');
+  const done = own?.check || existsSync(path.join(dir, judgementFile)) ? judgedGate({root: at.project, where, id: design, phase: 'detailed-design',
+    inputs: path.resolve(at.project, own?.check?.project ?? path.join(at.inputs, design)), published: dir, ...(judge ? {judge} : {}), ...(now ? {now} : {})}) : null;
+  if (done) writeGate(dir, done.gate);
   if (!existsSync(recordFile)) {
     mkdirSync(dir, {recursive: true});
     writeFileAtomic(recordFile, JSON.stringify({schema: designSchema, design,
       fusion: {archiveSha256: review.archiveSha256, stepSha256: review.stepSha256, configuration: review.configuration}}, null, 2) + '\n');
   }
-  check(readJson(recordFile).fusion?.stepSha256 === review.stepSha256, 'The readiness review is of a different STEP than design ' + design + ' names');
   writeFileAtomic(path.join(dir, 'readiness.json'), JSON.stringify(review, null, 2) + '\n');
   if (bench.record) writeFileAtomic(path.join(dir, benchFile), JSON.stringify(bench.record, null, 2) + '\n');
   if (!index.designs.includes(design)) index.designs.push(design);
@@ -290,7 +294,7 @@ export function markEffective({project, design, designName, readiness, benchTest
   // The date it was accepted stays with the design once it is superseded.
   index.accepted = {...index.accepted, [design]: index.accepted?.[design] ?? today()};
   const version = versionOf(design), latest = Math.max(0, ...index.designs.map(majorOf));
-  return {...saveIndex(at, index), report: (gate ? gateLine(sentence(described(index, design)), gate) + '\n' : '') + readinessSummary(review) + (bench.record ? 'Bench tests: ' + benchText(benchSummary(bench.record)) + '\n' : '') +
+  return {...saveIndex(at, index), report: (done ? gateLine(where, done) + '\n' : '') + readinessSummary(review) + (bench.record ? 'Bench tests: ' + benchText(benchSummary(bench.record)) + '\n' : '') +
     notes.map(n => 'Note: ' + n + '\n').join('') + 'Work toward the next baseline of ' +
     architectureName(index, design) + ' is ' + version.major + '.' + (version.minor + 1) + ', staged as drafts until it is accepted. A different architecture is ' +
     (latest + 1) + '.0 with its own name.\n' + onPush + '\n'};
@@ -339,12 +343,11 @@ export function withdraw({project, design, reason, ...folders}) {
 }
 
 /**
- * Copy a design's check inputs to a new design folder and write its pins for the new paths.
+ * Copy a design's check inputs to a new design folder, with its records, and write its paths for the new folder.
  *
- * A record can pin a file by path and SHA-256, and a design checked from the repository root names its own folder in
- * those paths. Each such pin is verified against the source, written with the new path and given the digest of the
- * copied file. Every file that is not a pinning record keeps its bytes. The review page, scene and receipt are not
- * copied: the layout check writes them for the new folder.
+ * A record can pin a file by path and SHA-256, and a design names its own folder in those paths. Each such pin is verified
+ * against the source, written with the new path and given the digest of the copied file. Every other file keeps its bytes.
+ * The library's records are copied as they are and the review scene is not: the page builder writes it for the new folder.
  */
 export function copyInputs({project, from, to, ...folders}) {
   const at = layout(project, folders);
@@ -354,12 +357,11 @@ export function copyInputs({project, from, to, ...folders}) {
   check(!existsSync(target), posix(target) + ' already exists. Choose a new design ID, or remove that folder first');
   const before = posix(source) + '/', after = posix(target) + '/', digest = file => sha(readFileSync(file));
   const isFile = file => statSync(file, {throwIfNoEntry: false})?.isFile() ?? false;
-  const plan = readJson(path.join(source, judgementFile)), view = named(plan.view) ? (plan.view.startsWith(before) ? plan.view.slice(before.length) : plan.view) : null;
-  const left = new Set(['receipt.json', ...(view ? [view, path.posix.join(path.posix.dirname(view), 'review-scene.json.gz')] : [])]);
+  const records = (readJson(path.join(source, judgementFile)).records?.folder ?? before + 'records') + '/', left = new Set([sceneFile]);
   const done = new Set(), rewritten = [], copied = [];
   const repin = name => {
     // Rewrite the pins in one copied record, after the records it pins.
-    if (done.has(name) || !name.endsWith('.json')) return;
+    if (done.has(name) || !name.endsWith('.json') || (before + name).startsWith(records)) return;
     done.add(name);
     let data;
     try { data = JSON.parse(readFileSync(path.join(target, name), 'utf8').replace(/^\uFEFF/, '')); } catch { return; }
@@ -375,9 +377,9 @@ export function copyInputs({project, from, to, ...folders}) {
         node.file = after + inner;
         if (pinned && isFile(path.join(target, inner))) node.sha256 = digest(path.join(target, inner));
       }
+      if (typeof node.folder === 'string' && node.folder.startsWith(before)) node.folder = after + node.folder.slice(before.length);
       Object.values(node).forEach(walk);
     })(data);
-    if (typeof data?.view === 'string' && data.view.startsWith(before)) data.view = after + data.view.slice(before.length);
     if (JSON.stringify(data) !== was) { writeFileSync(path.join(target, name), JSON.stringify(data, null, 2) + '\n'); rewritten.push(name); }
   };
   try {
@@ -392,9 +394,10 @@ export function copyInputs({project, from, to, ...folders}) {
     for (const name of copied.sort()) repin(name);
   } catch (error) { rmSync(target, {recursive: true, force: true}); throw error; }
   return {from, to, inputs: after.slice(0, -1), files: copied.length, rewritten: rewritten.sort(),
-    report: 'Copied the inputs of design ' + from + ' to ' + after.slice(0, -1) + ' and wrote ' + rewritten.length + ' pinning record' + (rewritten.length === 1 ? '' : 's') +
-      ' for the new paths. Now run the layout check there, then stage ' + to + ':\n' +
-      '  node PLUGIN/scripts/design.mjs preliminary-check . ' + after + 'judgement.json --write-view --require-checked --output ' + after + 'receipt.json\n'};
+    report: 'Copied the inputs of design ' + from + ' to ' + after.slice(0, -1) + ' with its records and wrote the paths of ' + rewritten.length + ' file' + (rewritten.length === 1 ? '' : 's') +
+      ' for the new folder. Now check it there, build its page, then stage ' + to + ':\n' +
+      '  node PLUGIN/scripts/design.mjs preliminary-check . ' + after + 'judgement.json --require-checked\n' +
+      '  node PLUGIN/scripts/design.mjs preliminary-page . ' + after + 'judgement.json\n'};
 }
 
 /**
@@ -437,19 +440,18 @@ export function refresh({project, ...folders}) {
   return saveIndex(at, index);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+/** The command line. `judge` is the layout judgement on committed records; only the plugin's own tests hand it another. */
+export function main(args, {judge} = {}) {
   try {
-    const [mode, project, ...rest] = process.argv.slice(2), options = {};
+    const [mode, project, ...rest] = args, options = {};
     for (let i = 0; i < rest.length; i += 2) {
       check(rest[i]?.startsWith('--') && rest[i + 1] !== undefined, 'Expected --option value pairs');
       options[rest[i].slice(2).replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = rest[i + 1];
     }
-    for (const name of ['budgetMinutes', 'workers']) if (options[name] !== undefined) options[name] = Number(options[name]);
-    // --check MODULE is for the plugin's own tests: the default export of the module stands in for the layout check.
-    if (options.check) { options.run = (await import(pathToFileURL(path.resolve(options.check)).href)).default; delete options.check; }
-    if (mode === 'effective') console.error('[gate] Running the full layout check on the committed design. Guideline: about 15 minutes.');
+    check(!Object.hasOwn(options, 'judge') && !Object.hasOwn(options, 'check'), 'The layout judgement is the plugin\'s own');
     check(project && statSync(project, {throwIfNoEntry: false})?.isDirectory(), 'Supply the project folder');
     options.project = path.resolve(project);
+    if (judge) options.judge = judge;
     const command = {stage: stageInProgress, effective: markEffective, relink, supersede, withdraw, refresh, 'copy-inputs': copyInputs, remove}[mode];
     check(command, 'Unknown command');
     const {report, ...index} = command(options);
@@ -457,10 +459,12 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
     console.log(JSON.stringify(index, null, 2));
   } catch (error) {
     console.error(error.message + '\nUsage: detailed-design-release.mjs stage PROJECT --design MAJOR.MINOR [--design-name "NAME"] --inputs FOLDER --preliminary RELEASE --authority REGISTER --lineage LINEAGE' +
-      ' | relink PROJECT --design ID --preliminary RELEASE | effective PROJECT --design ID --readiness REVIEW_RESULT.json [--design-name "NAME"] [--bench-tests FILE] [--budget-minutes 45] [--workers N]' +
+      ' | relink PROJECT --design ID --preliminary RELEASE | effective PROJECT --design ID --readiness REVIEW_RESULT.json [--design-name "NAME"] [--bench-tests FILE]' +
       ' | supersede PROJECT --design ID [--by ID] | withdraw PROJECT --design ID --reason TEXT | copy-inputs PROJECT --from ID --to ID' +
       ' | remove PROJECT --design ID [--replaced-by ID] | refresh PROJECT' +
       '   [--site docs] [--detailed detailed-design] [--preliminary-tree preliminary-design] [--detailed-inputs cad/detailed-design/designs]');
     process.exitCode = 1;
   }
 }
+
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) main(process.argv.slice(2));

@@ -74,7 +74,7 @@ test('drafts take no number: one in-progress version per architecture, and a new
   assert.match(accepted, /Preliminary design Tilting carriage 1\.0 is effective; the site opens 1\.0/);
   assert.match(accepted, /Work toward the next baseline of Tilting carriage is 1\.1, staged as drafts until it is accepted\. A different architecture is 2\.0 with its own name\./);
   assert.match(accepted, /Effective-readiness report for Tilting carriage 1\.0 \(/);
-  assert.match(accepted, /^\[gate\] Preliminary design Tilting carriage 1\.0: layout-checked on 5 current records, 3 of 3 readiness criteria met, in \d+\.\d s \(status 1\.0 s of it\)\. Nothing was measured\.$/m);
+  assert.match(accepted, /^\[gate\] Preliminary design Tilting carriage 1\.0: layout-checked on 6 current records, 3 of 3 readiness criteria met, in \d+\.\d s \(status 1\.0 s of it\)\. Nothing was measured\.$/m);
   assert.match(accepted, /On push: the project's workflow publishes the page\. Nothing is rerun\.\r?\n$/);
   await s.fixture('1.0', {page: '<html>Edited after acceptance</html>'});
   assert.match(s.stage('1.0').stderr, /Tilting carriage 1\.0 is effective and no longer changes\. Work toward its next baseline is 1\.1, staged as a draft/);

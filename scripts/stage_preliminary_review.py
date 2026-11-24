@@ -1,4 +1,4 @@
-"""Publish a checked preliminary design release into the season site, set a release's design status, republish the view
+"""Publish a judged preliminary design release into the season site, set a release's design status, republish the view
 of an effective release, copy a release's inputs to a new release folder, or remove a release.
 
 A new release takes a version as its ID, MAJOR.MINOR. The major number is the architecture and carries its name, given
@@ -7,12 +7,15 @@ of an in-progress version and takes no number: staging the same ID again counts 
 
 The coding agent runs this file from the installed plugin, at the project root. A project holds no copy of it.
 
-Staging copies files and edits the release index. Marking a release effective first runs the stage gate
-(stage-gate.mjs): the effective-readiness report must meet every criterion on the committed design, then the full
-layout check runs on it. The status is set only when the gate passes, and the gate's record is written beside the
-published release; a refused release keeps its status and gains no record.
-Withdrawing a release is a status change: the index keeps the reason and the last commit that held its published
-files, and the files leave the site."""
+Staging judges the committed records and measures nothing: a record that is stale or missing, or a verdict other than
+layout-checked, is refused. It publishes what was judged, byte for byte: each file of the design source, the judgement
+file with its reference to the season's requirements, the page file, each record judged and the review page.
+
+Marking a release effective first runs the stage gate (stage-gate.mjs), which judges the committed records, requires every
+one of them current and the effective-readiness report to meet every criterion, and measures nothing. The status is set
+only when the gate passes, and the gate's record, gate.json, is written beside the published release; a refused release
+keeps its status and gains no record. Withdrawing a release is a status change: the index keeps the reason and the last
+commit that held its published files, and the files leave the site."""
 import argparse
 import datetime
 from contextlib import contextmanager
@@ -34,8 +37,8 @@ PER_RELEASE = ("designStatus", "revision", "accepted", "refreshed", "reason", "l
 # What a push does with the change just made, said after each command. The method: docs/testing-methodology.md.
 ON_PUSH = "On push: the project's workflow publishes the page. Nothing is rerun."
 BEFORE_PUSH = "Before pushing, run the publication check: node PLUGIN/scripts/design-publication.mjs check ."
-GATE = "gate.json"
-JUDGEMENT = "judgement.json"
+GATE, JUDGEMENT, PAGE, SCENE_CHECK = "gate.json", "judgement.json", "review.html", Path(__file__).resolve().with_name("review-scene.mjs")
+GATE_COMMAND = ["node", str(Path(__file__).resolve().with_name("stage-gate.mjs"))]
 
 
 def read(path):
@@ -198,110 +201,84 @@ def save_index(record, site):
     replace_index(out.name, site)
 
 
-def project_root(season, inputs, view):
-    """The folder a release's pins are written from: the season repository when its view names the release folder
-    from there, else the release folder itself, for a package that was checked in its own folder."""
-    season, inputs = season.resolve(), inputs.resolve()
-    if isinstance(view, str) and view and (season / view).resolve().parent == inputs != season:
-        return season
-    return inputs
-
-
 def checked_id(release):
     if not version_of(release):
         raise ValueError("Use a version as the release ID: MAJOR.MINOR, such as 1.0")
     return release
 
 
-def receipt_identity(receipt):
-    """What a receipt records of the physics: the digests of the files the check read, the plan it repeats and every
-    verdict. Labels, the view and measured values are left out. The plugin's scripts/physics-identity.mjs holds the
-    same form as receiptIdentity."""
-    def unlabelled(node):
-        if isinstance(node, dict):
-            return {k: unlabelled(v) for k, v in node.items() if k not in ("file", "phase")}
-        return [unlabelled(v) for v in node] if isinstance(node, list) else node
+def judged(season, file):
+    """The verdict of the layout judgement on the committed records. Measures nothing; refuses a stale or missing record."""
+    from kernel_layout.verdict import judge
+    return judge(season, file, judge_only=True)
 
-    def digest(pin):
-        return (pin or {}).get("sha256")
 
-    def verdicts(rows, name, result="status"):
-        return sorted([str((row or {}).get(name)), str((row or {}).get(result))] for row in rows or [])
+def scene_problems(scene, verdict):
+    """Why a review scene cannot be published: the page cannot play it, or it does not repeat the verdict. Empty when it can."""
+    with tempfile.TemporaryDirectory() as temp:
+        file = Path(temp) / "verdict.json"
+        file.write_text(json.dumps(verdict), encoding="utf-8")
+        run = subprocess.run(["node", str(SCENE_CHECK), "validate", str(scene), "--verdict", str(file)], capture_output=True, text=True, encoding="utf-8")
+    try:
+        return json.loads(run.stdout)["errors"]
+    except (ValueError, KeyError):
+        return [run.stderr.strip() or "unreadable " + scene.name]
 
-    budgets, control = receipt.get("budgets") or {}, receipt.get("control") or {}
-    return {"the status": receipt.get("status"), "the generated solids": digest(receipt.get("step")),
-            "the design source": digest(receipt.get("design")), "the budget ledger": digest(budgets.get("source")),
-            "the limits": digest(budgets.get("limits")),
-            "the cycle": receipt.get("cycle") or [], "the case results": verdicts(receipt.get("cases"), "case"),
-            "the displaced control": [control.get("case"), control.get("displaced"), control.get("offsetMm"), (control.get("witness") or {}).get("status")],
-            "the mass result": budgets.get("massStatus"), "the loaded-voltage results": verdicts(budgets.get("electricalCases"), "case"),
-            "the narrative objectives": verdicts((receipt.get("narrativeReview") or {}).get("objectives"), "objective", "disposition"),
-            "the stages": unlabelled(receipt.get("stages") or {}), "the groups": receipt.get("groups"), "the mounts": receipt.get("mounts"),
-            "the datum": receipt.get("datum"), "the trial campaign": digest(receipt.get("trials")),
-            "the adjustment measurements": digest(receipt.get("measurements")),
-            "the interactions": sorted([str(i.get("id")), str(i.get("verdict")), str((i.get("trial") or {}).get("result"))] for i in receipt.get("interactions") or [])}
+
+def publishable(season, inputs, judgement, verdict):
+    """{published name: file} of what staging copies: what was judged, the page file and the review page. Refuses a judged
+    source or record outside the release folder, where a change to it would not touch the release."""
+    own, names = inputs.relative_to(season).as_posix() + "/", []
+    for name in [n for group in ("source", "parts", "records") for n in verdict["files"][group]]:
+        if not name.startswith(own):
+            raise ValueError("Keep " + name + " in the release folder, " + own.rstrip("/") + ": a change to a file elsewhere would not touch the release")
+    names = [*verdict["files"]["source"], own + JUDGEMENT, *verdict["files"]["records"]]
+    page = (judgement.get("page") or {}).get("file")
+    if page:
+        if not page.startswith(own):
+            raise ValueError("Keep " + page + " in the release folder beside its judgement file")
+        names.append(page)
+    files = {name[len(own):]: inside(season, name) for name in names}
+    for name in (PAGE, SCENE):
+        if not (inputs / name).is_file():
+            raise ValueError("Build the page first: design preliminary-page . " + own + JUDGEMENT + " writes " + PAGE + " and " + SCENE)
+    return {**files, "index.html": inputs / PAGE, SCENE: inputs / SCENE}
 
 
 def stage(season, inputs, release, design=None, refresh=False):
-    """Copy one release's checked files into the site and list it in the index as in progress.
+    """Copy one release's judged files into the site and list it in the index as in progress.
 
     An in-progress release is revised in place: staging its ID again replaces its published files and counts a
     draft in the index, under `revision`. A release stops changing when it is marked effective, and stays so afterwards.
 
-    refresh republishes the view of the effective release: a new review page, new titles or a --view-only rebuild.
-    Its receipt must record the physics the published receipt records. The status, the accepted date and the draft
-    count stay as they are."""
+    refresh republishes the view of the effective release: a rebuilt review page or a reworded page file. Its gate record
+    must still stand for every file it judged. The status, the accepted date and the draft count stay as they are."""
     checked_id(release)
+    season, inputs = season.resolve(), inputs.resolve()
     site = season / "docs/preliminary-design"
-    inputs = inputs.resolve()
     plan_file = inside(inputs, JUDGEMENT)
-    plan, result = read(plan_file), read(inside(inputs, "receipt.json"))
-    if result.get("planSha256") != hashlib.sha256(plan_file.read_bytes()).hexdigest():
-        raise ValueError("The receipt belongs to a different layout. Rerun the preliminary check and save its receipt")
-    if result.get("status") != "layout-checked" or result.get("partial") or result.get("physicsOnly"):
-        raise ValueError("A preliminary release needs the layout-checked receipt of a full check")
-    if not plan.get("view") or not plan.get("budgets"):
-        raise ValueError("A preliminary release needs the review view and the checked weight and loaded-voltage budgets")
-    missions = read(inputs / "missions.json").get("missionCases") if (inputs / "missions.json").exists() else None
-    if not missions:
-        raise ValueError("Declare a passing mission-task case for a represented objective in missions.json")
-    root = project_root(season, inputs, plan["view"])
-    viewer = inside(root, plan["view"])
-    if viewer.parent != inputs:
-        raise ValueError("Keep the review view in the release folder beside its layout plan")
-    scene_file = viewer.with_name(SCENE)
-    if not scene_file.is_file():
-        raise ValueError("Generate the review with --write-view: a release publishes the review page and its scene")
-    ledger = inside(root, plan["budgets"]["file"])
-    # The published folder carries what was checked: the design source.
-    files = {"index.html": viewer, SCENE: scene_file, "receipt.json": inputs / "receipt.json", "design.json": inside(root, plan["source"]["file"]), "budgets.json": ledger,
-             "limits.json": inside(root, read(ledger)["requirements"]["file"])}
+    if refresh:
+        held(load_index(site), release, season)
+    judgement, verdict = read(plan_file), judged(season, plan_file)
+    if verdict["status"] != "layout-checked":
+        raise ValueError("A preliminary release needs a layout-checked design; its records judge it " + verdict["status"] + ": "
+                         + ((verdict.get("firstUnmet") or {}).get("text") or "no reason given"))
+    files = publishable(season, inputs, judgement, verdict)
+    problems = scene_problems(files[SCENE], verdict)
+    if problems:
+        raise ValueError("The review scene does not repeat the verdict: " + "; ".join(problems[:5]) + ". Build the page again: design preliminary-page . "
+                         + plan_file.relative_to(season).as_posix())
 
-    record = dict(schema="agent-frc/preliminary-release@1", release=release, issue=result["issue"], phase="preliminary-design",
-                  # Where the stage gate finds the committed inputs to rerun the layout check.
-                  check=dict(project=inputs.relative_to(season.resolve()).as_posix()),
-                  missionCases=missions)
+    record = dict(schema="agent-frc/preliminary-release@2", release=release, issue=verdict["issue"], phase="preliminary-design",
+                  # Where the stage gate and the publication check find the committed inputs to judge.
+                  check=dict(project=inputs.relative_to(season).as_posix()),
+                  # The season's requirements are shared by every release: the judgement file points to them and they are not copied.
+                  requirements=judgement["requirements"]["file"])
     site.mkdir(parents=True, exist_ok=True)
     with update_index(site), tempfile.TemporaryDirectory(dir=site.parent, prefix=".stage-") as tmp:
         index = load_index(site)
         notes = place_version(index, release, design) if not refresh else []
-        if refresh:
-            listed = release in index["releases"]
-            if not listed or status_of(index, release) != "effective":
-                raise ValueError("--refresh-view republishes the view of the effective release. " + sentence(described(index, release)) + " is "
-                                 + (status_of(index, release) if listed else "not listed")
-                                 + ("" if listed and status_of(index, release) != "in-progress" else "; stage it to publish or revise it: stage_preliminary_review.py " + release))
-            try:
-                before = read(site / "releases" / release / "receipt.json")
-            except (OSError, ValueError):
-                raise ValueError("Release " + release + " has no published receipt to compare with")
-            was, now = receipt_identity(before), receipt_identity(result)
-            changed = [name for name in now if now[name] != was[name]] + (["the issue name"] if before.get("issue") != result.get("issue") else [])
-            if changed:
-                following = str(version_of(release)[0]) + "." + str(version_of(release)[1] + 1)
-                raise ValueError(sentence(title_of(index, release)) + " is effective and this receipt differs from the published one in " + ", ".join(changed)
-                                 + ". A view refresh keeps the physics. Work that changes it belongs to " + following + ", staged as a draft")
-        elif release in index["releases"] and status_of(index, release) != "in-progress":
+        if not refresh and release in index["releases"] and status_of(index, release) != "in-progress":
             major, minor = version_of(release)
             raise ValueError(title_of(index, release) + " is " + status_of(index, release) + " and no longer changes. Work toward its next baseline is "
                              + str(major) + "." + str(minor + 1) + ", staged as a draft; a different architecture takes the next major number with its own name")
@@ -312,7 +289,7 @@ def stage(season, inputs, release, design=None, refresh=False):
         (staged / "release.json").write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
         destination = site / "releases" / release
         if refresh and (destination / GATE).is_file():
-            # The record of the stage gate stays with the effective release: a view refresh changes no physics.
+            # The record of the stage gate stays with the effective release: a view refresh changes no file it judged.
             shutil.copyfile(destination / GATE, staged / GATE)
         destination.parent.mkdir(parents=True, exist_ok=True)
         replaced = destination.exists()
@@ -350,21 +327,30 @@ def stage(season, inputs, release, design=None, refresh=False):
     print(ON_PUSH)
 
 
+def held(index, release, season):
+    """Refuse a view refresh of a release that is not effective, or whose gate record no longer stands for its files."""
+    listed = release in index["releases"]
+    if not listed or status_of(index, release) != "effective":
+        raise ValueError("--refresh-view republishes the view of the effective release. " + sentence(described(index, release)) + " is "
+                         + (status_of(index, release) if listed else "not listed")
+                         + ("" if listed and status_of(index, release) != "in-progress" else "; stage it to publish or revise it: stage_preliminary_review.py " + release))
+    run = subprocess.run([*GATE_COMMAND, "holds", str(season), "--release", release], capture_output=True, text=True, encoding="utf-8")
+    if run.returncode:
+        raise ValueError(run.stderr.strip() + ". A view refresh changes no file its gate judged. Work that changes it belongs to "
+                         + str(version_of(release)[0]) + "." + str(version_of(release)[1] + 1) + ", staged as a draft")
+
+
 def sentence(text):
     return text[:1].upper() + text[1:]
 
 
-def stage_gate(season, release, budget_minutes=None, workers=None, check=None):
-    """Run the stage gate of a release: its readiness report must meet every criterion, then the full layout check runs.
+def stage_gate(season, release):
+    """Run the stage gate of a release: its committed records are judged, and its readiness report must meet every criterion.
 
-    The gate is the plugin's stage-gate.mjs. It prints what it ran and how long it took, and writes its record beside
+    The gate is the plugin's stage-gate.mjs. It prints what it judged and how long it took, and writes its record beside
     the published release. A release that does not pass keeps its status."""
-    command = ["node", str(Path(__file__).resolve().with_name("stage-gate.mjs")), "preliminary", str(season), "--release", release]
-    for flag, value in (("--budget-minutes", budget_minutes), ("--workers", workers), ("--check", check)):
-        if value is not None:
-            command += [flag, str(value)]
     sys.stdout.flush()
-    if subprocess.run(command).returncode != 0:
+    if subprocess.run([*GATE_COMMAND, "preliminary", str(season), "--release", release]).returncode != 0:
         raise ValueError("Release " + release + " keeps its status: the stage gate did not pass")
 
 
@@ -446,90 +432,61 @@ def set_status(site, release, status, reason=None):
     print(ON_PUSH)
 
 
-def step_digest(site, release):
-    """The SHA-256 of the STEP a published release was checked on, from its receipt."""
+def judged_records(season, site, release):
+    """{record: sha256} of what the gate of a published release judged, by path in its own folder; None without a gate record."""
     try:
-        digest = (read(site / "releases" / release / "receipt.json").get("step") or {}).get("sha256")
-        return digest if isinstance(digest, str) and digest else None
-    except (OSError, ValueError, AttributeError):
+        published = site / "releases" / release
+        own = (read(published / "release.json").get("check") or {}).get("project", "") + "/"
+        records = read(published / GATE)["files"]["records"]
+        return {name[len(own):] if name.startswith(own) else name: digest for name, digest in records.items()} or None
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
         return None
 
 
-
-
 def copy_inputs(season, base, old, new):
-    """Copy a release's check inputs to a new release folder and write its pins for the new paths.
+    """Copy a release's inputs to a new release folder, with its records, and write the paths that name the old folder.
 
-    A record pins a file by path and SHA-256, and a release checked from the repository root names its own folder in
-    those paths. Each such pin is verified against the source, written with the new path and given the digest of the
-    copied file. The STEP and every other file that is not a pinning record keep their bytes. The review page, scene
-    and receipt are not copied: the layout check writes them for the new folder."""
+    The judgement file names its files by project path. The source, its parts, the records and the page keep their bytes, so the
+    records stay current: nothing is measured again. The review scene is not copied: the page builder writes it for the new folder."""
     source, target = base / "releases" / checked_id(old), base / "releases" / checked_id(new)
-    name = JUDGEMENT
-    if not (source / name).is_file():
-        raise ValueError("No judgement file at " + (source / name).relative_to(season).as_posix())
+    if not (source / JUDGEMENT).is_file():
+        raise ValueError("No judgement file at " + (source / JUDGEMENT).relative_to(season).as_posix())
     if target.exists():
         raise ValueError(target.relative_to(season).as_posix() + " already exists. Choose a new release ID, or remove that folder first")
     before, after = source.relative_to(season).as_posix() + "/", target.relative_to(season).as_posix() + "/"
-    digest = lambda file: hashlib.sha256(file.read_bytes()).hexdigest()
-    view = read(source / name).get("view")
-    left = {"receipt.json", SCENE, Path(view).name if isinstance(view, str) else SCENE, "__pycache__"}
-    done, rewritten = set(), []
+    records = ((read(source / JUDGEMENT).get("records") or {}).get("folder") or before + "records") + "/"
 
-    def repin(name):
-        """Rewrite the pins in one copied record, after the records it pins."""
-        if name in done or not name.endswith(".json"):
-            return
-        done.add(name)
-        try:
-            data = json.loads((target / name).read_bytes())
-        except (OSError, ValueError):
-            return
-        was = json.dumps(data)
+    def moved(node):
+        """A record with each path under the old folder written for the new one."""
+        if isinstance(node, dict):
+            return {k: after + v[len(before):] if k in ("file", "folder") and isinstance(v, str) and v.startswith(before) else moved(v) for k, v in node.items()}
+        return [moved(v) for v in node] if isinstance(node, list) else node
 
-        def walk(node):
-            if isinstance(node, dict):
-                file, pinned = node.get("file"), node.get("sha256")
-                if isinstance(file, str) and file.startswith(before):
-                    inner = file[len(before):]
-                    if isinstance(pinned, str) and (not (source / inner).is_file() or digest(source / inner) != pinned):
-                        raise ValueError(before + name + " pins " + file + ", which is missing or differs from its pinned SHA-256. Resolve it in release "
-                                         + old + " before copying")
-                    repin(inner)
-                    node["file"] = after + inner
-                    if isinstance(pinned, str) and (target / inner).is_file():
-                        node["sha256"] = digest(target / inner)
-                for value in node.values():
-                    walk(value)
-            elif isinstance(node, list):
-                for value in node:
-                    walk(value)
-
-        walk(data)
-        if isinstance(data, dict) and isinstance(data.get("view"), str) and data["view"].startswith(before):
-            data["view"] = after + data["view"][len(before):]
-        if json.dumps(data) != was:
-            (target / name).write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-            rewritten.append(name)
-
+    written = 0
     try:
-        shutil.copytree(source, target, ignore=lambda folder, names: [n for n in names if Path(folder) == source and n in left or n == "__pycache__"])
+        shutil.copytree(source, target, ignore=lambda folder, names: [n for n in names if Path(folder) == source and n == SCENE or n == "__pycache__"])
         for file in sorted(target.rglob("*.json")):
-            repin(file.relative_to(target).as_posix())
+            if (before + file.relative_to(target).as_posix()).startswith(records):
+                continue
+            data = read(file)
+            changed = moved(data)
+            if changed != data:
+                file.write_text(json.dumps(changed, indent=2) + "\n", encoding="utf-8", newline="\n")
+                written += 1
     except Exception:
         shutil.rmtree(target, ignore_errors=True)
         raise
-    plan = after + name
-    print("Copied the inputs of release " + old + " to " + after.rstrip("/") + " and wrote " + str(len(rewritten)) + " pinning record"
-          + ("" if len(rewritten) == 1 else "s") + " for the new paths. The STEP is unchanged. Now run the layout check there, then stage " + new + ":\n"
-          "  node PLUGIN/scripts/design.mjs preliminary-check . " + plan + " --write-view --require-checked --output " + after + "receipt.json")
+    print("Copied the inputs of release " + old + " to " + after.rstrip("/") + " with its records and wrote the paths of " + str(written) + " file" + ("" if written == 1 else "s")
+          + " for the new folder. Now check it there, build its page, then stage " + new + ":\n"
+          "  node PLUGIN/scripts/design.mjs preliminary-check . " + after + JUDGEMENT + " --require-checked\n"
+          "  node PLUGIN/scripts/design.mjs preliminary-page . " + after + JUDGEMENT)
 
 
 def remove(season, base, release, replaced_by=None):
     """Take a release out of the index and delete its published folder and its inputs folder. No redirect is left.
 
     This is the last step of renaming a release: the same design is first rebuilt, checked and staged under its new ID.
-    A release that is or was effective is removed only when --replaced-by names the effective release of the same STEP."""
+    A release that is or was effective is removed only when --replaced-by names the effective release whose gate judged the same records."""
     checked_id(release)
     site = season / "docs/preliminary-design"
     with update_index(site):
@@ -545,9 +502,9 @@ def remove(season, base, release, replaced_by=None):
                                  "new ID, mark that release effective, then run --remove " + release + " --replaced-by NEW")
             if status_of(record, replaced_by) != "effective":
                 raise ValueError("Release " + replaced_by + " is " + status_of(record, replaced_by) + ". Mark it effective before it replaces " + release)
-            old, new = step_digest(site, release), step_digest(site, replaced_by)
+            old, new = judged_records(season, site, release), judged_records(season, site, replaced_by)
             if not old or old != new:
-                raise ValueError("Releases " + release + " and " + replaced_by + " were checked on different STEP files, or a receipt is missing. "
+                raise ValueError("Releases " + release + " and " + replaced_by + " were not judged on the same records, or a gate record is missing. "
                                  "A rename keeps the design; a changed design is a new version and the earlier one stays as superseded")
             if accepted:
                 # The design was accepted on the earlier date; the rename does not move it.
@@ -579,26 +536,23 @@ def remove(season, base, release, replaced_by=None):
         print("Note: detailed design " + design + " names preliminary release " + release + ". Stage it again with --preliminary " + (replaced_by or "NEW") + ".")
 
 
-if __name__ == "__main__":
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("release", nargs="?")
     mode.add_argument("--set-status", nargs=2, metavar=("RELEASE", "STATUS"), help="Set a release " + ", ".join(STATUSES))
     mode.add_argument("--refresh-view", metavar="RELEASE",
-                      help="Republish the view of the effective release from its folder: a new review page, new titles or a --view-only rebuild. "
-                           "Refused when its receipt records different physics than the published one")
+                      help="Republish the view of the effective release from its folder: a rebuilt review page or a reworded page file. "
+                           "Refused when a file its stage gate judged has changed")
     mode.add_argument("--remove", metavar="RELEASE", help="Delete a release's folders and index entry after it was staged again under a new ID; no redirect is left")
     mode.add_argument("--copy-inputs", nargs=2, metavar=("FROM", "TO"),
-                      help="Copy a release's check inputs to a new release folder with their pins written for the new paths, to start the next version or rename a release")
+                      help="Copy a release's inputs and records to a new release folder with its own paths, to start the next version or rename a release")
     parser.add_argument("--design-name", help="The architecture's name in words, given the first time a major number is staged, as in 1.0")
-    parser.add_argument("--replaced-by", metavar="RELEASE", help="With --remove of a release that is or was effective: the effective release of the same STEP")
+    parser.add_argument("--replaced-by", metavar="RELEASE", help="With --remove of a release that is or was effective: the effective release whose gate judged the same records")
     parser.add_argument("--reason", help="Why the release is withdrawn, with --set-status RELEASE withdrawn")
-    parser.add_argument("--budget-minutes", type=float, help="With --set-status RELEASE effective: stop the stage gate's layout check after this many minutes (default 45)")
-    parser.add_argument("--workers", type=int, help="With --set-status RELEASE effective: worker processes of the stage gate's layout check")
-    parser.add_argument("--gate-check", help=argparse.SUPPRESS)
     parser.add_argument("--base", type=Path, default=Path("cad/preliminary-design"),
                         help="The project's preliminary design folder, which holds releases/ (default: cad/preliminary-design under the current folder)")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     base = args.base.resolve()
     try:
         if not base.is_dir():
@@ -616,8 +570,8 @@ if __name__ == "__main__":
                     raise ValueError("Unknown release: " + args.set_status[0])
                 if args.reason:
                     raise ValueError("--reason applies to a withdrawal")
-                # The stage gate runs here, once, on the committed design. An earlier receipt is never taken for it.
-                stage_gate(base.parents[1], args.set_status[0], args.budget_minutes, args.workers, args.gate_check)
+                # The stage gate runs here, once, on the committed design.
+                stage_gate(base.parents[1], args.set_status[0])
             set_status(site, *args.set_status, reason=args.reason)
         elif args.copy_inputs:
             copy_inputs(base.parents[1].resolve(), base, *args.copy_inputs)
@@ -628,4 +582,9 @@ if __name__ == "__main__":
         else:
             stage(base.parents[1], base / "releases" / args.release, args.release, args.design_name)
     except (KeyError, ValueError, OSError) as error:
-        sys.exit(str(error))
+        return str(error)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

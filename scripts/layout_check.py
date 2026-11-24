@@ -22,6 +22,7 @@ def arguments():
     parser.add_argument("project", type=Path)
     parser.add_argument("judgement", help="The project-relative judgement file; it names the design source and the records folder")
     parser.add_argument("--judge-only", action="store_true", help="Measure nothing: judge the committed records, refusing any that is stale or missing")
+    parser.add_argument("--every-record", action="store_true", help="With --judge-only: also refuse any other record in the folder that is not current. The stage gate asks for it")
     parser.add_argument("--require-checked", action="store_true", help="Exit 1 unless the verdict is layout-checked")
     parser.add_argument("--json", action="store_true", help="Print the verdict as JSON on stdout")
     parser.add_argument("--workers", type=int, metavar="N", help="Worker processes the library shares the measuring between (default: half the cores)")
@@ -47,7 +48,8 @@ def main():
         root = args.project.resolve()
         file = project_path(root, args.judgement)
         require(args.workers is None or args.workers >= 1, "Give --workers as a whole number of 1 or more")
-        verdict = judge(root, file, judge_only=args.judge_only, workers=args.workers, progress=None if args.quiet else say)
+        require(args.judge_only or not args.every_record, "--every-record goes with --judge-only")
+        verdict = judge(root, file, judge_only=args.judge_only, every_record=args.every_record, workers=args.workers, progress=None if args.quiet else say)
         first = verdict["firstUnmet"]
         if args.json:
             sys.stdout.write(json.dumps(verdict, indent=1, allow_nan=False) + "\n")

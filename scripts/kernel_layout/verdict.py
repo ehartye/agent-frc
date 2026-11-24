@@ -6,13 +6,14 @@ judge() reads every input first and refuses, with the whole list, when one is mi
     rest; the library writes each record as its job finishes, so a stopped run keeps what it measured;
   - a judge-only check (judge_only=True) measures nothing and refuses any job record that is stale or missing.
 
-Either way a trial record the judgement uses must be current. The verdict is returned, never stored: the stage gate
-writes the one stored verdict, gate.json.
+Either way a trial record the judgement uses must be current. With every_record, which the stage gate asks for, so must
+every other record in the folder. The verdict is returned, never stored: the stage gate writes the one stored verdict,
+gate.json, from its status and the files it names.
 """
 from pathlib import Path
 from time import perf_counter
 
-from . import attachment, interactions, jobs as asking, judge as judging, limits, measure, premises, scope, stages
+from . import attachment, evidence, interactions, jobs as asking, judge as judging, limits, measure, premises, scope, stages
 from .files import read
 from .inputs import library, load, refused
 
@@ -28,21 +29,25 @@ def used_trials(inputs):
     return names
 
 
-def trial_records(inputs, say):
-    """(trials.json or None, the library's status of the records folder, seconds). Refuses a stale trial record the judgement uses."""
+def trial_records(inputs, every_record, say):
+    """(trials.json or None, the library's status of the records folder, seconds). Refuses a stale trial record the
+    judgement uses or, with every_record, any record in the folder that is not current."""
     path = inputs.records / "trials.json"
     campaign = read(path) if path.is_file() else None
     names = used_trials(inputs) & set((campaign or {}).get("trials", {}))
-    if not names:
+    if not names and not every_record:
         return campaign, {}, 0.0
     began = perf_counter()
     state = measure.status(inputs.source, inputs.records)
     seconds = perf_counter() - began
-    stale = [r for r in state["records"] if r["record"] in {f'trial "{n}"' for n in names} and r["state"] != "current"]
+    used = {f'trial "{n}"' for n in names}
+    stale = [r for r in state["records"] if (every_record or r["record"] in used) and r["state"] != "current"]
     if stale:
-        raise refused([r["record"] + " is stale: " + "; ".join(r["changes"]) + ". Run it again with python -m frc_design_kernel try SOURCE --out RECORDS"
-                       for r in stale], "before measuring, because a trial record it uses is not current")
-    say(f"[records] {len(names)} trial record(s) the judgement uses are current; status took {seconds:.1f} s")
+        raise refused([r.get("file", r["record"]) + " is stale: " + "; ".join(r["changes"]) + (". Run it again with python -m frc_design_kernel try SOURCE --out RECORDS"
+                       if r["record"].startswith("trial ") else ". Measure it again, or remove a record the design no longer needs") for r in stale],
+                      "before judging, because " + ("a record" if every_record else "a trial record it uses") + " is not current")
+    say(f"[records] {len(state['records'] if every_record else names)} " + ("record(s) in the folder" if every_record else "trial record(s) the judgement uses")
+        + f" are current; status took {seconds:.1f} s")
     return campaign, state, seconds
 
 
@@ -136,13 +141,13 @@ def judged(inputs, results, campaign, state, adjustments, paths, path_unmet, say
     return verdict
 
 
-def judge(root, file, *, judge_only=False, workers=None, progress=None):
+def judge(root, file, *, judge_only=False, every_record=False, workers=None, progress=None):
     """Judge one design and return its verdict. Raises ValueError, naming every problem, when it cannot be judged."""
     say, began = progress or (lambda line: None), perf_counter()
     inputs = load(Path(root), Path(file))
     if inputs.records is None:
         raise refused(["Name the folder of the library's records as records: {folder}"])
-    campaign, state, status_seconds = trial_records(inputs, say)
+    campaign, state, status_seconds = trial_records(inputs, every_record, say)
     problems, path_unmet = [], []
     paths = stages.fits(inputs, campaign, problems, path_unmet)
     if problems:
@@ -152,5 +157,6 @@ def judge(root, file, *, judge_only=False, workers=None, progress=None):
     adjustments = read(inputs.records / "adjustments.json") if (inputs.records / "adjustments.json").is_file() else None
     verdict = judged(inputs, results, campaign, state, adjustments, paths, path_unmet, say)
     verdict["records"] = dict(folder=inputs.records.relative_to(inputs.root).as_posix(), jobs=listed)
+    verdict["files"] = evidence.files(inputs, listed)
     verdict["seconds"] = dict(total=perf_counter() - began, status=status_seconds + check_seconds)
     return verdict

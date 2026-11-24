@@ -185,7 +185,7 @@ test('a design is removed after it is staged under another ID, with no redirect:
   write(p.root, old + '/study.json', {source: {file: old + '/design.json', sha256: sha(pinned)}, note: 'invented'});
   const copied = copyInputs({project: p.root, from: '1.0', to: '1.1'});
   assert.deepEqual([copied.inputs, copied.rewritten], ['cad/detailed-design/designs/1.1', ['judgement.json', 'study.json']]);
-  assert.match(copied.report, /Now run the layout check there, then stage 1\.1:\n  node PLUGIN\/scripts\/design\.mjs preliminary-check \. cad\/detailed-design\/designs\/1\.1\/judgement\.json --require-checked\n  node PLUGIN\/scripts\/design\.mjs preliminary-page \. cad\/detailed-design\/designs\/1\.1\/judgement\.json\n/);
+  assert.match(copied.report, /Now check it there, build its page, then stage 1\.1:\n  node PLUGIN\/scripts\/design\.mjs preliminary-check \. cad\/detailed-design\/designs\/1\.1\/judgement\.json --require-checked\n  node PLUGIN\/scripts\/design\.mjs preliminary-page \. cad\/detailed-design\/designs\/1\.1\/judgement\.json\n/);
   const target = path.join(p.root, 'cad/detailed-design/designs/1.1');
   assert.deepEqual(read(path.join(target, 'study.json')).source, {file: 'cad/detailed-design/designs/1.1/design.json', sha256: sha(pinned)});
   assert.ok(!existsSync(path.join(target, 'review-scene.json.gz')) && existsSync(path.join(target, 'review.html')) && existsSync(path.join(target, 'records/trials.json')),

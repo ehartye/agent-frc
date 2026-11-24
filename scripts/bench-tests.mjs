@@ -4,7 +4,7 @@
  * preliminary design it is built on.
  *
  * A preliminary design hands over each open risk it could not close in simulation as a bench test with a measure, a
- * pass value and a fail value (missions.json `risks[].benchTest`). Detailed design gives each one a tag, an owner, a
+ * pass value and a fail value (`risks[].benchTest` in its judgement file). Detailed design gives each one a tag, an owner, a
  * plan and, when it is run, a result:
  *
  *   before-build  it gates the build: the design is effective only with a recorded passing result
@@ -22,6 +22,7 @@ import {writeFileAtomic} from './atomic-write.mjs';
 export const benchSchema = 'agent-frc/bench-tests@1';
 export const benchFile = 'bench-tests.json';
 export const benchTags = ['before-build', 'on-robot'];
+const judgementSchema = 'agent-frc/layout-judgement@2';
 
 const named = v => typeof v === 'string' && v.trim().length > 0;
 const object = v => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -43,21 +44,22 @@ function places(project, {site = 'docs', detailed = 'detailed-design', prelimina
 export const recordPath = (project, design, folders) => path.join(places(project, folders).detailedInputs, design, benchFile);
 
 /**
- * The bench tests a preliminary release hands over, as effective-readiness lists them: each risk in its missions.json
- * that is not closed by a design change and carries a bench test with a measure, a pass value and a fail value.
- * Returns {release, source, tests}; `tests` is null when the release's inputs are not in the project.
+ * The bench tests a preliminary release hands over, as effective-readiness lists them: each risk in its judgement file
+ * that is not closed by a design change and carries a bench test with a measure, a pass value and a fail value. The
+ * judgement file is read from the release's inputs, or from its published copy when they are not in the project.
+ * Returns {release, source, tests}; `tests` is null when neither holds a judgement file this reads.
  */
 export function handedOver(project, release, folders) {
-  const at = places(project, folders);
+  const at = places(project, folders), published = path.join(at.prelimTree, 'releases', release);
   let folder = path.join(at.prelimInputs, release);
-  const recordFile = path.join(at.prelimTree, 'releases', release, 'release.json');
+  const recordFile = path.join(published, 'release.json');
   if (existsSync(recordFile)) {
     const named_ = readJson(recordFile).check?.project;
-    if (named(named_) && !path.isAbsolute(named_) && existsSync(path.join(project, named_, 'missions.json'))) folder = path.join(project, named_);
+    if (named(named_) && !path.isAbsolute(named_)) folder = path.join(project, named_);
   }
-  const file = path.join(folder, 'missions.json');
-  if (!existsSync(file)) return {release, source: null, tests: null};
-  const risks = readJson(file).risks;
+  const file = [folder, published].map(dir => path.join(dir, 'judgement.json')).find(existsSync), judgement = file ? readJson(file) : null;
+  if (judgement?.schema !== judgementSchema) return {release, source: null, tests: null};
+  const risks = judgement.risks;
   const tests = (Array.isArray(risks) ? risks : []).filter(r => object(r) && named(r.id) && !named(r.closedBy) && object(r.benchTest) &&
     named(r.benchTest.measure) && value(r.benchTest.pass) && value(r.benchTest.fail) && r.benchTest.pass !== r.benchTest.fail)
     .map(r => ({id: r.id, ...(named(r.risk) ? {risk: r.risk} : {}), measure: r.benchTest.measure, pass: r.benchTest.pass, fail: r.benchTest.fail,
@@ -90,7 +92,7 @@ export function verdict(test, result = test.result) {
 
 /**
  * What stops a design with this record from being effective, one line for each test. `handed` is the list from
- * handedOver, or null when the preliminary inputs are not in the project.
+ * handedOver, or null when its judgement file could not be read.
  */
 export function effectiveProblems(record, handed = null) {
   const problems = [];
@@ -140,6 +142,9 @@ export const summaryText = s => s.tests + ' bench test' + (s.tests === 1 ? '' : 
 export function effectiveGate(project, design, {preliminary, file, ...folders} = {}) {
   const link = preliminary ?? linkedPreliminary(project, design, folders), handed = link ? handedOver(project, link, folders) : {tests: null};
   const from = file ?? recordPath(project, design, folders);
+  // Risks that cannot be read are not taken for no risks.
+  if (link && !handed.tests) return {record: existsSync(from) ? readJson(from) : null, handed, problems: ['The risks of preliminary design ' + link +
+    ' cannot be read: it has no judgement file in the current format, in its inputs or its published folder']};
   if (!existsSync(from)) {
     const count = handed.tests?.length ?? 0;
     return {record: null, handed, problems: count ? ['Design ' + design + ' has no bench-test record, and preliminary design ' + link + ' hands over ' + count + ' bench test' +
@@ -159,7 +164,7 @@ export function seed({project, design, preliminary, ...folders}) {
   const link = preliminary ?? linkedPreliminary(project, design, folders) ?? effectivePreliminary(project, folders);
   check(named(link), 'Name the preliminary release that hands over the bench tests with --preliminary RELEASE');
   const handed = handedOver(project, link, folders);
-  check(handed.tests, 'No missions.json for preliminary release ' + link + ' in the project: commit its check inputs, or name another release with --preliminary');
+  check(handed.tests, 'No judgement file for preliminary release ' + link + ' in the project: commit its check inputs, or name another release with --preliminary');
   const file = recordPath(project, design, folders), before = existsSync(file) ? readJson(file) : null;
   check(!before || before.schema === benchSchema && Array.isArray(before.tests), posix(project, file) + ' is not a bench-test record');
   const kept = new Map((before?.tests ?? []).filter(object).map(t => [t.id, t])), ids = new Set(handed.tests.map(t => t.id));

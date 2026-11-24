@@ -106,7 +106,7 @@ test('the season script publishes a checked release, records where its inputs ar
   assert.equal(promoted.status, 0, promoted.stderr);
   assert.match(promoted.stdout, /Preliminary design Swinging arm 2\.0 is effective; the site opens 2\.0/);
   assert.match(promoted.stdout, /Effective-readiness report for Swinging arm 2\.0 \(synthetic-2\.0\)/, 'the reviewer is shown the readiness report of the installed plugin');
-  assert.match(promoted.stdout, /^\[gate\] Preliminary design Swinging arm 2\.0: layout-checked on 5 current records, 3 of 3 readiness criteria met, in \d+\.\d s/m, 'the command reports the gate it just ran');
+  assert.match(promoted.stdout, /^\[gate\] Preliminary design Swinging arm 2\.0: layout-checked on 6 current records, 3 of 3 readiness criteria met, in \d+\.\d s/m, 'the command reports the gate it just ran');
   assert.match(promoted.stdout, /On push: the project's workflow publishes the page\. Nothing is rerun\.\r?\n$/, 'the command says what a push will do');
   assert.deepEqual(await index(), {releases: ['1.0', '2.0'], designs, revision: counted, designStatus: {'1.0': 'superseded', '2.0': 'effective'}, accepted: {'1.0': 'DATE', '2.0': 'DATE'}, current: '2.0'});
   assert.ok(existsSync(path.join(site, 'releases', '1.0', 'judgement.json')), 'superseding a release keeps its published files');

@@ -31,11 +31,14 @@ function load(root,name){
   }catch{return {reason:name+' is not readable JSON'};}
 }
 
-/** The verdict of the layout judgement on the committed records, or {reason} when it cannot be judged. Measures nothing. */
-export function judgedVerdict(root,file){
+/**
+ * The verdict of the layout judgement on the committed records, or {reason} when it cannot be judged. Measures nothing.
+ * With everyRecord, which the stage gate asks for, every record in the folder must be current.
+ */
+export function judgedVerdict(root,file,{everyRecord=false}={}){
   const python=process.env.PYTHON||(process.platform==='win32'?'python':'python3');
   const run=spawnSync(python,['-B',fileURLToPath(new URL('./layout_check.py',import.meta.url)),root,path.relative(root,file).split(path.sep).join('/'),
-    '--judge-only','--json','--quiet'],{encoding:'utf8',maxBuffer:256*1024*1024});
+    '--judge-only','--json','--quiet',...(everyRecord?['--every-record']:[])],{encoding:'utf8',maxBuffer:256*1024*1024});
   if(run.error)return {reason:'The layout judgement could not run: '+run.error.message};
   if(run.status===0)try{return JSON.parse(run.stdout);}catch{/* reported below */}
   return {reason:'The layout judgement was refused: '+(run.stderr||run.stdout).trim()};

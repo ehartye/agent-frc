@@ -390,7 +390,7 @@ test('the review scene must repeat the verdict and a mission case must serve a r
   assert.doesNotMatch(errors, /Sliding gate 3\.0/);
   // A scene the stock page cannot play is refused even where it repeats the verdict, and so is one built from other records.
   show({openingCase: 'nowhere'});
-  assert.match(errorsOf(p.check()), /1\.0: the review page cannot play its scene: openingCase names an unknown case/);
+  assert.match(errorsOf(p.check()), /1\.0: the review page cannot play its scene: \/openingCase names an unknown case/);
   show({records: {...shown.records, jobs: shown.records.jobs.map((j, i) => i ? j : {...j, sha256: sha('earlier')})}});
   assert.match(errorsOf(p.check()), /1\.0: the review scene was built from another .*clearance\.motion\.loaded-turn\.json/);
   show({sources: {...shown.sources, design: {...shown.sources.design, sha256: sha('earlier source')}}});
@@ -680,7 +680,8 @@ test('the command says what it checked and what a push will do', t => {
   // The shipped commands take nothing that stands in for the judgement.
   for (const [command, args] of [['../scripts/stage-gate.mjs', ['preliminary', p.root, '--release', '1.0', '--check', standInCli]], ['../scripts/detailed-design-release.mjs', ['refresh', p.root, '--check', standInCli]]])
     assert.notEqual(spawnSync(process.execPath, [here(command), ...args], {encoding: 'utf8'}).status, 0, command);
-  assert.match(spawnSync(python, ['-B', stagingCommand, '--set-status', '1.0', 'effective', '--gate-check', standInCli], {encoding: 'utf8'}).stderr, /unrecognized arguments: --gate-check/);
+  const handed = spawnSync(python, ['-B', stagingCommand, '--base', path.join(p.root, 'cad/preliminary-design'), '--set-status', '1.0', 'effective', '--gate-check=' + standInCli], {encoding: 'utf8'});
+  assert.match(handed.stderr, /unrecognized arguments: --gate-check/);
 });
 
 test('the publication check scans tracked files for a personal path or a credential', t => {
