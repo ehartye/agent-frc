@@ -83,7 +83,6 @@ def fixture(root):
         },
     )
     run(root, "export-showcase-cad.py")
-    run(root, "cad-readmes.py", "--update")
     run(root, "cad-readmes.py")
     folder = root / "docs/robot/cad"
     record = json.loads((folder / "receipt.json").read_bytes())

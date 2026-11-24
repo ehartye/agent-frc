@@ -8,7 +8,7 @@ Use four-module swerve as the default for a new robot drivetrain unless the proj
 
 Use Autodesk Fusion as the standard for student CAD authoring and handoff. Prefer the manufacturer's model of each purchased part in its exact revision and configuration. Preserve its source, file identity, license and installed transform. Document the specific engineering justification for external shape authoring, how the selected result returns to Fusion and what remains editable. Label every approximation and its limits.
 
-Maintain a current CAD-rendered still immediately below the title of each project-owned README. Show the selected assembly that the interactive showcase presents. Identify the design, pose, revision and scope so students can distinguish a current robot, historical assembly or subsystem fixture. Regenerate both views when the selected CAD changes.
+Put a picture at the top of a README when there is a good one. Nothing enforces or checks it. For a robot project, show the selected assembly that the interactive showcase presents. Identify the design, pose, revision and scope so students can distinguish a current robot, historical assembly or subsystem fixture. Replace it when the design it shows changes.
 
 Start new robot frame and bumper designs with two rear plan-view chamfers. Preserve explicit project outlines. Size each mitered backing, padding and cover segment from the actual frame, retain the vertical bumper section and verify the applicable edition and cutoff in the owning project. [Frame profile convention](docs/frame-profile.md)
 
