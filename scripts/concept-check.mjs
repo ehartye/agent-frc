@@ -10,6 +10,7 @@ import { pieceRadiusFor, standOffBand } from './concept-arc.mjs';
 import { framePlan } from './frame-profile.mjs';
 import { validateProfile } from './kickoff.mjs';
 import { loadScoreObservations } from './score-observations.mjs';
+import { inspectionLimitLb } from './weight-limits.mjs';
 
 const usage = 'Usage: node "' + fileURLToPath(import.meta.url) + '" concept.json [--profile rules-model.json]';
 
@@ -34,11 +35,11 @@ export function conceptCheck(document, profile) {
   // frame outline in plan, in inches, without bumpers. The outline is the concept's frameProfile, else the project's,
   // else a rectangle, as the rehearsal defaults resolve it.
   const perimeterIn = framePlan(body.frameLengthIn.value, body.frameWidthIn.value, body.frameProfile ?? profile?.frameProfile, 0, 25.4).perimeter;
-  const mass = doc.massLb ?? null;
+  const mass = doc.massLb ?? null, massLimit = inspectionLimitLb(profile);
   const measured = {
     perimeter:[perimeterIn, limits.perimeterIn], startingHeight:[body.stowedHeightIn.value, limits.startingHeightIn],
     maxHeight:[body.maxHeightIn.value, limits.maxHeightIn], extension:[body.maxReachIn.value, limits.maxExtensionIn],
-    mass:[mass ? mass.max : null, limits.massLb]
+    mass:[mass ? mass.max : null, massLimit]
   };
   const ports = [];
   for (const output of record.concept.outputs.filter(o => o.kind === 'ranged')) {
@@ -59,7 +60,7 @@ export function conceptCheck(document, profile) {
     limitValues:Object.fromEntries(Object.entries(measured).map(([k, [value, limit]]) =>
       [k, {[k === 'mass' ? 'conceptLb' : 'conceptIn']:value, limit:limit ?? null}])),
     mass:{min:mass?.min ?? null, max:mass?.max ?? null, label:mass?.label ?? null, basis:mass?.basis ?? null,
-      default:mass?.default === true, shareOfLimit:mass && limits.massLb ? mass.max / limits.massLb.value : null},
+      default:mass?.default === true, shareOfLimit:mass && massLimit ? mass.max / massLimit.value : null},
     ports
   };
 }

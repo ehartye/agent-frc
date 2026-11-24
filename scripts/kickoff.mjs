@@ -7,6 +7,7 @@ import { createRehearsalGame,rehearsalFindings } from './rehearsal-game.mjs';
 import { createMatchSeries, createRehearsalSetup } from './rehearsal-series-core.mjs';
 import { createTerminalRehearsal } from './rehearsal-terminal.mjs';
 import {verifyRuleValues} from './rule-register.mjs';
+import {validateWeightLimits} from './weight-limits.mjs';
 import { readFile, realpath, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { analyzeWindow } from './kickoff-window.mjs';
@@ -83,6 +84,7 @@ export function validateProfile(p) {
   }
   if (!p.limits || ![p.limits.height, p.limits.perimeter].every(n => n === null || positive(n)) ||
       !label(p.limits.source)) throw Error('Provide sourced limits or use null for an unknown.');
+  if (p.weightLimits!==undefined) validateWeightLimits(p.weightLimits);
   if (!label(p.geometrySource) || !label(p.omissions) || !Array.isArray(p.landmarks) || !Array.isArray(p.levels)) {
     throw Error('Describe the geometry, source sections and omissions.');
   }
@@ -153,8 +155,8 @@ export function validateProfile(p) {
     // Optional target entry regions and robot limits. A ranged output can score only through an entry; the arc
     // check (scripts/concept-arc.mjs) reads it. Each factId names the rule-register fact that supports the value.
     // entry: {centerIn:[x,y,z], kind:'window', widthIn, heightIn, facingDeg, factId} or {centerIn, kind:'ring', radiusIn, factId}.
-    // robotLimits: all five keys, each {value>0, factId} or null for unknown. A bare number is refused, so every
-    // limit stays traceable to its fact; massLb follows the same shape.
+    // robotLimits: all four keys, each {value>0, factId} or null for unknown. A bare number is refused, so every
+    // limit stays traceable to its fact. Weight limits are in weightLimits.
     const only=(o,keys)=>o && typeof o==='object' && !Array.isArray(o) && Object.keys(o).every(k=>keys.includes(k) && o[k]!==undefined);
     for(const s of r.stations ?? []){
       if(s?.entry===undefined)continue;
@@ -170,9 +172,10 @@ export function validateProfile(p) {
       }
     }
     if(r.robotLimits!==undefined){
-      const keys=['perimeterIn','startingHeightIn','maxHeightIn','maxExtensionIn','massLb'],l=r.robotLimits;
+      const keys=['perimeterIn','startingHeightIn','maxHeightIn','maxExtensionIn'],l=r.robotLimits;
+      if(l?.massLb!==undefined)throw Error('rehearsal.robotLimits.massLb is not read: move the mass limit to weightLimits, under the name "inspection".');
       if(!only(l,keys) || !keys.every(k=>l[k]===null || only(l[k],['value','factId']) && positive(l[k].value) && label(l[k].factId))) {
-        throw Error('Give rehearsal.robotLimits perimeterIn, startingHeightIn, maxHeightIn, maxExtensionIn and massLb, ' +
+        throw Error('Give rehearsal.robotLimits perimeterIn, startingHeightIn, maxHeightIn and maxExtensionIn, ' +
           'each {value, factId} with a positive value, or null for an unknown limit.');
       }
       if(l.maxHeightIn && l.startingHeightIn && l.maxHeightIn.value<l.startingHeightIn.value) {

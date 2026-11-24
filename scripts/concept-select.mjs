@@ -97,7 +97,7 @@ export function conceptSelection({results,resultsRef,conceptRef,document,study,s
       pointer:row.pointer,betterDirection:direction,base:row.base});
   }
   const mass=entry.massLb;
-  if(!mass || !Number.isFinite(mass.max))throw Error('Candidate '+candidate+' has no mass range: give the concept massLb or the profile a mass limit.');
+  if(!mass || !Number.isFinite(mass.max))throw Error('Candidate '+candidate+' has no mass range: give the concept massLb, or the profile a weightLimits entry named "inspection".');
   const rates=premises.length;
   premises.push({id:premiseId(scenarioId+'.'+document.id,'massLb'),...shared,
     basis:'Mass range '+mass.min+'–'+mass.max+' lb, labelled '+mass.label+', '+(mass.default?'the profile default':

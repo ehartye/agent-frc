@@ -120,14 +120,14 @@ test('one loaded batch departs only after its pieces are aboard; early and late 
 test('scoring entry regions and robot limits are optional, and strictly shaped when present',()=>{
   const bay=profile.rehearsal.stations.findIndex(s=>s.kind==='scoring');
   const supply=profile.rehearsal.stations.findIndex(s=>s.kind==='retrieval');
-  assert.ok(profile.rehearsal.stations[bay].entry && profile.rehearsal.robotLimits.massLb.value===100,'the training field demonstrates both');
+  assert.ok(profile.rehearsal.stations[bay].entry && profile.rehearsal.robotLimits.maxExtensionIn.value===12,'the training field demonstrates both');
   const variant=edit=>{const p=structuredClone(profile);edit(p);return p;};
   const withEntry=(entry,at=bay)=>variant(p=>{p.rehearsal.stations[at].entry=entry;});
   const withLimits=limits=>variant(p=>{p.rehearsal.robotLimits=limits;});
   const ring={centerIn:[175,194,40],kind:'ring',radiusIn:9,factId:'invented-ring'};
   const window={centerIn:[175,194,30],kind:'window',widthIn:18,heightIn:12,facingDeg:180,factId:'invented-window'};
   const known=value=>({value,factId:'invented-limit'});
-  const limits={perimeterIn:known(116),startingHeightIn:known(46),maxHeightIn:null,maxExtensionIn:known(12),massLb:known(100)};
+  const limits={perimeterIn:known(116),startingHeightIn:known(46),maxHeightIn:null,maxExtensionIn:known(12)};
   for(const ok of [withEntry(ring),withEntry(window),withLimits(limits),
     variant(p=>{delete p.rehearsal.robotLimits;for(const s of p.rehearsal.stations)delete s.entry;})]) assert.doesNotThrow(()=>validateProfile(ok));
   for(const bad of [{...ring,centerIn:[175,194]},{...ring,centerIn:[175,999,40]},{...ring,centerIn:[175,194,-1]},
@@ -136,7 +136,7 @@ test('scoring entry regions and robot limits are optional, and strictly shaped w
     assert.throws(()=>validateProfile(withEntry(bad)),/entry/,JSON.stringify(bad));
   }
   assert.throws(()=>validateProfile(withEntry(ring,supply)),/scoring station/);
-  for(const bad of [{...limits,massLb:100},{...limits,massLb:known(0)},{...limits,perimeterIn:{value:116}},
+  for(const bad of [{...limits,maxExtensionIn:12},{...limits,maxExtensionIn:known(0)},{...limits,perimeterIn:{value:116}},
     {...limits,maxExtensionIn:undefined},{...limits,width:known(1)},{...limits,maxHeightIn:known(40)},[],null]) {
     assert.throws(()=>validateProfile(withLimits(bad)),/robotLimits/,JSON.stringify(bad));
   }

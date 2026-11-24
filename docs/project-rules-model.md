@@ -34,3 +34,16 @@ A modeled fact also carries a JSON Pointer to the field profile and the value re
 ~~~
 
 Give an unmodeled fact a reason and describe its design consequence. Keep unresolved interpretations in openQuestions. The compile command checks the edition, source IDs and each declared value against the profile, then embeds the register and its file digest in the project model. Review uncited profile assumptions separately. An agent or student must read and interpret the actual manual before running this consistency check.
+
+## Weight limits
+
+`weightLimits` lists every robot weight limit of the game. It is optional, and a missing list means the limits are unknown.
+
+| Field | Contents |
+| --- | --- |
+| `name` | A name, distinct in the list. The limit the robot is weighed against at inspection is named `inspection`; a concept's default mass range and `concept:check` use that one |
+| `limit` | `{value, unit}`, as the manual prints it, with `unit` `"lb"` or `"kg"`. A reader converts 1 lb as 0.45359237 kg |
+| `excludesRoles` | The group roles the limit leaves out: `structure`, `bumper`, `drive`, `battery`, `mechanism` or `other`. An empty list means none. Game pieces, service gauges and fixtures are never counted, so they are not listed |
+| `factId` | The register fact that supports the limit |
+
+`rehearsal.robotLimits` has no mass limit: a `massLb` there is refused, and the message says where it goes.

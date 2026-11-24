@@ -81,7 +81,7 @@ Start a drive from these bounds when the team has no module, gearing or current 
 
 ## Mass is a range
 
-`massLb` is a budget, never an input to the motion. When a concept has no `massLb` and the profile has `rehearsal.robotLimits.massLb`, the range defaults to 75–95% of that inspection limit. The default is labelled `assumed`, carries `"default": true`, and its basis names the limit's `factId`. With a 100 lb limit it is 75–95 lb.
+`massLb` is a budget, never an input to the motion. When a concept has no `massLb` and the profile's `weightLimits` has a limit named `inspection`, the range defaults to 75–95% of it. The default is labelled `assumed`, carries `"default": true`, and its basis names the limit's `factId`. With a 100 lb limit it is 75–95 lb.
 
 The default assumes the robot will be built close to the limit, holding about 5% back for late additions. It says nothing about this concept's mechanisms. The agent proposes it, says what it assumes and asks the student for evidence that narrows or shifts it. Useful evidence includes known component or kit masses, a module and battery count, or a comparable earlier build. The agent then writes the refined range into the document with its basis, labels it `observed` or `assumed`, and removes `default`. Without a limit and without an estimate, mass stays `unresolved` and the concept is still valid.
 
@@ -89,7 +89,7 @@ The default assumes the robot will be built close to the limit, holding about 5%
 
 Two optional additions to the [project rules model](project-rules-model.md) let a concept be checked against the game. Each value names the rule-register fact that supports it with a `factId`. `rules compile` carries both, and each fact's JSON pointer reaches into them.
 
-- `rehearsal.robotLimits` lists `perimeterIn`, `startingHeightIn`, `maxHeightIn`, `maxExtensionIn` and `massLb`. Each is `{value, factId}` with a positive value, or `null` when the rule is unknown. All five keys are required, and `maxHeightIn` must not be below `startingHeightIn`.
+- `rehearsal.robotLimits` lists `perimeterIn`, `startingHeightIn`, `maxHeightIn` and `maxExtensionIn`. Each is `{value, factId}` with a positive value, or `null` when the rule is unknown. All four keys are required, and `maxHeightIn` must not be below `startingHeightIn`. Mass limits are not here: see [weight limits](project-rules-model.md#weight-limits).
 - A scoring station may carry an `entry`, the opening a scored piece must pass through:
   - a **window**: `{centerIn:[x,y,z], kind:"window", widthIn, heightIn, facingDeg, factId}`. `facingDeg` is the plan direction the opening faces, toward the side a robot shoots from.
   - a **ring**: `{centerIn:[x,y,z], kind:"ring", radiusIn, factId}`, a horizontal opening entered from above.

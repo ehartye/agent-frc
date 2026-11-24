@@ -2,7 +2,7 @@
   "schema": "agent-frc/alliance-study@1",
   "id": "concept-study-example",
   "side": "blue",
-  "profile": {"file": "field.json", "sha256": "b4074060d927972aae2b54e2584835cdbce00122ee284382c1b866a1bb4067ed"},
+  "profile": {"file": "field.json", "sha256": "36c46bb89cceb09083840c9d76736c763827042452c00696e0219194bf453b3f"},
   "roles": [
     {
       "id": "front-intake-placer",

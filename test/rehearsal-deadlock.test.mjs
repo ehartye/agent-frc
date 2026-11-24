@@ -14,13 +14,16 @@ const series = fileURLToPath(new URL('../scripts/rehearsal-series.mjs', import.m
 
 // Full saved results produced before wait-cycle handling existed, for the unmodified invented training
 // field and for its first match with the blue slot-1 and slot-2 duties exchanged.
-// Re-pinned when the training profile gained optional entry/robotLimits fields; results otherwise byte-identical (verified).
-const EXAMPLE_RESULT_SHA256 = '68046fbde097ca3f60b80d0f254742f939ef9923868a9c83d134dd06f86bfe1a';
-// Re-pinned when the training profile gained optional entry/robotLimits fields; results otherwise byte-identical (verified).
-const SWAPPED_RESULT_SHA256 = 'cd6b89a55d29b1919df4a694b52a0a43bc127c8efc3c8897bb3bbd660bb49ea9';
+// Re-pinned when the training profile gained optional entry/robotLimits fields and when its mass limit moved to
+// weightLimits; results otherwise byte-identical (verified).
+const EXAMPLE_RESULT_SHA256 = 'bae2914b1003dad8e515e5a4aac8ba30be41e28084c1a7cf59ad59675b493220';
+// Re-pinned when the training profile gained optional entry/robotLimits fields and when its mass limit moved to
+// weightLimits; results otherwise byte-identical (verified).
+const SWAPPED_RESULT_SHA256 = '00be9256bfbd386285ac2eca110bd17c0688ff3614b287efc67f2d06957055d4';
 
 // The swapped match with waitCycles "yield". Deliberately re-accepted after the give-way change (B2's Opening wait 1.4 s -> 2.0 s).
-const SWAPPED_YIELD_RESULT_SHA256 = 'c6c6950812538437d5ea971774c3230601731601409d291c6ef8357490ca4545';
+// Re-pinned when the mass limit moved to weightLimits; otherwise byte-identical (verified).
+const SWAPPED_YIELD_RESULT_SHA256 = 'd5492d6f3f1b3dc41b70ad47c047a31b974241d42e497020ca2c0a6df1833ada';
 
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 

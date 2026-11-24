@@ -113,23 +113,24 @@ test('a mirror requires a matching reviewed digest',() => {
   assert.throws(()=>compileRules(register,local),/same reviewed SHA/);
 });
 
-test('rules compile carries entry regions and robot limits with the register facts that support them',() => {
+test('rules compile carries entry regions, robot limits and weight limits with the register facts that support them',() => {
   const register=example();
   const bay=profile.rehearsal.stations.findIndex(s=>s.entry), entry=profile.rehearsal.stations[bay].entry;
-  const mass=profile.rehearsal.robotLimits.massLb;
+  const mass=profile.weightLimits[0];
   register.facts.push(
     {id:entry.factId,sourceId:'handout',locator:'Drawing C',topic:'scoring',statement:'Opening above the blue bay',
       status:'modeled',pointer:'/rehearsal/stations/'+bay+'/entry',value:entry},
     {id:mass.factId,sourceId:'handout',locator:'Inspection table',topic:'restrictions',statement:'Robot mass limit',
-      status:'modeled',pointer:'/rehearsal/robotLimits/massLb/value',value:mass.value});
+      status:'modeled',pointer:'/weightLimits/0/limit/value',value:mass.limit.value});
   const model=compileRules(register,profile);
   assert.deepEqual(model.rehearsal.stations[bay].entry,entry);
   assert.deepEqual(model.rehearsal.robotLimits,profile.rehearsal.robotLimits);
+  assert.deepEqual(model.weightLimits,profile.weightLimits);
   assert.deepEqual(model.ruleRegister.facts.filter(f=>[entry.factId,mass.factId].includes(f.id)).map(f=>f.pointer),
-    ['/rehearsal/stations/'+bay+'/entry','/rehearsal/robotLimits/massLb/value']);
+    ['/rehearsal/stations/'+bay+'/entry','/weightLimits/0/limit/value']);
   // The carried values stay bound to their facts: an edited entry or limit no longer compiles or reopens.
   const moved=structuredClone(profile);moved.rehearsal.stations[bay].entry.centerIn[2]+=1;
   assert.throws(()=>compileRules(register,moved),/disagrees/);
-  model.rehearsal.robotLimits.massLb.value=120;
+  model.weightLimits[0].limit.value=120;
   assert.throws(()=>validateProfile(model),/disagrees/);
 });

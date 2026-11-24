@@ -5,6 +5,7 @@
   "units": "in",
   "field": {"length": 480, "width": 264, "source": "Invented field dimensions in this file."},
   "limits": {"perimeter": 120, "height": 46, "source": "Invented starting-volume limits in this file."},
+  "weightLimits": [{"name": "inspection", "limit": {"value": 100, "unit": "lb"}, "excludesRoles": ["bumper", "battery"], "factId": "invented-mass"}],
   "landmarks": [],
   "levels": [],
   "geometrySource": "Invented layout: each alliance has a tile rack near its wall and a raised ring 150 in away, up and to the side of it. Every value is hypothetical.",
@@ -28,8 +29,7 @@
       "perimeterIn": {"value": 120, "factId": "invented-perimeter"},
       "startingHeightIn": {"value": 46, "factId": "invented-starting-height"},
       "maxHeightIn": {"value": 60, "factId": "invented-max-height"},
-      "maxExtensionIn": {"value": 12, "factId": "invented-max-extension"},
-      "massLb": {"value": 100, "factId": "invented-mass"}
+      "maxExtensionIn": {"value": 12, "factId": "invented-max-extension"}
     },
     "stations": [
       {"id": "blue-rack", "label": "Blue tile rack", "kind": "retrieval", "side": "blue", "piece": "tile", "at": [70, 70], "radiusIn": 30, "stock": 6},
