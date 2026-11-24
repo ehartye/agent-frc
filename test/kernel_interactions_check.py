@@ -276,7 +276,8 @@ class KernelInteractionsCheck(unittest.TestCase):
             spin, turns = [0.0], [math.degrees(math.atan2(-m[2], m[0])) for m in frames]
             for a, b in zip(rows, rows[1:]):
                 spin.append(spin[-1] + math.degrees((a[3] + b[3]) / 2 * (b[0] - a[0])))
-            self.assertEqual([round(t, 3) for t in turns], [round((a + 180) % 360 - 180, 3) for a in spin])
+            # The scene keeps six decimals of each matrix entry: the angles agree to well within a thousandth of a degree.
+            self.assertLess(max(abs((t - a + 180) % 360 - 180) for t, a in zip(turns, spin)), 1e-3)
             self.assertEqual([e["label"] for e in replay["events"]], [e["event"] for e in trial["nominal"]["events"]])
             self.assertEqual(replay["time"][replay["events"][-1]["frame"]], trial["nominal"]["events"][-1]["t"])
             piece = scene["bodies"][next(member for member, body in replay["bodies"].items() if body["group"] == "piece")]

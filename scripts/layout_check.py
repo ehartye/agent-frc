@@ -21,7 +21,7 @@ def arguments():
     parser.add_argument("--require-checked", action="store_true", help="Exit 1 unless the receipt reads layout-checked")
     parser.add_argument("--physics-only", action="store_true", help="Check every case, the displaced control and the budgets without the review view; the receipt is not one to publish")
     parser.add_argument("--view-only", action="store_true", help="Rebuild the review page and scene from an earlier receipt without measuring a case again; refused when a measuring input changed")
-    parser.add_argument("--carry", action="store_true", help="Measure only the cases whose inputs changed since an earlier receipt and carry the rest from it; the displaced control is always measured. For a draft; the stage gate always runs the full check")
+    parser.add_argument("--carry", action="store_true", help="In every case, measure only the pairs whose solids, placements, motion or rules changed since an earlier receipt and carry the rest from it; a rename or an edited note measures nothing, and the displaced control is always measured. For a draft; the stage gate always runs the full check")
     parser.add_argument("--from-receipt", metavar="FILE", help="With --view-only or --carry, the project-relative receipt to reuse (default: --output, or receipt.json beside the judgement file)")
     parser.add_argument("--cases", metavar="A,B", help="Measure only these stages; the receipt is partial and is not one to publish")
     parser.add_argument("--output", metavar="FILE", help="Write the receipt to the project-relative FILE through a temporary file and a rename instead of stdout")
@@ -35,8 +35,8 @@ def ran(args, result):
     cases, control = len(result.get("cases") or []), result.get("control") or {}
     if args.view_only:
         return "view rebuilt from the receipt", "the cases and the displaced control (reused from the receipt)"
-    carried = (result.get("carriedFrom") or {}).get("cases", 0)
-    did = f"layout check of {cases} case(s)" + (f" ({cases - carried} measured, {carried} carried from {result['carriedFrom']['file']})" if carried else "") + (", the displaced control" if control and control.get("status") != "skipped" else "") + ", attachment and budgets"
+    carried = result.get("carriedFrom")
+    did = f"layout check of {cases} case(s)" + (f" ({carried['pairsMeasured']} pairs measured, {carried['pairsCarried']} carried from {carried['file']})" if carried else "") + (", the displaced control" if control and control.get("status") != "skipped" else "") + ", attachment and budgets"
     if result.get("partial"):
         return did, str(len(result["skippedCases"])) + " other case(s), the displaced control and the review view"
     return (did, "the review view (--physics-only)") if args.physics_only else (did + " and the review view", "")
@@ -51,7 +51,7 @@ def main():
         root = args.project.resolve()
         require(not (args.physics_only and args.write_view), "Choose --physics-only or --write-view")
         require(not (args.view_only and (args.physics_only or args.cases or args.carry)), "--view-only rebuilds the view; it cannot be combined with --physics-only, --cases or --carry")
-        require(not (args.carry and args.cases), "--carry decides which cases to measure; it cannot be combined with --cases")
+        require(not (args.carry and args.cases), "--carry decides which pairs to measure; it cannot be combined with --cases")
         require(args.view_only or args.carry or not args.from_receipt, "--from-receipt applies only with --view-only or --carry")
         file = project_path(root, args.judgement)
         output = (root / args.output).resolve() if args.output else None

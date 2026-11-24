@@ -358,7 +358,8 @@ class KernelLayoutCheck(unittest.TestCase):
                          "the seat pair does not include the rail: its contact is carried")
         service = next(row for row in receipt["cases"] if row["case"] == "remove-carrier")
         self.assertEqual(service["checked"]["measuresMeasured"], 1, "the withdrawal draws on every solid that stayed: it is measured again")
-        self.assertLess(0, receipt["attachment"]["checked"]["pairsMeasured"])
+        # The rail stands apart, so it touches nothing; the gate's mount on it is measured again.
+        self.assertEqual((receipt["attachment"]["checked"]["pairsMeasured"], receipt["attachment"]["checked"]["mountsMeasured"]), (0, 1))
         # The merged result is the full check's result of the moved design.
         _, fresh = self.check("--physics-only")
         self.assertEqual(self.results(receipt), self.results(fresh))

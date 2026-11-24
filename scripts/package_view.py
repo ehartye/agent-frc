@@ -10,7 +10,7 @@ import zlib
 
 from atomic_file import write_atomic
 from kernel_layout.attachment import floating
-from kernel_layout.files import named, pinned, read, require, resolve_references
+from kernel_layout.files import named, pinned, read, require
 
 CONTROL_ID = "package-displacement-control"
 CASE_KINDS = ("nominal", "inhibited", "adverse")
@@ -447,11 +447,6 @@ def _timeline(plan, case_id, frames):
     return out
 
 
-REPLAY_SET = "agent-frc/review-replays@1"
-REPLAY_KEYS = {"id", "label", "basis", "objective", "evidence", "recorded", "display", "time", "measure", "events",
-               "follow", "bodies", "groups", "tubes"}
-
-
 def _watertight(mesh):
     """Every edge of a closed triangle mesh is shared by exactly two triangles."""
     edges = {}
@@ -462,79 +457,30 @@ def _watertight(mesh):
     return bool(edges) and all(n == 2 for n in edges.values())
 
 
-def replay_entries(root, plan, meshes, bodies, placed, palette):
-    """Trial replays for the one animation list, from the replay sets named under presentation.replays.
+def trial_replays(found, meshes, bodies, placed, palette):
+    """The trial replays of the one animation list, from the layout check's replays of the library's trial record.
 
-    A replay set is a project-generated JSON file (optionally gzipped) with schema agent-frc/review-replays@1. It holds
-    `replays` and, optionally, `fieldBodies`: field parts and loose game pieces that only replays show, each with its own
-    display mesh. A replay moves bodies by rigid group, one transform per frame per group, so a whole-robot run stays
-    small. Field bodies and their meshes are appended to `bodies` and `meshes`; the replay rows are returned."""
-    refs = plan.get("presentation", {}).get("replays", [])
-    require(isinstance(refs, list), "presentation.replays lists replay sets as {file}")
-    rows, mesh_index, taken = [], {}, set()
-    for ref in refs:
-        # The checker filled in the digest of a replay set named by path alone; a typed sha256 is verified here.
-        require(isinstance(ref, dict) and set(ref) == {"file", "sha256"}, "presentation.replays lists replay sets as {file}")
-        raw = pinned(root, ref).read_bytes()
-        where = "Replay set " + ref["file"]
-        try:
-            data = json.loads(gzip.decompress(raw) if raw[:2] == bytes([31, 139]) else raw)
-        except (OSError, EOFError, ValueError, zlib.error):
-            raise ValueError(where + " is not JSON or gzipped JSON") from None
-        require(isinstance(data, dict) and data.get("schema") == REPLAY_SET and set(data) <= {"schema", "fieldBodies", "replays"}
-                and isinstance(data.get("replays"), list) and data["replays"], where + " needs schema " + REPLAY_SET + " and a replays list")
-        data = resolve_references(root, data)
-        field = data.get("fieldBodies", {})
-        require(isinstance(field, dict), where + ": fieldBodies maps new body IDs to {name, mesh: {v, f}}")
-        for member, item in sorted(field.items()):
-            require(isinstance(item, dict) and set(item) <= {"name", "category", "color", "subsystem", "material", "purpose", "rationale", "mesh"} and named(item.get("name"))
-                    and isinstance(item.get("mesh"), dict) and set(item["mesh"]) == {"v", "f"},
-                    where + ": field body " + member + " needs a name and a mesh {v, f}")
-            mesh = dict(v=[_round(p, 4) for p in item["mesh"]["v"]], f=[list(t) for t in item["mesh"]["f"]])
+    found lists (replay, pieces) pairs: each piece a body with its display mesh, shared by every replay that draws it.
+    The pieces and their meshes are appended to `bodies` and `meshes`; the replay rows are returned, each body named
+    with the mesh it is drawn with."""
+    rows, mesh_index = [], {}
+    for row, pieces in found:
+        for use, mesh in pieces.items():
             key = hashlib.sha256(json.dumps(mesh, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
             if key not in mesh_index:
                 mesh_index[key] = len(meshes)
                 meshes.append(mesh)
-            category = item.get("category") or "field"
-            colour = item.get("color") or _colour(palette, category, "reference", fixture=True)
-            require(isinstance(colour, str) and re.fullmatch(r"#[0-9a-fA-F]{6}", colour), where + ": field body " + member + " color is #rrggbb")
-            body = dict(name=item["name"], category=category, role="reference", color=colour.lower(),
-                        subsystem=item.get("subsystem"), motionGroup="field", material=item.get("material"), volumeMm3=None,
-                        volumeType=None, closed=_watertight(mesh), fixture=True, purpose=item.get("purpose"),
-                        rationale=item.get("rationale"), support=None, massExcluded="Field fixture; not robot mass",
-                        missing=[k for k in ("purpose", "rationale") if not named(item.get(k))])
-            require(member not in bodies or (member in placed and placed[member] == mesh_index[key] and bodies[member] == body),
-                    where + ": field body " + member + " repeats a placed ID or differs from an earlier replay set")
-            bodies[member] = body
-            placed[member] = mesh_index[key]
-        for item in data["replays"]:
-            require(isinstance(item, dict) and set(item) <= REPLAY_KEYS and named(item.get("id")), where + ": a replay holds " + ", ".join(sorted(REPLAY_KEYS)))
-            at = where + ", replay " + item["id"]
-            require(item["id"] not in taken and item["id"] not in plan.get("stages", {}) and item["id"] != CONTROL_ID,
-                    at + " repeats a case or replay ID")
-            taken.add(item["id"])
-            shown = item.get("bodies")
-            require(isinstance(shown, dict) and shown and set(shown) <= set(placed), at + ": bodies maps placed IDs or field bodies to a group or null")
-            evidence = item.get("evidence")
-            require(isinstance(evidence, list) and evidence, at + " names the trial files it plays back under evidence")
-            pins = []
-            for pin in evidence:
-                require(isinstance(pin, dict) and set(pin) <= {"file", "sha256", "role"}, at + ": evidence holds {file, role}")
-                pinned(root, pin)
-                pins.append({k: pin[k] for k in ("file", "sha256", "role") if k in pin})
-            groups = item.get("groups")
-            require(isinstance(groups, dict) and all(isinstance(series, list) for series in groups.values()), at + ": groups maps a name to one transform per frame")
-            row = {k: item[k] for k in ("id", "label", "basis", "objective", "recorded", "display", "time", "measure", "events", "follow") if k in item}
-            tubes = item.get("tubes", [])
-            require(isinstance(tubes, list) and all(isinstance(tube, dict) for tube in tubes), at + ": tubes is a list")
-            if tubes:
-                # A tube that names a field body carries that body's mesh along its centerline.
-                require(all("body" not in tube or (tube["body"] in placed and tube["body"] not in shown and "mesh" not in tube) for tube in tubes),
-                        at + ": a tube body is a field body that the replay does not also place")
-                row["tubes"] = [dict(tube, mesh=placed[tube["body"]]) if "body" in tube else tube for tube in tubes]
-            row.update(evidence=pins, bodies={member: dict(mesh=placed[member], group=group) for member, group in sorted(shown.items())},
-                       groups={name: [m if m is None else _round(m, 6) for m in series] for name, series in sorted(groups.items())})
-            rows.append(row)
+            for member in [m for m in row["bodies"] if m == "piece: " + use or m.startswith("piece: " + use + " (")]:
+                require(member not in placed or placed[member] == mesh_index[key], "Trial piece " + member + " is drawn with two shapes")
+                placed[member] = mesh_index[key]
+                bodies[member] = dict(name=member, category="game piece", role="payload", color=_colour(palette, "game piece", "payload"),
+                                      subsystem=None, motionGroup="trial piece", material=None, volumeMm3=None, volumeType=None,
+                                      closed=_watertight(mesh), fixture=False, purpose="The trial's free piece, with the shape its record gives it",
+                                      rationale="It moves as the trial's run traced it", support=None,
+                                      massExcluded="Game piece; not robot mass", missing=[])
+        require(row["id"] not in {r["id"] for r in rows}, "Two trials replay under one ID: " + row["id"] + ". Name them apart")
+        rows.append(dict(row, bodies={member: dict(mesh=placed[member], group=group) for member, group in sorted(row["bodies"].items()) if member in placed},
+                         groups={name: [_round(m, 6) for m in series] for name, series in sorted(row["groups"].items())}))
     return rows
 
 
@@ -634,7 +580,7 @@ def build_scene(root, plan, scenes, observed, budgets, review):
                  returnCriteria=return_criteria(), interactions=review.get("interactions", []), adjustments=review.get("adjustments", []),
                  focus=presentation.get("focus"), notes=presentation.get("notes"), cutaway=presentation.get("cutaway"))
     require(scene["openingCase"] in {c["id"] for c in cases}, "presentation.openingCase names a commissioned case")
-    # The first tessellation of each placed body is the mesh a replay moves; replay-only field bodies join below.
+    # The first tessellation of each placed body is the mesh a replay moves; the trial pieces join below.
     placed = {}
     for case in cases:
         for member, body in case["bodies"].items():
@@ -643,7 +589,7 @@ def build_scene(root, plan, scenes, observed, budgets, review):
     if attachment:
         # What the layout check reported about floating solids; the page lists it and the inspector repeats it.
         scene["attachment"] = attachment
-    rows = replay_entries(root, plan, scene["meshes"], bodies, placed, palette)
+    rows = trial_replays(review.get("replays", []), scene["meshes"], bodies, placed, palette)
     if rows:
         scene["replays"] = rows
     cut = scene["cutaway"]

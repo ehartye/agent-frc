@@ -35,10 +35,17 @@ class Measured:
         return dict(motion=case["id"], minGapMm=case["minGapMm"], depth=case["depth"], includeStill=True,
                     contacts=self.contacts(case["id"]), absent=sorted(case["removed"]))
 
-    def clearances(self, cases, workers):
-        """The library's clearance result for each case, in order, shared between worker processes."""
+    def clearances(self, cases, workers, earlier=None):
+        """The library's clearance result for each case, in order, shared between worker processes.
+
+        earlier, when given, maps each case to its earlier clearance result, or to None: the library then measures only
+        the pairs whose inputs changed, carries the rest and says which in each result's checked."""
         from frc_design_kernel.measure import run
-        return run.clearances(self.inputs.source, [self.job(case) for case in cases], workers)
+        jobs = [self.job(case) for case in cases]
+        if earlier is None:
+            return run.clearances(self.inputs.source, jobs, workers)
+        return run.clearances(self.inputs.source, [dict(job, earlier=earlier[case["id"]]) for job, case in zip(jobs, cases)], workers,
+                              assembly=self.assembly)
 
     def reached(self, case, rule):
         """Whether the pair of a required contact comes within its gap in its window of the stroke."""
@@ -67,11 +74,6 @@ class Measured:
         return clearance.along(self.assembly, case["id"], case["minGapMm"], absent=others, depth=case["depth"], include_still=True,
                                displace={spec["displaced"]: spec["offsetMm"]})
 
-    def used(self, case):
-        """What the library's clearance along a case draws on: every solid present, the motion, its poses, the groups and contacts."""
-        from frc_design_kernel.measure.summary import used_by_motion
-        return used_by_motion(self.assembly, case["id"], sorted(case["removed"]))
-
     def screen(self, name):
         """The library's screen facts for one declared interaction: plain facts, judged in interactions.py."""
         from frc_design_kernel.measure import screen
@@ -86,11 +88,14 @@ class Measured:
         """The display mesh of a solid as drawn: vertices and outward triangles, in millimetres."""
         return self.assembly.mesh(name, MESH_DEFLECTION_MM)
 
-    def attachment(self, case, gap, floor_z, ignore, base=None):
-        """What touches what at the start of a case: connected sets, solids not connected to the base, fixtures off the floor."""
+    def attachment(self, case, gap, floor_z, ignore, base=None, earlier=None):
+        """What touches what at the start of a case: connected sets, solids not connected to the base, fixtures off the floor.
+
+        earlier is an earlier result at the same pose: the library carries the touching gaps and mount distances of the
+        solids that did not change from it."""
         from frc_design_kernel.measure import attachment
         return attachment.at_pose(self.assembly, start_pose(self.inputs.data, case["id"]), gap=gap, floor_z=floor_z, ignore=ignore,
-                                  base=base, contacts=self.contacts(case["id"]), absent=sorted(case["removed"]))
+                                  base=base, contacts=self.contacts(case["id"]), absent=sorted(case["removed"]), earlier=earlier)
 
 
 class Placements:

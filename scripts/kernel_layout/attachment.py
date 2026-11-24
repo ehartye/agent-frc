@@ -50,19 +50,23 @@ def frame_of(found, structure):
     return max(sets, key=lambda members: (len(structure.intersection(members)), len(members))) if sets else []
 
 
-def report(inputs, measured, case):
-    """The attachment report for the start of one case: the receipt field and the stderr lines."""
+def report(inputs, measured, case, earlier=None):
+    """The attachment report for the start of one case: the receipt field and the stderr lines.
+
+    earlier is the library's attachment result kept by an earlier receipt at the same case, as its "measured": the
+    touching gaps and mount distances of the solids that did not change are carried from it. The report keeps this
+    run's under "measured", and the library's count of what it measured and carried under "checked"."""
     own = settings(inputs.plan, inputs.roster)
     groups = inputs.plan["groups"]
     group_of = {m: key for key, g in groups.items() for m in g["members"]}
     structure = {m for g in groups.values() if g["role"] == "structure" for m in g["members"]}
     payloads, gauges = left_out(inputs)
     ignore = sorted(payloads | gauges)
-    found = measured.attachment(case, own["gapMm"], own["floorZMm"], ignore)
+    found = measured.attachment(case, own["gapMm"], own["floorZMm"], ignore, earlier=earlier)
     frame = frame_of(found, structure)
     if any(row["solid"] in frame for row in found["notConnectedToBase"]):
         # The library took the largest set as the base; the frame is the set that holds the structure.
-        found = measured.attachment(case, own["gapMm"], own["floorZMm"], ignore, base=sorted(structure.intersection(frame) or frame)[0])
+        found = measured.attachment(case, own["gapMm"], own["floorZMm"], ignore, base=sorted(structure.intersection(frame) or frame)[0], earlier=earlier)
         frame = frame_of(found, structure)
     present = set(inputs.roster) - set(case["removed"])
     result = dict(case=case["id"], pose="start of the case", gapMm=own["gapMm"], floorZMm=own["floorZMm"],
@@ -92,7 +96,8 @@ def report(inputs, measured, case):
     off_floor = [dict(fixture=n, lowestAboveFloorMm=z) for n, z in sorted(hanging.items()) if n not in own["suspended"]]
     suspended = [dict(fixture=n, reason=reason, **({"lowestAboveFloorMm": hanging[n]} if n in hanging else {"reachesFloor": True}))
                  for n, reason in sorted(own["suspended"].items()) if n in present]
-    result.update(fixturesOffFloor=off_floor, suspendedFixtures=suspended)
+    result.update(fixturesOffFloor=off_floor, suspendedFixtures=suspended, checked=found["checked"],
+                  measured={key: found[key] for key in ("inputs", "touching", "mounts")})
     return result, lines(result, case)
 
 
