@@ -1,0 +1,78 @@
+{
+  "schema": "agent-frc/alliance-study@1",
+  "id": "concept-study-example",
+  "side": "blue",
+  "profile": {"file": "field.json", "sha256": "b4074060d927972aae2b54e2584835cdbce00122ee284382c1b866a1bb4067ed"},
+  "roles": [
+    {
+      "id": "front-intake-placer",
+      "basis": "Invented teaching candidate: a short-range placer that carries one loose tile at a time to the window.",
+      "concept": {"file": "../concept-bots/front-intake-placer.json", "sha256": "59b8ea4e5bcf3ac8d5be442c39f17f6827637bbbfa91081f99cb4ce1f84bebf9"},
+      "plans": {"Opening": "cycle", "Main play": "cycle"},
+      "endgame": null
+    },
+    {
+      "id": "turret-shooter",
+      "basis": "Invented teaching candidate: a turreted shooter with an adjustable hood that collects loose tiles and shoots them through the window.",
+      "concept": {"file": "../concept-bots/turret-shooter.json", "sha256": "da27e39b1c594e51d1089231d90f485bf3f0a88a59d9dff97129c9073a136b2f"},
+      "plans": {"Opening": "cycle", "Main play": "cycle"},
+      "endgame": null
+    },
+    {
+      "id": "fixed-shooter",
+      "basis": "Invented teaching candidate: a fixed shooter that turns the drivetrain to aim, collecting loose tiles and shooting them through the window.",
+      "concept": {"file": "../concept-bots/fixed-shooter.json", "sha256": "9a3e3a54d74a15705fe924f446bb756ee8c2a5b6a2d5f61198be20a12664b693"},
+      "plans": {"Opening": "cycle", "Main play": "cycle"},
+      "endgame": null
+    }
+  ],
+  "contexts": [
+    {
+      "id": "solo",
+      "match": "solo",
+      "slot": 1,
+      "basis": "The focal robot has its alliance’s tiles and window to itself."
+    },
+    {
+      "id": "screened",
+      "match": "screened",
+      "slot": 1,
+      "basis": "An opponent crosses back and forth over the focal alliance’s tiles all match."
+    },
+    {
+      "id": "shared",
+      "match": "shared",
+      "slot": 1,
+      "basis": "A partner with a front intake collects from the same tiles and scores through the same window as the focal robot."
+    }
+  ],
+  "conceptSweeps": {
+    "defaults": false,
+    "axes": {
+      "front-intake-placer": [
+        {"pointer": "/drive/accelInS2/value", "values": [150, 300, 450]},
+        {"pointer": "/drive/rotationDegS/value", "values": [135, 270, 405]},
+        {"pointer": "/inputs/0/secondsPerPiece/value", "values": [0.6, 0.8, 1]},
+        {"pointer": "/storage/capacity/tile/value", "values": [1, 2]},
+        {"pointer": "/storage/transferS/value", "values": [0.375, 0.5, 0.75]},
+        {"pointer": "/outputs/0/successFraction/value", "values": [0.675, 0.9, 1]}
+      ],
+      "turret-shooter": [
+        {"pointer": "/drive/accelInS2/value", "values": [125, 250, 375]},
+        {"pointer": "/drive/rotationDegS/value", "values": [180, 360, 540]},
+        {"pointer": "/inputs/0/secondsPerPiece/value", "values": [0.375, 0.5, 0.625]},
+        {"pointer": "/storage/capacity/tile/value", "values": [2, 3, 4]},
+        {"pointer": "/storage/transferS/value", "values": [0.5625, 0.75, 1.125]},
+        {"pointer": "/outputs/0/successFraction/value", "values": [0.6, 0.8, 1]}
+      ],
+      "fixed-shooter": [
+        {"pointer": "/drive/accelInS2/value", "values": [125, 250, 375]},
+        {"pointer": "/drive/rotationDegS/value", "values": [180, 360, 540]},
+        {"pointer": "/inputs/0/secondsPerPiece/value", "values": [0.375, 0.5, 0.625]},
+        {"pointer": "/storage/capacity/tile/value", "values": [2, 3, 4]},
+        {"pointer": "/storage/transferS/value", "values": [0.5625, 0.75, 1.125]},
+        {"pointer": "/outputs/0/successFraction/value", "values": [0.6, 0.8, 1]}
+      ]
+    }
+  }
+}

@@ -19,6 +19,9 @@ const EXAMPLE_RESULT_SHA256 = '68046fbde097ca3f60b80d0f254742f939ef9923868a9c83d
 // Re-pinned when the training profile gained optional entry/robotLimits fields; results otherwise byte-identical (verified).
 const SWAPPED_RESULT_SHA256 = 'cd6b89a55d29b1919df4a694b52a0a43bc127c8efc3c8897bb3bbd660bb49ea9';
 
+// The swapped match with waitCycles "yield". Deliberately re-accepted after the give-way change (B2's Opening wait 1.4 s -> 2.0 s).
+const SWAPPED_YIELD_RESULT_SHA256 = 'c6c6950812538437d5ea971774c3230601731601409d291c6ef8357490ca4545';
+
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 
 function profileFile(t, {swap = false, waitCycles} = {}) {
@@ -90,4 +93,10 @@ test('only the yield setting is accepted', () => {
   const profile = JSON.parse(readFileSync(example));
   profile.rehearsal.waitCycles = 'priority';
   assert.throws(() => validateProfile(profile), /Set rehearsal.waitCycles to "yield" or omit it/);
+});
+
+test('opting in to yield reproduces its pinned result for the swapped match', t => {
+  const result = run(profileFile(t, {swap: true, waitCycles: 'yield'}));
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(sha(result.stdout), SWAPPED_YIELD_RESULT_SHA256);
 });

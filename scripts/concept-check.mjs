@@ -1,5 +1,6 @@
 // concept:check — validate one concept-bot document and compare it with a rules model's robot limits and targets.
-// Usage: npm run concept:check -- concept.json [--profile rules-model.json]
+// Usage: node <plugin-root>/scripts/concept-check.mjs concept.json [--profile rules-model.json]
+//   (npm run concept:check -- … in a plugin checkout)
 // Prints a JSON report. Exits 0 when the concept is valid (even when a limit is exceeded) and 2 on invalid input.
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -10,7 +11,7 @@ import { framePlan } from './frame-profile.mjs';
 import { validateProfile } from './kickoff.mjs';
 import { loadScoreObservations } from './score-observations.mjs';
 
-const usage = 'Usage: npm run concept:check -- concept.json [--profile rules-model.json]';
+const usage = 'Usage: node "' + fileURLToPath(import.meta.url) + '" concept.json [--profile rules-model.json]';
 
 function countLabels(value, counts) {
   if (Array.isArray(value)) value.forEach(v => countLabels(v, counts));
