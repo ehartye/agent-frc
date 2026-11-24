@@ -24,6 +24,8 @@ Update the GitHub Pages guide in the same change whenever a workflow, skill, stu
 
 ## Keep the plugin season-neutral
 
+The plugin works for any season because it holds no season's logic: the game lives in the project that uses it. Linking a project that proves the plugin is not season logic, so the README links the proof-of-concept projects.
+
 Include only references that help someone make, implement or verify a decision during active design. Research, retrospective comparisons, team identities and team-specific designs belong in the FRC research wiki. Extract transferable methods without naming, linking, tracing or reproducing a team or its design. Original teaching fixtures must be clearly synthetic. Keep executable season assets with their owning project.
 
 Keep season-specific language, game rules, dimensions, scoring tables, target names, field layouts, example missions and robot case evidence in the owning season project, outside this repository and its installable package. Apply this boundary to code, defaults, tests, fixtures, skills, documentation and Pages. Use invented, season-neutral fixtures for portable tests. Retain a generalized engineering insight here only when external evidence demonstrates its effectiveness across all three reference seasons identified in the FRC research wiki. Keep that evidence and any game-specific qualifications in the external projects.

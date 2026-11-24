@@ -49,6 +49,7 @@ export function scanSeasonTree(root, terms = loadTerms()) {
   const findings = [];
   let files = 0;
   for (const name of trackedFiles(root).sort()) {
+    if (name === 'README.md') continue; // it links the proof-of-concept projects
     const full = path.join(root, name);
     if (!lstatSync(full, {throwIfNoEntry: false})?.isFile()) continue;
     // A file's own name is scanned as its line 0.

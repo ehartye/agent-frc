@@ -13,6 +13,16 @@ Agent FRC helps students turn a new game manual into robot design decisions. Ope
 5. **Share robot evidence.** Build a project-owned [robot highlights page](skills/frc-robot-highlights/SKILL.md) with explorable CAD, mechanism animations, the current configuration and sourced results.
 6. **Resume the investigation.** Recover the owner's decision, current candidate and most recent test with the [continuation guide](docs/strategy-first-continuation.md).
 
+## See it on real games
+
+Three proof-of-concept projects use the plugin on past games. Each keeps its own rules, field, designs and results.
+
+| Project | Open |
+| --- | --- |
+| [2024 proof of concept](https://github.com/ehartye/frc-2024-poc) | [Design review](https://ehartye.github.io/frc-2024-poc/preliminary-design/) · [Field lab](https://ehartye.github.io/frc-2024-poc/field-lab.html) |
+| [2025 proof of concept](https://github.com/ehartye/frc-2025-poc) | [Design review](https://ehartye.github.io/frc-2025-poc/preliminary-design/) · [Field lab](https://ehartye.github.io/frc-2025-poc/field-lab.html) |
+| [2026 proof of concept](https://github.com/ehartye/frc-2026-poc) | [Design review](https://ehartye.github.io/frc-2026-poc/preliminary-design/) · [Field lab](https://ehartye.github.io/frc-2026-poc/field-lab.html) |
+
 ## Install the plugin
 
 ```sh
