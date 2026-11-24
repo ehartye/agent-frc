@@ -43,8 +43,8 @@ aside{padding:16px;align-self:start}aside label{display:block;margin-bottom:5px}
 </style></head>
 <main>
 <header><span>Agent FRC　/　Engineering review</span><span id="links"></span></header>
-<div class="title"><div><p id="context">Preliminary design</p><h1 id="heading">Preliminary design review</h1></div><div class="title-side"><strong id="state" class="chip" title="Design status from the release index · checked result from the review receipt">Loading geometry…</strong><p id="unmetInline" hidden></p></div></div>
-<details id="review-basis"><summary>Review basis</summary><p id="basisNote">Preliminary design: not the released detailed model. The review receipt gives the checked result.</p>
+<div class="title"><div><p id="context">Preliminary design</p><h1 id="heading">Preliminary design review</h1></div><div class="title-side"><strong id="state" class="chip" title="Design status from the release index · verdict judged from the library's records">Loading geometry…</strong><p id="unmetInline" hidden></p></div></div>
+<details id="review-basis"><summary>Review basis</summary><p id="basisNote">Preliminary design: not the released detailed model. The checked result is the verdict judged from the library's records when this page was built.</p>
 <dl id="review-summary" aria-label="Review basis">
  <div><dt>Selected architecture</dt><dd id="architecture"></dd></div><div><dt>Datum</dt><dd id="datum"></dd></div><div><dt>Units</dt><dd id="units"></dd></div><div><dt>Strategic narrative</dt><dd id="narrativeSource"></dd></div>
  <div class="wide"><dt>Current decision</dt><dd><span id="decision"></span> <span id="decisionSource"></span></dd></div><div class="wide"><dt>First unmet requirement</dt><dd id="firstUnmet"></dd></div>
@@ -66,21 +66,21 @@ aside{padding:16px;align-self:start}aside label{display:block;margin-bottom:5px}
  <label>Group by<select id="group"><option>Whole robot</option><option>Category</option><option>Subsystem</option><option>Custom subsystem</option></select></label>
  <select aria-label="Selected group" id="subset" hidden></select>
  <div id="editor" hidden><label>Subsystem name<input id="subname" maxlength="70"></label><button id="save">Save checked components</button><p>Use the checkboxes in the inventory below.</p></div>
- <label>Electrical duty<select id="duty"></select></label><div id="summary"></div><details><summary>Allocation detail</summary><div id="lines"></div></details>
+ <label>Electrical motion<select id="duty"></select></label><div id="summary"></div><details><summary>Allocation detail</summary><div id="lines"></div></details>
 </aside>
 </div>
 <section id="resources" aria-label="Weight and power budgets"></section>
-<section class="lower power-ledger"><div id="weightCard"><h2>Weight budget</h2><div id="weightBody"></div></div><div id="powerCard"><h2>Power by load</h2><p>Upper battery-current estimate by circuit group. Choose a bar to inspect the contributing parts.</p><div id="powerBars"></div><div id="loads"></div></div></section>
-<section class="checks"><details><summary>Strategic narrative review</summary><div id="narrative"></div></details><h2>Required components</h2><p id="warningText"></p><div id="required"></div><h2 id="attachmentHeading">Attachment: nothing floats</h2><p id="attachmentText"></p><div id="attachment"></div></section>
+<section class="lower power-ledger"><div id="weightCard"><h2>Weight budget</h2><div id="weightBody"></div></div><div id="powerCard"><h2>Power by drive</h2><p>Each running drive's peak current drawn from the battery in the selected motion, from its electrical record. Choose a bar to inspect its motor.</p><div id="powerBars"></div><div id="loads"></div></div></section>
+<section class="checks"><details><summary>Strategic narrative review</summary><div id="narrative"></div></details><h2>Required roles</h2><p id="warningText"></p><div id="required"></div><h2 id="attachmentHeading">Attachment: nothing floats</h2><p id="attachmentText"></p><div id="attachment"></div></section>
 <section class="lower"><div><h2>Clearance evidence</h2><p id="validation"></p><label>Evidence set <select id="set"><option>Current motion</option><option>Parked assembly</option></select></label><label> Outcome <select id="filter"><option value="adverse">Failed or open</option><option value="all">All recorded pairs</option></select></label><p id="count"></p><div id="findings"></div><p id="witness"></p></div><div><h2>Component inventory</h2><p id="inventoryScope"></p><div id="inventory"></div></div></section>
 <section class="decision" id="motion-evidence" aria-label="Check results and decision"><h2>Check results and decision</h2>
- <p id="checkNote">The animations above show the mission. This list is the evidence. Each case is one straight segment of a path that the layout check swept, grouped here by mission phase. Open a phase to see its cases, and jump from a case to its pose in the model.</p>
+ <p id="checkNote">The animations above show the mission. This list is the evidence. Each row is one motion of the design source that the library measured, grouped here by phase of the cycle. Open a phase to see its motions, and jump from a motion to its pose in the model.</p>
  <div class="scroll"><table id="evidenceTable"></table></div>
- <p id="replayNote" hidden>A replay plays back a recorded trial from the files pinned in its row. It is not a clearance case: the layout check does not run it or credit it, and the decision above does not depend on it.</p>
+ <p id="replayNote" hidden>A replay plays back a trial's nominal run from the trial record named in its row. It is not a clearance case: the judgement does not run it or credit it, and the decision above does not depend on it.</p>
  <h3>Interactions</h3>
  <p id="interactionNote">Each interaction is a piece meeting the robot or the field. The screen says, before any trial runs, whether one section can answer it, whether it needs a 3D trial, or whether a simulated result is only a best guess to cover with an adjustment.<span id="interactionNone" hidden> This design declares no interaction.</span></p>
  <div class="scroll"><table id="interactionTable"></table></div>
- <p>Pinned evidence: <a id="receiptLink" href="receipt.json" target="_blank" rel="noopener">review receipt</a> <span id="receiptPin"></span></p>
+ <p>Judged from <span id="recordsNote"></span></p>
  <h3>Return to an earlier phase</h3><p>Return to <strong>preliminary design</strong> when:</p><ul id="returnPreliminary"></ul><p>Return to <strong>conceptual design</strong> when:</p><ul id="returnConceptual"></ul><p>Currently triggered:</p><ul id="triggered"></ul></section>
 <details class="notes"><summary>Model basis and limits</summary><div id="notes"></div></details>
 </main>
@@ -110,11 +110,12 @@ function interactionRows(scene){
    sensitivity:t?.sensitivity||[],adjustment:window};
  });
 }
-function massLinesFor(id,scene){
- const rows=(scene.mass?.lines||[]).filter(l=>l.members.includes(id)).map(l=>{const others=l.members.filter(m=>m!==id);
-  return l.id+': '+range(l.kg,2)+' kg · '+(l.basis||'basis '+MISSING.toLowerCase())+' · '+(others.length?'Shared with '+others.join(', ')+'; unallocated until the line is split':'Allocated to this component alone')});
- for(const l of scene.mass?.runningAdditions||[])if(l.members.includes(id))rows.push(l.name+': '+range(l.kg,2)+' kg · running addition, excluded from inspection weight');
- return rows;
+// The weight of a set of solids from the design source: the sum of the ranges of those weighed one by one, and how many are weighed only
+// as part of their group or not at all.
+function weightOf(ids,scene){
+ const kg=[0,0];let lumped=0,unweighed=0;
+ for(const id of ids){const b=scene.bodies[id];if(!b||b.fixture||b.massExcluded)continue;if(b.massRangeKg){kg[0]+=b.massRangeKg[0];kg[1]+=b.massRangeKg[1]}else if(b.massFrom==='group')lumped++;else unweighed++}
+ return {kg,lumped,unweighed};
 }
 // What the layout check's attachment report says about one body, or null. Only floating and off-floor are findings.
 function attachmentNote(id,scene){
@@ -139,21 +140,24 @@ function attachmentRows(scene){
 }
 function inspectorFields(id,scene){
  const b=scene.bodies[id];if(!b)return [['Component',MISSING,true]];
- const miss=new Set(b.missing||[]),val=(k,v)=>miss.has(k)||v==null||v===''?[MISSING,true]:[v,false];
- const volume=b.volumeMm3==null?[MISSING,true]:[fmt(b.volumeMm3/1000,1)+' cm³ · '+(b.volumeType?b.volumeType+' volume':'volume type '+MISSING.toLowerCase()),!b.volumeType];
- const lines=massLinesFor(id,scene);
- const mass=lines.length?[lines,false]:b.massExcluded?[b.massExcluded,false]:scene.mass?['No mass line includes this component',true]:['Budget ledger not supplied',true];
- const loads=[...new Set(scene.power.flatMap(d=>d.lines.filter(l=>l.members.includes(id)).map(l=>l.name)))];
+ const page=v=>v==null||v===''?[NOT_SUPPLIED,false]:[v,false];
+ const volume=b.volumeMm3==null?[MISSING,true]:[fmt(b.volumeMm3/1000,1)+' cm³',false];
+ const group=scene.weight?.groups?.[b.motionGroup];
+ const weight=b.massExcluded?[b.massExcluded,false]:b.massRangeKg?[fmt(b.massKg)+' kg, '+range(b.massRangeKg)+' kg · from the design source ('+b.massFrom+')',false]
+  :b.massFrom==='group'?['In the weight of its group, '+b.motionGroup+(group?': '+fmt(group.massKg)+' kg, '+range(group.rangeKg)+' kg':''),false]:['Unweighed: the design source gives it no massKg or densityKgM3',true];
+ const runs=(scene.power?.motions||[]).flatMap(m=>m.drives.filter(d=>b.motorOf.includes(d.drive)).map(d=>[d,m.motion]));
+ const motor=b.motorOf.length?b.motorOf.map(name=>{const hit=runs.find(([d])=>d.drive===name);if(!hit)return name+': runs in no powered motion';const [d,m]=hit;
+  return name+': '+(d.kind==='rotation'?'turns ':'slides ')+d.group+' ('+d.kind+') · up to '+fmt(d.currentA[1],1)+' A per motor, '+fmt(d.motorV[1])+' V needed in '+m}):'Not a motor';
  const moving=new Set(scene.cases.filter(c=>c.bodies[id]?.matrices.length>1).map(c=>c.id)),phases=animationsOf(scene);
- // Named by mission phase: a phase moves a body when any of its cases does.
+ // Named by phase of the cycle: a phase moves a body when any of its motions does.
  const moves=[...phases.filter(a=>a.cases.some(c=>moving.has(c))).map(a=>a.title),...[...moving].filter(c=>!phases.some(a=>a.cases.includes(c))),...(scene.replays||[]).filter(r=>r.bodies[id]&&r.bodies[id].group!==null).map(r=>r.id)];
- // Mounts the design source registers against this member, ahead of the project's load-path text.
+ // Mounts the design source registers against this member, then what the attachment report says of it.
  const note=attachmentNote(id,scene),mounts=(b.mounts||[]).map(m=>'Mounted on '+(scene.bodies[m.on]?.name||m.on)+' at ('+m.pointMm.map(v=>fmt(v,1)).join(', ')+') mm · '+m.basis);
- return [['Category',b.category+(b.category!==b.role&&!b.fixture?' (colour of role '+b.role+')':''),false,'swatch'],['Subsystem',...val('subsystem',b.subsystem)],['Motion group',b.motionGroup,false],
-  ['Material',...val('material',b.material)],['Occupied volume',...volume],['Mass line and basis',...mass],
-  ['Support and load path',...(note?[[note.text,...(b.fixture?['Field fixture']:[...mounts,...(b.support?[b.support]:[])])],note.finding]:b.fixture?['Field fixture',false]:mounts.length?[[...mounts,...(b.support?[b.support]:[])],false]:b.support?[b.support,false]:[NOT_SUPPLIED,true])],
-  ['Purpose',...val('purpose',b.purpose)],['Why it is included',...val('rationale',b.rationale)],
-  ['Electrical load lines',loads.length?loads:'None assigned to this component',false],['Moves in',moves.length?moves:'Stationary in every commissioned case',false]];
+ const support=note?[[note.text,...(b.fixture?['Field fixture']:mounts)],note.finding]:b.fixture?['Field fixture',false]:mounts.length?[mounts,false]
+  :scene.attachment&&!scene.attachment.skipped?['Attached: contacts or registered mounts trace it to the frame',false]:[NOT_SUPPLIED,false];
+ return [['Category',b.category+(b.category!==b.role&&!b.fixture?' (colour of role '+b.role+')':''),false,'swatch'],['Subsystem',...page(b.subsystem)],['Motion group',b.motionGroup,false],
+  ['Material',...page(b.material)],['Occupied volume',...volume],['Weight',...weight],['Support and load path',...support],['Description',...page(b.description)],
+  ['Motor of',motor,false],['Moves in',moves.length?moves:'Stationary in every motion',false]];
 }
 function visibleBodies(names,isolated){return isolated&&isolated.size?names.filter(n=>isolated.has(n)):names.slice()}
 function findComponent(query,bodies,exact=false){
@@ -163,13 +167,8 @@ function findComponent(query,bodies,exact=false){
  if(whole||exact)return whole?.id??null;
  return rows.find(r=>r.id.toLowerCase().includes(q)||r.name.toLowerCase().includes(q))?.id??null;
 }
-function partition(lines,selected,whole){
- const included=[],shared=[];
- for(const line of lines){const n=line.members.filter(v=>selected.has(v)).length;if(whole||n&&n===line.members.length)included.push(line);else if(n)shared.push(line)}
- return {included,shared};
-}
 function frameCount(c){return c.replay?c.time.length:Math.max(1,...Object.values(c.bodies).map(b=>b.matrices.length))}
-// The animation list of a scene: one entry per mission phase, each naming the cases it plays end to end.
+// The animation list of a scene: one entry per phase of the cycle, each naming the motions it plays end to end.
 function animationsOf(scene){return scene.animations}
 // One entry of the animation list as a single clip: its segments end to end, sharing the frame where one ends and the next begins.
 // A segment with no time of its own takes a tenth of a second a frame, shortened so the untimed part of a clip lasts six seconds at most.
@@ -232,36 +231,6 @@ function carriedValues(base,param,rest,now,out){
   for(let j=0;j<3;j++)out[6*k+j]=base[6*k+j]+(a[j]-ra[j])*(1-w)+(b[j]-rb[j])*w}
  return out}
 function followable(href,base){try{const u=new URL(href,base);return u.protocol==='https:'||u.origin===new URL(base).origin?u:null}catch{return null}}
-// SHA-256 for contexts without crypto.subtle, such as a plain-http LAN review. FIPS 180-4.
-const SHA_K=new Uint32Array([0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2]);
-// Hashes the input in place, padding only the final blocks, and yields about every megabyte.
-function* sha256Steps(input){
- const bytes=ArrayBuffer.isView(input)?new Uint8Array(input.buffer,input.byteOffset,input.byteLength):new Uint8Array(input);
- const n=bytes.length,full=n-n%64,tailLength=Math.ceil((n-full+9)/64)*64,tail=new Uint8Array(tailLength);
- tail.set(bytes.subarray(full));tail[n-full]=0x80;
- const tailView=new DataView(tail.buffer);tailView.setUint32(tailLength-8,Math.floor(n/0x20000000));tailView.setUint32(tailLength-4,(n<<3)>>>0);
- const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
- const h=new Uint32Array([0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19]),w=new Uint32Array(64);
- const rot=(x,k)=>(x>>>k)|(x<<(32-k));
- function block(source,off){
-  for(let i=0;i<16;i++)w[i]=source.getUint32(off+4*i);
-  for(let i=16;i<64;i++){const a=w[i-15],b=w[i-2];w[i]=(w[i-16]+(rot(a,7)^rot(a,18)^(a>>>3))+w[i-7]+(rot(b,17)^rot(b,19)^(b>>>10)))>>>0}
-  let [a,b,c,d,e,f,g,k]=h;
-  for(let i=0;i<64;i++){
-   const t1=(k+(rot(e,6)^rot(e,11)^rot(e,25))+((e&f)^(~e&g))+SHA_K[i]+w[i])>>>0,t2=((rot(a,2)^rot(a,13)^rot(a,22))+((a&b)^(a&c)^(b&c)))>>>0;
-   k=g;g=f;f=e;e=(d+t1)>>>0;d=c;c=b;b=a;a=(t1+t2)>>>0;
-  }
-  h[0]+=a;h[1]+=b;h[2]+=c;h[3]+=d;h[4]+=e;h[5]+=f;h[6]+=g;h[7]+=k;
- }
- for(let off=0;off<full;off+=64){block(view,off);if((off&0xfffff)===0xfffc0)yield}
- for(let off=0;off<tailLength;off+=64)block(tailView,off);
- return [...h].map(x=>x.toString(16).padStart(8,'0')).join('');
-}
-function sha256Pure(input){const steps=sha256Steps(input);let r;while(!(r=steps.next()).done);return r.value}
-async function digestHex(bytes,subtle=globalThis.crypto?.subtle){
- if(!subtle){const steps=sha256Steps(bytes);let r;while(!(r=steps.next()).done)await new Promise(res=>setTimeout(res));return r.value}
- return [...new Uint8Array(await subtle.digest('SHA-256',bytes))].map(b=>b.toString(16).padStart(2,'0')).join('');
-}
 </script>
 <script>
 'use strict';
@@ -274,26 +243,25 @@ const flat=(m,p)=>[0,4,8].map(k=>m[k]*p[0]+m[k+1]*p[1]+m[k+2]*p[2]+m[k+3]);
 const rgb=s=>[1,3,5].map(i=>parseInt(s.slice(i,i+2),16)/255);
 const short=s=>s?s.slice(0,12):'';
 let scene,entries,motions,custom=Object.create(null),selNames=new Set(),picked=new Set(),marked=[],selected=null,isolated=null,timer,cam,gl,program,position,normal,locations={},gpu,lastProjection,paintPending=false,extent=1,locatedId=null,allowanceIds=new Set();
-// The selected entry of the animation list is a clip of one or more checked cases, or one replay. Drawing and inspection
+// The selected entry of the animation list is a clip of one or more motions, or one replay. Drawing and inspection
 // read the case the clip shows now and the frame within it.
 const entry=()=>motions[$('motion').selectedIndex];
 const shown=()=>clipFrame(entry(),+$('time').value);
 const current=()=>entry().segments[shown()[0]];
-const duty=()=>scene.power[$('duty').selectedIndex];
+const duty=()=>scene.power.motions[$('duty').selectedIndex];
 const frameOf=()=>shown()[1];
 // Where an animation, a replay or a case sits in the list: [entry index, segment index].
 function placeOf(id){let i=motions.findIndex(m=>m.id===id);if(i>=0)return [i,0];i=motions.findIndex(m=>m.segments.some(c=>c.id===id));return i<0?null:[i,motions[i].segments.findIndex(c=>c.id===id)]}
 // Show a case at a fraction along it, inside the animation that plays it. Returns false for an unknown ID.
 function show(id,fraction=0){const at=placeOf(id);if(!at)return false;if($('motion').selectedIndex!==at[0]){$('motion').selectedIndex=at[0];activate()}else stop();
  $('time').value=clipSeek(motions[at[0]],at[1],fraction);draw();return true}
-const storageKey=()=>'agent-frc/preliminary/groups/'+scene.sources.step.sha256;
+const storageKey=()=>'agent-frc/preliminary/groups/'+scene.sources.design.sha256;
 function readGroups(){const groups=Object.create(null);try{Object.assign(groups,JSON.parse(localStorage.getItem(storageKey())||'{}'))}catch{}return groups}
 function writeGroups(){try{localStorage.setItem(storageKey(),JSON.stringify(custom))}catch{}}
 const UNMOVED=[1,0,0,0,0,1,0,0,0,0,1,0];
 // A replay body takes its group's transform for the frame; null means the group is hidden in that frame.
 function poseAt(c,id,t){const b=c.bodies[id];if(c.replay)return b.group===null?UNMOVED:c.groups[b.group][Math.min(t,c.time.length-1)];
- const m=b.matrices[Math.min(t,b.matrices.length-1)];
- if(!scene.bodies[id].fixture||!c.positions)return m;const [x,y]=c.positions[t];return [m[0],m[1],m[2],m[3]-x,m[4],m[5],m[6],m[7]-y,m[8],m[9],m[10],m[11]]}
+ return b.matrices[Math.min(t,b.matrices.length-1)]}
 function presentIds(c){const t=frameOf(),noField=$('hideField').checked;return Object.keys(c.bodies).filter(id=>!c.removed.includes(id)&&!(noField&&scene.bodies[id].fixture)&&!(scene.cutaway&&$('cutaway').checked&&scene.cutaway.hides.includes(id))&&!(c.replay&&!poseAt(c,id,t)))}
 // Where the followed group sits in the field at a frame; a case has no field position of this kind.
 function followPoint(c,t){if(!c.replay)return null;const m=c.groups[c.follow][Math.min(t,c.time.length-1)];return [m[3],m[7],m[11]]}
@@ -312,12 +280,14 @@ function header(){
  context();
  for(const link of scene.links||[]){const url=followable(link.href,location.href);if(!url)continue;const a=text('a',link.label);a.href=url.href;a.target='_top';$('links').append(a)}
  const show=(id,value,what)=>value?($(id).textContent=value):$(id).replaceChildren(notSupplied(what));
- show('architecture',scene.architecture,'presentation.architecture');show('datum',scene.datum);$('units').textContent=scene.units;
+ show('architecture',scene.architecture,'page.json architecture');show('datum',scene.datum);$('units').textContent=scene.units;
  const n=scene.narrativeReview?.source;$('narrativeSource').textContent=n?n.file+' · '+short(n.sha256):'Narrative pre-read missing';
- decide(scene.decision.status,scene.decision.firstUnmet,'(at scene generation; awaiting the review receipt)');
- triggered(scene.decision.status==='blocked'&&scene.decision.firstUnmet?[scene.decision.firstUnmet.text]:[]);
+ decide(scene.decision.status,scene.decision.firstUnmet,"(judged from the library's records when this page was built)");
+ triggered([...scene.reopen,...scene.unmet.filter(r=>BLOCKING.includes(r.kind)&&(r.status||'fail')==='fail').map(r=>r.text)]);
+ const jobs=scene.records.jobs;$('recordsNote').textContent=jobs.length+' record'+(jobs.length===1?'':'s')+' in '+scene.records.folder+' ('+jobs.map(j=>j.id).join(', ')+')'+(scene.records.trials?' and '+scene.records.trials.file:'')+'.';
 }
-let designStatus=null,draft=0,designTitle='',phase='Preliminary design',builtOn='',decision='pending receipt';
+const BLOCKING=['clearance','weight','voltage','floating'];
+let designStatus=null,draft=0,designTitle='',phase='Preliminary design',builtOn='',decision='';
 const releaseId=()=>decodeURIComponent(new URL('.',location.href).pathname.split('/').filter(Boolean).at(-1)||'');
 // A version reads NAME MAJOR.MINOR once the release index is read; until then the ID stands.
 function context(){$('context').textContent=[scene?.context,designTitle||releaseId(),phase,builtOn].filter(Boolean).join('　/　')}
@@ -326,7 +296,7 @@ function chip(){
  const s=$('state');s.textContent=(said?said[0].toUpperCase()+said.slice(1)+' · ':'')+decision;s.className='chip '+decision}
 function decide(status,unmet,source){
  decision=status;$('decision').textContent=status;$('decision').className='chip '+status;chip();
- $('decisionSource').textContent=source;$('firstUnmet').textContent=unmet?unmet.text:'None. Every commissioned check passes.';
+ $('decisionSource').textContent=source;$('firstUnmet').textContent=unmet?unmet.text:'None. Every check of the judgement passes.';
  $('unmetInline').hidden=!unmet;$('unmetInline').textContent=unmet?'First unmet: '+unmet.text:'';
 }
 function triggered(list){$('triggered').replaceChildren(...(list.length?list:['None recorded']).map(v=>text('li',typeof v==='string'?v:v.phase+': '+v.reason+(v.affected?' ('+v.affected.join(', ')+')':''))))}
@@ -338,7 +308,7 @@ async function showDetailedStatus(id){
  phase='Detailed design';designStatus=index.designStatus?.[id]??'in-progress';
  // This page is the one viewer of the detailed design, in progress and effective: the same checked model, motion and missions.
  for(const e of [$('heading'),document.querySelector('title')])e.textContent=e.textContent.replace('Preliminary design review','Detailed design review');
- $('basisNote').textContent='Detailed design: the model exported from the registered Fusion design, checked on the motion cases of the preliminary design it is built on. The review receipt gives the checked result.';
+ $('basisNote').textContent='Detailed design: the model exported from the registered Fusion design, checked on the motions of the preliminary design it is built on.';
  const edited=index.revision?.[id]?.number;draft=designStatus==='in-progress'&&Number.isInteger(edited)?edited:0;
  const name=index.architectures?.[versionMajor(id)]?.name,link=index.preliminary?.[id];
  if(typeof name==='string'&&name.trim()){designTitle=name+' '+id;document.title=designTitle+' · '+document.title.replace(designTitle+' · ','')}
@@ -357,17 +327,6 @@ async function showDesignStatus(){
   const major=/^([1-9]\d{0,3})\.(0|[1-9]\d{0,3})$/.exec(id)?.[1],name=major&&index.designs?.[major]?.name;
   if(typeof name==='string'&&name.trim()){designTitle=name+' '+id;context();document.title=designTitle+' · '+document.title.replace(designTitle+' · ','')}
   chip()}catch{}
-}
-async function bindReceipt(contentSha){
- let receipt=null;try{const r=await fetch('receipt.json',{cache:'no-store'});receipt=r.ok?await r.json():null}catch{}
- if(!receipt)return;
- const plain=isSecureContext?'':'; plain HTTP: consistency check only';
- if(receipt.issue!==scene.issue||receipt.view?.scene?.contentSha256!==contentSha){$('decisionSource').textContent='(receipt.json does not pin this scene; showing scene-generation findings)';return}
- const d=receipt.decision||{status:receipt.status,firstUnmet:null};
- decide(d.status,d.firstUnmet,'(from the review receipt that pins this scene'+plain+')');
- $('receiptPin').textContent='· plan '+short(receipt.planSha256)+' · scene '+short(receipt.view.scene.sha256);
- triggered(receipt.reopen||[]);
- for(const p of (receipt.premises||[]).filter(p=>p.phase==='conceptual-design'))$('returnConceptual').append(text('li','Premise '+p.id+' ('+p.unit+') leaves '+JSON.stringify(p.criterion)+' · now '+p.status));
 }
 
 // Region 2: renderer
@@ -450,8 +409,8 @@ function render(){
  lastProjection=p=>[dot(u,p)+off[0],dot(v,p)+off[1],dot(z,p)+off[2]];
  gl.uniformMatrix4fv(locations.camera,false,[u[0],v[0],z[0],0,u[1],v[1],z[1],0,u[2],v[2],z[2],0,...off,1]);
  const paint=(item,m,col,hatch=0)=>{gl.uniform1f(locations.hatch,hatch);gl.bindBuffer(gl.ARRAY_BUFFER,item.buffer);gl.vertexAttribPointer(position,3,gl.FLOAT,false,24,0);gl.vertexAttribPointer(normal,3,gl.FLOAT,false,24,12);gl.uniformMatrix4fv(locations.pose,false,modelMatrix(m));gl.uniform3fv(locations.tint,col);gl.drawArrays(item.mode,0,item.count)};
- const field=cs.positions?[1,0,0,-cs.positions[t][0],0,1,0,-cs.positions[t][1],0,0,1,0]:[1,0,0,0,0,1,0,0,0,0,1,0];
- if($('floor').checked){const g=gpu.gridStep,off=at?at.map(x=>-Math.round(x/g)*g):cs.positions?cs.positions[t].map(x=>x-Math.round(x/g)*g):[0,0];paint(gpu.grid,[1,0,0,-off[0],0,1,0,-off[1],0,0,1,0],[.16,.25,.34])}
+ const field=[1,0,0,0,0,1,0,0,0,0,1,0];
+ if($('floor').checked){const g=gpu.gridStep,off=at?at.map(x=>-Math.round(x/g)*g):[0,0];paint(gpu.grid,[1,0,0,-off[0],0,1,0,-off[1],0,0,1,0],[.16,.25,.34])}
  if(gpu.outline&&$('cutaway').checked)paint(gpu.outline,field,[.36,.94,1]);
  const labels=[];
  for(const id of visibleBodies(presentIds(cs),isolated)){
@@ -467,8 +426,8 @@ function render(){
 function readout(){
  const cs=current(),t=frameOf();
  const m=entry(),frame=+$('time').value;$('fraction').textContent=m.replay?fmt(cs.time[t])+' s':m.timed?fmt(m.times[frame])+' s':Math.round(frame/Math.max(1,m.frames-1)*100)+'%';
- // An animation of several checked segments names the one on screen, so a reviewer can find it in the check results.
- const said=(m.replay?'Recorded playback, not a clearance case. ':'')+(m.segments.length>1?'Checked segment '+(shown()[0]+1)+' of '+m.segments.length+' ('+cs.id+'). ':'')+cs.basis;if($('basis').textContent!==said)$('basis').textContent=said;
+ // An animation of several motions names the one on screen, so a reviewer can find it in the check results.
+ const said=(m.replay?'Recorded playback, not a clearance case. ':'')+(m.segments.length>1?'Motion '+(shown()[0]+1)+' of '+m.segments.length+' ('+cs.id+'). ':'')+cs.basis;if($('basis').textContent!==said)$('basis').textContent=said;
  const row=(scene.motionEvidence||[]).find(r=>r.case===cs.id);
  $('liveMeasure').textContent=cs.measure?.[t]||(cs.replay?'Recorded playback':row?row.kind+': '+row.result:cs.status==='pass'?'Checked path':cs.status);
  if(cs.events?.length){const now=eventAt(cs.events,t);$('eventNow').textContent=now?'Event '+now[0]+' of '+cs.events.length+': '+now[1]:'No event yet · '+cs.events.length+' recorded';
@@ -526,17 +485,15 @@ function select(){
  budget();inventory();draw();
 }
 function budget(){
- resourcePanel();const whole=$('group').value==='Whole robot',e=duty(),div=$('summary'),lines=$('lines');div.replaceChildren();lines.replaceChildren();
- const volume=entries.filter(([n])=>selNames.has(n)).reduce((s,[,b])=>s+(b.volumeMm3||0),0)/1e6;
- const values=[['Component envelopes',selNames.size+' selected · '+fmt(volume)+' L']];
- if(scene.mass){const m=partition(scene.mass.lines,selNames,whole),kg=sum(m.included,'kg');values.push(['Inspection mass allocated',m.shared.length&&!m.included.length?'Shared estimate · see detail':range(kg,3)+' kg'+(m.shared.length?' + shared mass':'')]);
-  for(const [title,arr] of [['Included inspection',m.included],['Shared inspection · unapportioned',m.shared]])if(arr.length){lines.append(text('strong',title));for(const v of arr)lines.append(text('p',v.id+' · '+range(v.kg,3)+' kg'))}}
- else values.push(['Inspection mass allocated',NOT_SUPPLIED]);
- if(e){const p=partition(e.lines,selNames,whole),amps=sum(p.included,'amps');values.push(['Attributed battery current',range(amps,1)+' A'+(p.shared.length?' + shared load':'')],['Attributed pack sag',range(amps.map(a=>a*e.resistanceOhm),2)+' V'+(p.shared.length?' + shared load':'')],['Whole-robot loaded bus',range(e.loadedBusV,2)+' V · '+e.requiredMinV+' V required']);
-  for(const [title,arr] of [['Included current',p.included],['Shared current · unapportioned',p.shared]])if(arr.length){lines.append(text('strong',title));for(const v of arr)lines.append(text('p',v.name+' · '+range(v.amps,1)+' A'))}}
- else values.push(['Attributed battery current',NOT_SUPPLIED]);
+ resourcePanel();const e=duty(),div=$('summary'),lines=$('lines');div.replaceChildren();lines.replaceChildren();
+ const chosen=entries.filter(([n])=>selNames.has(n)),volume=chosen.reduce((s,[,b])=>s+(b.volumeMm3||0),0)/1e6,w=weightOf([...selNames],scene);
+ const values=[['Component envelopes',selNames.size+' selected · '+fmt(volume)+' L'],['Weight of the selection',range(w.kg,3)+' kg'+(w.lumped?' + '+w.lumped+' in group weights':'')+(w.unweighed?' · '+w.unweighed+' unweighed':'')]];
+ if(e){const own=[...e.drives,...e.alsoRunning].filter(d=>d.members.length&&d.members.every(n=>selNames.has(n))),amps=own.reduce((s,d)=>s.map((v,i)=>v+d.busA[i]),[0,0]);
+  values.push(['Battery current of its motors',range(amps,1)+' A in '+e.motion],['Whole-robot bus in '+e.motion,range(e.busV,2)+' V · '+fmt(e.requiredV)+' V required']);
+  for(const d of own)lines.append(text('p',d.drive+' · '+range(d.busA,1)+' A'))}
+ else values.push(['Battery current of its motors','No powered motion']);
  for(const [k,v] of values){const row=text('p',k);row.append(text('b',v));div.append(row)}
- lines.append(text('p','The whole-robot bus includes all loads. Ranges from independent extrema can be conservative. Running additions are shown separately from inspection allocations.'));
+ lines.append(text('p','Weights add the ranges the design source states. The bus adds every running drive\'s peak current at once, which is conservative.'));
 }
 function table(headers,members){const el=document.createElement('table'),head=el.createTHead().insertRow();headers.forEach(h=>head.append(text('th',h)));return [el,el.createTBody()]}
 function ledgerRow(body,cells,ids,label){
@@ -545,58 +502,56 @@ function ledgerRow(body,cells,ids,label){
  return tr;
 }
 function resourcePanel(){
- const total=$('resources');total.replaceChildren();const e=duty(),m=scene.mass;
+ const total=$('resources');total.replaceChildren();const e=duty(),w=scene.weight;
  function meter(label,value,message,over,href){const block=document.createElement('section');block.className='budget-meter';block.append(text('span',label),text('b',value),text('small',message));if(href){const a=text('a',href[0]);a.href=href[1];block.append(a)}block.classList.toggle('over',over);total.append(block)}
- if(m)meter('Inspection weight',range(m.inspectionKg,3)+' kg','Limit '+fmt(m.limitKg,3)+' kg · headroom '+signed(m.limitKg-m.inspectionKg[1],'kg',3)+' high / '+signed(m.limitKg-m.inspectionKg[0],'kg',3)+' low',m.inspectionKg[1]>m.limitKg,['Weight ledger ↓','#weightCard']);
- else meter('Inspection weight',NOT_SUPPLIED,'Name the budget ledger, budgets.json, in the judgement file to compare with the inspection limit.',true);
- if(e){const voc=e.openCircuitV,r=e.resistanceOhm,min=e.requiredMinV,available=r>0?(voc-min)/r:Infinity,imax=e.batterySideA[1],pAt=i=>i*(voc-r*i),peak=Math.max(pAt(e.batterySideA[0]),pAt(imax),r>0&&e.batterySideA[0]<=voc/(2*r)&&imax>=voc/(2*r)?pAt(voc/(2*r)):0);
-  meter('Battery voltage under load',fmt(e.loadedBusV[0],3)+' V minimum','Requirement '+fmt(min)+' V · headroom '+signed(e.loadedBusV[0]-min,'V',3),e.loadedBusV[0]<min,['Power ledger ↓','#powerCard']);
-  meter('Battery-side demand',fmt(imax,1)+' A · '+fmt(peak/1000)+' kW','Pack budget at '+fmt(min,1)+' V: '+(Number.isFinite(available)?fmt(available,1)+' A / '+fmt(min*available/1000)+' kW':'unbounded for zero resistance'),imax>available,['Power ledger ↓','#powerCard'])}
- else meter('Battery voltage under load',NOT_SUPPLIED,'List the loaded-voltage cases in the budget ledger, budgets.json.',true);
+ for(const l of w.limits)meter('Weight · '+l.name,range(l.rangeKg,2)+' kg','Limit '+fmt(l.limitKg)+' kg · headroom '+signed(l.marginKg,'kg',2)+' at the high end'+(l.excludesGroups.length?' · leaves out '+l.excludesGroups.join(', '):''),l.status==='fail',['Weight budget ↓','#weightCard']);
+ if(!w.limits.length)meter('Weight',range(w.rangeKg,2)+' kg','The season\'s requirements name no weight limit.',false);
+ if(e){meter('Bus voltage under load',fmt(e.busV[0],2)+' V minimum','Needs '+fmt(e.requiredV)+' V ('+e.governs+') · headroom '+signed(e.marginV,'V',2)+' in '+e.motion,e.marginV<0,['Power by drive ↓','#powerCard']);
+  meter('Battery current',fmt(e.loadA[1],1)+' A peak','Weak pack '+fmt(e.openCircuitV[0],1)+' V open circuit, '+fmt(1000*e.resistanceOhm[1],1)+' mΩ'+(e.clamped.length?' · clamped: '+e.clamped.join(', '):''),e.clamped.length>0,['Power by drive ↓','#powerCard'])}
+ else meter('Bus voltage under load','No powered motion','No motion of the design source runs a drive.',false);
  weightLedger();powerLedger();required();
 }
 function weightLedger(){
- const root=$('weightBody');root.replaceChildren();const m=scene.mass;if(!m){root.append(notSupplied('budgets.json'));return}
- root.append(text('p','Inspection allowance '+fmt(m.limitKg)+' kg. Upper estimate '+fmt(m.inspectionKg[1])+' kg, with '+signed(m.limitKg-m.inspectionKg[1],'kg',2)+' headroom.'));
- const ruler=document.createElement('div');ruler.className='weight-ruler';const [low,high]=m.inspectionKg,width=Math.max(1,Math.abs(low-m.limitKg),Math.abs(high-m.limitKg))*1.08,start=m.limitKg-width;
- const band=document.createElement('i');band.style.left=((low-start)/(2*width)*100)+'%';band.style.width=((high-low)/(2*width)*100)+'%';ruler.append(band,text('b','Limit '+fmt(m.limitKg,3)+' kg'));root.append(ruler);
- const [tab,body]=table(['Inspection allocation','Low, kg','High, kg']);for(const l of m.lines)ledgerRow(body,[l.id,fmt(l.kg[0],3),fmt(l.kg[1],3)],l.members,l.id);
- const t=body.insertRow();t.className='grand-total';t.insertCell().textContent='Inspection total';for(const v of m.inspectionKg){const td=t.insertCell();td.textContent=fmt(v,3);td.className='num'}root.append(tab);
- const details=document.createElement('details');details.append(text('summary','Running configuration · '+range(m.runningKg,2)+' kg'));
- if(m.runningAdditions){details.append(text('p','Running additions to the inspection estimate'+(m.runningBasis?' · '+m.runningBasis:'')+'.'));const [ta,bd]=table(['Additional article','Low, kg','High, kg']);for(const r of m.runningAdditions)ledgerRow(bd,[r.name,fmt(r.kg[0],3),fmt(r.kg[1],3)],r.members,r.name);details.append(ta)}
- else{const p=text('p','Running payload '+(m.runningBasis||'')+'. Itemized running additions: ');p.append(notSupplied('presentation.runningAdditions'));details.append(p)}
- root.append(details);markLedger();
+ const root=$('weightBody');root.replaceChildren();const w=scene.weight;
+ root.append(text('p','From the design source: '+fmt(w.totalKg)+' kg nominal, '+range(w.rangeKg)+' kg over the stated ranges.'+(w.unweighed.length?' Unweighed: '+w.unweighed.join(', ')+'.':'')));
+ const [lim,lb]=table(['Weight limit','Low, kg','High, kg','Limit, kg','Headroom, kg']);
+ for(const l of w.limits){const r=ledgerRow(lb,[l.name,fmt(l.rangeKg[0]),fmt(l.rangeKg[1]),fmt(l.limitKg),signed(l.marginKg,'',2).trim()]);if(l.status==='fail')r.className='unmet';r.title=(l.basis||'')+(l.excludesGroups.length?' · leaves out '+l.excludesGroups.join(', '):'')}
+ root.append(lim);
+ const [tab,body]=table(['Group','Low, kg','High, kg']);
+ for(const [name,g] of Object.entries(w.groups))ledgerRow(body,[name+(w.notRobotWeight.includes(name)?' (not robot weight)':''),fmt(g.rangeKg[0],3),fmt(g.rangeKg[1],3)],g.members,name);
+ for(const x of w.extraMass)ledgerRow(body,[x.name+' (no solid, in '+x.group+')',fmt(x.rangeKg[0],3),fmt(x.rangeKg[1],3)],[],x.name);
+ const t=body.insertRow();t.className='grand-total';t.insertCell().textContent='Total';for(const v of w.rangeKg){const td=t.insertCell();td.textContent=fmt(v,3);td.className='num'}
+ const details=document.createElement('details');details.append(text('summary','Weight by group'),tab);root.append(details);markLedger();
 }
 function powerLedger(){
- const e=duty(),holder=$('powerBars'),mount=$('loads');holder.replaceChildren();mount.replaceChildren();if(!e){holder.append(notSupplied('budgets.json'));return}
- const max=Math.max(1,e.batterySideA[1]);
- e.lines.forEach((line,i)=>{const b=document.createElement('button');b.className='load-bar';b.setAttribute('aria-label','Inspect '+line.name);const fill=document.createElement('i'),track=document.createElement('i');fill.style.width=Math.max(.5,100*line.amps[1]/max)+'%';fill.style.background=['#2f66b0','#328a8a','#dfac29'][i%3];track.append(fill);b.append(text('span',line.name),text('strong',fmt(line.amps[1],1)+' A'),track);
+ const e=duty(),holder=$('powerBars'),mount=$('loads');holder.replaceChildren();mount.replaceChildren();if(!e){holder.append(text('p','No motion of the design source runs a drive.'));return}
+ const lines=[...e.drives.map(d=>({...d,label:d.drive})),...e.alsoRunning.map(d=>({...d,label:d.drive+' (also running)'}))],max=Math.max(1e-9,...lines.map(l=>l.busA[1]));
+ lines.forEach((line,i)=>{const b=document.createElement('button');b.className='load-bar';b.setAttribute('aria-label','Inspect '+line.label);const fill=document.createElement('i'),track=document.createElement('i');fill.style.width=Math.max(.5,100*line.busA[1]/max)+'%';fill.style.background=['#2f66b0','#328a8a','#dfac29'][i%3];track.append(fill);b.append(text('span',line.label),text('strong',fmt(line.busA[1],2)+' A'),track);
   b.onclick=()=>{const d=mount.children[i+1];d.open=true;d.scrollIntoView({block:'nearest'});isolated=null;selected=null;marked=line.members.slice();draw()};holder.append(b)});
- mount.append(text('p',e.case+' · '+fmt(e.openCircuitV,1)+' V open circuit · '+fmt(1000*e.resistanceOhm,1)+' mΩ battery model. Select a load to highlight its components.'));
- for(const line of e.lines){const d=document.createElement('details');d.dataset.members=JSON.stringify(line.members);d.append(text('summary',line.name+'　 '+range(line.amps,1)+' A'));
-  d.append(text('p','Battery input envelope '+Math.floor(line.amps[0]*e.loadedBusV[0])+'–'+Math.ceil(line.amps[1]*e.loadedBusV[1])+' W · pack sag contribution '+range(line.amps.map(i=>e.resistanceOhm*i),3)+' V. Power bounds combine voltage and current extrema.'));
-  const locateLoad=text('button','Locate this load');locateLoad.onclick=()=>{isolated=null;selected=null;marked=line.members.slice();draw();$('stage').scrollIntoView({block:'nearest'})};d.append(locateLoad);
+ mount.append(text('p',e.motion+' · bus '+range(e.busV)+' V under '+range(e.loadA,2)+' A · weak pack '+fmt(e.openCircuitV[0],2)+' V, '+fmt(1000*e.resistanceOhm[1],1)+' mΩ. '+(scene.power.conservative||'')));
+ for(const line of lines){const d=document.createElement('details');d.dataset.members=JSON.stringify(line.members);d.append(text('summary',line.label+'　 '+range(line.busA,2)+' A'));
+  if(line.currentA)d.append(text('p',(line.count>1?line.count+' motors · ':'')+'current '+range(line.currentA,2)+' A per motor'+(line.limitA!=null?' of a '+fmt(line.limitA,0)+' A limit':'')+(line.clamped?', clamped: it cannot make its torque':'')+' · motor needs '+range(line.motorV)+' V'+(line.change!=null?' · '+fmt(line.change,1)+' '+line.unit+' of '+line.kind:'')));
   const members=document.createElement('div');members.className='member-buttons';for(const n of line.members)if(scene.bodies[n]){const b=text('button',scene.bodies[n].name);b.onclick=()=>{isolated=null;inspect(n);$('stage').scrollIntoView({block:'nearest'})};members.append(b)}d.append(members);
-  d.append(text('p',!line.members.length?'Consumer allocation open: no placed member is assigned.':line.members.length>1?'Budgeted as a shared load. Individual current split is unavailable.':'Assigned to this component in the duty model.'));mount.append(d)}
+  if(!line.members.length)d.append(text('p','The design source places no motor solid for this drive.'));mount.append(d)}
 }
 function required(){
- const v=$('required');v.replaceChildren();const names=new Set(Object.keys(scene.bodies));let missing=0;
- if(!scene.required.length){v.append(notSupplied('presentation.required'))}
- for(const r of scene.required){const absent=r.ids.filter(n=>!names.has(n));missing+=absent.length;const row=document.createElement('div');row.className='role-row'+(absent.length?' warn':'');row.append(text('strong',absent.length?'Missing':'Present'),text('span',r.role+'　 '+(r.ids.length-absent.length)+'/'+r.ids.length));if(absent.length)row.append(text('small',absent.join(', ')));v.append(row)}
- const m=scene.mass,e=duty();
- $('warningText').textContent=(missing?missing+' missing required representations. ':scene.required.length?'Required component counts present. ':'')+(m&&m.inspectionKg[1]>m.limitKg?'High estimate exceeds inspection weight. ':'')+(e&&e.loadedBusV[0]<e.requiredMinV?'Selected duty falls below voltage requirement. ':'')+(scene.focus||'');
- if(!scene.focus)$('warningText').append('Focus: ',notSupplied('presentation.focus'));
+ const v=$('required');v.replaceChildren();let missing=0;
+ for(const r of scene.required){const row=document.createElement('div');row.className='role-row'+(r.ids.length?'':' warn');if(!r.ids.length)missing++;
+  row.append(text('strong',r.ids.length?'Present':'Missing'),text('span',r.role+'　 '+(r.ids.length?r.ids.length+' solid'+(r.ids.length>1?'s':''):'no group')));v.append(row)}
+ const e=duty(),over=scene.weight.limits.some(l=>l.status==='fail');
+ $('warningText').textContent=(missing?missing+' required role'+(missing>1?'s have':' has')+' no group in the design source. ':'Every required role has a group. ')+(over?'A weight limit is exceeded. ':'')+(e&&e.marginV<0?'The selected motion\'s bus falls below what it needs. ':'')+(scene.focus||'');
+ if(!scene.focus)$('warningText').append('Focus: ',notSupplied('page.json focus'));
 }
 // The layout check's attachment report: every floating solid and labelled exception, each selectable in the model.
 function attachmentPanel(){
  const a=scene.attachment,root=$('attachment'),note=$('attachmentText');root.replaceChildren();
- if(!a){note.replaceChildren(notSupplied('this scene predates the attachment report; rerun the layout check'));return}
+ if(!a){note.textContent='The judgement made no attachment report.';return}
  if(a.skipped&&!a.floating){note.textContent=a.skipped;return}
  const rows=attachmentRows(scene),findings=rows.filter(r=>r[3]).length;
- note.textContent=(findings?findings+' to fix or label. ':'Nothing floats. ')+a.robotSolids+' robot solids checked at the start of '+a.case+'; touching means within '+a.gapMm+' mm. Field fixtures, game pieces and service gauges are left out. Information only: it does not change the checked result.';
+ note.textContent=(findings?findings+' to fix or label. ':'Nothing floats. ')+a.robotSolids+' robot solids checked at the start of '+a.motion+'; touching means within '+a.gapMm+' mm. Field fixtures, game pieces and service gauges are left out. A floating solid or a fixture off the floor blocks the verdict.';
  for(const [label,id,detail,finding,also] of rows){
   const row=document.createElement('div');row.className='role-row'+(finding?' warn':'');const b=text('button',scene.bodies[id]?.name||id);b.setAttribute('aria-label','Inspect '+label.toLowerCase()+' '+id);
-  b.onclick=()=>{if(scene.bodies[id]?.fixture&&$('hideField').checked)$('hideField').checked=false;show(a.case);isolated=null;inspect(id,also);$('stage').scrollIntoView({block:'nearest'})};
+  b.onclick=()=>{if(scene.bodies[id]?.fixture&&$('hideField').checked)$('hideField').checked=false;show(a.motion);isolated=null;inspect(id,also);$('stage').scrollIntoView({block:'nearest'})};
   row.append(text('strong',label),b,text('small',detail));root.append(row)}
 }
 function inventory(){
@@ -605,18 +560,18 @@ function inventory(){
   const r=body.insertRow();r.dataset.name=n;r.dataset.members=JSON.stringify([n]);const first=r.insertCell();
   if(edit&&!b.fixture){const ck=document.createElement('input');ck.type='checkbox';ck.checked=picked.has(n);ck.setAttribute('aria-label','Include '+n);ck.onclick=ev=>{ev.stopPropagation();ck.checked?picked.add(n):picked.delete(n);selNames=new Set(picked);budget();draw()};first.append(ck)}
   else{const s=document.createElement('i');s.className='swatch';s.style.background=b.color;first.append(s,b.category)}
-  const cell=r.insertCell();cell.append(text('b',b.name),document.createElement('br'),b.fixture?'Field fixture':b.subsystem||'Subsystem '+MISSING.toLowerCase());r.insertCell().textContent=b.material||MISSING;const vol=r.insertCell();vol.className='num';vol.textContent=b.volumeMm3==null?MISSING:fmt(b.volumeMm3/1000,1)+' cm³';
+  const cell=r.insertCell();cell.append(text('b',b.name),document.createElement('br'),b.fixture?'Field fixture':b.subsystem||b.motionGroup);r.insertCell().textContent=b.material||NOT_SUPPLIED;const vol=r.insertCell();vol.className='num';vol.textContent=b.volumeMm3==null?MISSING:fmt(b.volumeMm3/1000,1)+' cm³';
   r.tabIndex=0;r.setAttribute('aria-label','Inspect '+b.name);r.onclick=()=>inspect(n);r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();inspect(n)}};
  }
- $('inventory').replaceChildren(tab);$('inventoryScope').textContent=edit?'Check members, give the subsystem a name and save.':'Each row is one placed preliminary envelope or field fixture. Select a row to locate it.';markLedger();
+ $('inventory').replaceChildren(tab);$('inventoryScope').textContent=edit?'Check members, give the subsystem a name and save.':'Each row is one solid of the design source or a field fixture. Select a row to locate it.';markLedger();
 }
 
 // Clearance evidence (region 6 detail)
 function evidence(){
  const parked=$('set').selectedIndex===1,m=entry(),cs=m.segments[0],many=m.segments.length>1,rows=parked?[...scene.parked.positive.map(x=>({pair:x.pair,status:'overlap',witness:{volumeMm3:x.volumeMm3}})),...scene.parked.unresolved.map(p=>({pair:p,status:'open',witness:{reason:'Unresolved'}}))]:m.segments.flatMap(c=>c.results.map(r=>({...r,of:c.id})));
  const counts={};rows.forEach(r=>counts[r.status]=(counts[r.status]||0)+1);
- $('count').textContent=parked?'Installed STEP · '+scene.parked.screenedPairs+' pairs screened. '+scene.parked.positive.length+' positive-volume pairs, '+scene.parked.unresolved.length+' unresolved.':m.title+' · '+(m.replay?'recorded playback, not a clearance case':(many?m.segments.length+' checked cases · ':'')+(Object.entries(counts).map(([k,v])=>v+' '+k).join(' / ')||'no pair within broad-phase range'))+(many||cs.allowanceMm==null?'':' · clearance allowance '+cs.allowanceMm+' mm');
- const [tab,body]=table(many&&!parked?['Pair','Case','Result','Witness']:['Pair','Result','Witness']);
+ $('count').textContent=parked?'As drawn · '+scene.parked.screenedPairs+' pairs screened. '+scene.parked.positive.length+' positive-volume pairs, '+scene.parked.unresolved.length+' unresolved.':m.title+' · '+(m.replay?'recorded playback, not a clearance case':(many?m.segments.length+' motions · ':'')+(Object.entries(counts).map(([k,v])=>v+' '+k).join(' / ')||'no pair within broad-phase range'))+(many||cs.allowanceMm==null?'':' · clearance allowance '+cs.allowanceMm+' mm');
+ const [tab,body]=table(many&&!parked?['Pair','Motion','Result','Witness']:['Pair','Result','Witness']);
  for(const f of rows){if($('filter').value==='adverse'&&!['fail','open','overlap'].includes(f.status))continue;
   const r=body.insertRow();r.dataset.finding='1';r.tabIndex=0;r.insertCell().textContent=f.pair.map(n=>scene.bodies[n]?.name??n).join(' / ');if(many&&!parked)r.insertCell().textContent=f.of;r.insertCell().textContent=f.status;const w=f.witness||{};
   r.insertCell().textContent=w.reason||(Array.isArray(w)?'Open interval '+w.map(v=>Math.round(v*100)+'%').join('–'):w.volumeMm3>0?fmt(w.volumeMm3)+' mm³':Number.isFinite(w.gapMm)?fmt(w.gapMm)+' mm':Number.isFinite(f.lowerBoundMm)?'≥ '+fmt(f.lowerBoundMm)+' mm':f.method||'Unresolved');
@@ -625,7 +580,7 @@ function evidence(){
  $('findings').replaceChildren(tab);
 }
 function validationText(){
- const all=entries.map(([,b])=>b);$('validation').textContent=all.filter(b=>b.closed).length+'/'+all.length+' closed meshes · '+scene.parked.screenedPairs+' parked pairs screened, '+scene.parked.positive.length+' positive, '+scene.parked.unresolved.length+' unresolved. Motion evidence is scoped to each case.';
+ const all=entries.map(([,b])=>b);$('validation').textContent=all.filter(b=>b.closed).length+'/'+all.length+' closed meshes · '+scene.parked.screenedPairs+' parked pairs screened, '+scene.parked.positive.length+' positive, '+scene.parked.unresolved.length+' unresolved. Motion evidence is scoped to each motion.';
 }
 
 // Region 6: motion evidence and decision
@@ -636,7 +591,7 @@ function limitText(row){
 }
 const listOf=(title,items)=>{if(!items?.length)return [];const ul=document.createElement('ul');for(const v of items)ul.append(text('li',v));return [text('b',title),ul]};
 function jumpTo(row){show(row.case,row.limitingTime||0);inspect(row.limitingPair[0],row.limitingPair);$('stage').scrollIntoView({block:'nearest'})}
-// One check case: a row of the table a phase opens to.
+// One motion: a row of the table a phase opens to.
 function caseRow(body,row){
  const r=body.insertRow();r.className=(row.kind==='displaced control'?'control':row.kind)+(['fail','open'].includes(row.result)?' unmet':'');
  for(const c of [row.case+(row.basis?' — '+row.basis:''),row.kind,row.start||'—',(row.groups||[]).join(', ')||'—',row.environment||'—',row.metric?row.metric+' ('+row.units+')':'—',limitText(row),row.allowanceMm==null?'—':fmt(row.allowanceMm)+' mm · '+(row.allowanceBasis||'basis missing'),row.method||row.note||'—',row.result+(row.expected?' (expected '+row.expected+')':'')])r.insertCell().textContent=c;
@@ -647,10 +602,10 @@ function caseRow(body,row){
    const both=text('button','Inspect both bodies');both.onclick=()=>{show(row.case);inspect(row.limitingPair[0],row.limitingPair);$('stage').scrollIntoView({block:'nearest'})};actions.append(jump,both)}
  }else if(row.note)actions.append(text('span',row.note));
 }
-// A replay is listed with the check results and marked as playback of pinned trial files.
+// A replay is listed with the check results and marked as playback of the trial record it names.
 function replayRow(body,r){
  const tr=body.insertRow();tr.className='replay';const fixtures=Object.keys(r.bodies).filter(id=>scene.bodies[id].fixture),cell=v=>{const td=tr.insertCell();td.append(...[v].flat());return td};
- const pins=document.createElement('details');pins.append(text('summary','Playback of '+r.evidence.length+' pinned trial file'+(r.evidence.length>1?'s':'')));
+ const pins=document.createElement('details');pins.append(text('summary','Playback of '+r.evidence.length+' trial record'+(r.evidence.length>1?'s':'')));
  const files=document.createElement('ul');for(const e of r.evidence)files.append(text('li',(e.role?e.role+': ':'')+e.file+' · '+short(e.sha256)));pins.append(files);pins.open=r.evidence.length<3;
  cell(r.id+' — '+r.basis+(r.objective?' Mission objective: '+r.objective+'.':''));cell('replay');cell('Recorded field pose of '+r.follow);cell(Object.keys(r.groups).join(', '));
  cell(fixtures.length||r.tubes?.length?'Field fixtures: '+[...fixtures.map(id=>scene.bodies[id].name),...(r.tubes||[]).map(x=>x.name)].join(', '):'No field fixture');
@@ -659,11 +614,11 @@ function replayRow(body,r){
  const actions=document.createElement('div');actions.className='actions';tr.insertCell().append(actions);
  const play=text('button','Play');play.onclick=()=>{show(r.id);start();$('stage').scrollIntoView({block:'nearest'})};actions.append(play);
 }
-const CASE_COLUMNS=['Case','Kind','Starting pose','Participating groups','Environment','Metric and units','Limiting pair and time','Clearance allowance','Evidence method','Result','Review'];
-// The check results: one row per mission phase, opening to its cases. The cases are evidence and are not animation entries.
+const CASE_COLUMNS=['Motion','Kind','Starting pose','Participating groups','Environment','Metric and units','Limiting pair and time','Clearance allowance','Evidence method','Result','Review'];
+// The check results: one row per phase of the cycle, opening to its motions.
 function motionEvidence(){
  const t=$('evidenceTable'),head=t.createTHead().insertRow(),spanText=(v,unit)=>v?(v[0]===v[1]?fmt(v[0])+' '+unit:fmt(v[0])+'–'+fmt(v[1])+' '+unit):'—';
- for(const h of ['Phase','Cases checked','Result','Tightest clearance','Clearance allowance','Path tolerance','Review'])head.append(text('th',h));
+ for(const h of ['Phase','Motions checked','Result','Tightest clearance','Clearance allowance','Path tolerance','Review'])head.append(text('th',h));
  const body=t.createTBody(),replays=scene.replays||[];
  const groups=[...checkGroups(scene),...(replays.length?[{title:'Trial replays',replays,rows:[],counts:{'recorded playback':replays.length}}]:[])];
  groups.forEach((g,n)=>{
@@ -709,7 +664,7 @@ function activate(opening=false){
  stop();const m=entry(),c=m.segments[0];$('time').max=m.frames-1;$('time').value=0;marked=[];
  $('events').hidden=!c.events?.length;$('eventJumps').replaceChildren(...(c.events||[]).map((e,i)=>{const b=text('button',String(i+1));b.title=e.label+' · '+fmt(c.time[e.frame])+' s';b.setAttribute('aria-label','Jump to event '+(i+1)+': '+e.label);b.onclick=()=>{stop();$('time').value=e.frame;draw()};return b}));
  const link=new URL(location.href);link.searchParams.set('case',m.id);try{history.replaceState({},'',link)}catch{}
- const match=opening?-1:scene.power.findIndex(e=>m.segments.some(s=>s.id===e.stage)&&e.batteryCondition==='weak');if(match>=0){$('duty').selectedIndex=match;budget()}
+ const match=opening?-1:scene.power.motions.findIndex(e=>m.segments.some(s=>s.id===e.motion));if(match>=0){$('duty').selectedIndex=match;budget()}
  // The cutaway hides a fixture without removing it from the case, so it does not change this control.
  const fieldFitting=c.tubes?.length?{enabled:true,reason:''}:fieldFitState([...new Set(m.segments.flatMap(s=>Object.keys(s.bodies).filter(id=>!s.removed.includes(id))))],scene);$('field').disabled=!fieldFitting.enabled;$('field').title=fieldFitting.reason;
  $('fieldWhy').textContent=fieldFitting.reason;$('fieldWhy').hidden=fieldFitting.enabled;
@@ -723,18 +678,17 @@ async function loadScene(){
  const response=await fetch('review-scene.json.gz',{cache:'no-store'});if(!response.ok)throw Error('Review scene unavailable ('+response.status+')');
  let bytes=new Uint8Array(await response.arrayBuffer());
  if(bytes[0]===0x1f&&bytes[1]===0x8b){if(typeof DecompressionStream==='undefined')throw Error('This browser cannot decompress the review scene');bytes=new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer())}
- $('sceneStatus').textContent='Verifying scene…';const contentSha=await digestHex(bytes);
- return {scene:JSON.parse(new TextDecoder().decode(bytes)),contentSha};
+ return {scene:JSON.parse(new TextDecoder().decode(bytes))};
 }
 async function init(){
  const loaded=await loadScene();scene=loaded.scene;
- if(scene.schema!=='agent-frc/preliminary-review-scene@1')throw Error('Unknown review scene format: '+scene.schema);
+ if(scene.schema!=='agent-frc/preliminary-review-scene@2')throw Error('Unknown review scene format: '+scene.schema);
  entries=Object.entries(scene.bodies);custom=readGroups();
  for(const m of scene.meshes){const c=[0,1,2].map(i=>m.v.reduce((s,p)=>s+p[i],0)/m.v.length);let best=1/0;for(const p of m.v){const d=p.reduce((s,x,i)=>s+(x-c[i])**2,0);if(d<best){best=d;m.anchor=p}}}
  for(const [,b] of entries){b.tint=rgb(b.color);b.dim=b.tint.map((x,i)=>.20*x+.80*[.64,.73,.83][i])}
  header();showDesignStatus();
- // One short list: an animation per mission phase, then the other checked motions, the displaced control and the trial replays.
- // A checked case is a segment of its phase's animation. It is listed in the check results, never here.
+ // One short list: an animation per phase of the cycle, then the other motions, the displaced control and the trial replays.
+ // A motion is a segment of its phase's animation; it is listed alone only in the check results.
  const caseOf=new Map(scene.cases.map(c=>[c.id,c])),phases=animationsOf(scene),clips=phases.map(a=>clipOf(a,a.cases.map(id=>caseOf.get(id))));
  // A control labelled by its case ID reads as plain words here.
  const controls=scene.cases.filter(c=>!phases.some(a=>a.cases.includes(c.id))).map(c=>clipOf({id:c.id,title:c.kind==='displaced control'&&c.label===c.id+' (displaced control)'?'Displaced control':c.label,mission:false},[c]));
@@ -743,21 +697,20 @@ async function init(){
  motions=lists.flatMap(l=>l[1]);
  $('motion').replaceChildren(...lists.map(([label,items])=>{const g=document.createElement('optgroup');g.label=label;g.append(...items.map(c=>new Option(c.title,c.id)));return g}));
  const opening=placeOf(new URLSearchParams(location.search).get('case'))||placeOf(scene.openingCase)||[0,0];$('motion').selectedIndex=opening[0];
- $('duty').replaceChildren(...scene.power.map(e=>new Option(e.case,e.case)));$('duty').disabled=!scene.power.length;
- if(scene.power.length)$('duty').selectedIndex=scene.power.reduce((w,e,i,a)=>e.marginV<a[w].marginV?i:w,0);
+ const powered=scene.power.motions;$('duty').replaceChildren(...powered.map(e=>new Option(e.motion,e.motion)));$('duty').disabled=!powered.length;
+ if(powered.length)$('duty').selectedIndex=powered.reduce((w,e,i,a)=>e.marginV<a[w].marginV?i:w,0);
  if(scene.cutaway){$('cutawayToggle').hidden=false;$('cutawayLabel').textContent=scene.cutaway.label}
  for(const [id,b] of entries)$('componentNames').append(new Option(b.name===id?id:b.name+' ('+id+')',id));
  for(const cat of new Set(entries.map(([,b])=>b.category))){const span=document.createElement('span'),i=document.createElement('i');i.className='swatch';i.style.background=entries.find(([,b])=>b.category===cat)[1].color;span.append(i,cat);$('legend').append(span)}
  const n=scene.narrativeReview;$('narrative').replaceChildren(...(n?.source?[text('p',n.source.file+' · '+short(n.source.sha256))]:[notSupplied('narrativeReview')]),...(n?.objectives||[]).map(o=>{const p=text('p',o.objective+' — '+o.disposition+'. '+o.basis);
   for(const r of replays.filter(r=>r.objective===o.objective)){const b=text('button','Play replay: '+r.title);b.style.marginLeft='.5rem';b.onclick=()=>{show(r.id);start();$('stage').scrollIntoView({block:'nearest'})};p.append(b)}return p}));
- $('notes').replaceChildren(...(scene.notes?.length?scene.notes.map(v=>text('p',v)):[notSupplied('presentation.notes')]));
+ $('notes').replaceChildren(...(scene.notes?.length?scene.notes.map(v=>text('p',v)):[notSupplied('page.json notes')]));
  allowanceIds=new Set((scene.attachment?.unmountedAllowances||[]).map(r=>r.solid));
  if(allowanceIds.size){const span=document.createElement('span'),i=document.createElement('i');i.className='swatch hatched';span.append(i,'unmounted allowance');$('legend').append(span)}
  $('hideFieldToggle').hidden=!entries.some(([,b])=>b.fixture);
  validationText();motionEvidence();attachmentPanel();initGL();group();
  activate(true);$('time').value=clipSeek(motions[opening[0]],opening[1]);reset();
  $('sceneStatus').textContent='Scene loaded';
- bindReceipt(loaded.contentSha).then(()=>{if($('decisionSource').textContent.startsWith('(from the review receipt'))$('sceneStatus').textContent='Scene digest verified'+(isSecureContext?'':' (plain HTTP: consistency check only)')});
  $('duty').onchange=budget;$('group').onchange=group;$('subset').onchange=()=>{if($('group').value==='Custom subsystem')picked=new Set(custom[$('subset').value]||[]);select()};
  $('save').onclick=()=>{const name=$('subname').value.trim();if(!name||!picked.size){$('inventoryScope').textContent='Enter a subsystem name and select at least one component.';return}custom[name]=[...picked];writeGroups();group();$('subset').value=name;$('subset').onchange()};
  $('motion').onchange=()=>activate();$('time').oninput=()=>{stop();draw()};$('play').onclick=()=>timer?stop():start();$('speed').onchange=stop;

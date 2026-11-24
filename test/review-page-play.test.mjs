@@ -55,7 +55,7 @@ test('the example review page built from its records opens with every motion pla
   assert.match(shown.source, /^\(judged from the library's records when this page was built\)/);
   assert.deepEqual(shown.played.map(p => p.id), ['acquire', 'transfer', 'deliver', 'park', 'service', 'package-displacement-control']);
   for (const p of shown.played) assert.equal(p.reached, p.frames, p.id + ' played to its last frame');
-  assert.match(shown.played[1].readout, /pivot 90\.0°.*gate 12\.0 mm.*bus \d+\.\d\d–\d+\.\d\d V/, 'the driven turn reads out its drives and bus at its end');
+  assert.match(shown.played[1].readout, /gate 12\.0 mm.*pivot 90\.0°.*bus \d+\.\d\d–\d+\.\d\d V/, 'the driven turn reads out its drives and bus at its end');
   assert.match(shown.played[0].readout, /^By hand: no motor drives this motion/);
   assert.deepEqual(shown.power, ['loaded-turn', 'release', 'park-loaded']);
   assert.match(shown.weight, /inspection/);

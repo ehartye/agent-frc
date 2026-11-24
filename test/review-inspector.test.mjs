@@ -6,14 +6,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createHash } from 'node:crypto';
 import { reviewScene, replayScene, phasedScene } from './fixtures/review-scene.mjs';
 import { validateScene } from '../scripts/review-scene.mjs';
 
 // The stock page's pure helpers, loaded from the shipped template.
 const html = readFileSync(new URL('../templates/preliminary-review/review.html', import.meta.url), 'utf8');
 const source = html.split('<script id="review-logic">')[1].split('</script>')[0];
-const logic = new Function(source + '\nreturn {inspectorFields, attachmentNote, attachmentRows, visibleBodies, findComponent, partition, frameCount, animationsOf, clipOf, clipFrame, clipSeek, checkGroups, massLinesFor, sha256Pure, digestHex, fieldFitState, replayMotion, eventAt, tubeTriangles, triangleValues, alongCenterline, carriedValues, interactionRows, MISSING, NOT_SUPPLIED};')();
+const logic = new Function(source + '\nreturn {inspectorFields, attachmentNote, attachmentRows, visibleBodies, findComponent, weightOf, frameCount, animationsOf, clipOf, clipFrame, clipSeek, checkGroups, fieldFitState, replayMotion, eventAt, tubeTriangles, triangleValues, alongCenterline, carriedValues, interactionRows, MISSING, NOT_SUPPLIED};')();
 const field = (fields, label) => fields.find(f => f[0] === label);
 
 test('the inspector shows identity, classification, volume, weight from the source, support, the drive a motor runs and the motions it moves in', () => {
@@ -46,7 +45,7 @@ test('a solid with no weight and a solid in a group lump say so; page text that 
   assert.equal(field(logic.inspectorFields('target', scene), 'Support and load path')[1], 'Field fixture');
   assert.equal(field(logic.inspectorFields('target', scene), 'Moves in')[1], 'Stationary in every motion');
   assert.deepEqual(logic.inspectorFields('ghost', scene), [['Component', logic.MISSING, true]]);
-  assert.deepEqual(logic.weightOf(['arm', 'arm motor'], scene), {kg: [1.75, 2.15], lumped: 0, unweighed: 1}, 'a selection adds the ranges of its weighed solids');
+  assert.deepEqual(logic.weightOf(['arm', 'arm motor', 'frame', 'target'], scene), {kg: [0.35, 0.45], lumped: 1, unweighed: 1}, 'a selection adds the ranges of its weighed solids and counts the rest');
 });
 
 test('focus shows only the selected bodies and Show assembly restores every body', () => {
@@ -67,19 +66,6 @@ test('search selects by stable ID or display name, and leaving the box accepts o
 test('a case has one frame per placement', () => {
   assert.equal(logic.frameCount(reviewScene().cases[0]), 25);
   assert.equal(logic.frameCount(reviewScene().cases[1]), 25);
-});
-
-test('the scene digest falls back to a pure-JS SHA-256 where crypto.subtle is unavailable', async () => {
-  for (const text of ['', 'abc', 'abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq', 'é'.repeat(70), 'x'.repeat(1000)]) {
-    const bytes = new TextEncoder().encode(text), expected = createHash('sha256').update(bytes).digest('hex');
-    assert.equal(logic.sha256Pure(bytes), expected);
-    assert.equal(await logic.digestHex(bytes, undefined), expected, 'without crypto.subtle');
-    assert.equal(await logic.digestHex(bytes.buffer, undefined), expected);
-    assert.equal(await logic.digestHex(bytes, globalThis.crypto.subtle), expected, 'with crypto.subtle');
-  }
-  const big = new Uint8Array(3 * 1024 * 1024 + 77).map((_, k) => (k * 31) & 255), view = big.subarray(13, big.length - 5);
-  assert.equal(await logic.digestHex(view, undefined), createHash('sha256').update(view).digest('hex'), 'a multi-megabyte offset view hashes in place');
-  for (const n of [55, 56, 63, 64, 119, 120]) { const b = new Uint8Array(n).fill(97); assert.equal(logic.sha256Pure(b), createHash('sha256').update(b).digest('hex'), n + ' bytes'); }
 });
 
 test('the field-interaction fit says why it is unavailable', () => {
