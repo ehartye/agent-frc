@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from time import perf_counter
 
-from mechanical_readiness import digest, named, read, require
+from .files import digest, named, read, require
 from package_view import CONTROL_ID, PHASE_GUIDE, first_unmet, mission_animations, parked_assembly, verify_view
 
 from . import attachment, interactions, judge, premises, scope, stages

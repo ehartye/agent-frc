@@ -2,8 +2,8 @@
 /**
  * Report whether a preliminary design meets the exit criteria for being marked effective.
  *
- * Informational only: it never changes a receipt, adds no gate rule and always exits 0 once it can read the
- * project folder. Marking a design effective stays a project decision in a reviewed pull request.
+ * The command never changes a receipt and always exits 0 once it can read the project folder. The stage gate runs
+ * the same report and refuses to mark a design effective unless it meets every criterion.
  */
 import {createHash} from 'node:crypto';
 import {existsSync,readFileSync,statSync} from 'node:fs';
@@ -184,7 +184,7 @@ export function effectiveReadiness(root,{release='',plan:planName,receipt:receip
 /** The report as text for a reviewer. */
 export function readinessText(report){
   const lines=['Effective-readiness report for '+(report.design?report.design+' ('+(report.issue??'unidentified issue')+')':report.issue??'an unidentified issue'),
-    'Informational: marking a design effective stays a project decision in a reviewed pull request.'];
+    'The stage gate marks a design effective only when every criterion is met.'];
   report.criteria.forEach((c,i)=>{
     lines.push((c.met?'[met]     ':'[not met] ')+(i+1)+'. '+c.title);
     for(const reason of c.reasons)lines.push('            - '+reason);

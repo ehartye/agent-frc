@@ -439,7 +439,7 @@ After the motion cases, the layout check writes an `[attachment]` section to std
 [attachment] held across a gap by a registered mount alone: arm, arm-roller, lift-carriage
 [attachment] unmounted allowance: control-panel (electrical): Panel stand-offs are chosen with the electrical layout in detailed design
 [attachment] field fixture off the floor: target-shelf, lowest point 410 mm above the floor at Z = 0 mm
-[attachment] note: nothing floats. Give each floating solid a support that touches it and traces to the frame, or register its mount; ...
+[attachment] note: nothing floats. Give each floating solid a support that touches it and traces to the frame, or give it a mount; ... Until then the layout is not layout-checked.
 ```
 
 Read it after every check and clear each `floating` and `off the floor` line. How it decides:
@@ -455,7 +455,7 @@ The receipt carries the same report in its `attachment` field: `floating` (each 
 
 The stock review page lists every row under **Attachment: nothing floats**, below the required components. Choose a row to select that solid in the model. An unmounted allowance is drawn hatched and the inspector shows its reason.
 
-The report is information. It never changes a status, a missing input or an exit code, and the publication check does not read it.
+A floating solid or a field fixture off the floor that no label explains fails the layout: the receipt's status is `blocked`, its first unmet requirement names each one, and the layout is not layout-checked until each is supported, mounted or labelled with its reason.
 
 The library measures it at the start pose of the opening stage. `--quiet` omits the stderr lines.
 
@@ -618,11 +618,11 @@ The [exit criteria](design-phase-detail.md#exit-criteria-for-an-effective-prelim
 node scripts/design.mjs effective-readiness PROJECT
 ```
 
-`PROJECT` is the folder that holds `judgement.json`, its saved `receipt.json`, `missions.json` and the trial files they name. Name other files with `--plan`, `--receipt` and `--missions`, relative to that folder. When the project is the repository and the three files sit in a release folder, name it once: `effective-readiness REPOSITORY --release cad/preliminary-design/releases/1.0`. Add `--design "NAME 1.0"` to title the report with the design name and version, as the publication check and the stage gate do. Trial paths still resolve from the project. Add `--json` for the machine-readable report. The command writes nothing, never changes a receipt and exits 0 whatever it finds. Only an unusable project folder is an error.
+`PROJECT` is the folder that holds `judgement.json`, its saved `receipt.json`, `missions.json` and the trial files they name. Name other files with `--plan`, `--receipt` and `--missions`, relative to that folder. When the project is the repository and the three files sit in a release folder, name it once: `effective-readiness REPOSITORY --release cad/preliminary-design/releases/1.0`. Add `--design "NAME 1.0"` to title the report with the design name and version, as the publication check and the stage gate do. Trial paths still resolve from the project. Add `--json` for the machine-readable report. The command writes nothing, never changes a receipt and exits 0 whatever it finds. Only an unusable project folder is an error. The [stage gate](design-publication.md#the-stage-gate) runs the same report on the committed design, with the receipt it publishes, and refuses to mark the design effective unless it meets every criterion.
 
 ```text
 Effective-readiness report for Turning carrier 1.0 (synthetic-package-1.0)
-Informational: marking a design effective stays a project decision in a reviewed pull request.
+The stage gate marks a design effective only when every criterion is met.
 [not met] 1. Whole mission cycle checked for clearance, mass and voltage
             - Narrative stage endgame has no case
 [not met] 2. Every deciding interaction meets the bar its screen verdict sets, and backs every mission case

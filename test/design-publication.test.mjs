@@ -15,10 +15,14 @@ import {fileURLToPath} from 'node:url';
 import {gzipSync, gunzipSync} from 'node:zlib';
 import {checkProject, compareVerdicts, pluginVersion} from '../scripts/design-publication.mjs';
 import {gatePhysics, preliminaryGate, stageGate, writeGate} from '../scripts/stage-gate.mjs';
-import {commitInputs, issueRelease, listing, sha, write} from './fixtures/preliminary-release.mjs';
+import {commitInputs, issueRelease, listing, planOf, sha, write} from './fixtures/preliminary-release.mjs';
+import {openRisk} from './fixtures/ready.mjs';
 
 // The staging command is the plugin's: an agent runs it from the plugin, at the project root.
 const stagingCommand = fileURLToPath(new URL('../scripts/stage_preliminary_review.py', import.meta.url));
+// The invented releases of project() hold no solid, so the layout check of the stage gate is stood in for: it reproduces the receipt.
+const gateCheck = fileURLToPath(new URL('./fixtures/gate-reproduces.mjs', import.meta.url));
+const python = process.env.PYTHON ?? (process.platform === 'win32' ? 'python' : 'python3');
 // Synthetic teaching fixtures: invented releases, cases and objectives with no relation to any game.
 const script = fileURLToPath(new URL('../scripts/design-publication.mjs', import.meta.url));
 const prelim = 'docs/preliminary-design', detail = 'docs/detailed-design';
@@ -74,19 +78,6 @@ function authorPlan(p, id, {issue = 'synthetic-' + id, title = 'Invented title',
   editJson(p.receiptFile(id), r => ({...r, planSha256: sha(plan)}));
 }
 
-test('the informational attachment report is no part of the verdict: an older receipt without it still reproduces at the gate', t => {
-  const p = project(t);
-  const report = {informational: true, case: 'raise', gapMm: 3, floating: [{solid: 'invented-panel', group: 'panel', nearest: 'frame', gapMm: 12}], fixturesOffFloor: []};
-  // The committed receipt predates the report; the gate, from a newer plugin, carries it.
-  assert.equal(read(p.receiptFile('1.0')).attachment, undefined);
-  assert.equal(p.gate('1.0', {run: p.run(r => ({...r, attachment: report}))}).gate.verdict, 'pass');
-  // And the other way round: a committed receipt that lists floating solids is still one to publish.
-  editJson(p.receiptFile('1.0'), r => ({...r, attachment: report}));
-  assert.equal(p.gate('1.0', {run: p.run(r => { const {attachment, ...rest} = r; return rest; })}).gate.verdict, 'pass');
-  const receipt = read(p.receiptFile('1.0'));
-  assert.deepEqual(compareVerdicts(receipt, {...receipt, attachment: {...report, floating: []}}), []);
-});
-
 test('a draft is checked for what it publishes; the publication check never runs the layout check', t => {
   const p = project(t);
   const result = p.check();
@@ -130,6 +121,57 @@ test('the stage gate reruns the layout check on the committed design and refuses
   assert.equal(p.gate('1.0', {now: clock(22)}).gate.elapsedSeconds, 22 * 60);
 });
 
+test('marking a design effective is refused unless its readiness report meets every criterion on the committed design', t => {
+  const p = project(t), missions = path.join(p.root, 'cad/preliminary-design/releases/1.0/missions.json');
+  const gateFile = path.join(p.root, prelim, 'releases/1.0/gate.json'), status = () => (read(path.join(p.root, prelim, 'releases.json')).designStatus ?? {})['1.0'] ?? 'in-progress';
+  const mark = () => { const run = spawnSync(python, ['-B', stagingCommand, '--base', path.join(p.root, 'cad/preliminary-design'), '--set-status', '1.0', 'effective', '--gate-check', gateCheck], {encoding: 'utf8'}); return {...run, said: run.stdout + run.stderr}; };
+  // 2 of 3: one open risk is neither closed by a design change nor carried as a bench test.
+  editJson(missions, m => ({...m, risks: [openRisk]}));
+  const refused = mark();
+  assert.notEqual(refused.status, 0);
+  assert.match(refused.said, /Preliminary design Tilting carriage 1\.0 is not marked effective: its effective-readiness report meets 2 of 3 criteria on the committed design\. Not met: Every open risk closed by a design change or carried as a bench test with numbers/);
+  assert.match(refused.said, /Risk invented-belt-slip has neither a closing design change/);
+  assert.match(refused.said, /Release 1\.0 keeps its status: the stage gate did not pass/);
+  assert.equal(existsSync(gateFile), false, 'no gate record is written');
+  assert.equal(status(), 'in-progress');
+  // The full layout check is not run for a design that cannot pass the gate.
+  assert.throws(() => p.gate('1.0'), /meets 2 of 3 criteria/);
+  assert.deepEqual(p.calls, []);
+  // Control: the same design meeting all three criteria is marked effective.
+  editJson(missions, m => ({...m, risks: []}));
+  const accepted = mark();
+  assert.equal(accepted.status, 0, accepted.said);
+  assert.match(accepted.said, /Result: 3 of 3 criteria met\./);
+  assert.equal(read(gateFile).verdict, 'pass');
+  assert.equal(status(), 'effective');
+});
+
+test('the publication check validates only the releases the change touches', t => {
+  // Effective 1.0 was published in an earlier format: a mission-case kind the check no longer accepts.
+  const earlier = [{case: 'loaded-turn', kind: 'invented-earlier-kind', accomplishes: 'delivered', objective: 'Carry the sample to the bin'}];
+  const p = project(t, {'1.0': {missions: earlier}, '1.1': {}}, {'1.0': 'effective', '1.1': 'in-progress'});
+  p.setStatus({});
+  const base = p.commit('effective 1.0');
+  // The change revises draft 1.1 and edits the index entry of 1.0. Neither touches a file in 1.0's own folders.
+  write(p.root, 'cad/preliminary-design/releases/1.1/notes.md', 'Invented draft note');
+  editJson(path.join(p.root, prelim, 'releases.json'), i => ({...i, accepted: {'1.0': '2001-01-02'}}));
+  p.commit('draft revision');
+  let result = p.check({base});
+  assert.deepEqual(result.errors, []);
+  assert.deepEqual(result.designs.map(d => [d.design, d.note]), [
+    ['Preliminary design Tilting carriage 1.0', 'effective, physics unchanged since ' + base + '.'],
+    ['Preliminary design Tilting carriage 1.1', 'draft, published on its local layout check. The layout check is not run here.']]);
+  // Control: a change to a file in its input folder touches it, and the earlier kind is refused. No reader for it is added.
+  write(p.root, 'cad/preliminary-design/releases/1.0/notes.md', 'Invented edited note');
+  p.commit('touched inputs');
+  assert.match(errorsOf(p.check({base})), /Tilting carriage 1\.0: each mission case needs a case, kind \(operating-case\)/);
+  // So does a change to a file in its published folder.
+  p.git('rm', '-q', 'cad/preliminary-design/releases/1.0/notes.md');
+  write(p.root, prelim + '/releases/1.0/notes.txt', 'Invented published note');
+  p.commit('touched published files');
+  assert.match(errorsOf(p.check({base})), /Tilting carriage 1\.0: each mission case needs a case, kind \(operating-case\)/);
+});
+
 test('the stage gate refuses a design whose inputs have uncommitted changes', t => {
   const p = project(t), folder = 'cad/preliminary-design/releases/1.0/';
   p.commit('draft');
@@ -154,7 +196,7 @@ test('a hand-edited receipt or a stale one is refused', t => {
   // The published receipt claims a plan that is not the committed one.
   write(p.root, folder + 'judgement.json', 'an edited plan');
   assert.match(errorsOf(p.check()), /published receipt is of a different layout plan than cad\/preliminary-design\/releases\/1\.0\/judgement\.json/);
-  write(p.root, folder + 'judgement.json', 'plan 1.0');
+  write(p.root, folder + 'judgement.json', planOf('1.0'));
   // An input changed after the check: the plan bytes are the same, and the committed file is not the one the receipt recorded.
   const study = readFileSync(path.join(p.root, folder + 'design.json'));
   write(p.root, folder + 'design.json', '{"cases":[],"edited":true}');
@@ -567,12 +609,15 @@ test('the publication check scans tracked files for a personal path or a credent
 });
 
 const kernel = {skip: process.env.FRC_TEST_PROFILE === 'portable' && 'Run the CAD kernel checks at the qualified station'};
-/** The synthetic example project in a Git repository, with the commands an agent runs on it. */
+/** The synthetic example project in a Git repository, ready to be marked effective, with the commands an agent runs on it. */
 function example(t) {
   const temp = mkdtempSync(path.join(os.tmpdir(), 'publication-real-'));
   t.after(() => rmSync(temp, {recursive: true, force: true}));
   const season = path.join(temp, 'season'), py = process.env.PYTHON ?? (process.platform === 'win32' ? 'python' : 'python3'), releases = 'cad/preliminary-design/releases/';
-  execFileSync(py, ['-B', fileURLToPath(new URL('../examples/design-source/create.py', import.meta.url)), season, '--project-review'], {stdio: 'pipe'});
+  execFileSync(py, ['-B', fileURLToPath(new URL('../examples/design-source/create.py', import.meta.url)), season, '--project-review', '--no-check'], {stdio: 'pipe'});
+  // The starter gains an interaction and its trial, a cycle map and a risk register, so it can meet every readiness criterion.
+  // That step builds, checks and stages it as its first draft.
+  execFileSync(py, ['-B', fileURLToPath(new URL('./fixtures/ready_example.py', import.meta.url)), season, '1.0', 'Turning carrier'], {stdio: 'pipe'});
   // Run from the project root, as an agent does. Both streams are returned: the commands speak on each.
   const stage = (...args) => { const run = spawnSync(py, ['-B', stagingCommand, ...args], {cwd: season, encoding: 'utf8'}); return {...run, said: run.stdout + run.stderr}; };
   const layoutCheck = (id, ...more) => execFileSync(process.execPath, [fileURLToPath(new URL('../scripts/design.mjs', import.meta.url)), 'preliminary-check', season, releases + id + '/judgement.json',
@@ -642,6 +687,7 @@ test('marking a real release effective runs the stage gate, and refuses uncommit
   assert.match(accepted.said, /^\[gate\] Running the full layout check on the committed design\. Guideline: about 15 minutes\.$/m);
   assert.match(accepted.said, /^\[gate\] Preliminary design Turning carrier 1\.0: the full layout check ran on the committed design and reproduced the published receipt in \d+ s \(guideline: about 15 minutes at a stage gate\)\.$/m);
   assert.match(accepted.said, /Effective-readiness report for Turning carrier 1\.0 \(invented-design-1\.0\)/);
+  assert.match(accepted.said, /Result: 3 of 3 criteria met\./);
   assert.match(accepted.said, /Preliminary design Turning carrier 1\.0 is effective; the site opens 1\.0/);
   assert.match(accepted.stdout, /On push: the project's workflow publishes the page\. Nothing is rerun\.\r?\n$/);
   assert.equal(e.status('1.0'), 'effective');

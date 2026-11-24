@@ -4,7 +4,7 @@ The library reports plain facts: the screen facts of each interaction it declare
 trial, and the clearances at both ends of each mechanical adjustment. This module holds the plugin's guidelines and
 turns those facts into the words a reviewer reads. The readiness report applies the effective bar to what it records.
 """
-from mechanical_readiness import named, pinned, read, require
+from .files import named, pinned, read, require
 
 VERDICTS = ("planar is enough", "needs 3D", "configurable")
 # Guidelines, not rules. An author may override a verdict with a written reason; the review lists every override.

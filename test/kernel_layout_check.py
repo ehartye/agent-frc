@@ -132,16 +132,41 @@ class KernelLayoutCheck(unittest.TestCase):
         self.assertIn("loaded-turn", failing)
         self.assertEqual(receipt["decision"]["firstUnmet"]["kind"], "clearance")
 
-    def test_floating_solid_is_reported_and_a_control_that_passes_is_named(self):
+    def test_a_floating_solid_fails_the_layout_and_the_same_solid_mounted_passes(self):
         judgement = self.copy(self.judgement)
+        # The rail's allowance taken away: nothing drawn holds it, and the gate is mounted on it, so both float.
         del judgement["attachment"]
-        # Control of the control: an offset that leaves the rail clear cannot show that the check fails.
+        self.put("judgement.json", judgement)
+        run, receipt = self.check("--physics-only", "--require-checked")
+        self.assertEqual(run.returncode, 1)
+        self.assertEqual([r["solid"] for r in receipt["attachment"]["floating"]], ["gate", "rail"])
+        self.assertEqual(receipt["status"], "blocked")
+        self.assertEqual([c["status"] for c in receipt["cases"]], ["pass"] * 5, "nothing but the floating solids is wrong")
+        self.assertEqual(receipt["control"]["witness"]["status"], "fail")
+        self.assertEqual(receipt["decision"]["firstUnmet"]["kind"], "floating")
+        self.assertIn("rail", receipt["decision"]["firstUnmet"]["text"])
+        self.assertIn("[attachment] floating: rail (structure)", run.stderr)
+        # Control: the same rail on a post and a beam that reach the mount block is attached, and the layout is checked. Each
+        # stands 2 mm off the next: within the 3 mm touching gap, and clear of the 1 mm allowance.
+        source, budgets = self.copy(self.source), self.copy(self.budgets)
+        source["solids"] += [dict(name="rail beam", group="structure", shape=dict(kind="box", fromMm=[-8, 10, 0], toMm=[24, 75, 6])),
+                             dict(name="rail post", group="structure", shape=dict(kind="box", fromMm=[19, 70, 8], toMm=[24, 75, 16]))]
+        self.explain(judgement, "rail beam", "rail post")
+        next(row for row in budgets["masses"] if row["id"] == "body")["members"] += ["rail beam", "rail post"]
+        self.put("design.json", source)
+        self.put("judgement.json", judgement)
+        self.put("budgets.json", budgets)
+        self.build()
+        mounted, checked = self.check("--physics-only", "--require-checked")
+        self.assertEqual(mounted.returncode, 0, mounted.stderr + json.dumps((checked or {}).get("missingInputs")))
+        self.assertEqual((checked["status"], checked["attachment"]["floating"]), ("layout-checked", []))
+
+    def test_a_displaced_control_that_is_not_rejected_is_named(self):
+        judgement = self.copy(self.judgement)
+        # An offset that leaves the rail clear cannot show that the check fails.
         judgement["control"]["offsetMm"] = [0, 5, 0]
         self.put("judgement.json", judgement)
-        run, receipt = self.check("--physics-only")
-        # The gate is mounted on the rail, so it floats with it.
-        self.assertEqual([r["solid"] for r in receipt["attachment"]["floating"]], ["gate", "rail"])
-        self.assertIn("[attachment] floating: rail (structure)", run.stderr)
+        _, receipt = self.check("--physics-only")
         self.assertIsNone(receipt["control"]["witness"])
         self.assertIn("Matched displacement did not reject the commissioned pair", receipt["missingInputs"])
         self.assertEqual(receipt["status"], "provisional")
@@ -352,14 +377,22 @@ class KernelLayoutCheck(unittest.TestCase):
         self.put("design.json", source)
         self.put("judgement.json", judgement)
         self.build()
+        # A field fixture that does not reach the floor floats: the layout is not checked, and the report names it.
+        off, floating = self.check("--physics-only", "--require-checked")
+        self.assertEqual(off.returncode, 1)
+        self.assertEqual([r["fixture"] for r in floating["attachment"]["fixturesOffFloor"]], ["lane"])
+        self.assertIn("[attachment] field fixture off the floor: lane", off.stderr)
+        self.assertEqual(floating["status"], "blocked")
+        self.assertEqual(floating["decision"]["firstUnmet"]["kind"], "floating")
+        self.assertIn("lane", floating["decision"]["firstUnmet"]["text"])
+        # Control: labelled suspended, with its reason, the same fixture is listed as suspended and the layout is checked.
+        judgement["attachment"]["suspended"] = {"lane": "Invented: hung from a frame that is not drawn."}
+        self.put("judgement.json", judgement)
         run, receipt = self.check("--physics-only", "--require-checked")
         self.assertEqual(run.returncode, 0, run.stderr + json.dumps((receipt or {}).get("missingInputs")))
         self.assertEqual(receipt["stages"]["loaded-turn"]["movingGroups"], ["carried article", "carrier", "neighbor"])
         self.assertEqual(receipt["stages"]["remove-carrier"]["movingGroups"], ["carried article", "carrier"])
-        self.assertEqual([r["fixture"] for r in receipt["attachment"]["fixturesOffFloor"]], ["lane"])
-        self.assertIn("[attachment] field fixture off the floor: lane", run.stderr)
-        # Controls: a labelled fixture is listed as suspended; a carrier that does not start where the last motion ended breaks the cycle.
-        judgement["attachment"]["suspended"] = {"lane": "Invented: hung from a frame that is not drawn."}
+        # Control: a carrier that does not start where the last motion ended breaks the cycle.
         source["poses"]["released"]["carrier"] = spin(80)
         self.put("design.json", source)
         self.put("judgement.json", judgement)

@@ -1,6 +1,8 @@
 """Decide what the library's measurements mean: each pair, each case and the displaced control."""
 from package_view import CONTROL_ID
 
+from .attachment import floating
+
 
 def pair_row(row):
     """One measured pair as the receipt records it: pass, fail or open, with the witness or the proven bound."""
@@ -64,7 +66,8 @@ def control_row(spec, found):
 
 
 def decide(result, missing):
-    """The receipt's status and what reopens: blocked on a failing case or budget, layout-checked when nothing is unmet."""
+    """The receipt's status and what reopens: blocked on a failing case, a broken budget or a solid that floats,
+    layout-checked when nothing is unmet."""
     cases, stages, groups, reopen = result["cases"], result["stages"], result["groups"], result["reopen"]
     failing = [c for c in cases if c["status"] == "fail"]
     for case in failing:
@@ -77,7 +80,12 @@ def decide(result, missing):
         over = (["inspection-weight"] if budgets["massStatus"] == "fail" else []) + [
             "voltage/" + row["case"] for row in budgets["electricalCases"] if row["status"] == "fail"]
         reopen.extend(dict(phase="preliminary-design", reason=key, affected=sorted(groups)) for key in over)
-    if failing or over:
+    # Nothing floats: a solid not held to the frame, or a fixture off the floor, that no label explains.
+    loose = floating(result.get("attachment"))
+    if loose:
+        reopen.append(dict(phase="preliminary-design", reason="floating", affected=sorted(
+            {key for key, g in groups.items() if set(loose).intersection(g["members"])} or set(loose))))
+    if failing or over or loose:
         return "blocked"
     if reopen:
         return "reopen"

@@ -2,15 +2,23 @@
 
 The library says what touches what, which solids are not connected to the base and which fixtures do not reach the
 floor. This module applies the labels the judgement file gives (an unmounted allowance, a suspended fixture) and
-writes the report. The report is information: it never changes a status, a missing input or an exit code.
+writes the report. A floating robot solid or a fixture off the floor that no label explains fails the layout check:
+judge.decide reads them from the report with floating().
 """
-from mechanical_readiness import named, number, require
+from .files import named, number, require
 
 GAP_MM = 3
 FLOOR_Z_MM = 0
 KEYS = ("gapMm", "floorZMm", "unmounted", "suspended")
 # Group roles that are not physical robot parts: game pieces, and service gauges or clearance envelopes.
 EXCLUDED_ROLES = ("payload", "service")
+
+
+def floating(report):
+    """The solids that float at the start of the opening case, sorted: robot solids no chain of contacts or mounts holds to the
+    frame, and field fixtures that do not reach the floor, each without a label that explains it."""
+    report = report or {}
+    return sorted([row["solid"] for row in report.get("floating", [])] + [row["fixture"] for row in report.get("fixturesOffFloor", [])])
 
 
 def settings(plan, roster):
@@ -43,7 +51,7 @@ def frame_of(found, structure):
 
 
 def report(inputs, measured, case):
-    """The attachment report for the start of one case: the informational receipt field and the stderr lines."""
+    """The attachment report for the start of one case: the receipt field and the stderr lines."""
     own = settings(inputs.plan, inputs.roster)
     groups = inputs.plan["groups"]
     group_of = {m: key for key, g in groups.items() for m in g["members"]}
@@ -57,7 +65,7 @@ def report(inputs, measured, case):
         found = measured.attachment(case, own["gapMm"], own["floorZMm"], ignore, base=sorted(structure.intersection(frame) or frame)[0])
         frame = frame_of(found, structure)
     present = set(inputs.roster) - set(case["removed"])
-    result = dict(informational=True, case=case["id"], pose="start of the case", gapMm=own["gapMm"], floorZMm=own["floorZMm"],
+    result = dict(case=case["id"], pose="start of the case", gapMm=own["gapMm"], floorZMm=own["floorZMm"],
                   robotSolids=found["robotSolids"],
                   excluded=dict(fieldFixtures=len(present & inputs.fixtures), payloads=len(present & payloads - inputs.fixtures),
                                 serviceAndGauges=len(present & gauges - inputs.fixtures)))
@@ -117,5 +125,5 @@ def lines(result, case):
         out.append("[attachment] note: nothing floats. Give each floating solid a support that touches it and traces to the frame, or "
                    "give it a mount in the design source; rest each field fixture on the floor or on a fixture that reaches it. Where "
                    "the support is deliberately not modelled yet, label the solid under attachment.unmounted, or the fixture under "
-                   "attachment.suspended, in the judgement file with the reason. This is information and does not change the result.")
+                   "attachment.suspended, in the judgement file with the reason. Until then the layout is not layout-checked.")
     return out

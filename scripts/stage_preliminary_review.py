@@ -8,8 +8,9 @@ of an in-progress version and takes no number: staging the same ID again counts 
 The coding agent runs this file from the installed plugin, at the project root. A project holds no copy of it.
 
 Staging copies files and edits the release index. Marking a release effective first runs the stage gate
-(stage-gate.mjs): the full layout check on the committed design, with the effective-readiness report. The status
-is set only when the gate passes, and the gate's record is written beside the published release.
+(stage-gate.mjs): the effective-readiness report must meet every criterion on the committed design, then the full
+layout check runs on it. The status is set only when the gate passes, and the gate's record is written beside the
+published release; a refused release keeps its status and gains no record.
 Withdrawing a release is a status change: the index keeps the reason and the last commit that held its published
 files, and the files leave the site."""
 import argparse
@@ -354,7 +355,7 @@ def sentence(text):
 
 
 def stage_gate(season, release, budget_minutes=None, workers=None, check=None):
-    """Run the stage gate of a release: the full layout check on the committed design, and its readiness report.
+    """Run the stage gate of a release: its readiness report must meet every criterion, then the full layout check runs.
 
     The gate is the plugin's stage-gate.mjs. It prints what it ran and how long it took, and writes its record beside
     the published release. A release that does not pass keeps its status."""
