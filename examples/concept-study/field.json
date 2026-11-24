@@ -7,12 +7,12 @@
   "limits": {"perimeter": 120, "height": 46, "source": "Invented starting-volume limits in this file."},
   "landmarks": [],
   "levels": [],
-  "geometrySource": "Invented layout: each alliance has 45 loose tiles in a 5 by 9 grid on its own half and a raised ring just past the grid, toward the centre line. Every value is hypothetical.",
+  "geometrySource": "Invented layout: each alliance has 60 loose tiles in a grid on its own half and a raised window just past the grid, facing back over the tiles. Every value is hypothetical.",
   "omissions": "The exercise omits mechanism contact, field tolerances, scoring adjudication and hardware behavior.",
   "rehearsal": {
     "schema": "field-rehearsal/v1",
-    "basis": "Invented concept-study field. Every dimension, pose, piece count, material property and point value is hypothetical.",
-    "boundsNote": "The field has no interior obstacles. Tiles are loose physical pieces that robots push; an invented tile on carpet slows at about 0.5 g (193 in/s²) with a dull bounce (restitution 0.1). A scored tile leaves play. Each alliance starts with 45 tiles and gets no more.",
+    "basis": "Invented concept-study field. Every dimension, pose, piece count, period length, material property and point value is hypothetical.",
+    "boundsNote": "The field has no interior obstacles. Tiles are loose physical pieces that robots push; an invented tile on carpet slows at about 0.5 g (193 in/s²) with a dull bounce (restitution 0.1). A scored tile leaves play. Each alliance starts with 60 tiles and gets no more, which is more than any candidate collects in a match. A robot without a concept has a front intake and carries two tiles.",
     "sources": ["examples/concept-study/field.json"],
     "resourceLabel": "shared lane",
     "setups": ["open"],
@@ -22,8 +22,8 @@
     "bands": [],
     "starts": [[25, 60], [25, 132], [25, 204]],
     "mirror": {"redX": true, "redY": true},
-    "periods": [{"name": "Opening", "seconds": 10}, {"name": "Main play", "seconds": 45}],
-    "defaults": {"length": 24, "width": 24, "height": 26, "bumper": 3, "heading": 0, "speed": 78, "orders": ["hold", "hold", "hold"]},
+    "periods": [{"name": "Opening", "seconds": 10}, {"name": "Main play", "seconds": 25}],
+    "defaults": {"length": 24, "width": 24, "height": 26, "bumper": 3, "heading": 0, "speed": 78, "intake": {"widthIn": 18, "extensionIn": 4}, "capacity": 2, "orders": ["hold", "hold", "hold"]},
     "robotLimits": {
       "perimeterIn": {"value": 120, "factId": "invented-perimeter"},
       "startingHeightIn": {"value": 46, "factId": "invented-starting-height"},
@@ -32,24 +32,24 @@
       "massLb": {"value": 100, "factId": "invented-mass"}
     },
     "stations": [
-      {"id": "blue-floor", "label": "Blue loose tiles", "kind": "retrieval", "side": "blue", "piece": "tile", "at": [132, 132], "radiusIn": 120, "stock": 45,
+      {"id": "blue-floor", "label": "Blue loose tiles", "kind": "retrieval", "side": "blue", "piece": "tile", "at": [130, 130], "radiusIn": 120, "stock": 60,
         "floor": {"radiusIn": 4, "heightIn": 2, "captureReachIn": 4, "dragInS2": 193, "restitution": 0.1,
-          "positions": [[80, 40], [80, 63], [80, 86], [80, 109], [80, 132], [80, 155], [80, 178], [80, 201], [80, 224], [106, 40], [106, 63], [106, 86], [106, 109], [106, 132], [106, 155], [106, 178], [106, 201], [106, 224], [132, 40], [132, 63], [132, 86], [132, 109], [132, 132], [132, 155], [132, 178], [132, 201], [132, 224], [158, 40], [158, 63], [158, 86], [158, 109], [158, 132], [158, 155], [158, 178], [158, 201], [158, 224], [184, 40], [184, 63], [184, 86], [184, 109], [184, 132], [184, 155], [184, 178], [184, 201], [184, 224]]}},
-      {"id": "blue-ring", "label": "Blue ring", "kind": "scoring", "side": "blue", "piece": "tile", "at": [215, 132], "radiusIn": 16, "points": 2,
-        "criterion": "Invented: a tile that passes down through the ring scores.",
-        "entry": {"centerIn": [215, 132, 36], "kind": "ring", "radiusIn": 12, "factId": "invented-blue-ring"}},
-      {"id": "red-floor", "label": "Red loose tiles", "kind": "retrieval", "side": "red", "piece": "tile", "at": [348, 132], "radiusIn": 120, "stock": 45,
+          "positions": [[70, 40], [70, 60], [70, 80], [70, 100], [70, 120], [70, 140], [70, 160], [70, 180], [70, 200], [70, 220], [94, 40], [94, 60], [94, 80], [94, 100], [94, 120], [94, 140], [94, 160], [94, 180], [94, 200], [94, 220], [118, 40], [118, 60], [118, 80], [118, 100], [118, 120], [118, 140], [118, 160], [118, 180], [118, 200], [118, 220], [142, 40], [142, 60], [142, 80], [142, 100], [142, 120], [142, 140], [142, 160], [142, 180], [142, 200], [142, 220], [166, 40], [166, 60], [166, 80], [166, 100], [166, 120], [166, 140], [166, 160], [166, 180], [166, 200], [166, 220], [190, 40], [190, 60], [190, 80], [190, 100], [190, 120], [190, 140], [190, 160], [190, 180], [190, 200], [190, 220]]}},
+      {"id": "blue-window", "label": "Blue window", "kind": "scoring", "side": "blue", "piece": "tile", "at": [215, 132], "radiusIn": 16, "points": 2,
+        "criterion": "Invented: a tile that passes through the window scores.",
+        "entry": {"centerIn": [215, 132, 36], "kind": "window", "widthIn": 18, "heightIn": 12, "facingDeg": 180, "factId": "invented-blue-window"}},
+      {"id": "red-floor", "label": "Red loose tiles", "kind": "retrieval", "side": "red", "piece": "tile", "at": [350, 134], "radiusIn": 120, "stock": 60,
         "floor": {"radiusIn": 4, "heightIn": 2, "captureReachIn": 4, "dragInS2": 193, "restitution": 0.1,
-          "positions": [[400, 224], [400, 201], [400, 178], [400, 155], [400, 132], [400, 109], [400, 86], [400, 63], [400, 40], [374, 224], [374, 201], [374, 178], [374, 155], [374, 132], [374, 109], [374, 86], [374, 63], [374, 40], [348, 224], [348, 201], [348, 178], [348, 155], [348, 132], [348, 109], [348, 86], [348, 63], [348, 40], [322, 224], [322, 201], [322, 178], [322, 155], [322, 132], [322, 109], [322, 86], [322, 63], [322, 40], [296, 224], [296, 201], [296, 178], [296, 155], [296, 132], [296, 109], [296, 86], [296, 63], [296, 40]]}},
-      {"id": "red-ring", "label": "Red ring", "kind": "scoring", "side": "red", "piece": "tile", "at": [265, 132], "radiusIn": 16, "points": 2,
-        "criterion": "Invented: a tile that passes down through the ring scores.",
-        "entry": {"centerIn": [265, 132, 36], "kind": "ring", "radiusIn": 12, "factId": "invented-red-ring"}}
+          "positions": [[410, 224], [410, 204], [410, 184], [410, 164], [410, 144], [410, 124], [410, 104], [410, 84], [410, 64], [410, 44], [386, 224], [386, 204], [386, 184], [386, 164], [386, 144], [386, 124], [386, 104], [386, 84], [386, 64], [386, 44], [362, 224], [362, 204], [362, 184], [362, 164], [362, 144], [362, 124], [362, 104], [362, 84], [362, 64], [362, 44], [338, 224], [338, 204], [338, 184], [338, 164], [338, 144], [338, 124], [338, 104], [338, 84], [338, 64], [338, 44], [314, 224], [314, 204], [314, 184], [314, 164], [314, 144], [314, 124], [314, 104], [314, 84], [314, 64], [314, 44], [290, 224], [290, 204], [290, 184], [290, 164], [290, 144], [290, 124], [290, 104], [290, 84], [290, 64], [290, 44]]}},
+      {"id": "red-window", "label": "Red window", "kind": "scoring", "side": "red", "piece": "tile", "at": [265, 132], "radiusIn": 16, "points": 2,
+        "criterion": "Invented: a tile that passes through the window scores.",
+        "entry": {"centerIn": [265, 132, 36], "kind": "window", "widthIn": 18, "heightIn": 12, "facingDeg": 0, "factId": "invented-red-window"}}
     ],
     "programs": {
       "hold": {"label": "Hold position", "steps": []},
-      "cycle": {"label": "Collect tiles and score them in the ring", "loop": true, "steps": [
-        {"at": [132, 132], "label": "Collect tiles", "operation": "acquire", "station": {"blue": "blue-floor", "red": "red-floor"}},
-        {"at": [215, 132], "label": "Score in the ring", "operation": "attempt", "station": {"blue": "blue-ring", "red": "red-ring"}, "outcome": "credited"}
+      "cycle": {"label": "Collect tiles and score them through the window", "loop": true, "steps": [
+        {"at": [130, 130], "label": "Collect tiles", "operation": "acquire", "station": {"blue": "blue-floor", "red": "red-floor"}},
+        {"at": [215, 132], "label": "Score through the window", "operation": "attempt", "station": {"blue": "blue-window", "red": "red-window"}, "outcome": "credited"}
       ]},
       "screen": {"label": "Cross the blue tiles", "loop": true, "steps": [
         {"at": [110, 80], "label": "Screen the near tiles", "frame": "field"},
@@ -66,7 +66,7 @@
         {"side": "red", "slot": 1, "plans": {"Opening": "cycle", "Main play": "cycle"}},
         {"side": "red", "slot": 2, "plans": {"Opening": "screen", "Main play": "screen"}}
       ]},
-      {"id": "shared", "basis": "Invented: a blue partner without a concept collects from the same tiles and scores in the same ring as the focal robot.", "setup": "open", "roster": [
+      {"id": "shared", "basis": "Invented: a blue partner without a concept collects from the same tiles and scores through the same window as the focal robot.", "setup": "open", "roster": [
         {"side": "blue", "slot": 1, "plans": {"Opening": "cycle", "Main play": "cycle"}},
         {"side": "blue", "slot": 2, "plans": {"Opening": "cycle", "Main play": "cycle"}},
         {"side": "red", "slot": 1, "plans": {"Opening": "cycle", "Main play": "cycle"}}

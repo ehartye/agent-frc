@@ -70,6 +70,8 @@ test('the example field holds only physical pieces: loose floor stock, no fixed 
     if(s.kind==='retrieval')assert.ok(Array.isArray(s.floor?.positions) && s.floor.positions.length===s.stock && !s.service,s.id+' is loose floor stock');
     assert.equal(s.returns,undefined,s.id+' returns no scored piece');
   }
+  // Partners and opponents without a concept must be able to collect loose pieces, or "shared" contexts share nothing.
+  assert.ok(field.rehearsal.defaults.intake?.widthIn>0,'robots without a concept carry a front intake');
 });
 
 test('only quantities labelled assumed are swept by default',()=>{
@@ -88,10 +90,11 @@ test('defaults: false yields no variants and leaves the base roles to play alone
 });
 
 test('an explicit axis replaces the default for its pointer and nothing else',()=>{
-  const result=expandConceptStudy(study,documents);
+  const topSpeed={'turret-shooter':[{pointer:'/drive/topSpeedInS/value',values:[120,150,180,210,240]}]};
+  const result=expandConceptStudy(sweeps({defaults:true,axes:topSpeed}),documents);
   assert.deepEqual(axisValues(result,'turret-shooter'),{...turretDefaults,'/drive/topSpeedInS/value':[120,150,180,210,240]});
   assert.deepEqual(axisValues(result,'fixed-shooter')['/drive/topSpeedInS/value'],turretDefaults['/drive/topSpeedInS/value']);
-  const only=expandConceptStudy(sweeps({defaults:false,axes:study.conceptSweeps.axes}),documents);
+  const only=expandConceptStudy(sweeps({defaults:false,axes:topSpeed}),documents);
   assert.deepEqual(only.variants.map(v=>v.id),[120,150,210,240].map(n=>'turret-shooter@/drive/topSpeedInS/value='+n));
 });
 
@@ -119,6 +122,14 @@ test('a variant the validator rejects is recorded as invalid and is not playable
   assert.match(capacity.error,/storage\.capacity\.tile: must be a whole number/);
   assert.deepEqual([fraction.document,capacity.document],[null,null]);
   assert.deepEqual(result.roles.map(r=>r.id),[...study.roles.map(r=>r.id),'turret-shooter@/outputs/0/successFraction/value=0.9']);
+});
+
+test('the example sweeps explicit axes only, and plans few enough matches for the run budget',()=>{
+  const result=expandConceptStudy(study,documents);
+  assert.equal(study.conceptSweeps.defaults,false);
+  assert.ok(result.axes.every(a=>a.source==='explicit') && result.variants.every(v=>v.status==='ok'));
+  // About 1 s per match on the example field: 114 matches keep the run near 2 minutes, far from the 5-minute stop.
+  assert.ok(result.roles.length*study.contexts.length<=120,result.roles.length*study.contexts.length+' planned matches');
 });
 
 test('a concept study needs 2 to 8 base roles',()=>{
