@@ -67,7 +67,8 @@ test('invalid concepts name the offending field',()=>{
 });
 
 test('a missing mass defaults to 75–95% of the profile inspection limit without mutating inputs',()=>{
-  const profile={rehearsal:{robotLimits:{massLb:{value:100,factId:'R-mass'}}}}, before=JSON.stringify([turret,profile]);
+  const inspection=limit=>({weightLimits:[{name:'inspection',limit,excludesRoles:[],factId:'R-mass'}]});
+  const profile=inspection({value:100,unit:'lb'}), before=JSON.stringify([turret,profile]);
   const filled=applyProfileDefaults(turret,profile);
   assert.equal(JSON.stringify([turret,profile]),before);
   assert.notEqual(filled,turret);
@@ -78,17 +79,16 @@ test('a missing mass defaults to 75–95% of the profile inspection limit withou
   assert.deepEqual(compileConceptBot(filled).concept.defaultsApplied,['massLb']);
   assert.deepEqual(applyProfileDefaults(filled,profile),filled);
   assert.equal(Object.hasOwn(applyProfileDefaults(placer,profile),'defaultsApplied'),false);
-  assert.match(applyProfileDefaults(turret,{rehearsal:{robotLimits:{massLb:100}}}).massLb.basis,/robotLimits\.massLb/);
   assert.deepEqual(applyProfileDefaults(placer,profile).massLb,placer.massLb);
-  for(const p of [{},{rehearsal:{robotLimits:{massLb:null}}},undefined])
+  for(const p of [{},{rehearsal:{robotLimits:{massLb:{value:100,factId:'R-mass'}}}},undefined])
     assert.equal(Object.hasOwn(applyProfileDefaults(turret,p),'massLb'),false);
 });
 
 test('the concept digest covers the source file: stable across key order and profile defaults, changed by content',()=>{
   const digest=doc=>compileConceptBot(doc).concept.digest;
   assert.equal(digest(reorder(turret)),digest(turret));
-  for(const limit of [100,{value:120,factId:'R-mass'}]){
-    const profile={rehearsal:{robotLimits:{massLb:limit}}};
+  for(const limit of [{value:100,unit:'lb'},{value:54,unit:'kg'}]){
+    const profile={weightLimits:[{name:'inspection',limit,excludesRoles:[],factId:'R-mass'}]};
     assert.equal(digest(applyProfileDefaults(fixed,profile)),digest(fixed));
     assert.equal(digest(applyProfileDefaults(placer,profile)),digest(placer));
   }

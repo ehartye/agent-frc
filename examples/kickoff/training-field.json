@@ -14,6 +14,20 @@
     "height": 46,
     "source": "Invented starting-volume constraints for the exercise."
   },
+  "weightLimits": [
+    {
+      "name": "inspection",
+      "limit": {
+        "value": 100,
+        "unit": "lb"
+      },
+      "excludesRoles": [
+        "bumper",
+        "battery"
+      ],
+      "factId": "robot-mass"
+    }
+  ],
   "landmarks": [
     {
       "name": "West pedestal",
@@ -735,10 +749,6 @@
       "maxExtensionIn": {
         "value": 12,
         "factId": "robot-max-extension"
-      },
-      "massLb": {
-        "value": 100,
-        "factId": "robot-mass"
       }
     },
     "programs": {

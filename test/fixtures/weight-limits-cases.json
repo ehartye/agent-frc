@@ -1,0 +1,59 @@
+{
+  "valid": [
+    {"name": "one limit in pounds, two excluded roles", "weightLimits": [
+      {"name": "inspection", "limit": {"value": 100, "unit": "lb"}, "excludesRoles": ["bumper", "battery"], "factId": "robot-mass"}
+    ]},
+    {"name": "one limit in kilograms, no excluded roles", "weightLimits": [
+      {"name": "inspection", "limit": {"value": 45.5, "unit": "kg"}, "excludesRoles": [], "factId": "robot-mass"}
+    ]},
+    {"name": "several limits, every listable role", "weightLimits": [
+      {"name": "inspection", "limit": {"value": 100, "unit": "lb"}, "excludesRoles": ["bumper", "battery"], "factId": "robot-mass"},
+      {"name": "with bumpers", "limit": {"value": 120.5, "unit": "lb"}, "excludesRoles": ["battery"], "factId": "robot-mass-with-bumpers"},
+      {"name": "bumpers alone", "limit": {"value": 9, "unit": "kg"}, "excludesRoles": ["structure", "drive", "battery", "mechanism", "other"], "factId": "bumper-mass"}
+    ]},
+    {"name": "no limit named inspection", "weightLimits": [
+      {"name": "on the field", "limit": {"value": 60, "unit": "kg"}, "excludesRoles": [], "factId": "field-mass"}
+    ]}
+  ],
+  "refused": [
+    {"name": "unknown role", "because": "wheels is not a group role", "weightLimits": [
+      {"name": "inspection", "limit": {"value": 100, "unit": "lb"}, "excludesRoles": ["wheels"], "factId": "robot-mass"}
+    ]},
+    {"name": "payload listed", "because": "a payload group never counts, so it is not listed", "weightLimits": [
+      {"name": "inspection", "limit": {"value": 100, "unit": "lb"}, "excludesRoles": ["payload"], "factId": "robot-mass"}
+    ]},
+    {"name": "service listed", "because": "a service group never counts, so it is not listed", "weightLimits": [
+      {"name": "inspection", "limit": {"value": 100, "unit": "lb"}, "excludesRoles": ["bumper", "service"], "factId": "robot-mass"}
+    ]},
+    {"name": "fixture listed", "because": "a fixture group is not part of the robot, so it is not listed", "weightLimits": [
+      {"name": "inspection", "limit": {"value": 100, "unit": "lb"}, "excludesRoles": ["fixture"], "factId": "robot-mass"}
+    ]},
+    {"name": "duplicate name", "because": "two limits are named inspection", "weightLimits": [
+      {"name": "inspection", "limit": {"value": 100, "unit": "lb"}, "excludesRoles": ["bumper"], "factId": "robot-mass"},
+      {"name": "inspection", "limit": {"value": 120, "unit": "lb"}, "excludesRoles": [], "factId": "robot-mass-with-bumpers"}
+    ]},
+    {"name": "bad unit", "because": "the unit is lb or kg", "weightLimits": [
+      {"name": "inspection", "limit": {"value": 100, "unit": "pounds"}, "excludesRoles": [], "factId": "robot-mass"}
+    ]},
+    {"name": "value not above zero", "because": "the value must be above zero", "weightLimits": [
+      {"name": "inspection", "limit": {"value": 0, "unit": "lb"}, "excludesRoles": [], "factId": "robot-mass"}
+    ]},
+    {"name": "missing factId", "because": "every limit names the fact that supports it", "weightLimits": [
+      {"name": "inspection", "limit": {"value": 100, "unit": "lb"}, "excludesRoles": []}
+    ]},
+    {"name": "missing excludesRoles", "because": "every limit lists the roles it leaves out, or an empty list", "weightLimits": [
+      {"name": "inspection", "limit": {"value": 100, "unit": "lb"}, "factId": "robot-mass"}
+    ]},
+    {"name": "unknown key", "because": "note is not a field of a limit", "weightLimits": [
+      {"name": "inspection", "limit": {"value": 100, "unit": "lb"}, "excludesRoles": [], "factId": "robot-mass", "note": "as printed"}
+    ]},
+    {"name": "not a list", "because": "weightLimits is a list", "weightLimits":
+      {"name": "inspection", "limit": {"value": 100, "unit": "lb"}, "excludesRoles": [], "factId": "robot-mass"}
+    },
+    {"name": "an empty list", "because": "leave weightLimits out when no limit is known", "weightLimits": []}
+  ],
+  "conversions": [
+    {"limit": {"value": 100, "unit": "lb"}, "kg": 45.359237},
+    {"limit": {"value": 45.5, "unit": "kg"}, "kg": 45.5}
+  ]
+}

@@ -11,6 +11,7 @@
 // source document, without those fields and that list, so one file has one digest under any profile.
 import { createHash } from 'node:crypto';
 import { framePlan } from './frame-profile.mjs';
+import { inspectionLimitLb } from './weight-limits.mjs';
 
 export const CONCEPT_SCHEMA='agent-frc/concept-bot@1';
 export const LABELS=Object.freeze(['required','assumed','observed']);
@@ -201,11 +202,10 @@ export function validateConceptBot(doc) {
 
 // Returns a copy with profile-derived defaults: a missing mass becomes 75–95% of the inspection limit.
 export function applyProfileDefaults(doc,profile) {
-  const copy=structuredClone(doc), limit=profile?.rehearsal?.robotLimits?.massLb;
-  const value=typeof limit==='number'?limit:limit?.value;
-  if(copy?.massLb===undefined&&Number.isFinite(value)&&value>0){
-    copy.massLb={min:0.75*value,max:0.95*value,label:'assumed',
-      basis:'Default 75–95% of the inspection limit ('+(text(limit?.factId)?limit.factId:'robotLimits.massLb')+')',default:true};
+  const copy=structuredClone(doc), limit=inspectionLimitLb(profile);
+  if(copy?.massLb===undefined&&limit){
+    copy.massLb={min:0.75*limit.value,max:0.95*limit.value,label:'assumed',
+      basis:'Default 75–95% of the inspection limit ('+limit.factId+')',default:true};
     copy.defaultsApplied=[...(copy.defaultsApplied ?? []),'massLb'];
   }
   return copy;

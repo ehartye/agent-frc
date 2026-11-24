@@ -64,7 +64,7 @@ test('limits compare the frame outline perimeter, heights and extension with the
   const tall = variant(turret, c => { c.body.stowedHeightIn = q(50); c.body.maxHeightIn = q(70); c.body.maxReachIn = q(20); });
   assert.deepEqual(conceptCheck(tall, profile).limits,
     {perimeter:'within', startingHeight:'exceeds', maxHeight:'exceeds', extension:'exceeds', mass:'within'});
-  const unlimited = variant(profile, p => { delete p.rehearsal.robotLimits; });
+  const unlimited = variant(profile, p => { delete p.rehearsal.robotLimits; delete p.weightLimits; });
   assert.deepEqual(conceptCheck(square, unlimited).limits,
     {perimeter:'unresolved', startingHeight:'unresolved', maxHeight:'unresolved', extension:'unresolved', mass:'unresolved'});
   const partly = variant(profile, p => { p.rehearsal.robotLimits.perimeterIn = null; });
@@ -79,7 +79,7 @@ test('mass defaults to 75–95% of the inspection limit, keeps a stated range an
   const stated = conceptCheck(placer, profile);
   assert.deepEqual({...stated.mass, basis:undefined}, {min:90, max:110, label:'assumed', basis:undefined, default:false, shareOfLimit:1.1});
   assert.equal(stated.limits.mass, 'exceeds');
-  const unlimited = variant(profile, p => { p.rehearsal.robotLimits.massLb = null; });
+  const unlimited = variant(profile, p => { delete p.weightLimits; });
   const none = conceptCheck(turret, unlimited);
   assert.equal(none.limits.mass, 'unresolved');
   assert.deepEqual(none.mass, {min:null, max:null, label:null, basis:null, default:false, shareOfLimit:null});

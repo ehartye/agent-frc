@@ -98,6 +98,7 @@
       "test-map.test.mjs",
       "throughput-cohort.test.mjs",
       "trace-diagnostics.test.mjs",
+      "weight-limits.test.mjs",
       "workflow-preflight.test.mjs"
     ],
     "docs": [
