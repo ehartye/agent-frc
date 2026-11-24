@@ -32,7 +32,7 @@ The site check ends with one line that says what it covered, such as `The publis
 
 ### Steps on the hosted runner
 
-- **Python.** The hosted Linux runner has `python3` and no `python`. Write `python3` in a step, or add `actions/setup-python` with the version the project uses and then write `python`.
+- **Python.** The hosted Linux runner has `python3` and no `python`. Write `python3` in a step, or add `actions/setup-python` with `python-version: '3.14'` and then write `python`. The suite has one Python, 3.14, in every project's CI, the design library and the plugin.
 - **A browser.** A step that opens a page needs a browser the runner does not hold. Install the one the project's own test uses in a step before it, for example `npx playwright install --with-deps chromium`, with Playwright in the project's own `package.json`.
 - **A large repository.** The checkout can take longer than every check: one adopter's took over four minutes for folders no step read. The scan reads every tracked file, so the scan job needs the whole tree. Give a job that reads a few folders a sparse checkout. The reference workflow carries this as a commented example:
 

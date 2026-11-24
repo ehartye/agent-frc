@@ -20,6 +20,9 @@ export function selectLibraries(task){
 export function assessLibraries(libraries,expected={}){
  return libraries.map(r=>({...r,status:r.importStatus!=='ok'?'import-failed':!r.version?'metadata-missing':expected[r.distribution]&&r.version!==expected[r.distribution]?'version-mismatch':'available',expectedVersion:expected[r.distribution]??null}));
 }
+// The suite's one Python: CI, the design library and every project run it.
+export const suitePython='3.14';
+const pythonOkay=version=>{const at=/^(\d+)\.(\d+)/.exec(version??''),[major,minor]=suitePython.split('.').map(Number);return !!at&&(+at[1]>major||+at[1]===major&&+at[2]>=minor);};
 export function inspectEnvironment({task='core',python,expected={},jdk,expectedJava,cwd,appendPaths=[],run=spawnSync}={}){
  if((cwd!==undefined||appendPaths.length)&&!['cad-physics','native-cad','physics','preliminary-design'].includes(task))throw Error('Python launch context requires a Python task');
  if(cwd!==undefined&&(typeof cwd!=='string'||!cwd.trim()))throw Error('Choose the test working directory');
@@ -57,8 +60,9 @@ export function inspectEnvironment({task='core',python,expected={},jdk,expectedJ
  if(child.error||child.status!==0){report.pythonStatus='probe-failed';report.ready=false;report.diagnostic=child.error?.code??'nonzero-exit';report.detail=String(child.stderr??'').slice(0,1000);return report;}
  let data;try{data=JSON.parse(child.stdout);}catch{report.pythonStatus='invalid-probe-output';report.ready=false;return report;}
  if(!data?.interpreter||!Array.isArray(data.libraries)||data.libraries.length!==selected.length||data.libraries.some((r,i)=>r.distribution!==selected[i].distribution||r.module!==selected[i].module||r.required!==selected[i].required||!['ok','failed'].includes(r.importStatus))){report.pythonStatus='invalid-probe-shape';report.ready=false;return report;}
- report.python=data.interpreter;report.pythonStatus='probed';report.libraries=assessLibraries(data.libraries,expected);report.ready=nodeOkay&&report.libraries.every(r=>!r.required||r.status==='available');
- report.nextSteps=report.libraries.filter(r=>r.status!=='available').map(r=>({distribution:r.distribution,required:r.required,action:r.distribution===designLibrary.distribution&&r.status!=='version-mismatch'?'Install or update the design library in this interpreter, once the owner agrees: '+designLibrary.install+'. It has no pinned version: main is the release':r.status==='version-mismatch'?'Compare with project lockfile; do not silently upgrade':r.status==='metadata-missing'?'Import succeeded but distribution version is unresolved; inspect this interpreter':r.errorType==='ModuleNotFoundError'?'Confirm selected interpreter and project dependency manifest before proposing installation':'Inspect import exception and native dependency compatibility in the selected interpreter'}));return report;
+ const supported=pythonOkay(data.interpreter.version);
+ report.python={...data.interpreter,supported};report.pythonStatus='probed';report.libraries=assessLibraries(data.libraries,expected);report.ready=nodeOkay&&supported&&report.libraries.every(r=>!r.required||r.status==='available');
+ report.nextSteps=[...(supported?[]:[{python:data.interpreter.version,required:true,action:'Use Python '+suitePython+' or newer, the one version this suite uses'}]),...report.libraries.filter(r=>r.status!=='available').map(r=>({distribution:r.distribution,required:r.required,action:r.distribution===designLibrary.distribution&&r.status!=='version-mismatch'?'Install or update the design library in this interpreter, once the owner agrees: '+designLibrary.install+'. It has no pinned version: main is the release':r.status==='version-mismatch'?'Compare with project lockfile; do not silently upgrade':r.status==='metadata-missing'?'Import succeeded but distribution version is unresolved; inspect this interpreter':r.errorType==='ModuleNotFoundError'?'Confirm selected interpreter and project dependency manifest before proposing installation':'Inspect import exception and native dependency compatibility in the selected interpreter'}))];return report;
 }
 export function parseArgs(args){
  const opts={};
