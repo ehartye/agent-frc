@@ -392,7 +392,7 @@ test('the review scene must repeat the verdict and a mission case must serve a r
   show({openingCase: 'nowhere'});
   assert.match(errorsOf(p.check()), /1\.0: the review page cannot play its scene: \/openingCase names an unknown case/);
   show({records: {...shown.records, jobs: shown.records.jobs.map((j, i) => i ? j : {...j, sha256: sha('earlier')})}});
-  assert.match(errorsOf(p.check()), /1\.0: the review scene was built from another .*clearance\.motion\.loaded-turn\.json/);
+  assert.match(errorsOf(p.check()), /1\.0: the review scene does not repeat the verdict: Scene was built from another .*clearance\.motion\.loaded-turn\.json/);
   show({sources: {...shown.sources, design: {...shown.sources.design, sha256: sha('earlier source')}}});
   assert.match(errorsOf(p.check()), /1\.0: the review scene was built from another design source/);
   writeFileSync(scene, 'not a scene');
@@ -724,12 +724,12 @@ function example(t) {
   const judgement = id => inputsOf(id) + '/judgement.json';
   const layoutCheck = (id, ...more) => design('preliminary-check', '.', judgement(id), '--require-checked', '--quiet', ...more);
   const page = id => design('preliminary-page', '.', judgement(id), '--quiet');
-  const check = (...args) => { const run = spoken(process.execPath, [here('../scripts/design-publication.mjs'), 'check', '.', ...args]); return {...run, ...(run.stdout ? JSON.parse(run.stdout) : {})}; };
+  const check = (...args) => { const run = spoken(process.execPath, [here('../scripts/design-publication.mjs'), 'check', '.', ...args]); return {...run, ...JSON.parse(/^\{[^]*/m.exec(run.stdout)[0])}; };
   const git = (...args) => execFileSync('git', ['-C', season, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', '-c', 'core.autocrlf=false', ...args], {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']}).trim();
   const commit = message => { git('add', '-A'); git('commit', '-q', '-m', message); return git('rev-parse', 'HEAD'); };
   const status = id => read(path.join(season, prelim, 'releases.json')).designStatus[id];
   /** The calls that measured or ran a trial since the last time this was asked. */
-  const measuredSince = () => { const found = existsSync(calls) ? readFileSync(calls, 'utf8').split('\n').filter(Boolean) : []; rmSync(calls, {force: true}); return found; };
+  const measuredSince = () => { const found = existsSync(calls) ? readFileSync(calls, 'utf8').split(/\r?\n/).filter(Boolean) : []; rmSync(calls, {force: true}); return found; };
   const at = (id, name) => path.join(season, inputsOf(id), name);
   git('init', '-q');
   return {season, stage, design, layoutCheck, page, git, commit, status, check, at, measuredSince, gateFile: id => path.join(season, publishedOf(id), 'gate.json')};
@@ -815,11 +815,13 @@ test('a draft whose records were carried is staged and passes the gate, which me
   const stale = e.stage('1.0');
   assert.notEqual(stale.status, 0);
   assert.match(stale.said, /clearance\.motion\.loaded-turn\.json is stale: .*solid "rail" changed/);
+  // The records the library's own measure command wrote are measured again by it, and the judgement's by the layout check.
+  execFileSync(python, ['-m', 'frc_design_kernel', 'measure', inputsOf('1.0') + '/design.json', '--out', inputsOf('1.0') + '/records', '--extremes', '--min-gap', '1', '--carry'], {cwd: e.season, stdio: 'pipe'});
   const carried = e.design('preliminary-check', '.', inputsOf('1.0') + '/judgement.json', '--require-checked');
   assert.equal(carried.status, 0, carried.said);
   assert.match(carried.said, /measured [1-9]\d* and carried [1-9]\d* of \d+ record/);
   // A page built from the earlier records is refused too.
-  assert.match(e.stage('1.0').said, /review scene does not repeat the verdict|was built from another/);
+  assert.match(e.stage('1.0').said, /review scene does not repeat the verdict: .*was built from another/);
   assert.equal(e.page('1.0').status, 0);
   e.measuredSince();
   const staged = e.stage('1.0');

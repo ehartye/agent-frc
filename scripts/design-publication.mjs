@@ -41,7 +41,7 @@ import {pathToFileURL} from 'node:url';
 
 import {architectureName, currentFor, designName, designStatuses, designTitle, detailedTitle, releaseId, stateOf, statusOf, versionOf} from './design-status.mjs';
 import {effectiveReadiness, judgedVerdict} from './effective-readiness.mjs';
-import {compareWithVerdict, readScene, validateScene} from './review-scene.mjs';
+import {builtFromOthers, compareWithVerdict, readScene, validateScene} from './review-scene.mjs';
 import {contentSha, filesProblem, gateDifferences, gateFile, gateText, isGateOf, readGate} from './gate-record.mjs';
 import {scanTree} from '../templates/project-ci/scan.mjs';
 import {unlinkedAdvice} from './published-content.mjs';
@@ -97,12 +97,11 @@ export function checkScene(where, {root, published, files, verdict}) {
   try { ({scene} = readScene(readFileSync(file))); } catch { throw Error(where + ': unreadable ' + sceneFile); }
   const {errors} = validateScene(scene), again = '. Build the page again with design preliminary-page and stage it';
   check(!errors.length, where + ': the review page cannot play its scene: ' + errors.slice(0, 5).join('; '));
-  const differ = verdict ? compareWithVerdict(scene, verdict) : scene.decision.status === 'layout-checked' && scene.decision.firstUnmet === null ? [] : ['Scene decision differs from the verdict'];
+  const differ = verdict ? compareWithVerdict(scene, verdict)
+    : [...(scene.decision.status === 'layout-checked' && scene.decision.firstUnmet === null ? [] : ['Scene decision differs from the verdict']), ...builtFromOthers(scene, files)];
   check(!differ.length, where + ': the review scene does not repeat the verdict: ' + differ.join('; ') + again);
   check(scene.sources.design.sha256 === digest(Buffer.concat(Object.keys(files.source).map(name => readFileSync(path.join(root, name))))),
     where + ': the review scene was built from another design source' + again);
-  const shown = [...scene.records.jobs.map(job => [scene.records.folder + '/' + job.file, job.sha256]), ...(scene.records.trials ? [[scene.records.trials.file, scene.records.trials.sha256]] : [])];
-  for (const [name, sha256] of shown) check(files.records[name] === sha256, where + ': the review scene was built from another ' + name + again);
   return scene;
 }
 

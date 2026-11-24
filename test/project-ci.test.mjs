@@ -49,18 +49,34 @@ test('the sample project passes its own CI checks in a folder that holds no plug
   const site = run(root, 'site-check.mjs', 'docs');
   assert.equal(site.status, 0, site.stderr);
   // The last line says what the check covered, so a check pointed at the wrong folder shows as zeros.
-  assert.equal(site.stdout.trim(), 'The published site is whole: checked 1 design index listing 1 design, 1 design record, 3 pages and 8 relative links.');
+  assert.equal(site.stdout.trim(), 'The published site is whole: checked 1 design index listing 1 design, 1 design record, 3 pages and 9 relative links.');
   // The controls: each check can fail on this project. The path is assembled here so this file holds none.
   writeFileSync(path.join(root, 'notes.md'), 'Built at ' + ['C:', 'Users', 'invented-student', 'robot'].join('\\') + '\n');
   const found = run(root, 'scan.mjs', '.');
   assert.equal(found.status, 1);
   assert.match(found.stderr, /^notes\.md:1: machine-path: /);
-  rmSync(path.join(root, 'docs/preliminary-design/releases/1.0/summary.json'));
+  rmSync(path.join(root, 'docs/preliminary-design/releases/1.0/judgement.json'));
   const broken = run(root, 'site-check.mjs', 'docs');
   assert.equal(broken.status, 1);
-  assert.equal(broken.stdout.trim(), '2 problems in the published site. Checked 1 design index listing 1 design, 1 design record, 3 pages and 8 relative links.');
-  assert.deepEqual(broken.stderr.trim().split(/\r?\n/), ['preliminary-design/releases/1.0/index.html links to summary.json, which is missing',
-    'preliminary-design/releases/1.0/release.json names summary.json, which is missing']);
+  assert.equal(broken.stdout.trim(), '1 problem in the published site. Checked 1 design index listing 1 design, 1 design record, 3 pages and 9 relative links.');
+  assert.deepEqual(broken.stderr.trim().split(/\r?\n/), ['preliminary-design/releases/1.0/index.html links to judgement.json, which is missing']);
+});
+
+test('the sample project publishes the files its design was judged on, and nothing of an earlier format', () => {
+  const published = 'docs/preliminary-design/releases/1.0', inputs = 'cad/preliminary-design/releases/1.0', bytes = name => readFileSync(path.join(sample, name));
+  const files = filesUnder(path.join(sample, published)), own = ['index.html', 'release.json', 'review-scene.json.gz'];
+  assert.deepEqual(JSON.parse(bytes(published + '/release.json')), {schema: 'agent-frc/preliminary-release@2', release: '1.0', issue: 'invented-design-1.0', phase: 'preliminary-design',
+    check: {project: inputs}, requirements: 'cad/preliminary-design/requirements.json'});
+  for (const name of files.filter(n => !own.includes(n))) assert.ok(bytes(published + '/' + name).equals(bytes(inputs + '/' + name)), name);
+  assert.ok(bytes(published + '/index.html').equals(bytes(inputs + '/review.html')));
+  const judgement = JSON.parse(bytes(inputs + '/judgement.json'));
+  assert.equal(judgement.schema, 'agent-frc/layout-judgement@2');
+  // Each input the judgement names is there, and each record of its folder is published.
+  for (const name of [judgement.source.file, judgement.requirements.file, judgement.narrative.file, judgement.page.file, ...judgement.premises.map(p => p.file)]) assert.ok(existsSync(path.join(sample, name)), name);
+  const records = filesUnder(path.join(sample, judgement.records.folder));
+  assert.ok(records.length > 8, records.join());
+  assert.deepEqual(files.filter(n => n.startsWith('records/')), records.map(n => 'records/' + n));
+  assert.equal(filesUnder(sample).filter(n => /budget|limits\.json|missions|receipt/i.test(n)).join(), '');
 });
 
 test('the sample project uses the reference files as its CI, byte for byte', () => {
@@ -183,7 +199,7 @@ test('the audit never calls a project clear while it has findings, and says what
   const run = (...args) => { const done = spawnSync(process.execPath, [cli, root, ...args], {encoding: 'utf8'}); assert.equal(done.status, 0, 'advice only: the audit never fails a run'); return done.stdout.trim().split(/\r?\n/); };
   const clear = "In what the audit read, no project file runs or imports plugin code. The project's CI runs its scan and its site check.";
   assert.deepEqual(run(), ['Note: scripts/ci/scan.mjs is the reference path and secret scan.', 'Note: scripts/ci/site-check.mjs is the reference site check.', 'Note: .github/workflows/ci.yml is the reference workflow.',
-    'Read 3 code files and 9 prose or data files, listed by a walk of the folder. Model, image and archive files are not read.', clear]);
+    'Read 3 code files and 41 prose or data files, listed by a walk of the folder. Model, image and archive files are not read.', clear]);
   // Code whose target the audit cannot read is listed, and the project is not called clear.
   write(root, {'tools/loader.py': ['import importlib', 'def load(name):', '    return importlib.import_module(name)'], 'tools/big.py': '# filler\n'.repeat(300000)});
   const unsure = run();

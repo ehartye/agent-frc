@@ -1,0 +1,23 @@
+{
+  "schema": "agent-frc/review-page@1",
+  "title": "Turning carrier 1.0: invented turning carrier",
+  "context": "Invented teaching project",
+  "architecture": "A pivoting carrier that turns a sample past a sliding gate",
+  "focus": "Invented focus: the loaded head clears the rail and the gate through the turn.",
+  "notes": [
+    "Invented: every solid is a blockout box with an assumed weight range."
+  ],
+  "phases": {
+    "transfer": {
+      "title": "Turn the loaded carrier past the gate"
+    },
+    "service": {
+      "title": "Lift the carrier out in the pit"
+    }
+  },
+  "solids": {
+    "head": {
+      "description": "Invented carrier head that holds the sample through the turn."
+    }
+  }
+}

@@ -4,8 +4,12 @@ An invented project that shows what a robot project holds and how its own CI wor
 
 | Folder | Holds |
 | --- | --- |
-| `cad/preliminary-design/releases/1.0/` | The design's inputs: here one note that stands in for the design source, the judgement file, the solids and the budgets |
-| `docs/` | The published site: a home page, the design index and the page of each design |
+| `cad/preliminary-design/requirements.json` | The season's requirements, shared by every release: the weight limits and the lowest bus voltage |
+| `cad/preliminary-design/releases/1.0/design.json` | The design source: every solid with its weight, the motors, the battery and each motion as the motor commands that make it |
+| `cad/preliminary-design/releases/1.0/judgement.json` | The judgement file: the rules stated once, the cycle, the control and pointers to the requirements, the narrative and the accepted premises |
+| `cad/preliminary-design/releases/1.0/records/` | What was measured: one file for each measurement. Nothing else stores a result |
+| `cad/preliminary-design/releases/1.0/page.json` | The words of the review page. They change no result |
+| `docs/` | The published site: a home page, the design index and the page of each design, with a copy of the design source, the judgement file, the page file and the records it was judged on |
 | `scripts/ci/` | The project's two CI checks, each one file that needs only Node |
 | `.github/workflows/ci.yml` | The project's workflow: scan, site check and, on the default branch, publish `docs/` |
 

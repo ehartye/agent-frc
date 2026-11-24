@@ -1,0 +1,59 @@
+{
+ "schema": "frc-design-kernel/measurement-job@1",
+ "generator": {
+  "library": "frc-design-kernel",
+  "version": "0.1.0",
+  "commit": "9c69c7d201b7affc0173be277903a64075c29fe5"
+ },
+ "id": "withdrawal.remove-carrier",
+ "job": {
+  "kind": "withdrawal",
+  "motion": "remove-carrier",
+  "absent": []
+ },
+ "inputs": {
+  "rules": {},
+  "solids": {
+   "battery": "b8362677a7debd89",
+   "bumper": "28618d5a4c81a937",
+   "drive": "8812e33de182da48",
+   "ejector motor": "a28107ef71150f3a",
+   "gate": "492851e3c98c605c",
+   "gate motor": "6cdef0c4525c5737",
+   "head": "14f8e1913553d429",
+   "mount": "935e83095d6ddf9f",
+   "pivot motor": "263b725ba0a1fc92",
+   "rail": "ae38154122d1a9fe",
+   "sample": "03404721212fafc3"
+  }
+ },
+ "used": {
+  "start": {},
+  "joints": {}
+ },
+ "checked": {
+  "measured": "whole"
+ },
+ "result": {
+  "motion": "remove-carrier",
+  "moving": [
+   "ejector motor",
+   "head",
+   "sample"
+  ],
+  "restBoundsMm": [
+   -20.0,
+   -20.0,
+   0.0,
+   58.0,
+   75.0,
+   24.0
+  ],
+  "boxGapMm": {
+   "ejector motor": 79.5,
+   "head": 74.0,
+   "sample": 74.0
+  },
+  "smallestBoxGapMm": 74.0
+ }
+}

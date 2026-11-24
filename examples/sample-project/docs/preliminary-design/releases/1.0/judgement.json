@@ -1,0 +1,124 @@
+{
+  "schema": "agent-frc/layout-judgement@2",
+  "issue": "invented-design-1.0",
+  "source": {
+    "file": "cad/preliminary-design/releases/1.0/design.json"
+  },
+  "records": {
+    "folder": "cad/preliminary-design/releases/1.0/records"
+  },
+  "requirements": {
+    "file": "cad/preliminary-design/requirements.json"
+  },
+  "narrative": {
+    "file": "cad/preliminary-design/releases/1.0/narrative.md",
+    "objectives": [
+      {
+        "objective": "Acquire, turn and release",
+        "disposition": "represented",
+        "basis": "The acquire, loaded-turn and release motions follow the sample."
+      },
+      {
+        "objective": "Park at the finish",
+        "disposition": "represented",
+        "basis": "The park-loaded motion returns the carrier."
+      },
+      {
+        "objective": "Stop for a closed gate",
+        "disposition": "represented",
+        "basis": "The parked head clears the closed gate before the turn."
+      }
+    ]
+  },
+  "premises": [
+    {
+      "file": "cad/preliminary-design/releases/1.0/premises/robot-mass.json"
+    }
+  ],
+  "rules": {
+    "minGapMm": 1,
+    "depth": 9,
+    "allowanceBasis": "Invented 1 mm packaging reserve",
+    "pathToleranceMm": 40
+  },
+  "purposes": {
+    "park": [
+      "park-loaded"
+    ],
+    "service": {
+      "remove-carrier": {
+        "extract": true
+      }
+    }
+  },
+  "cycle": [
+    {
+      "phase": "acquire",
+      "motions": [
+        "acquire"
+      ]
+    },
+    {
+      "phase": "retain",
+      "notApplicable": "Invented: the teaching cycle has no retain step"
+    },
+    {
+      "phase": "transfer",
+      "motions": [
+        "loaded-turn"
+      ]
+    },
+    {
+      "phase": "deliver",
+      "motions": [
+        "release"
+      ]
+    },
+    {
+      "phase": "reset",
+      "notApplicable": "Invented: the teaching cycle has no reset step"
+    },
+    {
+      "phase": "endgame",
+      "notApplicable": "Invented: the teaching cycle has no endgame step"
+    },
+    {
+      "phase": "park",
+      "motions": [
+        "park-loaded"
+      ]
+    },
+    {
+      "phase": "service",
+      "motions": [
+        "remove-carrier"
+      ]
+    }
+  ],
+  "attachment": {
+    "unmounted": {
+      "rail": "Invented teaching layout: the frame member that carries the rail is not drawn."
+    }
+  },
+  "control": {
+    "motion": "loaded-turn",
+    "displaced": "rail",
+    "moving": "head",
+    "offsetMm": [
+      0,
+      -50,
+      0
+    ],
+    "basis": "Move the fixed rail into the arc between the same clear endpoints"
+  },
+  "risks": [
+    {
+      "id": "gate-closes-mid-turn",
+      "risk": "Invented: the gate closes while the loaded head is turning",
+      "closedBy": "Invented: the narrative stops before the turn when the gate is closed"
+    }
+  ],
+  "page": {
+    "file": "cad/preliminary-design/releases/1.0/page.json"
+  }
+}

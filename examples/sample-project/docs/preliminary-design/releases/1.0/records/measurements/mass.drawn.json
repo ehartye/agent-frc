@@ -1,0 +1,234 @@
+{
+ "schema": "frc-design-kernel/measurement-job@1",
+ "generator": {
+  "library": "frc-design-kernel",
+  "version": "0.1.0",
+  "commit": "9c69c7d201b7affc0173be277903a64075c29fe5"
+ },
+ "id": "mass.drawn",
+ "job": {
+  "kind": "mass",
+  "pose": null,
+  "absent": []
+ },
+ "inputs": {
+  "rules": {},
+  "solids": {
+   "battery": "b8362677a7debd89",
+   "bumper": "28618d5a4c81a937",
+   "drive": "8812e33de182da48",
+   "ejector motor": "f2b71a4d08914918",
+   "gate": "492851e3c98c605c",
+   "gate motor": "6cdef0c4525c5737",
+   "head": "72f10dc47f3a3b87",
+   "mount": "935e83095d6ddf9f",
+   "pivot motor": "263b725ba0a1fc92",
+   "rail": "ae38154122d1a9fe",
+   "sample": "471d8cd2314aa201"
+  }
+ },
+ "used": {
+  "masses": {
+   "battery": 2.0,
+   "bumper": 1.5,
+   "drive": 4.5,
+   "ejector motor": 0.15,
+   "gate": 0.2,
+   "gate motor": 0.2,
+   "head": 0.4,
+   "mount": 0.5,
+   "pivot motor": 0.3,
+   "rail": 0.2,
+   "sample": 0.3
+  },
+  "massRanges": {
+   "battery": [
+    1.9,
+    2.1
+   ],
+   "bumper": [
+    1.3,
+    1.8
+   ],
+   "drive": [
+    4.2,
+    4.8
+   ],
+   "ejector motor": [
+    0.14,
+    0.16
+   ],
+   "gate": [
+    0.15,
+    0.25
+   ],
+   "gate motor": [
+    0.18,
+    0.22
+   ],
+   "head": [
+    0.3,
+    0.5
+   ],
+   "mount": [
+    0.4,
+    0.6
+   ],
+   "pivot motor": [
+    0.28,
+    0.32
+   ],
+   "rail": [
+    0.15,
+    0.25
+   ],
+   "sample": [
+    0.2,
+    0.5
+   ]
+  },
+  "groupMasses": {},
+  "extraMass": [
+   {
+    "name": "wiring",
+    "group": "structure",
+    "massKg": {
+     "value": 0.3,
+     "assumed": [
+      0.2,
+      0.5
+     ]
+    },
+    "note": "Invented loom, fasteners and controls; not drawn."
+   }
+  ],
+  "unweighed": [],
+  "groups": "87c58c5acccfebfd"
+ },
+ "checked": {
+  "measured": "whole"
+ },
+ "result": {
+  "pose": null,
+  "totalKg": 10.55,
+  "rangeKg": [
+   9.4,
+   12.0
+  ],
+  "groups": {
+   "structure": {
+    "massKg": 1.5,
+    "rangeKg": [
+     1.21,
+     1.89
+    ],
+    "from": "solids",
+    "extra": [
+     "wiring"
+    ],
+    "centreMm": [
+     6.227869918699187,
+     23.867138211382112,
+     8.093495934959348
+    ],
+    "solids": 4
+   },
+   "bumper": {
+    "massKg": 1.5,
+    "rangeKg": [
+     1.3,
+     1.8
+    ],
+    "from": "solids",
+    "extra": [],
+    "centreMm": [
+     -18.0,
+     8.326672684688675e-17,
+     2.0
+    ],
+    "solids": 1
+   },
+   "carrier": {
+    "massKg": 0.55,
+    "rangeKg": [
+     0.44,
+     0.66
+    ],
+    "from": "solids",
+    "extra": [],
+    "centreMm": [
+     29.999999999999996,
+     5.29879170843825e-18,
+     21.295454545454543
+    ],
+    "solids": 2
+   },
+   "carried article": {
+    "massKg": 0.3,
+    "rangeKg": [
+     0.2,
+     0.5
+    ],
+    "from": "solids",
+    "extra": [],
+    "centreMm": [
+     38.0,
+     1.0408340855860847e-17,
+     20.0
+    ],
+    "solids": 1
+   },
+   "neighbor": {
+    "massKg": 0.2,
+    "rangeKg": [
+     0.15,
+     0.25
+    ],
+    "from": "solids",
+    "extra": [],
+    "centreMm": [
+     56.5,
+     -8.5,
+     19.5
+    ],
+    "solids": 1
+   },
+   "drive": {
+    "massKg": 4.5,
+    "rangeKg": [
+     4.2,
+     4.8
+    ],
+    "from": "solids",
+    "extra": [],
+    "centreMm": [
+     -12.0,
+     -6.5,
+     3.0
+    ],
+    "solids": 1
+   },
+   "battery": {
+    "massKg": 2.0,
+    "rangeKg": [
+     1.9,
+     2.1
+    ],
+    "from": "solids",
+    "extra": [],
+    "centreMm": [
+     13.0,
+     -6.5,
+     2.0
+    ],
+    "solids": 1
+   }
+  },
+  "unweighed": [],
+  "centreMm": [
+   -0.6121511963934804,
+   -0.7724448040688938,
+   5.142440180325973
+  ]
+ }
+}

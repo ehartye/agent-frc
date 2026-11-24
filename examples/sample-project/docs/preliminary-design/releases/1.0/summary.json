@@ -1,7 +1,0 @@
-{
-  "design": "Tilting carriage 1.0",
-  "phases": [
-    {"phase": "Carry the sample to the bin", "clearanceMm": 6},
-    {"phase": "Return to park", "clearanceMm": 11}
-  ]
-}

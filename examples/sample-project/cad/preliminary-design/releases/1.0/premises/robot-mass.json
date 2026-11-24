@@ -1,0 +1,19 @@
+{
+  "id": "robot-mass",
+  "phase": "conceptual-design",
+  "scenario": "selected cycle",
+  "unit": "kg",
+  "interfaces": [
+    "robot"
+  ],
+  "criterion": {
+    "range": [
+      0,
+      14
+    ]
+  },
+  "observes": "mass.rangeKg",
+  "betterDirection": "lower",
+  "base": 14,
+  "basis": "Invented concept study: the drive and cycle assumptions hold for a robot of at most 14 kg"
+}

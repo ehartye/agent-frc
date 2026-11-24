@@ -1,0 +1,600 @@
+{
+  "schema": "frc-design-kernel/design@1",
+  "name": "Turning carrier 1.0",
+  "units": {
+    "length": "mm",
+    "mass": "kg"
+  },
+  "frame": "Invented mounting block axis on the floor plane, +X forward, +Y left, +Z up, millimetres",
+  "parameters": {
+    "turn": 90,
+    "slide": 12
+  },
+  "groups": {
+    "structure": {
+      "role": "structure"
+    },
+    "bumper": {
+      "role": "bumper"
+    },
+    "carrier": {
+      "role": "mechanism"
+    },
+    "carried article": {
+      "role": "payload",
+      "carriedBy": "carrier"
+    },
+    "neighbor": {
+      "role": "mechanism"
+    },
+    "drive": {
+      "role": "drive"
+    },
+    "battery": {
+      "role": "battery"
+    }
+  },
+  "solids": [
+    {
+      "name": "mount",
+      "group": "structure",
+      "shape": {
+        "kind": "box",
+        "fromMm": [
+          -8,
+          -8,
+          0
+        ],
+        "toMm": [
+          8,
+          8,
+          6
+        ]
+      },
+      "massKg": {
+        "value": 0.5,
+        "assumed": [
+          0.4,
+          0.6
+        ]
+      }
+    },
+    {
+      "name": "rail",
+      "group": "structure",
+      "shape": {
+        "kind": "box",
+        "fromMm": [
+          19,
+          70,
+          18
+        ],
+        "toMm": [
+          24,
+          75,
+          23
+        ]
+      },
+      "massKg": {
+        "value": 0.2,
+        "assumed": [
+          0.15,
+          0.25
+        ]
+      }
+    },
+    {
+      "name": "pivot motor",
+      "group": "structure",
+      "shape": {
+        "kind": "box",
+        "fromMm": [
+          -8,
+          9.5,
+          0
+        ],
+        "toMm": [
+          0,
+          15,
+          6
+        ]
+      },
+      "massKg": {
+        "value": 0.3,
+        "assumed": [
+          0.28,
+          0.32
+        ]
+      }
+    },
+    {
+      "name": "gate motor",
+      "group": "structure",
+      "shape": {
+        "kind": "box",
+        "fromMm": [
+          25,
+          70,
+          18
+        ],
+        "toMm": [
+          30,
+          75,
+          23
+        ]
+      },
+      "massKg": {
+        "value": 0.2,
+        "assumed": [
+          0.18,
+          0.22
+        ]
+      }
+    },
+    {
+      "name": "bumper",
+      "group": "bumper",
+      "shape": {
+        "kind": "box",
+        "fromMm": [
+          -20,
+          -20,
+          0
+        ],
+        "toMm": [
+          -16,
+          20,
+          4
+        ]
+      },
+      "massKg": {
+        "value": 1.5,
+        "assumed": [
+          1.3,
+          1.8
+        ]
+      }
+    },
+    {
+      "name": "head",
+      "group": "carrier",
+      "shape": {
+        "kind": "box",
+        "fromMm": [
+          28,
+          -2,
+          18
+        ],
+        "toMm": [
+          32,
+          2,
+          22
+        ]
+      },
+      "massKg": {
+        "value": 0.4,
+        "assumed": [
+          0.3,
+          0.5
+        ]
+      }
+    },
+    {
+      "name": "ejector motor",
+      "group": "carrier",
+      "shape": {
+        "kind": "box",
+        "fromMm": [
+          28,
+          -2,
+          23.5
+        ],
+        "toMm": [
+          32,
+          2,
+          26
+        ]
+      },
+      "massKg": {
+        "value": 0.15,
+        "assumed": [
+          0.14,
+          0.16
+        ]
+      }
+    },
+    {
+      "name": "sample",
+      "group": "carried article",
+      "shape": {
+        "kind": "box",
+        "fromMm": [
+          36,
+          -2,
+          18
+        ],
+        "toMm": [
+          40,
+          2,
+          22
+        ]
+      },
+      "massKg": {
+        "value": 0.3,
+        "assumed": [
+          0.2,
+          0.5
+        ]
+      }
+    },
+    {
+      "name": "gate",
+      "group": "neighbor",
+      "shape": {
+        "kind": "box",
+        "fromMm": [
+          55,
+          -10,
+          15
+        ],
+        "toMm": [
+          58,
+          -7,
+          24
+        ]
+      },
+      "massKg": {
+        "value": 0.2,
+        "assumed": [
+          0.15,
+          0.25
+        ]
+      }
+    },
+    {
+      "name": "drive",
+      "group": "drive",
+      "shape": {
+        "kind": "box",
+        "fromMm": [
+          -14,
+          -11,
+          0
+        ],
+        "toMm": [
+          -10,
+          -2,
+          6
+        ]
+      },
+      "massKg": {
+        "value": 4.5,
+        "assumed": [
+          4.2,
+          4.8
+        ]
+      }
+    },
+    {
+      "name": "battery",
+      "group": "battery",
+      "shape": {
+        "kind": "box",
+        "fromMm": [
+          9,
+          -10,
+          0
+        ],
+        "toMm": [
+          17,
+          -3,
+          4
+        ]
+      },
+      "massKg": {
+        "value": 2.0,
+        "assumed": [
+          1.9,
+          2.1
+        ]
+      }
+    }
+  ],
+  "extraMass": [
+    {
+      "name": "wiring",
+      "group": "structure",
+      "massKg": {
+        "value": 0.3,
+        "assumed": [
+          0.2,
+          0.5
+        ]
+      },
+      "note": "Invented loom, fasteners and controls; not drawn."
+    }
+  ],
+  "fixtures": [],
+  "mounts": [
+    {
+      "group": "carrier",
+      "on": "mount",
+      "atMm": [
+        0,
+        0,
+        6
+      ],
+      "note": "Sketch origin of the pedestal"
+    },
+    {
+      "group": "neighbor",
+      "on": "rail",
+      "atMm": [
+        22,
+        72,
+        20
+      ],
+      "note": "Proposed slide attachment datum"
+    }
+  ],
+  "contacts": [],
+  "motors": {
+    "small motor": {
+      "note": "Invented brushless motor figures for teaching.",
+      "ktNmPerA": {
+        "value": 0.018,
+        "assumed": [
+          0.017,
+          0.019
+        ]
+      },
+      "ohm": {
+        "value": 0.05,
+        "assumed": [
+          0.045,
+          0.06
+        ]
+      },
+      "keVsPerRad": {
+        "value": 0.018,
+        "assumed": [
+          0.017,
+          0.019
+        ]
+      }
+    }
+  },
+  "drives": {
+    "pivot": {
+      "motor": "small motor",
+      "motorSolid": "pivot motor",
+      "gear": 10,
+      "efficiency": {
+        "value": 0.8,
+        "assumed": [
+          0.7,
+          0.9
+        ]
+      },
+      "supplyLimitA": 30,
+      "joint": {
+        "group": "carrier",
+        "kind": "rotation",
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "originMm": [
+          0,
+          0,
+          20
+        ],
+        "travel": [
+          -5,
+          "=turn + 5"
+        ]
+      }
+    },
+    "gate": {
+      "motor": "small motor",
+      "motorSolid": "gate motor",
+      "gear": 4,
+      "efficiency": {
+        "value": 0.8,
+        "assumed": [
+          0.7,
+          0.9
+        ]
+      },
+      "supplyLimitA": 20,
+      "joint": {
+        "group": "neighbor",
+        "kind": "slide",
+        "axis": [
+          0,
+          1,
+          0
+        ],
+        "perOutputTurn": 8,
+        "travel": [
+          0,
+          "=slide + 2"
+        ]
+      }
+    },
+    "ejector": {
+      "motor": "small motor",
+      "motorSolid": "ejector motor",
+      "gear": 3,
+      "efficiency": {
+        "value": 0.8,
+        "assumed": [
+          0.7,
+          0.9
+        ]
+      },
+      "supplyLimitA": 20,
+      "joint": {
+        "group": "carried article",
+        "kind": "slide",
+        "axis": [
+          1,
+          0,
+          0
+        ],
+        "perOutputTurn": 10,
+        "travel": [
+          0,
+          14
+        ]
+      }
+    },
+    "drivetrain": {
+      "motor": "small motor",
+      "motorSolid": "drive",
+      "count": 4,
+      "gear": 6,
+      "efficiency": {
+        "value": 0.8,
+        "assumed": [
+          0.7,
+          0.9
+        ]
+      },
+      "supplyLimitA": 40,
+      "radiusMm": 50,
+      "movingKg": {
+        "value": 12,
+        "assumed": [
+          10,
+          14
+        ]
+      },
+      "note": "The running gear. No motion of this teaching layout commands it; a motion lists it under alsoRunning when it drives at the same time."
+    }
+  },
+  "battery": {
+    "openCircuitV": {
+      "value": 12.6,
+      "assumed": [
+        12.2,
+        12.9
+      ]
+    },
+    "resistanceOhm": {
+      "value": 0.02,
+      "assumed": [
+        0.015,
+        0.03
+      ]
+    },
+    "note": "Invented pack figures."
+  },
+  "poses": {
+    "offered": {
+      "carried article": [
+        {
+          "kind": "translation",
+          "travelMm": [
+            0,
+            -10,
+            0
+          ]
+        }
+      ]
+    }
+  },
+  "motions": {
+    "acquire": {
+      "from": "offered",
+      "by": "hand",
+      "moves": {
+        "carried article": [
+          {
+            "kind": "translation",
+            "travelMm": [
+              0,
+              10,
+              0
+            ]
+          }
+        ]
+      },
+      "note": "The sample is handed to the carrier: no motor moves it in this teaching layout."
+    },
+    "loaded-turn": {
+      "from": {
+        "after": "acquire"
+      },
+      "drive": {
+        "pivot": {
+          "to": "=turn"
+        },
+        "gate": {
+          "to": "=slide"
+        }
+      },
+      "durationS": {
+        "value": 0.5,
+        "assumed": [
+          0.4,
+          0.7
+        ]
+      }
+    },
+    "release": {
+      "from": {
+        "after": "loaded-turn"
+      },
+      "drive": {
+        "ejector": {
+          "to": 12
+        }
+      },
+      "durationS": {
+        "value": 0.4,
+        "assumed": [
+          0.3,
+          0.6
+        ]
+      }
+    },
+    "park-loaded": {
+      "from": {
+        "after": "release"
+      },
+      "drive": {
+        "pivot": {
+          "to": 0
+        },
+        "gate": {
+          "to": 0
+        }
+      },
+      "durationS": {
+        "value": 0.5,
+        "assumed": [
+          0.4,
+          0.7
+        ]
+      }
+    },
+    "remove-carrier": {
+      "by": "hand",
+      "moves": {
+        "carrier": [
+          {
+            "kind": "translation",
+            "travelMm": [
+              0,
+              0,
+              80
+            ]
+          }
+        ]
+      },
+      "note": "Lifted out by hand in the pit, with the representative sample on it."
+    }
+  }
+}

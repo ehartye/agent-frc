@@ -1,0 +1,22 @@
+{
+  "schema": "agent-frc/season-requirements@1",
+  "basis": "Invented design brief for teaching",
+  "minBusV": 9,
+  "weightLimits": [
+    {
+      "name": "inspection",
+      "limitKg": 15,
+      "excludesGroups": [
+        "bumper",
+        "battery"
+      ],
+      "basis": "Invented rule: weighed without bumpers and battery"
+    },
+    {
+      "name": "with bumpers and battery",
+      "limitKg": 20,
+      "excludesGroups": [],
+      "basis": "Invented field estimate"
+    }
+  ]
+}

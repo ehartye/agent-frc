@@ -1,0 +1,297 @@
+{
+ "schema": "frc-design-kernel/measurement-job@1",
+ "generator": {
+  "library": "frc-design-kernel",
+  "version": "0.1.0",
+  "commit": "9c69c7d201b7affc0173be277903a64075c29fe5"
+ },
+ "id": "electrical.release",
+ "job": {
+  "kind": "electrical",
+  "motion": "release",
+  "samples": 32
+ },
+ "inputs": {
+  "rules": {
+   "samples": 32
+  },
+  "solids": {
+   "sample": "1741aa1f19b57442"
+  }
+ },
+ "used": {
+  "start": {
+   "carried article": [
+    0.0,
+    -1.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0
+   ],
+   "carrier": [
+    0.0,
+    -1.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0
+   ],
+   "neighbor": [
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0,
+    12.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0
+   ]
+  },
+  "joints": {
+   "carried article": {
+    "kind": "slide",
+    "from": 0.0,
+    "to": 12
+   }
+  },
+  "masses": {
+   "sample": 0.3
+  },
+  "massRanges": {
+   "sample": [
+    0.2,
+    0.5
+   ]
+  },
+  "groupMasses": {},
+  "extraMass": [],
+  "unweighed": [],
+  "groups": "68e7e070f54b616c",
+  "drives": {
+   "ejector": {
+    "motor": {
+     "ktNmPerA": [
+      0.018,
+      0.017,
+      0.019
+     ],
+     "ohm": [
+      0.05,
+      0.045,
+      0.06
+     ],
+     "keVsPerRad": [
+      0.018,
+      0.017,
+      0.019
+     ]
+    },
+    "gear": 3,
+    "count": 1,
+    "efficiency": [
+     0.8,
+     0.7,
+     0.9
+    ],
+    "limits": {
+     "supplyLimitA": 20
+    },
+    "joint": {
+     "group": "carried article",
+     "kind": "slide",
+     "axis": [
+      1,
+      0,
+      0
+     ],
+     "perOutputTurn": 10,
+     "travel": [
+      0,
+      14
+     ]
+    }
+   }
+  },
+  "durationS": [
+   0.4,
+   0.3,
+   0.6
+  ],
+  "extraLoad": {},
+  "alsoRunning": [],
+  "battery": {
+   "openCircuitV": [
+    12.6,
+    12.2,
+    12.9
+   ],
+   "resistanceOhm": [
+    0.02,
+    0.015,
+    0.03
+   ]
+  }
+ },
+ "checked": {
+  "measured": "whole"
+ },
+ "result": {
+  "motion": "release",
+  "profile": "triangle: each commanded joint speeds up evenly over the first half of durationS and slows evenly over the second, from rest to rest; peak speed 2 * change / durationS at mid-stroke, acceleration 4 * change / durationS^2",
+  "samples": 32,
+  "durationS": {
+   "value": 0.4,
+   "range": [
+    0.3,
+    0.6
+   ]
+  },
+  "drives": {
+   "ejector": {
+    "group": "carried article",
+    "kind": "slide",
+    "moved": [
+     "carried article"
+    ],
+    "count": 1,
+    "change": 12.0,
+    "load": {
+     "unit": "N",
+     "gravity": {
+      "value": 0.0,
+      "range": [
+       0.0,
+       0.0
+      ]
+     },
+     "acceleration": {
+      "value": 0.08999999999999998,
+      "range": [
+       0.02666666666666667,
+       0.26666666666666666
+      ]
+     },
+     "extra": {
+      "value": 0.0,
+      "range": [
+       0.0,
+       0.0
+      ]
+     },
+     "hold": {
+      "value": 0.0,
+      "range": [
+       0.0,
+       0.0
+      ]
+     },
+     "peak": {
+      "value": 0.08999999999999998,
+      "range": [
+       0.02666666666666667,
+       0.26666666666666666
+      ]
+     }
+    },
+    "peakSpeed": {
+     "unit": "mm/s",
+     "value": 60.0,
+     "range": [
+      40.0,
+      80.0
+     ]
+    },
+    "motorRadPerS": {
+     "value": 113.09733552923255,
+     "range": [
+      75.39822368615503,
+      150.79644737231007
+     ]
+    },
+    "neededA": {
+     "value": 0.003315727981081153,
+     "range": [
+      0.0008273161434276562,
+      0.011888324413960436
+     ]
+    },
+    "limitA": 20.0,
+    "clamped": false,
+    "currentA": {
+     "value": 0.003315727981081153,
+     "range": [
+      0.0008273161434276562,
+      0.011888324413960436
+     ]
+    },
+    "holdA": {
+     "value": 0.0,
+     "range": [
+      0.0,
+      0.0
+     ]
+    },
+    "motorV": {
+     "value": 2.0359178259252397,
+     "range": [
+      1.28180703189109,
+      2.8658457995387288
+     ]
+    },
+    "busA": {
+     "value": 0.003315727981081153,
+     "range": [
+      0.0008273161434276562,
+      0.011888324413960436
+     ]
+    },
+    "unweighed": []
+   }
+  },
+  "alsoRunning": [],
+  "bus": {
+   "loadA": {
+    "value": 0.003315727981081153,
+    "range": [
+     0.0008273161434276562,
+     0.011888324413960436
+    ]
+   },
+   "openCircuitV": [
+    12.6,
+    12.2,
+    12.9
+   ],
+   "resistanceOhm": [
+    0.02,
+    0.015,
+    0.03
+   ],
+   "volts": {
+    "value": 12.599933685440378,
+    "range": [
+     12.19964335026758,
+     12.89998759025785
+    ]
+   }
+  },
+  "conservative": "conservative: each drive's peak current is added to the others as though the peaks came at once, and each motor's winding current is counted as drawn from the bus in full"
+ }
+}

@@ -1,6 +1,10 @@
 {
-  "schema": "agent-frc/preliminary-release@1",
+  "schema": "agent-frc/preliminary-release@2",
   "release": "1.0",
+  "issue": "invented-design-1.0",
   "phase": "preliminary-design",
-  "summary": {"file": "summary.json"}
+  "check": {
+    "project": "cad/preliminary-design/releases/1.0"
+  },
+  "requirements": "cad/preliminary-design/requirements.json"
 }

@@ -1,0 +1,140 @@
+{
+ "schema": "frc-design-kernel/measurement-job@1",
+ "generator": {
+  "library": "frc-design-kernel",
+  "version": "0.1.0",
+  "commit": "9c69c7d201b7affc0173be277903a64075c29fe5"
+ },
+ "id": "clearance.motion.loaded-turn.displaced.rail",
+ "job": {
+  "kind": "clearance",
+  "motion": "loaded-turn",
+  "minGapMm": 1.0,
+  "depth": 9,
+  "includeStill": true,
+  "nearMm": 0.0,
+  "contacts": [],
+  "absent": [
+   "battery",
+   "bumper",
+   "drive",
+   "ejector motor",
+   "gate",
+   "gate motor",
+   "mount",
+   "pivot motor",
+   "sample"
+  ],
+  "displace": {
+   "rail": [
+    0.0,
+    -50.0,
+    0.0
+   ]
+  }
+ },
+ "inputs": {
+  "rules": {
+   "minGapMm": 1.0,
+   "depthLimit": 9,
+   "includeStill": true,
+   "nearMm": 0.0
+  },
+  "solids": {
+   "head": "e85b20bea934c0b7",
+   "rail": "917c201b7c155cbc"
+  }
+ },
+ "used": {
+  "start": {},
+  "joints": {
+   "carrier": {
+    "kind": "rotation",
+    "from": 0.0,
+    "to": 90
+   },
+   "neighbor": {
+    "kind": "slide",
+    "from": 0.0,
+    "to": 12
+   }
+  },
+  "contacts": []
+ },
+ "checked": {
+  "measuredSolids": null,
+  "measuredPairs": [],
+  "pairsMeasured": 1,
+  "pairsCarried": 0,
+  "pairsNotMeasured": 0,
+  "renamed": {}
+ },
+ "counts": {
+  "pairs": 1,
+  "declaredContacts": 0,
+  "bothStill": 0,
+  "farApart": 0,
+  "fixedFarApart": 0,
+  "measured": 1,
+  "notInFocus": 0
+ },
+ "result": {
+  "motion": "loaded-turn",
+  "minGapMm": 1.0,
+  "depthLimit": 9,
+  "declaredContacts": [],
+  "absent": [
+   "battery",
+   "bumper",
+   "drive",
+   "ejector motor",
+   "gate",
+   "gate motor",
+   "mount",
+   "pivot motor",
+   "sample"
+  ],
+  "includeStill": true,
+  "displaced": {
+   "rail": [
+    0.0,
+    -50.0,
+    0.0
+   ]
+  },
+  "proven": true,
+  "closer": [
+   [
+    "head",
+    "rail"
+   ]
+  ],
+  "unresolved": [],
+  "closest": {
+   "pair": [
+    "head",
+    "rail"
+   ],
+   "gapMm": 0.0,
+   "t": 0.5,
+   "overlapMm3": 52.04327657105575
+  },
+  "pairs": [
+   {
+    "pair": [
+     "head",
+     "rail"
+    ],
+    "method": "adaptive search",
+    "gapMm": 0.0,
+    "t": 0.5,
+    "overlapMm3": 52.04327657105575,
+    "lowerBoundMm": null,
+    "proven": true,
+    "closerThanMinGap": true,
+    "samples": 3
+   }
+  ],
+  "nearMm": 0.0
+ }
+}

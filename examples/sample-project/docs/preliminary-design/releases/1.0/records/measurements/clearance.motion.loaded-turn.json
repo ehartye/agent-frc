@@ -1,0 +1,89 @@
+{
+ "schema": "frc-design-kernel/measurement-job@1",
+ "generator": {
+  "library": "frc-design-kernel",
+  "version": "0.1.0",
+  "commit": "9c69c7d201b7affc0173be277903a64075c29fe5"
+ },
+ "id": "clearance.motion.loaded-turn",
+ "job": {
+  "kind": "clearance",
+  "motion": "loaded-turn",
+  "minGapMm": 1.0,
+  "depth": 9,
+  "includeStill": true,
+  "nearMm": 0.0,
+  "contacts": "declared",
+  "absent": [],
+  "displace": {}
+ },
+ "inputs": {
+  "rules": {
+   "minGapMm": 1.0,
+   "depthLimit": 9,
+   "includeStill": true,
+   "nearMm": 0.0
+  },
+  "solids": {
+   "battery": "b8362677a7debd89",
+   "bumper": "28618d5a4c81a937",
+   "drive": "8812e33de182da48",
+   "ejector motor": "2469f25bdfd6e165",
+   "gate": "bf17d3fac6b300eb",
+   "gate motor": "6cdef0c4525c5737",
+   "head": "e85b20bea934c0b7",
+   "mount": "935e83095d6ddf9f",
+   "pivot motor": "263b725ba0a1fc92",
+   "rail": "ae38154122d1a9fe",
+   "sample": "a69f77c208897d93"
+  }
+ },
+ "used": {
+  "start": {},
+  "joints": {
+   "carrier": {
+    "kind": "rotation",
+    "from": 0.0,
+    "to": 90
+   },
+   "neighbor": {
+    "kind": "slide",
+    "from": 0.0,
+    "to": 12
+   }
+  },
+  "contacts": []
+ },
+ "checked": {
+  "measuredSolids": null,
+  "measuredPairs": [],
+  "pairsMeasured": 55,
+  "pairsCarried": 0,
+  "pairsNotMeasured": 0,
+  "renamed": {}
+ },
+ "counts": {
+  "pairs": 55,
+  "declaredContacts": 0,
+  "bothStill": 0,
+  "farApart": 28,
+  "fixedFarApart": 22,
+  "measured": 5,
+  "notInFocus": 0
+ },
+ "result": {
+  "motion": "loaded-turn",
+  "minGapMm": 1.0,
+  "depthLimit": 9,
+  "declaredContacts": [],
+  "absent": [],
+  "includeStill": true,
+  "displaced": {},
+  "proven": true,
+  "closer": [],
+  "unresolved": [],
+  "closest": null,
+  "pairs": [],
+  "nearMm": 0.0
+ }
+}

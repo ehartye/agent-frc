@@ -86,7 +86,7 @@ jobs:
       - if: steps.reach.outputs.run == 'true' || steps.reach.outputs.library == 'true' || steps.reach.outputs.audit == 'true'
         run: python -m pip install "cadquery-ocp==8.0.1.0.0" "numpy==2.5.3"
       # The design library is not pinned: its main branch is the release, so this installs whatever is there now.
-      - if: steps.reach.outputs.library == 'true' || steps.reach.outputs.audit == 'true'
+      - if: steps.reach.outputs.run == 'true' || steps.reach.outputs.library == 'true' || steps.reach.outputs.audit == 'true'
         run: python -m pip install "git+https://github.com/ehartye/frc-design-kernel"
       # Checks an invented design source with the design library and rejects interference, a floating solid, an
       # overweight ledger and stale generated solids.
@@ -100,8 +100,8 @@ jobs:
         run: node --test test/design-audit-library.test.mjs
         env:
           FRC_TEST_REQUIRE_LIBRARY: '1' # here the library is installed, so a skip would hide a failure
-      # Builds a synthetic release with the real layout check, marks it effective through the stage gate the agent runs,
-      # checks a rename and a view refresh with no layout check and rejects a stale and a forged receipt.
+      # Measures a synthetic release with the design library and marks it effective through the stage gate the agent runs,
+      # which measures nothing. A stale job, a missing job, a stale trial and readiness below every criterion are refused.
       - if: steps.reach.outputs.run == 'true'
         run: node --test test/design-publication.test.mjs
         env:

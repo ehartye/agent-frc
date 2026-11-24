@@ -1,0 +1,127 @@
+{
+ "schema": "frc-design-kernel/measurement-job@1",
+ "generator": {
+  "library": "frc-design-kernel",
+  "version": "0.1.0",
+  "commit": "9c69c7d201b7affc0173be277903a64075c29fe5"
+ },
+ "id": "clearance.motion.release",
+ "job": {
+  "kind": "clearance",
+  "motion": "release",
+  "minGapMm": 1.0,
+  "depth": 9,
+  "includeStill": true,
+  "nearMm": 0.0,
+  "contacts": "declared",
+  "absent": [],
+  "displace": {}
+ },
+ "inputs": {
+  "rules": {
+   "minGapMm": 1.0,
+   "depthLimit": 9,
+   "includeStill": true,
+   "nearMm": 0.0
+  },
+  "solids": {
+   "battery": "b8362677a7debd89",
+   "bumper": "28618d5a4c81a937",
+   "drive": "8812e33de182da48",
+   "ejector motor": "64815be1c4eace82",
+   "gate": "3d419f902a0a7415",
+   "gate motor": "6cdef0c4525c5737",
+   "head": "4bdc95868baf8ed9",
+   "mount": "935e83095d6ddf9f",
+   "pivot motor": "263b725ba0a1fc92",
+   "rail": "ae38154122d1a9fe",
+   "sample": "1741aa1f19b57442"
+  }
+ },
+ "used": {
+  "start": {
+   "carried article": [
+    0.0,
+    -1.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0
+   ],
+   "carrier": [
+    0.0,
+    -1.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0
+   ],
+   "neighbor": [
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0,
+    12.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0
+   ]
+  },
+  "joints": {
+   "carried article": {
+    "kind": "slide",
+    "from": 0.0,
+    "to": 12
+   }
+  },
+  "contacts": []
+ },
+ "checked": {
+  "measuredSolids": null,
+  "measuredPairs": [],
+  "pairsMeasured": 55,
+  "pairsCarried": 0,
+  "pairsNotMeasured": 0,
+  "renamed": {}
+ },
+ "counts": {
+  "pairs": 55,
+  "declaredContacts": 0,
+  "bothStill": 0,
+  "farApart": 8,
+  "fixedFarApart": 43,
+  "measured": 4,
+  "notInFocus": 0
+ },
+ "result": {
+  "motion": "release",
+  "minGapMm": 1.0,
+  "depthLimit": 9,
+  "declaredContacts": [],
+  "absent": [],
+  "includeStill": true,
+  "displaced": {},
+  "proven": true,
+  "closer": [],
+  "unresolved": [],
+  "closest": null,
+  "pairs": [],
+  "nearMm": 0.0
+ }
+}

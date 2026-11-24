@@ -170,10 +170,16 @@ export function readScene(bytes, maxBytes = maxSceneBytes) {
 const canonical = v => JSON.stringify(v, (k, x) => x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.keys(x).sort().map(n => [n, x[n]])) : x);
 const same = (a, b) => canonical(a) === canonical(b);
 
+/** The records a scene was built from that are not the ones judged, by name. `files` names the judged ones with their digests. */
+export function builtFromOthers(scene, files) {
+  const shown = [...(scene.records?.jobs ?? []).map(job => [scene.records.folder + '/' + job.file, job.sha256]), ...(scene.records?.trials ? [[scene.records.trials.file, scene.records.trials.sha256]] : [])];
+  return shown.filter(([name, sha256]) => files.records?.[name] !== sha256).map(([name]) => 'Scene was built from another ' + name);
+}
+
 /**
  * The verdict fields the scene must repeat exactly: the decision, each motion's result, the displaced control, the
  * weight, each powered motion's bus, the attachment report, the interactions and adjustments, the narrative
- * objectives and the records it was judged from. A scene that claims what the records do not hold differs here.
+ * objectives and the records it was judged from, by digest. A scene that claims what the records do not hold differs here.
  */
 export function compareWithVerdict(scene, verdict) {
   const errors = [];
@@ -195,6 +201,7 @@ export function compareWithVerdict(scene, verdict) {
   if (!same(scene.narrativeReview?.objectives ?? [], verdict.narrative?.objectives ?? [])) errors.push('Scene narrative objectives differ from the verdict');
   const jobs = list => (list || []).map(j => [j.id, j.file]);
   if (scene.records?.folder !== verdict.records?.folder || !same(jobs(scene.records?.jobs), jobs(verdict.records?.jobs))) errors.push('Scene records differ from the verdict\'s');
+  if (verdict.files) errors.push(...builtFromOthers(scene, verdict.files));
   return errors;
 }
 

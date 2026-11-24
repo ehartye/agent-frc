@@ -1,0 +1,93 @@
+{
+ "schema": "frc-design-kernel/measurement-job@1",
+ "generator": {
+  "library": "frc-design-kernel",
+  "version": "0.1.0",
+  "commit": "9c69c7d201b7affc0173be277903a64075c29fe5"
+ },
+ "id": "clearance.motion.acquire",
+ "job": {
+  "kind": "clearance",
+  "motion": "acquire",
+  "minGapMm": 1.0,
+  "depth": 9,
+  "includeStill": true,
+  "nearMm": 0.0,
+  "contacts": "declared",
+  "absent": [],
+  "displace": {}
+ },
+ "inputs": {
+  "rules": {
+   "minGapMm": 1.0,
+   "depthLimit": 9,
+   "includeStill": true,
+   "nearMm": 0.0
+  },
+  "solids": {
+   "battery": "b8362677a7debd89",
+   "bumper": "28618d5a4c81a937",
+   "drive": "8812e33de182da48",
+   "ejector motor": "f2b71a4d08914918",
+   "gate": "492851e3c98c605c",
+   "gate motor": "6cdef0c4525c5737",
+   "head": "72f10dc47f3a3b87",
+   "mount": "935e83095d6ddf9f",
+   "pivot motor": "263b725ba0a1fc92",
+   "rail": "ae38154122d1a9fe",
+   "sample": "fd7eeaf1353bba4c"
+  }
+ },
+ "used": {
+  "start": {
+   "carried article": [
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0,
+    -10.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0
+   ]
+  },
+  "joints": {},
+  "contacts": []
+ },
+ "checked": {
+  "measuredSolids": null,
+  "measuredPairs": [],
+  "pairsMeasured": 55,
+  "pairsCarried": 0,
+  "pairsNotMeasured": 0,
+  "renamed": {}
+ },
+ "counts": {
+  "pairs": 55,
+  "declaredContacts": 0,
+  "bothStill": 0,
+  "farApart": 10,
+  "fixedFarApart": 43,
+  "measured": 2,
+  "notInFocus": 0
+ },
+ "result": {
+  "motion": "acquire",
+  "minGapMm": 1.0,
+  "depthLimit": 9,
+  "declaredContacts": [],
+  "absent": [],
+  "includeStill": true,
+  "displaced": {},
+  "proven": true,
+  "closer": [],
+  "unresolved": [],
+  "closest": null,
+  "pairs": [],
+  "nearMm": 0.0
+ }
+}

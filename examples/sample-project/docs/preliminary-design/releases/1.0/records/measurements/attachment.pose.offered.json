@@ -1,0 +1,197 @@
+{
+ "schema": "frc-design-kernel/measurement-job@1",
+ "generator": {
+  "library": "frc-design-kernel",
+  "version": "0.1.0",
+  "commit": "9c69c7d201b7affc0173be277903a64075c29fe5"
+ },
+ "id": "attachment.pose.offered",
+ "job": {
+  "kind": "attachment",
+  "pose": "offered",
+  "touchGapMm": 3.0,
+  "floorZMm": 0.0,
+  "ignore": [
+   "sample"
+  ],
+  "base": null,
+  "contacts": "declared",
+  "absent": [],
+  "pairs": true
+ },
+ "inputs": {
+  "rules": {
+   "touchGapMm": 3.0,
+   "floorZMm": 0.0,
+   "base": null,
+   "pairs": true,
+   "ignored": [
+    "sample"
+   ]
+  },
+  "solids": {
+   "battery": "b8362677a7debd89",
+   "bumper": "28618d5a4c81a937",
+   "drive": "8812e33de182da48",
+   "ejector motor": "f2b71a4d08914918",
+   "gate": "492851e3c98c605c",
+   "gate motor": "6cdef0c4525c5737",
+   "head": "72f10dc47f3a3b87",
+   "mount": "935e83095d6ddf9f",
+   "pivot motor": "263b725ba0a1fc92",
+   "rail": "ae38154122d1a9fe"
+  }
+ },
+ "used": {
+  "contacts": [],
+  "mounts": [
+   {
+    "group": "carrier",
+    "on": "mount",
+    "atMm": [
+     0,
+     0,
+     6
+    ]
+   },
+   {
+    "group": "neighbor",
+    "on": "rail",
+    "atMm": [
+     22,
+     72,
+     20
+    ]
+   }
+  ],
+  "fixtures": [],
+  "groups": "51e3faf1d52601cd"
+ },
+ "checked": {
+  "measured": "whole"
+ },
+ "result": {
+  "pose": "offered",
+  "touchGapMm": 3.0,
+  "floorZMm": 0.0,
+  "ignored": [
+   "sample"
+  ],
+  "robotSolids": 10,
+  "baseSolids": 7,
+  "connectedSets": [
+   [
+    "battery",
+    "bumper",
+    "drive",
+    "ejector motor",
+    "head",
+    "mount",
+    "pivot motor"
+   ],
+   [
+    "gate",
+    "gate motor",
+    "rail"
+   ]
+  ],
+  "notConnectedToBase": [
+   {
+    "solid": "gate",
+    "group": "neighbor",
+    "nearest": "ejector motor",
+    "gapMm": 23.53720459187964
+   },
+   {
+    "solid": "gate motor",
+    "group": "structure",
+    "nearest": "pivot motor",
+    "gapMm": 61.59545437773797
+   },
+   {
+    "solid": "rail",
+    "group": "structure",
+    "nearest": "pivot motor",
+    "gapMm": 59.413803110051795
+   }
+  ],
+  "heldByMountOnly": [
+   "ejector motor",
+   "head"
+  ],
+  "touching": [
+   {
+    "pair": [
+     "battery",
+     "mount"
+    ],
+    "gapMm": 1.0
+   },
+   {
+    "pair": [
+     "bumper",
+     "drive"
+    ],
+    "gapMm": 2.0
+   },
+   {
+    "pair": [
+     "drive",
+     "mount"
+    ],
+    "gapMm": 2.0
+   },
+   {
+    "pair": [
+     "ejector motor",
+     "head"
+    ],
+    "gapMm": 1.5
+   },
+   {
+    "pair": [
+     "gate motor",
+     "rail"
+    ],
+    "gapMm": 1.0
+   },
+   {
+    "pair": [
+     "mount",
+     "pivot motor"
+    ],
+    "gapMm": 1.5
+   }
+  ],
+  "mounts": [
+   {
+    "group": "carrier",
+    "member": "head",
+    "on": "mount",
+    "atMm": [
+     0,
+     0,
+     6
+    ],
+    "gapMm": 23.323807579381203,
+    "pointToMemberMm": 30.463092423455635,
+    "pointToOnMm": 0.0
+   },
+   {
+    "group": "neighbor",
+    "member": "gate",
+    "on": "rail",
+    "atMm": [
+     22,
+     72,
+     20
+    ],
+    "gapMm": 83.00602387778854,
+    "pointToMemberMm": 85.61541917201598,
+    "pointToOnMm": 0.0
+   }
+  ],
+  "fixtures": 0,
+  "fixturesOffFloor": []
+ }
+}
