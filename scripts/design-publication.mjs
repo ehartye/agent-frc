@@ -80,7 +80,7 @@ export function checkPublished(where, {root, folder, published, phase, files}) {
     check(existsSync(copy), where + ': the published ' + name(file) + ' is missing. Stage it again');
     check(readFileSync(copy).equals(readFileSync(own)), where + ': the published ' + name(file) + ' is not the committed ' + file + '. Stage it again');
   }
-  const records = [...new Set(Object.keys(files.records).map(file => name(file).split('/')[0]))];
+  const records = [...new Set(Object.keys(files.records).map(name).filter(file => file.includes('/')).map(file => file.split('/')[0]))];
   for (const found of records.flatMap(dir => namesUnder(path.join(published, dir)).map(item => dir + '/' + item)))
     check(expected.has(found), where + ': the published ' + found + ' is not a file of the committed design. Stage it again');
   check(existsSync(path.join(published, 'index.html')), where + ' has no review page (index.html). Stage it again');
