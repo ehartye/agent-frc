@@ -356,9 +356,10 @@ def scene_of(root, file):
     page, page_pin = page_file(inputs)
     by_id, cycle = {c["id"]: c for c in inputs.cases}, [m for e in verdict["cycle"] for m in e.get("motions", [])]
     order = list(dict.fromkeys([m for m in cycle if m in by_id] + [c["id"] for c in inputs.cases]))
-    record = lambda name: measure.read(inputs.records, name)
-    clearances = {m: record("clearance.motion." + m) for m in order}
-    electrical = {m: record(row["id"])["result"] for m in order for row in verdict["records"]["jobs"] if row["id"] == "electrical." + m}
+    answers = {tuple(row["answers"]): row["id"] for row in verdict["records"]["jobs"]}
+    record = lambda *asked: measure.read(inputs.records, answers[asked])
+    clearances = {m: record("clearance", m) for m in order}
+    electrical = {m: record("electrical", m)["result"] for m in order if ("electrical", m) in answers}
     assembly, volumes = view.built(inputs)
     captured, volumes = view.scenes(inputs, assembly, volumes, order, verdict["control"])
     meshes, placed_cases = scene_payload(captured)
@@ -375,8 +376,7 @@ def scene_of(root, file):
         shown = dict(id=placed["id"], label="Displaced control" if control else m + " (" + case["purpose"] + ")", kind="displaced control" if control else "nominal",
                      purpose=case["purpose"], cause=case["cause"], basis=verdict["control"]["basis"] if control else basis_of(inputs.data["motions"][m]),
                      status=("fail" if verdict["control"]["rejected"] else "pass") if control else row["status"], allowanceMm=case["minGapMm"],
-                     bodies=placed["bodies"], removed=[], results=results_of(record("clearance.motion." + m + ".displaced." + verdict["control"]["displaced"])["result"]["pairs"]
-                                                                             if control else clearances[m]["result"]["pairs"]), measure=lines)
+                     bodies=placed["bodies"], removed=[], results=results_of(record("control")["result"]["pairs"] if control else clearances[m]["result"]["pairs"]), measure=lines)
         if time:
             shown["time"] = time
         cases.append(shown)
@@ -397,7 +397,7 @@ def scene_of(root, file):
                  decision=dict(status=verdict["status"], firstUnmet=verdict["firstUnmet"]), unmet=verdict["unmet"], reopen=verdict["reopen"],
                  premises=verdict["premises"], palette=palette, meshes=meshes, bodies=bodies, cases=cases,
                  openingCase=page.get("opening") or order[0], animations=animations(inputs, verdict, page), parked=parked(inputs, clearances),
-                 weight=weight_of(inputs, verdict, record("mass.drawn")["result"]), power=power,
+                 weight=weight_of(inputs, verdict, record("mass")["result"]), power=power,
                  required=[dict(role=role, ids=sorted(inputs.members((role,)))) for role in REQUIRED_ROLES],
                  narrativeReview=dict(source=dict(file=narrative, sha256=digest(root / narrative)), objectives=verdict["narrative"]["objectives"]),
                  motionEvidence=motion_evidence(inputs, verdict, order, clearances), returnCriteria=return_criteria(verdict),

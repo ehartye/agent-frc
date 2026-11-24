@@ -52,7 +52,8 @@ def trial_records(inputs, every_record, say):
 
 
 def measured(inputs, asked, judge_only, workers, say):
-    """({tag: result}, the jobs as listed in the verdict, seconds the staleness check took)."""
+    """({tag: result}, the jobs as listed in the verdict, seconds the staleness check took). The library names each record from
+    its question, so the verdict says what each one answers."""
     listed = [job for job, _ in asked]
     if judge_only:
         began = perf_counter()
@@ -65,13 +66,13 @@ def measured(inputs, asked, judge_only, workers, say):
                              + "\n".join("- " + r["file"] + " is " + r["state"] + ": " + "; ".join(r["changes"]) for r in bad))
         records = [measure.read(inputs.records, r["record"]) for r in rows]
         return ({tag: held["result"] for (_, tag), held in zip(asked, records)},
-                [dict(id=r["record"], kind=r["kind"], file=r["file"], action="current") for r in rows], seconds)
+                [dict(id=r["record"], kind=r["kind"], file=r["file"], action="current", answers=list(tag)) for (_, tag), r in zip(asked, rows)], seconds)
     report = lambda entry: say(f"[records] {entry['id']}: {entry['action']}")
     entries = measure.record(inputs.source, listed, inputs.records, workers=workers, report=report)
     done = sum(1 for e in entries if e["action"] == "measured")
     say(f"[records] {done} measured, {len(entries) - done} carried, in {inputs.records.relative_to(inputs.root).as_posix()}/measurements")
     return ({tag: e["record"]["result"] for (_, tag), e in zip(asked, entries)},
-            [dict(id=e["id"], kind=e["kind"], file=e["file"], action=e["action"]) for e in entries], 0.0)
+            [dict(id=e["id"], kind=e["kind"], file=e["file"], action=e["action"], answers=list(tag)) for (_, tag), e in zip(asked, entries)], 0.0)
 
 
 def structure(inputs, found):

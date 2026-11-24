@@ -206,6 +206,20 @@ class ReviewPage(unittest.TestCase):
         self.assertEqual(node("preliminary-check", str(self.root), RELEASE + "/judgement.json", "--quiet").returncode, 0)
         self.assertEqual(self.page().returncode, 0)
 
+    # The library names a record from its question, so a motion's name with a space in it is not the record's.
+    def test_a_motion_whose_name_has_a_space_is_paged(self):
+        def named(source):
+            source["motions"] = {"release the sample" if m == "release" else m: e for m, e in source["motions"].items()}
+            source["motions"]["park-loaded"]["from"] = {"after": "release the sample"}
+        self.edit("design.json", named)
+        self.edit("judgement.json", lambda j: j.update(cycle=[dict(e, motions=["release the sample"]) if e.get("motions") == ["release"] else e for e in j["cycle"]]))
+        self.assertEqual(node("preliminary-check", str(self.root), RELEASE + "/judgement.json", "--quiet").returncode, 0)
+        run = self.page()
+        self.assertEqual(run.returncode, 0, run.stderr)
+        scene = scene_of(self.root)
+        self.assertIn("release the sample", [m["motion"] for m in scene["power"]["motions"]])
+        self.assertEqual(self.validate(verdict_of(self.root))["errors"], [])
+
     # From PR 231: one replay per trial with a nominal trace, from trials.json, with no hand-made replay set.
     def test_each_trial_with_a_nominal_trace_is_replayed_from_the_trial_record(self):
         tray = runpy.run_path(str(PLUGIN / "test/fixtures/ready_example.py"))

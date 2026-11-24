@@ -1,6 +1,7 @@
 # @lane merge
 # @subject scripts/layout_check.py
 # @subject scripts/kernel_layout/verdict.py
+# @subject scripts/kernel_layout/evidence.py
 # @subject scripts/kernel_layout/inputs.py
 # @subject scripts/kernel_layout/rules.py
 # @subject scripts/kernel_layout/jobs.py
@@ -152,6 +153,38 @@ class KernelLayoutCheck(unittest.TestCase):
         # Control: measuring again makes it current, carrying what is unchanged.
         self.assertEqual(self.check()[0].returncode, 0)
         self.assertEqual(self.check("--judge-only")[0].returncode, 0)
+
+    # What the stage gate asks for: every record in the folder current, and the files the verdict was made from.
+    def test_the_gate_asks_for_every_record_in_the_folder_and_the_verdict_names_the_files_it_was_made_from(self):
+        # The source names a subsystem file and a trial file: both are the design's.
+        source = self.copy(self.source)
+        (self.root / RELEASE / "parts").mkdir()
+        subsystem = {"schema": "frc-design-kernel/subsystem@1", **{k: source.pop(k) for k in ("groups", "solids", "mounts", "contacts", "drives", "motions", "poses", "extraMass")}}
+        source["subsystems"] = [{"file": "parts/robot.json"}]
+        (self.root / RELEASE / "parts/robot.json").write_text(json.dumps(subsystem), encoding="utf-8")
+        self.put("design.json", source)
+        self.assertEqual(self.check("--require-checked", "--quiet")[0].returncode, 0)
+        run, verdict = self.check("--judge-only", "--every-record", "--quiet")
+        self.assertEqual(run.returncode, 0, run.stderr)
+        from hashlib import sha256
+        files = verdict["files"]
+        self.assertEqual(list(files["source"]), [RELEASE + "/design.json", RELEASE + "/parts/robot.json"])
+        self.assertEqual(list(files["judgement"]), [RELEASE + "/judgement.json", REQUIREMENTS, RELEASE + "/premises/robot-mass.json"])
+        self.assertEqual(sorted(files["records"]), [RELEASE + "/records/measurements/" + name + ".json" for name in self.jobs()])
+        for group in files.values():
+            for name, digest in group.items():
+                self.assertEqual(digest, sha256((self.root / name).read_bytes()).hexdigest(), name)
+        # The page file and the narrative are outside the verdict, so neither is among them.
+        self.assertFalse([n for g in files.values() for n in g if "page" in n or "narrative" in n])
+        # A record the judgement does not ask for, gone stale: the gate refuses it by name and a draft judgement does not.
+        stray = self.jobs()["mass.drawn"]
+        stray["used"]["masses"]["rail"] = 9
+        self.put(RELEASE + "/records/measurements/mass.spare.json", dict(stray, id="mass.spare"))
+        self.assertEqual(self.check("--judge-only", "--quiet")[0].returncode, 0)
+        refused, none = self.check("--judge-only", "--every-record", "--quiet")
+        self.assertEqual((refused.returncode, none), (2, None))
+        self.assertIn("measurements/mass.spare.json is stale", refused.stderr)
+        self.assertEqual(self.check("--every-record", "--quiet")[0].returncode, 2, "it judges committed records, so it goes with --judge-only")
 
     # Acceptance 6: a missing input stops the check in seconds, before anything is measured, with the whole list.
     def test_a_missing_input_is_refused_before_measuring_with_every_one_listed(self):

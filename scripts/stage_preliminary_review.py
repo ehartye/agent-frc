@@ -286,7 +286,7 @@ def stage(season, inputs, release, design=None, refresh=False):
         for name, source in files.items():
             (staged / name).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source, staged / name)
-        (staged / "release.json").write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+        (staged / "release.json").write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8", newline="\n")
         destination = site / "releases" / release
         if refresh and (destination / GATE).is_file():
             # The record of the stage gate stays with the effective release: a view refresh changes no file it judged.
