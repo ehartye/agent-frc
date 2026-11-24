@@ -1,9 +1,5 @@
 # Agent FRC
 
-[![From game rules to robot design. Red and blue routes cross a practice field beside a four-module drivetrain layout and a close-up of its wheel and steering assembly.](examples/swerve/workflow-header.png)](https://ehartye.github.io/agent-frc/)
-
-*Classroom field study and original swerve teaching assembly, shown at four mounting positions and in detail. [Open the editable Fusion model](examples/swerve/independent-swerve.f3d).*
-
 Agent FRC helps students turn a new game manual into robot design decisions. Open the [interactive workflow guide](https://ehartye.github.io/agent-frc/) to try the field lab and see which skills support each step.
 
 1. **Model the rules.** Set up the [student project structure](skills/frc-project-setup/SKILL.md). Read the supplied manual and drawings at the project's evidence cutoff. Build a [source-linked rules register and field profile](docs/project-rules-model.md) in the team's project.
