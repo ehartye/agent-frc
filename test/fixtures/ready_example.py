@@ -1,9 +1,9 @@
 """The invented starter, made ready to be marked effective: a tray, a wall and a ball with one deciding interaction and
-its planar trial backing the mission case, a cycle map and a closed risk register.
+its planar trial backing the mission case. The starter already holds the cycle and a closed risk register.
 
     python test/fixtures/ready_example.py PROJECT RELEASE NAME
 
-builds the solids, runs the trial and the adjustment extremes with the design library, runs the layout check and
+builds the solids, runs the trial and the adjustment extremes with the design library, measures and judges the layout, and
 stages the release as a draft under the architecture NAME. Synthetic teaching fixture: invented parts with no relation to any game."""
 import json
 from pathlib import Path
@@ -42,40 +42,36 @@ def tray(source):
     return source
 
 
+def judged(judgement):
+    """The judgement of the starter with the tray interaction and its trial backing the mission case."""
+    judgement["interactions"] = {"tray stop": dict(decides="Invented: whether the wall needs a lip", trial=TRIAL)}
+    judgement["missionCases"] = [dict(name="deliver", trial=TRIAL, accomplishes="delivered", objective="Acquire, turn and release")]
+    return judgement
+
+
 def ready(project, release, name):
-    """Add the tray interaction, the cycle map and the risk register to the starter at RELEASE, then check and stage it."""
+    """Add the tray interaction and its trial to the starter at RELEASE, run the library's records, judge it and stage it."""
     project = Path(project).resolve()
     rel = "cad/preliminary-design/releases/" + release
     folder = project / rel
 
     def edit(name, change):
         data = change(json.loads((folder / name).read_text(encoding="utf-8")))
-        (folder / name).write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8", newline="\n")
+        (folder / name).write_text(json.dumps(data, indent=2) + "
+", encoding="utf-8", newline="
+")
 
     edit("design.json", tray)
-
-    def judged(judgement):
-        judgement["trials"], judgement["measurements"] = {"file": rel + "/records/trials.json"}, {"file": rel + "/records/measurements.json"}
-        judgement["interactions"] = {"tray stop": dict(decides="Invented: whether the wall needs a lip", trial=TRIAL, cases=["release"])}
-        for name in ("tray", "wall"):
-            judgement["presentation"]["components"][name] = dict(purpose="Invented field part.", rationale="Invented: the ball rests here.")
-        return judgement
     edit("judgement.json", judged)
-    cycle = {"acquire": ["acquire"], "retain": ["loaded-turn"], "transfer": ["loaded-turn"], "deliver": ["release"], "park": ["park-loaded"],
-             "service": ["remove-carrier"]}
-    edit("missions.json", lambda m: dict(m, cycle={stage: {"cases": cycle[stage]} if stage in cycle else {"notApplicable": "Invented: the teaching cycle has no " + stage}
-                                                   for stage in ("acquire", "retain", "transfer", "deliver", "reset", "endgame", "park", "service")},
-                                         risks=[dict(id="gate-closes-mid-turn", risk="Invented: the gate closes while the loaded head is turning",
-                                                     closedBy="Invented: the narrative stops before the turn when the gate is closed")]))
     for args in (["build", rel + "/design.json", "--out", rel + "/generated"], ["try", rel + "/design.json", "--out", rel + "/records"],
                  ["measure", rel + "/design.json", "--out", rel + "/records", "--extremes", "--min-gap", "1"]):
         subprocess.run([sys.executable, "-m", "frc_design_kernel", *args], cwd=project, check=True, capture_output=True)
-    for command in (["node", str(PLUGIN / "scripts/design.mjs"), "preliminary-check", ".", rel + "/judgement.json", "--write-view", "--require-checked",
-                     "--quiet", "--output", rel + "/receipt.json"],
+    for command in (["node", str(PLUGIN / "scripts/design.mjs"), "preliminary-check", ".", rel + "/judgement.json", "--require-checked", "--quiet"],
                     [sys.executable, "-B", str(PLUGIN / "scripts/stage_preliminary_review.py"), release, "--design-name", name]):
         done = subprocess.run(command, cwd=project, capture_output=True, text=True)
         if done.returncode:
-            raise SystemExit(" ".join(command[:3]) + " failed:\n" + done.stdout + done.stderr)
+            raise SystemExit(" ".join(command[:3]) + " failed:
+" + done.stdout + done.stderr)
 
 
 if __name__ == "__main__":

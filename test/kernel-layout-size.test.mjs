@@ -1,7 +1,7 @@
 /**
  * @lane edit
  * @subject scripts/layout_check.py
- * @subject scripts/kernel_layout/review.py
+ * @subject scripts/kernel_layout/verdict.py
  * @subject scripts/stage_preliminary_review.py
  * @subject scripts/package_view.py
  * @subject examples/design-source/create.py

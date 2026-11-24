@@ -229,3 +229,21 @@ test('custom code that looks alike in two projects is a library candidate; unlik
   const others = acrossLines([three, {...two, customs: two.customs.map(item => ({...item, name: 'jaw'}))}]).join('\n');
   assert.doesNotMatch(others, /Library candidate \(shape\)/);
 });
+
+test('the report lists every motion no motor drives, with its cause, from the top file and its subsystem files', t => {
+  const root = project(t, {edit: data => {
+    data.motions = {raise: {through: ['down', 'up'], by: 'hand'}};
+    data.subsystems = [{file: 'subsystems/arm.json'}];
+  }, overlay: {'design/subsystems/arm.json': JSON.stringify({schema: 'frc-design-kernel/subsystem@1',
+    motions: {swing: {drive: {pivot: {to: 40}}, durationS: {value: 0.5, assumed: [0.4, 0.6]}}, settle: {from: {after: 'swing'}, by: 'gravity', moves: {}}}})}});
+  const result = auditDesign(root, {run: false});
+  const line = result.info.find(item => item.form === 'motions-without-a-motor');
+  assert.ok(line, JSON.stringify(result.info));
+  assert.equal(line.file, 'design/design.json');
+  assert.deepEqual(line.motions, [{motion: 'raise', by: 'hand', file: 'design/design.json'}, {motion: 'settle', by: 'gravity', file: 'design/subsystems/arm.json'}]);
+  assert.match(line.text, /^2 motions without a motor: raise \(by hand\), settle \(by gravity, in design\/subsystems\/arm\.json\)$/);
+  assert.ok(reportLines(result).some(text => text.includes('2 motions without a motor: raise (by hand)')));
+  // Control: when a motor drives every motion, nothing is listed.
+  const driven = auditDesign(project(t, {edit: data => { data.motions = {raise: {drive: {pivot: {to: 40}}, durationS: {value: 0.5, assumed: [0.4, 0.6]}}}; }}), {run: false});
+  assert.equal(driven.info.find(item => item.form === 'motions-without-a-motor'), undefined);
+});

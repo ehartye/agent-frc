@@ -2,11 +2,14 @@
 
     python PLUGIN/examples/design-source/create.py . --project-review --release 1.0 --design-name "Turning carrier"
 
-writes the example into cad/preliminary-design/releases/1.0/, builds its solids with the design library, runs the
-layout check and stages it. Without --project-review it writes the folder cad/preliminary-design/releases/ID under
-a new directory and stops there. Every name and number is invented: replace them with the project's own.
+writes the example into cad/preliminary-design/releases/1.0/, builds its solids with the design library, measures and
+judges it, and stages it. Without --project-review it writes the folder cad/preliminary-design/releases/ID under a new
+directory and stops there. Every name and number is invented: replace them with the project's own.
 
-This file draws nothing. The design source it writes is the library's input; the judgement file is the plugin's.
+This file draws nothing. The design source it writes is the library's input: every solid with its weight, the motors
+placed as solids, the battery, and each motion as the motor commands that make it or the cause that moves it. The
+judgement file is the plugin's: the rules stated once, the cycle, the control and the pointers to the season's
+requirements, the narrative and the accepted premises. The library's records go in records/.
 """
 import argparse
 import json
@@ -18,86 +21,98 @@ import sys
 
 PLUGIN = Path(__file__).resolve().parents[2]
 RELEASES = "cad/preliminary-design/releases"
-
-
-def spin(deg):
-    return [dict(kind="rotation", originMm=[0, 0, 20], axis=[0, 0, 1], travelDeg=deg)]
+PHASES = ("acquire", "retain", "transfer", "deliver", "reset", "endgame", "park", "service")
 
 
 def travel(v):
     return [dict(kind="translation", travelMm=v)]
 
 
-def box(name, group, lo, hi):
-    return dict(name=name, group=group, shape=dict(kind="box", fromMm=lo, toMm=hi))
+def kg(value, low, high):
+    return {"value": value, "assumed": [low, high]}
+
+
+def box(name, group, lo, hi, mass):
+    return dict(name=name, group=group, shape=dict(kind="box", fromMm=lo, toMm=hi), massKg=mass)
+
+
+def motors():
+    """One invented motor model, used by every drive. Each figure is an assumed range."""
+    return {"small motor": {"note": "Invented brushless motor figures for teaching.", "ktNmPerA": kg(0.018, 0.017, 0.019),
+                            "ohm": kg(0.05, 0.045, 0.06), "keVsPerRad": kg(0.018, 0.017, 0.019)}}
+
+
+def drives():
+    """Each motor is a placed solid; each drive turns or slides one group through its joint."""
+    efficiency = kg(0.8, 0.7, 0.9)
+    return {
+        "pivot": dict(motor="small motor", motorSolid="pivot motor", gear=10, efficiency=efficiency, supplyLimitA=30,
+                      joint=dict(group="carrier", kind="rotation", axis=[0, 0, 1], originMm=[0, 0, 20], travel=[-5, "=turn + 5"])),
+        "gate": dict(motor="small motor", motorSolid="gate motor", gear=4, efficiency=efficiency, supplyLimitA=20,
+                     joint=dict(group="neighbor", kind="slide", axis=[0, 1, 0], perOutputTurn=8, travel=[0, "=slide + 2"])),
+        "ejector": dict(motor="small motor", motorSolid="ejector motor", gear=3, efficiency=efficiency, supplyLimitA=20,
+                        joint=dict(group="carried article", kind="slide", axis=[1, 0, 0], perOutputTurn=10, travel=[0, 14])),
+        "drivetrain": dict(motor="small motor", motorSolid="drive", count=4, gear=6, efficiency=efficiency, supplyLimitA=40, radiusMm=50, movingKg=kg(12, 10, 14),
+                           note="The running gear. No motion of this teaching layout commands it; a motion lists it under alsoRunning when it drives at the same time.")}
 
 
 def design_source(name):
-    """The design source: what is drawn, how it is grouped and mounted, and how it moves."""
+    """The design source: what is drawn, what it weighs, how it is grouped and mounted, and what moves it."""
+    seconds = lambda value, low, high: {"value": value, "assumed": [low, high]}
     return {
         "schema": "frc-design-kernel/design@1", "name": name, "units": {"length": "mm", "mass": "kg"},
         "frame": "Invented mounting block axis on the floor plane, +X forward, +Y left, +Z up, millimetres",
         "parameters": {"turn": 90, "slide": 12},
         "groups": {"structure": {"role": "structure"}, "bumper": {"role": "bumper"}, "carrier": {"role": "mechanism"},
-                   "carried article": {"role": "payload"}, "neighbor": {"role": "mechanism"}, "drive": {"role": "drive"},
+                   "carried article": {"role": "payload", "carriedBy": "carrier"}, "neighbor": {"role": "mechanism"}, "drive": {"role": "drive"},
                    "battery": {"role": "battery"}},
-        "solids": [box("mount", "structure", [-8, -8, 0], [8, 8, 6]), box("rail", "structure", [19, 70, 18], [24, 75, 23]),
-                   box("bumper", "bumper", [-20, -20, 0], [-16, 20, 4]), box("head", "carrier", [28, -2, 18], [32, 2, 22]),
-                   box("sample", "carried article", [36, -2, 18], [40, 2, 22]), box("gate", "neighbor", [55, -10, 15], [58, -7, 24]),
-                   box("drive", "drive", [-14, -11, 0], [-10, -2, 6]), box("battery", "battery", [9, -10, 0], [17, -3, 4])],
+        "solids": [box("mount", "structure", [-8, -8, 0], [8, 8, 6], kg(0.5, 0.4, 0.6)),
+                   box("rail", "structure", [19, 70, 18], [24, 75, 23], kg(0.2, 0.15, 0.25)),
+                   box("pivot motor", "structure", [-8, 9.5, 0], [0, 15, 6], kg(0.3, 0.28, 0.32)),
+                   box("gate motor", "structure", [25, 70, 18], [30, 75, 23], kg(0.2, 0.18, 0.22)),
+                   box("bumper", "bumper", [-20, -20, 0], [-16, 20, 4], kg(1.5, 1.3, 1.8)),
+                   box("head", "carrier", [28, -2, 18], [32, 2, 22], kg(0.4, 0.3, 0.5)),
+                   box("ejector motor", "carrier", [28, -2, 23.5], [32, 2, 26], kg(0.15, 0.14, 0.16)),
+                   box("sample", "carried article", [36, -2, 18], [40, 2, 22], kg(0.3, 0.2, 0.5)),
+                   box("gate", "neighbor", [55, -10, 15], [58, -7, 24], kg(0.2, 0.15, 0.25)),
+                   box("drive", "drive", [-14, -11, 0], [-10, -2, 6], kg(4.5, 4.2, 4.8)),
+                   box("battery", "battery", [9, -10, 0], [17, -3, 4], kg(2.0, 1.9, 2.1))],
+        "extraMass": [dict(name="wiring", group="structure", massKg=kg(0.3, 0.2, 0.5), note="Invented loom, fasteners and controls; not drawn.")],
         "fixtures": [],
         "mounts": [dict(group="carrier", on="mount", atMm=[0, 0, 6], note="Sketch origin of the pedestal"),
                    dict(group="neighbor", on="rail", atMm=[22, 72, 20], note="Proposed slide attachment datum")],
         "contacts": [],
-        "poses": {"offered": {"carried article": travel([0, -10, 0])},
-                  "turned": {"carrier": spin("=turn"), "carried article": spin("=turn"), "neighbor": travel([0, "=slide", 0])},
-                  "released": {"carrier": spin("=turn"), "carried article": spin("=turn") + travel([0, 12, 0]), "neighbor": travel([0, "=slide", 0])}},
+        "motors": motors(), "drives": drives(),
+        "battery": {"openCircuitV": kg(12.6, 12.2, 12.9), "resistanceOhm": kg(0.02, 0.015, 0.03), "note": "Invented pack figures."},
+        "poses": {"offered": {"carried article": travel([0, -10, 0])}},
         "motions": {
-            "acquire": {"from": "offered", "moves": {"carried article": travel([0, 10, 0])}},
-            "loaded-turn": {"to": "turned", "moves": {"carrier": spin("=turn"), "carried article": spin("=turn"), "neighbor": travel([0, "=slide", 0])}},
-            "release": {"from": "turned", "to": "released", "moves": {"carried article": travel([0, 12, 0])}},
-            "park-loaded": {"from": "released", "moves": {"carrier": spin("=-turn"), "neighbor": travel([0, "=-slide", 0])}},
-            "remove-carrier": {"moves": {"carrier": travel([0, 0, 80]), "carried article": travel([0, 0, 80])}}}}
+            "acquire": {"from": "offered", "by": "hand", "moves": {"carried article": travel([0, 10, 0])},
+                        "note": "The sample is handed to the carrier: no motor moves it in this teaching layout."},
+            "loaded-turn": {"from": {"after": "acquire"}, "drive": {"pivot": {"to": "=turn"}, "gate": {"to": "=slide"}},
+                            "durationS": seconds(0.5, 0.4, 0.7)},
+            "release": {"from": {"after": "loaded-turn"}, "drive": {"ejector": {"to": 12}}, "durationS": seconds(0.4, 0.3, 0.6)},
+            "park-loaded": {"from": {"after": "release"}, "drive": {"pivot": {"to": 0}, "gate": {"to": 0}}, "durationS": seconds(0.5, 0.4, 0.7)},
+            "remove-carrier": {"by": "hand", "moves": {"carrier": travel([0, 0, 80])},
+                               "note": "Lifted out by hand in the pit, with the representative sample on it."}}}
 
 
-def stages():
-    """One stage per motion of the source: why it is checked, against what allowance, and what carries the payload."""
-    reserve = "Invented 1 mm packaging reserve"
-    return {
-        "acquire": dict(purpose="operating", basis="Bring the article to the carrier", minGapMm=1, allowanceBasis=reserve, pathToleranceMm=40),
-        "loaded-turn": dict(purpose="operating", basis="Sweep the head and sample while the adjacent gate slides", minGapMm=1, allowanceBasis=reserve,
-                            pathToleranceMm=40, carriedWith={"carried article": "carrier"}),
-        "release": dict(purpose="operating", basis="Move the article clear of the turned carrier", minGapMm=1, allowanceBasis=reserve, pathToleranceMm=40),
-        "park-loaded": dict(purpose="park", basis="Return from the reached posture", minGapMm=1, allowanceBasis=reserve, pathToleranceMm=40),
-        "remove-carrier": dict(purpose="service", basis="Withdraw the parked carrier and representative payload vertically", minGapMm=1,
-                               allowanceBasis=reserve, pathToleranceMm=40, extract=True, carriedWith={"carried article": "carrier"})}
+def cycle():
+    """One cycle, in order: each phase names its motions or why it does not apply."""
+    listed = {"acquire": ["acquire"], "transfer": ["loaded-turn"], "deliver": ["release"], "park": ["park-loaded"], "service": ["remove-carrier"]}
+    return [dict(phase=p, motions=listed[p]) if p in listed else dict(phase=p, notApplicable="Invented: the teaching cycle has no " + p + " step")
+            for p in PHASES]
 
 
-def presentation():
-    words = {"mount": ("Locate the carrier pivot.", "Its fixed face establishes the repeatable attachment datum.", "Aluminum", "Carrier"),
-             "rail": ("Support the sliding gate.", "Its proximity to the turning head governs clearance at midstroke.", "Steel", "Gate"),
-             "head": ("Carry the sample during the turn.", "A single rotating carrier connects pickup to release.", "Aluminum", "Carrier"),
-             "sample": ("Represent the article being transferred.", "Its overhang sets the loaded clearance.", "Polymer", "Carried article"),
-             "gate": ("Control access to the release lane.", "Its concurrent slide can obstruct the loaded turn.", "Polymer", "Gate"),
-             "drive": ("Represent the propulsion package.", "The carrier must clear running gear during withdrawal.", "Purchased assembly", "Drivetrain"),
-             "battery": ("Supply the robot bus.", "The selected supply occupies space near the service path.", "Purchased assembly", "Power"),
-             "bumper": ("Represent the outer protective structure.", "Its fixed envelope constrains the approach.", "Foam and backing", "Frame and bumper")}
-    return {
-        "components": {n: dict(purpose=p, rationale=r, material=m, subsystem=s, volumeType="material") for n, (p, r, m, s) in words.items()},
-        "required": {"propulsion": ["drive"], "supply": ["battery"]},
-        "loadMembers": {"drive": ["drive"], "carrier": ["head"], "gate": ["gate"]},
-        "architecture": "Invented pivoting carrier beside a sliding gate (teaching layout)",
-        "title": "Acquire, turn and release past a sliding gate", "context": "Invented teaching project",
-        "focus": "Check the loaded head against the sliding gate, then play the displaced control.",
-        "notes": ["Invented teaching layout. Boxes stand in for the carrier, gate, rail and running gear.",
-                  "Carried-article motion is prescribed. Retention under gravity is not modelled."],
-        "runningAdditions": [dict(name="carried sample", kg=[0.2, 0.5], members=["sample"])], "runningBasis": "the carried sample",
-        "loadPaths": {"head": "Pivot on the mount block; the mount bolts to the invented frame plate.",
-                      "gate": "Slides on the rail; the rail bolts to the frame plate."},
-        "caseKinds": {"park-loaded": "inhibited"},
-        "phases": {"loaded-turn": dict(title="Turn the loaded carrier"), "park-loaded": dict(title="Return to park with the sample held")},
-        "uncoveredCases": [dict(id="gate-closes-mid-turn", condition="The gate closes while the loaded head is turning",
-                                reason="No interlock timing is modelled; the narrative stops before the turn instead")]}
+def requirements():
+    """The season's requirements, shared by every release: the weight limits, each with what it leaves out, and the bus floor."""
+    return {"schema": "agent-frc/season-requirements@1", "basis": "Invented design brief for teaching", "minBusV": 9,
+            "weightLimits": [dict(name="inspection", limitKg=15, excludesGroups=["bumper", "battery"], basis="Invented rule: weighed without bumpers and battery"),
+                             dict(name="with bumpers and battery", limitKg=20, excludesGroups=[], basis="Invented field estimate")]}
+
+
+def requirements_file(root, project):
+    """Where the season's requirements sit: beside the releases folder, shared by every release of the season."""
+    return (root.parent.parent if root.parent.name == "releases" else root.parent) / "requirements.json"
 
 
 def create(root, release_id="1.0", project=None, name="Turning carrier"):
@@ -108,54 +123,40 @@ def create(root, release_id="1.0", project=None, name="Turning carrier"):
         raise ValueError("Keep the release folder inside the project, not at its root")
     prefix = root.relative_to(project).as_posix() + "/"
     root.mkdir(parents=True, exist_ok=False)
+    (root / "premises").mkdir()
 
     def write(file, data):
         (root / file).write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8", newline="\n")
         return {"file": prefix + file}
 
-    cycle = ["acquire", "loaded-turn", "release", "park-loaded"]
     issue = "invented-design-" + release_id
     source = write("design.json", design_source(name + " " + release_id))
+    season = requirements_file(root, project)
+    if not season.exists():
+        season.write_text(json.dumps(requirements(), indent=2) + "\n", encoding="utf-8", newline="\n")
     (root / "narrative.md").write_text("Acquire a sample from the front and turn it past the gate for release. At the finish, park the carrier. "
                                        "If the gate stays closed, stop before the turn.\n", encoding="utf-8", newline="\n")
-    limits = write("limits.json", dict(basis="Invented design brief and loaded operating estimates", inspectionLimitKg=15, operatingMinV=9,
-                                       massLines=["running gear", "power", "body", "mechanisms", "remaining robot"],
-                                       electricalCases={stage + "-" + condition: dict(stage=stage, duty="Drive and operate the mechanism during " + stage,
-                                                                                      batteryCondition=condition, requiredMotionMinV=9.2,
-                                                                                      sources=["drive", "carrier", "gate", "controls"])
-                                                        for stage in cycle for condition in ("nominal", "weak")}))
-    masses = [("running gear", ["drive"], [4, 5]), ("power", ["battery"], [2, 2.2]), ("body", ["mount", "rail", "bumper"], [2, 2.4]),
-              ("mechanisms", ["head", "gate"], [2, 2.4]), ("remaining robot", [], [1, 1.5])]
-    amps = {"drive": [20, 30], "carrier": [8, 13], "gate": [2, 3], "controls": [2, 4]}
-    budgets = write("budgets.json", dict(
-        issue=issue, requirements=limits, runningPayloadKg=[0.2, 0.5],
-        masses=[dict(id=k, members=items, kg=kg, basis="Invented subtotal, including unmodelled items") for k, items, kg in masses],
-        electricalCases={stage + "-" + k: dict(basis="Simultaneous estimated source currents at loaded operating mass", loadedKg=[11.2, 14.0],
-                                               batterySideA=amps, openCircuitV=v, resistanceOhm=r)
-                         for stage in cycle for k, v, r in (("nominal", [12.3, 12.6], [.012, .017]), ("weak", [11.5, 12], [.023, .03]))}))
-    role = write("role-cycle.json", dict(cycle="Acquire at the front; budget 2.0 to 3.0 s for acquisition"))
-    estimate = write("capability-estimate.json", dict(acquireSeconds=2.4, basis="Invented timing estimate"))
-    accepted = write("acquire-time-accepted.json", dict(id="acquire-time", unit="s", scenario="selected cycle", criterion={"range": [2.0, 3.0]},
-                                                        phase="conceptual-design", interfaces=["carrier", "carried article"], source=role,
-                                                        basis="Matched coarse role comparison"))
-    current = write("acquire-time-current.json", dict(id="acquire-time", unit="s", scenario="selected cycle", value=2.4, issue=issue,
-                                                      source=estimate, valueField="acquireSeconds"))
+    premise = write("premises/robot-mass.json", dict(
+        id="robot-mass", phase="conceptual-design", scenario="selected cycle", unit="kg", interfaces=["robot"], criterion={"range": [0, 14]},
+        observes="mass.rangeKg", betterDirection="lower", base=14, basis="Invented concept study: the drive and cycle assumptions hold for a robot of at most 14 kg"))
     judgement = {
-        "schema": "agent-frc/layout-judgement@1", "issue": issue, "source": source, "generated": {"file": prefix + "generated/manifest.json"},
-        "view": prefix + "package-motion.html", "budgets": budgets,
-        "narrativeReview": dict(source={"file": prefix + "narrative.md"}, objectives=[
-            dict(objective="Acquire, turn and release", disposition="represented", basis="The acquire, loaded-turn and release stages follow the sample."),
-            dict(objective="Park at the finish", disposition="represented", basis="The park-loaded stage returns the carrier."),
+        "schema": "agent-frc/layout-judgement@2", "issue": issue, "source": source, "records": {"folder": prefix + "records"},
+        "requirements": {"file": season.relative_to(project).as_posix()},
+        "narrative": dict(file=prefix + "narrative.md", objectives=[
+            dict(objective="Acquire, turn and release", disposition="represented", basis="The acquire, loaded-turn and release motions follow the sample."),
+            dict(objective="Park at the finish", disposition="represented", basis="The park-loaded motion returns the carrier."),
             dict(objective="Stop for a closed gate", disposition="represented", basis="The parked head clears the closed gate before the turn.")]),
-        "premises": [dict(accepted=accepted, current=current)], "missingInputs": [],
+        "premises": [premise],
+        "rules": dict(minGapMm=1, depth=9, allowanceBasis="Invented 1 mm packaging reserve", pathToleranceMm=40),
+        "purposes": {"park": ["park-loaded"], "service": {"remove-carrier": {"extract": True}}},
+        "cycle": cycle(),
         # Nothing floats: the rail's support is deliberately not drawn in this teaching layout, so it is labelled with the reason.
         "attachment": {"unmounted": {"rail": "Invented teaching layout: the frame member that carries the rail is not drawn."}},
-        "cycle": cycle,
-        "control": dict(case="loaded-turn", displaced="rail", moving="head", offsetMm=[0, -50, 0],
+        "control": dict(motion="loaded-turn", displaced="rail", moving="head", offsetMm=[0, -50, 0],
                         basis="Move the fixed rail into the arc between the same clear endpoints"),
-        "stages": stages(), "presentation": presentation()}
+        "risks": [dict(id="gate-closes-mid-turn", risk="Invented: the gate closes while the loaded head is turning",
+                       closedBy="Invented: the narrative stops before the turn when the gate is closed")]}
     write("judgement.json", judgement)
-    write("missions.json", dict(missionCases=[dict(case="release", kind="operating-case", accomplishes="delivered", objective="Acquire, turn and release")]))
     return judgement
 
 
@@ -167,11 +168,10 @@ def run(command, cwd):
 
 
 def build_and_check(project, folder):
-    """Generate the solids with the design library, then run the layout check and save its receipt."""
+    """Generate the solids with the design library, then measure and judge the design: the library writes its records."""
     rel = folder.relative_to(project).as_posix()
     run([sys.executable, "-m", "frc_design_kernel", "build", rel + "/design.json", "--out", rel + "/generated"], project)
-    run(["node", str(PLUGIN / "scripts/design.mjs"), "preliminary-check", ".", rel + "/judgement.json", "--write-view", "--require-checked",
-         "--output", rel + "/receipt.json"], project)
+    run(["node", str(PLUGIN / "scripts/design.mjs"), "preliminary-check", ".", rel + "/judgement.json", "--require-checked"], project)
 
 
 def site(project, author):
@@ -210,4 +210,4 @@ if __name__ == "__main__":
             run([sys.executable, str(PLUGIN / "scripts/stage_preliminary_review.py"), "--base", str(project / "cad/preliminary-design"), args.release,
                  "--design-name", args.design_name], project)
     print("Wrote " + folder.relative_to(project).as_posix() + ": design.json is the design source, judgement.json is the judgement file."
-          + ("" if args.no_check else " Its solids are built, its layout check passed" + (" and it is staged as a draft." if args.project_review else ".")))
+          + ("" if args.no_check else " Its solids are built, measured and judged layout-checked" + (", and it is staged as a draft." if args.project_review else ".")))

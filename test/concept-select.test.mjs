@@ -99,7 +99,9 @@ test('a selection writes its record and one-sided premises only for pointers wit
   assert.deepEqual(selection.notBounded,[{pointer:release,betterDirection:'lower',breakEven:{low:0.2,high:null},
     reason:'break-even only on the better side (non-monotonic sweep)'}]);
   const mass=premise('massLb');
-  assert.deepEqual([mass.unit,mass.interfaces,mass.criterion],['lb',['robot'],{range:[0,95]}]);
+  assert.deepEqual([mass.unit,mass.interfaces,mass.criterion,mass.observes],['lb',['robot'],{range:[0,95]},'mass.rangeKg']);
+  // A rate premise names no library fact: the author adds observes once a record states it.
+  assert.equal(handling.observes,undefined);
   assert.match(mass.basis,/75–95 lb/);assert.match(mass.basis,/assumed/);assert.match(mass.basis,/default/);assert.match(mass.basis,/at most 95 lb/);
   assert.deepEqual(selection.premises.map(p=>p.file).sort(),readdirSync(path.join(root,'sel/premises')).map(f=>'sel/premises/'+f).sort());
 });
@@ -145,7 +147,7 @@ test('a rerun removes the conceptual-design premises of this selection it did no
   assert.deepEqual(readdirSync(folder).sort(),[...written,'broken.json','notes.json','upstream.json'].sort());
 });
 
-test('the layout check reads every generated premise; a premise without a unit is rejected',async t=>{
+test('the layout judgement accepts every generated premise unchanged and computes the mass it observes; a premise without a unit is rejected',async t=>{
   const root=project(t);
   assert.equal((await cli(root,['--candidate','turret','--basis','Why.','--out','sel'])).code,0);
   const python=process.env.PYTHON ?? (process.platform==='win32'?'python':'python3');
