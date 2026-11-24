@@ -15,7 +15,7 @@
  *   3. a hatch doing too much: a custom shape that returns several solids, places itself, reads or writes files or
  *      imports past its contract; custom trial code that tells the method's runs apart, keeps state, steers the
  *      piece or always passes; registrations with no reason or limits, or that nothing uses;
- *   4. a generated scene edited by hand, a MuJoCo scene kept as a file, engine settings typed into a trial;
+ *   4. a MuJoCo scene kept as a file, engine settings typed into a trial;
  *   5. drift back toward a builder: the share of custom solids and the size of custom/ against the plugin's
  *      guidelines (scripts/design-audit/guidelines.json), trial numbers that restate a parameter, a custom shape a
  *      listed shape could make;
@@ -39,7 +39,7 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
 import {foreignNames, projectFiles, usesIn} from './project-ci-audit.mjs';
 import {libraryCandidates} from './design-audit/across.mjs';
 import {codeFindings, dedupe, sceneFileFindings} from './design-audit/code.mjs';
-import {findLibrary, generatedFindings, sceneFindings} from './design-audit/generated.mjs';
+import {findLibrary, generatedFindings} from './design-audit/generated.mjs';
 import {customFindings} from './design-audit/hatch.mjs';
 import {designSchema, overridesIn, sourceFindings} from './design-audit/source.mjs';
 
@@ -69,7 +69,6 @@ export const forms = {
   'custom-criterion-always': 'A custom criterion that always passes',
   'custom-guide-force': 'A custom force law that steers the piece',
   'custom-stands-in': 'A custom force law that stands in for a contact, drive or load the library has',
-  'edited-scene': 'A generated review scene edited by hand',
   'engine-scene-file': 'A physics engine scene kept as a file. The library makes it from the design source',
   'engine-setting-in-trial': 'Engine settings typed into a trial instead of physical inputs',
   'custom-share': 'More custom solids than the guideline',
@@ -262,9 +261,9 @@ export function auditDesign(root, {skip = [], run = true, python} = {}) {
   }
   // Generated outputs, the review scene and judgement data.
   const found = !run ? {reason: '--no-run was given'} : !sources.length ? {reason: 'the project has no design source'} : findLibrary(python);
-  const generated = generatedFindings(root, files, sources, found), scenes = sceneFindings(root, files), overrides = judgementFindings(root, files);
-  findings.push(...generated.findings, ...scenes.findings, ...overrides.findings, ...qualificationFindings(root, files));
-  info.push(...generated.info, ...scenes.info, ...overrides.info);
+  const generated = generatedFindings(root, files, sources, found), overrides = judgementFindings(root, files);
+  findings.push(...generated.findings, ...overrides.findings, ...qualificationFindings(root, files));
+  info.push(...generated.info, ...overrides.info);
   // Without a design source there is no door to go around yet: the library's work done in project code is information.
   let listed = dedupe(findings);
   if (!sources.length) {

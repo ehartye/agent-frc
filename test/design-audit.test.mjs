@@ -159,8 +159,6 @@ const cases = {
   'custom-criterion-always': [replaceFile('design/custom/held.py', 'def judge(run, parameters):\n    return True\n'), {}],
   'custom-guide-force': [replaceFile('design/custom/drag.py', 'def force(signals, parameters):\n    return (parameters["k"] * (parameters["targetMm"] - signals["xMm"]), 0.0, 0.0)\n'), {}],
   'custom-stands-in': [replaceFile('design/custom/drag.py', 'def force(signals, parameters):\n    sink = -signals["zMm"]\n    return (0.0, parameters["floorStiffness"] * max(sink, 0.0), 0.0)\n'), {}],
-  'edited-scene': [{overlay: {'design/receipt.json': JSON.stringify({view: {scene: {file: 'design/review-scene.json', sha256: sha('{"frames":1}'), contentSha256: sha('{"frames":1}')}}}), 'design/review-scene.json': '{"frames":2}'}},
-    {overlay: {'design/receipt.json': JSON.stringify({view: {scene: {file: 'design/review-scene.json', sha256: sha('{"frames":1}'), contentSha256: sha('{"frames":1}')}}}), 'design/review-scene.json': '{"frames":1}'}}],
   'engine-scene-file': [replaceFile('design/scene.xml', '<mujoco model="tote"><worldbody/></mujoco>\n'), {}],
   'engine-setting-in-trial': [{edit: data => { data.trials.carry.surfaces[0].solref = [0.02, 1]; }}, {}],
   'custom-share': [{edit: data => { for (const name of ['arm brace', 'bumper front']) Object.assign(data.solids.find(solid => solid.name === name), {shape: {kind: 'custom', use: 'hook', parameters: {}}}); }}, {}],

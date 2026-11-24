@@ -1,7 +1,7 @@
 /**
  * Outputs that do not regenerate: the library's records (manifest, measurements, trials, screen) and STEP files
  * whose stamp names an earlier source, whose content disagrees with their own stamp, or that the library no longer
- * makes from the source; and a review scene that differs from the one the layout check wrote.
+ * makes from the source.
  *
  * Fingerprints are compared without the library. Where the library can be run, the audit also rebuilds each design
  * into a temporary folder and asks the library's status command about each folder of records. It writes nothing in
@@ -12,7 +12,6 @@ import {spawnSync} from 'node:child_process';
 import {existsSync, mkdtempSync, readFileSync, rmSync, statSync} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {gunzipSync} from 'node:zlib';
 import {libraryRecords} from './code.mjs';
 
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -23,18 +22,28 @@ const fixedStepTime = "2000-01-01T00:00:00";
 const readJson = full => { try { return JSON.parse(readFileSync(full, 'utf8')); } catch { return null; } };
 const plural = (count, one, many = one + 's') => count + ' ' + (count === 1 ? one : many);
 
+const JOB = 'frc-design-kernel/measurement-job@1';
+/** A measurement job record: RECORDS/measurements/<job id>.json, one per job the library answered. */
+const jobRecord = output => output.record.schema === JOB;
+
 /** The library records among a project's files: [{file, record}]. */
 export function libraryOutputs(root, files) {
-  return files.filter(file => libraryRecords.includes(path.posix.basename(file))).map(file => ({file, record: readJson(path.join(root, file))}))
+  return files.filter(file => libraryRecords.includes(path.posix.basename(file)) || path.posix.basename(path.posix.dirname(file)) === 'measurements' && file.endsWith('.json'))
+    .map(file => ({file, record: readJson(path.join(root, file))}))
     .filter(({record}) => typeof record?.schema === 'string' && record.schema.startsWith('frc-design-kernel/'));
 }
 
-/** The design source an output was made from: the nearest source of the recorded name in its folder or above it. */
+/** The folder of records an output belongs to: a job record's is the folder above measurements/. */
+const recordsFolder = output => jobRecord(output) ? path.posix.dirname(path.posix.dirname(output.file)) : path.posix.dirname(output.file);
+
+/** The design source an output was made from: the nearest source of the recorded name in its folder or above it. A job
+ *  record names no source: it belongs to the one design source nearest its records folder. */
 function ownerOf(output, sources) {
   const name = output.record.design?.source;
-  let folder = path.posix.dirname(output.file);
+  let folder = recordsFolder(output);
   for (;;) {
-    const found = sources.find(source => path.posix.dirname(source.file) === folder && path.posix.basename(source.file) === name);
+    const here = sources.filter(source => path.posix.dirname(source.file) === folder);
+    const found = jobRecord(output) ? (here.length === 1 ? here[0] : null) : here.find(source => path.posix.basename(source.file) === name);
     if (found) return found;
     if (folder === '.' || !folder) return null;
     folder = path.posix.dirname(folder);
@@ -125,8 +134,8 @@ function status(root, folder, records, source, found, add, ran) {
   if (!result) { add('stale-output', records[0].file, 'the library\'s status command could not compare it with ' + source.file + ' (' + lastLine(done) + ')'); return; }
   for (const row of result.records ?? []) {
     if (row.state !== 'stale') continue;
-    const record = records.find(item => (/^trial /.test(row.record) ? item.record.schema.includes('trial') : !item.record.schema.includes('trial'))) ?? records[0];
-    const stamped = record.record.design?.sourceSha256 === source.sha256;
+    const record = records.find(item => /^trial /.test(row.record) ? item.record.schema.includes('trial') : item.file === path.posix.join(folder, row.file ?? '')) ?? records[0];
+    const stamped = !jobRecord(record) && record.record.design?.sourceSha256 === source.sha256;
     add(stamped ? 'hand-edited-output' : 'stale-output', record.file, row.record + ' is stale' + (stamped ? ' though its stamp names the current source (edited by hand, or made by another library version)' : '') + ': ' + (row.changes ?? []).slice(0, 3).join('; ') + ((row.changes ?? []).length > 3 ? '; ...' : ''));
   }
 }
@@ -146,8 +155,8 @@ export function generatedFindings(root, files, sources, found) {
     if (output.record.schema.startsWith('frc-design-kernel/manifest')) {
       stepFindings(root, output, add);
       if (found.python) rebuild(root, output, source, found, add, ran);
-    } else if (/measurements|trial/.test(output.record.schema)) {
-      const folder = path.posix.dirname(output.file), entry = folders.get(folder) ?? {source, records: []};
+    } else if (/measurement|trial/.test(output.record.schema)) {
+      const folder = recordsFolder(output), entry = folders.get(folder) ?? {source, records: []};
       entry.records.push(output); folders.set(folder, entry);
     }
   }
@@ -155,21 +164,4 @@ export function generatedFindings(root, files, sources, found) {
   if (!found.python && outputs.length) notRun.push('Did not run the design library to rebuild ' + plural(outputs.length, 'generated record') + ' and ask their status: ' + found.reason + '. Only their fingerprints were compared.');
   for (const source of sources) if (!outputs.some(output => ownerOf(output, sources) === source)) info.push({file: source.file, text: 'has no generated manifest or record beside it or below it, so nothing of it was compared'});
   return {findings, info, ran, notRun, outputs};
-}
-
-/** A review scene that the layout check's receipt records, compared with the file. */
-export function sceneFindings(root, files) {
-  const findings = [], info = [];
-  for (const file of files.filter(name => path.posix.basename(name) === 'receipt.json')) {
-    const scene = readJson(path.join(root, file))?.view?.scene;
-    if (!scene?.file || !scene.sha256) continue;
-    const candidates = [scene.file, path.posix.join(path.posix.dirname(file), path.posix.basename(scene.file))], at = candidates.find(name => files.includes(name));
-    if (!at) { info.push({file, text: 'records the review scene ' + scene.file + ', which is not committed beside it, so it was not compared'}); continue; }
-    const bytes = readFileSync(path.join(root, at));
-    if (sha(bytes) === scene.sha256) continue;
-    let content = null;
-    try { content = sha(at.endsWith('.gz') ? gunzipSync(bytes) : bytes); } catch { /* not readable */ }
-    if (!scene.contentSha256 || content !== scene.contentSha256) findings.push({form: 'edited-scene', file: at, line: null, detail: 'is not the review scene the layout check wrote (' + file + ' records ' + short(scene.contentSha256 ?? scene.sha256) + '): never edit a generated scene; change the design source and run the check again'});
-  }
-  return {findings, info};
 }

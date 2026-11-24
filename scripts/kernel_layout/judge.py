@@ -70,7 +70,7 @@ def motion_unmet(name, row):
         return None
     if row["failing"]:
         w = min(row["failing"], key=lambda r: (r["gapMm"], -r["overlapMm3"]))
-        detail = "overlap %.1f mm³ at t %.3f" % (w["overlapMm3"], w["t"]) if w["overlapMm3"] > 0 else "gap %.3f mm at t %.3f" % (w["gapMm"], w["t"])
+        detail = "overlap %.1f mm3 at t %.3f" % (w["overlapMm3"], w["t"]) if w["overlapMm3"] > 0 else "gap %.3f mm at t %.3f" % (w["gapMm"], w["t"])
         text = name + ": " + " and ".join(w["pair"]) + " " + detail + ", inside the " + f"{row['allowanceMm']:g} mm allowance"
     elif row["open"]:
         text = name + ": " + " and ".join(row["open"][0]["pair"]) + " unresolved over t " + str(row["open"][0]["interval"])

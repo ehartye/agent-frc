@@ -51,7 +51,7 @@ const design = {
   ],
   contacts: [{pair: ['post', 'base plate']}, {pair: ['flag', 'post']}],
   poses: {down: {}, up: {flag: [{kind: 'rotation', originMm: [0, 0, '=post_top'], axis: [0, -1, 0], travelDeg: 30}]}},
-  motions: {wave: {through: ['down', 'up']}},
+  motions: {wave: {through: ['down', 'up'], by: 'hand'}},
 };
 
 /** A project holding the design, built and measured once by the library; every case starts from a copy of it. */
@@ -95,12 +95,12 @@ test('outputs the library made from the current source regenerate; a hand edit, 
     const earlier = auditDesign(copy(t, root => edit(root, 'design/design.json', text => text.replace('"post_top": 200', '"post_top": 220'))), {python: found.python});
     const said = forms(earlier).join('\n');
     assert.match(said, /stale-output design\/generated\/manifest\.json: was made from an earlier design\/design\.json/);
-    assert.match(said, /stale-output design\/generated\/measurements\.json: clearance along "wave" is stale: .*post_top|stale-output design\/generated\/measurements\.json: .*is stale/);
+    assert.match(said, /stale-output design\/generated\/measurements\/clearance\.motion\.wave\.json: clearance\.motion\.wave is stale: /);
 
     const custom = auditDesign(copy(t, root => edit(root, 'design/custom/notch.py', text => text.replace('height - height / 4', 'height - height / 3'))), {python: found.python});
     assert.match(forms(custom).join('\n'), /stale-output design\/generated\/manifest\.json: was made with an earlier custom\/notch\.py/);
 
     const notRun = auditDesign(copy(t), {run: false});
     assert.deepEqual(forms(notRun), []);
-    assert.match(notRun.coverage.notRun.join(' '), /Did not run the design library to rebuild 2 generated records .*--no-run was given/);
+    assert.match(notRun.coverage.notRun.join(' '), /Did not run the design library to rebuild \d+ generated records .*--no-run was given/);
   });

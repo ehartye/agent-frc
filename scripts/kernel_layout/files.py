@@ -87,7 +87,7 @@ def resolve_references(root, node):
     """Return a copy of a plan or record in which every path-only file reference also holds its SHA-256.
 
     An author names a file by its project-relative path, as {"file": "..."}. The checker reads the file and records
-    the digest it found, so the receipt still says what was checked. A reference that already holds a sha256 is left
+    the digest it found, so the record still says what was checked. A reference that already holds a sha256 is left
     as typed and is verified wherever it is used."""
     if path_reference(node):
         return dict(node, sha256=digest(project_path(root, node["file"])))

@@ -24,6 +24,7 @@ RELEASE = "cad/preliminary-design/releases/1.0"
 # The invented tray, wall, ball, interaction and trial, shared with the tests that mark the starter effective.
 _TRAY = runpy.run_path(str(PLUGIN / "test/fixtures/ready_example.py"))
 TRIAL, tray, judged = _TRAY["TRIAL"], _TRAY["tray"], _TRAY["judged"]
+ROLLED = "ball rolls off the tray"
 
 
 class KernelInteractionsCheck(unittest.TestCase):
@@ -189,6 +190,76 @@ class KernelInteractionsCheck(unittest.TestCase):
         refused, _, _ = self.check()
         self.assertEqual(refused.returncode, 2)
         self.assertIn("The window of carried article in acquire runs between two kept points of the trial's fit", refused.stderr)
+
+    def rolling(self):
+        """The source with a second invented trial whose fit turns and keeps several points: the ball pushed off the tray's
+        open end rolls along it and falls. Returns (source, the trial's fit)."""
+        source = self.copy(self.source)
+        trial = self.copy(source["trials"][TRIAL])
+        trial.update(fitToleranceMm=1, adjustments=[], loads=[{"name": "push", "along": [-1, 0], "accelerationMps2": -6, "startS": 0.0, "durationS": 0.3}],
+                     events=[{"name": "rolled off", "when": {"signal": "zMm", "below": 0}, "outcome": "rolled off"},
+                             {"name": "stayed", "when": {"all": [{"signal": "tS", "above": 0.8}, {"restFor": 0.3}]}, "outcome": "stayed"}],
+                     control={"change": {"loads.push.accelerationMps2": 3}, "note": "Pushed toward the wall, the ball stays on the tray."},
+                     brackets=[{"input": "loads.push.accelerationMps2", "unit": "m/s2", "values": [-8, -6, -4]}])
+        trial["pass"] = {"outcomes": ["rolled off"]}
+        source["trials"][ROLLED] = trial
+        self.refresh(source, extremes=False)
+        return source, json.loads((self.root / RELEASE / "records/trials.json").read_text(encoding="utf-8"))["trials"][ROLLED]["fit"]
+
+    def bind(self, window=None):
+        """Bind the carried article's move in acquire to the rolling trial, over a window of its fit when one is given."""
+        judgement = self.copy(self.judgement)
+        judgement["motions"] = {"acquire": {"transportedBy": {"carried article": dict(
+            mechanisms=["carrier"], drive={"carrier": "Invented rollers"}, basis="Invented", trial=ROLLED, **({"window": window} if window else {}))}}}
+        self.put("judgement.json", judgement)
+
+    def moved_on(self, source, operation):
+        """The source with the article's acquire move written as one operation, the turn starting from a pose as drawn."""
+        source = self.copy(source)
+        source["motions"]["acquire"]["moves"]["carried article"] = [operation]
+        source["motions"]["acquire"]["by"] = "piece"
+        source["poses"]["loaded"] = {}
+        source["motions"]["loaded-turn"]["from"] = "loaded"
+        return source
+
+    def test_a_window_of_a_turning_fit_is_its_kept_points_with_their_turn(self):
+        source, fit = self.rolling()
+        op, times = fit["operation"], fit["atS"]
+        self.assertGreaterEqual(len(times), 4, "the fit keeps points inside the trace")
+        self.assertTrue(op["turnDeg"][-1] > 90 and op["turnAxis"] == [0, -1, 0], "the rolling ball's fit turns")
+        # The stroke between the second and the next-to-last kept point: their places and their turns, about the fit's axis.
+        window = [times[1], times[-2]]
+        part = dict(op, throughMm=op["throughMm"][1:-1], turnDeg=op["turnDeg"][1:-1])
+        self.refresh(self.moved_on(source, part), trial=False, extremes=False)
+        self.bind(window)
+        _, bound, _ = self.check()
+        self.assertFalse(any("fitted" in gap for gap in self.texts(bound)), bound["unmet"])
+        unbound = "The move of carried article in acquire is not the path trial " + ROLLED + " fitted over its window. Write its fit operation as the move in the design source"
+        # Controls: the same places with the turn the other way, or with no turn, are not the trial's path.
+        for other in (dict(part, turnAxis=[0, 1, 0]), {k: v for k, v in part.items() if k not in ("turnDeg", "turnAxis")}):
+            self.refresh(self.moved_on(source, other), trial=False, extremes=False)
+            _, refused, _ = self.check()
+            self.assertIn(unbound, self.texts(refused))
+
+    def test_a_fit_that_strays_past_its_own_tolerance_is_not_the_trial(self):
+        source, fit = self.rolling()
+        self.refresh(self.moved_on(source, fit["operation"]), trial=False, extremes=False)
+        self.bind()
+        _, bound, _ = self.check()
+        self.assertFalse(any(ROLLED in gap for gap in self.texts(bound)), bound["unmet"])
+        # The library measures each sample against its own piece of the kept path. A fit it records as straying past its
+        # tolerance, in place or in turn, does not stand for the trace; the record is written that way here.
+        records = self.root / RELEASE / "records/trials.json"
+        held = records.read_text(encoding="utf-8")
+        for field, limit, words in (("maxDeviationMm", "toleranceMm", "1.5 mm from its trace, past its tolerance of 1 mm"),
+                                    ("maxTurnDeviationDeg", "turnToleranceDeg", "7.5 degrees from its trace, past its tolerance of 5 degrees")):
+            record = json.loads(held)
+            record["trials"][ROLLED]["fit"][field] = record["trials"][ROLLED]["fit"][limit] * 1.5
+            records.write_text(json.dumps(record), encoding="utf-8")
+            _, strays, _ = self.check()
+            self.assertIn("The fit of trial " + ROLLED + " strays " + words + ", so the path of carried article in acquire is not the trial. "
+                          "Run the trial with a smaller fitToleranceMm", self.texts(strays))
+        records.write_text(held, encoding="utf-8")
 
     def test_a_free_path_or_a_fixture_moves_a_payload_only_on_its_trial(self):
         fit = json.loads((self.root / RELEASE / "records/trials.json").read_text(encoding="utf-8"))["trials"][TRIAL]["fit"]["operation"]
