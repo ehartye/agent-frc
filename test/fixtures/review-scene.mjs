@@ -32,7 +32,7 @@ export function reviewScene(overrides = {}) {
       {id: 'raise', label: 'raise (operating)', kind: 'nominal', purpose: 'operating', cause: 'drive', basis: 'Invented: turn the arm a quarter turn.', status: 'pass', allowanceMm: 5,
         bodies: {frame: {mesh: 0, matrices: [I]}, arm: {mesh: 1, matrices: Array.from({length: 25}, (_, k) => turn(k))}, 'arm motor': {mesh: 4, matrices: [I]}, battery: {mesh: 2, matrices: [I]}, target: {mesh: 3, matrices: [I]}},
         removed: [], results: [{pair: ['arm', 'battery'], status: 'pass', lowerBoundMm: 12.5, method: 'adaptive search'}],
-        time: clock, measure: Array.from({length: 25}, (_, k) => 'shoulder ' + (90 * k / 24).toFixed(1) + '° of 0–90°, up to 12.0 A · bus 11.10–12.40 V')},
+        time: clock.slice(), measure: Array.from({length: 25}, (_, k) => 'shoulder ' + (90 * k / 24).toFixed(1) + '° of 0–90°, up to 12.0 A · bus 11.10–12.40 V')},
       {id: 'package-displacement-control', label: 'Displaced control', kind: 'displaced control', purpose: 'operating', cause: 'drive',
         basis: 'Invented: move the battery into the arc.', status: 'fail', allowanceMm: 5,
         bodies: {frame: {mesh: 0, matrices: [I]}, arm: {mesh: 1, matrices: Array.from({length: 25}, (_, k) => turn(k))}, 'arm motor': {mesh: 4, matrices: [I]}, battery: {mesh: 2, matrices: [[1, 0, 0, 180, 0, 1, 0, -150, 0, 0, 1, 0]]}, target: {mesh: 3, matrices: [I]}},
@@ -108,7 +108,8 @@ export function phasedScene(overrides = {}) {
 }
 
 /** The verdict a scene built from these records repeats: the fields compareWithVerdict reads. */
-export function verdictOf(scene) {
+export function verdictOf(shown) {
+  const scene = JSON.parse(JSON.stringify(shown));
   const motions = Object.fromEntries(scene.cases.filter(c => c.kind !== 'displaced control').map(c => [c.id, {status: c.status}]));
   const control = scene.cases.find(c => c.kind === 'displaced control');
   return {schema: 'agent-frc/layout-verdict@1', issue: scene.issue, status: scene.decision.status, firstUnmet: scene.decision.firstUnmet, unmet: scene.unmet,

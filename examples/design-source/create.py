@@ -3,13 +3,14 @@
     python PLUGIN/examples/design-source/create.py . --project-review --release 1.0 --design-name "Turning carrier"
 
 writes the example into cad/preliminary-design/releases/1.0/, builds its solids with the design library, measures and
-judges it, and stages it. Without --project-review it writes the folder cad/preliminary-design/releases/ID under a new
+judges it, builds its review page from the records, and stages it. Without --project-review it writes the folder cad/preliminary-design/releases/ID under a new
 directory and stops there. Every name and number is invented: replace them with the project's own.
 
 This file draws nothing. The design source it writes is the library's input: every solid with its weight, the motors
 placed as solids, the battery, and each motion as the motor commands that make it or the cause that moves it. The
 judgement file is the plugin's: the rules stated once, the cycle, the control and the pointers to the season's
-requirements, the narrative and the accepted premises. The library's records go in records/.
+requirements, the narrative, the accepted premises and the page file. The library's records go in records/. The page
+file, page.json, holds the review page's words; it never reaches the verdict.
 """
 import argparse
 import json
@@ -103,6 +104,17 @@ def cycle():
             for p in PHASES]
 
 
+def page(name):
+    """The review page's words and display choices. Every field is optional and none reaches the verdict: a solid with no
+    entry shows its name, its group and its note from the design source."""
+    return {"schema": "agent-frc/review-page@1", "title": name + ": invented turning carrier",
+            "context": "Invented teaching project", "architecture": "A pivoting carrier that turns a sample past a sliding gate",
+            "focus": "Invented focus: the loaded head clears the rail and the gate through the turn.",
+            "notes": ["Invented: every solid is a blockout box with an assumed weight range."],
+            "phases": {"transfer": {"title": "Turn the loaded carrier past the gate"}, "service": {"title": "Lift the carrier out in the pit"}},
+            "solids": {"head": {"description": "Invented carrier head that holds the sample through the turn."}}}
+
+
 def requirements():
     """The season's requirements, shared by every release: the weight limits, each with what it leaves out, and the bus floor."""
     return {"schema": "agent-frc/season-requirements@1", "basis": "Invented design brief for teaching", "minBusV": 9,
@@ -136,6 +148,7 @@ def create(root, release_id="1.0", project=None, name="Turning carrier"):
         season.write_text(json.dumps(requirements(), indent=2) + "\n", encoding="utf-8", newline="\n")
     (root / "narrative.md").write_text("Acquire a sample from the front and turn it past the gate for release. At the finish, park the carrier. "
                                        "If the gate stays closed, stop before the turn.\n", encoding="utf-8", newline="\n")
+    shown = write("page.json", page(name + " " + release_id))
     premise = write("premises/robot-mass.json", dict(
         id="robot-mass", phase="conceptual-design", scenario="selected cycle", unit="kg", interfaces=["robot"], criterion={"range": [0, 14]},
         observes="mass.rangeKg", betterDirection="lower", base=14, basis="Invented concept study: the drive and cycle assumptions hold for a robot of at most 14 kg"))
@@ -155,7 +168,8 @@ def create(root, release_id="1.0", project=None, name="Turning carrier"):
         "control": dict(motion="loaded-turn", displaced="rail", moving="head", offsetMm=[0, -50, 0],
                         basis="Move the fixed rail into the arc between the same clear endpoints"),
         "risks": [dict(id="gate-closes-mid-turn", risk="Invented: the gate closes while the loaded head is turning",
-                       closedBy="Invented: the narrative stops before the turn when the gate is closed")]}
+                       closedBy="Invented: the narrative stops before the turn when the gate is closed")],
+        "page": shown}
     write("judgement.json", judgement)
     return judgement
 
@@ -168,10 +182,12 @@ def run(command, cwd):
 
 
 def build_and_check(project, folder):
-    """Generate the solids with the design library, then measure and judge the design: the library writes its records."""
+    """Generate the solids with the design library, measure and judge the design (the library writes its records), then build
+    the review page from those records."""
     rel = folder.relative_to(project).as_posix()
     run([sys.executable, "-m", "frc_design_kernel", "build", rel + "/design.json", "--out", rel + "/generated"], project)
     run(["node", str(PLUGIN / "scripts/design.mjs"), "preliminary-check", ".", rel + "/judgement.json", "--require-checked"], project)
+    run(["node", str(PLUGIN / "scripts/design.mjs"), "preliminary-page", ".", rel + "/judgement.json", "--quiet"], project)
 
 
 def site(project, author):
@@ -210,4 +226,4 @@ if __name__ == "__main__":
             run([sys.executable, str(PLUGIN / "scripts/stage_preliminary_review.py"), "--base", str(project / "cad/preliminary-design"), args.release,
                  "--design-name", args.design_name], project)
     print("Wrote " + folder.relative_to(project).as_posix() + ": design.json is the design source, judgement.json is the judgement file."
-          + ("" if args.no_check else " Its solids are built, measured and judged layout-checked" + (", and it is staged as a draft." if args.project_review else ".")))
+          + ("" if args.no_check else " Its solids are built, measured and judged layout-checked, and its review page is built" + (", and it is staged as a draft." if args.project_review else ".")))

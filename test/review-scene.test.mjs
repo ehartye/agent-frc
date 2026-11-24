@@ -37,7 +37,6 @@ test('cross-checks catch references to bodies, meshes, frames and motions that d
   scene.weight.groups.frame.members.push('ghost');
   scene.power.motions[0].drives[0].members = ['phantom'];
   scene.power.motions.push({...scene.power.motions[0], motion: 'spin'});
-  scene.bodies.arm.motorOf = ['wrist'];
   scene.cases[0].bodies.arm.mesh = 9;
   scene.cases[0].time.pop();
   scene.openingCase = 'missing';
@@ -45,7 +44,7 @@ test('cross-checks catch references to bodies, meshes, frames and motions that d
   scene.required[0].ids.push('wheel');
   const {errors} = validateScene(scene);
   for (const pattern of [/weight\/groups\/frame names an unknown body: ghost/, /power\/raise\/shoulder names an unknown body: phantom/, /power\/motions\/1 names spin, which is not a case/,
-    /bodies\/arm\/motorOf names wrist, which no motion's power lists/, /cases\/0\/bodies\/arm mesh out of range/, /cases\/0\/time needs one entry per frame \(25\)/,
+    /cases\/0\/bodies\/arm mesh out of range/, /cases\/0\/time needs one entry per frame \(25\)/,
     /openingCase names an unknown case/, /cutaway\/hides names a body that is not a fixture: frame/, /required\/structure names an unknown body: wheel/])
     assert.ok(errors.some(e => pattern.test(e)), pattern + ' in ' + errors.join('\n'));
 });

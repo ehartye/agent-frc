@@ -126,7 +126,7 @@ class ReviewPage(unittest.TestCase):
         duration = json.loads((self.root / RELEASE / "design.json").read_text(encoding="utf-8"))["motions"]["loaded-turn"]["durationS"]["value"]
         self.assertAlmostEqual(turn["time"][-1], duration, places=9)
         self.assertAlmostEqual(turn["time"][(frames - 1) // 2], duration / 2, places=9)
-        self.assertLess(turn["time"][1], duration / (frames - 1), "it starts from rest")
+        self.assertGreater(turn["time"][1], duration / (frames - 1), "it starts from rest, so its first step of stroke takes longer than an even share")
         power = next(m for m in scene["power"]["motions"] if m["motion"] == "loaded-turn")
         pivot = next(d for d in power["drives"] if d["drive"] == "pivot")
         self.assertEqual((pivot["motorSolid"], pivot["currentA"]), ("pivot motor", record["drives"]["pivot"]["currentA"]["range"]))

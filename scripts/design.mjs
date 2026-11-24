@@ -45,6 +45,14 @@ try{
    if(run.error)throw run.error;
    process.exitCode=run.status??2;
  }
+ else if(command==='preliminary-page'){
+   if(!input||!out)throw Error('Usage: design preliminary-page PROJECT JUDGEMENT.json [--check] [--quiet]');
+   // Builds the review page from the design source, the judgement, the page file and the committed records; it measures nothing.
+   const run=spawnSync(process.env.PYTHON||(process.platform==='win32'?'python':'python3'),
+     ['-B',path.join(import.meta.dirname,'package_view.py'),input,out,...rest],{stdio:'inherit'});
+   if(run.error)throw run.error;
+   process.exitCode=run.status??2;
+ }
  else if(command==='effective-readiness'){
    // Informational report on the exit criteria for marking a preliminary design effective; it judges the records and writes nothing.
    const run=spawnSync(process.execPath,[path.join(import.meta.dirname,'effective-readiness.mjs'),...process.argv.slice(3)],{stdio:'inherit'});
@@ -55,5 +63,5 @@ try{
  else if(command==='validate'){if(out)throw Error('Usage: design validate input.json');const a=load(input);console.log(JSON.stringify({valid:true,id:a.id,revision:a.revision,checks:spatialChecks(a),budget:rehearsalBudget(a)},null,2));}
  else if(command==='opening'){checkDesignDestination(input);if(!out||rest.length!==1||!['on','off'].includes(rest[0]))throw Error('Usage: design opening input.json new-output.json on|off');const a=reviseDesign(load(input),x=>{x.operations[0].enabled=rest[0]==='on'});write(out,canonicalStringify(a));console.log('Saved new revision; prior checks invalidated');}
  else if(command==='export'){checkDesignDestination(input);if(!out||rest.length)throw Error('Usage: design export input.json NEW-directory');const a=load(input),dir=path.resolve(out);checkDesignDestination(dir);fs.mkdirSync(dir);try{write(path.join(dir,'design.json'),canonicalStringify(a));write(path.join(dir,'geometry.json'),JSON.stringify(deriveGeometry(a),null,2)+'\n');write(path.join(dir,'blockout.scad'),exportCad(a));if(a.design.frameProfile)write(path.join(dir,'frame-plan.dxf'),frameDxf(deriveGeometry(a).framePlan));write(path.join(dir,'checks.json'),JSON.stringify({checks:spatialChecks(a),budget:rehearsalBudget(a)},null,2)+'\n');write(path.join(dir,'HANDOFF.md'),handoff(a));}catch(e){throw Error('Incomplete new export directory retained for inspection: '+e.message)}console.log('Exported editable source and spatial CAD handoff; no physical validation claimed');}
- else throw Error('Usage: design new|preliminary-check|effective-readiness|frame-basis|validate|opening|export ...');
+ else throw Error('Usage: design new|preliminary-check|preliminary-page|effective-readiness|frame-basis|validate|opening|export ...');
 }catch(e){console.error(e.message);process.exitCode=1}
