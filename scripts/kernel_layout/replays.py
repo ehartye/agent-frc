@@ -10,7 +10,10 @@ is drawn where it starts: the record traces the piece, not the surface.
 
 Nothing here is a clearance case: the layout check neither runs nor credits a replay.
 """
+import json
+from pathlib import Path
 import re
+from tempfile import TemporaryDirectory
 
 FRAMES = 240            # at most this many frames of a long trace are kept, every n-th row and always the last
 PIECE_MESH_MM = 0.5     # how far a display triangle of a piece may stand off its surface
@@ -28,10 +31,16 @@ def kept_rows(rows):
 
 
 def piece_mesh(shape):
-    """The piece's display mesh, drawn about its centre, as {v, f}, and the centre it was drawn about."""
-    from frc_design_kernel.builder.shape import solid
-    from frc_design_kernel.kernel.mesh import triangles
-    found = triangles(solid(shape, "piece", None), PIECE_MESH_MM)
+    """The piece's display mesh, drawn about its centre, as {v, f}. The library builds and meshes it through its public
+    calls, from a design source of the one solid written to a temporary folder."""
+    import frc_design_kernel as kernel
+    source = {"schema": "frc-design-kernel/design@1", "name": "trial piece", "units": {"length": "mm", "mass": "kg"},
+              "frame": "The piece's own drawing frame", "groups": {"piece": {"role": "payload"}}, "solids": [{"name": "piece", "group": "piece", "shape": shape}],
+              "fixtures": [], "mounts": [], "contacts": [], "poses": {}, "motions": {}}
+    with TemporaryDirectory() as folder:
+        file = Path(folder) / "piece.json"
+        file.write_text(json.dumps(source), encoding="utf-8")
+        found = kernel.build(kernel.load(file)).mesh("piece", PIECE_MESH_MM)
     vertices = found["vertices"]
     centre = shape.get("centerMm") or [(min(p[i] for p in vertices) + max(p[i] for p in vertices)) / 2 for i in range(3)]
     return dict(v=[[round(p[i] - centre[i], 4) for i in range(3)] for p in vertices], f=[list(t) for t in found["triangles"]])
