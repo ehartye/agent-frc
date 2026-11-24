@@ -321,7 +321,7 @@ test('public command and classroom routes use the neutral bundled comparison',as
   assert.match(report.interpretation,/complete for the minimum-voltage check/);
   if (await readFile(path.join(root,'.github/pages/guide.mjs')).catch(()=>null)) {
     const {stages}=await import('../.github/pages/guide.mjs');
-    for(const id of ['design','verify']) assert.ok(stages.find(s=>s.id===id).docs.some(([,p])=>p==='docs/shared-power-review.md'));
+    for(const id of ['preliminary','detailed']) assert.ok(stages.find(s=>s.id===id).docs.some(([,p])=>p==='docs/shared-power-review.md'));
   }
   assert.match(await readFile(path.join(root,'skills/frc-troubleshoot/SKILL.md'),'utf8'),/shared-power-review/);
 });
@@ -333,8 +333,8 @@ test('the Pages exercise shows the two outcomes produced by the real review',asy
   t.after(()=>rm(folder,{recursive:true,force:true}));
   const run=spawnSync(process.execPath,[build,folder],{cwd:root,encoding:'utf8'});
   assert.equal(run.status,0,run.stderr);
-  const html=await readFile(path.join(folder,'index.html'),'utf8');
-  assert.doesNotMatch(html,/[\u00c2\u00e2][^\x00-\x7f]/u, 'Guide contains misdecoded punctuation');
+  const html=await readFile(path.join(folder,'exercises.html'),'utf8');
+  for(const name of ['index','exercises','reference']) assert.doesNotMatch(await readFile(path.join(folder,name+'.html'),'utf8'),/[\u00c2\u00e2][^\x00-\x7f]/u, 'Guide contains misdecoded punctuation');
   assert.match(html,/id="power-choice"/);
   assert.match(html,/data-power-trial="overlap"/);
   assert.match(html,/8\.3 V/);

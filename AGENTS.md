@@ -8,7 +8,7 @@ Use four-module swerve as the default for a new robot drivetrain unless the proj
 
 Use Autodesk Fusion as the standard for student CAD authoring and handoff. Prefer the manufacturer's model of each purchased part in its exact revision and configuration. Preserve its source, file identity, license and installed transform. Document the specific engineering justification for external shape authoring, how the selected result returns to Fusion and what remains editable. Label every approximation and its limits.
 
-Maintain a current CAD-rendered still immediately below the title of each project-owned README. Show the selected assembly that the interactive showcase presents. Identify the design, pose, revision and scope so students can distinguish a current robot, historical assembly or subsystem fixture. Regenerate both views when the selected CAD changes.
+Put a picture at the top of a README when there is a good one. Nothing enforces or checks it. For a robot project, show the selected assembly that the interactive showcase presents. Identify the design, pose, revision and scope so students can distinguish a current robot, historical assembly or subsystem fixture. Replace it when the design it shows changes.
 
 Start new robot frame and bumper designs with two rear plan-view chamfers. Preserve explicit project outlines. Size each mitered backing, padding and cover segment from the actual frame, retain the vertical bumper section and verify the applicable edition and cutoff in the owning project. [Frame profile convention](docs/frame-profile.md)
 
@@ -23,6 +23,8 @@ Every published design holds a status: in-progress, effective, superseded or wit
 Update the GitHub Pages guide in the same change whenever a workflow, skill, student objective, artifact contract or user-facing behavior changes. Check the guide against the installed skill inventory, build it, exercise the changed interaction and verify the published result after merge. Write browser-check captures to a scratch directory outside the checkout, and remove any `.playwright-mcp/` folder the check leaves before finishing.
 
 ## Keep the plugin season-neutral
+
+The plugin works for any season because it holds no season's logic: the game lives in the project that uses it. Linking a project that proves the plugin is not season logic, so the README links the proof-of-concept projects.
 
 Include only references that help someone make, implement or verify a decision during active design. Research, retrospective comparisons, team identities and team-specific designs belong in the FRC research wiki. Extract transferable methods without naming, linking, tracing or reproducing a team or its design. Original teaching fixtures must be clearly synthetic. Keep executable season assets with their owning project.
 
