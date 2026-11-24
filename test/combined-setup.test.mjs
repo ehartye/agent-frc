@@ -21,7 +21,7 @@ test('mixed tasks require both bindings and retain the stronger shared NumPy req
       calls++;
       assert.equal(options.cwd,'project');
       assert.deepEqual(JSON.parse(args[3]),selected);
-      return {status:0,stdout:JSON.stringify({interpreter:{executable:exe},libraries:selected.map(row=>({
+      return {status:0,stdout:JSON.stringify({interpreter:{executable:exe,version:'3.14.10'},libraries:selected.map(row=>({
         ...row,version:'1',importStatus:row.module===absent?'failed':'ok'
       }))})};
     }});
