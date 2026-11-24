@@ -1,8 +1,8 @@
 # Agent FRC
 
-[![A practice match in the field lab: three blue and three red robots on an invented field, with loose pieces, obstacles and the score.](docs/field-lab.png)](https://ehartye.github.io/agent-frc/field-lab.html)
+[![From game rules to robot design. Five steps: case study, strategy, conceptual design, preliminary design and detailed design. The robot goes from a page of rules to a plain box, a blockout and a detailed machine.](docs/workflow.png)](https://ehartye.github.io/agent-frc/)
 
-Agent FRC is a plugin for coding agents. It takes a student team from a new game manual to a robot design they can build, one decision at a time. The students make the decisions. The agent reads, models, measures and keeps the record. [Open the interactive guide](https://ehartye.github.io/agent-frc/) or [try the field lab](https://ehartye.github.io/agent-frc/field-lab.html), pictured above on an invented field.
+Agent FRC is a plugin for coding agents. It takes a student team from a new game manual to a robot design they can build, one decision at a time. The students make the decisions. The agent reads, models, measures and keeps the record. [Open the interactive guide](https://ehartye.github.io/agent-frc/) or [try the field lab](https://ehartye.github.io/agent-frc/field-lab.html).
 
 ## Five phases
 
