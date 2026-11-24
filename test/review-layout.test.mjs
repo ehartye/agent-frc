@@ -6,7 +6,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { createHash } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -16,19 +15,14 @@ import { reviewScene, replayScene, phasedScene } from './fixtures/review-scene.m
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const page = readFileSync(path.join(root, 'templates/preliminary-review/review.html'));
-const sha = b => createHash('sha256').update(b).digest('hex');
 const skip = !browser() && 'No Chrome or Edge found; set CHROME_PATH';
 
-/** A release laid out as the site serves it: site/fonts, site/releases/ID/{index.html, review-scene.json.gz, receipt.json}. */
-function release(site, id, scene, {receipt = true, folder = 'releases'} = {}) {
+/** A release laid out as the site serves it: site/fonts, site/releases/ID/{index.html, review-scene.json.gz}. The scene carries the verdict. */
+function release(site, id, scene, {folder = 'releases'} = {}) {
   const dir = path.join(site, folder, id);
   mkdirSync(dir, {recursive: true});
-  const content = Buffer.from(JSON.stringify(scene)), served = gzipSync(content);
   writeFileSync(path.join(dir, 'index.html'), page);
-  writeFileSync(path.join(dir, 'review-scene.json.gz'), served);
-  if (receipt) writeFileSync(path.join(dir, 'receipt.json'), JSON.stringify({issue: scene.issue, planSha256: 'f'.repeat(64), status: 'layout-checked',
-    decision: {status: 'layout-checked', firstUnmet: null}, reopen: [],
-    view: {file: 'index.html', sha256: sha(page), verified: true, scene: {file: 'review-scene.json.gz', sha256: sha(served), contentSha256: sha(content), bytes: content.length}}}));
+  writeFileSync(path.join(dir, 'review-scene.json.gz'), gzipSync(Buffer.from(JSON.stringify(scene))));
   return folder + '/' + id + '/index.html';
 }
 function site(t) {
@@ -37,8 +31,7 @@ function site(t) {
   cpSync(path.join(root, 'templates/preliminary-review-fonts'), path.join(dir, 'fonts'), {recursive: true});
   return dir;
 }
-const ready = `for(let i=0;i<200&&/Loading|Verifying/.test(document.querySelector('#sceneStatus').textContent);i++)await new Promise(r=>setTimeout(r,50));
- for(let i=0;i<40&&!document.querySelector('#decisionSource').textContent.startsWith('(from');i++)await new Promise(r=>setTimeout(r,50));`;
+const ready = `for(let i=0;i<200&&/Loading|Verifying/.test(document.querySelector('#sceneStatus').textContent);i++)await new Promise(r=>setTimeout(r,50));`;
 const box = `const box=s=>{const e=document.querySelector(s);if(!e)return null;const b=e.getBoundingClientRect();return {left:b.left,right:b.right,top:b.top+scrollY,bottom:b.bottom+scrollY,width:b.width}};`;
 const structure = ready + box + `
  const visible=e=>e&&e.offsetParent!==null&&getComputedStyle(e).visibility!=='hidden';
@@ -64,7 +57,7 @@ test('the stock page keeps the reference region order, control placement, labels
     basisOpen:document.querySelector('#review-basis').open,unmetShown:!document.querySelector('#unmetInline').hidden,canvasTop:document.querySelector('#stage').getBoundingClientRect().top,
     idle:{actions:document.querySelector('#inspActions').hidden,hint:document.querySelector('#inspId').textContent,search:!!document.querySelector('#componentSearch')},
     csp:!!document.querySelector('head>meta[http-equiv="Content-Security-Policy"]:first-child')}`, {width: 1680, height: 1000});
-  assert.equal(top.chip, 'Effective · layout-checked', 'the chip shows the design status from the index and the receipt decision');
+  assert.equal(top.chip, 'Effective · layout-checked', 'the chip shows the design status from the index and the verdict the scene was built with');
   assert.equal(top.context, 'Synthetic project　/　Tilting carriage 1.0　/　Preliminary design');
   assert.equal(top.heading, 'Invented arm raise and return', 'the heading is the release title');
   assert.equal(top.basisOpen, false, 'the review basis starts collapsed');
@@ -106,7 +99,7 @@ test('the stock page keeps the reference region order, control placement, labels
     assert.match(g.h1, /^"?Barlow Condensed/);
     assert.match(g.body, /^"?Source Sans 3/);
     assert.equal(g.state, 'Effective · layout-checked');
-    assert.match(g.source, /^\(from the review receipt that pins this scene/);
+    assert.match(g.source, /^\(judged from the library's records when this page was built\)/);
   }
   for (const width of [960, 800]) {
     const g = await probePage(dir, url, structure, {width, height: 1000});
@@ -124,32 +117,34 @@ test('the stock page keeps the reference region order, control placement, labels
   for (const s of phone.selects) assert.ok(s.right <= 390, '390 px: each selector fits (' + JSON.stringify(s) + ')');
 });
 
-test('gaps and failures stay visible: missing roles, overweight, low voltage and unsupplied project fields', {skip}, async t => {
+test('gaps and failures stay visible: a missing role, a weight limit over, a sagging bus, a blocked verdict and page text not supplied', {skip}, async t => {
   const scene = reviewScene({architecture: null, focus: null, notes: null, cutaway: null});
-  scene.required.push({role: 'Drive wheels', ids: ['wheel-1', 'wheel-2']});
-  scene.mass.remainingKg = -1.25;
-  scene.mass.inspectionKg = [19.5, 21.25];
-  scene.mass.runningAdditions = null;
-  Object.assign(scene.power[0], {marginV: -0.4, status: 'fail', loadedBusV: [8.6, 10.2]});
-  scene.bodies.frame.purpose = null;
-  scene.bodies.frame.missing = ['purpose'];
-  const dir = site(t), url = release(dir, '1.0', scene, {receipt: false});
+  scene.required.push({role: 'drive', ids: []});
+  Object.assign(scene.weight.limits[0], {rangeKg: [19.5, 21.25], marginKg: -1.25, status: 'fail'});
+  Object.assign(scene.power.motions[0], {marginV: -0.4, status: 'fail', busV: [8.6, 10.2]});
+  scene.decision = {status: 'blocked', firstUnmet: {kind: 'weight', text: 'Weight limit inspection: up to 21.25 kg against 20.00 kg (-1.25 kg)'}};
+  scene.unmet = [scene.decision.firstUnmet];
+  scene.bodies.frame.description = null;
+  const dir = site(t), url = release(dir, '1.0', scene);
   const g = await probePage(dir, url, ready + `
    inspect('frame');
    const t=s=>document.querySelector(s).textContent;
    return {architecture:t('#architecture'),notes:t('#notes'),warning:t('#warningText'),roles:[...document.querySelectorAll('.role-row.warn')].map(r=>r.textContent),
-    over:[...document.querySelectorAll('.budget-meter.over span')].map(s=>s.textContent),running:t('#weightBody'),
-    cutawayHidden:document.querySelector('#cutawayToggle').hidden,purpose:[...document.querySelectorAll('#inspFields dd.missing')].map(d=>d.previousElementSibling.textContent),
-    source:t('#decisionSource')}`, {width: 1600, height: 1000});
+    over:[...document.querySelectorAll('.budget-meter.over span')].map(s=>s.textContent),weight:t('#weightBody'),
+    cutawayHidden:document.querySelector('#cutawayToggle').hidden,missing:[...document.querySelectorAll('#inspFields dd.missing')].map(d=>d.previousElementSibling.textContent),
+    chip:t('#state'),unmet:t('#unmetInline'),triggered:t('#triggered')}`, {width: 1600, height: 1000});
   assert.ok(!g.probeError, g.probeError);
   const NOT = 'Not supplied in this review';
-  assert.ok(g.architecture.startsWith(NOT) && g.notes.startsWith(NOT) && g.running.includes(NOT + ' (presentation.runningAdditions)'), JSON.stringify(g));
-  assert.match(g.warning, /2 missing required representations\. High estimate exceeds inspection weight\. Selected duty falls below voltage requirement\. Focus: Not supplied/);
-  assert.deepEqual(g.roles, ['MissingDrive wheels　 0/2wheel-1, wheel-2']);
-  assert.deepEqual(g.over, ['Inspection weight', 'Battery voltage under load']);
+  assert.ok(g.architecture.startsWith(NOT) && g.notes.startsWith(NOT), JSON.stringify(g));
+  assert.match(g.warning, /1 required role has no group in the design source\. A weight limit is exceeded\. The selected motion's bus falls below what it needs\. Focus: Not supplied/);
+  assert.deepEqual(g.roles, ['Missingdrive　 no group']);
+  assert.deepEqual(g.over, ['Weight · inspection', 'Bus voltage under load']);
+  assert.match(g.weight, /inspection.*21\.25.*20\.00/);
   assert.equal(g.cutawayHidden, true, 'an absent optional cutaway hides its toggle');
-  assert.ok(g.purpose.includes('Purpose'), 'a missing purpose is shown as missing');
-  assert.match(g.source, /awaiting the review receipt/, 'without a receipt the scene-generation findings are labelled as such');
+  assert.deepEqual(g.missing, [], 'absent page text is not a gap in the inspector');
+  assert.match(g.chip, /blocked$/);
+  assert.match(g.unmet, /^First unmet: Weight limit inspection/);
+  assert.match(g.triggered, /Weight limit inspection/);
 });
 
 test('the stable index shows the release picker and the review with no note between them', {skip}, async t => {
@@ -269,7 +264,7 @@ test('the same page staged for a detailed design reads its name, draft and statu
   assert.equal(earlier.chip, 'Superseded · layout-checked', 'a superseded design says so');
 });
 
-test('the animation list holds one entry per mission phase; the checked cases sit in the check results and jump the viewer to their pose', {skip}, async t => {
+test('the animation list holds one entry per phase of the cycle; the motions sit in the check results and jump the viewer to their pose', {skip}, async t => {
   const dir = site(t), url = release(dir, '1.0', phasedScene());
   const probe = w => `const d=${w}.document,q=s=>d.querySelector(s),all=s=>[...d.querySelectorAll(s)],wait=ms=>new Promise(r=>setTimeout(r,ms)),motion=q('#motion'),time=q('#time');
    for(let i=0;i<200&&/Loading|Verifying/.test(q('#sceneStatus').textContent);i++)await wait(50);await wait(100);
@@ -290,43 +285,43 @@ test('the animation list holds one entry per mission phase; the checked cases si
    all('#checkCases0 button').filter(b=>b.textContent==='Jump to limiting pose')[1].click();await wait(100);out.caseJump=[motion.value,time.value];
    button(rows[2],'Jump to tightest pose').click();await wait(100);out.control=[motion.value,time.value,time.max];
    button(rows[1],'Play').click();await wait(50);out.other=[motion.value,q('#play').textContent,new URLSearchParams(location.search).get('case')];
-   q('#set').selectedIndex=0;motion.value='raise';motion.dispatchEvent(new Event('change'));q('#filter').value='all';q('#filter').dispatchEvent(new Event('change'));
+   q('#set').selectedIndex=0;motion.value='transfer';motion.dispatchEvent(new Event('change'));q('#filter').value='all';q('#filter').dispatchEvent(new Event('change'));
    out.pairs=[q('#count').textContent,all('#findings thead th').map(c=>c.textContent),all('#findings tbody tr').map(r=>r.cells[1].textContent)];
    all('#findings tbody tr')[1].click();await wait(100);out.pairJump=[motion.value,time.value];
    return out`);
   assert.ok(!seen.probeError, seen.probeError);
-  assert.deepEqual(seen.groups, ['Mission animations: Raise the arm', 'Other checked motions: Lower', 'Check control: Displaced control'],
-    'four checked cases and a control give three list entries, not five');
+  assert.deepEqual(seen.groups, ['Mission animations: Raise the arm', 'Other checked motions: Park', 'Check control: Displaced control'],
+    'four motions and a control give three list entries, one per phase of the cycle, not five');
   assert.equal(seen.label, 'Mission animation');
-  assert.deepEqual(seen.opening, ['raise', '0', '72', 'Checked segment 1 of 3 (raise-01). Invented: third 1 of the raise.']);
+  assert.deepEqual(seen.opening, ['transfer', '0', '72', 'Motion 1 of 3 (raise-01). Invented: third 1 of the raise.']);
   assert.deepEqual(seen.played, [['1', '2', '3'], '72', 'Play', '100%'], 'one press of Play runs the whole phase through every segment');
   assert.deepEqual(seen.phases, [['Raise the arm', '3', '3 pass', 'arm / battery · gap 6.500 mm · t = 0.500 · in raise-03', '5.00 mm', '2.00 mm'],
-    ['Lower', '1', '1 pass', '—', '5.00 mm', 'Not declared'],
-    ['Displaced control and uncovered conditions', '2', '1 rejected as expected · 1 not evaluated', 'arm / battery · gap 0.000 mm, overlap 4100.0 mm³ · t = 0.500 · in package-displacement-control', '5.00 mm', '—']]);
+    ['Park', '1', '1 pass', '—', '5.00 mm', 'Not declared'],
+    ['Displaced control and uncovered conditions', '2', '1 rejected as expected · 1 out-of-scope', 'arm / battery · gap 0.000 mm, overlap 4100.0 mm³ · t = 0.500 · in package-displacement-control', '5.00 mm', '—']]);
   assert.deepEqual(seen.hidden, [true, true, true], 'a passing check list stays compact');
   assert.deepEqual(seen.buttons, [['Play', 'Jump to tightest pose', 'Show cases'], ['Play', 'Show cases'], ['Jump to tightest pose', 'Show cases']]);
-  assert.deepEqual(seen.jump, ['raise', '60', 'Checked segment 3 of 3 (raise-03). Invented: third 3 of the raise.', 'arm'], 'the tightest case opens at its limiting pose inside the phase animation');
+  assert.deepEqual(seen.jump, ['transfer', '60', 'Motion 3 of 3 (raise-03). Invented: third 3 of the raise.', 'arm'], 'the tightest motion opens at its limiting pose inside the phase animation');
   assert.deepEqual(seen.open, ['true', 'checkCases0', 'Hide cases', false, ['raise-01', 'raise-02', 'raise-03']]);
-  assert.deepEqual(seen.caseJump, ['raise', '36']);
+  assert.deepEqual(seen.caseJump, ['transfer', '36']);
   assert.deepEqual(seen.control, ['package-displacement-control', '12', '24']);
-  assert.deepEqual(seen.other, ['lower', 'Pause', 'lower'], 'the address names the animation');
-  assert.deepEqual(seen.pairs, ['Raise the arm · 3 checked cases · 3 pass', ['Pair', 'Case', 'Result', 'Witness'], ['raise-01', 'raise-02', 'raise-03']]);
-  assert.deepEqual(seen.pairJump, ['raise', '36'], 'a recorded pair opens its own segment at the witness pose');
+  assert.deepEqual(seen.other, ['park', 'Pause', 'park'], 'the address names the animation');
+  assert.deepEqual(seen.pairs, ['Raise the arm · 3 motions · 3 pass', ['Pair', 'Motion', 'Result', 'Witness'], ['raise-01', 'raise-02', 'raise-03']]);
+  assert.deepEqual(seen.pairJump, ['transfer', '36'], 'a recorded pair opens its own motion at the witness pose');
   // A failing case opens its phase at once.
   const failing = phasedScene();
   Object.assign(failing.motionEvidence[1], {result: 'fail', limitingValue: {gapMm: 0, volumeMm3: 30}});
-  const failed = await probePage(dir, release(dir, '1.1', failing, {receipt: false}), probe('window') + `
+  const failed = await probePage(dir, release(dir, '1.1', failing), probe('window') + `
    const rows=all('#evidenceTable>tbody>tr.phase');
    return {groups:all('#motion optgroup').map(g=>g.label+': '+[...g.children].map(o=>o.textContent).join(', ')),hidden:all('tr.phase-cases').map(r=>r.hidden),
     attention:rows.map(r=>r.classList.contains('attention')),result:rows[0].cells[2].textContent,jump:[...rows[0].querySelectorAll('button')].map(b=>b.textContent)}`);
-  assert.deepEqual(failed.groups, ['Mission animations: Raise the arm', 'Other checked motions: Lower', 'Check control: Displaced control']);
+  assert.deepEqual(failed.groups, ['Mission animations: Raise the arm', 'Other checked motions: Park', 'Check control: Displaced control']);
   assert.deepEqual([failed.hidden, failed.attention, failed.result, failed.jump], [[false, true, true], [true, false, false], '2 pass · 1 fail', ['Play', 'Jump to failing case', 'Hide cases']]);
   // Headless windows have a minimum width, so phone width is measured inside a 390 px frame. The frame also carries a link to one case.
   writeFileSync(path.join(dir, 'phone.html'), '<!doctype html><body style="margin:0"><iframe src="' + url + '?case=raise-02" style="width:390px;height:900px;border:0"></iframe>');
   const phone = await probePage(dir, 'phone.html', probe(`document.querySelector('iframe').contentWindow`) + `
    const deep=[motion.value,time.value,q('#basis').textContent];button(q('tr.phase'),'Show cases').click();const w=d.defaultView;
    return {deep,width:w.innerWidth,scroll:d.documentElement.scrollWidth,motion:motion.getBoundingClientRect().right,table:q('#motion-evidence .scroll').getBoundingClientRect().right}`);
-  assert.deepEqual(phone.deep, ['raise', '24', 'Checked segment 2 of 3 (raise-02). Invented: third 2 of the raise.'], 'a link to a case opens its animation at that case');
+  assert.deepEqual(phone.deep, ['transfer', '24', 'Motion 2 of 3 (raise-02). Invented: third 2 of the raise.'], 'a link to a motion opens its animation at that motion');
   assert.ok(phone.width === 390 && phone.scroll <= 390 && phone.motion <= 390 && phone.table <= 390, '390 px: the list and the check results fit without sideways scrolling (' + JSON.stringify(phone) + ')');
 });
 

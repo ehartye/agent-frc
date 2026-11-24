@@ -1,21 +1,26 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "agent-frc/preliminary-review-scene@1",
+  "$id": "agent-frc/preliminary-review-scene@2",
   "title": "Agent FRC preliminary review scene",
-  "description": "The only input of the stock preliminary design review page. The plugin builds it from a checked preliminary package; seasons supply data, not markup. Each property's `x-supplier` says who provides it: `plugin` (derived from the design source, the judgement file, the receipt or the budgets), `project` (authored under presentation in the judgement file; a missing value renders as 'Not supplied in this review' and validates with a warning) or `optional` (a feature that hides cleanly when absent).",
+  "description": "The only input of the stock preliminary design review page. design preliminary-page builds it from the design source, the judgement file, the page file and the library's records; seasons supply data, not markup. Each property's `x-supplier` says who provides it: `plugin` (derived from the design source, the judgement file, the verdict or the records), `page` (page.json; a missing value renders as 'Not supplied in this review' and validates with a warning) or `optional` (a feature that hides cleanly when absent).",
   "type": "object",
   "required": [
     "schema",
     "issue",
+    "design",
     "sources",
+    "records",
     "decision",
+    "unmet",
+    "reopen",
+    "premises",
     "palette",
     "meshes",
     "bodies",
     "cases",
     "openingCase",
     "parked",
-    "mass",
+    "weight",
     "power",
     "required",
     "narrativeReview",
@@ -27,7 +32,7 @@
   ],
   "properties": {
     "schema": {
-      "const": "agent-frc/preliminary-review-scene@1",
+      "const": "agent-frc/preliminary-review-scene@2",
       "x-supplier": "plugin"
     },
     "issue": {
@@ -36,29 +41,54 @@
       "x-supplier": "plugin",
       "description": "Layout issue identifier; the page heading."
     },
+    "design": {
+      "type": "string",
+      "minLength": 1,
+      "x-supplier": "plugin",
+      "description": "The design's name in its design source."
+    },
     "title": {
       "type": [
         "string",
         "null"
       ],
-      "x-supplier": "project",
-      "description": "presentation.title: the release's human title, shown as the page heading; the issue ID is used when absent."
+      "x-supplier": "page",
+      "description": "page.json title: the release's human title, shown as the page heading; the issue ID is used when absent."
     },
     "context": {
       "type": [
         "string",
         "null"
       ],
-      "x-supplier": "project",
-      "description": "presentation.context: the line above the heading, such as the project and iteration."
+      "x-supplier": "page",
+      "description": "page.json context: the line above the heading, such as the project and iteration."
     },
     "architecture": {
       "type": [
         "string",
         "null"
       ],
-      "x-supplier": "project",
-      "description": "presentation.architecture: the selected whole-robot architecture."
+      "x-supplier": "page",
+      "description": "page.json architecture: the selected whole-robot architecture."
+    },
+    "focus": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "x-supplier": "page",
+      "description": "page.json focus: what the reviewer should look at first."
+    },
+    "notes": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "x-supplier": "page",
+      "description": "page.json notes: model basis and limits.",
+      "items": {
+        "type": "string"
+      }
     },
     "datum": {
       "type": [
@@ -66,7 +96,7 @@
         "null"
       ],
       "x-supplier": "plugin",
-      "description": "The registered layout datum name."
+      "description": "The design source's frame, in words."
     },
     "units": {
       "type": "string",
@@ -74,10 +104,42 @@
     },
     "links": {
       "type": "array",
-      "x-supplier": "optional",
-      "description": "presentation.links: header links to season pages.",
+      "x-supplier": "page",
+      "description": "page.json links: header links to season pages.",
       "items": {
         "$ref": "#/$defs/link"
+      }
+    },
+    "cutaway": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "x-supplier": "page",
+      "description": "page.json cutaway: a toggle that hides named fixtures and outlines an opening, for example a target aperture.",
+      "required": [
+        "label",
+        "hides"
+      ],
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "hides": {
+          "$ref": "#/$defs/ids"
+        },
+        "outline": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+              "type": "number"
+            }
+          }
+        }
       }
     },
     "sources": {
@@ -85,16 +147,62 @@
       "x-supplier": "plugin",
       "required": [
         "design",
-        "step"
+        "narrative",
+        "page"
       ],
+      "additionalProperties": false,
+      "description": "The design source (its library fingerprint, which covers every subsystem file), the narrative and the page file, each with the digest read.",
       "properties": {
         "design": {
           "$ref": "#/$defs/pin"
         },
-        "step": {
-          "$ref": "#/$defs/pin"
-        },
         "narrative": {
+          "$ref": "#/$defs/pinOrNull"
+        },
+        "page": {
+          "$ref": "#/$defs/pinOrNull"
+        }
+      }
+    },
+    "records": {
+      "type": "object",
+      "x-supplier": "plugin",
+      "required": [
+        "folder",
+        "jobs",
+        "trials"
+      ],
+      "additionalProperties": false,
+      "description": "The library's records the verdict was judged from: each job record the judgement asked for, and trials.json.",
+      "properties": {
+        "folder": {
+          "type": "string"
+        },
+        "jobs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "file",
+              "sha256"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "file": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "trials": {
           "$ref": "#/$defs/pinOrNull"
         }
       }
@@ -106,14 +214,16 @@
         "status",
         "firstUnmet"
       ],
-      "description": "The checker's findings when the scene was built. The page replaces them with receipt.json's decision when that receipt pins this scene.",
+      "additionalProperties": false,
+      "description": "The verdict judged from the records when the scene was built: its status and its first unmet requirement.",
       "properties": {
         "status": {
           "enum": [
-            "pending receipt",
-            "blocked"
-          ],
-          "description": "Never a passing claim: only the receipt that pins this scene can set the decision the page shows as checked."
+            "layout-checked",
+            "provisional",
+            "blocked",
+            "reopen"
+          ]
         },
         "firstUnmet": {
           "type": [
@@ -129,6 +239,42 @@
             }
           }
         }
+      }
+    },
+    "unmet": {
+      "type": "array",
+      "x-supplier": "plugin",
+      "description": "Every unmet requirement of the verdict, blocking first.",
+      "items": {
+        "type": "object",
+        "required": [
+          "kind",
+          "text"
+        ]
+      }
+    },
+    "reopen": {
+      "type": "array",
+      "x-supplier": "plugin",
+      "description": "What the verdict reopens: the phase, the reason and the groups affected.",
+      "items": {
+        "type": "object",
+        "required": [
+          "phase",
+          "reason"
+        ]
+      }
+    },
+    "premises": {
+      "type": "array",
+      "x-supplier": "plugin",
+      "description": "Each accepted premise, judged against the fact it observes.",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "status"
+        ]
       }
     },
     "palette": {
@@ -194,7 +340,8 @@
       "minItems": 1,
       "items": {
         "$ref": "#/$defs/case"
-      }
+      },
+      "description": "One case per motion of the design source, then the displaced control."
     },
     "openingCase": {
       "type": "string",
@@ -203,7 +350,7 @@
     "animations": {
       "type": "array",
       "x-supplier": "plugin",
-      "description": "The animation list: one entry per mission phase, each playing its cases end to end. A stage names its phase under stages.CASE.phase; presentation.phases gives a title and says whether it is a headline mission animation. A case is one checked segment, listed in the check results and not here. A scene written before 0.137.0 has none, and the page derives them from the case IDs.",
+      "description": "The animation list: one entry per phase of the judgement's cycle, playing its motions end to end, then each motion outside the cycle. page.json phases gives a phase a title and says whether it is a headline mission animation.",
       "minItems": 1,
       "items": {
         "type": "object",
@@ -276,106 +423,316 @@
         }
       }
     },
-    "mass": {
-      "type": [
-        "object",
-        "null"
-      ],
+    "weight": {
+      "type": "object",
       "x-supplier": "plugin",
       "required": [
-        "limitKg",
-        "inspectionKg",
-        "remainingKg",
-        "runningKg",
-        "lines",
-        "runningAdditions"
+        "totalKg",
+        "rangeKg",
+        "notRobotWeight",
+        "unweighed",
+        "groups",
+        "extraMass",
+        "limits"
       ],
+      "additionalProperties": false,
+      "description": "The weight from the design source's masses, as the mass record states it, against each of the season's weight limits.",
       "properties": {
-        "limitKg": {
-          "type": "number",
-          "exclusiveMinimum": 0
-        },
-        "inspectionKg": {
-          "$ref": "#/$defs/interval"
-        },
-        "remainingKg": {
+        "totalKg": {
           "type": "number"
         },
-        "runningKg": {
+        "rangeKg": {
           "$ref": "#/$defs/interval"
         },
-        "lines": {
-          "type": "array",
-          "items": {
+        "notRobotWeight": {
+          "$ref": "#/$defs/ids"
+        },
+        "unweighed": {
+          "$ref": "#/$defs/ids"
+        },
+        "groups": {
+          "type": "object",
+          "additionalProperties": {
             "type": "object",
             "required": [
-              "id",
-              "kg",
+              "massKg",
+              "rangeKg",
               "members",
-              "basis"
+              "extra"
             ],
             "properties": {
-              "id": {
-                "type": "string"
+              "massKg": {
+                "type": "number"
               },
-              "kg": {
+              "rangeKg": {
                 "$ref": "#/$defs/interval"
               },
               "members": {
                 "$ref": "#/$defs/ids"
               },
-              "basis": {
-                "type": "string"
+              "extra": {
+                "$ref": "#/$defs/ids"
               }
-            }
+            },
+            "additionalProperties": false
           }
         },
-        "runningAdditions": {
-          "type": [
-            "array",
-            "null"
-          ],
-          "x-supplier": "project",
-          "description": "presentation.runningAdditions: itemized running-only articles (battery, bumpers, payload) with member IDs.",
+        "extraMass": {
+          "type": "array",
           "items": {
             "type": "object",
             "required": [
               "name",
-              "kg",
-              "members"
+              "group",
+              "rangeKg"
             ],
             "properties": {
               "name": {
                 "type": "string"
               },
-              "kg": {
+              "group": {
+                "type": "string"
+              },
+              "rangeKg": {
                 "$ref": "#/$defs/interval"
               },
-              "members": {
-                "$ref": "#/$defs/ids"
+              "note": {
+                "type": [
+                  "string",
+                  "null"
+                ]
               }
-            }
+            },
+            "additionalProperties": false
           }
         },
-        "runningBasis": {
-          "type": [
-            "string",
-            "null"
-          ]
+        "limits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "limitKg",
+              "excludesGroups",
+              "rangeKg",
+              "marginKg",
+              "status"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "limitKg": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "excludesGroups": {
+                "$ref": "#/$defs/ids"
+              },
+              "basis": {
+                "type": "string"
+              },
+              "rangeKg": {
+                "$ref": "#/$defs/interval"
+              },
+              "marginKg": {
+                "type": "number"
+              },
+              "status": {
+                "enum": [
+                  "pass",
+                  "fail"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
         }
       }
     },
     "power": {
-      "type": "array",
+      "type": "object",
       "x-supplier": "plugin",
-      "items": {
-        "$ref": "#/$defs/duty"
+      "required": [
+        "minBusV",
+        "conservative",
+        "motions"
+      ],
+      "additionalProperties": false,
+      "description": "Each powered motion's electrical record as judged: every running drive's current and needed motor voltage, and the bus under all of them.",
+      "properties": {
+        "minBusV": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "conservative": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "motions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "motion",
+              "status",
+              "busV",
+              "loadA",
+              "requiredV",
+              "marginV",
+              "drives",
+              "alsoRunning"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "motion": {
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "pass",
+                  "fail"
+                ]
+              },
+              "busV": {
+                "$ref": "#/$defs/interval"
+              },
+              "loadA": {
+                "$ref": "#/$defs/interval"
+              },
+              "requiredV": {
+                "type": "number"
+              },
+              "governs": {
+                "type": "string"
+              },
+              "marginV": {
+                "type": "number"
+              },
+              "clamped": {
+                "$ref": "#/$defs/ids"
+              },
+              "openCircuitV": {
+                "$ref": "#/$defs/interval"
+              },
+              "resistanceOhm": {
+                "$ref": "#/$defs/interval"
+              },
+              "drives": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "drive",
+                    "kind",
+                    "currentA",
+                    "motorV",
+                    "limitA",
+                    "clamped",
+                    "busA",
+                    "members"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "drive": {
+                      "type": "string"
+                    },
+                    "motor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "motorSolid": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "count": {
+                      "type": "number"
+                    },
+                    "group": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
+                    "change": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "unit": {
+                      "type": "string"
+                    },
+                    "currentA": {
+                      "$ref": "#/$defs/interval"
+                    },
+                    "neededA": {
+                      "$ref": "#/$defs/interval"
+                    },
+                    "limitA": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "motorV": {
+                      "$ref": "#/$defs/interval"
+                    },
+                    "clamped": {
+                      "type": "boolean"
+                    },
+                    "busA": {
+                      "$ref": "#/$defs/interval"
+                    },
+                    "members": {
+                      "$ref": "#/$defs/ids"
+                    }
+                  }
+                }
+              },
+              "alsoRunning": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "drive",
+                    "busA",
+                    "members"
+                  ],
+                  "properties": {
+                    "drive": {
+                      "type": "string"
+                    },
+                    "busA": {
+                      "$ref": "#/$defs/interval"
+                    },
+                    "members": {
+                      "$ref": "#/$defs/ids"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
       }
     },
     "required": {
       "type": "array",
-      "x-supplier": "project",
-      "description": "presentation.required: each role and the placed IDs that represent it. Absent IDs show as missing.",
+      "x-supplier": "plugin",
+      "description": "Each role a preliminary layout must hold and the solids of the groups that hold it, from the design source.",
       "items": {
         "type": "object",
         "required": [
@@ -389,7 +746,8 @@
           "ids": {
             "$ref": "#/$defs/ids"
           }
-        }
+        },
+        "additionalProperties": false
       }
     },
     "narrativeReview": {
@@ -424,76 +782,41 @@
         "conceptual"
       ]
     },
-    "focus": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "x-supplier": "project",
-      "description": "presentation.focus: what the reviewer should look at first."
-    },
-    "notes": {
-      "type": [
-        "array",
-        "null"
-      ],
-      "x-supplier": "project",
-      "description": "presentation.notes: model basis and limits.",
-      "items": {
-        "type": "string"
-      }
-    },
-    "cutaway": {
-      "type": [
-        "object",
-        "null"
-      ],
-      "x-supplier": "optional",
-      "description": "presentation.cutaway: a toggle that hides named fixtures and outlines an opening, for example a target aperture.",
-      "required": [
-        "label",
-        "hides"
-      ],
-      "properties": {
-        "label": {
-          "type": "string"
-        },
-        "hides": {
-          "$ref": "#/$defs/ids"
-        },
-        "outline": {
-          "type": "array",
-          "minItems": 3,
-          "items": {
-            "type": "array",
-            "minItems": 3,
-            "maxItems": 3,
-            "items": {
-              "type": "number"
-            }
-          }
-        }
-      }
-    },
-    "replays": {
+    "interactions": {
       "type": "array",
-      "x-supplier": "optional",
-      "description": "presentation.replays: playback of recorded trials in the same animation list and view as the mission animations. A replay is evidence playback, not a clearance case: the layout check neither runs nor credits it, and the receipt's case set does not include it.",
+      "x-supplier": "plugin",
+      "description": "The verdict's interactions: screen verdict and reasons, override, and the trial's result, assumptions, inputs, sensitivity, coverage and state.",
       "items": {
-        "$ref": "#/$defs/replay"
+        "type": "object",
+        "required": [
+          "id",
+          "verdict",
+          "reasons"
+        ]
+      }
+    },
+    "adjustments": {
+      "type": "array",
+      "x-supplier": "plugin",
+      "description": "The verdict's adjustments: kind, input, range and, for a mechanical one, whether both ends were measured and what came close there.",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "kind",
+          "range",
+          "measured"
+        ]
       }
     },
     "attachment": {
       "type": "object",
       "x-supplier": "plugin",
-      "description": "The layout check's attachment report for one case's start pose: robot solids with no path of contacts or registered mounts to the frame, labelled unmounted allowances and field fixtures off the floor. A floating solid or a fixture off the floor that no label explains keeps the layout from being layout-checked.",
+      "description": "The verdict's attachment report at the start of the cycle: robot solids with no path of contacts or registered mounts to the frame, labelled unmounted allowances and field fixtures off the floor.",
       "required": [
-        "case"
+        "motion"
       ],
       "properties": {
-        "case": {
-          "type": "string"
-        },
         "pose": {
           "type": "string"
         },
@@ -626,35 +949,25 @@
             },
             "additionalProperties": false
           }
+        },
+        "motion": {
+          "type": "string"
+        },
+        "mountsOffHost": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
         }
       },
       "additionalProperties": false
     },
-    "interactions": {
+    "replays": {
       "type": "array",
-      "x-supplier": "plugin",
-      "description": "The receipt's interactions: screen verdict and reasons, override, and the trial's result, assumptions, inputs, sensitivity, coverage and state.",
+      "x-supplier": "optional",
+      "description": "One replay per trial with a nominal trace in the records folder's trials.json: playback in the same animation list and view as the motions. A replay is evidence playback, not a clearance case: the verdict neither runs nor credits it.",
       "items": {
-        "type": "object",
-        "required": [
-          "id",
-          "verdict",
-          "reasons"
-        ]
-      }
-    },
-    "adjustments": {
-      "type": "array",
-      "x-supplier": "plugin",
-      "description": "The receipt's adjustments: kind, input, range and, for a mechanical one, whether both ends were measured and what came close there.",
-      "items": {
-        "type": "object",
-        "required": [
-          "name",
-          "kind",
-          "range",
-          "measured"
-        ]
+        "$ref": "#/$defs/replay"
       }
     }
   },
@@ -749,11 +1062,17 @@
         "fixture",
         "volumeMm3",
         "closed",
-        "missing"
+        "description",
+        "massKg",
+        "massRangeKg",
+        "massFrom",
+        "massExcluded",
+        "motorOf"
       ],
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "page.json solids, else the solid's name in the design source."
         },
         "category": {
           "type": "string",
@@ -771,8 +1090,8 @@
             "string",
             "null"
           ],
-          "x-supplier": "project",
-          "description": "Which function it serves."
+          "x-supplier": "page",
+          "description": "Which function it serves: page.json solids, else its group."
         },
         "motionGroup": {
           "type": "string",
@@ -783,7 +1102,7 @@
             "string",
             "null"
           ],
-          "x-supplier": "project"
+          "x-supplier": "page"
         },
         "volumeMm3": {
           "type": [
@@ -791,42 +1110,11 @@
             "null"
           ]
         },
-        "volumeType": {
-          "enum": [
-            "material",
-            "envelope",
-            "gauge",
-            null
-          ],
-          "x-supplier": "project"
-        },
         "closed": {
           "type": "boolean"
         },
         "fixture": {
           "type": "boolean"
-        },
-        "purpose": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "x-supplier": "project"
-        },
-        "rationale": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "x-supplier": "project"
-        },
-        "support": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "x-supplier": "project",
-          "description": "presentation.loadPaths: the support and load path into the frame."
         },
         "massExcluded": {
           "type": [
@@ -837,8 +1125,8 @@
         "mounts": {
           "type": "array",
           "minItems": 1,
-          "x-supplier": "project",
-          "description": "Plan mounts that name this member: the host, the registered point and its basis.",
+          "x-supplier": "plugin",
+          "description": "Mounts the design source registers against this member: the host, the point and its note.",
           "items": {
             "type": "object",
             "required": [
@@ -865,8 +1153,44 @@
             "additionalProperties": false
           }
         },
-        "missing": {
-          "$ref": "#/$defs/ids"
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "page.json solids, else the solid's note in the design source."
+        },
+        "massKg": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "massRangeKg": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "number"
+          }
+        },
+        "massFrom": {
+          "enum": [
+            "massKg",
+            "densityKgM3",
+            "group",
+            null
+          ]
+        },
+        "motorOf": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The drives whose motor this solid is."
         }
       },
       "additionalProperties": false
@@ -877,7 +1201,8 @@
         "id",
         "label",
         "kind",
-        "stage",
+        "purpose",
+        "cause",
         "basis",
         "status",
         "bodies",
@@ -894,13 +1219,8 @@
         "kind": {
           "enum": [
             "nominal",
-            "inhibited",
-            "adverse",
             "displaced control"
           ]
-        },
-        "stage": {
-          "type": "string"
         },
         "basis": {
           "type": "string"
@@ -960,107 +1280,31 @@
         },
         "time": {
           "type": "array",
-          "x-supplier": "optional",
-          "description": "presentation.caseTimelines[id].time: seconds per frame.",
+          "description": "Seconds per frame: a driven motion's nominal duration on the library's triangle speed profile, from rest to rest.",
           "items": {
             "type": "number"
           }
         },
         "measure": {
           "type": "array",
-          "x-supplier": "optional",
-          "description": "presentation.caseTimelines[id].measure: live readout per frame.",
+          "description": "The readout per frame: each drive's joint value and peak current and the bus voltage, or the cause of a motion no motor drives.",
           "items": {
             "type": "string"
           }
         },
-        "positions": {
-          "type": "array",
-          "x-supplier": "optional",
-          "description": "presentation.caseTimelines[id].positions: robot field position per frame, mm.",
-          "items": {
-            "type": "array",
-            "minItems": 2,
-            "maxItems": 2,
-            "items": {
-              "type": "number"
-            }
-          }
-        }
-      },
-      "additionalProperties": false
-    },
-    "duty": {
-      "type": "object",
-      "required": [
-        "case",
-        "duty",
-        "batteryCondition",
-        "openCircuitV",
-        "resistanceOhm",
-        "requiredMinV",
-        "loadedBusV",
-        "batterySideA",
-        "marginV",
-        "status",
-        "lines"
-      ],
-      "properties": {
-        "case": {
-          "type": "string"
+        "purpose": {
+          "enum": [
+            "operating",
+            "park",
+            "service"
+          ]
         },
-        "duty": {
-          "type": "string"
-        },
-        "stage": {
-          "type": "string"
-        },
-        "batteryCondition": {
-          "type": "string"
-        },
-        "openCircuitV": {
-          "type": "number"
-        },
-        "resistanceOhm": {
-          "type": "number",
-          "minimum": 0
-        },
-        "requiredMinV": {
-          "type": "number"
-        },
-        "loadedBusV": {
-          "$ref": "#/$defs/interval"
-        },
-        "batterySideA": {
-          "$ref": "#/$defs/interval"
-        },
-        "marginV": {
-          "type": "number"
-        },
-        "status": {
-          "type": "string"
-        },
-        "lines": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": [
-              "name",
-              "amps",
-              "members"
-            ],
-            "properties": {
-              "name": {
-                "type": "string"
-              },
-              "amps": {
-                "$ref": "#/$defs/interval"
-              },
-              "members": {
-                "$ref": "#/$defs/ids"
-              }
-            }
-          }
+        "cause": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "drive, or the cause a motion no motor drives states: hand, spring, gravity or piece."
         }
       },
       "additionalProperties": false

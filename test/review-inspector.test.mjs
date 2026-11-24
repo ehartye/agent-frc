@@ -6,48 +6,46 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createHash } from 'node:crypto';
 import { reviewScene, replayScene, phasedScene } from './fixtures/review-scene.mjs';
 import { validateScene } from '../scripts/review-scene.mjs';
 
 // The stock page's pure helpers, loaded from the shipped template.
 const html = readFileSync(new URL('../templates/preliminary-review/review.html', import.meta.url), 'utf8');
 const source = html.split('<script id="review-logic">')[1].split('</script>')[0];
-const logic = new Function(source + '\nreturn {inspectorFields, attachmentNote, attachmentRows, visibleBodies, findComponent, partition, frameCount, animationsOf, clipOf, clipFrame, clipSeek, checkGroups, massLinesFor, sha256Pure, digestHex, fieldFitState, replayMotion, eventAt, tubeTriangles, triangleValues, alongCenterline, carriedValues, interactionRows, MISSING, NOT_SUPPLIED};')();
+const logic = new Function(source + '\nreturn {inspectorFields, attachmentNote, attachmentRows, visibleBodies, findComponent, weightOf, frameCount, animationsOf, clipOf, clipFrame, clipSeek, checkGroups, fieldFitState, replayMotion, eventAt, tubeTriangles, triangleValues, alongCenterline, carriedValues, interactionRows, MISSING, NOT_SUPPLIED};')();
 const field = (fields, label) => fields.find(f => f[0] === label);
 
-test('the inspector shows identity, classification, volume, mass basis, support, loads and moving cases from the scene', () => {
+test('the inspector shows identity, classification, volume, weight from the source, support, the drive a motor runs and the motions it moves in', () => {
   const scene = reviewScene();
   const fields = logic.inspectorFields('arm', scene);
-  assert.deepEqual(fields.map(f => f[0]), ['Category', 'Subsystem', 'Motion group', 'Material', 'Occupied volume', 'Mass line and basis',
-    'Support and load path', 'Purpose', 'Why it is included', 'Electrical load lines', 'Moves in']);
+  assert.deepEqual(fields.map(f => f[0]), ['Category', 'Subsystem', 'Motion group', 'Material', 'Occupied volume', 'Weight', 'Support and load path', 'Description', 'Motor of',
+    'Moves in']);
   assert.equal(field(fields, 'Category')[3], 'swatch');
-  assert.equal(field(fields, 'Subsystem')[1], 'Invented arm');
-  assert.equal(field(fields, 'Motion group')[1], 'arm', 'subsystem and motion group stay separate');
-  assert.equal(field(fields, 'Occupied volume')[1], '64.0 cm³ · material volume');
-  assert.deepEqual(field(fields, 'Mass line and basis')[1], ['mechanisms: 3.00–3.60 kg · Invented estimate · Allocated to this component alone']);
-  assert.equal(field(fields, 'Support and load path')[1], 'Pivot shaft into the frame plate.');
-  assert.deepEqual(field(fields, 'Electrical load lines')[1], ['arm']);
-  assert.deepEqual(field(fields, 'Moves in')[1], ['Raise', 'package-displacement-control']);
-  assert.ok(fields.every(f => f[2] === false), 'a complete entry has no missing field');
+  assert.equal(field(fields, 'Subsystem')[1], 'arm');
+  assert.equal(field(fields, 'Motion group')[1], 'arm', 'subsystem and motion group are separate fields');
+  assert.equal(field(fields, 'Occupied volume')[1], '64.0 cm³');
+  assert.equal(field(fields, 'Weight')[1], '1.50 kg, 1.40–1.70 kg · from the design source (massKg)');
+  assert.equal(field(fields, 'Description')[1], 'Invented note on arm.');
+  assert.equal(field(fields, 'Motor of')[1], 'Not a motor');
+  assert.deepEqual(field(fields, 'Moves in')[1], ['Transfer', 'package-displacement-control']);
+  assert.deepEqual(field(fields, 'Material').slice(1, 3), [logic.NOT_SUPPLIED, false], 'page text not supplied is shown as such and is not a gap');
+  assert.ok(fields.every(f => f[2] === false), 'nothing the source states is missing');
+  const motor = logic.inspectorFields('arm motor', scene);
+  assert.deepEqual(field(motor, 'Motor of')[1], ['shoulder: turns arm (rotation) · up to 12.0 A per motor, 6.20 V needed in raise']);
 });
 
-test('missing explanations, support paths and mass lines stay visible as missing', () => {
+test('a solid with no weight and a solid in a group lump say so; page text that is absent is not a gap', () => {
   const scene = reviewScene();
-  Object.assign(scene.bodies.frame, {purpose: null, subsystem: null, volumeType: null, support: null, missing: ['purpose', 'subsystem', 'volume type']});
-  scene.mass.lines = scene.mass.lines.filter(l => l.id !== 'structure');
-  const fields = logic.inspectorFields('frame', scene);
-  assert.deepEqual(field(fields, 'Purpose').slice(1, 3), [logic.MISSING, true]);
-  assert.deepEqual(field(fields, 'Subsystem').slice(1, 3), [logic.MISSING, true]);
-  assert.equal(field(fields, 'Occupied volume')[2], true);
-  assert.deepEqual(field(fields, 'Support and load path').slice(1, 3), [logic.NOT_SUPPLIED, true]);
-  assert.deepEqual(field(fields, 'Mass line and basis').slice(1, 3), ['No mass line includes this component', true]);
-  assert.equal(field(fields, 'Moves in')[1], 'Stationary in every commissioned case');
-  assert.equal(field(logic.inspectorFields('target', scene), 'Mass line and basis')[1], 'Field fixture; not robot mass');
+  Object.assign(scene.bodies.frame, {massKg: null, massRangeKg: null, massFrom: 'group', description: null});
+  Object.assign(scene.bodies.arm, {massKg: null, massRangeKg: null, massFrom: null});
+  assert.deepEqual(field(logic.inspectorFields('frame', scene), 'Weight').slice(1, 3), ['In the weight of its group, frame: 1.90 kg, 1.75–2.15 kg', false]);
+  assert.deepEqual(field(logic.inspectorFields('frame', scene), 'Description').slice(1, 3), [logic.NOT_SUPPLIED, false]);
+  assert.deepEqual(field(logic.inspectorFields('arm', scene), 'Weight').slice(1, 3), ['Unweighed: the design source gives it no massKg or densityKgM3', true]);
+  assert.equal(field(logic.inspectorFields('target', scene), 'Weight')[1], 'Field fixture; not robot weight');
   assert.equal(field(logic.inspectorFields('target', scene), 'Support and load path')[1], 'Field fixture');
+  assert.equal(field(logic.inspectorFields('target', scene), 'Moves in')[1], 'Stationary in every motion');
   assert.deepEqual(logic.inspectorFields('ghost', scene), [['Component', logic.MISSING, true]]);
-  scene.mass.runningAdditions = [{name: 'carried article', kg: [0.5, 0.75], members: ['frame']}];
-  assert.deepEqual(logic.massLinesFor('frame', scene), ['carried article: 0.50–0.75 kg · running addition, excluded from inspection weight']);
+  assert.deepEqual(logic.weightOf(['arm', 'arm motor', 'frame', 'target'], scene), {kg: [0.35, 0.45], lumped: 1, unweighed: 1}, 'a selection adds the ranges of its weighed solids and counts the rest');
 });
 
 test('focus shows only the selected bodies and Show assembly restores every body', () => {
@@ -65,25 +63,9 @@ test('search selects by stable ID or display name, and leaving the box accepts o
   assert.equal(logic.findComponent('nothing', bodies), null);
 });
 
-test('budget partition keeps shared lines separate until they are split', () => {
-  const lines = [{id: 'a', members: ['arm']}, {id: 'b', members: ['arm', 'frame']}, {id: 'c', members: ['battery']}];
-  const sel = new Set(['arm']);
-  assert.deepEqual(logic.partition(lines, sel, false), {included: [lines[0]], shared: [lines[1]]});
-  assert.deepEqual(logic.partition(lines, sel, true).included.length, 3);
+test('a case has one frame per placement', () => {
   assert.equal(logic.frameCount(reviewScene().cases[0]), 25);
-});
-
-test('the scene digest falls back to a pure-JS SHA-256 where crypto.subtle is unavailable', async () => {
-  for (const text of ['', 'abc', 'abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq', 'é'.repeat(70), 'x'.repeat(1000)]) {
-    const bytes = new TextEncoder().encode(text), expected = createHash('sha256').update(bytes).digest('hex');
-    assert.equal(logic.sha256Pure(bytes), expected);
-    assert.equal(await logic.digestHex(bytes, undefined), expected, 'without crypto.subtle');
-    assert.equal(await logic.digestHex(bytes.buffer, undefined), expected);
-    assert.equal(await logic.digestHex(bytes, globalThis.crypto.subtle), expected, 'with crypto.subtle');
-  }
-  const big = new Uint8Array(3 * 1024 * 1024 + 77).map((_, k) => (k * 31) & 255), view = big.subarray(13, big.length - 5);
-  assert.equal(await logic.digestHex(view, undefined), createHash('sha256').update(view).digest('hex'), 'a multi-megabyte offset view hashes in place');
-  for (const n of [55, 56, 63, 64, 119, 120]) { const b = new Uint8Array(n).fill(97); assert.equal(logic.sha256Pure(b), createHash('sha256').update(b).digest('hex'), n + ' bytes'); }
+  assert.equal(logic.frameCount(reviewScene().cases[1]), 25);
 });
 
 test('the field-interaction fit says why it is unavailable', () => {
@@ -104,16 +86,12 @@ test('the field-interaction fit says why it is unavailable', () => {
   assert.match(html, /id="fieldWhy"/, 'the reason has a visible place on the page');
 });
 
-test('a mount registered against a member leads its support and load path', () => {
+test('a mount the design source registers against a member leads its support and load path', () => {
   const scene = reviewScene();
   scene.bodies.arm.mounts = [{on: 'frame', pointMm: [10, -20.25, 30], basis: 'Invented right-hand pivot datum'}];
-  const withText = field(logic.inspectorFields('arm', scene), 'Support and load path');
-  assert.deepEqual(withText.slice(1, 3), [['Mounted on ' + scene.bodies.frame.name + ' at (10.0, -20.3, 30.0) mm · Invented right-hand pivot datum',
-    'Pivot shaft into the frame plate.'], false]);
-  scene.bodies.arm.support = null;
-  const alone = field(logic.inspectorFields('arm', scene), 'Support and load path');
-  assert.equal(alone[1].length, 1);
-  assert.equal(alone[2], false, 'a registered mount is a supplied support');
+  const withMount = field(logic.inspectorFields('arm', scene), 'Support and load path');
+  assert.deepEqual(withMount.slice(1, 3), [['Mounted on ' + scene.bodies.frame.name + ' at (10.0, -20.3, 30.0) mm · Invented right-hand pivot datum'], false]);
+  assert.deepEqual(field(logic.inspectorFields('frame', scene), 'Support and load path').slice(1, 3), [logic.NOT_SUPPLIED, false], 'no attachment report and no mount');
   const {errors} = validateScene(scene);
   assert.deepEqual(errors, []);
   scene.bodies.arm.mounts = [{on: 'frame', pointMm: [10, 20], basis: 'Invented'}];
@@ -130,8 +108,8 @@ test('a replay becomes one entry of the animation list: frames from its clock, e
   assert.equal(logic.eventAt(motion.events, 1), null, 'no event before the first');
   assert.deepEqual(logic.eventAt(motion.events, 2), [1, 'Halfway']);
   assert.deepEqual(logic.eventAt(motion.events, 4), [2, 'At the target']);
-  assert.deepEqual(field(logic.inspectorFields('arm', scene), 'Moves in')[1], ['Raise', 'package-displacement-control', 'lane-run']);
-  assert.equal(field(logic.inspectorFields('target', scene), 'Moves in')[1], 'Stationary in every commissioned case', 'a body a replay keeps in place does not move');
+  assert.deepEqual(field(logic.inspectorFields('arm', scene), 'Moves in')[1], ['Transfer', 'package-displacement-control', 'lane-run']);
+  assert.equal(field(logic.inspectorFields('target', scene), 'Moves in')[1], 'Stationary in every motion', 'a body a replay keeps in place does not move');
 });
 
 test('a tube is a closed ring of triangles at its radius, and a carried mesh moves with its centerline', () => {
@@ -155,10 +133,12 @@ test('a tube is a closed ring of triangles at its radius, and a carried mesh mov
 test('the attachment report names each floating solid and labelled exception, and the inspector repeats it', () => {
   const scene = reviewScene();
   assert.equal(logic.attachmentNote('arm', scene), null, 'a scene without the report says nothing');
+  assert.equal(field(logic.inspectorFields('frame', {...scene, attachment: {motion: 'raise', gapMm: 3, floating: []}}), 'Support and load path')[1],
+    'Attached: contacts or registered mounts trace it to the frame', 'a solid the report does not list is attached');
   assert.deepEqual(logic.attachmentRows(scene), []);
-  scene.attachment = {case: 'raise', gapMm: 3, robotSolids: 3,
+  scene.attachment = {motion: 'raise', pose: 'start of the motion', gapMm: 3, robotSolids: 3,
     floating: [{solid: 'battery', group: 'battery', nearest: 'frame', gapMm: 41.26}], heldByMountOnly: ['arm'], onUnmountedAllowance: [],
-    unmountedAllowances: [], fixturesOffFloor: [{fixture: 'target', lowestAboveFloorMm: 120}], suspendedFixtures: []};
+    unmountedAllowances: [], fixturesOffFloor: [{fixture: 'target', lowestAboveFloorMm: 120}], suspendedFixtures: [], mountsOffHost: []};
   assert.deepEqual(validateScene(scene).errors, []);
   const rows = logic.attachmentRows(scene);
   assert.deepEqual(rows.map(r => [r[0], r[1], r[3]]), [['Floating', 'battery', true], ['Off floor', 'target', true], ['Mount only', 'arm', false]]);
@@ -168,7 +148,7 @@ test('the attachment report names each floating solid and labelled exception, an
   assert.match(support[1][0], /^Floating: nothing holds it within 3 mm\. Nearest attached solid: frame, 41\.3 mm away/);
   assert.equal(support[2], true, 'a floating solid shows as a gap in the inspector');
   const held = field(logic.inspectorFields('arm', scene), 'Support and load path');
-  assert.deepEqual(held[1], ['Held across a gap by a registered mount alone; no modelled solid touches it', 'Pivot shaft into the frame plate.']);
+  assert.deepEqual(held[1], ['Held across a gap by a registered mount alone; no modelled solid touches it']);
   assert.equal(held[2], false);
   assert.match(field(logic.inspectorFields('target', scene), 'Support and load path')[1][0], /^Off the floor: lowest point 120\.0 mm above it/);
   // A labelled allowance shows its reason and is not a finding.
@@ -193,16 +173,16 @@ test('a field fixture shows its own category without a robot role', () => {
   assert.equal(field(logic.inspectorFields('arm', scene), 'Category')[1], 'intake (colour of role mechanism)');
 });
 
-test('an animation plays the segments of one mission phase end to end as one clip', () => {
+test('an animation plays the motions of one phase of the cycle end to end as one clip', () => {
   const scene = phasedScene(), cases = new Map(scene.cases.map(c => [c.id, c]));
   const [raise, lower] = logic.animationsOf(scene).map(a => logic.clipOf(a, a.cases.map(id => cases.get(id))));
-  assert.deepEqual([raise.id, raise.title, raise.mission, raise.segments.length], ['raise', 'Raise the arm', true, 3]);
+  assert.deepEqual([raise.id, raise.title, raise.mission, raise.segments.length], ['transfer', 'Raise the arm', true, 3]);
   assert.equal(raise.frames, 73, 'three segments of 25 frames share the frame where one ends and the next begins');
   assert.deepEqual(raise.offsets, [0, 24, 48]);
   assert.deepEqual([0, 23, 24, 47, 48, 72].map(t => logic.clipFrame(raise, t)), [[0, 0], [0, 23], [1, 0], [1, 23], [2, 0], [2, 24]]);
   assert.deepEqual([logic.clipSeek(raise, 1, 0.5), logic.clipSeek(raise, 2, 1), logic.clipSeek(raise, 0, 7)], [36, 72, 24]);
   assert.ok(raise.times.every((t, k) => !k || t > raise.times[k - 1]), 'the clip clock never stops at a joint');
-  assert.ok(Math.abs(raise.times.at(-1) - 6) < 1e-9, 'a long untimed clip plays in six seconds, however many segments it was checked in');
+  assert.ok(Math.abs(raise.times.at(-1) - 6) < 1e-9, 'a long untimed clip plays in six seconds, however many motions it holds');
   assert.ok(Math.abs(lower.times.at(-1) - 2.4) < 1e-9, 'a single untimed case keeps a tenth of a second a frame');
   for (const k of [0, 1]) {
     const end = raise.segments[k].bodies.arm.matrices.at(-1), next = raise.segments[k + 1].bodies.arm.matrices[0];
@@ -210,13 +190,13 @@ test('an animation plays the segments of one mission phase end to end as one cli
   }
   const timed = logic.clipOf({id: 'timed'}, [{...cases.get('raise-01'), time: Array.from({length: 25}, (_, k) => 3 + k * 0.05)}, cases.get('raise-02')]);
   assert.deepEqual([timed.times[0], +timed.times[24].toFixed(6), timed.timed], [3, 4.2, false], 'a segment keeps its own clock and the next continues from it');
-  assert.deepEqual(field(logic.inspectorFields('arm', scene), 'Moves in')[1], ['Raise the arm', 'Lower', 'package-displacement-control'], 'the inspector names phases, not segments');
+  assert.deepEqual(field(logic.inspectorFields('arm', scene), 'Moves in')[1], ['Raise the arm', 'Park', 'package-displacement-control'], 'the inspector names phases, not motions');
 });
 
 test('check results group by phase: counts, the tightest clearance, the tolerance used and the case to jump to', () => {
   const scene = phasedScene(), groups = logic.checkGroups(scene);
-  assert.deepEqual(groups.map(g => [g.title, g.rows.length, g.counts]), [['Raise the arm', 3, {pass: 3}], ['Lower', 1, {pass: 1}],
-    ['Displaced control and uncovered conditions', 2, {'rejected as expected': 1, 'not evaluated': 1}]]);
+  assert.deepEqual(groups.map(g => [g.title, g.rows.length, g.counts]), [['Raise the arm', 3, {pass: 3}], ['Park', 1, {pass: 1}],
+    ['Displaced control and uncovered conditions', 2, {'rejected as expected': 1, 'out-of-scope': 1}]]);
   const [raise, lower, rest] = groups;
   assert.deepEqual([raise.tightest.case, raise.focus.case, raise.allowanceMm, raise.pathToleranceMm, raise.undeclaredTolerance, raise.attention], ['raise-03', 'raise-03', [5, 5], [2, 2], 0, false]);
   assert.deepEqual([lower.tightest, lower.pathToleranceMm, lower.undeclaredTolerance], [null, null, 1], 'a phase with no pair in range and no declared tolerance says so');
@@ -225,7 +205,7 @@ test('check results group by phase: counts, the tightest clearance, the toleranc
   scene.motionEvidence[0].limitingValue = {gapMm: 0, volumeMm3: 30};
   const failed = logic.checkGroups(scene)[0];
   assert.deepEqual([failed.counts, failed.attention, failed.focus.case, failed.tightest.case], [{fail: 1, pass: 2}, true, 'raise-01', 'raise-01'], 'an overlap is tighter than any gap, and a failing case is the one to jump to');
-  assert.deepEqual(logic.checkGroups(reviewScene()).map(g => [g.id, g.rows.length]), [['raise', 1], [null, 1]], 'a scene of one phase groups the same way');
+  assert.deepEqual(logic.checkGroups(reviewScene()).map(g => [g.id, g.rows.length]), [['transfer', 1], [null, 1]], 'a scene of one phase groups the same way');
 });
 
 test('each interaction shows its verdict and why, its trial result, what it assumed and leans on, and its adjustment window', () => {

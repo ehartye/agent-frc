@@ -9,9 +9,11 @@ motors and drives, the battery, poses and motions. The judgement file is the plu
      "premises": [{"file"}], "rules": {...}, "purposes": {...}, "motions": {...},
      "cycle": [{"phase", "motions": [...]} | {"phase", "notApplicable"}],
      "control": {"motion", "displaced", "moving", "offsetMm", "basis"},
-     "attachment": {...}, "interactions": {...}, "missionCases": [...], "risks": [...], "scopeGuidelines": {...}}
+     "attachment": {...}, "interactions": {...}, "missionCases": [...], "risks": [...], "scopeGuidelines": {...},
+     "page": {"file"}}
 
-A file is named by its path alone. The season's requirements file is shared by every release of the season:
+A file is named by its path alone. The page file holds the review page's words and display choices; only the page
+reads it (package_view.py), so it never reaches the verdict. The season's requirements file is shared by every release of the season:
 
     {"schema": "agent-frc/season-requirements@1", "basis": "...", "minBusV": 9,
      "weightLimits": [{"name", "limitKg", "excludesGroups": [...], "basis"}]}
@@ -31,7 +33,7 @@ NOT_ROBOT = ("payload", "service")
 # What belongs to the design source. A judgement file that carries one of these is refused, naming it.
 SOURCE_KEYS = ("groups", "mounts", "contacts", "solids", "fixtures", "poses", "stages", "datum", "step", "design", "drives", "battery")
 KEYS = ("schema", "issue", "source", "records", "requirements", "narrative", "premises", "rules", "purposes", "motions", "cycle", "control",
-        "attachment", "interactions", "missionCases", "risks", "scopeGuidelines")
+        "attachment", "interactions", "missionCases", "risks", "scopeGuidelines", "page")
 
 
 def library():

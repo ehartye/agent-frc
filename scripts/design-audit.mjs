@@ -15,7 +15,8 @@
  *   3. a hatch doing too much: a custom shape that returns several solids, places itself, reads or writes files or
  *      imports past its contract; custom trial code that tells the method's runs apart, keeps state, steers the
  *      piece or always passes; registrations with no reason or limits, or that nothing uses;
- *   4. a MuJoCo scene kept as a file, engine settings typed into a trial;
+ *   4. a review scene that is not the page its current records build, a MuJoCo scene kept as a file, engine settings
+ *      typed into a trial;
  *   5. drift back toward a builder: the share of custom solids and the size of custom/ against the plugin's
  *      guidelines (scripts/design-audit/guidelines.json), trial numbers that restate a parameter, a custom shape a
  *      listed shape could make;
@@ -33,6 +34,7 @@
  * Every run lists each exception with its reason and what it covers. An exception without a reason covers nothing.
  */
 import {createHash} from 'node:crypto';
+import {spawnSync} from 'node:child_process';
 import {existsSync, readFileSync, statSync} from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
@@ -69,6 +71,7 @@ export const forms = {
   'custom-criterion-always': 'A custom criterion that always passes',
   'custom-guide-force': 'A custom force law that steers the piece',
   'custom-stands-in': 'A custom force law that stands in for a contact, drive or load the library has',
+  'stale-scene': 'A committed review scene that is not the page its current records build. A generated scene is never edited: build it again with design preliminary-page',
   'engine-scene-file': 'A physics engine scene kept as a file. The library makes it from the design source',
   'engine-setting-in-trial': 'Engine settings typed into a trial instead of physical inputs',
   'custom-share': 'More custom solids than the guideline',
@@ -205,6 +208,26 @@ function judgementFindings(root, files) {
   return {findings, info};
 }
 
+/**
+ * Each committed review scene beside a judgement file, against the page its current records build. The page command
+ * builds that page in memory and writes nothing (--check); a stale record leaves the scene uncompared, with the reason.
+ */
+function sceneFindings(root, files, found) {
+  const findings = [], info = [], notRun = [], script = fileURLToPath(new URL('./package_view.py', import.meta.url));
+  for (const file of files.filter(name => path.posix.basename(name) === 'judgement.json' && !name.startsWith('docs/'))) {
+    const scene = path.posix.join(path.posix.dirname(file), 'review-scene.json.gz');
+    if (!files.includes(scene)) continue;
+    let json;
+    try { json = JSON.parse(readText(root, file)); } catch { continue; }
+    if (json?.schema !== 'agent-frc/layout-judgement@2') continue;
+    if (!found.python) { notRun.push('Did not compare ' + scene + ' with the page its records build: ' + found.reason + '.'); continue; }
+    const done = spawnSync(found.python, ['-B', script, root, file, '--check', '--quiet'], {encoding: 'utf8', timeout: 300000, maxBuffer: 1 << 26});
+    if (done.status === 1) findings.push({form: 'stale-scene', file: scene, line: null, detail: 'is not the page ' + file + ' and its current records build: build it again with design preliminary-page . ' + file});
+    else if (done.status !== 0) info.push({file: scene, text: 'was not compared with the page its records build: ' + ((done.stderr || String(done.error?.message || '')).trim().split('\n').filter(Boolean).pop() || 'exit ' + done.status)});
+  }
+  return {findings, info, notRun};
+}
+
 /** The motions of a design source and its subsystem files that no motor drives, each with its stated cause and the file it is in. */
 export function motorless(source) {
   const files = [{file: source.file, json: source.json}];
@@ -261,9 +284,10 @@ export function auditDesign(root, {skip = [], run = true, python} = {}) {
   }
   // Generated outputs, the review scene and judgement data.
   const found = !run ? {reason: '--no-run was given'} : !sources.length ? {reason: 'the project has no design source'} : findLibrary(python);
-  const generated = generatedFindings(root, files, sources, found), overrides = judgementFindings(root, files);
-  findings.push(...generated.findings, ...overrides.findings, ...qualificationFindings(root, files));
-  info.push(...generated.info, ...overrides.info);
+  const generated = generatedFindings(root, files, sources, found), overrides = judgementFindings(root, files), scenes = sceneFindings(root, files, found);
+  findings.push(...generated.findings, ...overrides.findings, ...scenes.findings, ...qualificationFindings(root, files));
+  info.push(...generated.info, ...overrides.info, ...scenes.info);
+  generated.notRun.push(...scenes.notRun);
   // Without a design source there is no door to go around yet: the library's work done in project code is information.
   let listed = dedupe(findings);
   if (!sources.length) {

@@ -159,6 +159,8 @@ const cases = {
   'custom-criterion-always': [replaceFile('design/custom/held.py', 'def judge(run, parameters):\n    return True\n'), {}],
   'custom-guide-force': [replaceFile('design/custom/drag.py', 'def force(signals, parameters):\n    return (parameters["k"] * (parameters["targetMm"] - signals["xMm"]), 0.0, 0.0)\n'), {}],
   'custom-stands-in': [replaceFile('design/custom/drag.py', 'def force(signals, parameters):\n    sink = -signals["zMm"]\n    return (0.0, parameters["floorStiffness"] * max(sink, 0.0), 0.0)\n'), {}],
+  // Needs the design library to build the page from the records: test/review_page_check.py reports one and its control.
+  'stale-scene': null,
   'engine-scene-file': [replaceFile('design/scene.xml', '<mujoco model="tote"><worldbody/></mujoco>\n'), {}],
   'engine-setting-in-trial': [{edit: data => { data.trials.carry.surfaces[0].solref = [0.02, 1]; }}, {}],
   'custom-share': [{edit: data => { for (const name of ['arm brace', 'bumper front']) Object.assign(data.solids.find(solid => solid.name === name), {shape: {kind: 'custom', use: 'hook', parameters: {}}}); }}, {}],
@@ -183,7 +185,9 @@ const cases = {
 
 test('every form has a fixture that is reported and a near miss that is not', t => {
   assert.deepEqual(Object.keys(cases).sort(), Object.keys(forms).sort(), 'one case per form');
-  for (const [form, [reported, control]] of Object.entries(cases)) {
+  for (const [form, pair] of Object.entries(cases)) {
+    if (!pair) continue;
+    const [reported, control] = pair;
     const found = audit(t, reported), clear = audit(t, control);
     assert.ok(found.findings.some(finding => finding.form === form), form + ' is reported: ' + JSON.stringify(formsOf(found)));
     assert.ok(!clear.findings.some(finding => finding.form === form), form + ' near miss is not reported: ' + JSON.stringify(clear.findings.filter(finding => finding.form === form)));
