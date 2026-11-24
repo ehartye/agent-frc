@@ -32,7 +32,7 @@ areas:
   # The layout check: a false pass is the worst failure.
   - path: scripts/kernel_layout/**
     tier: critical
-    why: the layout check on the design library; a false pass publishes a layout that interferes
+    why: the layout check on the design library; a false pass publishes a layout that interferes or floats
   - path: scripts/layout_check.py
     tier: critical
     why: the command of the layout check on the design library
@@ -45,7 +45,7 @@ areas:
     why: what an effective design is held to; a false match lets its physics change without a gate
   - path: scripts/effective-readiness.mjs
     tier: critical
-    why: the readiness report read at the stage gate
+    why: the readiness report the stage gate requires to meet every criterion; a false "met" makes a design effective without its trials
   - path: scripts/detailed-design-release.mjs
     tier: critical
     why: status changes for detailed designs
@@ -57,7 +57,7 @@ areas:
     why: bench-test records the detailed stage gate reads
   - path: scripts/stage-gate.mjs
     tier: critical
-    why: the stage gate the agent runs when a design is marked effective
+    why: the stage gate the agent runs when a design is marked effective; it refuses unless readiness meets every criterion
   - path: scripts/stage_preliminary_review.py
     tier: critical
     why: staging and status changes for preliminary designs

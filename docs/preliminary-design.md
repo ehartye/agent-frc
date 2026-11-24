@@ -346,7 +346,7 @@ The case results stand only while the inputs that produced them are unchanged. T
 --view-only reuses the checked cases of a receipt only while their inputs are unchanged. Changed since that receipt: the stages. Run the full check with --write-view
 ```
 
-Everything else is checked again as in a full run: the groups and their roles, mounts, stages, payload relations and their trial references, the cycle, premises, the narrative review, component explanations and the view itself. A reworded clearance basis, a renamed group or a new component explanation is therefore accepted, and a missing explanation still leaves the receipt provisional. For the same files the receipt and the scene are the ones a full `--write-view` check writes, so publishing and the publication check accept them unchanged. A project's CI still [reruns the cases](design-publication.md) of every published layout and compares the result with the committed receipt.
+Everything else is checked again as in a full run: the groups and their roles, mounts, stages, payload relations and their trial references, the cycle, premises, the narrative review, component explanations and the view itself. A reworded clearance basis, a renamed group or a new component explanation is therefore accepted, and a missing explanation still leaves the receipt provisional. For the same files the receipt and the scene are the ones a full `--write-view` check writes, so publishing and the publication check accept them unchanged.
 
 `--view-only` is refused with `--cases` or `--physics-only`, for a partial receipt, and for a receipt whose displaced control was not rejected.
 
