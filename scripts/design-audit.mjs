@@ -15,13 +15,16 @@
  *   3. a hatch doing too much: a custom shape that returns several solids, places itself, reads or writes files or
  *      imports past its contract; custom trial code that tells the method's runs apart, keeps state, steers the
  *      piece or always passes; registrations with no reason or limits, or that nothing uses;
- *   4. a generated scene edited by hand, a MuJoCo scene kept as a file, engine settings typed into a trial;
+ *   4. a MuJoCo scene kept as a file, engine settings typed into a trial;
  *   5. drift back toward a builder: the share of custom solids and the size of custom/ against the plugin's
  *      guidelines (scripts/design-audit/guidelines.json), trial numbers that restate a parameter, a custom shape a
  *      listed shape could make;
  *   6. judgement data: screen overrides with their reasons, inputs with no stated source, trials with no control or
  *      no brackets;
  *   7. across projects (given several): custom code that looks alike in more than one, as library candidates.
+ *
+ * It also lists, as information, every motion no motor drives, with the cause it states (by hand, spring, gravity or
+ * piece), from the top file and its subsystem files: the motions whose movement no motor, current or bus voltage stands behind.
  *
  * A project declares folders to skip and known exceptions in .design-audit.json at its root:
  *
@@ -36,7 +39,7 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
 import {foreignNames, projectFiles, usesIn} from './project-ci-audit.mjs';
 import {libraryCandidates} from './design-audit/across.mjs';
 import {codeFindings, dedupe, sceneFileFindings} from './design-audit/code.mjs';
-import {findLibrary, generatedFindings, sceneFindings} from './design-audit/generated.mjs';
+import {findLibrary, generatedFindings} from './design-audit/generated.mjs';
 import {customFindings} from './design-audit/hatch.mjs';
 import {designSchema, overridesIn, sourceFindings} from './design-audit/source.mjs';
 
@@ -66,7 +69,6 @@ export const forms = {
   'custom-criterion-always': 'A custom criterion that always passes',
   'custom-guide-force': 'A custom force law that steers the piece',
   'custom-stands-in': 'A custom force law that stands in for a contact, drive or load the library has',
-  'edited-scene': 'A generated review scene edited by hand',
   'engine-scene-file': 'A physics engine scene kept as a file. The library makes it from the design source',
   'engine-setting-in-trial': 'Engine settings typed into a trial instead of physical inputs',
   'custom-share': 'More custom solids than the guideline',
@@ -203,6 +205,28 @@ function judgementFindings(root, files) {
   return {findings, info};
 }
 
+/** The motions of a design source and its subsystem files that no motor drives, each with its stated cause and the file it is in. */
+export function motorless(source) {
+  const files = [{file: source.file, json: source.json}];
+  for (const entry of Array.isArray(source.json.subsystems) ? source.json.subsystems : []) {
+    const file = path.posix.join(path.posix.dirname(source.file), String(entry?.file ?? ''));
+    try { files.push({file, json: JSON.parse(readText(source.root, file))}); } catch { /* an unreadable subsystem file is the library's to report */ }
+  }
+  const found = [];
+  for (const {file, json} of files)
+    for (const [motion, entry] of Object.entries(json?.motions ?? {}))
+      if (!(entry?.drive && Object.keys(entry.drive).length)) found.push({motion, by: entry?.by ?? null, file});
+  return found.sort((a, b) => a.motion.localeCompare(b.motion));
+}
+
+/** The information line that lists the motions no motor drives, or null when a motor drives every one. */
+function motorlessLine(source) {
+  const motions = motorless(source);
+  if (!motions.length) return null;
+  const said = motions.map(m => m.motion + ' (' + (m.by ? 'by ' + m.by : 'no cause stated') + (m.file === source.file ? '' : ', in ' + m.file) + ')');
+  return {file: source.file, form: 'motions-without-a-motor', motions, text: plural(motions.length, 'motion') + ' without a motor: ' + said.join(', ')};
+}
+
 /** Audit one project. Returns {root, sources, copies, findings, info, exceptions, problems, coverage, customs}. */
 export function auditDesign(root, {skip = [], run = true, python} = {}) {
   const own = declared(root), skipped = [...new Set([...skip, ...own.skip].map(folderOf))].sort();
@@ -214,6 +238,8 @@ export function auditDesign(root, {skip = [], run = true, python} = {}) {
     registryOf.set(source, result.registry);
     findings.push(...result.findings); info.push(...result.info);
     source.summary = {solids: result.solids, customSolids: result.customSolids, trials: Object.keys(result.trials).length, custom: Object.keys(result.registry).length};
+    const moved = motorlessLine(source);
+    if (moved) info.push(moved);
   }
   for (const copy of copies) {
     const same = sources.find(source => source.sha256 === copy.sha256);
@@ -235,9 +261,9 @@ export function auditDesign(root, {skip = [], run = true, python} = {}) {
   }
   // Generated outputs, the review scene and judgement data.
   const found = !run ? {reason: '--no-run was given'} : !sources.length ? {reason: 'the project has no design source'} : findLibrary(python);
-  const generated = generatedFindings(root, files, sources, found), scenes = sceneFindings(root, files), overrides = judgementFindings(root, files);
-  findings.push(...generated.findings, ...scenes.findings, ...overrides.findings, ...qualificationFindings(root, files));
-  info.push(...generated.info, ...scenes.info, ...overrides.info);
+  const generated = generatedFindings(root, files, sources, found), overrides = judgementFindings(root, files);
+  findings.push(...generated.findings, ...overrides.findings, ...qualificationFindings(root, files));
+  info.push(...generated.info, ...overrides.info);
   // Without a design source there is no door to go around yet: the library's work done in project code is information.
   let listed = dedupe(findings);
   if (!sources.length) {

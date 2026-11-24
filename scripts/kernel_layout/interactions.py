@@ -2,9 +2,9 @@
 
 The library reports plain facts: the screen facts of each interaction it declares, the campaign record of each
 trial, and the clearances at both ends of each mechanical adjustment. This module holds the plugin's guidelines and
-turns those facts into the words a reviewer reads. The readiness report applies the effective bar to what it records.
+turns those facts into the words a reviewer reads. The readiness report applies the effective bar to what it judges.
 """
-from .files import named, pinned, read, require
+from .files import named
 
 VERDICTS = ("planar is enough", "needs 3D", "configurable")
 # Guidelines, not rules. An author may override a verdict with a written reason; the review lists every override.
@@ -109,37 +109,25 @@ def trial_facts(record, name):
                 touchedHulled=found.get("touchedHulled", []))
 
 
-def records(inputs):
-    """The trial campaign and the measurements the judgement file names, read, with their pins. Both sit in one folder."""
-    out = {}
-    for key in ("trials", "measurements"):
-        ref = inputs.judgement.get(key)
-        if ref is None:
-            continue
-        require(isinstance(ref, dict) and named(ref.get("file")), "Name the library's " + key + " record as " + key + ": {file}")
-        path = pinned(inputs.root, dict(ref))
-        out[key] = (read(path), dict(file=ref["file"], sha256=ref["sha256"]), path.parent)
-    folders = {folder for _, _, folder in out.values()}
-    require(len(folders) <= 1, "Keep trials.json and measurements.json in one records folder: the library's status reads them together")
-    return out
+def extremes(inputs, adjustments, results):
+    """For each mechanical adjustment: whether both ends are measured, and the pairs that only come close at an end.
 
-
-def extremes(inputs, measurements):
-    """For each mechanical adjustment: whether both ends are measured, and the pairs that only come close at an end."""
-    rows, record = [], measurements[0] if measurements else None
+    adjustments is the library's adjustments.json in the records folder, or None. A pair already closer than the
+    allowance in the nominal clearance record of a motion is not counted again at an end."""
+    rows = []
     allowance = max(case["minGapMm"] for case in inputs.cases)
+    nominal = {tag[1]: {frozenset(r["pair"]) for r in found["pairs"] if r["closerThanMinGap"]} for tag, found in results.items() if tag[0] == "clearance"}
     for name, adjustment in sorted((inputs.data.get("adjustments") or {}).items()):
         row = dict(name=name, kind=adjustment["kind"], input=adjustment["input"], range=adjustment["range"], measured=False, findings=[])
         rows.append(row)
         if adjustment["kind"] != "mechanical":
             continue
-        found = (record or {}).get("adjustments", {}).get(name)
-        if not found or record["settings"]["minGapMm"] < allowance:
+        found = ((adjustments or {}).get("adjustments") or {}).get(name)
+        if not found:
             row["hint"] = ("Measure both ends with python -m frc_design_kernel measure SOURCE --out RECORDS --extremes --min-gap " + f"{allowance:g}"
-                           + ": the largest stage allowance")
+                           + ": the largest allowance")
             continue
         row["measured"] = True
-        nominal = {motion: {frozenset(p) for p in found_motion.get("closer", [])} for motion, found_motion in record.get("motions", {}).items()}
         for setting in found["settings"]:
             for motion, at in sorted(setting["motions"].items()):
                 new = sorted(" and ".join(sorted(p)) for p in at.get("closer", []) if frozenset(p) not in nominal.get(motion, set()))
@@ -147,54 +135,50 @@ def extremes(inputs, measurements):
     return rows
 
 
-def judge(inputs, measured, missing, say):
-    """The receipt's interactions and adjustments, and the pins of the records read.
+def trial_state(state, trial):
+    row = next((r for r in state.get("records", []) if r["record"] == f'trial "{trial}"'), None)
+    return dict(state=row["state"] if row else "not run", changes=row["changes"] if row else [])
 
-    Only an interaction the judgement file does not explain is a missing input: what it decides is settled at the
-    arrangement stage. Trial results and adjustment extremes never block the layout; the readiness report reads them."""
+
+def judge(inputs, screen, campaign, state, say):
+    """(interaction rows, unmet rows). screen gives the library's screen facts of an interaction; campaign is trials.json or None.
+
+    Only an interaction the judgement file does not explain is unmet: what it decides is settled at the arrangement
+    stage. Trial results never block the layout; the readiness report reads them."""
     declared = inputs.data.get("interactions") or {}
     judged = inputs.judgement.get("interactions") or {}
-    require(isinstance(judged, dict) and not set(judged) - set(declared),
-            "Each interaction of the judgement file is declared under interactions in the design source: " + ", ".join(sorted(set(judged) - set(declared))))
-    found = inputs.records
-    campaign = found.get("trials")
-    state = measured.status(found["trials"][2] if campaign else found["measurements"][2]) if found else {}
     owner = {s["name"]: s["group"] for s in [*inputs.data["solids"], *inputs.data["fixtures"]]}
-    rows = []
+    rows, unmet = [], []
     for name in sorted(declared):
         entry = judged.get(name)
-        facts = measured.screen(name)
+        facts = screen(name)
         involved = [*declared[name]["solids"], *declared[name].get("guides", []), *([declared[name]["pieceSolid"]] if "pieceSolid" in declared[name] else [])]
         word, reasons = verdict(facts, groups={owner[s] for s in involved if s in owner})
         row = dict(id=name, piece=facts["piece"]["name"], plane=facts["plane"], verdict=word, reasons=reasons)
         rows.append(row)
         say(f"[screen] {name}: {word}, because " + "; ".join(reasons))
-        if not isinstance(entry, dict):
-            missing.append("Say in the judgement file what interaction " + name + " decides, and name its trial or why it needs none")
+        if entry is None:
+            unmet.append(dict(kind="interaction", text="Say in the judgement file what interaction " + name + " decides, and name its trial or why it needs none"))
             continue
-        require(named(entry.get("decides")) and (named(entry.get("trial")) != named(entry.get("noTrial"))) and isinstance(entry.get("cases", []), list)
-                and set(entry.get("cases", [])) <= {c["id"] for c in inputs.cases},
-                "Interaction " + name + " says what it decides, names one trial or the reason it needs none, and lists the stages it backs")
-        row.update(decides=entry["decides"], cases=sorted(entry.get("cases", [])))
+        row["decides"] = entry["decides"]
         if "override" in entry:
-            over = entry["override"]
-            require(isinstance(over, dict) and over.get("verdict") in VERDICTS and named(over.get("reason")),
-                    "An override of interaction " + name + " gives a verdict (" + ", ".join(VERDICTS) + ") and the reason")
-            row.update(screened=word, verdict=over["verdict"], override=over["reason"])
+            row.update(screened=word, verdict=entry["override"]["verdict"], override=entry["override"]["reason"])
         if named(entry.get("noTrial")):
             row["noTrial"] = entry["noTrial"]
             continue
         trial = entry["trial"]
-        if not campaign or trial not in campaign[0].get("trials", {}):
+        if not campaign or trial not in campaign.get("trials", {}):
             row["trial"] = dict(name=trial, result=None, state="not run")
             continue
-        row["trial"] = dict(trial_facts(campaign[0], trial), **trial_state(state, trial))
-        say(f"[trial] {trial} ({row['trial']['engine']}): {row['trial']['result']}" + (", stale" if row["trial"]["state"] == "stale" else ""))
-    adjustments = extremes(inputs, found.get("measurements"))
-    pins = {key: pin for key, (_, pin, _) in found.items()}
-    return rows, adjustments, pins
+        row["trial"] = dict(trial_facts(campaign, trial), **trial_state(state, trial))
+        say(f"[trial] {trial} ({row['trial']['engine']}): {row['trial']['result']}")
+    return rows, unmet
 
 
-def trial_state(state, trial):
-    row = next((r for r in state.get("records", []) if r["record"] == f'trial "{trial}"'), None)
-    return dict(state=row["state"] if row else "not run", changes=row["changes"] if row else [])
+def mission_cases(inputs, campaign, state):
+    """Each mission case with the state and result of its trial's record."""
+    out = []
+    for row in inputs.judgement.get("missionCases", []):
+        found = (campaign or {}).get("trials", {}).get(row["trial"])
+        out.append(dict(row, state=trial_state(state, row["trial"])["state"] if found else "not run", result=found["result"] if found else None))
+    return out

@@ -8,7 +8,9 @@
 // DIR/concept-selection.json (agent-frc/concept-selection@1) pins the results file and the selected concept, keeps
 // the student's basis and a snapshot of the ranking, and says whether the selection was first, Pareto and fragile.
 // DIR/premises/<id>.json holds one accepted premise per swept quantity of the selected role with a break-even, plus
-// a mass premise, in the shape scripts/kernel_layout/premises.py accepted_premise reads. Each range premise is
+// a mass premise, in the shape scripts/kernel_layout/premises.py accepted reads. The mass premise observes the library's
+// mass record (observes: mass.rangeKg), so preliminary design works out its current value; a rate premise names no library
+// fact, and the author adds observes once a record states one. Each range premise is
 // one-sided. Each quantity has a fixed better direction (betterDirection in concept-tournament.mjs): the premise
 // bounds only the worse side, at the last competitive value before the break-even there, and its better side is the
 // validity limit, so a better observation never reopens the design. A break-even found only on the better side is
@@ -101,7 +103,7 @@ export function conceptSelection({results,resultsRef,conceptRef,document,study,s
     basis:'Mass range '+mass.min+'–'+mass.max+' lb, labelled '+mass.label+', '+(mass.default?'the profile default':
       'from the concept document, not the profile default')+': '+mass.basis+'. The drive and rate assumptions of '+document.id+
       ' were made for a robot at most '+mass.max+' lb.',
-    unit:'lb',interfaces:['robot'],criterion:{range:[0,mass.max]},betterDirection:'lower',base:mass.max});
+    unit:'lb',interfaces:['robot'],criterion:{range:[0,mass.max]},observes:'mass.rangeKg',betterDirection:'lower',base:mass.max});
   const used=new Set(premises.flatMap(p=>p.interfaces));
   for(const [part,group] of renames){
     if(!used.has(part))throw Error('--interface '+part+': no premise uses that interface; use one of '+[...used].join(', ')+'.');

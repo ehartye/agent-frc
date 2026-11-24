@@ -14,25 +14,25 @@ def took(seconds):
     return f"{seconds:.0f} s" if seconds < 120 else f"{seconds / 60:.1f} min"
 
 
-def time_lines(seconds, ran, skipped):
-    """What the run cost against the time guidelines, and what it ran and did not run."""
-    lines = [f"[time] {ran} in {took(seconds)}. Guidelines: about 1 minute while editing, 5 before merging, 15 at a stage gate."]
+def time_lines(seconds, ran, skipped="", after=""):
+    """What the run cost against the time guidelines, and what it ran and did not run. after follows the time, such as a share of it."""
+    lines = [f"[time] {ran} in {took(seconds)}{after}. Guidelines: about 1 minute while editing, 5 before merging, 15 at a stage gate."]
     if skipped:
         lines.append("[time] not run: " + skipped)
     if seconds > GATE_SECONDS:
         lines.append("[time] note: this run passed the guideline for a stage gate. Stop and tell the owner what is slow and why, and agree "
                      "a bounded budget before running it again. Do not repeat a run whose inputs have not changed.")
     elif seconds > EDIT_SECONDS:
-        lines.append("[time] note: past the guideline for a check while editing. Check the stages you changed with --cases, use "
-                     "--view-only after a change to names, titles or the page alone, and merge solids that move together.")
+        lines.append("[time] note: past the guideline for a check while editing. A draft check measures only the jobs whose records are "
+                     "stale; merge solids that move together, and judge committed records with --judge-only.")
     return lines
 
 
-def report(plan, solids, fixtures):
+def report(inputs, solids, fixtures):
     """Count the solids and find the finest declared path tolerance, and name each guideline the layout has passed.
 
-    Returns the informational receipt field and the stderr lines."""
-    own = plan.get("scopeGuidelines", {})
+    Returns the informational verdict field and the stderr lines."""
+    own = inputs.judgement.get("scopeGuidelines", {})
     require(isinstance(own, dict), "Give scopeGuidelines as an object with solids, toleranceMm or extendedBudget")
     for key in ("solids", "toleranceMm"):
         require(key not in own or number(own[key]) and own[key] > 0, "Give scopeGuidelines." + key + " as a positive number")
@@ -41,17 +41,12 @@ def report(plan, solids, fixtures):
             "An agreed extended budget names its " + ", ".join(BUDGET_FIELDS))
     guide = dict(solids=own.get("solids", SCOPE_SOLIDS), toleranceMm=own.get("toleranceMm", SCOPE_TOLERANCE_MM),
                  source="judgement file" if "solids" in own or "toleranceMm" in own else "plugin default")
-    declared = []
-    for key, stage in plan["stages"].items():
-        if "pathToleranceMm" in stage:
-            require(number(stage["pathToleranceMm"]) and stage["pathToleranceMm"] > 0,
-                    "Give the path tolerance of " + key + " as a positive number of millimetres")
-            declared.append((stage["pathToleranceMm"], key))
+    declared = [(case["pathToleranceMm"], case["id"]) for case in inputs.cases if number(case.get("pathToleranceMm"))]
     finest = min(declared) if declared else None
     passed = (["solids"] if solids > guide["solids"] else []) + (["pathTolerance"] if finest and finest[0] < guide["toleranceMm"] else [])
     field = dict(informational=True, solids=solids, fieldFixtures=fixtures, guideline=guide,
                  finestPathToleranceMm=finest[0] if finest else None, finestPathToleranceCase=finest[1] if finest else None,
-                 undeclaredPathTolerance=len(plan["stages"]) - len(declared), passed=passed)
+                 undeclaredPathTolerance=len(inputs.cases) - len(declared), passed=passed)
     if budget:
         field["extendedBudget"] = {k: budget[k] for k in BUDGET_FIELDS}
     tolerance = f"{finest[0]:g} mm in {finest[1]}" if finest else "not declared"

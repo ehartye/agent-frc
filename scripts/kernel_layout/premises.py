@@ -1,92 +1,133 @@
-"""Judge what the layout was asked to answer: the narrative objectives and the premises it holds from upstream."""
-from .files import named, number, pinned, read, require, resolve_references
+"""Judge what the layout was asked to answer: the narrative objectives and the premises it holds from upstream.
+
+An accepted premise is a file, as conceptual design writes it (DIR/premises/<id>.json):
+
+    {"id", "phase": "conceptual-design", "scenario", "basis", "unit", "interfaces": [groups or "robot"],
+     "criterion": {"range": [low, high]} | {"equals": value}, "observes": "mass.rangeKg"}
+
+observes names a fact the library states, so the current value is worked out, never typed:
+
+    mass.rangeKg, mass.totalKg   the robot's weight, from the mass record (in kg, or converted to a premise in lb)
+    trials.<trial>.<path>        a field of a trial's record in trials.json
+
+A premise without observes is not observed: it stays unmet until a record states it.
+"""
+from .files import named, number, read, reference
+
+KEYS = {"id", "scenario", "scenarioId", "phase", "basis", "unit", "interfaces", "criterion", "observes", "pointer", "betterDirection", "base", "source"}
+PHASES = ("conceptual-design", "preliminary-design")
+MASS = ("mass.rangeKg", "mass.totalKg")
+UNITS = {"kg": 1.0, "lb": 1 / 0.45359237}
+DISPOSITIONS = ("represented", "open", "out-of-scope")
 
 
-def narrative(root, plan, missing):
-    """The narrative review as the receipt records it. Each open objective is a missing input."""
-    review = plan.get("narrativeReview") or {}
-    require(isinstance(review, dict), "Supply a narrative review record")
-    if review.get("source"):
-        pinned(root, review["source"])
-    else:
-        missing.append("Read and identify the current strategic narrative")
-    objectives = review.get("objectives", [])
-    require(isinstance(objectives, list), "List the reviewed narrative objectives")
-    if not objectives:
-        missing.append("Account for the narrative objectives and fallbacks")
-    for row in objectives:
-        require(isinstance(row, dict) and named(row.get("objective")) and named(row.get("basis"))
-                and row.get("disposition") in ("represented", "open", "out-of-scope"),
-                "Record each narrative objective, its disposition and basis")
-        if row["disposition"] == "open":
-            missing.append("Open narrative objective: " + row["objective"])
-    return review
+def narrative(root, judgement, problems):
+    """The narrative's file, which must resolve, and the objectives the layout was reviewed for."""
+    own = judgement.get("narrative")
+    if not isinstance(own, dict) or set(own) - {"file", "objectives"}:
+        problems.append("Give narrative as {file, objectives}: the project's narrative and each objective's disposition and basis")
+        return {"file": None, "objectives": []}
+    reference(root, {"file": own.get("file")}, "narrative.file", problems)
+    objectives = own.get("objectives", [])
+    if not isinstance(objectives, list) or not all(isinstance(row, dict) and named(row.get("objective")) and named(row.get("basis"))
+                                                   and row.get("disposition") in DISPOSITIONS for row in objectives):
+        problems.append("Record each narrative objective, its disposition (" + ", ".join(DISPOSITIONS) + ") and basis")
+        objectives = []
+    return {"file": own.get("file"), "objectives": objectives}
 
 
-def record(root, ref):
-    return resolve_references(root, read(pinned(root, ref)))
+def criterion_ok(criterion):
+    if not isinstance(criterion, dict):
+        return False
+    if set(criterion) == {"range"}:
+        found = criterion["range"]
+        return isinstance(found, list) and len(found) == 2 and all(number(v) for v in found) and found[0] <= found[1]
+    return set(criterion) == {"equals"} and (named(criterion["equals"]) or number(criterion["equals"]))
 
 
-def given(source, key, expected):
-    """Whether an optional digest a record repeats is absent or equals the checked one."""
-    return not isinstance(source, dict) or source.get(key) is None or source[key] == expected
+def observes_ok(premise):
+    fact = premise.get("observes")
+    if fact is None:
+        return True
+    if fact in MASS:
+        return premise.get("unit") in UNITS
+    return isinstance(fact, str) and fact.startswith("trials.") and len(fact.split(".")) >= 3
+
+
+def accepted(root, ref, groups, seen, problems):
+    """One accepted premise file, read and checked, or None with its problems appended. groups None skips the interface check."""
+    path = reference(root, ref, "a premise", problems)
+    if path is None:
+        return None
+    found = read(path)
+    where = "Premise " + str(found.get("id") if isinstance(found, dict) else path.name)
+    if not isinstance(found, dict) or set(found) - KEYS:
+        problems.append(where + " holds " + ", ".join(sorted(KEYS)) + (": not " + ", ".join(sorted(set(found) - KEYS)) if isinstance(found, dict) else ""))
+        return None
+    for key in ("id", "scenario", "basis", "unit"):
+        if not named(found.get(key)):
+            problems.append(where + ": give its " + key)
+    if found.get("id") in seen:
+        problems.append(where + " is accepted twice")
+    seen.add(found.get("id"))
+    if found.get("phase") not in PHASES:
+        problems.append(where + ": its phase is " + " or ".join(PHASES))
+    interfaces = found.get("interfaces")
+    if not (isinstance(interfaces, list) and interfaces):
+        problems.append(where + ": list the groups it bounds under interfaces")
+    elif groups is not None and set(interfaces) - set(groups) - {"robot"}:
+        problems.append("Unknown group in the interfaces of premise " + str(found.get("id")) + ": " + ", ".join(sorted(set(interfaces) - set(groups) - {"robot"})))
+    if not criterion_ok(found.get("criterion")):
+        problems.append(where + ": supply one criterion, an ordered finite range or a value it equals")
+    if not observes_ok(found):
+        problems.append(where + " observes " + str(found.get("observes")) + ". It names " + ", ".join(MASS) + " (in kg or lb) or trials.<trial>.<field>")
+    return found
+
+
+def read_all(root, judgement, groups, problems):
+    """Every accepted premise the judgement points to."""
+    rows = judgement.get("premises", [])
+    if not isinstance(rows, list):
+        problems.append("List the accepted premises as premises: [{file}]")
+        return []
+    seen, found = set(), []
+    for ref in rows:
+        premise = accepted(root, ref, groups, seen, problems)
+        if premise is not None:
+            found.append(premise)
+    return found
 
 
 def within(criterion, value):
+    """Whether an observed value, or the whole of an observed range, meets the criterion."""
     if "range" in criterion:
-        require(number(value), "Expected an observed finite number")
-        return criterion["range"][0] <= value <= criterion["range"][1]
-    require(named(value), "Expected a current categorical observation")
+        low, high = criterion["range"]
+        ends = value if isinstance(value, list) else [value]
+        return all(number(v) and low <= v <= high for v in ends)
     return value == criterion["equals"]
 
 
-def accepted_premise(root, links, groups, seen):
-    accepted = record(root, links["accepted"])
-    key = accepted["id"]
-    require(named(key) and key not in seen and named(accepted["scenario"]) and named(accepted["basis"])
-            and accepted["phase"] in ("conceptual-design", "preliminary-design") and named(accepted["unit"]),
-            "Bind each premise to a unique ID, scenario, unit, upstream phase and evidence")
-    seen.add(key)
-    interfaces = accepted["interfaces"]
-    require(isinstance(interfaces, list) and interfaces and set(interfaces) <= set(groups), "Unknown group in the interfaces of premise " + key)
-    pinned(root, accepted["source"])
-    criterion = accepted["criterion"]
-    if set(criterion) == {"range"}:
-        lo, hi = criterion["range"]
-        require(number(lo) and number(hi) and lo <= hi, "Supply an ordered finite acceptance interval")
-    else:
-        require(set(criterion) == {"equals"} and named(criterion["equals"]), "Supply one categorical or numeric criterion")
-    return accepted, dict(id=key, phase=accepted["phase"], scenario=accepted["scenario"], interfaces=sorted(interfaces),
-                          unit=accepted["unit"], criterion=criterion, accepted=links["accepted"], status="unknown")
+def observed(premise, mass, trials):
+    """The value of the fact a premise observes, in its unit; None when the record does not state it."""
+    fact = premise["observes"]
+    if fact in MASS:
+        value = (mass or {}).get(fact.split(".")[1])
+        scale = UNITS[premise["unit"]]
+        return [v * scale for v in value] if isinstance(value, list) else value * scale if number(value) else None
+    _, name, *path = fact.split(".")
+    value = ((trials or {}).get("trials") or {}).get(name)
+    for key in path:
+        value = value.get(key) if isinstance(value, dict) else None
+    return value
 
 
-def compare(root, plan, missing):
-    """One decision per accepted premise: within its criterion, reopened, or unknown for want of a current observation."""
-    rows = plan.get("premises", [])
-    require(isinstance(rows, list), "List the accepted upstream premises")
-    if not rows:
-        missing.append("No upstream premise commissioned")
-    decisions, seen = [], set()
-    for links in rows:
-        accepted, decision = accepted_premise(root, links, plan["groups"], seen)
-        decisions.append(decision)
-        if not links.get("current"):
-            missing.append("Missing current observation for " + decision["id"])
-            continue
-        current = record(root, links["current"])
-        # A stable scenarioId on both records lets the observer word the scenario differently.
-        ids = (current.get("scenarioId"), accepted.get("scenarioId"))
-        same = ids[0] == ids[1] if None not in ids else current.get("scenario") == accepted["scenario"]
-        require(same and all(current.get(k) == accepted[k] for k in ("id", "unit")), "Premise observation differs in scope: " + decision["id"])
-        source = read(pinned(root, current["source"]))
-        require(named(current["valueField"]) and isinstance(source, dict) and current["valueField"] in source,
-                "Locate the observed value in its project measurement: " + decision["id"])
-        value = source[current["valueField"]]
-        require(value == current["value"] and type(value) == type(current["value"]), "Reported value differs from its source: " + decision["id"])
-        decision.update(current=links["current"], value=value)
-        # The issue name binds an observation to this design. A digest the observation repeats is still compared.
-        if current.get("issue") != plan["issue"] or not given(current, "designSha256", plan["design"]["sha256"]):
-            missing.append("Earlier revision cannot resume " + decision["id"])
-            continue
-        decision["status"] = "within" if within(decision["criterion"], value) else "reopen"
-    return decisions
+def judged(premise, mass, trials=None):
+    """One premise against what the records state now: within, reopen, or not observed."""
+    row = {key: premise.get(key) for key in ("id", "phase", "scenario", "unit", "criterion", "observes")}
+    row["interfaces"] = sorted(premise["interfaces"])
+    if premise.get("observes") is None:
+        return dict(row, status="not observed", value=None)
+    value = observed(premise, mass, trials)
+    if value is None:
+        return dict(row, status="not observed", value=None)
+    return dict(row, status="within" if within(premise["criterion"], value) else "reopen", value=value)

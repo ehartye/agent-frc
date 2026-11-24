@@ -1,22 +1,30 @@
-"""Decide what the library's measurements mean: each pair, each case and the displaced control."""
-from package_view import CONTROL_ID
+"""Decide what the library's records mean: each pair, each motion, the displaced control, and the verdict as a whole.
 
+A motion passes when no pair comes closer than its allowance, every required contact is reached, no game piece is
+squeezed past its allowed depth and, for a service withdrawal, the moved solids end beyond the allowance of
+everything that stayed. A pair the search could not settle is open, never clear.
+
+The verdict is blocked by a failing motion, a weight over a limit, a motion the bus cannot power or a solid that
+floats; it reopens an upstream phase when a premise leaves its criterion; it is provisional while anything else is
+unmet; otherwise it is layout-checked.
+"""
 from .attachment import floating
 
+BLOCKING = ("clearance", "weight", "voltage", "floating")
+# The order in which the first unmet requirement is named.
+ORDER = ("clearance", "weight", "voltage", "floating", "control", "premise")
 
-def pair_row(row):
-    """One measured pair as the receipt records it: pass, fail or open, with the witness or the proven bound."""
-    pair = row["pair"]
-    if not row["proven"]:
-        # The search reached its depth limit: the pair is never passed off as clear.
-        return dict(pair=pair, status="open", witness=list(row.get("unresolved") or [0, 1]))
-    if row["closerThanMinGap"]:
-        return dict(pair=pair, status="fail", witness=dict(t=row["t"], gapMm=row["gapMm"], volumeMm3=row["overlapMm3"]))
-    if row["method"] == "enclosed straight stroke":
-        return dict(pair=pair, status="pass", method="Enclosed straight stroke: the swept solid stays beyond the allowance")
-    if row["method"] == "fixed relative pose":
-        return dict(pair=pair, status="pass", witness=dict(t=0, gapMm=row["gapMm"], volumeMm3=0))
-    return dict(pair=pair, status="pass", lowerBoundMm=row["lowerBoundMm"], samples=row["samples"])
+
+def gap_row(row):
+    return dict(pair=row["pair"], gapMm=row["gapMm"], t=row["t"], overlapMm3=row["overlapMm3"])
+
+
+def clearance(found):
+    """(failing pairs, open pairs) of a clearance record: closer than the allowance, or not settled by the depth limit."""
+    rows = found["pairs"]
+    failing = [gap_row(r) for r in rows if r["proven"] and r["closerThanMinGap"]]
+    unsettled = [dict(pair=r["pair"], interval=list(r.get("unresolved") or [0, 1])) for r in rows if not r["proven"]]
+    return failing, unsettled
 
 
 def contact_row(rule, found):
@@ -33,62 +41,69 @@ def compression_row(rule, found):
                 deepestMm=found["deepestMm"], t=found["t"], upperBoundMm=found["upperBoundMm"], sectionRadiusMm=found["sectionRadiusMm"])
 
 
-def worst(rows):
-    return "fail" if any(r["status"] == "fail" for r in rows) else "open" if any(r["status"] == "open" for r in rows) else "pass"
+def worst(statuses):
+    statuses = list(statuses)
+    return "fail" if "fail" in statuses else "open" if "open" in statuses else "pass"
 
 
-def case_row(case, found, contacts, withdrawal, compression=()):
-    """One checked case. It passes when no pair is closer than the allowance, every required contact is reached, no
-    game piece is squeezed past its allowed depth and, for a service withdrawal, the moved solids end beyond the
-    allowance of everything that stayed."""
-    pairs = [pair_row(row) for row in found["pairs"]]
-    status = "fail" if any(r["status"] == "fail" for r in pairs) else "open" if any(r["status"] == "open" for r in pairs) else "pass"
-    if status == "pass":
-        status = worst([*contacts, *compression])
-    extracted = []
-    if withdrawal is not None:
-        if withdrawal["smallestBoxGapMm"] > case["minGapMm"]:
-            extracted = list(case["extract"])
-        elif status == "pass":
-            status = "open"
-    return dict(case=case["id"], status=status, allowanceMm=case["minGapMm"], moving=sorted(case["moves"]), removed=dict(case["removed"]),
-                extracted=extracted, installedCount=case["present"],
-                pairs=pairs, requiredContacts=contacts, compression=list(compression), counts=found["counts"],
-                **({"withdrawnBoxGapMm": withdrawal["smallestBoxGapMm"]} if withdrawal is not None else {}))
+def motion_row(case, results):
+    """One judged motion from its records. results is {tag: result} for this motion's jobs."""
+    m = case["id"]
+    found = results[("clearance", m)]
+    failing, unsettled = clearance(found)
+    contacts = [contact_row(rule, results[("reach", m, rule["id"])]) for rule in case["requiredContacts"]]
+    pressed = [compression_row(rule, results[("indentation", m, rule["payload"], rule["contact"])]) for rule in case["compression"]]
+    status = "fail" if failing else "open" if unsettled else worst(r["status"] for r in [*contacts, *pressed])
+    row = dict(purpose=case["purpose"], cause=case["cause"], status=status, allowanceMm=case["minGapMm"], allowanceBasis=case["allowanceBasis"],
+               movingGroups=case["movingGroups"], absent=case["absent"], closest=found.get("closest"), failing=failing, open=unsettled,
+               counts=found.get("counts"), requiredContacts=contacts, compression=pressed)
+    if ("withdrawal", m) in results:
+        gap = results[("withdrawal", m)]["smallestBoxGapMm"]
+        row["withdrawal"] = dict(smallestBoxGapMm=gap, extracted=case["moved"] if gap > case["minGapMm"] else [])
+        if gap <= case["minGapMm"] and row["status"] == "pass":
+            row["status"] = "open"
+    return row
+
+
+def motion_unmet(name, row):
+    if row["status"] == "pass":
+        return None
+    if row["failing"]:
+        w = min(row["failing"], key=lambda r: (r["gapMm"], -r["overlapMm3"]))
+        detail = "overlap %.1f mm3 at t %.3f" % (w["overlapMm3"], w["t"]) if w["overlapMm3"] > 0 else "gap %.3f mm at t %.3f" % (w["gapMm"], w["t"])
+        text = name + ": " + " and ".join(w["pair"]) + " " + detail + ", inside the " + f"{row['allowanceMm']:g} mm allowance"
+    elif row["open"]:
+        text = name + ": " + " and ".join(row["open"][0]["pair"]) + " unresolved over t " + str(row["open"][0]["interval"])
+    else:
+        bad = next((r for r in [*row["requiredContacts"], *row["compression"]] if r["status"] != "pass"), None)
+        text = name + ": " + (("required contact " + bad["id"] if "id" in bad else "squeeze of " + bad["payload"] + " by " + bad["contact"]) + " is " + bad["status"]
+                              if bad else "the withdrawn solids end within the allowance of what stayed")
+    return dict(kind="clearance", motion=name, status=row["status"], text=text)
 
 
 def control_row(spec, found):
-    """The control's receipt field and its case row. The check can fail only if the shifted pair is rejected."""
-    rows = [pair_row(row) for row in found["pairs"]]
-    hit = next((r for r in rows if set(r["pair"]) == {spec["moving"], spec["displaced"]} and r["status"] == "fail"), None)
-    return (dict(case=spec["case"], displaced=spec["displaced"], offsetMm=spec["offsetMm"], witness=hit),
-            dict(case=CONTROL_ID, status="fail" if hit else "pass", pairs=rows))
+    """The control's verdict field. The check can fail only if the shifted pair is rejected."""
+    failing, _ = clearance(found)
+    hit = next((r for r in failing if set(r["pair"]) == {spec["moving"], spec["displaced"]}), None)
+    return dict(motion=spec["motion"], displaced=spec["displaced"], moving=spec["moving"], offsetMm=spec["offsetMm"], basis=spec["basis"],
+                rejected=hit is not None, witness=hit)
 
 
-def decide(result, missing):
-    """The receipt's status and what reopens: blocked on a failing case, a broken budget or a solid that floats,
-    layout-checked when nothing is unmet."""
-    cases, stages, groups, reopen = result["cases"], result["stages"], result["groups"], result["reopen"]
-    failing = [c for c in cases if c["status"] == "fail"]
-    for case in failing:
-        hits = {name for row in case["pairs"] if row["status"] == "fail" for name in row["pair"]}
-        affected = set(stages[case["case"]]["movingGroups"]) | {k for k, g in groups.items() if hits.intersection(g["members"])}
-        reopen.append(dict(phase="preliminary-design", reason=case["case"], affected=sorted(affected)))
-    budgets = result.get("budgets")
-    over = []
-    if budgets:
-        over = (["inspection-weight"] if budgets["massStatus"] == "fail" else []) + [
-            "voltage/" + row["case"] for row in budgets["electricalCases"] if row["status"] == "fail"]
-        reopen.extend(dict(phase="preliminary-design", reason=key, affected=sorted(groups)) for key in over)
-    # Nothing floats: a solid not held to the frame, or a fixture off the floor, that no label explains.
-    loose = floating(result.get("attachment"))
+def decide(verdict, unmet):
+    """The status and the first unmet requirement, blocking findings first; adds what reopens for a failing motion."""
+    groups = verdict["groups"]
+    for name, row in verdict["motions"].items():
+        if row["status"] == "fail":
+            hits = {n for r in row["failing"] for n in r["pair"]}
+            affected = set(row["movingGroups"]) | {k for k, g in groups.items() if hits.intersection(g["members"])}
+            verdict["reopen"].append(dict(phase="preliminary-design", reason=name, affected=sorted(affected)))
+    loose = floating(verdict.get("attachment"))
     if loose:
-        reopen.append(dict(phase="preliminary-design", reason="floating", affected=sorted(
-            {key for key, g in groups.items() if set(loose).intersection(g["members"])} or set(loose))))
-    if failing or over or loose:
-        return "blocked"
-    if reopen:
-        return "reopen"
-    if cases and not missing and all(c["status"] == "pass" for c in cases):
-        return "layout-checked"
-    return "provisional"
+        unmet.append(dict(kind="floating", text="Floating: " + ", ".join(loose) + ". Give each a support or mount that traces to the frame, rest each "
+                          "fixture on the floor, or label it under attachment in the judgement file with the reason"))
+    ranked = sorted(unmet, key=lambda r: ORDER.index(r["kind"]) if r["kind"] in ORDER else len(ORDER))
+    blocking = [r for r in ranked if r["kind"] in BLOCKING and r.get("status", "fail") == "fail"]
+    first = blocking[0] if blocking else ranked[0] if ranked else None
+    reopen = any(r["phase"] != "preliminary-design" for r in verdict["reopen"])
+    status = "blocked" if blocking else "reopen" if reopen else "provisional" if ranked else "layout-checked"
+    return status, first, ranked

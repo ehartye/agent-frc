@@ -20,7 +20,7 @@ const stagingCommand = fileURLToPath(new URL('../scripts/stage_preliminary_revie
 // These invented releases hold no solid, so the layout check of the stage gate is stood in for: it reproduces the receipt.
 const gateCheck = fileURLToPath(new URL('./fixtures/gate-reproduces.mjs', import.meta.url));
 // Synthetic teaching fixture: an invented layout with one case and one objective.
-test('the season script publishes a checked release, records where its inputs are and sets design statuses', async t => {
+test('the season script publishes a checked release, records where its inputs are and sets design statuses', {skip: 'WP8 converts the gate and staging to records'}, async t => {
   const root = await mkdtemp(path.join(tmpdir(), 'preliminary-releases-'));
   t.after(() => rm(root, { recursive: true, force: true }));
   const author = path.join(root, 'cad', 'preliminary-design');

@@ -1,23 +1,37 @@
-"""Read a design's two inputs and join them into the plan the rest of the check reads.
+"""Read every input of a judgement before anything is measured, and refuse with the whole list of what is missing.
 
-The design source is the library's and holds every solid, group, mount, contact, pose and motion. The judgement
-file is the plugin's and holds none of those. The joined plan repeats the source's groups and mounts so the
-receipt, the budgets and the review scene can name them.
+The design source is the library's and holds everything physical: solids and their weight, groups, mounts, contacts,
+motors and drives, the battery, poses and motions. The judgement file is the plugin's and holds none of those:
+
+    {"schema": "agent-frc/layout-judgement@2", "issue": "...",
+     "source": {"file"}, "records": {"folder"}, "requirements": {"file"},
+     "narrative": {"file", "objectives": [{"objective", "disposition", "basis"}]},
+     "premises": [{"file"}], "rules": {...}, "purposes": {...}, "motions": {...},
+     "cycle": [{"phase", "motions": [...]} | {"phase", "notApplicable"}],
+     "control": {"motion", "displaced", "moving", "offsetMm", "basis"},
+     "attachment": {...}, "interactions": {...}, "missionCases": [...], "risks": [...], "scopeGuidelines": {...}}
+
+A file is named by its path alone. The season's requirements file is shared by every release of the season:
+
+    {"schema": "agent-frc/season-requirements@1", "basis": "...", "minBusV": 9,
+     "weightLimits": [{"name", "limitKg", "excludesGroups": [...], "basis"}]}
 """
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .files import digest, named, number, pinned, read, require, resolve_references
+from . import missions, premises, rules, stages
+from .files import named, number, read, reference
 
-SCHEMA = "agent-frc/layout-judgement@1"
+SCHEMA = "agent-frc/layout-judgement@2"
+REQUIREMENTS = "agent-frc/season-requirements@1"
 INSTALL = "pip install --upgrade git+https://github.com/ehartye/frc-design-kernel"
 ROLES = ("structure", "bumper", "drive", "battery", "mechanism", "payload", "service", "other", "fixture")
-PURPOSES = ("operating", "park", "service")
+# Group roles that are not physical robot parts: game pieces, and service gauges or clearance envelopes.
+NOT_ROBOT = ("payload", "service")
 # What belongs to the design source. A judgement file that carries one of these is refused, naming it.
-SOURCE_KEYS = ("groups", "mounts", "contacts", "solids", "fixtures", "poses", "motions", "datum", "step", "design")
-STAGE_KEYS = {"purpose", "phase", "basis", "minGapMm", "allowanceBasis", "pathToleranceMm", "depth", "absent", "extract",
-              "requiredContacts", "payloadCompression", "carriedWith", "transportedBy", "freePath", "supportedBy"}
-DEFAULT_DEPTH = 9
+SOURCE_KEYS = ("groups", "mounts", "contacts", "solids", "fixtures", "poses", "stages", "datum", "step", "design", "drives", "battery")
+KEYS = ("schema", "issue", "source", "records", "requirements", "narrative", "premises", "rules", "purposes", "motions", "cycle", "control",
+        "attachment", "interactions", "missionCases", "risks", "scopeGuidelines")
 
 
 def library():
@@ -29,20 +43,28 @@ def library():
     return frc_design_kernel
 
 
+def refused(problems, before="before measuring"):
+    """One error that lists every problem."""
+    return ValueError("Refused " + before + ": " + str(len(problems)) + " missing or invalid input" + ("" if len(problems) == 1 else "s")
+                      + ":\n" + "\n".join("- " + p for p in problems))
+
+
 @dataclass
 class Inputs:
-    """One design as the check reads it."""
+    """One design as the judgement reads it."""
     root: Path          # the project
     file: Path          # the judgement file
-    judgement: dict     # the judgement file, with a digest beside every file it names
+    judgement: dict     # the judgement file as written
     design: object      # the library's loaded design source
-    plan: dict          # the judgement joined with the source's groups, mounts and pins
-    cases: list         # one record per stage: what moves, from where, against what allowance
+    records: Path       # the folder of the library's records
+    requirements: dict  # the season's requirements
+    premises: list      # the accepted premises
+    narrative: dict     # the narrative's file and the objectives it was reviewed for
+    cases: list         # one record per motion: its purpose, rules and bindings, and the groups it moves
+    groups: dict        # {group: {role, members}}
     fixtures: set       # the names of the fixture solids
     roster: set         # every solid and fixture name
-    volumes: dict = field(default_factory=dict)    # {solid: volume in mm3}, from the generated manifest
-    parts: list = field(default_factory=list)      # the STEP files the source places solids from, each with its digest
-    records: dict = field(default_factory=dict)    # {"trials" | "measurements": (record, pin, folder)}: the library's records the judgement names
+    mounts: list = field(default_factory=list)
 
     @property
     def data(self):
@@ -52,155 +74,114 @@ class Inputs:
     def source(self):
         return self.design.path
 
-
-def group_of(data):
-    return {s["name"]: s["group"] for s in [*data["solids"], *data["fixtures"]]}
-
-
-def carried_chain(data, group):
-    """The groups that carry this one, nearest first."""
-    chain, at = [], data["groups"][group].get("carriedBy")
-    while at and at not in chain:
-        chain.append(at)
-        at = data["groups"][at].get("carriedBy")
-    return chain
+    def members(self, roles):
+        return {m for g in self.groups.values() if g["role"] in roles for m in g["members"]}
 
 
-def own_motion(data, name):
-    """(start, moves) of a motion as the source writes them: {group: operations} at the start and along the stroke.
-
-    A motion through poses has no operations of its own; each group whose pose changes carries one marker
-    operation that names the poses, so two records of the same motion still compare equal."""
-    motion = data["motions"][name]
-    if "through" in motion:
-        stops = [data["poses"][pose] for pose in motion["through"]]
-        moving = sorted({g for stop in stops for g in stop if any(other.get(g, []) != stop[g] for other in stops)})
-        return dict(stops[0]), {g: [dict(kind="through", poses=list(motion["through"]))] for g in moving}
-    return dict(data["poses"].get(motion.get("from"), {})), dict(motion["moves"])
-
-
-def start_pose(data, name):
-    """The named pose a motion starts from; None when it starts as drawn."""
-    motion = data["motions"][name]
-    return motion["through"][0] if "through" in motion else motion.get("from")
-
-
-def has_travel(op):
-    if op["kind"] == "translation":
-        return any(op["travelMm"])
-    if op["kind"] == "rotation":
-        return op["travelDeg"] != 0
-    if op["kind"] == "gravity-drop":
-        return op["fallMm"] > 0
-    return True     # a path or a motion through poses
-
-
-def case_record(data, key, stage, members, fixtures):
-    """One stage as a case: the solids it moves and poses, the allowance, and what is taken out of the scene."""
-    start, moves = own_motion(data, key)
-    for group, ops in moves.items():
-        require(ops and any(has_travel(op) for op in ops), "Missing signed travel for " + group + " in " + key)
-    moving = {g for g in data["groups"] if g in moves or any(c in moves for c in carried_chain(data, g))}
-    posed = {g for g in data["groups"] if g in start or any(c in start for c in carried_chain(data, g))}
-    absent = stage.get("absent", [])
-    return dict(id=key, stage=stage["purpose"], basis=stage.get("basis"), minGapMm=stage["minGapMm"], depth=stage.get("depth", DEFAULT_DEPTH),
-                movingGroups=sorted(moving), present=sum(len(names) for names in members.values()) - len(absent),
-                moves={m: moves.get(g, []) for g in sorted(moving) for m in members[g]},
-                initialPose={m: start.get(g, []) for g in sorted(posed) for m in members[g]},
-                fixtures=[dict(id=name) for name in sorted(fixtures - set(absent))],
-                removed={name: "Taken out before this case" for name in absent},
-                extract=sorted(m for g in moving for m in members[g]) if stage.get("extract") else [],
-                requiredContacts=stage.get("requiredContacts", []), compression=stage.get("payloadCompression", []))
-
-
-def check_stage(key, stage, roster):
-    require(isinstance(stage, dict) and set(stage) <= STAGE_KEYS,
-            "Stage " + key + " holds " + ", ".join(sorted(STAGE_KEYS)) + ". Geometry and motion belong to the design source")
-    require(stage.get("purpose") in PURPOSES and named(stage.get("allowanceBasis")) and number(stage.get("minGapMm")) and stage["minGapMm"] >= 0,
-            "Give stage " + key + " a purpose (" + ", ".join(PURPOSES) + "), an allowance minGapMm of zero or more and its allowanceBasis")
-    require("phase" not in stage or named(stage["phase"]), "Give the phase of " + key + " as a short name, such as acquire")
-    require(set(stage.get("absent", [])) <= roster, "Stage " + key + " lists an absent solid the design source does not hold")
-    require(isinstance(stage.get("depth", DEFAULT_DEPTH), int), "Give the search depth of " + key + " as a whole number")
-    for rule in stage.get("payloadCompression", []):
-        require(isinstance(rule, dict) and rule.get("payload") in roster and rule.get("contact") in roster and number(rule.get("maxDepthMm"))
-                and rule["maxDepthMm"] > 0 and named(rule.get("basis")),
-                "A compression rule of " + key + " names the payload solid, the contact solid that presses into it, maxDepthMm above zero and its basis")
-    for rule in stage.get("requiredContacts", []):
-        require(isinstance(rule, dict) and named(rule.get("id")) and isinstance(rule.get("pair"), list) and set(rule["pair"]) <= roster
-                and len(rule["pair"]) == 2 and number(rule.get("maxGapMm")) and isinstance(rule.get("window", [0, 1]), list),
-                "A required contact of " + key + " names an id, a pair of solids, maxGapMm and an optional window of stroke fractions")
-
-
-def source_groups(data, fixtures):
+def source_groups(data, fixtures, problems):
     """{group: {role, members}} as the source states them. A role is one of the plugin's words."""
     groups = {}
     for name, entry in data["groups"].items():
         members = [s["name"] for s in [*data["solids"], *data["fixtures"]] if s["group"] == name]
         if not members:
             continue
-        require(entry.get("role") in ROLES, "Group " + name + " in the design source has the role " + repr(entry.get("role"))
-                + ". The layout check reads one of: " + ", ".join(ROLES))
-        require(entry["role"] != "fixture" or set(members) <= fixtures, "Group " + name + " has the role fixture and holds a robot solid. "
-                "List field parts under fixtures in the design source")
-        groups[name] = dict(role=entry["role"], members=members)
+        if entry.get("role") not in ROLES:
+            problems.append("Group " + name + " in the design source has the role " + repr(entry.get("role")) + ". The judgement reads one of: " + ", ".join(ROLES))
+        elif entry["role"] == "fixture" and not set(members) <= fixtures:
+            problems.append("Group " + name + " has the role fixture and holds a robot solid. List field parts under fixtures in the design source")
+        groups[name] = dict(role=entry.get("role"), members=members)
     return groups
 
 
-def source_mounts(data):
-    mounts = []
-    for mount in data["mounts"]:
-        require(named(mount.get("note")), "Give each mount in the design source a note: it is the basis the review shows. Missing on "
-                + mount["group"] + " on " + mount["on"])
-        mounts.append(dict(group=mount["group"], on=mount["on"], pointMm=mount["atMm"], basis=mount["note"],
-                           **({"member": mount["member"]} if "member" in mount else {})))
-    return mounts
+def unweighed(data, groups):
+    """The robot solids no weight covers: no massKg or densityKgM3 of their own and no lump on their group. Service solids need none."""
+    lumps = {g for g, entry in data["groups"].items() if "massKg" in entry}
+    return sorted(s["name"] for s in data["solids"] if groups.get(s["group"], {}).get("role") not in ("service",)
+                  and "massKg" not in s and "densityKgM3" not in s and s["group"] not in lumps)
+
+
+def season(root, judgement, groups, problems):
+    """The season's requirements, read and checked: the bus floor and each weight limit with the groups it leaves out."""
+    path = reference(root, judgement.get("requirements"), "requirements", problems)
+    if path is None:
+        return {}
+    found = read(path)
+    if not (isinstance(found, dict) and found.get("schema") == REQUIREMENTS and named(found.get("basis")) and number(found.get("minBusV"))
+            and found["minBusV"] > 0 and isinstance(found.get("weightLimits"), list) and set(found) <= {"schema", "basis", "minBusV", "weightLimits"}):
+        problems.append("A requirements file has schema " + REQUIREMENTS + ", a basis, minBusV above zero and a list of weightLimits")
+        return {}
+    for row in found["weightLimits"]:
+        if not (isinstance(row, dict) and set(row) == {"name", "limitKg", "excludesGroups", "basis"} and named(row["name"]) and number(row["limitKg"])
+                and row["limitKg"] > 0 and isinstance(row["excludesGroups"], list) and named(row["basis"])):
+            problems.append("A weight limit names itself, its limitKg above zero, the groups it excludes and its basis")
+            continue
+        for group in row["excludesGroups"] if groups is not None else []:
+            if group not in groups:
+                problems.append("Weight limit " + row["name"] + " excludes " + str(group) + ", which is not a group of the design")
+    return found
+
+
+def top_level(raw, problems):
+    """Refuse what the judgement file must not hold: geometry and motion, and anything it does not know."""
+    stray = sorted(set(raw) & set(SOURCE_KEYS))
+    if stray:
+        problems.append("The judgement file holds no geometry or motion. Move " + ", ".join(stray) + " to the design source, or remove "
+                        + ("it" if len(stray) == 1 else "them") + ": the judgement reads groups, mounts, poses and motions from the source")
+    unknown = sorted(set(raw) - set(KEYS) - set(SOURCE_KEYS))
+    if unknown:
+        problems.append("The judgement file has no field " + ", ".join(unknown) + "; it holds " + ", ".join(KEYS))
+
+
+def design_of(root, judgement, problems):
+    path = reference(root, judgement.get("source"), "source", problems)
+    if path is None:
+        return None
+    try:
+        return library().load(path)
+    except (ValueError, OSError) as problem:
+        problems.append("The design source does not load: " + str(problem))
+        return None
+
+
+def physical(design, groups, cases, problems):
+    """What the source must state for the judgement to be made: every robot solid weighed, and a battery for every powered motion."""
+    problems.extend("Unweighed robot solid: " + name for name in unweighed(design.data, groups))
+    powered = sorted(c["id"] for c in cases if c["powered"])
+    if powered and not design.data.get("battery"):
+        problems.append("Give the design source a battery: " + (", ".join(powered[:-1]) + " and " + powered[-1] if len(powered) > 1 else powered[0])
+                        + " draw" + ("" if len(powered) > 1 else "s") + " from it")
 
 
 def load(root, file):
-    """Read the judgement file and the design source it names. Raises ValueError with one message that says what to change."""
-    raw = read(file)
-    require(isinstance(raw, dict) and raw.get("schema") == SCHEMA and named(raw.get("issue")),
-            "A judgement file has schema " + SCHEMA + " and an issue name")
-    stray = sorted(set(raw) & set(SOURCE_KEYS))
-    require(not stray, "The judgement file holds no geometry or motion. Move " + ", ".join(stray) + " to the design source, or remove "
-            + ("it" if len(stray) == 1 else "them") + ": the check reads groups, mounts, poses and motions from the source")
-    judgement = resolve_references(root, raw)
-    require(isinstance(judgement.get("source"), dict), "Name the design source in the judgement file, as source: {file}")
-    design = library().load(pinned(root, judgement["source"]))
+    """Read the judgement file, the season's requirements, the premises and the design source. Raises ValueError listing every problem."""
+    root, problems = Path(root).resolve(), []
+    raw = read(Path(file))
+    if not (isinstance(raw, dict) and raw.get("schema") == SCHEMA and named(raw.get("issue"))):
+        raise refused(["A judgement file has schema " + SCHEMA + " and an issue name"])
+    top_level(raw, problems)
+    folder = reference(root, raw.get("records"), "records", problems, kind="folder")
+    narrative = premises.narrative(root, raw, problems)
+    design = design_of(root, raw, problems)
+    if design is None:
+        season(root, raw, None, problems)
+        premises.read_all(root, raw, None, problems)
+        raise refused(problems)
     data = design.data
     fixtures = {s["name"] for s in data["fixtures"]}
-    groups, mounts = source_groups(data, fixtures), source_mounts(data)
+    groups = source_groups(data, fixtures, problems)
     roster = {m for g in groups.values() for m in g["members"]}
-    stages = judgement.get("stages")
-    require(isinstance(stages, dict) and stages, "List a stage for each motion of the design source under stages")
-    unknown, unjudged = sorted(set(stages) - set(data["motions"])), sorted(set(data["motions"]) - set(stages))
-    require(not unknown and not unjudged, "Each motion of the design source has exactly one stage in the judgement file"
-            + ("; no motion is named " + ", ".join(unknown) if unknown else "") + ("; no stage judges " + ", ".join(unjudged) if unjudged else ""))
-    members = {name: g["members"] for name, g in groups.items()}
-    cases = []
-    for key in data["motions"]:
-        check_stage(key, stages[key], roster)
-        cases.append(case_record(data, key, stages[key], {g: members.get(g, []) for g in data["groups"]}, fixtures))
-    pin = dict(file=judgement["source"]["file"], sha256=design.sha256)
-    plan = dict(judgement, groups=groups, mounts=mounts, datum=dict(name=data["frame"]), design=pin,
-                stages={c["id"]: dict(stages[c["id"]], movingGroups=c["movingGroups"]) for c in cases})
-    return Inputs(root=root, file=Path(file), judgement=judgement, design=design, plan=plan, cases=cases, fixtures=fixtures, roster=roster)
-
-
-def generated(inputs):
-    """The library's generated records for this source: the STEP pin and each solid's box. Stale or absent ones stop the check."""
-    ref = inputs.judgement.get("generated")
-    build = "python -m frc_design_kernel build " + inputs.judgement["source"]["file"] + " --out FOLDER"
-    require(isinstance(ref, dict) and named(ref.get("file")) and (inputs.root / ref["file"]).is_file(),
-            "Generate the solids and the manifest with the library (" + build + ") and name the manifest in the judgement file, as generated: {file}")
-    path = pinned(inputs.root, dict(ref))
-    manifest = read(path)
-    require((manifest.get("design") or {}).get("sourceSha256") == inputs.design.sha256,
-            "The generated solids are of an earlier design source. A generated file is never edited: regenerate them with " + build)
-    step = path.with_name((manifest.get("files") or {}).get("design") or "design.step")
-    require(step.is_file(), "The manifest names a STEP that is not beside it: " + step.name + ". Regenerate with " + build)
-    rows = [*manifest.get("solids", []), *manifest.get("fixtures", [])]
-    bounds = {row["name"]: row["boundsMm"] for row in rows}
-    inputs.volumes.update({row["name"]: row["volumeMm3"] for row in rows})
-    inputs.parts[:] = [dict(file=row["file"], sha256=row["sha256"], solids=len(row.get("solids", []))) for row in manifest.get("parts", [])]
-    return dict(file=step.relative_to(inputs.root).as_posix(), sha256=digest(step)), bounds
+    requirements = season(root, raw, groups, problems)
+    payloads = {m for g in groups.values() if g["role"] == "payload" for m in g["members"]}
+    cases = rules.cases(raw, data, roster, payloads, problems)
+    physical(design, groups, cases, problems)
+    accepted = premises.read_all(root, raw, groups, problems)
+    inputs = Inputs(root=root, file=Path(file), judgement=raw, design=design, records=folder, requirements=requirements, premises=accepted, narrative=narrative,
+                    cases=cases, groups=groups, fixtures=fixtures, roster=roster,
+                    mounts=[dict(group=m["group"], on=m["on"], pointMm=m["atMm"], basis=m.get("note"), **({"member": m["member"]} if "member" in m else {}))
+                            for m in data["mounts"]])
+    stages.moving(inputs)
+    stages.checked(inputs, problems)
+    missions.checked(inputs, problems)
+    if problems:
+        raise refused(problems)
+    return inputs

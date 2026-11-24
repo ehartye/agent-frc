@@ -1,7 +1,8 @@
-"""Small helpers the preliminary path shares: read a project file, digest it, check an input and resolve a file reference.
+"""Small helpers the preliminary path shares: read a project file, check an input and resolve a file reference.
 
 They hold no geometry and import nothing of the plugin, so the check, its review page and the staging commands can use
-them without loading the detailed-design path."""
+them without loading the detailed-design path. The layout judgement names its files by path alone (reference); the
+digest helpers below serve the detailed-design review, which pins its own evidence."""
 from hashlib import file_digest
 import json
 import math
@@ -37,6 +38,28 @@ def project_path(root, name):
     return result
 
 
+def reference(root, ref, where, problems, kind="file"):
+    """The project file (or folder) a {file} or {folder} reference names, or None with the problem appended.
+
+    A reference holds its path and nothing else: no digest is typed or checked, because judging reads what a file says
+    now, and the one record of what was judged is gate.json."""
+    if not (isinstance(ref, dict) and named(ref.get(kind))):
+        problems.append("Name " + where + " as {" + kind + ": PATH}, a project-relative path")
+        return None
+    extra = sorted(set(ref) - {kind})
+    if extra:
+        problems.append("A " + kind + " reference is {" + kind + "}: " + where + " holds " + ", ".join(extra))
+        return None
+    name = ref[kind]
+    found = (root / name).resolve() if not Path(name).is_absolute() else None
+    if found is None or not found.is_relative_to(root) or not (found.is_dir() if kind == "folder" else found.is_file()):
+        if kind == "folder" and found is not None and found.is_relative_to(root) and not found.exists():
+            return found
+        problems.append("Unresolved project " + kind + ": " + name)
+        return None
+    return found
+
+
 def pinned(root, ref):
     """The project file a reference names. A SHA-256 the author typed is verified; none is required.
 
@@ -64,7 +87,7 @@ def resolve_references(root, node):
     """Return a copy of a plan or record in which every path-only file reference also holds its SHA-256.
 
     An author names a file by its project-relative path, as {"file": "..."}. The checker reads the file and records
-    the digest it found, so the receipt still says what was checked. A reference that already holds a sha256 is left
+    the digest it found, so the record still says what was checked. A reference that already holds a sha256 is left
     as typed and is verified wherever it is used."""
     if path_reference(node):
         return dict(node, sha256=digest(project_path(root, node["file"])))

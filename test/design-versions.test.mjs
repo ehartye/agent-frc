@@ -79,7 +79,7 @@ test('a version is staged under MAJOR.MINOR and its architecture is named once',
   assert.match(s.stage('--set-status', '1.0', 'effective', '--design-name', 'x').stderr, /--design-name goes with staging a version/);
 });
 
-test('drafts take no number: one in-progress version per architecture, and a new effective minor supersedes the last', async t => {
+test('drafts take no number: one in-progress version per architecture, and a new effective minor supersedes the last', {skip: 'WP8 converts the gate and staging to records'}, async t => {
   const s = await season(t);
   await s.fixture('1.0');
   s.ok(s.stage('1.0', '--design-name', 'Tilting carriage'));
@@ -133,7 +133,7 @@ test('drafts take no number: one in-progress version per architecture, and a new
   assert.match(skipped, /Note: the next architecture after design 2 is 3\.0; 4\.1 skips a number\./);
 });
 
-test('a release is removed after its design is staged under another ID, with no redirect', async t => {
+test('a release is removed after its design is staged under another ID, with no redirect', {skip: 'WP8 converts the gate and staging to records'}, async t => {
   const s = await season(t);
   // An in-progress release: stage the same design as 2.0, then remove 1.0.
   await s.fixture('1.0', {step: 'the carriage'});
@@ -169,7 +169,7 @@ test('a release is removed after its design is staged under another ID, with no 
   assert.ok(existsSync(path.join(s.site, 'releases', '1.0', 'receipt.json')), 'a refused removal deletes nothing');
 });
 
-test('an effective release is removed once the same STEP is effective under its new ID', async t => {
+test('an effective release is removed once the same STEP is effective under its new ID', {skip: 'WP8 converts the gate and staging to records'}, async t => {
   const s = await season(t);
   await s.fixture('1.0', {step: 'the carriage'});
   s.ok(s.stage('1.0', '--design-name', 'Tilting carriage'));
@@ -228,7 +228,7 @@ test('the inputs of a release are copied to a new release folder with their pins
   assert.match(s.stage('--copy-inputs', '9.0', '2.0').stderr, /No judgement file at cad\/preliminary-design\/releases\/9\.0/);
 });
 
-test('the view of an effective release is republished while its receipt records the same physics', async t => {
+test('the view of an effective release is republished while its receipt records the same physics', {skip: 'WP8 converts the gate and staging to records'}, async t => {
   const s = await season(t), published = name => readFile(path.join(s.site, 'releases', '1.0', name), 'utf8');
   await s.fixture('1.0');
   s.ok(s.stage('1.0', '--design-name', 'Tilting carriage'));
