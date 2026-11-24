@@ -544,7 +544,8 @@ test('ports: a port interval runs on the match clock across the period boundary'
 test('ports: under yield, a concept robot and a legacy robot holding each other give way and move on',()=>{
   // The invented concept-study field, context "screened": B1 cycles a rack to a ring while the legacy R2 screens
   // the blue lane. A placer accelerating at 150 in/s2 meets R2 head-on; each waits for the other.
-  const study=JSON.parse(readFileSync(new URL('../examples/concept-study/field.json',import.meta.url)));
+  // Frozen copy of examples/concept-study/field.json as committed in a52c797, so the example can change freely.
+  const study=JSON.parse(readFileSync(new URL('./fixtures/concept-yield-field.json',import.meta.url)));
   const doc=JSON.parse(readFileSync(new URL('../examples/concept-bots/front-intake-placer.json',import.meta.url)));
   doc.id='slow-placer';doc.drive.accelInS2.value=150;
   const main=waitCycles=>{
@@ -565,4 +566,72 @@ test('ports: under yield, a concept robot and a legacy robot holding each other 
   // Control: without yield the same pair stays held for most of Main play.
   const held=main(undefined);
   assert.ok(held.B1.wait*dt>40,'report-only B1 waited '+held.B1.wait*dt+' s');
+});
+
+test('ports: beside a wall a front face that must turn makes room, turns and acquires; boxed in, it waits',()=>{
+  // The robot starts inside a rack radius 19 in from the south wall facing north. Its circle (21.2 in) meets the wall,
+  // so it cannot turn there: it drives clear, turns its front to the rack and takes stock.
+  const beside=pocket=>{
+    const p=arena({docs:[conceptDoc('front-ball',{inputs:[input('front')]})],steps:[{operation:'acquire',station:'side-rack',at:[250,19]}]});
+    p.rehearsal.stations.push({id:'side-rack',label:'Side rack',kind:'retrieval',side:'both',piece:'ball',at:[250,19],radiusIn:16,stock:3});
+    // Control: a 36 in pocket of three blocks lets the robot reach its rack goal but leaves no pose where its 42.4 in
+    // circle is clear, so it cannot make room and waits with the turn blocked, as before make-room existed.
+    if(pocket)p.rehearsal.obstacles.push(
+      {name:'Pocket west',poly:[[206,0],[222,0],[222,60],[206,60]],lower:0,kind:'test'},
+      {name:'Pocket east',poly:[[258,0],[274,0],[274,60],[258,60]],lower:0,kind:'test'},
+      {name:'Pocket roof',poly:[[206,36],[274,36],[274,60],[206,60]],lower:0,kind:'test'});
+    // Run in Main play, so the opening-task allocation does not stand in for the physics being tested.
+    p.rehearsal.starts[0]=[240,19];
+    const engine=createFieldRehearsal(p);
+    const sim=engine.createProbe([{...engine.defaults('blue',1),plans:{Opening:'hold','Main play':'trial'},concept:'front-ball',heading:90}]);
+    sim.paused=false;engine.advance(sim,engine.elapsedSeconds('Opening'));engine.nextPhase(sim);sim.paused=false;engine.advance(sim,3);
+    return {sim,events:sim.game.events};
+  };
+  const open=beside(false),got=open.events.find(e=>e.outcome==='acquired');
+  assert.ok(got,'acquired after making room: '+open.sim.robots[0].action);
+  const toward=Math.atan2(19-got.pose.p[1],250-got.pose.p[0])*180/Math.PI;
+  assert.ok(Math.abs(wrapDeg(got.pose.heading-toward))<=10,'front toward the rack: heading '+got.pose.heading);
+  const boxed=beside(true);
+  assert.equal(boxed.events.filter(e=>e.outcome==='acquired').length,0);
+  assert.equal(boxed.sim.robots[0].heading,90);
+  assert.match(boxed.sim.robots[0].blocked,/Occupied by (South guardrail|Pocket)/);
+});
+
+test('ports: every piece is in exactly one place, and a floor piece never jumps',()=>{
+  // A rolling intake (pieces in flight for secondsPerPiece) and a ring shooter cycle a floor row with returns, so pieces
+  // leave the floor, fly aboard, score and come back. Each tick every piece has one custody, and every floor piece
+  // matches its station's stock and moves continuously.
+  const doc=conceptDoc('cycler',{capacity:{ball:3},transferS:0.3,inputs:[input('front',{requiresStop:false,secondsPerPiece:q(0.5)})],
+    outputs:[shooter({elevation:[20,60]})]});
+  const p=arena({docs:[doc],steps:[{operation:'acquire',station:'test-balls'},shoot],balls:[[250,60],[262,60],[274,60],[286,60],[250,90]]});
+  const goal=p.rehearsal.stations.find(s=>s.id==='test-goal');
+  goal.returns={credited:{station:'test-balls',at:[300,100],delayS:1}};
+  p.rehearsal.programs.trial.loop=true;
+  p.rehearsal.starts[0]=[200,60];
+  const engine=createFieldRehearsal(p);
+  const sim=engine.createProbe([{...engine.defaults('blue',1),plans:{Opening:'trial','Main play':'trial'},concept:'cycler'}]);
+  sim.paused=false;
+  const ids=[...Array(5)].map((_,i)=>'test-balls/'+(i+1));
+  let last=null;
+  for(let tick=0;tick<200;tick++){
+    engine.advance(sim,dt);
+    const g=sim.game,where={};
+    const add=(id,place)=>{if(!ids.includes(id))return;(where[id]??=[]).push(place);};
+    for(const [station,list] of Object.entries(g.stock))for(const piece of list)add(piece.id,'stock:'+station);
+    for(const [robot,list] of Object.entries(g.cargo))for(const piece of list)add(piece.id,'cargo:'+robot);
+    for(const entry of g.concept.B1.landing ?? [])add(entry.cargo.id,'landing');
+    for(const entry of g.returning)add(entry.piece.id,'returning');
+    for(const piece of g.terminal)add(piece.id,'terminal');
+    for(const id of ids)assert.equal(where[id]?.length,1,id+' at '+(sim.ticks*dt).toFixed(2)+' s is in '+JSON.stringify(where[id]));
+    const floor=new Map(g.motion.pieces.filter(x=>ids.includes(x.id)).map(x=>[x.id,[...x.p]]));
+    for(const id of ids)assert.equal(floor.has(id),where[id][0]==='stock:test-balls',id+' on the floor only while in stock');
+    // A piece that was on the floor last tick moves continuously. One coming back from a configured return was not on
+    // the floor last tick: that reappearance is the profile's legacy teleport.
+    if(last)for(const [id,q] of floor){
+      const before=last.get(id);
+      if(before)assert.ok(Math.hypot(q[0]-before[0],q[1]-before[1])<=10,id+' jumped '+Math.hypot(q[0]-before[0],q[1]-before[1]).toFixed(1)+' in');
+    }
+    last=floor;
+  }
+  assert.ok(sim.game.events.some(e=>e.outcome==='credited'),'pieces scored');
 });

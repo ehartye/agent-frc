@@ -1,0 +1,74 @@
+{
+  "game": "Concept study field",
+  "edition": "Invented classroom exercise",
+  "manual": "examples/concept-study/field.json",
+  "units": "in",
+  "field": {"length": 480, "width": 264, "source": "Invented field dimensions in this file."},
+  "limits": {"perimeter": 120, "height": 46, "source": "Invented starting-volume limits in this file."},
+  "landmarks": [],
+  "levels": [],
+  "geometrySource": "Invented layout: each alliance has a tile rack near its wall and a raised ring 150 in away, up and to the side of it. Every value is hypothetical.",
+  "omissions": "The exercise omits mechanism contact, field tolerances, scoring adjudication and hardware behavior.",
+  "rehearsal": {
+    "schema": "field-rehearsal/v1",
+    "basis": "Invented concept-study field. Every dimension, pose, stock, delay and point value is hypothetical.",
+    "boundsNote": "The field has no interior obstacles. Each credited tile returns to its alliance's rack 2 s after it scores, so supply lasts the match.",
+    "sources": ["examples/concept-study/field.json"],
+    "resourceLabel": "shared lane",
+    "setups": ["open"],
+    "waitCycles": "yield",
+    "planes": [],
+    "obstacles": [],
+    "bands": [],
+    "starts": [[40, 60], [40, 132], [40, 204]],
+    "mirror": {"redX": true, "redY": true},
+    "periods": [{"name": "Opening", "seconds": 10}, {"name": "Main play", "seconds": 45}],
+    "defaults": {"length": 24, "width": 24, "height": 26, "bumper": 3, "heading": 0, "speed": 78, "orders": ["hold", "hold", "hold"]},
+    "robotLimits": {
+      "perimeterIn": {"value": 120, "factId": "invented-perimeter"},
+      "startingHeightIn": {"value": 46, "factId": "invented-starting-height"},
+      "maxHeightIn": {"value": 60, "factId": "invented-max-height"},
+      "maxExtensionIn": {"value": 12, "factId": "invented-max-extension"},
+      "massLb": {"value": 100, "factId": "invented-mass"}
+    },
+    "stations": [
+      {"id": "blue-rack", "label": "Blue tile rack", "kind": "retrieval", "side": "blue", "piece": "tile", "at": [70, 70], "radiusIn": 30, "stock": 6},
+      {"id": "blue-ring", "label": "Blue ring", "kind": "scoring", "side": "blue", "piece": "tile", "at": [150, 200], "radiusIn": 16, "points": 2,
+        "criterion": "Invented: a tile that passes down through the ring scores.",
+        "entry": {"centerIn": [150, 200, 36], "kind": "ring", "radiusIn": 12, "factId": "invented-blue-ring"},
+        "returns": {"credited": {"station": "blue-rack", "delayS": 2}}},
+      {"id": "red-rack", "label": "Red tile rack", "kind": "retrieval", "side": "red", "piece": "tile", "at": [410, 194], "radiusIn": 30, "stock": 6},
+      {"id": "red-ring", "label": "Red ring", "kind": "scoring", "side": "red", "piece": "tile", "at": [330, 64], "radiusIn": 16, "points": 2,
+        "criterion": "Invented: a tile that passes down through the ring scores.",
+        "entry": {"centerIn": [330, 64, 36], "kind": "ring", "radiusIn": 12, "factId": "invented-red-ring"},
+        "returns": {"credited": {"station": "red-rack", "delayS": 2}}}
+    ],
+    "programs": {
+      "hold": {"label": "Hold position", "steps": []},
+      "cycle": {"label": "Collect tiles and score them in the ring", "loop": true, "steps": [
+        {"at": [70, 70], "label": "Collect a tile", "operation": "acquire", "station": {"blue": "blue-rack", "red": "red-rack"}},
+        {"at": [150, 200], "label": "Score in the ring", "operation": "attempt", "station": {"blue": "blue-ring", "red": "red-ring"}, "outcome": "credited"}
+      ]},
+      "screen": {"label": "Cross the blue lane", "loop": true, "steps": [
+        {"at": [85, 155], "label": "Screen the near side of the lane", "frame": "field"},
+        {"at": [205, 115], "label": "Screen the far side of the lane", "frame": "field"}
+      ]}
+    },
+    "series": {"matches": [
+      {"id": "solo", "basis": "Invented: each alliance cycles one robot while its partners hold at their starts.", "setup": "open", "roster": [
+        {"side": "blue", "slot": 1, "plans": {"Opening": "cycle", "Main play": "cycle"}},
+        {"side": "red", "slot": 1, "plans": {"Opening": "cycle", "Main play": "cycle"}}
+      ]},
+      {"id": "screened", "basis": "Invented: a red robot crosses back and forth over the lane between the blue rack and the blue ring.", "setup": "open", "roster": [
+        {"side": "blue", "slot": 1, "plans": {"Opening": "cycle", "Main play": "cycle"}},
+        {"side": "red", "slot": 1, "plans": {"Opening": "cycle", "Main play": "cycle"}},
+        {"side": "red", "slot": 2, "plans": {"Opening": "screen", "Main play": "screen"}}
+      ]},
+      {"id": "shared", "basis": "Invented: a blue partner without a concept cycles the same rack and ring as the focal robot.", "setup": "open", "roster": [
+        {"side": "blue", "slot": 1, "plans": {"Opening": "cycle", "Main play": "cycle"}},
+        {"side": "blue", "slot": 2, "plans": {"Opening": "cycle", "Main play": "cycle"}},
+        {"side": "red", "slot": 1, "plans": {"Opening": "cycle", "Main play": "cycle"}}
+      ]}
+    ]}
+  }
+}
