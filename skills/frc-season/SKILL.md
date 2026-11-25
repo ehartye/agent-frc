@@ -6,6 +6,8 @@ description: "Use when selecting or interpreting an FRC season, manual, update, 
 
 Read [grounding policy](../../docs/grounding.md). Start with the [learning brief](../../docs/briefs.md): npm run brief -- --workflow season --season YEAR --as-of YYYY-MM-DD. The brief is optional scaffolding, not a source-reading substitute. No vault is required; local catalog use must be explicitly configured.
 
+If the project keeps the season's rules as a dated folder, ask the folder first; if you are writing one, follow the rules for reading the documents. Both are in [season documents and the rules folder](references/season-documents.md).
+
 ## Establish context
 
 - Requested season and event.

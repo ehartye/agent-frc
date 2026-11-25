@@ -12,6 +12,7 @@ export const stages = [
     skills: ['frc-case-study', 'frc-season', 'frc-project-setup', 'frc-setup'],
     docs: [
       ['Prepare a project rules model', 'docs/project-rules-model.md'],
+      ['Ask a season’s rules folder, and write one from the documents', 'skills/frc-season/references/season-documents.md'],
       ['Scan every pushed branch for machine paths and credentials', 'docs/project-ci.md#the-path-and-secret-scan'],
       ['Write the CI a project owns, and audit the project for use of the plugin', 'docs/project-ci.md#audit-the-project-for-use-of-the-plugin'],
       ['Invented training profile', 'examples/kickoff/training-field.json'],
@@ -205,7 +206,7 @@ export const purpose = {
   'frc-mechanism-hardening': 'Find where a mechanism stops working in three stages: alone, installed in the robot, and after a fault and repair.',
   'frc-robot-highlights': 'Open the design review to rotate the assembly, inspect its parts and watch mechanism motion. Publish the styled results page and its source evidence on GitHub Pages, linked to that one review, with the effective design front and center and an in-progress design labelled beside it.',
   'frc-swerve': 'Connect module geometry, two independent motions and feedback conventions to drivetrain verification.',
-  'frc-season': 'Pin the season, applicable manual edition and source boundaries.',
+  'frc-season': 'Pin the season, applicable manual edition and source boundaries. Ask a project’s rules folder by code, word or name before opening a manual, and read every change notice when writing one.',
   'frc-case-study': 'Trace game objectives through strategy, subsystems and engineering evidence.',
   'frc-conceptual-design': 'Describe candidate robots as concept bots, check them against the rules model, compare them in the rehearsal, rank them in a concept study and record the student’s selection for preliminary design.',
   'frc-strategic-narrative': 'Turn match roles into explicit stories and provisional requirements.',
